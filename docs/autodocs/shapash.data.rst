@@ -1,22 +1,14 @@
-shapash.data package
+data_loader
 ====================
 
-Submodules
-----------
+shapash provides a data_loader function which returns clearly
+labeled Dataset data sets to be able to test the library on a
+classification or regression problem
 
-shapash.data.data\_loader module
+data\_loader module
 --------------------------------
 
 .. automodule:: shapash.data.data_loader
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: shapash.data
    :members:
    :undoc-members:
    :show-inheritance:

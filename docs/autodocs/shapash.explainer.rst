@@ -1,46 +1,21 @@
-shapash.explainer package
+SmartExplainer Object
 =========================
 
 Submodules
 ----------
 
-shapash.explainer.multi\_decorator module
+shapash.explainer.smart\_explainer.SmartExplainer class
 -----------------------------------------
 
-.. automodule:: shapash.explainer.multi_decorator
-   :members:
+.. autoclass:: shapash.explainer.smart_explainer.SmartExplainer
+   :members: compile, add, save, load, filter, to_pandas, run_app
    :undoc-members:
    :show-inheritance:
 
-shapash.explainer.smart\_explainer module
------------------------------------------
-
-.. automodule:: shapash.explainer.smart_explainer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-shapash.explainer.smart\_plotter module
+shapash.explainer.smart\_plotter.SmartPlotter class
 ---------------------------------------
 
-.. automodule:: shapash.explainer.smart_plotter
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-shapash.explainer.smart\_state module
--------------------------------------
-
-.. automodule:: shapash.explainer.smart_state
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: shapash.explainer
-   :members:
+.. autoclass:: shapash.explainer.smart_plotter.SmartPlotter
+   :members: features_importance, contribution_plot, local_plot
    :undoc-members:
    :show-inheritance:

@@ -28,9 +28,13 @@ logging.basicConfig(level=logging.INFO)
 
 class SmartExplainer:
     """
-    Easy manipulation and ordering of any local decomposition.
+    The SmartExplainer class is the main object of the Shapash library.
+    It allows the Data Scientists to perform many operations to make the
+    results more understandable
+    linking encoders, models, predictions, label dict and datasets:
+    SmartExplainer users have several methods which are described below
 
-    Attributes
+    The SmartExplainer Attributes:
     ----------
     data : dict
         Three elements of size (n_samples, n_features), that should be regarded as a single array
@@ -49,20 +53,21 @@ class SmartExplainer:
         data['x_sorted']: pandas.DataFrame or list
             It gives for each line the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
-    x : pandas.DataFrame
-        Prediction set input to analyse. Input used for predict and predict_proba method of model
+
+    x_init : pandas.DataFrame
+        preprocessed dataset used by the model to perform the prediction
     x_pred : pandas.DataFrame
-        Prediction set with inverse trasformation.
+        x_init dataset with inverse transformation.
     y_pred : pandas.DataFrame
-        Prediction values.
-    contributions: pandas.DataFrame or list
-        Local contributions with preprocessing taken into account (e.g. one-hot encoding).
+        User-specified prediction values.
+    contributions: pandas.DataFrame (regression) or list (classification)
+        local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
     features_dict: dict
         Dictionary mapping technical feature names to domain names.
     inv_features_dict: dict
         Inverse features_dict mapping.
     label_dict: dict
-        Dictionary mapping integer labels to domain names.
+        Dictionary mapping integer labels to domain names (classification - target values).
     inv_label_dict : dict
         Inverse label_dict mapping.
     columns_dict : dict
@@ -73,6 +78,19 @@ class SmartExplainer:
         Helper object containing all plotting functions (Bridge pattern).
     model : model object
         model used to check the different values of target estimate predict proba
+    features_desc : dict
+        Dictionary that references the numbers of feature values ​​in the x_pred
+    features_imp : pandas.Series (regression) or list (classification)
+        Features importance values
+
+    How to declare a new SmartExplainer object?
+
+    Example
+    --------
+    >>> xpl = SmartExplainer(features_dict=featd,label_dict=labeld)
+    features_dict & label_dict are both optional
+    features_dict maps technical feature names to domain names.
+    label_dict specify the labels of target (classification)
     """
 
     def __init__(self, features_dict={}, label_dict=None):
@@ -94,31 +112,39 @@ class SmartExplainer:
 
     def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None):
         """
-        The compile method is the first step to understand model and predic. It performs the sorting
-        of contributions, the reverse preprocessing steps and performs
-        all the calculations necessary for a quick display of plots
-        and efficient display of summary of explanation.
+        The compile method is the first step to understand model and prediction. It performs the sorting
+        of contributions, the reverse preprocessing steps and performs all the calculations necessary for
+        a quick display of plots and efficient display of summary of explanation.
         Most of the parameters are optional but all help to display results that can be understood
+
+        This step can last a few moments with large datasets.
 
         Parameters
         ----------
-        contributions : pandas.DataFrame, np.ndarray or list
-            single or multiple contributions (multi-class) to handle.
-            if pandas.Dataframe, the index and columns should be share with the prediction set.
-            if np.ndarray, index and columns will be generated according to prediction set
         x : pandas.DataFrame
             Prediction set.
             IMPORTANT: this should be the raw prediction set, whose values are seen by the end user.
-            In case you only have at your disposal a preprocessed (e.g. one-hot encoded) set,
-            please look at utils.inverse_transform.
+            x is a preprocessed dataset: Shapash can apply the model to it
         model : model object
             model used to consistency check. model object can also be used by some method to compute
             predict and predict_proba values
+        contributions : pandas.DataFrame, np.ndarray or list
+            single or multiple contributions (multi-class) to handle.
+            if pandas.Dataframe, the index and columns should be share with the prediction set.
+            if np.ndarray, index and columns will be generated according to x dataset
         y_pred : pandas.Series, optional (default: None)
             Prediction values (1 column only).
             The index must be identical to the index of x_pred.
+            This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
+            as they may wish to set their own threshold (classification)
+
         preprocessing : object, optional (default: None)
+            compile method can apply preprocess inverse transform
             A scikit-learn or category_encoders encoding step (e.g. OneHotEncoder)
+
+        Example
+        --------
+        >>> xpl.compile(x=xtest_df,model=my_model)
         """
         self.x_init = x
         self.x_pred = inverse_transform(self.x_init, preprocessing)
@@ -150,10 +176,11 @@ class SmartExplainer:
 
     def add(self, y_pred=None, label_dict=None, features_dict=None):
         """
-        Function which allows the user to add a model or y_pred without compiling again
+        Add method allows the user to add a label_dict, features_dict
+        or y_pred without compiling again (and it can last a few moments)
         y_pred can be used in the plot to color scatter
         y_pred is needed in the to_pandas method
-        model is needed in the to_pandas method for classification case
+        label_dict and features_dict displays allow to display clearer results
 
         Parameters
         ----------
@@ -492,7 +519,12 @@ class SmartExplainer:
     ):
 
         """
-        Compute a mask to apply on internal data.
+        The filter method is an important method which allows to summarize the local explainability
+        by using the user defined parameters defined by the  which correspond to its use case.
+        filter method is used with the local_plot method of Smarplotter to see the concrete result of this summary
+        with a local contribution barchart
+
+        Please, watch the local_plot tutorial to see how these two methods are combined with a concrete example
 
         Parameters
         ----------
@@ -501,9 +533,10 @@ class SmartExplainer:
         threshold : float, optional (default: None)
             Absolute threshold below which any contribution is hidden.
         positive: bool, optional (default: None)
-            If True, hide negative values. Hide positive values otherwise. If None, hide nothing.
+            If True, hide negative values. False, hide positive values
+            If None, hide nothing.
         max_contrib : int, optional (default: None)
-            Number of contributions to show.
+            Maximum number of contributions to show.
         """
         mask = [self.state.init_mask(self.data['contrib_sorted'], True)]
         if features_to_hide:
@@ -543,7 +576,10 @@ class SmartExplainer:
 
     def save(self, path, protocol=pickle.HIGHEST_PROTOCOL):
         """
-        Save a dictionary containing attributes of your explainer
+        Save method allows user to save SmartExplainer object on disk
+        using a pickle file.
+        Save method can be useful: you don't have to recompile to display
+        results later
 
         Parameters
         ----------
@@ -552,6 +588,10 @@ class SmartExplainer:
         protocol : int
             Int which indicates which protocol should be used by the pickler,
             default HIGHEST_PROTOCOL
+
+        Example
+        --------
+        >>> xpl.save('path_to_pkl/xpl.pkl')
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
