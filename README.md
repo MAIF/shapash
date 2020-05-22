@@ -1,10 +1,10 @@
 # Shapash
 
+[![Build Status](https://api.travis-ci.org/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
+
 <p align="center">
   <img src="docs/_static/shapash-resize.png" width="400" title="logo">
 </p>
-
-[![Build Status](https://api.travis-ci.org/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
 
 # Overview
 
