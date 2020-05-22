@@ -4,7 +4,7 @@
   <img src="docs/_static/shapash-resize.png" width="400" title="logo">
 </p>
 
-[![Build Status](https://api.travis-ci.org/MAIF/diaphane.svg?branch=master)](https://travis-ci.org/MAIF/Diaphane)
+[![Build Status](https://api.travis-ci.org/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
 
 # Overview
 
