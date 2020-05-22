@@ -2,13 +2,19 @@
 
 [![Build Status](https://api.travis-ci.org/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
 
-<p align="center">
-  <img src="docs/_static/shapash-resize.png" width="400" title="logo">
-</p>
+<img align="right" src="docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 
-# Overview
+<br/>
+<br/>
 
-**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone
+**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone.
+It provides several types of visualization that display explicit labels that everyone can understand. 
+
+<br/>
+
+Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+
+<br/> <br/>
 
 **The objectives pursued by shapash:**
 - To display clear and understandable results: Plots and outputs use **explicit labels** for each feature and its modalities:
