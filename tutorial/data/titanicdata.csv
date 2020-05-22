@@ -1,0 +1,892 @@
+PassengerId,Survived,Pclass,Name,Sex,Age,SibSp,Parch,Fare,Embarked,Title
+1,0,Third class,Braund Owen Harris,male,22.0,1,0,7.25,Southampton,Mr
+2,1,First class,Cumings John Bradley (Florence Briggs Thayer),female,38.0,1,0,71.28,Cherbourg,Mrs
+3,1,Third class,Heikkinen Laina,female,26.0,0,0,7.92,Southampton,Miss
+4,1,First class,Futrelle Jacques Heath (Lily May Peel),female,35.0,1,0,53.1,Southampton,Mrs
+5,0,Third class,Allen William Henry,male,35.0,0,0,8.05,Southampton,Mr
+6,0,Third class,Moran James,male,29.5,0,0,8.46,Queenstown,Mr
+7,0,First class,McCarthy Timothy J,male,54.0,0,0,51.86,Southampton,Mr
+8,0,Third class,Palsson Gosta Leonard,male,2.0,3,1,21.08,Southampton,Master
+9,1,Third class,Johnson Oscar W (Elisabeth Vilhelmina Berg),female,27.0,0,2,11.13,Southampton,Mrs
+10,1,Second class,Nasser Nicholas (Adele Achem),female,14.0,1,0,30.07,Cherbourg,Mrs
+11,1,Third class,Sandstrom Marguerite Rut,female,4.0,1,1,16.7,Southampton,Miss
+12,1,First class,Bonnell Elizabeth,female,58.0,0,0,26.55,Southampton,Miss
+13,0,Third class,Saundercock William Henry,male,20.0,0,0,8.05,Southampton,Mr
+14,0,Third class,Andersson Anders Johan,male,39.0,1,5,31.28,Southampton,Mr
+15,0,Third class,Vestrom Hulda Amanda Adolfina,female,14.0,0,0,7.85,Southampton,Miss
+16,1,Second class,Hewlett (Mary D Kingcome),female,55.0,0,0,16.0,Southampton,Mrs
+17,0,Third class,Rice Eugene,male,2.0,4,1,29.12,Queenstown,Master
+18,1,Second class,Williams Charles Eugene,male,29.5,0,0,13.0,Southampton,Mr
+19,0,Third class,Vander Planke Julius (Emelia Maria Vandemoortele),female,31.0,1,0,18.0,Southampton,Mrs
+20,1,Third class,Masselmani Fatima,female,29.5,0,0,7.22,Cherbourg,Mrs
+21,0,Second class,Fynney Joseph J,male,35.0,0,0,26.0,Southampton,Mr
+22,1,Second class,Beesley Lawrence,male,34.0,0,0,13.0,Southampton,Mr
+23,1,Third class,"McGowan Anna ""Annie""",female,15.0,0,0,8.03,Queenstown,Miss
+24,1,First class,Sloper William Thompson,male,28.0,0,0,35.5,Southampton,Mr
+25,0,Third class,Palsson Torborg Danira,female,8.0,3,1,21.08,Southampton,Miss
+26,1,Third class,Asplund Carl Oscar (Selma Augusta Emilia Johansson),female,38.0,1,5,31.39,Southampton,Mrs
+27,0,Third class,Emir Farred Chehab,male,29.5,0,0,7.22,Cherbourg,Mr
+28,0,First class,Fortune Charles Alexander,male,19.0,3,2,263.0,Southampton,Mr
+29,1,Third class,"O'Dwyer Ellen ""Nellie""",female,29.5,0,0,7.88,Queenstown,Miss
+30,0,Third class,Todoroff Lalio,male,29.5,0,0,7.9,Southampton,Mr
+31,0,First class,Uruchurtu Manuel E,male,40.0,0,0,27.72,Cherbourg,Don
+32,1,First class,Spencer William Augustus (Marie Eugenie),female,29.5,1,0,146.52,Cherbourg,Mrs
+33,1,Third class,Glynn Mary Agatha,female,29.5,0,0,7.75,Queenstown,Miss
+34,0,Second class,Wheadon Edward H,male,66.0,0,0,10.5,Southampton,Mr
+35,0,First class,Meyer Edgar Joseph,male,28.0,1,0,82.17,Cherbourg,Mr
+36,0,First class,Holverson Alexander Oskar,male,42.0,1,0,52.0,Southampton,Mr
+37,1,Third class,Mamee Hanna,male,29.5,0,0,7.23,Cherbourg,Mr
+38,0,Third class,Cann Ernest Charles,male,21.0,0,0,8.05,Southampton,Mr
+39,0,Third class,Vander Planke Augusta Maria,female,18.0,2,0,18.0,Southampton,Miss
+40,1,Third class,Nicola-Yarred Jamila,female,14.0,1,0,11.24,Cherbourg,Miss
+41,0,Third class,Ahlin Johan (Johanna Persdotter Larsson),female,40.0,1,0,9.48,Southampton,Mrs
+42,0,Second class,Turpin William John Robert (Dorothy Ann Wonnacott),female,27.0,1,0,21.0,Southampton,Mrs
+43,0,Third class,Kraeff Theodor,male,29.5,0,0,7.9,Cherbourg,Mr
+44,1,Second class,Laroche Simonne Marie Anne Andree,female,3.0,1,2,41.58,Cherbourg,Miss
+45,1,Third class,Devaney Margaret Delia,female,19.0,0,0,7.88,Queenstown,Miss
+46,0,Third class,Rogers William John,male,29.5,0,0,8.05,Southampton,Mr
+47,0,Third class,Lennon Denis,male,29.5,1,0,15.5,Queenstown,Mr
+48,1,Third class,O'Driscoll Bridget,female,29.5,0,0,7.75,Queenstown,Miss
+49,0,Third class,Samaan Youssef,male,29.5,2,0,21.68,Cherbourg,Mr
+50,0,Third class,Arnold-Franchi Josef (Josefine Franchi),female,18.0,1,0,17.8,Southampton,Mrs
+51,0,Third class,Panula Juha Niilo,male,7.0,4,1,39.69,Southampton,Master
+52,0,Third class,Nosworthy Richard Cater,male,21.0,0,0,7.8,Southampton,Mr
+53,1,First class,Harper Henry Sleeper (Myna Haxtun),female,49.0,1,0,76.73,Cherbourg,Mrs
+54,1,Second class,Faunthorpe Lizzie (Elizabeth Anne Wilkinson),female,29.0,1,0,26.0,Southampton,Mrs
+55,0,First class,Ostby Engelhart Cornelius,male,65.0,0,1,61.98,Cherbourg,Mr
+56,1,First class,Woolner Hugh,male,29.5,0,0,35.5,Southampton,Mr
+57,1,Second class,Rugg Emily,female,21.0,0,0,10.5,Southampton,Miss
+58,0,Third class,Novel Mansouer,male,28.5,0,0,7.23,Cherbourg,Mr
+59,1,Second class,West Constance Mirium,female,5.0,1,2,27.75,Southampton,Miss
+60,0,Third class,Goodwin William Frederick,male,11.0,5,2,46.9,Southampton,Master
+61,0,Third class,Sirayanian Orsen,male,22.0,0,0,7.23,Cherbourg,Mr
+62,1,First class,Icard Amelie,female,38.0,0,0,80.0,Queenstown,Miss
+63,0,First class,Harris Henry Birkhardt,male,45.0,1,0,83.48,Southampton,Mr
+64,0,Third class,Skoog Harald,male,4.0,3,2,27.9,Southampton,Master
+65,0,First class,Stewart Albert A,male,29.5,0,0,27.72,Cherbourg,Mr
+66,1,Third class,Moubarek Gerios,male,29.5,1,1,15.25,Cherbourg,Master
+67,1,Second class,Nye (Elizabeth Ramell),female,29.0,0,0,10.5,Southampton,Mrs
+68,0,Third class,Crease Ernest James,male,19.0,0,0,8.16,Southampton,Mr
+69,1,Third class,Andersson Erna Alexandra,female,17.0,4,2,7.92,Southampton,Miss
+70,0,Third class,Kink Vincenz,male,26.0,2,0,8.66,Southampton,Mr
+71,0,Second class,Jenkin Stephen Curnow,male,32.0,0,0,10.5,Southampton,Mr
+72,0,Third class,Goodwin Lillian Amy,female,16.0,5,2,46.9,Southampton,Miss
+73,0,Second class,Hood Ambrose Jr,male,21.0,0,0,73.5,Southampton,Mr
+74,0,Third class,Chronopoulos Apostolos,male,26.0,1,0,14.45,Cherbourg,Mr
+75,1,Third class,Bing Lee,male,32.0,0,0,56.5,Southampton,Mr
+76,0,Third class,Moen Sigurd Hansen,male,25.0,0,0,7.65,Southampton,Mr
+77,0,Third class,Staneff Ivan,male,29.5,0,0,7.9,Southampton,Mr
+78,0,Third class,Moutal Rahamin Haim,male,29.5,0,0,8.05,Southampton,Mr
+79,1,Second class,Caldwell Alden Gates,male,0.83,0,2,29.0,Southampton,Master
+80,1,Third class,Dowdell Elizabeth,female,30.0,0,0,12.48,Southampton,Miss
+81,0,Third class,Waelens Achille,male,22.0,0,0,9.0,Southampton,Mr
+82,1,Third class,Sheerlinck Jan Baptist,male,29.0,0,0,9.5,Southampton,Mr
+83,1,Third class,McDermott Brigdet Delia,female,29.5,0,0,7.79,Queenstown,Miss
+84,0,First class,Carrau Francisco M,male,28.0,0,0,47.1,Southampton,Mr
+85,1,Second class,Ilett Bertha,female,17.0,0,0,10.5,Southampton,Miss
+86,1,Third class,Backstrom Karl Alfred (Maria Mathilda Gustafsson),female,33.0,3,0,15.85,Southampton,Mrs
+87,0,Third class,Ford William Neal,male,16.0,1,3,34.38,Southampton,Mr
+88,0,Third class,Slocovski Selman Francis,male,29.5,0,0,8.05,Southampton,Mr
+89,1,First class,Fortune Mabel Helen,female,23.0,3,2,263.0,Southampton,Miss
+90,0,Third class,Celotti Francesco,male,24.0,0,0,8.05,Southampton,Mr
+91,0,Third class,Christmann Emil,male,29.0,0,0,8.05,Southampton,Mr
+92,0,Third class,Andreasson Paul Edvin,male,20.0,0,0,7.85,Southampton,Mr
+93,0,First class,Chaffee Herbert Fuller,male,46.0,1,0,61.18,Southampton,Mr
+94,0,Third class,Dean Bertram Frank,male,26.0,1,2,20.58,Southampton,Mr
+95,0,Third class,Coxon Daniel,male,59.0,0,0,7.25,Southampton,Mr
+96,0,Third class,Shorney Charles Joseph,male,29.5,0,0,8.05,Southampton,Mr
+97,0,First class,Goldschmidt George B,male,71.0,0,0,34.65,Cherbourg,Mr
+98,1,First class,Greenfield William Bertram,male,23.0,0,1,63.36,Cherbourg,Mr
+99,1,Second class,Doling John T (Ada Julia Bone),female,34.0,0,1,23.0,Southampton,Mrs
+100,0,Second class,Kantor Sinai,male,34.0,1,0,26.0,Southampton,Mr
+101,0,Third class,Petranec Matilda,female,28.0,0,0,7.9,Southampton,Miss
+102,0,Third class,"Petroff Pastcho (""Pentcho"")",male,29.5,0,0,7.9,Southampton,Mr
+103,0,First class,White Richard Frasar,male,21.0,0,1,77.29,Southampton,Mr
+104,0,Third class,Johansson Gustaf Joel,male,33.0,0,0,8.65,Southampton,Mr
+105,0,Third class,Gustafsson Anders Vilhelm,male,37.0,2,0,7.92,Southampton,Mr
+106,0,Third class,Mionoff Stoytcho,male,28.0,0,0,7.9,Southampton,Mr
+107,1,Third class,Salkjelsvik Anna Kristine,female,21.0,0,0,7.65,Southampton,Miss
+108,1,Third class,Moss Albert Johan,male,29.5,0,0,7.78,Southampton,Mr
+109,0,Third class,Rekic Tido,male,38.0,0,0,7.9,Southampton,Mr
+110,1,Third class,Moran Bertha,female,29.5,1,0,24.15,Queenstown,Miss
+111,0,First class,Porter Walter Chamberlain,male,47.0,0,0,52.0,Southampton,Mr
+112,0,Third class,Zabour Hileni,female,14.5,1,0,14.45,Cherbourg,Miss
+113,0,Third class,Barton David John,male,22.0,0,0,8.05,Southampton,Mr
+114,0,Third class,Jussila Katriina,female,20.0,1,0,9.82,Southampton,Miss
+115,0,Third class,Attalah Malake,female,17.0,0,0,14.46,Cherbourg,Miss
+116,0,Third class,Pekoniemi Edvard,male,21.0,0,0,7.92,Southampton,Mr
+117,0,Third class,Connors Patrick,male,70.5,0,0,7.75,Queenstown,Mr
+118,0,Second class,Turpin William John Robert,male,29.0,1,0,21.0,Southampton,Mr
+119,0,First class,Baxter Quigg Edmond,male,24.0,0,1,247.52,Cherbourg,Mr
+120,0,Third class,Andersson Ellis Anna Maria,female,2.0,4,2,31.28,Southampton,Miss
+121,0,Second class,Hickman Stanley George,male,21.0,2,0,73.5,Southampton,Mr
+122,0,Third class,Moore Leonard Charles,male,29.5,0,0,8.05,Southampton,Mr
+123,0,Second class,Nasser Nicholas,male,32.5,1,0,30.07,Cherbourg,Mr
+124,1,Second class,Webber Susan,female,32.5,0,0,13.0,Southampton,Miss
+125,0,First class,White Percival Wayland,male,54.0,0,1,77.29,Southampton,Mr
+126,1,Third class,Nicola-Yarred Elias,male,12.0,1,0,11.24,Cherbourg,Master
+127,0,Third class,McMahon Martin,male,29.5,0,0,7.75,Queenstown,Mr
+128,1,Third class,Madsen Fridtjof Arne,male,24.0,0,0,7.14,Southampton,Mr
+129,1,Third class,Peter Anna,female,29.5,1,1,22.36,Cherbourg,Miss
+130,0,Third class,Ekstrom Johan,male,45.0,0,0,6.98,Southampton,Mr
+131,0,Third class,Drazenoic Jozef,male,33.0,0,0,7.9,Cherbourg,Mr
+132,0,Third class,Coelho Domingos Fernandeo,male,20.0,0,0,7.05,Southampton,Mr
+133,0,Third class,Robins Alexander A (Grace Charity Laury),female,47.0,1,0,14.5,Southampton,Mrs
+134,1,Second class,Weisz Leopold (Mathilde Francoise Pede),female,29.0,1,0,26.0,Southampton,Mrs
+135,0,Second class,Sobey Samuel James Hayden,male,25.0,0,0,13.0,Southampton,Mr
+136,0,Second class,Richard Emile,male,23.0,0,0,15.05,Cherbourg,Mr
+137,1,First class,Newsom Helen Monypeny,female,19.0,0,2,26.28,Southampton,Miss
+138,0,First class,Futrelle Jacques Heath,male,37.0,1,0,53.1,Southampton,Mr
+139,0,Third class,Osen Olaf Elon,male,16.0,0,0,9.22,Southampton,Mr
+140,0,First class,Giglio Victor,male,24.0,0,0,79.2,Cherbourg,Mr
+141,0,Third class,Boulos Joseph (Sultana),female,29.5,0,2,15.25,Cherbourg,Mrs
+142,1,Third class,Nysten Anna Sofia,female,22.0,0,0,7.75,Southampton,Miss
+143,1,Third class,Hakkarainen Pekka Pietari (Elin Matilda Dolck),female,24.0,1,0,15.85,Southampton,Mrs
+144,0,Third class,Burke Jeremiah,male,19.0,0,0,6.75,Queenstown,Mr
+145,0,Second class,Andrew Edgardo Samuel,male,18.0,0,0,11.5,Southampton,Mr
+146,0,Second class,Nicholls Joseph Charles,male,19.0,1,1,36.75,Southampton,Mr
+147,1,Third class,"Andersson August Edvard (""Wennerstrom"")",male,27.0,0,0,7.8,Southampton,Mr
+148,0,Third class,"Ford Robina Maggie ""Ruby""",female,9.0,2,2,34.38,Southampton,Miss
+149,0,Second class,"Navratil Michel (""Louis M Hoffman"")",male,36.5,0,2,26.0,Southampton,Mr
+150,0,Second class,Byles Thomas Roussel Davids,male,42.0,0,0,13.0,Southampton,Rev
+151,0,Second class,Bateman Robert James,male,51.0,0,0,12.52,Southampton,Rev
+152,1,First class,Pears Thomas (Edith Wearne),female,22.0,1,0,66.6,Southampton,Mrs
+153,0,Third class,Meo Alfonzo,male,55.5,0,0,8.05,Southampton,Mr
+154,0,Third class,van Billiard Austin Blyler,male,40.5,0,2,14.5,Southampton,Mr
+155,0,Third class,Olsen Ole Martin,male,29.5,0,0,7.31,Southampton,Mr
+156,0,First class,Williams Charles Duane,male,51.0,0,1,61.38,Cherbourg,Mr
+157,1,Third class,"Gilnagh Katherine ""Katie""",female,16.0,0,0,7.73,Queenstown,Miss
+158,0,Third class,Corn Harry,male,30.0,0,0,8.05,Southampton,Mr
+159,0,Third class,Smiljanic Mile,male,29.5,0,0,8.66,Southampton,Mr
+160,0,Third class,Sage Thomas Henry,male,29.5,8,2,69.55,Southampton,Master
+161,0,Third class,Cribb John Hatfield,male,44.0,0,1,16.1,Southampton,Mr
+162,1,Second class,"Watt James (Elizabeth ""Bessie"" Inglis Milne)",female,40.0,0,0,15.75,Southampton,Mrs
+163,0,Third class,Bengtsson John Viktor,male,26.0,0,0,7.78,Southampton,Mr
+164,0,Third class,Calic Jovo,male,17.0,0,0,8.66,Southampton,Mr
+165,0,Third class,Panula Eino Viljami,male,1.0,4,1,39.69,Southampton,Master
+166,1,Third class,"Goldsmith Frank John William ""Frankie""",male,9.0,0,2,20.52,Southampton,Master
+167,1,First class,Chibnall (Edith Martha Bowerman),female,29.5,0,1,55.0,Southampton,Mrs
+168,0,Third class,Skoog William (Anna Bernhardina Karlsson),female,45.0,1,4,27.9,Southampton,Mrs
+169,0,First class,Baumann John D,male,29.5,0,0,25.92,Southampton,Mr
+170,0,Third class,Ling Lee,male,28.0,0,0,56.5,Southampton,Mr
+171,0,First class,Van der hoef Wyckoff,male,61.0,0,0,33.5,Southampton,Mr
+172,0,Third class,Rice Arthur,male,4.0,4,1,29.12,Queenstown,Master
+173,1,Third class,Johnson Eleanor Ileen,female,1.0,1,1,11.13,Southampton,Miss
+174,0,Third class,Sivola Antti Wilhelm,male,21.0,0,0,7.92,Southampton,Mr
+175,0,First class,Smith James Clinch,male,56.0,0,0,30.7,Cherbourg,Mr
+176,0,Third class,Klasen Klas Albin,male,18.0,1,1,7.85,Southampton,Mr
+177,0,Third class,Lefebre Henry Forbes,male,29.5,3,1,25.47,Southampton,Master
+178,0,First class,Isham Ann Elizabeth,female,50.0,0,0,28.71,Cherbourg,Miss
+179,0,Second class,Hale Reginald,male,30.0,0,0,13.0,Southampton,Mr
+180,0,Third class,Leonard Lionel,male,36.0,0,0,0.0,Southampton,Mr
+181,0,Third class,Sage Constance Gladys,female,29.5,8,2,69.55,Southampton,Miss
+182,0,Second class,Pernot Rene,male,29.5,0,0,15.05,Cherbourg,Mr
+183,0,Third class,Asplund Clarence Gustaf Hugo,male,9.0,4,2,31.39,Southampton,Master
+184,1,Second class,Becker Richard F,male,1.0,2,1,39.0,Southampton,Master
+185,1,Third class,Kink-Heilmann Luise Gretchen,female,4.0,0,2,22.02,Southampton,Miss
+186,0,First class,Rood Hugh Roscoe,male,29.5,0,0,50.0,Southampton,Mr
+187,1,Third class,"O'Brien Thomas (Johanna ""Hannah"" Godfrey)",female,29.5,1,0,15.5,Queenstown,Mrs
+188,1,First class,"Romaine Charles Hallace (""Mr C Rolmane"")",male,45.0,0,0,26.55,Southampton,Mr
+189,0,Third class,Bourke John,male,40.0,1,1,15.5,Queenstown,Mr
+190,0,Third class,Turcin Stjepan,male,36.0,0,0,7.9,Southampton,Mr
+191,1,Second class,Pinsky (Rosa),female,32.0,0,0,13.0,Southampton,Mrs
+192,0,Second class,Carbines William,male,19.0,0,0,13.0,Southampton,Mr
+193,1,Third class,Andersen-Jensen Carla Christine Nielsine,female,19.0,1,0,7.85,Southampton,Miss
+194,1,Second class,Navratil Michel M,male,3.0,1,1,26.0,Southampton,Master
+195,1,First class,Brown James Joseph (Margaret Tobin),female,44.0,0,0,27.72,Cherbourg,Mrs
+196,1,First class,Lurette Elise,female,58.0,0,0,146.52,Cherbourg,Miss
+197,0,Third class,Mernagh Robert,male,29.5,0,0,7.75,Queenstown,Mr
+198,0,Third class,Olsen Karl Siegwart Andreas,male,42.0,0,1,8.4,Southampton,Mr
+199,1,Third class,"Madigan Margaret ""Maggie""",female,29.5,0,0,7.75,Queenstown,Miss
+200,0,Second class,"Yrois Henriette (""Mrs Harbeck"")",female,24.0,0,0,13.0,Southampton,Miss
+201,0,Third class,Vande Walle Nestor Cyriel,male,28.0,0,0,9.5,Southampton,Mr
+202,0,Third class,Sage Frederick,male,29.5,8,2,69.55,Southampton,Mr
+203,0,Third class,Johanson Jakob Alfred,male,34.0,0,0,6.5,Southampton,Mr
+204,0,Third class,Youseff Gerious,male,45.5,0,0,7.22,Cherbourg,Mr
+205,1,Third class,"Cohen Gurshon ""Gus""",male,18.0,0,0,8.05,Southampton,Mr
+206,0,Third class,Strom Telma Matilda,female,2.0,0,1,10.46,Southampton,Miss
+207,0,Third class,Backstrom Karl Alfred,male,32.0,1,0,15.85,Southampton,Mr
+208,1,Third class,Albimona Nassef Cassem,male,26.0,0,0,18.79,Cherbourg,Mr
+209,1,Third class,"Carr Helen ""Ellen""",female,16.0,0,0,7.75,Queenstown,Miss
+210,1,First class,Blank Henry,male,40.0,0,0,31.0,Cherbourg,Mr
+211,0,Third class,Ali Ahmed,male,24.0,0,0,7.05,Southampton,Mr
+212,1,Second class,Cameron Clear Annie,female,35.0,0,0,21.0,Southampton,Miss
+213,0,Third class,Perkin John Henry,male,22.0,0,0,7.25,Southampton,Mr
+214,0,Second class,Givard Hans Kristensen,male,30.0,0,0,13.0,Southampton,Mr
+215,0,Third class,Kiernan Philip,male,29.5,1,0,7.75,Queenstown,Mr
+216,1,First class,Newell Madeleine,female,31.0,1,0,113.28,Cherbourg,Miss
+217,1,Third class,Honkanen Eliina,female,27.0,0,0,7.92,Southampton,Miss
+218,0,Second class,Jacobsohn Sidney Samuel,male,42.0,1,0,27.0,Southampton,Mr
+219,1,First class,Bazzani Albina,female,32.0,0,0,76.29,Cherbourg,Miss
+220,0,Second class,Harris Walter,male,30.0,0,0,10.5,Southampton,Mr
+221,1,Third class,Sunderland Victor Francis,male,16.0,0,0,8.05,Southampton,Mr
+222,0,Second class,Bracken James H,male,27.0,0,0,13.0,Southampton,Mr
+223,0,Third class,Green George Henry,male,51.0,0,0,8.05,Southampton,Mr
+224,0,Third class,Nenkoff Christo,male,29.5,0,0,7.9,Southampton,Mr
+225,1,First class,Hoyt Frederick Maxfield,male,38.0,1,0,90.0,Southampton,Mr
+226,0,Third class,Berglund Karl Ivar Sven,male,22.0,0,0,9.35,Southampton,Mr
+227,1,Second class,Mellors William John,male,19.0,0,0,10.5,Southampton,Mr
+228,0,Third class,"Lovell John Hall (""Henry"")",male,20.5,0,0,7.25,Southampton,Mr
+229,0,Second class,Fahlstrom Arne Jonas,male,18.0,0,0,13.0,Southampton,Mr
+230,0,Third class,Lefebre Mathilde,female,29.5,3,1,25.47,Southampton,Miss
+231,1,First class,Harris Henry Birkhardt (Irene Wallach),female,35.0,1,0,83.48,Southampton,Mrs
+232,0,Third class,Larsson Bengt Edvin,male,29.0,0,0,7.78,Southampton,Mr
+233,0,Second class,Sjostedt Ernst Adolf,male,59.0,0,0,13.5,Southampton,Mr
+234,1,Third class,Asplund Lillian Gertrud,female,5.0,4,2,31.39,Southampton,Miss
+235,0,Second class,Leyson Robert William Norman,male,24.0,0,0,10.5,Southampton,Mr
+236,0,Third class,Harknett Alice Phoebe,female,29.5,0,0,7.55,Southampton,Miss
+237,0,Second class,Hold Stephen,male,44.0,1,0,26.0,Southampton,Mr
+238,1,Second class,"Collyer Marjorie ""Lottie""",female,8.0,0,2,26.25,Southampton,Miss
+239,0,Second class,Pengelly Frederick William,male,19.0,0,0,10.5,Southampton,Mr
+240,0,Second class,Hunt George Henry,male,33.0,0,0,12.28,Southampton,Mr
+241,0,Third class,Zabour Thamine,female,29.5,1,0,14.45,Cherbourg,Miss
+242,1,Third class,"Murphy Katherine ""Kate""",female,29.5,1,0,15.5,Queenstown,Miss
+243,0,Second class,Coleridge Reginald Charles,male,29.0,0,0,10.5,Southampton,Mr
+244,0,Third class,Maenpaa Matti Alexanteri,male,22.0,0,0,7.12,Southampton,Mr
+245,0,Third class,Attalah Sleiman,male,30.0,0,0,7.22,Cherbourg,Mr
+246,0,First class,Minahan William Edward,male,44.0,2,0,90.0,Queenstown,Dr
+247,0,Third class,Lindahl Agda Thorilda Viktoria,female,25.0,0,0,7.78,Southampton,Miss
+248,1,Second class,Hamalainen William (Anna),female,24.0,0,2,14.5,Southampton,Mrs
+249,1,First class,Beckwith Richard Leonard,male,37.0,1,1,52.55,Southampton,Mr
+250,0,Second class,Carter Ernest Courtenay,male,54.0,1,0,26.0,Southampton,Rev
+251,0,Third class,Reed James George,male,29.5,0,0,7.25,Southampton,Mr
+252,0,Third class,Strom Wilhelm (Elna Matilda Persson),female,29.0,1,1,10.46,Southampton,Mrs
+253,0,First class,Stead William Thomas,male,62.0,0,0,26.55,Southampton,Mr
+254,0,Third class,Lobb William Arthur,male,30.0,1,0,16.1,Southampton,Mr
+255,0,Third class,Rosblom Viktor (Helena Wilhelmina),female,41.0,0,2,20.21,Southampton,Mrs
+256,1,Third class,Touma Darwis (Hanne Youssef Razi),female,29.0,0,2,15.25,Cherbourg,Mrs
+257,1,First class,Thorne Gertrude Maybelle,female,29.5,0,0,79.2,Cherbourg,Mrs
+258,1,First class,Cherry Gladys,female,30.0,0,0,86.5,Southampton,Miss
+259,1,First class,Ward Anna,female,35.0,0,0,512.33,Cherbourg,Miss
+260,1,Second class,Parrish (Lutie Davis),female,50.0,0,1,26.0,Southampton,Mrs
+261,0,Third class,Smith Thomas,male,29.5,0,0,7.75,Queenstown,Mr
+262,1,Third class,Asplund Edvin Rojj Felix,male,3.0,4,2,31.39,Southampton,Master
+263,0,First class,Taussig Emil,male,52.0,1,1,79.65,Southampton,Mr
+264,0,First class,Harrison William,male,40.0,0,0,0.0,Southampton,Mr
+265,0,Third class,Henry Delia,female,29.5,0,0,7.75,Queenstown,Miss
+266,0,Second class,Reeves David,male,36.0,0,0,10.5,Southampton,Mr
+267,0,Third class,Panula Ernesti Arvid,male,16.0,4,1,39.69,Southampton,Mr
+268,1,Third class,Persson Ernst Ulrik,male,25.0,1,0,7.78,Southampton,Mr
+269,1,First class,Graham William Thompson (Edith Junkins),female,58.0,0,1,153.46,Southampton,Mrs
+270,1,First class,Bissette Amelia,female,35.0,0,0,135.63,Southampton,Miss
+271,0,First class,Cairns Alexander,male,29.5,0,0,31.0,Southampton,Mr
+272,1,Third class,Tornquist William Henry,male,25.0,0,0,0.0,Southampton,Mr
+273,1,Second class,Mellinger (Elizabeth Anne Maidment),female,41.0,0,1,19.5,Southampton,Mrs
+274,0,First class,Natsch Charles H,male,37.0,0,1,29.7,Cherbourg,Mr
+275,1,Third class,"Healy Hanora ""Nora""",female,29.5,0,0,7.75,Queenstown,Miss
+276,1,First class,Andrews Kornelia Theodosia,female,63.0,1,0,77.96,Southampton,Miss
+277,0,Third class,Lindblom Augusta Charlotta,female,45.0,0,0,7.75,Southampton,Miss
+278,0,Second class,"Parkes Francis ""Frank""",male,29.5,0,0,0.0,Southampton,Mr
+279,0,Third class,Rice Eric,male,7.0,4,1,29.12,Queenstown,Master
+280,1,Third class,Abbott Stanton (Rosa Hunt),female,35.0,1,1,20.25,Southampton,Mrs
+281,0,Third class,Duane Frank,male,65.0,0,0,7.75,Queenstown,Mr
+282,0,Third class,Olsson Nils Johan Goransson,male,28.0,0,0,7.85,Southampton,Mr
+283,0,Third class,de Pelsmaeker Alfons,male,16.0,0,0,9.5,Southampton,Mr
+284,1,Third class,Dorking Edward Arthur,male,19.0,0,0,8.05,Southampton,Mr
+285,0,First class,Smith Richard William,male,29.5,0,0,26.0,Southampton,Mr
+286,0,Third class,Stankovic Ivan,male,33.0,0,0,8.66,Cherbourg,Mr
+287,1,Third class,de Mulder Theodore,male,30.0,0,0,9.5,Southampton,Mr
+288,0,Third class,Naidenoff Penko,male,22.0,0,0,7.9,Southampton,Mr
+289,1,Second class,Hosono Masabumi,male,42.0,0,0,13.0,Southampton,Mr
+290,1,Third class,Connolly Kate,female,22.0,0,0,7.75,Queenstown,Miss
+291,1,First class,"Barber Ellen ""Nellie""",female,26.0,0,0,78.85,Southampton,Miss
+292,1,First class,Bishop Dickinson H (Helen Walton),female,19.0,1,0,91.08,Cherbourg,Mrs
+293,0,Second class,Levy Rene Jacques,male,36.0,0,0,12.88,Cherbourg,Mr
+294,0,Third class,Haas Aloisia,female,24.0,0,0,8.85,Southampton,Miss
+295,0,Third class,Mineff Ivan,male,24.0,0,0,7.9,Southampton,Mr
+296,0,First class,Lewy Ervin G,male,29.5,0,0,27.72,Cherbourg,Mr
+297,0,Third class,Hanna Mansour,male,23.5,0,0,7.23,Cherbourg,Mr
+298,0,First class,Allison Helen Loraine,female,2.0,1,2,151.55,Southampton,Miss
+299,1,First class,Saalfeld Adolphe,male,29.5,0,0,30.5,Southampton,Mr
+300,1,First class,Baxter James (Helene DeLaudeniere Chaput),female,50.0,0,1,247.52,Cherbourg,Mrs
+301,1,Third class,"Kelly Anna Katherine ""Annie Kate""",female,29.5,0,0,7.75,Queenstown,Miss
+302,1,Third class,McCoy Bernard,male,29.5,2,0,23.25,Queenstown,Mr
+303,0,Third class,Johnson William Cahoone Jr,male,19.0,0,0,0.0,Southampton,Mr
+304,1,Second class,Keane Nora A,female,29.5,0,0,12.35,Queenstown,Miss
+305,0,Third class,"Williams Howard Hugh ""Harry""",male,29.5,0,0,8.05,Southampton,Mr
+306,1,First class,Allison Hudson Trevor,male,0.92,1,2,151.55,Southampton,Master
+307,1,First class,Fleming Margaret,female,29.5,0,0,110.88,Cherbourg,Miss
+308,1,First class,Penasco y Castellana Victor de Satode (Maria Josefa Perez de Soto y Vallejo),female,17.0,1,0,108.9,Cherbourg,Mrs
+309,0,Second class,Abelson Samuel,male,30.0,1,0,24.0,Cherbourg,Mr
+310,1,First class,Francatelli Laura Mabel,female,30.0,0,0,56.93,Cherbourg,Miss
+311,1,First class,Hays Margaret Bechstein,female,24.0,0,0,83.16,Cherbourg,Miss
+312,1,First class,Ryerson Emily Borie,female,18.0,2,2,262.38,Cherbourg,Miss
+313,0,Second class,Lahtinen William (Anna Sylfven),female,26.0,1,1,26.0,Southampton,Mrs
+314,0,Third class,Hendekovic Ignjac,male,28.0,0,0,7.9,Southampton,Mr
+315,0,Second class,Hart Benjamin,male,43.0,1,1,26.25,Southampton,Mr
+316,1,Third class,Nilsson Helmina Josefina,female,26.0,0,0,7.85,Southampton,Miss
+317,1,Second class,Kantor Sinai (Miriam Sternin),female,24.0,1,0,26.0,Southampton,Mrs
+318,0,Second class,Moraweck Ernest,male,54.0,0,0,14.0,Southampton,Dr
+319,1,First class,Wick Mary Natalie,female,31.0,0,2,164.87,Southampton,Miss
+320,1,First class,Spedden Frederic Oakley (Margaretta Corning Stone),female,40.0,1,1,134.5,Cherbourg,Mrs
+321,0,Third class,Dennis Samuel,male,22.0,0,0,7.25,Southampton,Mr
+322,0,Third class,Danoff Yoto,male,27.0,0,0,7.9,Southampton,Mr
+323,1,Second class,Slayter Hilda Mary,female,30.0,0,0,12.35,Queenstown,Miss
+324,1,Second class,Caldwell Albert Francis (Sylvia Mae Harbaugh),female,22.0,1,1,29.0,Southampton,Mrs
+325,0,Third class,Sage George John Jr,male,29.5,8,2,69.55,Southampton,Mr
+326,1,First class,Young Marie Grice,female,36.0,0,0,135.63,Cherbourg,Miss
+327,0,Third class,Nysveen Johan Hansen,male,61.0,0,0,6.24,Southampton,Mr
+328,1,Second class,Ball (Ada E Hall),female,36.0,0,0,13.0,Southampton,Mrs
+329,1,Third class,Goldsmith Frank John (Emily Alice Brown),female,31.0,1,1,20.52,Southampton,Mrs
+330,1,First class,Hippach Jean Gertrude,female,16.0,0,1,57.98,Cherbourg,Miss
+331,1,Third class,McCoy Agnes,female,29.5,2,0,23.25,Queenstown,Miss
+332,0,First class,Partner Austen,male,45.5,0,0,28.5,Southampton,Mr
+333,0,First class,Graham George Edward,male,38.0,0,1,153.46,Southampton,Mr
+334,0,Third class,Vander Planke Leo Edmondus,male,16.0,2,0,18.0,Southampton,Mr
+335,1,First class,Frauenthal Henry William (Clara Heinsheimer),female,29.5,1,0,133.65,Southampton,Mrs
+336,0,Third class,Denkoff Mitto,male,29.5,0,0,7.9,Southampton,Mr
+337,0,First class,Pears Thomas Clinton,male,29.0,1,0,66.6,Southampton,Mr
+338,1,First class,Burns Elizabeth Margaret,female,41.0,0,0,134.5,Cherbourg,Miss
+339,1,Third class,Dahl Karl Edwart,male,45.0,0,0,8.05,Southampton,Mr
+340,0,First class,Blackwell Stephen Weart,male,45.0,0,0,35.5,Southampton,Mr
+341,1,Second class,Navratil Edmond Roger,male,2.0,1,1,26.0,Southampton,Master
+342,1,First class,Fortune Alice Elizabeth,female,24.0,3,2,263.0,Southampton,Miss
+343,0,Second class,Collander Erik Gustaf,male,28.0,0,0,13.0,Southampton,Mr
+344,0,Second class,Sedgwick Charles Frederick Waddington,male,25.0,0,0,13.0,Southampton,Mr
+345,0,Second class,Fox Stanley Hubert,male,36.0,0,0,13.0,Southampton,Mr
+346,1,Second class,"Brown Amelia ""Mildred""",female,24.0,0,0,13.0,Southampton,Miss
+347,1,Second class,Smith Marion Elsie,female,40.0,0,0,13.0,Southampton,Miss
+348,1,Third class,Davison Thomas Henry (Mary E Finck),female,29.5,1,0,16.1,Southampton,Mrs
+349,1,Third class,"Coutts William Loch ""William""",male,3.0,1,1,15.9,Southampton,Master
+350,0,Third class,Dimic Jovan,male,42.0,0,0,8.66,Southampton,Mr
+351,0,Third class,Odahl Nils Martin,male,23.0,0,0,9.22,Southampton,Mr
+352,0,First class,Williams-Lambert Fletcher Fellows,male,29.5,0,0,35.0,Southampton,Mr
+353,0,Third class,Elias Tannous,male,15.0,1,1,7.23,Cherbourg,Mr
+354,0,Third class,Arnold-Franchi Josef,male,25.0,1,0,17.8,Southampton,Mr
+355,0,Third class,Yousif Wazli,male,29.5,0,0,7.22,Cherbourg,Mr
+356,0,Third class,Vanden Steen Leo Peter,male,28.0,0,0,9.5,Southampton,Mr
+357,1,First class,Bowerman Elsie Edith,female,22.0,0,1,55.0,Southampton,Miss
+358,0,Second class,Funk Annie Clemmer,female,38.0,0,0,13.0,Southampton,Miss
+359,1,Third class,McGovern Mary,female,29.5,0,0,7.88,Queenstown,Miss
+360,1,Third class,"Mockler Helen Mary ""Ellie""",female,29.5,0,0,7.88,Queenstown,Miss
+361,0,Third class,Skoog Wilhelm,male,40.0,1,4,27.9,Southampton,Mr
+362,0,Second class,del Carlo Sebastiano,male,29.0,1,0,27.72,Cherbourg,Mr
+363,0,Third class,Barbara (Catherine David),female,45.0,0,1,14.45,Cherbourg,Mrs
+364,0,Third class,Asim Adola,male,35.0,0,0,7.05,Southampton,Mr
+365,0,Third class,O'Brien Thomas,male,29.5,1,0,15.5,Queenstown,Mr
+366,0,Third class,Adahl Mauritz Nils Martin,male,30.0,0,0,7.25,Southampton,Mr
+367,1,First class,Warren Frank Manley (Anna Sophia Atkinson),female,60.0,1,0,75.25,Cherbourg,Mrs
+368,1,Third class,Moussa (Mantoura Boulos),female,29.5,0,0,7.23,Cherbourg,Mrs
+369,1,Third class,Jermyn Annie,female,29.5,0,0,7.75,Queenstown,Miss
+370,1,First class,Aubart Leontine Pauline,female,24.0,0,0,69.3,Cherbourg,Mme
+371,1,First class,Harder George Achilles,male,25.0,1,0,55.44,Cherbourg,Mr
+372,0,Third class,Wiklund Jakob Alfred,male,18.0,1,0,6.5,Southampton,Mr
+373,0,Third class,Beavan William Thomas,male,19.0,0,0,8.05,Southampton,Mr
+374,0,First class,Ringhini Sante,male,22.0,0,0,135.63,Cherbourg,Mr
+375,0,Third class,Palsson Stina Viola,female,3.0,3,1,21.08,Southampton,Miss
+376,1,First class,Meyer Edgar Joseph (Leila Saks),female,29.5,1,0,82.17,Cherbourg,Mrs
+377,1,Third class,Landergren Aurora Adelia,female,22.0,0,0,7.25,Southampton,Miss
+378,0,First class,Widener Harry Elkins,male,27.0,0,2,211.5,Cherbourg,Mr
+379,0,Third class,Betros Tannous,male,20.0,0,0,4.01,Cherbourg,Mr
+380,0,Third class,Gustafsson Karl Gideon,male,19.0,0,0,7.78,Southampton,Mr
+381,1,First class,Bidois Rosalie,female,42.0,0,0,227.52,Cherbourg,Miss
+382,1,Third class,"Nakid Maria (""Mary"")",female,1.0,0,2,15.74,Cherbourg,Miss
+383,0,Third class,Tikkanen Juho,male,32.0,0,0,7.92,Southampton,Mr
+384,1,First class,Holverson Alexander Oskar (Mary Aline Towner),female,35.0,1,0,52.0,Southampton,Mrs
+385,0,Third class,Plotcharsky Vasil,male,29.5,0,0,7.9,Southampton,Mr
+386,0,Second class,Davies Charles Henry,male,18.0,0,0,73.5,Southampton,Mr
+387,0,Third class,Goodwin Sidney Leonard,male,1.0,5,2,46.9,Southampton,Master
+388,1,Second class,Buss Kate,female,36.0,0,0,13.0,Southampton,Miss
+389,0,Third class,Sadlier Matthew,male,29.5,0,0,7.73,Queenstown,Mr
+390,1,Second class,Lehmann Bertha,female,17.0,0,0,12.0,Cherbourg,Miss
+391,1,First class,Carter William Ernest,male,36.0,1,2,120.0,Southampton,Mr
+392,1,Third class,Jansson Carl Olof,male,21.0,0,0,7.8,Southampton,Mr
+393,0,Third class,Gustafsson Johan Birger,male,28.0,2,0,7.92,Southampton,Mr
+394,1,First class,Newell Marjorie,female,23.0,1,0,113.28,Cherbourg,Miss
+395,1,Third class,Sandstrom Hjalmar (Agnes Charlotta Bengtsson),female,24.0,0,2,16.7,Southampton,Mrs
+396,0,Third class,Johansson Erik,male,22.0,0,0,7.8,Southampton,Mr
+397,0,Third class,Olsson Elina,female,31.0,0,0,7.85,Southampton,Miss
+398,0,Second class,McKane Peter David,male,46.0,0,0,26.0,Southampton,Mr
+399,0,Second class,Pain Alfred,male,23.0,0,0,10.5,Southampton,Dr
+400,1,Second class,Trout William H (Jessie L),female,28.0,0,0,12.65,Southampton,Mrs
+401,1,Third class,Niskanen Juha,male,39.0,0,0,7.92,Southampton,Mr
+402,0,Third class,Adams John,male,26.0,0,0,8.05,Southampton,Mr
+403,0,Third class,Jussila Mari Aina,female,21.0,1,0,9.82,Southampton,Miss
+404,0,Third class,Hakkarainen Pekka Pietari,male,28.0,1,0,15.85,Southampton,Mr
+405,0,Third class,Oreskovic Marija,female,20.0,0,0,8.66,Southampton,Miss
+406,0,Second class,Gale Shadrach,male,34.0,1,0,21.0,Southampton,Mr
+407,0,Third class,Widegren Carl/Charles Peter,male,51.0,0,0,7.75,Southampton,Mr
+408,1,Second class,Richards William Rowe,male,3.0,1,1,18.75,Southampton,Master
+409,0,Third class,Birkeland Hans Martin Monsen,male,21.0,0,0,7.78,Southampton,Mr
+410,0,Third class,Lefebre Ida,female,29.5,3,1,25.47,Southampton,Miss
+411,0,Third class,Sdycoff Todor,male,29.5,0,0,7.9,Southampton,Mr
+412,0,Third class,Hart Henry,male,29.5,0,0,6.86,Queenstown,Mr
+413,1,First class,Minahan Daisy E,female,33.0,1,0,90.0,Queenstown,Miss
+414,0,Second class,Cunningham Alfred Fleming,male,29.5,0,0,0.0,Southampton,Mr
+415,1,Third class,Sundman Johan Julian,male,44.0,0,0,7.92,Southampton,Mr
+416,0,Third class,Meek Thomas (Annie Louise Rowley),female,29.5,0,0,8.05,Southampton,Mrs
+417,1,Second class,Drew James Vivian (Lulu Thorne Christian),female,34.0,1,1,32.5,Southampton,Mrs
+418,1,Second class,Silven Lyyli Karoliina,female,18.0,0,2,13.0,Southampton,Miss
+419,0,Second class,Matthews William John,male,30.0,0,0,13.0,Southampton,Mr
+420,0,Third class,Van Impe Catharina,female,10.0,0,2,24.15,Southampton,Miss
+421,0,Third class,Gheorgheff Stanio,male,29.5,0,0,7.9,Cherbourg,Mr
+422,0,Third class,Charters David,male,21.0,0,0,7.73,Queenstown,Mr
+423,0,Third class,Zimmerman Leo,male,29.0,0,0,7.88,Southampton,Mr
+424,0,Third class,Danbom Ernst Gilbert (Anna Sigrid Maria Brogren),female,28.0,1,1,14.4,Southampton,Mrs
+425,0,Third class,Rosblom Viktor Richard,male,18.0,1,1,20.21,Southampton,Mr
+426,0,Third class,Wiseman Phillippe,male,29.5,0,0,7.25,Southampton,Mr
+427,1,Second class,Clarke Charles V (Ada Maria Winfield),female,28.0,1,0,26.0,Southampton,Mrs
+428,1,Second class,"Phillips Kate Florence (""Mrs Kate Louise Phillips Marshall"")",female,19.0,0,0,26.0,Southampton,Miss
+429,0,Third class,Flynn James,male,29.5,0,0,7.75,Queenstown,Mr
+430,1,Third class,Pickard Berk (Berk Trembisky),male,32.0,0,0,8.05,Southampton,Mr
+431,1,First class,Bjornstrom-Steffansson Mauritz Hakan,male,28.0,0,0,26.55,Southampton,Mr
+432,1,Third class,Thorneycroft Percival (Florence Kate White),female,29.5,1,0,16.1,Southampton,Mrs
+433,1,Second class,Louch Charles Alexander (Alice Adelaide Slow),female,42.0,1,0,26.0,Southampton,Mrs
+434,0,Third class,Kallio Nikolai Erland,male,17.0,0,0,7.12,Southampton,Mr
+435,0,First class,Silvey William Baird,male,50.0,1,0,55.9,Southampton,Mr
+436,1,First class,Carter Lucile Polk,female,14.0,1,2,120.0,Southampton,Miss
+437,0,Third class,"Ford Doolina Margaret ""Daisy""",female,21.0,2,2,34.38,Southampton,Miss
+438,1,Second class,Richards Sidney (Emily Hocking),female,24.0,2,3,18.75,Southampton,Mrs
+439,0,First class,Fortune Mark,male,64.0,1,4,263.0,Southampton,Mr
+440,0,Second class,Kvillner Johan Henrik Johannesson,male,31.0,0,0,10.5,Southampton,Mr
+441,1,Second class,Hart Benjamin (Esther Ada Bloomfield),female,45.0,1,1,26.25,Southampton,Mrs
+442,0,Third class,Hampe Leon,male,20.0,0,0,9.5,Southampton,Mr
+443,0,Third class,Petterson Johan Emil,male,25.0,1,0,7.78,Southampton,Mr
+444,1,Second class,Reynaldo Encarnacion,female,28.0,0,0,13.0,Southampton,Ms
+445,1,Third class,Johannesen-Bratthammer Bernt,male,29.5,0,0,8.11,Southampton,Mr
+446,1,First class,Dodge Washington,male,4.0,0,2,81.86,Southampton,Master
+447,1,Second class,Mellinger Madeleine Violet,female,13.0,0,1,19.5,Southampton,Miss
+448,1,First class,Seward Frederic Kimber,male,34.0,0,0,26.55,Southampton,Mr
+449,1,Third class,Baclini Marie Catherine,female,5.0,2,1,19.26,Cherbourg,Miss
+450,1,First class,Peuchen Arthur Godfrey,male,52.0,0,0,30.5,Southampton,Major
+451,0,Second class,West Edwy Arthur,male,36.0,1,2,27.75,Southampton,Mr
+452,0,Third class,Hagland Ingvald Olai Olsen,male,29.5,1,0,19.97,Southampton,Mr
+453,0,First class,Foreman Benjamin Laventall,male,30.0,0,0,27.75,Cherbourg,Mr
+454,1,First class,Goldenberg Samuel L,male,49.0,1,0,89.1,Cherbourg,Mr
+455,0,Third class,Peduzzi Joseph,male,29.5,0,0,8.05,Southampton,Mr
+456,1,Third class,Jalsevac Ivan,male,29.0,0,0,7.9,Cherbourg,Mr
+457,0,First class,Millet Francis Davis,male,65.0,0,0,26.55,Southampton,Mr
+458,1,First class,Kenyon Frederick R (Marion),female,29.5,1,0,51.86,Southampton,Mrs
+459,1,Second class,Toomey Ellen,female,50.0,0,0,10.5,Southampton,Miss
+460,0,Third class,O'Connor Maurice,male,29.5,0,0,7.75,Queenstown,Mr
+461,1,First class,Anderson Harry,male,48.0,0,0,26.55,Southampton,Mr
+462,0,Third class,Morley William,male,34.0,0,0,8.05,Southampton,Mr
+463,0,First class,Gee Arthur H,male,47.0,0,0,38.5,Southampton,Mr
+464,0,Second class,Milling Jacob Christian,male,48.0,0,0,13.0,Southampton,Mr
+465,0,Third class,Maisner Simon,male,29.5,0,0,8.05,Southampton,Mr
+466,0,Third class,Goncalves Manuel Estanslas,male,38.0,0,0,7.05,Southampton,Mr
+467,0,Second class,Campbell William,male,29.5,0,0,0.0,Southampton,Mr
+468,0,First class,Smart John Montgomery,male,56.0,0,0,26.55,Southampton,Mr
+469,0,Third class,Scanlan James,male,29.5,0,0,7.72,Queenstown,Mr
+470,1,Third class,Baclini Helene Barbara,female,0.75,2,1,19.26,Cherbourg,Miss
+471,0,Third class,Keefe Arthur,male,29.5,0,0,7.25,Southampton,Mr
+472,0,Third class,Cacic Luka,male,38.0,0,0,8.66,Southampton,Mr
+473,1,Second class,West Edwy Arthur (Ada Mary Worth),female,33.0,1,2,27.75,Southampton,Mrs
+474,1,Second class,Jerwan Amin S (Marie Marthe Thuillard),female,23.0,0,0,13.79,Cherbourg,Mrs
+475,0,Third class,Strandberg Ida Sofia,female,22.0,0,0,9.84,Southampton,Miss
+476,0,First class,Clifford George Quincy,male,29.5,0,0,52.0,Southampton,Mr
+477,0,Second class,Renouf Peter Henry,male,34.0,1,0,21.0,Southampton,Mr
+478,0,Third class,Braund Lewis Richard,male,29.0,1,0,7.05,Southampton,Mr
+479,0,Third class,Karlsson Nils August,male,22.0,0,0,7.52,Southampton,Mr
+480,1,Third class,Hirvonen Hildur E,female,2.0,0,1,12.29,Southampton,Miss
+481,0,Third class,Goodwin Harold Victor,male,9.0,5,2,46.9,Southampton,Master
+482,0,Second class,"Frost Anthony Wood ""Archie""",male,29.5,0,0,0.0,Southampton,Mr
+483,0,Third class,Rouse Richard Henry,male,50.0,0,0,8.05,Southampton,Mr
+484,1,Third class,Turkula (Hedwig),female,63.0,0,0,9.59,Southampton,Mrs
+485,1,First class,Bishop Dickinson H,male,25.0,1,0,91.08,Cherbourg,Mr
+486,0,Third class,Lefebre Jeannie,female,29.5,3,1,25.47,Southampton,Miss
+487,1,First class,Hoyt Frederick Maxfield (Jane Anne Forby),female,35.0,1,0,90.0,Southampton,Mrs
+488,0,First class,Kent Edward Austin,male,58.0,0,0,29.7,Cherbourg,Mr
+489,0,Third class,Somerton Francis William,male,30.0,0,0,8.05,Southampton,Mr
+490,1,Third class,"Coutts Eden Leslie ""Neville""",male,9.0,1,1,15.9,Southampton,Master
+491,0,Third class,Hagland Konrad Mathias Reiersen,male,29.5,1,0,19.97,Southampton,Mr
+492,0,Third class,Windelov Einar,male,21.0,0,0,7.25,Southampton,Mr
+493,0,First class,Molson Harry Markland,male,55.0,0,0,30.5,Southampton,Mr
+494,0,First class,Artagaveytia Ramon,male,71.0,0,0,49.5,Cherbourg,Mr
+495,0,Third class,Stanley Edward Roland,male,21.0,0,0,8.05,Southampton,Mr
+496,0,Third class,Yousseff Gerious,male,29.5,0,0,14.46,Cherbourg,Mr
+497,1,First class,Eustis Elizabeth Mussey,female,54.0,1,0,78.27,Cherbourg,Miss
+498,0,Third class,Shellard Frederick William,male,29.5,0,0,15.1,Southampton,Mr
+499,0,First class,Allison Hudson J C (Bessie Waldo Daniels),female,25.0,1,2,151.55,Southampton,Mrs
+500,0,Third class,Svensson Olof,male,24.0,0,0,7.8,Southampton,Mr
+501,0,Third class,Calic Petar,male,17.0,0,0,8.66,Southampton,Mr
+502,0,Third class,Canavan Mary,female,21.0,0,0,7.75,Queenstown,Miss
+503,0,Third class,O'Sullivan Bridget Mary,female,29.5,0,0,7.63,Queenstown,Miss
+504,0,Third class,Laitinen Kristina Sofia,female,37.0,0,0,9.59,Southampton,Miss
+505,1,First class,Maioni Roberta,female,16.0,0,0,86.5,Southampton,Miss
+506,0,First class,Penasco y Castellana Victor de Satode,male,18.0,1,0,108.9,Cherbourg,Mr
+507,1,Second class,Quick Frederick Charles (Jane Richards),female,33.0,0,2,26.0,Southampton,Mrs
+508,1,First class,"Bradley George (""George Arthur Brayton"")",male,29.5,0,0,26.55,Southampton,Mr
+509,0,Third class,Olsen Henry Margido,male,28.0,0,0,22.52,Southampton,Mr
+510,1,Third class,Lang Fang,male,26.0,0,0,56.5,Southampton,Mr
+511,1,Third class,Daly Eugene Patrick,male,29.0,0,0,7.75,Queenstown,Mr
+512,0,Third class,Webber James,male,29.5,0,0,8.05,Southampton,Mr
+513,1,First class,McGough James Robert,male,36.0,0,0,26.29,Southampton,Mr
+514,1,First class,Rothschild Martin (Elizabeth L,female,54.0,1,0,59.4,Cherbourg,Mrs
+515,0,Third class,Coleff Satio,male,24.0,0,0,7.5,Southampton,Mr
+516,0,First class,Walker William Anderson,male,47.0,0,0,34.02,Southampton,Mr
+517,1,Second class,Lemore (Amelia Milley),female,34.0,0,0,10.5,Southampton,Mrs
+518,0,Third class,Ryan Patrick,male,29.5,0,0,24.15,Queenstown,Mr
+519,1,Second class,"Angle William A (Florence ""Mary"" Agnes Hughes)",female,36.0,1,0,26.0,Southampton,Mrs
+520,0,Third class,Pavlovic Stefo,male,32.0,0,0,7.9,Southampton,Mr
+521,1,First class,Perreault Anne,female,30.0,0,0,93.5,Southampton,Miss
+522,0,Third class,Vovk Janko,male,22.0,0,0,7.9,Southampton,Mr
+523,0,Third class,Lahoud Sarkis,male,29.5,0,0,7.22,Cherbourg,Mr
+524,1,First class,Hippach Louis Albert (Ida Sophia Fischer),female,44.0,0,1,57.98,Cherbourg,Mrs
+525,0,Third class,Kassem Fared,male,29.5,0,0,7.23,Cherbourg,Mr
+526,0,Third class,Farrell James,male,40.5,0,0,7.75,Queenstown,Mr
+527,1,Second class,Ridsdale Lucy,female,50.0,0,0,10.5,Southampton,Miss
+528,0,First class,Farthing John,male,29.5,0,0,221.78,Southampton,Mr
+529,0,Third class,Salonen Johan Werner,male,39.0,0,0,7.92,Southampton,Mr
+530,0,Second class,Hocking Richard George,male,23.0,2,1,11.5,Southampton,Mr
+531,1,Second class,Quick Phyllis May,female,2.0,1,1,26.0,Southampton,Miss
+532,0,Third class,Toufik Nakli,male,29.5,0,0,7.23,Cherbourg,Mr
+533,0,Third class,Elias Joseph Jr,male,17.0,1,1,7.23,Cherbourg,Mr
+534,1,Third class,Peter Catherine (Catherine Rizk),female,29.5,0,2,22.36,Cherbourg,Mrs
+535,0,Third class,Cacic Marija,female,30.0,0,0,8.66,Southampton,Miss
+536,1,Second class,Hart Eva Miriam,female,7.0,0,2,26.25,Southampton,Miss
+537,0,First class,Butt Archibald Willingham,male,45.0,0,0,26.55,Southampton,Major
+538,1,First class,LeRoy Bertha,female,30.0,0,0,106.42,Cherbourg,Miss
+539,0,Third class,Risien Samuel Beard,male,29.5,0,0,14.5,Southampton,Mr
+540,1,First class,Frolicher Hedwig Margaritha,female,22.0,0,2,49.5,Cherbourg,Miss
+541,1,First class,Crosby Harriet R,female,36.0,0,2,71.0,Southampton,Miss
+542,0,Third class,Andersson Ingeborg Constanzia,female,9.0,4,2,31.28,Southampton,Miss
+543,0,Third class,Andersson Sigrid Elisabeth,female,11.0,4,2,31.28,Southampton,Miss
+544,1,Second class,Beane Edward,male,32.0,1,0,26.0,Southampton,Mr
+545,0,First class,Douglas Walter Donald,male,50.0,1,0,106.42,Cherbourg,Mr
+546,0,First class,Nicholson Arthur Ernest,male,64.0,0,0,26.0,Southampton,Mr
+547,1,Second class,Beane Edward (Ethel Clarke),female,19.0,1,0,26.0,Southampton,Mrs
+548,1,Second class,Padro y Manent Julian,male,29.5,0,0,13.86,Cherbourg,Mr
+549,0,Third class,Goldsmith Frank John,male,33.0,1,1,20.52,Southampton,Mr
+550,1,Second class,Davies John Morgan Jr,male,8.0,1,1,36.75,Southampton,Master
+551,1,First class,Thayer John Borland Jr,male,17.0,0,2,110.88,Cherbourg,Mr
+552,0,Second class,Sharp Percival James R,male,27.0,0,0,26.0,Southampton,Mr
+553,0,Third class,O'Brien Timothy,male,29.5,0,0,7.83,Queenstown,Mr
+554,1,Third class,"Leeni Fahim (""Philip Zenni"")",male,22.0,0,0,7.22,Cherbourg,Mr
+555,1,Third class,Ohman Velin,female,22.0,0,0,7.78,Southampton,Miss
+556,0,First class,Wright George,male,62.0,0,0,26.55,Southampton,Mr
+557,1,First class,"Duff Gordon (Lucille Christiana Sutherland) (""Mrs Morgan"")",female,48.0,1,0,39.6,Cherbourg,Lady
+558,0,First class,Robbins Victor,male,29.5,0,0,227.52,Cherbourg,Mr
+559,1,First class,Taussig Emil (Tillie Mandelbaum),female,39.0,1,1,79.65,Southampton,Mrs
+560,1,Third class,de Messemaeker Guillaume Joseph (Emma),female,36.0,1,0,17.4,Southampton,Mrs
+561,0,Third class,Morrow Thomas Rowan,male,29.5,0,0,7.75,Queenstown,Mr
+562,0,Third class,Sivic Husein,male,40.0,0,0,7.9,Southampton,Mr
+563,0,Second class,Norman Robert Douglas,male,28.0,0,0,13.5,Southampton,Mr
+564,0,Third class,Simmons John,male,29.5,0,0,8.05,Southampton,Mr
+565,0,Third class,Meanwell (Marion Ogden),female,29.5,0,0,8.05,Southampton,Miss
+566,0,Third class,Davies Alfred J,male,24.0,2,0,24.15,Southampton,Mr
+567,0,Third class,Stoytcheff Ilia,male,19.0,0,0,7.9,Southampton,Mr
+568,0,Third class,Palsson Nils (Alma Cornelia Berglund),female,29.0,0,4,21.08,Southampton,Mrs
+569,0,Third class,Doharr Tannous,male,29.5,0,0,7.23,Cherbourg,Mr
+570,1,Third class,Jonsson Carl,male,32.0,0,0,7.85,Southampton,Mr
+571,1,Second class,Harris George,male,62.0,0,0,10.5,Southampton,Mr
+572,1,First class,Appleton Edward Dale (Charlotte Lamson),female,53.0,2,0,51.48,Southampton,Mrs
+573,1,First class,"Flynn John Irwin (""Irving"")",male,36.0,0,0,26.39,Southampton,Mr
+574,1,Third class,Kelly Mary,female,29.5,0,0,7.75,Queenstown,Miss
+575,0,Third class,Rush Alfred George John,male,16.0,0,0,8.05,Southampton,Mr
+576,0,Third class,Patchett George,male,19.0,0,0,14.5,Southampton,Mr
+577,1,Second class,Garside Ethel,female,34.0,0,0,13.0,Southampton,Miss
+578,1,First class,Silvey William Baird (Alice Munger),female,39.0,1,0,55.9,Southampton,Mrs
+579,0,Third class,Caram Joseph (Maria Elias),female,29.5,1,0,14.46,Cherbourg,Mrs
+580,1,Third class,Jussila Eiriik,male,32.0,0,0,7.92,Southampton,Mr
+581,1,Second class,Christy Julie Rachel,female,25.0,1,1,30.0,Southampton,Miss
+582,1,First class,Thayer John Borland (Marian Longstreth Morris),female,39.0,1,1,110.88,Cherbourg,Mrs
+583,0,Second class,Downton William James,male,54.0,0,0,26.0,Southampton,Mr
+584,0,First class,Ross John Hugo,male,36.0,0,0,40.12,Cherbourg,Mr
+585,0,Third class,Paulner Uscher,male,29.5,0,0,8.71,Cherbourg,Mr
+586,1,First class,Taussig Ruth,female,18.0,0,2,79.65,Southampton,Miss
+587,0,Second class,Jarvis John Denzil,male,47.0,0,0,15.0,Southampton,Mr
+588,1,First class,Frolicher-Stehli Maxmillian,male,60.0,1,1,79.2,Cherbourg,Mr
+589,0,Third class,Gilinski Eliezer,male,22.0,0,0,8.05,Southampton,Mr
+590,0,Third class,Murdlin Joseph,male,29.5,0,0,8.05,Southampton,Mr
+591,0,Third class,Rintamaki Matti,male,35.0,0,0,7.12,Southampton,Mr
+592,1,First class,Stephenson Walter Bertram (Martha Eustis),female,52.0,1,0,78.27,Cherbourg,Mrs
+593,0,Third class,Elsbury William James,male,47.0,0,0,7.25,Southampton,Mr
+594,0,Third class,Bourke Mary,female,29.5,0,2,7.75,Queenstown,Miss
+595,0,Second class,Chapman John Henry,male,37.0,1,0,26.0,Southampton,Mr
+596,0,Third class,Van Impe Jean Baptiste,male,36.0,1,1,24.15,Southampton,Mr
+597,1,Second class,Leitch Jessie Wills,female,29.5,0,0,33.0,Southampton,Miss
+598,0,Third class,Johnson Alfred,male,49.0,0,0,0.0,Southampton,Mr
+599,0,Third class,Boulos Hanna,male,29.5,0,0,7.22,Cherbourg,Mr
+600,1,First class,"Duff Gordon Cosmo Edmund (""Mr Morgan"")",male,49.0,1,0,56.93,Cherbourg,Sir
+601,1,Second class,Jacobsohn Sidney Samuel (Amy Frances Christy),female,24.0,2,1,27.0,Southampton,Mrs
+602,0,Third class,Slabenoff Petco,male,29.5,0,0,7.9,Southampton,Mr
+603,0,First class,Harrington Charles H,male,29.5,0,0,42.4,Southampton,Mr
+604,0,Third class,Torber Ernst William,male,44.0,0,0,8.05,Southampton,Mr
+605,1,First class,"Homer Harry (""Mr E Haven"")",male,35.0,0,0,26.55,Cherbourg,Mr
+606,0,Third class,Lindell Edvard Bengtsson,male,36.0,1,0,15.55,Southampton,Mr
+607,0,Third class,Karaic Milan,male,30.0,0,0,7.9,Southampton,Mr
+608,1,First class,Daniel Robert Williams,male,27.0,0,0,30.5,Southampton,Mr
+609,1,Second class,Laroche Joseph (Juliette Marie Louise Lafargue),female,22.0,1,2,41.58,Cherbourg,Mrs
+610,1,First class,Shutes Elizabeth W,female,40.0,0,0,153.46,Southampton,Miss
+611,0,Third class,Andersson Anders Johan (Alfrida Konstantia Brogren),female,39.0,1,5,31.28,Southampton,Mrs
+612,0,Third class,Jardin Jose Neto,male,29.5,0,0,7.05,Southampton,Mr
+613,1,Third class,Murphy Margaret Jane,female,29.5,1,0,15.5,Queenstown,Miss
+614,0,Third class,Horgan John,male,29.5,0,0,7.75,Queenstown,Mr
+615,0,Third class,Brocklebank William Alfred,male,35.0,0,0,8.05,Southampton,Mr
+616,1,Second class,Herman Alice,female,24.0,1,2,65.0,Southampton,Miss
+617,0,Third class,Danbom Ernst Gilbert,male,34.0,1,1,14.4,Southampton,Mr
+618,0,Third class,Lobb William Arthur (Cordelia K Stanlick),female,26.0,1,0,16.1,Southampton,Mrs
+619,1,Second class,Becker Marion Louise,female,4.0,2,1,39.0,Southampton,Miss
+620,0,Second class,Gavey Lawrence,male,26.0,0,0,10.5,Southampton,Mr
+621,0,Third class,Yasbeck Antoni,male,27.0,1,0,14.45,Cherbourg,Mr
+622,1,First class,Kimball Edwin Nelson Jr,male,42.0,1,0,52.55,Southampton,Mr
+623,1,Third class,Nakid Sahid,male,20.0,1,1,15.74,Cherbourg,Mr
+624,0,Third class,Hansen Henry Damsgaard,male,21.0,0,0,7.85,Southampton,Mr
+625,0,Third class,"Bowen David John ""Dai""",male,21.0,0,0,16.1,Southampton,Mr
+626,0,First class,Sutton Frederick,male,61.0,0,0,32.32,Southampton,Mr
+627,0,Second class,Kirkland Charles Leonard,male,57.0,0,0,12.35,Queenstown,Rev
+628,1,First class,Longley Gretchen Fiske,female,21.0,0,0,77.96,Southampton,Miss
+629,0,Third class,Bostandyeff Guentcho,male,26.0,0,0,7.9,Southampton,Mr
+630,0,Third class,O'Connell Patrick D,male,29.5,0,0,7.73,Queenstown,Mr
+631,1,First class,Barkworth Algernon Henry Wilson,male,80.0,0,0,30.0,Southampton,Mr
+632,0,Third class,Lundahl Johan Svensson,male,51.0,0,0,7.05,Southampton,Mr
+633,1,First class,Stahelin-Maeglin Max,male,32.0,0,0,30.5,Cherbourg,Dr
+634,0,First class,Parr William Henry Marsh,male,29.5,0,0,0.0,Southampton,Mr
+635,0,Third class,Skoog Mabel,female,9.0,3,2,27.9,Southampton,Miss
+636,1,Second class,Davis Mary,female,28.0,0,0,13.0,Southampton,Miss
+637,0,Third class,Leinonen Antti Gustaf,male,32.0,0,0,7.92,Southampton,Mr
+638,0,Second class,Collyer Harvey,male,31.0,1,1,26.25,Southampton,Mr
+639,0,Third class,Panula Juha (Maria Emilia Ojala),female,41.0,0,5,39.69,Southampton,Mrs
+640,0,Third class,Thorneycroft Percival,male,29.5,1,0,16.1,Southampton,Mr
+641,0,Third class,Jensen Hans Peder,male,20.0,0,0,7.85,Southampton,Mr
+642,1,First class,Sagesser Emma,female,24.0,0,0,69.3,Cherbourg,Mlle
+643,0,Third class,Skoog Margit Elizabeth,female,2.0,3,2,27.9,Southampton,Miss
+644,1,Third class,Foo Choong,male,29.5,0,0,56.5,Southampton,Mr
+645,1,Third class,Baclini Eugenie,female,0.75,2,1,19.26,Cherbourg,Miss
+646,1,First class,Harper Henry Sleeper,male,48.0,1,0,76.73,Cherbourg,Mr
+647,0,Third class,Cor Liudevit,male,19.0,0,0,7.9,Southampton,Mr
+648,1,First class,Simonius-Blumer Oberst Alfons,male,56.0,0,0,35.5,Cherbourg,Col
+649,0,Third class,Willey Edward,male,29.5,0,0,7.55,Southampton,Mr
+650,1,Third class,Stanley Amy Zillah Elsie,female,23.0,0,0,7.55,Southampton,Miss
+651,0,Third class,Mitkoff Mito,male,29.5,0,0,7.9,Southampton,Mr
+652,1,Second class,Doling Elsie,female,18.0,0,1,23.0,Southampton,Miss
+653,0,Third class,Kalvik Johannes Halvorsen,male,21.0,0,0,8.43,Southampton,Mr
+654,1,Third class,"O'Leary Hanora ""Norah""",female,29.5,0,0,7.83,Queenstown,Miss
+655,0,Third class,"Hegarty Hanora ""Nora""",female,18.0,0,0,6.75,Queenstown,Miss
+656,0,Second class,Hickman Leonard Mark,male,24.0,2,0,73.5,Southampton,Mr
+657,0,Third class,Radeff Alexander,male,29.5,0,0,7.9,Southampton,Mr
+658,0,Third class,Bourke John (Catherine),female,32.0,1,1,15.5,Queenstown,Mrs
+659,0,Second class,Eitemiller George Floyd,male,23.0,0,0,13.0,Southampton,Mr
+660,0,First class,Newell Arthur Webster,male,58.0,0,2,113.28,Cherbourg,Mr
+661,1,First class,Frauenthal Henry William,male,50.0,2,0,133.65,Southampton,Dr
+662,0,Third class,Badt Mohamed,male,40.0,0,0,7.22,Cherbourg,Mr
+663,0,First class,Colley Edward Pomeroy,male,47.0,0,0,25.59,Southampton,Mr
+664,0,Third class,Coleff Peju,male,36.0,0,0,7.5,Southampton,Mr
+665,1,Third class,Lindqvist Eino William,male,20.0,1,0,7.92,Southampton,Mr
+666,0,Second class,Hickman Lewis,male,32.0,2,0,73.5,Southampton,Mr
+667,0,Second class,Butler Reginald Fenton,male,25.0,0,0,13.0,Southampton,Mr
+668,0,Third class,Rommetvedt Knud Paust,male,29.5,0,0,7.78,Southampton,Mr
+669,0,Third class,Cook Jacob,male,43.0,0,0,8.05,Southampton,Mr
+670,1,First class,Taylor Elmer Zebley (Juliet Cummins Wright),female,29.5,1,0,52.0,Southampton,Mrs
+671,1,Second class,Brown Thomas William Solomon (Elizabeth Catherine Ford),female,40.0,1,1,39.0,Southampton,Mrs
+672,0,First class,Davidson Thornton,male,31.0,1,0,52.0,Southampton,Mr
+673,0,Second class,Mitchell Henry Michael,male,70.0,0,0,10.5,Southampton,Mr
+674,1,Second class,Wilhelms Charles,male,31.0,0,0,13.0,Southampton,Mr
+675,0,Second class,Watson Ennis Hastings,male,29.5,0,0,0.0,Southampton,Mr
+676,0,Third class,Edvardsson Gustaf Hjalmar,male,18.0,0,0,7.78,Southampton,Mr
+677,0,Third class,Sawyer Frederick Charles,male,24.5,0,0,8.05,Southampton,Mr
+678,1,Third class,Turja Anna Sofia,female,18.0,0,0,9.84,Southampton,Miss
+679,0,Third class,Goodwin Frederick (Augusta Tyler),female,43.0,1,6,46.9,Southampton,Mrs
+680,1,First class,Cardeza Thomas Drake Martinez,male,36.0,0,1,512.33,Cherbourg,Mr
+681,0,Third class,Peters Katie,female,29.5,0,0,8.14,Queenstown,Miss
+682,1,First class,Hassab Hammad,male,27.0,0,0,76.73,Cherbourg,Mr
+683,0,Third class,Olsvigen Thor Anderson,male,20.0,0,0,9.22,Southampton,Mr
+684,0,Third class,Goodwin Charles Edward,male,14.0,5,2,46.9,Southampton,Mr
+685,0,Second class,Brown Thomas William Solomon,male,60.0,1,1,39.0,Southampton,Mr
+686,0,Second class,Laroche Joseph Philippe Lemercier,male,25.0,1,2,41.58,Cherbourg,Mr
+687,0,Third class,Panula Jaako Arnold,male,14.0,4,1,39.69,Southampton,Mr
+688,0,Third class,Dakic Branko,male,19.0,0,0,10.17,Southampton,Mr
+689,0,Third class,Fischer Eberhard Thelander,male,18.0,0,0,7.8,Southampton,Mr
+690,1,First class,Madill Georgette Alexandra,female,15.0,0,1,211.34,Southampton,Miss
+691,1,First class,Dick Albert Adrian,male,31.0,1,0,57.0,Southampton,Mr
+692,1,Third class,Karun Manca,female,4.0,0,1,13.42,Cherbourg,Miss
+693,1,Third class,Lam Ali,male,29.5,0,0,56.5,Southampton,Mr
+694,0,Third class,Saad Khalil,male,25.0,0,0,7.22,Cherbourg,Mr
+695,0,First class,Weir John,male,60.0,0,0,26.55,Southampton,Col
+696,0,Second class,Chapman Charles Henry,male,52.0,0,0,13.5,Southampton,Mr
+697,0,Third class,Kelly James,male,44.0,0,0,8.05,Southampton,Mr
+698,1,Third class,"Mullens Katherine ""Katie""",female,29.5,0,0,7.73,Queenstown,Miss
+699,0,First class,Thayer John Borland,male,49.0,1,1,110.88,Cherbourg,Mr
+700,0,Third class,Humblen Adolf Mathias Nicolai Olsen,male,42.0,0,0,7.65,Southampton,Mr
+701,1,First class,Astor John Jacob (Madeleine Talmadge Force),female,18.0,1,0,227.52,Cherbourg,Mrs
+702,1,First class,Silverthorne Spencer Victor,male,35.0,0,0,26.29,Southampton,Mr
+703,0,Third class,Barbara Saiide,female,18.0,0,1,14.45,Cherbourg,Miss
+704,0,Third class,Gallagher Martin,male,25.0,0,0,7.74,Queenstown,Mr
+705,0,Third class,Hansen Henrik Juul,male,26.0,1,0,7.85,Southampton,Mr
+706,0,Second class,"Morley Henry Samuel (""Mr Henry Marshall"")",male,39.0,0,0,26.0,Southampton,Mr
+707,1,Second class,"Kelly Florence ""Fannie""",female,45.0,0,0,13.5,Southampton,Mrs
+708,1,First class,Calderhead Edward Pennington,male,42.0,0,0,26.29,Southampton,Mr
+709,1,First class,Cleaver Alice,female,22.0,0,0,151.55,Southampton,Miss
+710,1,Third class,"Moubarek Halim Gonios (""William George"")",male,29.5,1,1,15.25,Cherbourg,Master
+711,1,First class,"Mayne Berthe Antonine (""Mrs de Villiers"")",female,24.0,0,0,49.5,Cherbourg,Mlle
+712,0,First class,Klaber Herman,male,29.5,0,0,26.55,Southampton,Mr
+713,1,First class,Taylor Elmer Zebley,male,48.0,1,0,52.0,Southampton,Mr
+714,0,Third class,Larsson August Viktor,male,29.0,0,0,9.48,Southampton,Mr
+715,0,Second class,Greenberg Samuel,male,52.0,0,0,13.0,Southampton,Mr
+716,0,Third class,Soholt Peter Andreas Lauritz Andersen,male,19.0,0,0,7.65,Southampton,Mr
+717,1,First class,Endres Caroline Louise,female,38.0,0,0,227.52,Cherbourg,Miss
+718,1,Second class,"Troutt Edwina Celia ""Winnie""",female,27.0,0,0,10.5,Southampton,Miss
+719,0,Third class,McEvoy Michael,male,29.5,0,0,15.5,Queenstown,Mr
+720,0,Third class,Johnson Malkolm Joackim,male,33.0,0,0,7.78,Southampton,Mr
+721,1,Second class,"Harper Annie Jessie ""Nina""",female,6.0,0,1,33.0,Southampton,Miss
+722,0,Third class,Jensen Svend Lauritz,male,17.0,1,0,7.05,Southampton,Mr
+723,0,Second class,Gillespie William Henry,male,34.0,0,0,13.0,Southampton,Mr
+724,0,Second class,Hodges Henry Price,male,50.0,0,0,13.0,Southampton,Mr
+725,1,First class,Chambers Norman Campbell,male,27.0,1,0,53.1,Southampton,Mr
+726,0,Third class,Oreskovic Luka,male,20.0,0,0,8.66,Southampton,Mr
+727,1,Second class,Renouf Peter Henry (Lillian Jefferys),female,30.0,3,0,21.0,Southampton,Mrs
+728,1,Third class,Mannion Margareth,female,29.5,0,0,7.74,Queenstown,Miss
+729,0,Second class,Bryhl Kurt Arnold Gottfrid,male,25.0,1,0,26.0,Southampton,Mr
+730,0,Third class,Ilmakangas Pieta Sofia,female,25.0,1,0,7.92,Southampton,Miss
+731,1,First class,Allen Elisabeth Walton,female,29.0,0,0,211.34,Southampton,Miss
+732,0,Third class,Hassan Houssein G N,male,11.0,0,0,18.79,Cherbourg,Mr
+733,0,Second class,Knight Robert J,male,29.5,0,0,0.0,Southampton,Mr
+734,0,Second class,Berriman William John,male,23.0,0,0,13.0,Southampton,Mr
+735,0,Second class,Troupiansky Moses Aaron,male,23.0,0,0,13.0,Southampton,Mr
+736,0,Third class,Williams Leslie,male,28.5,0,0,16.1,Southampton,Mr
+737,0,Third class,Ford Edward (Margaret Ann Watson),female,48.0,1,3,34.38,Southampton,Mrs
+738,1,First class,Lesurer Gustave J,male,35.0,0,0,512.33,Cherbourg,Mr
+739,0,Third class,Ivanoff Kanio,male,29.5,0,0,7.9,Southampton,Mr
+740,0,Third class,Nankoff Minko,male,29.5,0,0,7.9,Southampton,Mr
+741,1,First class,Hawksford Walter James,male,29.5,0,0,30.0,Southampton,Mr
+742,0,First class,Cavendish Tyrell William,male,36.0,1,0,78.85,Southampton,Mr
+743,1,First class,"Ryerson Susan Parker ""Suzette""",female,21.0,2,2,262.38,Cherbourg,Miss
+744,0,Third class,McNamee Neal,male,24.0,1,0,16.1,Southampton,Mr
+745,1,Third class,Stranden Juho,male,31.0,0,0,7.92,Southampton,Mr
+746,0,First class,Crosby Edward Gifford,male,70.0,1,1,71.0,Southampton,Capt
+747,0,Third class,Abbott Rossmore Edward,male,16.0,1,1,20.25,Southampton,Mr
+748,1,Second class,Sinkkonen Anna,female,30.0,0,0,13.0,Southampton,Miss
+749,0,First class,Marvin Daniel Warner,male,19.0,1,0,53.1,Southampton,Mr
+750,0,Third class,Connaghton Michael,male,31.0,0,0,7.75,Queenstown,Mr
+751,1,Second class,Wells Joan,female,4.0,1,1,23.0,Southampton,Miss
+752,1,Third class,Moor Meier,male,6.0,0,1,12.48,Southampton,Master
+753,0,Third class,Vande Velde Johannes Joseph,male,33.0,0,0,9.5,Southampton,Mr
+754,0,Third class,Jonkoff Lalio,male,23.0,0,0,7.9,Southampton,Mr
+755,1,Second class,Herman Samuel (Jane Laver),female,48.0,1,2,65.0,Southampton,Mrs
+756,1,Second class,Hamalainen Viljo,male,0.67,1,1,14.5,Southampton,Master
+757,0,Third class,Carlsson August Sigfrid,male,28.0,0,0,7.8,Southampton,Mr
+758,0,Second class,Bailey Percy Andrew,male,18.0,0,0,11.5,Southampton,Mr
+759,0,Third class,Theobald Thomas Leonard,male,34.0,0,0,8.05,Southampton,Mr
+760,1,First class,Rothes of (Lucy Noel Martha Dyer-Edwards),female,33.0,0,0,86.5,Southampton,the Countess
+761,0,Third class,Garfirth John,male,29.5,0,0,14.5,Southampton,Mr
+762,0,Third class,Nirva Iisakki Antino Aijo,male,41.0,0,0,7.12,Southampton,Mr
+763,1,Third class,Barah Hanna Assi,male,20.0,0,0,7.23,Cherbourg,Mr
+764,1,First class,Carter William Ernest (Lucile Polk),female,36.0,1,2,120.0,Southampton,Mrs
+765,0,Third class,Eklund Hans Linus,male,16.0,0,0,7.78,Southampton,Mr
+766,1,First class,Hogeboom John C (Anna Andrews),female,51.0,1,0,77.96,Southampton,Mrs
+767,0,First class,Brewe Arthur Jackson,male,29.5,0,0,39.6,Cherbourg,Dr
+768,0,Third class,Mangan Mary,female,30.5,0,0,7.75,Queenstown,Miss
+769,0,Third class,Moran Daniel J,male,29.5,1,0,24.15,Queenstown,Mr
+770,0,Third class,Gronnestad Daniel Danielsen,male,32.0,0,0,8.36,Southampton,Mr
+771,0,Third class,Lievens Rene Aime,male,24.0,0,0,9.5,Southampton,Mr
+772,0,Third class,Jensen Niels Peder,male,48.0,0,0,7.85,Southampton,Mr
+773,0,Second class,Mack (Mary),female,57.0,0,0,10.5,Southampton,Mrs
+774,0,Third class,Elias Dibo,male,29.5,0,0,7.22,Cherbourg,Mr
+775,1,Second class,Hocking Elizabeth (Eliza Needs),female,54.0,1,3,23.0,Southampton,Mrs
+776,0,Third class,Myhrman Pehr Fabian Oliver Malkolm,male,18.0,0,0,7.75,Southampton,Mr
+777,0,Third class,Tobin Roger,male,29.5,0,0,7.75,Queenstown,Mr
+778,1,Third class,Emanuel Virginia Ethel,female,5.0,0,0,12.48,Southampton,Miss
+779,0,Third class,Kilgannon Thomas J,male,29.5,0,0,7.74,Queenstown,Mr
+780,1,First class,Robert Edward Scott (Elisabeth Walton McMillan),female,43.0,0,1,211.34,Southampton,Mrs
+781,1,Third class,Ayoub Banoura,female,13.0,0,0,7.23,Cherbourg,Miss
+782,1,First class,Dick Albert Adrian (Vera Gillespie),female,17.0,1,0,57.0,Southampton,Mrs
+783,0,First class,Long Milton Clyde,male,29.0,0,0,30.0,Southampton,Mr
+784,0,Third class,Johnston Andrew G,male,29.5,1,2,23.45,Southampton,Mr
+785,0,Third class,Ali William,male,25.0,0,0,7.05,Southampton,Mr
+786,0,Third class,Harmer Abraham (David Lishin),male,25.0,0,0,7.25,Southampton,Mr
+787,1,Third class,Sjoblom Anna Sofia,female,18.0,0,0,7.5,Southampton,Miss
+788,0,Third class,Rice George Hugh,male,8.0,4,1,29.12,Queenstown,Master
+789,1,Third class,Dean Bertram Vere,male,1.0,1,2,20.58,Southampton,Master
+790,0,First class,Guggenheim Benjamin,male,46.0,0,0,79.2,Cherbourg,Mr
+791,0,Third class,"Keane Andrew ""Andy""",male,29.5,0,0,7.75,Queenstown,Mr
+792,0,Second class,Gaskell Alfred,male,16.0,0,0,26.0,Southampton,Mr
+793,0,Third class,Sage Stella Anna,female,29.5,8,2,69.55,Southampton,Miss
+794,0,First class,Hoyt William Fisher,male,29.5,0,0,30.7,Cherbourg,Mr
+795,0,Third class,Dantcheff Ristiu,male,25.0,0,0,7.9,Southampton,Mr
+796,0,Second class,Otter Richard,male,39.0,0,0,13.0,Southampton,Mr
+797,1,First class,Leader Alice (Farnham),female,49.0,0,0,25.93,Southampton,Dr
+798,1,Third class,Osman Mara,female,31.0,0,0,8.68,Southampton,Mrs
+799,0,Third class,Ibrahim Shawah Yousseff,male,30.0,0,0,7.23,Cherbourg,Mr
+800,0,Third class,Van Impe Jean Baptiste (Rosalie Paula Govaert),female,30.0,1,1,24.15,Southampton,Mrs
+801,0,Second class,Ponesell Martin,male,34.0,0,0,13.0,Southampton,Mr
+802,1,Second class,Collyer Harvey (Charlotte Annie Tate),female,31.0,1,1,26.25,Southampton,Mrs
+803,1,First class,Carter William Thornton II,male,11.0,1,2,120.0,Southampton,Master
+804,1,Third class,Thomas Assad Alexander,male,0.42,0,1,8.52,Cherbourg,Master
+805,1,Third class,Hedman Oskar Arvid,male,27.0,0,0,6.98,Southampton,Mr
+806,0,Third class,Johansson Karl Johan,male,31.0,0,0,7.78,Southampton,Mr
+807,0,First class,Andrews Thomas Jr,male,39.0,0,0,0.0,Southampton,Mr
+808,0,Third class,Pettersson Ellen Natalia,female,18.0,0,0,7.78,Southampton,Miss
+809,0,Second class,Meyer August,male,39.0,0,0,13.0,Southampton,Mr
+810,1,First class,Chambers Norman Campbell (Bertha Griggs),female,33.0,1,0,53.1,Southampton,Mrs
+811,0,Third class,Alexander William,male,26.0,0,0,7.89,Southampton,Mr
+812,0,Third class,Lester James,male,39.0,0,0,24.15,Southampton,Mr
+813,0,Second class,Slemen Richard James,male,35.0,0,0,10.5,Southampton,Mr
+814,0,Third class,Andersson Ebba Iris Alfrida,female,6.0,4,2,31.28,Southampton,Miss
+815,0,Third class,Tomlin Ernest Portage,male,30.5,0,0,8.05,Southampton,Mr
+816,0,First class,Fry Richard,male,29.5,0,0,0.0,Southampton,Mr
+817,0,Third class,Heininen Wendla Maria,female,23.0,0,0,7.92,Southampton,Miss
+818,0,Second class,Mallet Albert,male,31.0,1,1,37.0,Cherbourg,Mr
+819,0,Third class,Holm John Fredrik Alexander,male,43.0,0,0,6.45,Southampton,Mr
+820,0,Third class,Skoog Karl Thorsten,male,10.0,3,2,27.9,Southampton,Master
+821,1,First class,Hays Charles Melville (Clara Jennings Gregg),female,52.0,1,1,93.5,Southampton,Mrs
+822,1,Third class,Lulic Nikola,male,27.0,0,0,8.66,Southampton,Mr
+823,0,First class,Reuchlin John George,male,38.0,0,0,0.0,Southampton,Jonkheer
+824,1,Third class,Moor (Beila),female,27.0,0,1,12.48,Southampton,Mrs
+825,0,Third class,Panula Urho Abraham,male,2.0,4,1,39.69,Southampton,Master
+826,0,Third class,Flynn John,male,29.5,0,0,6.95,Queenstown,Mr
+827,0,Third class,Lam Len,male,29.5,0,0,56.5,Southampton,Mr
+828,1,Second class,Mallet Andre,male,1.0,0,2,37.0,Cherbourg,Master
+829,1,Third class,McCormack Thomas Joseph,male,29.5,0,0,7.75,Queenstown,Mr
+830,1,First class,Stone George Nelson (Martha Evelyn),female,62.0,0,0,80.0,Queenstown,Mrs
+831,1,Third class,Yasbeck Antoni (Selini Alexander),female,15.0,1,0,14.45,Cherbourg,Mrs
+832,1,Second class,Richards George Sibley,male,0.83,1,1,18.75,Southampton,Master
+833,0,Third class,Saad Amin,male,29.5,0,0,7.23,Cherbourg,Mr
+834,0,Third class,Augustsson Albert,male,23.0,0,0,7.85,Southampton,Mr
+835,0,Third class,Allum Owen George,male,18.0,0,0,8.3,Southampton,Mr
+836,1,First class,Compton Sara Rebecca,female,39.0,1,1,83.16,Cherbourg,Miss
+837,0,Third class,Pasic Jakob,male,21.0,0,0,8.66,Southampton,Mr
+838,0,Third class,Sirota Maurice,male,29.5,0,0,8.05,Southampton,Mr
+839,1,Third class,Chip Chang,male,32.0,0,0,56.5,Southampton,Mr
+840,1,First class,Marechal Pierre,male,29.5,0,0,29.7,Cherbourg,Mr
+841,0,Third class,Alhomaki Ilmari Rudolf,male,20.0,0,0,7.92,Southampton,Mr
+842,0,Second class,Mudd Thomas Charles,male,16.0,0,0,10.5,Southampton,Mr
+843,1,First class,Serepeca Augusta,female,30.0,0,0,31.0,Cherbourg,Miss
+844,0,Third class,Lemberopolous Peter L,male,34.5,0,0,6.44,Cherbourg,Mr
+845,0,Third class,Culumovic Jeso,male,17.0,0,0,8.66,Southampton,Mr
+846,0,Third class,Abbing Anthony,male,42.0,0,0,7.55,Southampton,Mr
+847,0,Third class,Sage Douglas Bullen,male,29.5,8,2,69.55,Southampton,Mr
+848,0,Third class,Markoff Marin,male,35.0,0,0,7.9,Cherbourg,Mr
+849,0,Second class,Harper John,male,28.0,0,1,33.0,Southampton,Rev
+850,1,First class,Goldenberg Samuel L (Edwiga Grabowska),female,29.5,1,0,89.1,Cherbourg,Mrs
+851,0,Third class,Andersson Sigvard Harald Elias,male,4.0,4,2,31.28,Southampton,Master
+852,0,Third class,Svensson Johan,male,74.0,0,0,7.78,Southampton,Mr
+853,0,Third class,Boulos Nourelain,female,9.0,1,1,15.25,Cherbourg,Miss
+854,1,First class,Lines Mary Conover,female,16.0,0,1,39.4,Southampton,Miss
+855,0,Second class,Carter Ernest Courtenay (Lilian Hughes),female,44.0,1,0,26.0,Southampton,Mrs
+856,1,Third class,Aks Sam (Leah Rosen),female,18.0,0,1,9.35,Southampton,Mrs
+857,1,First class,Wick George Dennick (Mary Hitchcock),female,45.0,1,1,164.87,Southampton,Mrs
+858,1,First class,Daly Peter Denis,male,51.0,0,0,26.55,Southampton,Mr
+859,1,Third class,Baclini Solomon (Latifa Qurban),female,24.0,0,3,19.26,Cherbourg,Mrs
+860,0,Third class,Razi Raihed,male,29.5,0,0,7.23,Cherbourg,Mr
+861,0,Third class,Hansen Claus Peter,male,41.0,2,0,14.11,Southampton,Mr
+862,0,Second class,Giles Frederick Edward,male,21.0,1,0,11.5,Southampton,Mr
+863,1,First class,Swift Frederick Joel (Margaret Welles Barron),female,48.0,0,0,25.93,Southampton,Mrs
+864,0,Third class,"Sage Dorothy Edith ""Dolly""",female,29.5,8,2,69.55,Southampton,Miss
+865,0,Second class,Gill John William,male,24.0,0,0,13.0,Southampton,Mr
+866,1,Second class,Bystrom (Karolina),female,42.0,0,0,13.0,Southampton,Mrs
+867,1,Second class,Duran y More Asuncion,female,27.0,1,0,13.86,Cherbourg,Miss
+868,0,First class,Roebling Washington Augustus II,male,31.0,0,0,50.5,Southampton,Mr
+869,0,Third class,van Melkebeke Philemon,male,29.5,0,0,9.5,Southampton,Mr
+870,1,Third class,Johnson Harold Theodor,male,4.0,1,1,11.13,Southampton,Master
+871,0,Third class,Balkic Cerin,male,26.0,0,0,7.9,Southampton,Mr
+872,1,First class,Beckwith Richard Leonard (Sallie Monypeny),female,47.0,1,1,52.55,Southampton,Mrs
+873,0,First class,Carlsson Frans Olof,male,33.0,0,0,5.0,Southampton,Mr
+874,0,Third class,Vander Cruyssen Victor,male,47.0,0,0,9.0,Southampton,Mr
+875,1,Second class,Abelson Samuel (Hannah Wizosky),female,28.0,1,0,24.0,Cherbourg,Mrs
+876,1,Third class,"Najib Adele Kiamie ""Jane""",female,15.0,0,0,7.22,Cherbourg,Miss
+877,0,Third class,Gustafsson Alfred Ossian,male,20.0,0,0,9.85,Southampton,Mr
+878,0,Third class,Petroff Nedelio,male,19.0,0,0,7.9,Southampton,Mr
+879,0,Third class,Laleff Kristo,male,29.5,0,0,7.9,Southampton,Mr
+880,1,First class,Potter Thomas Jr (Lily Alexenia Wilson),female,56.0,0,1,83.16,Cherbourg,Mrs
+881,1,Second class,Shelley William (Imanita Parrish Hall),female,25.0,0,1,26.0,Southampton,Mrs
+882,0,Third class,Markun Johann,male,33.0,0,0,7.9,Southampton,Mr
+883,0,Third class,Dahlberg Gerda Ulrika,female,22.0,0,0,10.52,Southampton,Miss
+884,0,Second class,Banfield Frederick James,male,28.0,0,0,10.5,Southampton,Mr
+885,0,Third class,Sutehall Henry Jr,male,25.0,0,0,7.05,Southampton,Mr
+886,0,Third class,Rice William (Margaret Norton),female,39.0,0,5,29.12,Queenstown,Mrs
+887,0,Second class,Montvila Juozas,male,27.0,0,0,13.0,Southampton,Rev
+888,1,First class,Graham Margaret Edith,female,19.0,0,0,30.0,Southampton,Miss
+889,0,Third class,"Johnston Catherine Helen ""Carrie""",female,29.5,1,2,23.45,Southampton,Miss
+890,1,First class,Behr Karl Howell,male,26.0,0,0,30.0,Cherbourg,Mr
+891,0,Third class,Dooley Patrick,male,32.0,0,0,7.75,Queenstown,Mr

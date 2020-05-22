@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 78 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="Calque_2">
+        <g id="Calque_1-2">
+            <path d="M0,25.7L77,25.7L69.66,12.6L77,0L0,0L0,25.7Z" style="fill:rgb(244,192,0);fill-rule:nonzero;"/>
+            <path d="M77.5,25.5L70.5,29.5L0.5,29.5L0.5,25.7L77.5,25.5Z" style="fill:rgb(46,48,49);fill-rule:nonzero;"/>
+            <circle cx="63.5" cy="12.5" r="2.5" style="fill:rgb(46,48,49);"/>
+            <g transform="matrix(1,0,0,1,7.53,18.67)">
+                <text x="0px" y="0px" style="font-family:'LucidaGrande-Bold', 'Lucida Grande', sans-serif;font-weight:600;font-size:14px;fill:rgb(46,48,49);">Python</text>
+            </g>
+        </g>
+    </g>
+</svg>

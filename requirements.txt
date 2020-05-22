@@ -1,0 +1,17 @@
+plotly
+numpy
+# sorted in alphabetical order
+pickle
+pathlib
+pandas
+types
+python-dotenv
+dash-bootstrap-components==0.4.0
+dash==0.40.0
+dash-core-components==0.45.0
+dash-dangerously-set-inner-html==0.0.2
+dash-daq==0.1.0
+dash-html-components==0.15.0
+dash-renderer==0.21.0
+dash-table==3.6.0
+dash-table-experiments==0.6.0

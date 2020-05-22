@@ -1,31 +1,122 @@
-:warning: **This is a template projet to open source your code, more details [here](https://github.com/MAIF/project-template/wiki/Open-sourcing-your-project)** :warning: 
+# Shapash
 
-# Your project
+<p align="center">
+  <img src="docs/_static/shapash-resize.png" width="400" title="logo">
+</p>
 
-[![Build Status](https://travis-ci.org/MAIF/your-project.svg?branch=master)](https://travis-ci.org/MAIF/your-project) [![Join the chat at https://gitter.im/MAIF/your-project](https://badges.gitter.im/MAIF/your-project.svg)](https://gitter.im/MAIF/your-project?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [ ![Download](https://img.shields.io/github/release/MAIF/your-project.svg) ](https://dl.bintray.com/maif/binaries/your-project.jar/1.0.0/your-project.jar)
+[![Build Status](https://api.travis-ci.org/MAIF/diaphane.svg?branch=master)](https://travis-ci.org/MAIF/Diaphane)
 
-**Your project** is a very nice tool written in Java and developped by the <a href="https://maif.github.io" target="_blank">MAIF</a> team .
+# Overview
 
-## Reference Documentation
+**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone
 
-The reference documentation is available at [https://maif.github.io/your-project/documentation/](https://maif.github.io/project-template/documentation/)
+**The objectives pursued by shapash:**
+- To display clear and understandable results: Plots and outputs use **explicit labels** for each feature and its modalities:
+<p align="center">
+  <img src="docs/_static/shapash-contribution_plot-example.png" width="700" title="contrib">
+</p>
 
-## Community
-You can join these groups and chats to discuss and ask your-project related questions:
+- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability., and understand how the different features contribute:
 
-- Issue tracker: [![github: MAIF/your-project/issues](https://img.shields.io/github/issues/MAIF/your-project.svg)](https://github.com/MAIF/your-project/issues)
-- Pull request: [![github: MAIF/your-project/pulls](https://img.shields.io/github/issues-pr/MAIF/your-project.svg)](https://github.com/MAIF/your-project/pulls)
-- Chat room: [![Join the chat at https://gitter.im/MAIF/your-project](https://badges.gitter.im/MAIF/your-project.svg)](https://gitter.im/MAIF/your-project?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+*LINK + GIF*
 
-## Contributing
+- To **Summarize and export** the local explanation:
+<p align="center">
+  <img src="docs/_static/shapash-to_pandas-example.png" width="700" title="contrib">
+</p>
 
-Contributions are *very* welcome!
+<p align="center">
+  <img src="docs/_static/shapash-local_plot-example.png" width="700" title="contrib">
+</p>
 
-If you see an issue that you'd like to see fixed, the best way to make it happen is to help out by submitting a pull request implementing it.
+  > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to an summarized and explicit explanation
+  
 
-Refer to the [CONTRIBUTING.md](https://github.com/MAIF/your-project/blob/master/.github/CONTRIBUTING.md) file for more details about the workflow,
-and general hints on how to prepare your pull request. You can also ask for clarifications or guidance in GitHub issues directly.
+- To discuss results: **Shapash** allows Data Scientists to easily share and discuss their results with non-Data users
 
-## License
+**How does shapash work?** <br />
 
-Your project is Open Source and available under the Apache 2 License.
+**Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
+to compute contributions.
+**Shapash** relies on the different steps necessary to build a Machine Learning model to make the results understandable.
+
+<p align="center">
+  <img src="docs/_static/shapash-diagram.png" width="900" title="diagram">
+</p>
+
+
+# User Manual
+
+**Shapash** works for Regression, Binary Classification or Multiclass problem. <br />
+It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*. <br />
+Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary. <br />
+
+You can use Shap or Lime, compute your own local contributions and use **Shapash** to display plot or summarize it. <br />
+
+Using **Shapash** is simple and requires only a few lines of code. <br />
+Most parameters are optional, you can displays plots effortlessly. <br />
+
+But you can also tune plots and outputs, specifying labels dict, features dict, encoders, predictions, ... : 
+The more you specify parameters, options, dictionaries and more the outputs will be understandable
+
+
+## Installation
+
+```
+pip install shapash
+```
+
+## Getting Start: 3 minutes to shapash
+
+The 3 steps to display results:
+
+- Step 1: Declare SmartExplainer Object
+  > You can declare features dict here to specify the labels to display
+
+```
+from shapash.explainer.smart_explainer import SmartExplainer
+xpl = SmartExplainer(features_dict=house_dict) # optional parameter
+```
+
+- Step 2: Compile Model, Dataset, Encoders, ...
+  > There are 2 mandatory parameters in compile method: Model and Dataset
+ 
+```
+xpl.compile(
+    x=Xtest,
+    model=regressor,
+    preprocessing=encoder, # Optional: compile step can use inverse_transform method
+    y_pred=y_pred # Optional
+)
+```  
+
+- Step 3: Display output
+  > There are several outputs and plots available. for example, you can launch the web app:
+
+```
+app = xpl.run_app()
+``` 
+
+*LINK TO STAND ALONE APP*
+
+## Tutorials
+This github repository offers a lot of tutorials to allow you to start more concretely in the use of Shapash.
+
+### More Precise Overview
+- [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
+- [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
+
+### More details about charts and plots
+- [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
+- [Contribution plot to understand how one feature affects a prediction](tutorial/plot/tuto-plot02-contribution_plot.ipynb)
+- [Summarize, display and export local contribution using filter and local_plot method](tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb)
+- Compare Plot  - TO DO*
+
+### The different ways to use Encoders and Dictionaries
+- *Use Category_Encoders - TO DO*
+- *Use ColumnTransformers - TO DO*
+- *Use a Simple Dict - TO DO*
+
+### How to use shapash with Shap or Lime compute
+- [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
+- [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)

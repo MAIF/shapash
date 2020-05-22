@@ -1,0 +1,107 @@
+:root {
+    --main-color: #f4c000;
+    --bkg-color: #343736;
+}
+
+#shapash_title {
+    color: var(--main-color) !important;
+    padding-left: 20px !important;
+    margin: 0
+}
+
+#shapash_title hover,a {
+    text-decoration: none !important;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 10px;
+    color: #2e404f;
+    position: relative;
+    /*margin: 0.8rem 0.25rem 0.5rem 0.255rem;*/
+    -webkit-transition: -webkit-box-shadow .25s;
+    border-radius: 2px;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
+    /*transition: all 0.5s linear;*/
+}
+
+.card_filter {
+    /*background-color: #A1B8DD;*/
+    /*padding: 5px 5px 5px 5px;*/
+    /*color: #2e404f;*/
+    position: relative;
+    /*margin: 1rem 0.5rem 0rem 0.5rem;*/
+}
+
+/*      SLIDER     */
+.rc-slider-track {
+  background-color: var(--main-color);
+}
+.rc-slider-dot-active {
+  border-color: var(--bkg-color);
+  border: solid 2px var(--bkg-color);
+}
+.rc-slider-handle {
+  border-color: var(--bkg-color);
+}
+.rc.slider-handle-active:active {
+  border-color: var(--main-color);
+}
+#max_contrib_id, #threshold_id {
+    padding: 0px 5px 20px !important;
+}
+
+/*   CHECKBOX     */
+.custom-control-input:checked~.custom-control-label::before {
+    border-color: var(--bkg-color) !important;
+    background-color: var(--main-color) !important;
+}
+.custom-checkbox .custom-control-input:checked~.custom-control-label::after {
+    background-image: none !important;
+}
+
+/*   SELECT CONTROL*/
+.Select--multi .Select-value {
+    color: var(--bkg-color) !important;
+    background-color: var(--main-color) !important;
+}
+
+#datatable-interactivity > div.dash-spreadsheet-container.dash-spreadsheet.dash-empty-01.dash-fill-width > div > div.row.row-1 {
+    margin-right: 0px !important; 
+    margin-left: 0px !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td.focused {
+    background-color : var(--main-color) !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
+    --accent: lightgrey !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner [class^='column-header--sort'] {
+    float: right !important;
+    margin-left: 5px;
+}
+
+.dock-expand {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background-color: white;
+    border-radius: 26px;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
+    text-align:center;
+    cursor: pointer;
+    z-index: 998;
+}
+#dataset > div.dash-spreadsheet-container.dash-spreadsheet.dash-freeze-top.dash-list-view.dash-fill-width > div{
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.dash-spreadsheet.dash-freeze-top, .dash-spreadsheet.dash-virtualized {
+    max-height: 1;
+}
