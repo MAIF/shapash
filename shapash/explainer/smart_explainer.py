@@ -37,20 +37,23 @@ class SmartExplainer:
     The SmartExplainer Attributes:
     ----------
     data : dict
-        Three elements of size (n_samples, n_features), that should be regarded as a single array
+        Data dictionary has 3 entries. Each key returns a pd.DataFrame (regression) or a list of pd.DataFrame
+        (classification - The length of the lists is equivalent to the number of labels.
+        All pd.DataFrame have she same shape (n_samples, n_features).
+        For the regression case, data that should be regarded as a single array
         of size (n_samples, n_features, 3).
 
-        data['contrib_sorted']: pandas.DataFrame or list
+        data['contrib_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             Contains local contributions of the prediction set, with common line index.
             Columns are 'contrib_1', 'contrib_2', ... and contains the top contributions
             for each line from left to right. In multi-class problems, this is a list of
             contributions, one for each class.
-        data['var_dict']: pandas.DataFrame or list
+        data['var_dict']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             Must contains only ints. It gives for each line the list of most import features
             regarding the local decomposition. In order to save space, columns are denoted by
             integers, the conversion being done with the columns_dict member. In multi-class
             problems, this is a list of dataframes, one for each class.
-        data['x_sorted']: pandas.DataFrame or list
+        data['x_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             It gives for each line the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
 
@@ -520,8 +523,8 @@ class SmartExplainer:
 
         """
         The filter method is an important method which allows to summarize the local explainability
-        by using the user defined parameters defined by the  which correspond to its use case.
-        filter method is used with the local_plot method of Smarplotter to see the concrete result of this summary
+        by using the user defined parameters which correspond to its use case.
+        Filter method is used with the local_plot method of Smarplotter to see the concrete result of this summary
         with a local contribution barchart
 
         Please, watch the local_plot tutorial to see how these two methods are combined with a concrete example
@@ -584,7 +587,7 @@ class SmartExplainer:
         Parameters
         ----------
         path : str
-            File path where the pickled dict will be stored.
+            File path to store the pickle file
         protocol : int
             Int which indicates which protocol should be used by the pickler,
             default HIGHEST_PROTOCOL
@@ -601,11 +604,19 @@ class SmartExplainer:
 
     def load(self, path):
         """
-        Load a dict and define its entries as attributes of the explainer
+        Load method allows Shapash user to use pikled SmartExplainer.
+        To use this method you must first declare your SmartExplainer object
+        Watch the following example
+
         Parameters
         ----------
         path : str
-            File path where the pickled dict is stored.
+            File path of the pickle file.
+
+        Example
+        --------
+        >>> xpl = SmartExplainer()
+        >>> xpl.load('path_to_pkl/xpl.pkl')
         """
         dict_to_load = load_pickle(path)
         if isinstance(dict_to_load, dict):
@@ -627,8 +638,20 @@ class SmartExplainer:
             proba=False
     ):
         """
-        Create a pandas DataFrame containing the explanation
-        associated with the predicted value of each row
+        The to_pandas method allows to export the summary of local explainability
+        This method proposes a set of parameters to summarize the explainability of each point.
+        If the user does not specify any, the to_pandas method uses the parameter specified during
+        the last execution of the filter method.
+
+        In classification case, The method to_pandas summarizes the explicability which corresponds
+        to the predicted values specified by the user (with compile or add method).
+        the proba parameter displays the corresponding predict proba value for each point
+        In classification case, There are 2 ways to use this to pandas method.
+        - Provide a real prediction set to explain
+        - Focus on a constant target value and look at the proba and explainability corresponding to each point.
+        (in that case, specify a constant pd.Series with add or compile method)
+
+        Examples are presented in the tutorial local_plot (please check tutorial part of this doc)
 
         Parameters
         ----------
@@ -735,10 +758,12 @@ class SmartExplainer:
 
     def run_app(self, port: int = None, host: str = None) -> CustomThread:
         """
-        Launch the interpretability web app associated with the shapash object.
-        Based on App class (see webapp folder).
-        Default host is 0.0.0.0 (localhost)
+        run_app method launches the interpretability web app associated with the shapash object.
+        run_app method can be used directly in a Jupyter notebook
+        The link to the webapp is directly mentioned in the Jupyter output
         Use object.kill() method to kill the current instance
+
+        Examples are presented in the web_app tutorial (please check tutorial part of this doc)
         
         Parameters
         ----------
@@ -748,10 +773,16 @@ class SmartExplainer:
         host: str (default: None)
             The default host is '0.0.0.0'. You can specify a custom
             ip address for your app
+
         Returns
         -------
         CustomThread
             Return the thread instance of your server.
+
+        Example
+        --------
+        >>> app = xpl.run_app()
+        >>> app.kill()
         """
         if hasattr(self, '_case'):
             self.smartapp = SmartApp(self)

@@ -1,10 +1,7 @@
 SmartExplainer Object
 =========================
 
-Submodules
-----------
-
-shapash.explainer.smart\_explainer.SmartExplainer class
+SmartExplainer class
 -----------------------------------------
 
 .. autoclass:: shapash.explainer.smart_explainer.SmartExplainer
@@ -12,7 +9,7 @@ shapash.explainer.smart\_explainer.SmartExplainer class
    :undoc-members:
    :show-inheritance:
 
-shapash.explainer.smart\_plotter.SmartPlotter class
+SmartPlotter class
 ---------------------------------------
 
 .. autoclass:: shapash.explainer.smart_plotter.SmartPlotter

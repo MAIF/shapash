@@ -16,8 +16,8 @@ Shapash is an overlay package for libraries dedicated to the interpretability of
 to compute contributions.
 Shapash relies on the different steps necessary to build a Machine Learning model to make the results understandable.
 
-.. image:: ../_static/shapash-resize.png
-   :width: 500px
+.. image:: _static/shapash-resize.png
+   :width: 300px
    :align: center
 
 
