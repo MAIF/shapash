@@ -26,10 +26,9 @@ requirements = [
         'dash-table-experiments>=0.6.0'
     ]
 
+setup_requirements = ['pytest-runner', ]
 
-with open('requirements.dev.txt') as f:
-    requirements_dev = f.read().splitlines()
-
+test_requirements = ['pytest', ]
 
 setup(
     name="shapash", # Replace with your own username
@@ -59,8 +58,8 @@ setup(
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
               'shapash.utils', 'shapash.webapp'],
-    setup_requires=requirements,
+    setup_requires=setup_requirements,
     test_suite='tests',
-    tests_require=requirements_dev,
+    tests_require=test_requirements,
     zip_safe=False,
 )
