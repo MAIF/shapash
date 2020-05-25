@@ -23,11 +23,15 @@ from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 
-
 logging.basicConfig(level=logging.INFO)
 
 class SmartExplainer:
     """
+    The SmartExplainer class is the main object of the Shapash library.
+    It allows the Data Scientists to perform a multitude of operations
+    linking encoders, models, predictions and datasets: Several methods
+    are available to the user
+
     Easy manipulation and ordering of any local decomposition.
 
     Attributes
@@ -49,16 +53,18 @@ class SmartExplainer:
         data['x_sorted']: pandas.DataFrame or list
             It gives for each line the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
-    x : pandas.DataFrame
+    x_init : pandas.DataFrame
         Prediction set input to analyse. Input used for predict and predict_proba method of model
     x_pred : pandas.DataFrame
-        Prediction set with inverse trasformation.
+        Prediction set with inverse transformation.
     y_pred : pandas.DataFrame
         Prediction values.
     contributions: pandas.DataFrame or list
         Local contributions with preprocessing taken into account (e.g. one-hot encoding).
     features_dict: dict
         Dictionary mapping technical feature names to domain names.
+    features_desc: dict
+        Value counts of each feature
     inv_features_dict: dict
         Inverse features_dict mapping.
     label_dict: dict
@@ -94,7 +100,7 @@ class SmartExplainer:
 
     def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None):
         """
-        The compile method is the first step to understand model and predic. It performs the sorting
+        The compile method is the first step to understand model and predict. It performs the sorting
         of contributions, the reverse preprocessing steps and performs
         all the calculations necessary for a quick display of plots
         and efficient display of summary of explanation.
@@ -102,7 +108,7 @@ class SmartExplainer:
 
         Parameters
         ----------
-        contributions : pandas.DataFrame, np.ndarray or list
+        contributions : pandas.DataFrame, np.ndarray or list - optional
             single or multiple contributions (multi-class) to handle.
             if pandas.Dataframe, the index and columns should be share with the prediction set.
             if np.ndarray, index and columns will be generated according to prediction set
@@ -117,8 +123,14 @@ class SmartExplainer:
         y_pred : pandas.Series, optional (default: None)
             Prediction values (1 column only).
             The index must be identical to the index of x_pred.
-        preprocessing : object, optional (default: None)
-            A scikit-learn or category_encoders encoding step (e.g. OneHotEncoder)
+        preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+            A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+            A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
+            A list with multiple category_encoders with optional (dict, list of dict)
+            A list with a single ColumnTransformer with optional (dict, list of dict)
+            A dict
+            A list of dict
+
         """
         self.x_init = x
         self.x_pred = inverse_transform(self.x_init, preprocessing)
@@ -188,7 +200,6 @@ class SmartExplainer:
             self.features_dict = features_dict
             self.check_features_dict()
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
-
 
     def choose_state(self, contributions):
         """
@@ -273,7 +284,7 @@ class SmartExplainer:
                     """
                 )
 
-        return self.state.validate_contributions(contributions, self.x_pred)
+        return self.state.validate_contributions(contributions, self.x_init)
 
     def apply_preprocessing(self, contributions, preprocessing=None):
         """

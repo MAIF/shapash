@@ -96,7 +96,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl._case = "classification"
         xpl._classes = list(model._classes)
         xpl.state = xpl.choose_state(contributions)
-        xpl.x_pred = pd.DataFrame(
+        xpl.x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],

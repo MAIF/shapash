@@ -7,10 +7,9 @@ import pandas as pd
 import numpy as np
 import category_encoders as ce
 from shapash.decomposition.contributions import inverse_transform_contributions
-from shapash.decomposition.contributions import make_mapping_dict, get_origin_column_name
 from shapash.decomposition.contributions import compute_contributions, rank_contributions
 
-
+    
 class TestContributions(unittest.TestCase):
     """
     Unit test class of contributions
@@ -136,77 +135,3 @@ class TestContributions(unittest.TestCase):
         assert pd.Index.equals(s_ord.index, expected_s_ord.index)
         assert pd.Index.equals(x_ord.index, expected_x_ord.index)
         assert pd.Index.equals(s_dict.index, expected_s_dict.index)
-
-    def test_make_mapping_dict_1(self):
-        """
-        Unit test make mapping dict 1
-        """
-        mapping = [
-            {'col': 'Sector',
-             'mapping': pd.DataFrame(
-                 data=np.array([[1, 2], [3, 4]]),
-                 index=[0, 1],
-                 columns=['Sector_0', 'Sector_1']
-             )
-            },
-            {'col': 'Game',
-             'mapping': pd.DataFrame(
-                 data=np.array([[5, 6, 7], [8, 9, 10]]),
-                 index=[0, 1],
-                 columns=['Game_0', 'Game_1', 'Game_3'])
-             },
-        ]
-        output = make_mapping_dict(mapping)
-        expected = {
-            'Sector': ['Sector_0', 'Sector_1'],
-            'Game': ['Game_0', 'Game_1', 'Game_3']
-        }
-        self.assertDictEqual(output, expected)
-
-    def test_get_origin_column_name_1(self):
-        """
-        Unit test get origin column name 1
-        """
-        encoded_column_name = 'Game_1'
-        mapping_dict = {
-            'Sector': ['Sector_0', 'Sector_1'],
-            'Game': ['Game_0', 'Game_1', 'Game_3']
-        }
-        output = get_origin_column_name(encoded_column_name, mapping_dict)
-        assert output == 'Game'
-
-    def test_inverse_transform_contributions_1(self):
-        """
-        Unit test inverse transform contributions 1
-        """
-        contributions = pd.DataFrame(np.random.rand(10, 15))
-        preprocessing = None
-        output = inverse_transform_contributions(contributions, preprocessing)
-        pd.testing.assert_frame_equal(output, contributions)
-
-    @patch('shapash.decomposition.contributions.make_mapping_dict')
-    def test_inverse_transform_contributions_2(self, mock_make_mapping_dict):
-        """
-        Unit test inverse transform contributions 2
-        TODO: Docstring
-        Parameters
-        ----------
-        mock_make_mapping_dict : [type]
-            [description]
-        """
-        mock_make_mapping_dict.return_value = {
-            'Sector': ['Sector_0', 'Sector_1'],
-            'Game': ['Game_0', 'Game_1', 'Game_2']
-        }
-        contributions = pd.DataFrame(
-            data=[[1, 2, 3], [4, 5, 0]],
-            columns=['Sector_0', 'Sector_1', 'Game_0']
-        )
-        preprocessing = Mock(spec=ce.BaseNEncoder)
-        preprocessing.mapping = []
-        output = inverse_transform_contributions(contributions, preprocessing)
-        expected_output = pd.DataFrame(
-            data=[[3, 3], [9, 0]],
-            columns=['Sector', 'Game']
-        )
-        pd.testing.assert_frame_equal(output, expected_output)

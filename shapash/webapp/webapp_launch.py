@@ -5,6 +5,9 @@ This is an example in python how to launch app from explainer
 from sklearn.model_selection import train_test_split
 from lightgbm import LGBMClassifier, LGBMRegressor
 import pandas as pd
+from category_encoders import OrdinalEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 import shap
 # TODO: Remove the next 4 lines, these lines allow you to run locally the code and import shapash content
 import os,sys,inspect
@@ -17,11 +20,12 @@ from explainer.smart_explainer import SmartExplainer
 from category_encoders import one_hot
 
 cases = {
-    '1': 'regression',
-    '2': 'binary classification',
-    '3': 'multi class classification',
+    '1': 'Titanic regression',
+    '2': 'Titanic binary classification',
+    '3': 'Titanic multi class classification',
 }
-case = 3
+
+case = 1
 
 titanic = pd.read_pickle('../../tests/data/clean_titanic.pkl')
 if case == 1:
@@ -71,7 +75,7 @@ y_pred = pd.DataFrame(data=y_pred,
 
 # xpl.compile(contributions[0], X_test, y_pred=y_pred)
 xpl.compile(X_test, model, contributions, y_pred=y_pred, preprocessing=encoder)
-app = xpl.run_app(port='8050')
+app = xpl.run_app(port='8051')
 #sleep(10) # This value is the time to keepalive the server. (Now need to be used in notebook to keepalive and kill it when you want)
 #app.kill()
 # s_dict = xpl.data['var_dict']
