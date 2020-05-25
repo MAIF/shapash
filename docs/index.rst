@@ -24,8 +24,17 @@
 Provide a SmartExplainer class to understand your model and summarize explanation with a simple syntax
 Very few arguments are required to display results. But the more you work on cleaning and documenting the data, the clearer the results will be for the end user
 
+The objectives of shapash:
+
+To display clear and understandable results: Plots and outputs use explicit labels for each feature and its modalities:
+
+.. image:: ./_static/shapash-contribution_plot-example.png
+   :width: 500px
+   :align: center
+
 .. toctree::
    :maxdepth: 3
+
 
    overview
    tutorials/index

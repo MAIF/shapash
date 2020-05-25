@@ -3,13 +3,13 @@ python:
 - 3.6
 install: pip install -U tox-travis
 script: tox
-# deploy:
-#   provider: pypi
-#   distributions: sdist bdist_wheel
-#   user: qmaif
-#   password:
-#     secure: jJqysgA7honYOH+uiJLpKv/yu/Jt5AKu4MZQNgtCkdXONij1IliYseMosrxYFT1xmtZWQ3L1BQhZUXzepjdVvKGra+8YwG/MY2oEA4d/8emjtQseVqTLpF1PCb9k9ZOUeY8ztISCBAVoLOk1kEecLrSgromewyhDNJy+UIg9wfqVDMrbG5C7iv2whoSiK4doVUBpux05K20gm7JesV3htHn3KQK3ccrzFjyGIdYTErHha5aMoYv89+Z2lGvUrNo6VmaT1aWGKoGAEYnuOmBi8BHuBXeETZsH0XNm4ICmqHE8OUEkWsZmw1I+dglS5PvW23Z7F1kZuBlhrJf1txX+aT+h3VOgoam6x0TzxG7jIQMqRF6LP0ovn7U+lxNmaT1CeQ/rcKL2ahSQm4KuBcVNvEx/TiyP3Yy9Yml5nf19h67V9Ikl3bEOL2T9Hxtsywh4cXbMYm1qnDo6nnLAG0DXPOze+sQLYtaz21y2ZOrCj2nOjxt36TvFC3eu71kCmRIIRR4njhj0rMx0JAPgRNuuvyaZYwesEIsONp6OL6YG9so1fsOInA+hjmsF2bSHWuDqj8RuqrS6V7TRIxDBK1ssMUEbrCq3tgo3+XZ8KWwMEYtLSjH0uqbFgl+W5wIb8cwFKn7LdcOtOZMGr/bvJpzsLAxkhrznrb+tM6/ihCS2Lsk=
-#   on:
-#     tags: true
-#     repo: MAIF/melusine
-#     python: 3.6
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: sMaif
+  password:
+    secure: AgEIcHlwaS5vcmcCJGRhMjA4ZTE5LTVkNzUtNDNjMS05MmNmLTY4ZTllODkxMmE5MwACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgjXRetD-PHTHFFqs2HpkJdhHUTJqQiLi6Goxr5S_jTJk
+  on:
+    tags: true
+    repo: MAIF/shapash
+    python: 3.6
