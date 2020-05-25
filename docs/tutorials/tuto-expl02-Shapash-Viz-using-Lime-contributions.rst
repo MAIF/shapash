@@ -39,113 +39,21 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 
 
 
-.. raw:: html
+.. table::
 
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>Survived</th>
-          <th>Pclass</th>
-          <th>Sex</th>
-          <th>Age</th>
-          <th>SibSp</th>
-          <th>Parch</th>
-          <th>Fare</th>
-          <th>Embarked</th>
-          <th>Title</th>
-        </tr>
-        <tr>
-          <th>PassengerId</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>0</td>
-          <td>Third class</td>
-          <td>male</td>
-          <td>22.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>7.25</td>
-          <td>Southampton</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>1</td>
-          <td>First class</td>
-          <td>female</td>
-          <td>38.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>71.28</td>
-          <td>Cherbourg</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>1</td>
-          <td>Third class</td>
-          <td>female</td>
-          <td>26.0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>7.92</td>
-          <td>Southampton</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>1</td>
-          <td>First class</td>
-          <td>female</td>
-          <td>35.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>53.10</td>
-          <td>Southampton</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>0</td>
-          <td>Third class</td>
-          <td>male</td>
-          <td>35.0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>8.05</td>
-          <td>Southampton</td>
-          <td>Mr</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |Survived|  Pclass   | Sex  |Age|SibSp|Parch|Fare | Embarked  |Title|
+    +========+===========+======+===+=====+=====+=====+===========+=====+
+    |       0|Third class|male  | 22|    1|    0| 7.25|Southampton|Mr   |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       1|First class|female| 38|    1|    0|71.28|Cherbourg  |Mrs  |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       1|Third class|female| 26|    0|    0| 7.92|Southampton|Miss |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       1|First class|female| 35|    1|    0|53.10|Southampton|Mrs  |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       0|Third class|male  | 35|    0|    0| 8.05|Southampton|Mr   |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
 
 
 
@@ -243,7 +151,7 @@ Apply Explainer to Test Sample And Preprocessing
     ypred=pd.DataFrame(rf.predict(Xtest),columns=['pred'],index=Xtest.index)
 
 Use Shapash With Lime Contributions
-===================================
+-----------------------------------
 
 .. code:: ipython3
 
@@ -281,112 +189,20 @@ Use contributions parameter of compile method to declare Lime contributions
 
 
 
-.. raw:: html
+.. table::
 
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>pred</th>
-          <th>proba</th>
-          <th>feature_1</th>
-          <th>value_1</th>
-          <th>contribution_1</th>
-          <th>feature_2</th>
-          <th>value_2</th>
-          <th>contribution_2</th>
-          <th>feature_3</th>
-          <th>value_3</th>
-          <th>contribution_3</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>863</th>
-          <td>1</td>
-          <td>0.801675</td>
-          <td>Sex</td>
-          <td>female</td>
-          <td>0.257817</td>
-          <td>Title of passenger</td>
-          <td>Mrs</td>
-          <td>0.188714</td>
-          <td>Ticket class</td>
-          <td>First class</td>
-          <td>0.0880992</td>
-        </tr>
-        <tr>
-          <th>224</th>
-          <td>0</td>
-          <td>0.965208</td>
-          <td>Sex</td>
-          <td>male</td>
-          <td>0.248462</td>
-          <td>Title of passenger</td>
-          <td>Mr</td>
-          <td>0.199544</td>
-          <td>Ticket class</td>
-          <td>Third class</td>
-          <td>0.0838383</td>
-        </tr>
-        <tr>
-          <th>85</th>
-          <td>1</td>
-          <td>0.799397</td>
-          <td>Sex</td>
-          <td>female</td>
-          <td>0.25465</td>
-          <td>Title of passenger</td>
-          <td>Miss</td>
-          <td>0.193198</td>
-          <td>Age</td>
-          <td>17</td>
-          <td>0.0981314</td>
-        </tr>
-        <tr>
-          <th>681</th>
-          <td>1</td>
-          <td>0.786956</td>
-          <td>Sex</td>
-          <td>female</td>
-          <td>0.252464</td>
-          <td>Title of passenger</td>
-          <td>Miss</td>
-          <td>0.187045</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>0.0522808</td>
-        </tr>
-        <tr>
-          <th>536</th>
-          <td>1</td>
-          <td>0.936170</td>
-          <td>Sex</td>
-          <td>female</td>
-          <td>0.250703</td>
-          <td>Title of passenger</td>
-          <td>Miss</td>
-          <td>0.193096</td>
-          <td>Age</td>
-          <td>7</td>
-          <td>0.104632</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
+    +----+------+------------------+-------+--------------+-------------------+------------+--------------+------------------+------------+--------------+
+    |pred|proba |    feature_1     |value_1|contribution_1|     feature_2     |  value_2   |contribution_2|    feature_3     |  value_3   |contribution_3|
+    +====+======+==================+=======+==============+===================+============+==============+==================+============+==============+
+    |   1|0.8444|Sex               |female |       0.22468|Title of passenger |Mrs         |       0.14245|Ticket class      |First class |       0.12911|
+    +----+------+------------------+-------+--------------+-------------------+------------+--------------+------------------+------------+--------------+
+    |   0|0.9781|Sex               |male   |       0.08425|Title of passenger |Mr          |       0.08304|Passenger fare    |         7.9|       0.06555|
+    +----+------+------------------+-------+--------------+-------------------+------------+--------------+------------------+------------+--------------+
+    |   1|0.8249|Sex               |female |       0.20914|Title of passenger |Miss        |       0.14421|Ticket class      |Second class|       0.10001|
+    +----+------+------------------+-------+--------------+-------------------+------------+--------------+------------------+------------+--------------+
+    |   1|0.7653|Sex               |female |       0.17878|Port of embarkation|Queenstown  |       0.16792|Title of passenger|Miss        |       0.13360|
+    +----+------+------------------+-------+--------------+-------------------+------------+--------------+------------------+------------+--------------+
+    |   1|0.9240|Title of passenger|Miss   |       0.15922|Ticket class       |Second class|       0.14618|Sex               |female      |       0.12907|
+    +----+------+------------------+-------+--------------+-------------------+------------+--------------+------------------+------------+--------------+
 
 

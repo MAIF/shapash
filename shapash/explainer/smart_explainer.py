@@ -665,9 +665,10 @@ class SmartExplainer:
             Number of contributions to show in the pandas df
         proba : bool, optional (default: False)
             adding proba in output df
+
         Returns
         -------
-        pandas DataFrame
+        pandas.DataFrame
             - selected explanation of each row for classification case
 
 

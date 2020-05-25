@@ -38,198 +38,22 @@ Building Supervized Model
 
 
 
-.. raw:: html
 
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>MSSubClass</th>
-          <th>MSZoning</th>
-          <th>LotArea</th>
-          <th>Street</th>
-          <th>LotShape</th>
-          <th>LandContour</th>
-          <th>Utilities</th>
-          <th>LotConfig</th>
-          <th>LandSlope</th>
-          <th>Neighborhood</th>
-          <th>...</th>
-          <th>EnclosedPorch</th>
-          <th>3SsnPorch</th>
-          <th>ScreenPorch</th>
-          <th>PoolArea</th>
-          <th>MiscVal</th>
-          <th>MoSold</th>
-          <th>YrSold</th>
-          <th>SaleType</th>
-          <th>SaleCondition</th>
-          <th>SalePrice</th>
-        </tr>
-        <tr>
-          <th>Id</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>2-Story 1946 &amp; Newer</td>
-          <td>Residential Low Density</td>
-          <td>8450</td>
-          <td>Paved</td>
-          <td>Regular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Inside lot</td>
-          <td>Gentle slope</td>
-          <td>College Creek</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>2</td>
-          <td>2008</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>208500</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>1-Story 1946 &amp; Newer All Styles</td>
-          <td>Residential Low Density</td>
-          <td>9600</td>
-          <td>Paved</td>
-          <td>Regular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Frontage on 2 sides of property</td>
-          <td>Gentle slope</td>
-          <td>Veenker</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>5</td>
-          <td>2007</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>181500</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>2-Story 1946 &amp; Newer</td>
-          <td>Residential Low Density</td>
-          <td>11250</td>
-          <td>Paved</td>
-          <td>Slightly irregular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Inside lot</td>
-          <td>Gentle slope</td>
-          <td>College Creek</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>9</td>
-          <td>2008</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>223500</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>2-Story 1945 &amp; Older</td>
-          <td>Residential Low Density</td>
-          <td>9550</td>
-          <td>Paved</td>
-          <td>Slightly irregular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Corner lot</td>
-          <td>Gentle slope</td>
-          <td>Crawford</td>
-          <td>...</td>
-          <td>272</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>2</td>
-          <td>2006</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Abnormal Sale</td>
-          <td>140000</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>2-Story 1946 &amp; Newer</td>
-          <td>Residential Low Density</td>
-          <td>14260</td>
-          <td>Paved</td>
-          <td>Slightly irregular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Frontage on 2 sides of property</td>
-          <td>Gentle slope</td>
-          <td>Northridge</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>12</td>
-          <td>2008</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>250000</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>5 rows × 73 columns</p>
-    </div>
+.. table::
+
+    +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+    |          MSSubClass           |       MSZoning        |LotArea|Street|     LotShape     |  LandContour  |           Utilities            |           LotConfig           | LandSlope  |Neighborhood |       Condition1        |Condition2|       BldgType       |HouseStyle|OverallQual|OverallCond|YearBuilt|YearRemodAdd|RoofStyle|          RoofMatl          |Exterior1st | Exterior2nd |MasVnrType|MasVnrArea|   ExterQual   |   ExterCond   |  Foundation   |       BsmtQual       |            BsmtCond             |     BsmtExposure      |     BsmtFinType1      |BsmtFinSF1|     BsmtFinType2     |BsmtFinSF2|BsmtUnfSF|TotalBsmtSF|          Heating          |HeatingQC|CentralAir|           Electrical            |1stFlrSF|2ndFlrSF|LowQualFinSF|GrLivArea|BsmtFullBath|BsmtHalfBath|FullBath|HalfBath|BedroomAbvGr|KitchenAbvGr|  KitchenQual  |TotRmsAbvGrd|     Functional      |Fireplaces|    GarageType    |GarageYrBlt|    GarageFinish    |GarageArea|  GarageQual   |  GarageCond   |PavedDrive|WoodDeckSF|OpenPorchSF|EnclosedPorch|3SsnPorch|ScreenPorch|PoolArea|MiscVal|MoSold|YrSold|          SaleType          |SaleCondition|SalePrice|
+    +===============================+=======================+=======+======+==================+===============+================================+===============================+============+=============+=========================+==========+======================+==========+===========+===========+=========+============+=========+============================+============+=============+==========+==========+===============+===============+===============+======================+=================================+=======================+=======================+==========+======================+==========+=========+===========+===========================+=========+==========+=================================+========+========+============+=========+============+============+========+========+============+============+===============+============+=====================+==========+==================+===========+====================+==========+===============+===============+==========+==========+===========+=============+=========+===========+========+=======+======+======+============================+=============+=========+
+    |2-Story 1946 & Newer           |Residential Low Density|   8450|Paved |Regular           |Near Flat/Level|All public Utilities (E,G,W,& S)|Inside lot                     |Gentle slope|College Creek|Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     2003|        2003|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       196|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|No Exposure/No Basement|Good Living Quarters   |       706|Unfinished/No Basement|         0|      150|        856|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|     856|     854|           0|     1710|           1|           0|       2|       1|           3|           1|Good           |           8|Typical Functionality|         0|Attached to home  |       2003|Rough Finished      |       548|Typical/Average|Typical/Average|Paved     |         0|         61|            0|        0|          0|       0|      0|     2|  2008|Warranty Deed - Conventional|Normal Sale  |   208500|
+    +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+    |1-Story 1946 & Newer All Styles|Residential Low Density|   9600|Paved |Regular           |Near Flat/Level|All public Utilities (E,G,W,& S)|Frontage on 2 sides of property|Gentle slope|Veenker      |Adjacent to feeder street|Normal    |Single-family Detached|One story |          6|          8|     1976|        1976|Gable    |Standard (Composite) Shingle|Metal Siding|Metal Siding |None      |         0|Average/Typical|Average/Typical|Cinder Block   |Good (90-99 inches)   |Typical - slight dampness allowed|Good Exposure          |Average Living Quarters|       978|Unfinished/No Basement|         0|      284|       1262|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|    1262|       0|           0|     1262|           0|           1|       2|       0|           3|           1|Typical/Average|           6|Typical Functionality|         1|Attached to home  |       1976|Rough Finished      |       460|Typical/Average|Typical/Average|Paved     |       298|          0|            0|        0|          0|       0|      0|     5|  2007|Warranty Deed - Conventional|Normal Sale  |   181500|
+    +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+    |2-Story 1946 & Newer           |Residential Low Density|  11250|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Inside lot                     |Gentle slope|College Creek|Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     2001|        2002|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       162|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|Mimimum Exposure       |Good Living Quarters   |       486|Unfinished/No Basement|         0|      434|        920|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|     920|     866|           0|     1786|           1|           0|       2|       1|           3|           1|Good           |           6|Typical Functionality|         1|Attached to home  |       2001|Rough Finished      |       608|Typical/Average|Typical/Average|Paved     |         0|         42|            0|        0|          0|       0|      0|     9|  2008|Warranty Deed - Conventional|Normal Sale  |   223500|
+    +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+    |2-Story 1945 & Older           |Residential Low Density|   9550|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Corner lot                     |Gentle slope|Crawford     |Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     1915|        1970|Gable    |Standard (Composite) Shingle|Wood Siding |Wood Shingles|None      |         0|Average/Typical|Average/Typical|Brick & Tile   |Typical (80-89 inches)|Good                             |No Exposure/No Basement|Average Living Quarters|       216|Unfinished/No Basement|         0|      540|        756|Gas forced warm air furnace|Good     |Yes       |Standard Circuit Breakers & Romex|     961|     756|           0|     1717|           1|           0|       1|       0|           3|           1|Good           |           7|Typical Functionality|         1|Detached from home|       1998|Unfinished/No Garage|       642|Typical/Average|Typical/Average|Paved     |         0|         35|          272|        0|          0|       0|      0|     2|  2006|Warranty Deed - Conventional|Abnormal Sale|   140000|
+    +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+    |2-Story 1946 & Newer           |Residential Low Density|  14260|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Frontage on 2 sides of property|Gentle slope|Northridge   |Normal                   |Normal    |Single-family Detached|Two story |          8|          5|     2000|        2000|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       350|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|Average Exposure       |Good Living Quarters   |       655|Unfinished/No Basement|         0|      490|       1145|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|    1145|    1053|           0|     2198|           1|           0|       2|       1|           4|           1|Good           |           9|Typical Functionality|         1|Attached to home  |       2000|Rough Finished      |       836|Typical/Average|Typical/Average|Paved     |       192|         84|            0|        0|          0|       0|      0|    12|  2008|Warranty Deed - Conventional|Normal Sale  |   250000|
+    +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
 
 
 
@@ -408,108 +232,21 @@ to_pandas method has the same parameters as the filter method
 
 
 
-.. raw:: html
+.. table::
 
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>pred</th>
-          <th>feature_1</th>
-          <th>value_1</th>
-          <th>contribution_1</th>
-          <th>feature_2</th>
-          <th>value_2</th>
-          <th>contribution_2</th>
-          <th>feature_3</th>
-          <th>value_3</th>
-          <th>contribution_3</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>259</th>
-          <td>209141.256921</td>
-          <td>Ground living area square feet</td>
-          <td>1792</td>
-          <td>13710.4</td>
-          <td>Overall material and finish of the house</td>
-          <td>7</td>
-          <td>12776.3</td>
-          <td>Total square feet of basement area</td>
-          <td>963</td>
-          <td>-5103.03</td>
-        </tr>
-        <tr>
-          <th>268</th>
-          <td>178734.474531</td>
-          <td>Ground living area square feet</td>
-          <td>2192</td>
-          <td>29747</td>
-          <td>Overall material and finish of the house</td>
-          <td>5</td>
-          <td>-26151.3</td>
-          <td>Overall condition of the house</td>
-          <td>8</td>
-          <td>9190.84</td>
-        </tr>
-        <tr>
-          <th>289</th>
-          <td>113950.844570</td>
-          <td>Overall material and finish of the house</td>
-          <td>5</td>
-          <td>-24730</td>
-          <td>Ground living area square feet</td>
-          <td>900</td>
-          <td>-16342.6</td>
-          <td>Total square feet of basement area</td>
-          <td>882</td>
-          <td>-5922.64</td>
-        </tr>
-        <tr>
-          <th>650</th>
-          <td>74957.162142</td>
-          <td>Overall material and finish of the house</td>
-          <td>4</td>
-          <td>-33927.7</td>
-          <td>Ground living area square feet</td>
-          <td>630</td>
-          <td>-23234.4</td>
-          <td>Total square feet of basement area</td>
-          <td>630</td>
-          <td>-11687.9</td>
-        </tr>
-        <tr>
-          <th>1234</th>
-          <td>135305.243500</td>
-          <td>Overall material and finish of the house</td>
-          <td>5</td>
-          <td>-25445.7</td>
-          <td>Ground living area square feet</td>
-          <td>1188</td>
-          <td>-11476.6</td>
-          <td>Condition of sale</td>
-          <td>Abnormal Sale</td>
-          <td>-5071.82</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-
+    +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+    |  pred  |               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |   value_3   |contribution_3|
+    +========+========================================+=======+==============+========================================+=======+==============+==================================+=============+==============+
+    |209141.3|Ground living area square feet          |   1792|       13710.4|Overall material and finish of the house|      7|       12776.3|Total square feet of basement area|          963|       -5103.0|
+    +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+    |178734.5|Ground living area square feet          |   2192|       29747.0|Overall material and finish of the house|      5|      -26151.3|Overall condition of the house    |            8|        9190.8|
+    +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+    |113950.8|Overall material and finish of the house|      5|      -24730.0|Ground living area square feet          |    900|      -16342.6|Total square feet of basement area|          882|       -5922.6|
+    +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+    | 74957.2|Overall material and finish of the house|      4|      -33927.7|Ground living area square feet          |    630|      -23234.4|Total square feet of basement area|          630|      -11687.9|
+    +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+    |135305.2|Overall material and finish of the house|      5|      -25445.7|Ground living area square feet          |   1188|      -11476.6|Condition of sale                 |Abnormal Sale|       -5071.8|
+    +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
 
 
 Save your explainer in Pickle File

@@ -40,120 +40,23 @@ Load Titanic data
 
 
 
-.. raw:: html
 
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>Survived</th>
-          <th>Pclass</th>
-          <th>Name</th>
-          <th>Sex</th>
-          <th>Age</th>
-          <th>SibSp</th>
-          <th>Parch</th>
-          <th>Fare</th>
-          <th>Embarked</th>
-          <th>Title</th>
-        </tr>
-        <tr>
-          <th>PassengerId</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>0</td>
-          <td>Third class</td>
-          <td>Braund Owen Harris</td>
-          <td>male</td>
-          <td>22.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>7.25</td>
-          <td>Southampton</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>1</td>
-          <td>First class</td>
-          <td>Cumings John Bradley (Florence Briggs Thayer)</td>
-          <td>female</td>
-          <td>38.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>71.28</td>
-          <td>Cherbourg</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>1</td>
-          <td>Third class</td>
-          <td>Heikkinen Laina</td>
-          <td>female</td>
-          <td>26.0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>7.92</td>
-          <td>Southampton</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>1</td>
-          <td>First class</td>
-          <td>Futrelle Jacques Heath (Lily May Peel)</td>
-          <td>female</td>
-          <td>35.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>53.10</td>
-          <td>Southampton</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>0</td>
-          <td>Third class</td>
-          <td>Allen William Henry</td>
-          <td>male</td>
-          <td>35.0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>8.05</td>
-          <td>Southampton</td>
-          <td>Mr</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
+.. table::
+
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |Survived|  Pclass   | Sex  |Age|SibSp|Parch|Fare | Embarked  |Title|
+    +========+===========+======+===+=====+=====+=====+===========+=====+
+    |       0|Third class|male  | 22|    1|    0| 7.25|Southampton|Mr   |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       1|First class|female| 38|    1|    0|71.28|Cherbourg  |Mrs  |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       1|Third class|female| 26|    0|    0| 7.92|Southampton|Miss |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       1|First class|female| 35|    1|    0|53.10|Southampton|Mrs  |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+    |       0|Third class|male  | 35|    0|    0| 8.05|Southampton|Mr   |
+    +--------+-----------+------+---+-----+-----+-----+-----------+-----+
+
 
 
 
