@@ -7,3 +7,4 @@
 
 .. _here: https://github.com/MAIF/Diaphane/tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb
 
+.. include:: ../_notebooks/tutorial02-Shapash-overview-in-Jupyter.rst

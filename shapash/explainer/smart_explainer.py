@@ -140,14 +140,18 @@ class SmartExplainer:
             The index must be identical to the index of x_pred.
             This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
             as they may wish to set their own threshold (classification)
-
-        preprocessing : object, optional (default: None)
-            compile method can apply preprocess inverse transform
-            A scikit-learn or category_encoders encoding step (e.g. OneHotEncoder)
+        preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+            A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+            A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
+            A list with multiple category_encoders with optional (dict, list of dict)
+            A list with a single ColumnTransformer with optional (dict, list of dict)
+            A dict
+            A list of dict
 
         Example
         --------
         >>> xpl.compile(x=xtest_df,model=my_model)
+
         """
         self.x_init = x
         self.x_pred = inverse_transform(self.x_init, preprocessing)
@@ -218,7 +222,6 @@ class SmartExplainer:
             self.features_dict = features_dict
             self.check_features_dict()
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
-
 
     def choose_state(self, contributions):
         """
@@ -765,7 +768,7 @@ class SmartExplainer:
         Use object.kill() method to kill the current instance
 
         Examples are presented in the web_app tutorial (please check tutorial part of this doc)
-        
+
         Parameters
         ----------
         port: int (default: None)

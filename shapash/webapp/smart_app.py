@@ -2,46 +2,33 @@
 Main class of Web application Shapash
 """
 import dash
+import dash_table
+from dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_daq as daq
 from dash.dependencies import Output, Input, State
-import dash_table
 import pandas as pd
 import plotly.graph_objs as go
 import random
+import numpy as np
+import re
+from math import log10
+from shapash.webapp.utils.utils import apply_filter, check_row, round_to_1
+from shapash.webapp.utils.MyGraph import MyGraph
 
 
-class MyGraph(dcc.Graph):
-    def __init__(self, figure, style, id):
-        super().__init__()
-        self.figure = figure
-        self.style = style
-        self.id = id
-
-    def adjust_graph(self):
-        """
-        Override graph layout for app use
-        """
-        self.figure.update_layout(
-            autosize=True,
-            margin=dict(
-                l=50,
-                r=10,
-                b=0,
-                t=50,
-                pad=0
-            ),
-            title={
-                'y': 1,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'}
-        )
-        self.figure.update_xaxes(title='', automargin=True)
-        self.figure.update_yaxes(title='', automargin=True)
+def create_input_modal(id, label, tooltip):
+    return dbc.FormGroup(
+        [
+            dbc.Label(label, id=f'{id}_label', html_for=id, width=8),
+            dbc.Col(
+                dbc.Input(id=id, type="number", value=0),
+                width=4),
+            dbc.Tooltip(tooltip, target=f'{id}_label', placement='bottom'),
+        ], row=True,
+    )
 
 
 class SmartApp:
@@ -55,99 +42,170 @@ class SmartApp:
 
     def __init__(self, explainer):
         """
-        Init on class instanciation, everything to be able to run the app
-        on server.
+        Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
-        explainer : [type]
-            [description]
+        explainer : SmartExplainer
+            SmartExplainer object
         """
+        # APP
         self.app = dash.Dash(
             __name__,
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
-        self.logo = self.app.get_asset_url('shapash-fond-fonce.png')
         self.explainer = explainer
 
+        # SETTINGS
+        self.logo = self.app.get_asset_url('shapash-fond-fonce.png')
         self.color = '#f4c000'
         self.bkg_color = "#343736"
-        # TODO : add constants in front
-        self.max_rows = 1000
-        self.max_features = 20
-        self.violin_maxf = 10
-        self.max_points = 2000
-        self.page_size = 20
-
+        self.settings_ini = {
+            'rows': 1000,
+            'points': 1000,
+            'violin': 10,
+            'features': 20,
+        }
+        self.settings = self.settings_ini.copy()
+        self.predict_col = ['_predict_']
         self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
-        if explainer._case == 'classification':
+        if self.explainer._case == 'classification':
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, 'num')[1]
-            self.selected_feature = explainer.features_imp[-1].idxmax()
-            self.max_threshold = int(round(max([abs(x).max().max() for x in self.explainer.contributions])))
+            self.selected_feature = self.explainer.features_imp[-1].idxmax()
+            self.max_threshold = int(max([x.applymap(lambda x: round_to_1(x)).max().max()
+                                          for x in self.explainer.contributions]))
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(round(max(abs(self.explainer.contributions).max())))
-        self.max_features = min(20, len(self.explainer.features_desc))
+            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_1(x)).max().max())
         self.list_index = []
         self.subset = None
 
+        # DATA
+        self.dataframe = pd.DataFrame()
+        self.round_dataframe = pd.DataFrame()
+        self.init_data()
+
+        # COMPONENTS
         self.components = {
             'menu': {},
             'table': {},
             'graph': {},
             'filter': {},
+            'settings': {}
         }
-        self.init_data()
         self.init_components()
 
+        # LAYOUT
         self.skeleton = {
             'navbar': {},
             'body': {}
         }
         self.make_skeleton()
-
         self.app.layout = html.Div([self.skeleton['navbar'], self.skeleton['body']])
+
+        # CALLBACK
         self.callback_fullscreen_buttons()
+        self.init_callback_settings()
         self.callback_generator()
 
     def init_data(self):
         """
-        Method which intialize data from explainer object
+        Method which initializes data from explainer object
         """
-        # TODO : add is_loading if necessary
         if hasattr(self.explainer, 'y_pred'):
             self.dataframe = self.explainer.x_pred.copy()
             if isinstance(self.explainer.y_pred, (pd.Series, pd.DataFrame)):
                 self.predict_col = self.explainer.y_pred.columns.to_list()[0]
                 self.dataframe = self.dataframe.join(self.explainer.y_pred)
             elif isinstance(self.explainer.y_pred, list):
-                self.predict_col = ['_predict_']
                 self.dataframe = self.dataframe.join(pd.DataFrame(data=self.explainer.y_pred,
                                                                   columns=[self.predict_col],
                                                                   index=self.explainer.x_pred.index))
             else:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
-
         else:
             raise ValueError(f'y_pred must be set when calling compile function.')
 
         self.dataframe['_index_'] = self.explainer.x_pred.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
-        col_order = ['_index_', '_predict_'] + \
-                    self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
-
+        col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
         self.list_index = random.sample(population=self.dataframe.index.tolist(),
-                                        k=min(self.max_rows, len(self.dataframe.index.tolist()))
+                                        k=min(self.settings['rows'], len(self.dataframe.index.tolist()))
                                         )
         self.dataframe = self.dataframe[col_order].loc[self.list_index].sort_index()
+        self.round_dataframe = self.dataframe.copy()
+        for col in list(self.dataframe.columns):
+            typ = self.dataframe[col].dtype
+            if typ == float:
+                std = self.dataframe[col].std()
+                if std != 0:
+                    digit = max(round(log10(1/std) + 1)+2, 0)
+                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format)
 
     def init_components(self):
         """
-        Initialize components (graph, table, ...) and insert it inside
+        Initialize components (graph, table, filter, settings, ...) and insert it inside
         components containers which are created by init_skeleton
         """
-        # TODO : MAX : Modifier la mise en forme du dropdown (largeur fonction des éléments, en top z-index, éventuellement avec flèche à droite ...)
+
+        self.components['settings']['input_rows'] = create_input_modal(
+            id='rows',
+            label="Number of rows for subset",
+            tooltip="Set max number of lines for subset (datatable).Filter will be apply on this subset."
+        )
+
+        self.components['settings']['input_points'] = create_input_modal(
+            id='points',
+            label="Number of points for plot",
+            tooltip="Set max number of points in feature contribution plots"
+        )
+
+        self.components['settings']['input_features'] = create_input_modal(
+            id='features',
+            label=f"Number of features to plot",
+            tooltip="Set max number of features to plot in features importance and local explanation plots.",
+        )
+
+        self.components['settings']['input_violin'] = create_input_modal(
+            id='violin',
+            label="Max number of labels for violin plot",
+            tooltip="Set max number of labels to display a violin plot for feature contribution plot (otherwise a "
+                    "scatter plot is displayed)."
+        )
+
+        self.components['settings']['name'] = dbc.FormGroup(
+            [
+                dbc.Checklist(
+                    options=[{"label": "Use domain name for features name.", "value": 1}], value=[], inline=True,
+                    id="name",
+                    style={"margin-left": "20px"}
+                ),
+                dbc.Tooltip("Replace technical feature names by domain names if exists.",
+                            target='name', placement='bottom'),
+            ], row=True,
+        )
+
+        self.components['settings']['modal'] = dbc.Modal(
+            [
+                dbc.ModalHeader("Settings"),
+                dbc.ModalBody(
+                    dbc.Form(
+                        [
+                            self.components['settings']['input_rows'],
+                            self.components['settings']['input_points'],
+                            self.components['settings']['input_features'],
+                            self.components['settings']['input_violin'],
+                            self.components['settings']['name']
+                        ]
+                    )
+                ),
+                dbc.ModalFooter(
+                    dbc.Button("Apply", id="apply", className="ml-auto")
+                ),
+            ],
+            id="modal"
+        )
 
         self.components['menu'] = dbc.Row(
             [
@@ -159,9 +217,8 @@ class SmartApp:
                              ],
                             style={"margin": "0px"}
                         ),
-                        ],
-                    width="auto",
-                    align="center",
+                    ],
+                    width="auto", align="center",
                 ),
                 dbc.Col(
                     dbc.Collapse(
@@ -170,72 +227,74 @@ class SmartApp:
                                 dbc.Label("Class to analyse", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
                                     id="select_label",
-                                    options=[],
-                                    value=None,
+                                    options=[], value=None,
                                     clearable=False, searchable=False,
                                     style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '200px'}
                                 )
                             ],
-                            row=True,
-                            style={"margin": "0px 0px 0px 5px", "align-items": "center"}
+                            row=True, style={"margin": "0px 0px 0px 5px", "align-items": "center"}
                         ),
-                        is_open=True,
-                        id='select_collapse'
+                        is_open=True, id='select_collapse'
                     ),
-                    width="auto",
-                    align="center"
+                    width="auto", align="center", style={'padding': 'none'}
+                ),
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Img(id='settings', title='settings', alt='Settings',
+                                     src=self.app.get_asset_url('settings.png'),
+                                     height='40px',
+                                     style={'cursor': 'pointer'}),
+                            self.components['settings']['modal'],
+                        ]
+                    ),
+                    align="center", width="50px", style={'padding': '0px 0px 0px 20px'}
                 )
             ],
-            no_gutters=True,
-            justify="end",
-            form=True
+            form=True, no_gutters=True, justify="end"
         )
 
         self.adjust_menu()
 
         self.components['table']['dataset'] = dash_table.DataTable(
             id='dataset',
-            data=self.dataframe.to_dict('records'),
-            columns=[
-                {"name": i,
-                 "id": i,
-                 } for i in self.dataframe.columns
-            ],
-            editable=False,
-            row_deletable=False,
+            data=self.round_dataframe.to_dict('records'),
+            tooltip_data=[
+                {
+                    column: {'value': str(value), 'type': 'text'}
+                    for column, value in row.items()
+                } for row in self.dataframe.to_dict('rows')
+            ], tooltip_duration=2000,
+
+            columns=[{"name": '_index_', "id": '_index_'},
+                     {"name": '_predict_', "id": '_predict_'}] +
+                    [{"name": i, "id": i} for i in self.explainer.x_pred],
+            editable=False, row_deletable=False,
             style_as_list_view=True,
+            virtualization=True,
+            page_action='none',
             fixed_rows={'headers': True, 'data': 0},
-
-            page_size=self.page_size,
-            page_action='custom',
-            filter_action='custom',
-            filter_query='',
-            sort_action='custom',
-            sort_mode='multi',
-
-            sort_by=[],
-            page_current=0,
-            active_cell={'row': 0, 'column': 0},
+            fixed_columns={'headers': True, 'data': 0},
+            filter_action='custom', filter_query='',
+            sort_action='custom', sort_mode='multi', sort_by=[],
+            active_cell={'row': 0, 'column': 0, 'column_id': '_index_'},
+            style_table={'overflowY': 'auto', 'overflowX': 'auto'},
+            style_header={'height': '30px'},
+            style_cell={
+                'minWidth': '70px', 'width': '120px', 'maxWidth': '200px',
+            },
         )
-        self.adjust_dataset()
 
         self.components['graph']['global_feature_importance'] = MyGraph(
-            figure=go.Figure(),
-            style={'hovermode': 'closest', "max-width": "1000px", "max-height": "1000px", "margin": "auto"},
-            id='global_feature_importance'
+            figure=go.Figure(), id='global_feature_importance'
         )
 
         self.components['graph']['feature_selector'] = MyGraph(
-            figure=go.Figure(),
-            style={'height': '22rem', 'clickmode': 'event'},
-            id='feature_selector'
+            figure=go.Figure(), id='feature_selector'
         )
-        self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
 
         self.components['graph']['detail_feature'] = MyGraph(
-            figure=go.Figure(),
-            style={'height': '12rem'},
-            id='detail_feature'
+            figure=go.Figure(), id='detail_feature'
         )
 
         self.components['filter']['index'] = dbc.FormGroup(
@@ -244,11 +303,19 @@ class SmartApp:
                 dbc.Col(
                     dbc.Input(
                         id="index_id", type="text", bs_size="md", placeholder="Id must exist",
-                        debounce=True, persistence=True,
+                        debounce=True, persistence=True, style={'textAlign': 'right'}
                     ),
+                    style={'padding': "0px"}
                 ),
+                dbc.Col(
+                    html.Img(id='validation', alt='Validate', title='Validate index',
+                             src=self.app.get_asset_url('reload.png'),
+                             height='30px', style={'cursor': 'pointer'},
+                             ),
+                    style={'padding': "0px"}, align="center", width="40px"
+                )
             ],
-            row=True,
+            row=True
         )
 
         self.components['filter']['threshold'] = dbc.FormGroup(
@@ -256,11 +323,12 @@ class SmartApp:
                 dbc.Label("Threshold", html_for="slider", id='threshold_label'),
                 dcc.Slider(
                     min=0, max=self.max_threshold, value=0, step=0.1,
-                    marks={f'{mark}': f'{mark}' for mark in range(self.max_threshold + 1)},
+                    marks={f'{round(self.max_threshold * mark / 4)}': f'{round(self.max_threshold * mark / 4)}'
+                           for mark in range(5)},
                     id="threshold_id",
                 )
             ],
-            style={'width': '100%'}
+            className='filter_dashed'
         )
 
         self.components['filter']['max_contrib'] = dbc.FormGroup(
@@ -268,23 +336,35 @@ class SmartApp:
                 dbc.Label(
                     "Features to display : ", id='max_contrib_label'),
                 dcc.Slider(
-                    min=1, max=self.max_features, value=self.max_features, step=1,
-                    marks={f'{feat}': f'{feat}' for feat in range(self.max_features + 1)},
+                    min=1, max=min(self.settings['features'], len(self.dataframe.columns) - 2),
+                    step=1, value=min(self.settings['features'], len(self.dataframe.columns) - 2),
                     id="max_contrib_id",
                 )
             ],
-            style={'width': '100%'}
+            className='filter_dashed'
         )
 
         self.components['filter']['positive_contrib'] = dbc.FormGroup(
             [
-                dbc.Checklist(
-                    options=[{"label": "Positive contributions only", "value": 1}],
-                    value=[],
-                    id="check_id",
-                    inline=True,
+                dbc.Label("Contributions to display : "),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.Checklist(
+                                options=[{"label": "Positive", "value": 1}], value=[1], inline=True,
+                                id="check_id_positive"
+                            ), width=6
+                        ),
+                        dbc.Col(
+                            dbc.Checklist(
+                                options=[{"label": "Negative", "value": 1}], value=[1], inline=True,
+                                id="check_id_negative"
+                            ), width=6, style={'padding': "0px"}, align="center"
+                        ),
+                    ], no_gutters=True, justify="center", form=True
                 )
-            ]
+            ],
+            className='filter_dashed'
         )
 
         self.components['filter']['masked_contrib'] = dbc.FormGroup(
@@ -293,13 +373,11 @@ class SmartApp:
                     "Feature(s) to mask :"),
                 dcc.Dropdown(
                     options=[{'label': key, 'value': value} for key, value in self.explainer.inv_features_dict.items()],
-                    value='',
-                    multi=True,
-                    searchable=True,
+                    value='', multi=True, searchable=True,
                     id="masked_contrib_id"
                 ),
             ],
-            style={'width': '100%'}
+            className='filter_dashed'
         )
 
     def make_skeleton(self):
@@ -319,24 +397,19 @@ class SmartApp:
                                     ],
                                     align="center",
                                 ),
-                                href="https://github.com/MAIF/Diaphane",
-                                target="_blank",
+                                href="https://github.com/MAIF/Diaphane", target="_blank",
                             ),
-                            md=5,
-                            align="left"
+                            md=3, align="left"
                         ),
                         dbc.Col(
                             self.components['menu'],
-                            md=7,
-                            align='right',
+                            md=9, align='right',
                         )
                     ],
-                    style={'padding': "5px 15px", "verticalAlign" : "middle"},
-                    # no_gutters=True
+                    style={'padding': "5px 15px", "verticalAlign": "middle"},
                 )
             ],
-            fluid=True,
-            style={'height': '50px', 'backgroundColor': self.bkg_color},
+            fluid=True, style={'height': '50px', 'backgroundColor': self.bkg_color},
         )
 
         self.skeleton['body'] = dbc.Container(
@@ -361,6 +434,7 @@ class SmartApp:
                                     self.draw_component('table', 'dataset'),
                                     className="card",
                                     id='card_dataset',
+                                    style={'cursor': 'pointer'},
                                 )
                             ],
                             md=7,
@@ -378,13 +452,11 @@ class SmartApp:
                                     self.draw_component('graph', 'feature_selector'),
                                     className="card",
                                     id='card_feature_selector',
-                                    # style={'height': '27rem'}
                                 )
                             ],
                             md=5,
                             align="center",
                             style={'padding': '0px 10px'},
-                            # style={'height': '27rem'}
                         ),
                         dbc.Col(
                             [
@@ -408,12 +480,10 @@ class SmartApp:
                                                     self.draw_filter(),
                                                     className="card_filter",
                                                     id='card_filter',
-                                                    # style={"height": "26rem"}
                                                 ),
                                             ],
                                             md=4,
                                             align="center",
-                                            # style={'height': '27rem'}
                                         ),
                                     ],
                                 ),
@@ -421,7 +491,6 @@ class SmartApp:
                             md=7,
                             align="center",
                             style={'padding': '0px 10px'},
-                            # style={'height': '27rem'}
                         ),
                     ],
                     style={'padding': '15px 10px'},
@@ -456,71 +525,15 @@ class SmartApp:
         else:
             raise ValueError(f'No rule defined for explainer case : {self.explainer._case}')
 
-    def adjust_dataset(self):
-        """
-        Update dataset layout.
-        """
-        self.components['table']['dataset'].style_table = {
-                          'overflowX': 'scroll',
-                          'maxWidth': '10rem',
-                          'maxHeight': '22rem',
-                          'overflowY': 'scroll',
-                          'padding-left': '0rem',  # 1,1
-                          'padding-right': '1rem'
-                      },
-        self.components['table']['dataset'].style_cell = {
-                         'minHeight': '50px',
-                         'minWidth': '50px', 'width': '50px', 'maxWidth': '180px',
-                         'whiteSpace': 'normal'
-                     },
-        self.components['table']['dataset'].style_data_conditional = [
-                                     {
-                                         'if': {'column_id': '_index_'},
-                                         'backgroundColor': '#d3d3d3',
-                                     },
-                                     {
-                                         'if': {'column_id': '_predict_'},
-                                         'backgroundColor': '#d3d3d3',
-                                     },
-                                 ],
-        self.components['table']['dataset'].style_filter_conditional = self.components['table']['dataset'].style_data_conditional,
-        self.components['table']['dataset'].style_header_conditional = self.components['table']['dataset'].style_data_conditional
-
-    def adjust_graph(self, graph):
-        """
-        Override graph from explainer object
-        Parameters
-        ----------
-        graph : Graph component
-            Component to be modified
-        """
-        graph.figure.update_layout(
-            autosize=True,
-            margin=dict(
-                l=50,
-                r=10,
-                b=0,
-                t=50,
-                pad=0
-            ),
-            title={
-                'y': 1,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'}
-        )
-        graph.figure.update_xaxes(title='', automargin=True)
-        graph.figure.update_yaxes(title='', automargin=True)
-
     def draw_component(self, component_type, component_id, title=None):
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
         Parameters
         ----------
-        type : string
+        component_type : string
             Type of the component. Can be table, graph, ...
-        id : string
+        component_id : string
             Id of the component. It must be unique.
         title : string, optional
             by default None
@@ -534,23 +547,20 @@ class SmartApp:
         component.append(self.components[component_type][component_id])
         component.append(
             html.A(
-                html.I(
-                    "fullscreen",
-                    className="material-icons tiny",
-                    style={'marginTop': '8px', 'marginLeft': '1px'}
-                ),
+                html.I("fullscreen",
+                       className="material-icons tiny",
+                       style={'marginTop': '8px', 'marginLeft': '1px'}
+                       ),
                 id=f"ember_{component_id}",
                 className="dock-expand",
-                **{
-                    'data-component-type': component_type,
-                }
+                **{'data-component-type': component_type}
             )
         )
         return component
 
     def draw_filter(self):
         """
-        Method which return filter components block for local contributions plot.
+        Method which returns filter components block for local contributions plot.
         Returns
         -------
         list
@@ -560,73 +570,34 @@ class SmartApp:
             dbc.Container(
                 [
                     dbc.Row([self.components['filter']['index']],
-                            align="center",
-                            style={"height": "4rem"}
+                            align="center", style={"height": "4rem"}
                             ),
                     dbc.Row([self.components['filter']['threshold']],
-                            align="center",
-                            style={"height": "5rem"}
+                            align="center", style={"height": "5rem"}
                             ),
                     dbc.Row([self.components['filter']['max_contrib']],
-                            align="center",
-                            style={"height": "5rem"}
+                            align="center", style={"height": "5rem"}
                             ),
                     dbc.Row([self.components['filter']['positive_contrib']],
-                            align="center",
-                            style={"height": "4rem"}
+                            align="center", style={"height": "4rem"}
                             ),
                     dbc.Row([self.components['filter']['masked_contrib']],
-                            align="center",
-                            ),
+                            align="center"),
                 ],
             ),
         ]
         return filter
 
     def select_point(self, graph, click_data):
+        """
+        Method which set the selected point in graph component corresponding to click_data
+        """
         if click_data:
             curve_id = click_data['points'][0]['curveNumber']
             point_id = click_data['points'][0]['pointIndex']
             for curve in range(len(self.components['graph'][graph].figure['data'])):
                 self.components['graph'][graph].figure['data'][curve].selectedpoints = \
                     [point_id] if curve == curve_id else []
-
-    def split_filter_part(self, filter_part):
-        operators = [['ge ', '>='],
-                     ['le ', '<='],
-                     ['lt ', '<'],
-                     ['gt ', '>'],
-                     ['ne ', '!='],
-                     ['eq ', '='],
-                     ['contains '],
-                     ['datestartswith ']]
-        for operator_type in operators:
-            for operator in operator_type:
-                if operator in filter_part:
-                    name_part, value_part = filter_part.split(operator, 1)
-                    name = name_part[name_part.find('{') + 1: name_part.rfind('}')]
-
-                    value_part = value_part.strip()
-                    v0 = value_part[0]
-                    if v0 == value_part[-1] and v0 in ("'", '"', '`'):
-                        value = value_part[1: -1].replace('\\' + v0, v0)
-                    else:
-                        try:
-                            value = float(value_part)
-                        except ValueError:
-                            value = value_part
-
-                    # word operators need spaces after them in the filter string,
-                    # but we don't want these later
-                    return name, operator_type[0].strip(), value
-
-        return [None] * 3
-
-    @staticmethod
-    def check_row(data, index):
-        df = pd.DataFrame.from_records(data, index='_index_')
-        row = df.index.get_loc(index) if index in list(df.index) else None
-        return row
 
     def callback_fullscreen_buttons(self):
         """
@@ -646,92 +617,145 @@ class SmartApp:
 
             @app.callback(
                 [
-                    Output(component_id=f'card_{component_id}', component_property='style'),
-                    Output(component_id=f'{component_id}', component_property=component_property),
+                    Output(f'card_{component_id}', 'style'),
+                    Output(f'{component_id}', component_property),
                 ],
                 [
                     Input(f'ember_{component_id}', 'n_clicks'),
                     Input(f'ember_{component_id}', 'data-component-type')
                 ]
             )
-            def ember(click, component_type):
+            def ember(click, data_component_type):
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
-                    if component_type == 'graph':
+                    style_component = {
+                        'height': '25rem'
+                    }
+                    if data_component_type == 'table':
                         style_component = {
-                            'height': '23rem',
-                        }
-                    elif component_type == 'table':
-                        style_component = {
-                            'overflowX': 'scroll',
-                            'maxHeight': '22rem',
+                            'maxHeight': '25rem',
                         }
                     this_style_card = {
-                        'height': '26rem',
-                        'width': 'auto',
-                        # 'paddingTop': '0.5rem',
-                        'zIndex': 900,
+                        'height': '26rem', 'zIndex': 900,
                     }
 
                     return this_style_card, style_component
 
                 else:
                     this_style_card = {
-                        'height': 'auto',
-                        'width': 'auto',
+                        'height': 'auto', 'width': 'auto',
                         'zIndex': 998,
-                        'position': 'fixed',
-                        'top': '50px',
-                        'bottom': 0,
-                        'left': 0,
-                        'right': 0,
-                        # 'paddingTop': '0.5rem'
+                        'position': 'fixed', 'top': '50px',
+                        'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '87vh',
-                        'maxHeight': '87vh',
+                        'height': '87vh', 'maxHeight': '87vh',
                     }
                     return this_style_card, style_component
 
-        self.app = app
+    def init_callback_settings(self):
+        app = self.app
+        self.components['settings']['input_rows']['rows'].value = self.settings['rows']
+        self.components['settings']['input_points']['points'].value = self.settings['points']
+        self.components['settings']['input_features']['features'].value = self.settings['features']
+        self.components['settings']['input_violin']['violin'].value = self.settings['violin']
+
+        for id in self.settings.keys():
+            @app.callback(
+                [Output(f'{id}', 'valid'),
+                 Output(f'{id}', 'invalid')],
+                [Input(f'{id}', "value")]
+            )
+            def update_valid(value):
+                """
+                actualise valid and invalid icon in input component
+                Parameters
+                ----------
+                value : int
+                    value of input component
+                Returns
+                -------
+                    tuple of boolean
+                """
+                patt = re.compile('^[0-9]*[1-9][0-9]*$')
+                if patt.match(str(value)):
+                    return True, False
+                else:
+                    return False, True
+
+        @app.callback(
+            Output("modal", "is_open"),
+            [
+                Input("settings", "n_clicks"),
+                Input("apply", "n_clicks")],
+            [
+                State('rows', 'valid'),
+                State('points', 'valid'),
+                State('features', 'valid'),
+                State('violin', 'valid'),
+            ],
+        )
+        def toggle_modal(n1, n2, rows, points, features, violin):
+            """
+            open modal /close modal (only if all input are valid)
+            """
+            ctx = dash.callback_context
+            if ctx.triggered[0]['prop_id'] == 'settings.n_clicks':
+                if n1 is not None:
+                    return True
+            else:
+                if n2 is not None:
+                    if all([rows, points, features, violin]):
+                        return False
+                    else:
+                        return True
+            return False
 
     def callback_generator(self):
         app = self.app
 
         @app.callback(
             [
-                Output(component_id='dataset', component_property='data'),
-                Output(component_id='dataset', component_property='columns')
+                Output('dataset', 'data'),
+                Output('dataset', 'columns'),
+                Output('dataset', 'active_cell'),
             ],
             [
-                Input('dataset', "page_current"),
-                Input('dataset', "page_size"),
                 Input('dataset', 'sort_by'),
-                Input('dataset', "filter_query")
+                Input('dataset', "filter_query"),
+                Input('modal', 'is_open')
             ],
-            [
-                State('index_id', 'value'),
-                State('dataset', 'data')
-            ]
+            [State('rows', 'value'),
+             State('name', 'value')]
         )
-        def update_datatable(page_current, page_size, sort_by, filter_query, index, data):
+        def update_datatable(sort_by, filter_query, is_open, rows, name):
+            """
+            update datatable according to sorting, filtering and settings modifications
+            """
+            ctx = dash.callback_context
+            active_cell = no_update
+            columns = self.components['table']['dataset'].columns
+            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
+                if is_open:
+                    raise PreventUpdate
+                else:
+                    if rows != self.settings_ini['rows']:
+                        self.settings['rows'] = rows
+                        self.init_data()
+                        active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
+                        self.settings_ini['rows'] = self.settings['rows']
+
+                    if name == [1]:
+                        columns = [
+                                      {"name": '_index_', "id": '_index_'},
+                                      {"name": '_predict_', "id": '_predict_'}] +\
+                                  [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
+
             if not filter_query:
-                df = self.dataframe
+                df = self.round_dataframe
             else:
-                filtering_expressions = filter_query.split(' && ')
-                df = self.dataframe
-                for filter_part in filtering_expressions:
-                    col_name, operator, filter_value = self.split_filter_part(filter_part)
-                    if operator in ('eq', 'ne', 'lt', 'le', 'gt', 'ge'):
-                        # these operators match pandas series operator method names
-                        df = df.loc[getattr(df[col_name], operator)(filter_value)]
-                    elif operator == 'contains':
-                        df = df.loc[df[col_name].str.contains(filter_value)]
-                    elif operator == 'datestartswith':
-                        # this is a simplification of the front-end filtering logic,
-                        # only works with complete fields in standard format
-                        df = df.loc[df[col_name].str.startswith(filter_value)]
+                df = apply_filter(self.round_dataframe, filter_query)
 
             if len(sort_by):
                 df = df.sort_values(
@@ -742,86 +766,117 @@ class SmartApp:
                     ],
                     inplace=False
                 )
+            self.components['table']['dataset'].data = df.to_dict('records')
 
-            self.components['table']['dataset'].data = \
-                df.iloc[page_current * page_size: (page_current + 1) * page_size].to_dict('records')
-            row = self.check_row(data, index)
-            if row:
-                self.components['table']['dataset'].active_cell = {'row': row, 'column': 1}
-
-            return self.components['table']['dataset'].data, self.components['table']['dataset'].columns
+            return self.components['table']['dataset'].data, columns, active_cell
 
         @app.callback(
-            Output(component_id='global_feature_importance', component_property='figure'),
+            [
+                Output('global_feature_importance', 'figure'),
+                Output('global_feature_importance', 'clickData')
+            ],
             [
                 Input('select_label', 'value'),
-                Input('dataset', 'data')
+                Input('dataset', 'data'),
+                Input('modal', 'is_open')
             ],
-            [State('global_feature_importance', 'clickData')]
+            [State('global_feature_importance', 'clickData'),
+             State('dataset', "filter_query"),
+             State('features', 'value')]
         )
-        def update_feature_importance(label, data, clickData):
+        def update_feature_importance(label, data, is_open, clickData, filter_query, features):
+            """
+            update feature importance plot according to selected label and dataset state.
+            """
             ctx = dash.callback_context
-            if not ctx.triggered:
+            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
+                if is_open:
+                    raise PreventUpdate
+                else:
+                    if features != self.settings_ini['features']:
+                        self.settings['features'] = features
+                        self.settings_ini['features'] = self.settings['features']
+                    else:
+                        raise PreventUpdate
+            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
+                self.label = label
+            elif ctx.triggered[0]['prop_id'] == 'dataset.data':
+                self.list_index = [d['_index_'] for d in data]
+            else:
                 raise PreventUpdate
 
-            if ctx.triggered[0]['prop_id'] == 'select_label.value':
-                self.label = label
-            else:
-                self.list_index = [d['_index_'] for d in data]
-
+            selection = self.list_index if filter_query else None
             self.components['graph']['global_feature_importance'].figure = \
-                self.explainer.plot.features_importance(max_features=self.max_features,
-                                                        selection=self.list_index,
+                self.explainer.plot.features_importance(max_features=features,
+                                                        selection=selection,
                                                         label=self.label
                                                         )
             self.components['graph']['global_feature_importance'].adjust_graph()
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             self.select_point('global_feature_importance', clickData)
 
-            return self.components['graph']['global_feature_importance'].figure
+            return self.components['graph']['global_feature_importance'].figure, clickData
 
         @app.callback(
             Output(component_id='feature_selector', component_property='figure'),
             [
                 Input('global_feature_importance', 'clickData'),
                 Input('select_label', 'value'),
-                Input('dataset', 'data')
+                Input('modal', 'is_open')
             ],
-            [State('feature_selector', 'clickData')]
+            [
+                State('points', 'value'),
+                State('violin', 'value')
+            ]
         )
-        def update_feature_selector(feature, label, data, clickData):
+        def update_feature_selector(feature, label, is_open, points, violin):
+            """
+            Update feature plot according to label, data, selected feature and settings modifications
+            """
             ctx = dash.callback_context
-            if not ctx.triggered:
-                raise PreventUpdate
-
-            if ctx.triggered[0]['prop_id'] == 'select_label.value':
+            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
+                if is_open:
+                    raise PreventUpdate
+                else:
+                    if points != self.settings_ini['points'] or violin != self.settings_ini['violin']:
+                        self.settings['points'] = points
+                        self.settings_ini['points'] = self.settings['points']
+                        self.settings['violin'] = violin
+                        self.settings_ini['violin'] = self.settings['violin']
+                    else:
+                        raise PreventUpdate
+            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
-            elif ctx.triggered[0]['prop_id'] == 'dataset.data':
-                if self.subset:
-                    self.subset = [d['_index_'] for d in data]
+            elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
+                if feature is not None:
+                    self.selected_feature = feature['points'][0]['label']
+                    if feature['points'][0]['curveNumber'] == 0 and \
+                            len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                        self.subset = self.list_index
+                    else:
+                        self.subset = None
             else:
-                self.selected_feature = feature['points'][0]['label']
-                self.subset = self.list_index if feature['points'][0]['curveNumber'] == 0 else None
+                raise PreventUpdate
 
             self.components['graph']['feature_selector'].figure = self.explainer.plot.contribution_plot(
                 col=self.selected_feature,
                 selection=self.subset,
                 label=self.label,
-                violin_maxf=self.violin_maxf,
-                max_points=self.max_points
+                violin_maxf=violin,
+                max_points=points
             )
 
-            self.select_point('global_feature_importance', clickData)
-
-            if self.subset:
-                self.components['graph']['feature_selector'].figure['layout'].title.text += " <b>< Subset ></b>"
-            self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
-            self.components['graph']['feature_selector'].adjust_graph()
+            self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event'
+            subset_graph = True if self.subset is not None else False
+            self.components['graph']['feature_selector'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
 
             return self.components['graph']['feature_selector'].figure
 
         @app.callback(
-            Output(component_id='index_id', component_property='value'),
+            [
+                Output('index_id', 'value'),
+                Output("index_id", "n_submit")
+            ],
             [
                 Input('feature_selector', 'clickData'),
                 Input('dataset', 'active_cell')
@@ -830,85 +885,193 @@ class SmartApp:
                 State('dataset', 'data')
             ]
         )
-        # TODO : gestion déselection de la cellule qd clic sur graph
         def update_index_id(click_data, cell, data):
+            """
+            update index value according to active cell and click data on feature plot.
+            """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                 selected = click_data['points'][0]['customdata']
-                self.components['table']['dataset'].active_cell = None
+                self.click_graph = True
             elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
-                if cell:
+                if cell is not None:
                     selected = data[cell['row']]['_index_']
                 else:
                     raise PreventUpdate
             else:
                 raise PreventUpdate
-
-            # self.components['filter']['index'].value = selected
-            return selected
+            return selected, True
 
         @app.callback(
-            dash.dependencies.Output('threshold_label', 'children'),
-            [dash.dependencies.Input('threshold_id', 'value')])
+            Output('threshold_label', 'children'),
+            [Input('threshold_id', 'value')])
         def update_threshold_label(value):
+            """
+            update threshold label
+            """
             return f'Threshold : {value}'
 
         @app.callback(
-            dash.dependencies.Output('max_contrib_label', 'children'),
-            [dash.dependencies.Input('max_contrib_id', 'value')])
+            Output('max_contrib_label', 'children'),
+            [Input('max_contrib_id', 'value')])
         def update_max_contrib_label(value):
+            """
+            update max_contrib label
+            """
+            self.components['filter']['max_contrib']['max_contrib_id'].value = value
             return f'Features to display : {value}'
+
+        @app.callback(
+            [Output('max_contrib_id', 'value'),
+             Output('max_contrib_id', 'max'),
+             Output('max_contrib_id', 'marks')
+             ],
+            [Input('modal', 'is_open')],
+            [State('features', 'value')]
+        )
+        def update_max_contrib_id(is_open, features):
+            """
+            update max contrib component layout after settings modifications
+            """
+            ctx = dash.callback_context
+            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
+                if is_open:
+                    raise PreventUpdate
+                else:
+                    max = min(features, len(self.dataframe.columns) - 2)
+                    if max // 5 == max / 5:
+                        nb_marks = min(int(max // 5), 10)
+                    elif max // 4 == max / 4:
+                        nb_marks = min(int(max // 4), 10)
+                    elif max // 3 == max/3:
+                        nb_marks = min(int(max // 3), 10)
+                    elif max // 7 == max/7:
+                        nb_marks = min(int(max // 6), 10)
+                    else:
+                        nb_marks = 2
+                    marks = {f'{round(max * feat / nb_marks)}': f'{round(max * feat / nb_marks)}'
+                             for feat in range(1, nb_marks+1)}
+                    marks['1'] = '1'
+                    if max < self.components['filter']['max_contrib']['max_contrib_id'].value:
+                        value = max
+                    else:
+                        value = no_update
+
+                    return value, max, marks
 
         @app.callback(
             Output(component_id='detail_feature', component_property='figure'),
             [
-                Input('index_id', 'value'),
                 Input('threshold_id', 'value'),
                 Input('max_contrib_id', 'value'),
-                Input('check_id', 'value'),
+                Input('check_id_positive', 'value'),
+                Input('check_id_negative', 'value'),
                 Input('masked_contrib_id', 'value'),
-                Input('select_label', 'value')
+                Input('select_label', 'value'),
+                Input('dataset', 'active_cell'),
+                Input('feature_selector', 'clickData'),
+            ],
+            [
+                State('index_id', 'value'),
+                State('dataset', 'data')
             ]
         )
-        def update_detail_feature(index, threshold, max_contrib, sign, masked, label):
+        def update_detail_feature(threshold, max_contrib, positive, negative, masked, label, cell,
+                                  click_data, index, data):
+            """
+            update local explanation plot according to app changes.
+            """
             ctx = dash.callback_context
-            if not ctx.triggered:
-                raise PreventUpdate
+            selected = None
+            if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
+                selected = click_data['points'][0]['customdata']
+            elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
+                if cell:
+                    selected = data[cell['row']]['_index_']
+                else:
+                    raise PreventUpdate
+
+            if selected is None:
+                if cell is not None:
+                    selected = data[cell['row']]['_index_']
+                else:
+                    selected = index
 
             threshold = threshold if threshold != 0 else None
-            sign = (True if sign == [1] else None)
+            if positive == [1]:
+                sign = (None if negative == [1] else True)
+            else:
+                sign = (False if negative == [1] else None)
+
             self.explainer.filter(threshold=threshold,
                                   features_to_hide=masked,
                                   positive=sign,
                                   max_contrib=max_contrib)
-            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=index,
+            if np.issubdtype(self.explainer.x_pred.index[0], np.dtype(int).type):
+                selected = int(selected)
+            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=selected,
                                                                                                label=label,
-                                                                                               show_masked=True)
-            self.components['graph']['detail_feature'].adjust_graph()
+                                                                                               show_masked=True,
+                                                                                               yaxis_max_label=8)
+            self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
             return self.components['graph']['detail_feature'].figure
 
         @app.callback(
+            Output("validation", "n_clicks"),
             [
-                Output(component_id='dataset', component_property='style_data_conditional'),
-                Output(component_id='dataset', component_property='style_filter_conditional'),
-                Output(component_id='dataset', component_property='style_header_conditional')
+                Input("index_id", "n_submit")
+            ],
+
+        )
+        def click_validation(n_submit):
+            """
+            submit index selection
+            """
+            if n_submit:
+                return 1
+            else:
+                raise PreventUpdate
+
+        @app.callback(
+            [
+                Output('dataset', 'style_data_conditional'),
+                Output('dataset', 'style_filter_conditional'),
+                Output('dataset', 'style_header_conditional'),
+                Output('dataset', 'style_cell_conditional'),
             ],
             [
-                Input('index_id', 'value'),
-                Input('dataset', 'data'),
+                Input("validation", "n_clicks")
+            ],
+            [
+                State('dataset', 'data'),
+                State('index_id', 'value')
             ]
         )
-        def select_row(index, data):
+        def datatable_layout(validation, data, index):
             ctx = dash.callback_context
-            if not ctx.triggered:
-                raise PreventUpdate
-            selected = self.check_row(data, index)
-            init_style = [
-                    {'if': {'column_id': '_index_'}, 'backgroundColor': '#d3d3d3'},
-                    {'if': {'column_id': '_predict_'}, 'backgroundColor': '#d3d3d3'}
-            ]
-            if selected is not None:
-                data_style = init_style+[{"if": {"row_index": selected}, "backgroundColor": self.color}]
+            if ctx.triggered[0]['prop_id'] == 'validation.n_clicks' and validation is not None:
+                pass
             else:
-                data_style = init_style
-            return data_style, init_style, init_style
+                raise PreventUpdate
+
+            style_data_conditional = [
+                {
+                    'if': {'row_index': 'odd'},
+                    'backgroundColor': 'rgb(248, 248, 248)'
+                }
+            ]
+            style_filter_conditional = []
+            style_header_conditional = [
+                {'if': {'column_id': c}, 'fontWeight': 'bold'}
+                for c in ['_index_', '_predict_']
+            ]
+            style_cell_conditional = [
+                {'if': {'column_id': c},
+                 'width': '70px', 'fontWeight': 'bold'} for c in ['_index_', '_predict_']
+            ]
+
+            selected = check_row(data, index)
+            if selected is not None:
+                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color}]
+
+            return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional

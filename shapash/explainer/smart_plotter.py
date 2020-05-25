@@ -503,6 +503,7 @@ class SmartPlotter:
                        var_dict,
                        x_val,
                        contrib,
+                       yaxis_max_label=12,
                        subtitle=None,
                        width=900,
                        height=550,
@@ -516,11 +517,13 @@ class SmartPlotter:
         index_value:
             the index of row, used in title of local contribution plot
         var_dict: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
+            Unidimensional numpy array containing the features names for the observation of interest.
         x_val: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
+            Unidimensional numpy array containing the features values for the observation of interest.
         contrib: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
+            Unidimensional numpy array containing the contribution value for the observation of interest.
+        yaxis_max_label: int (default: 12)
+            Maximum number of variables to display labels on the y axis
         subtitle: string (default: None)
             subtitle to display
         width : Int (default: 900)
@@ -580,7 +583,7 @@ class SmartPlotter:
             else :
                 hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0],40,maxlen=120), \
                                   add_line_break(expl[1],40,maxlen=160))
-                if len(contrib) <= 12:
+                if len(contrib) <= yaxis_max_label:
                     ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0],45), truncate_str(expl[1],45))
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0],maxlen=45)))
@@ -750,6 +753,7 @@ class SmartPlotter:
                    label=None,
                    show_masked=True,
                    show_predict=True,
+                   yaxis_max_label=12,
                    width=900,
                    height=550,
                    file_name=None,
@@ -783,6 +787,8 @@ class SmartPlotter:
             show the sum of the contributions of the hidden variable
         show_predict: bool (default: True)
             show predict or predict proba value
+        yaxis_max_label: int
+            Maximum number of variables to display labels on the y axis
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 550)
@@ -883,7 +889,7 @@ class SmartPlotter:
                 del x_val[expl]
                 del contrib[expl]
 
-        fig = self.plot_bar_chart(line, var_dict, x_val, contrib, subtitle, width, height, file_name, auto_open)
+        fig = self.plot_bar_chart(line, var_dict, x_val, contrib, yaxis_max_label, subtitle, width, height, file_name, auto_open)
         return fig
 
     def contribution_plot(self,
@@ -1015,7 +1021,7 @@ class SmartPlotter:
                     self.tuning_colorscale()
                 if self.round_digit is None:
                     self.tuning_round_digit()
-                y_pred = y_pred.applymap(lambda x: round(x,self.round_digit))
+                y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
         else:
             y_pred = None
 
