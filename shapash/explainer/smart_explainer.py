@@ -57,11 +57,11 @@ class SmartExplainer:
             It gives for each line the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
 
-    x_init : pandas.DataFrame
+    x_init: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction
-    x_pred : pandas.DataFrame
+    x_pred: pandas.DataFrame
         x_init dataset with inverse transformation.
-    y_pred : pandas.DataFrame
+    y_pred: pandas.DataFrame
         User-specified prediction values.
     contributions: pandas.DataFrame (regression) or list (classification)
         local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
@@ -71,19 +71,19 @@ class SmartExplainer:
         Inverse features_dict mapping.
     label_dict: dict
         Dictionary mapping integer labels to domain names (classification - target values).
-    inv_label_dict : dict
+    inv_label_dict: dict
         Inverse label_dict mapping.
-    columns_dict : dict
+    columns_dict: dict
         Dictionary mapping integer column number to technical feature names.
-    inv_columns_dict : dict
+    inv_columns_dict: dict
         Inverse columns_dict mapping.
-    plot : object
+    plot: object
         Helper object containing all plotting functions (Bridge pattern).
-    model : model object
+    model: model object
         model used to check the different values of target estimate predict proba
-    features_desc : dict
+    features_desc: dict
         Dictionary that references the numbers of feature values ​​in the x_pred
-    features_imp : pandas.Series (regression) or list (classification)
+    features_imp: pandas.Series (regression) or list (classification)
         Features importance values
 
     How to declare a new SmartExplainer object?
@@ -91,6 +91,7 @@ class SmartExplainer:
     Example
     --------
     >>> xpl = SmartExplainer(features_dict=featd,label_dict=labeld)
+
     features_dict & label_dict are both optional
     features_dict maps technical feature names to domain names.
     label_dict specify the labels of target (classification)
@@ -141,12 +142,14 @@ class SmartExplainer:
             This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
             as they may wish to set their own threshold (classification)
         preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
-            A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
-            A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
-            A list with multiple category_encoders with optional (dict, list of dict)
-            A list with a single ColumnTransformer with optional (dict, list of dict)
-            A dict
-            A list of dict
+            --> Differents types of preprocessing are available:
+
+            - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+            - A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
+            - A list with multiple category_encoders with optional (dict, list of dict)
+            - A list with a single ColumnTransformer with optional (dict, list of dict)
+            - A dict
+            - A list of dict
 
         Example
         --------
@@ -306,7 +309,7 @@ class SmartExplainer:
                     """
                 )
 
-        return self.state.validate_contributions(contributions, self.x_pred)
+        return self.state.validate_contributions(contributions, self.x_init)
 
     def apply_preprocessing(self, contributions, preprocessing=None):
         """
@@ -641,7 +644,7 @@ class SmartExplainer:
             proba=False
     ):
         """
-        The to_pandas method allows to export the summary of local explainability
+        The to_pandas method allows to export the summary of local explainability.
         This method proposes a set of parameters to summarize the explainability of each point.
         If the user does not specify any, the to_pandas method uses the parameter specified during
         the last execution of the filter method.

@@ -1,7 +1,7 @@
 .. plot:
 
-Shapash Plot
-============
+More details about charts and plots
+===================================
 
 .. toctree::
     :maxdepth: 2

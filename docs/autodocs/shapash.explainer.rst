@@ -1,7 +1,7 @@
-SmartExplainer Object
+The SmartExplainer Object
 =========================
 
-SmartExplainer class
+SmartExplainer declaration and data preparation
 -----------------------------------------
 
 .. autoclass:: shapash.explainer.smart_explainer.SmartExplainer
@@ -9,8 +9,10 @@ SmartExplainer class
    :undoc-members:
    :show-inheritance:
 
-SmartPlotter class
+
+The Plot Methods
 ---------------------------------------
+
 
 .. autoclass:: shapash.explainer.smart_plotter.SmartPlotter
    :members: features_importance, contribution_plot, local_plot

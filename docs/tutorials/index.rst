@@ -12,4 +12,5 @@ This part offers a series of tutorials and allows users to gradually discover th
 
     overview
     plot
+    encoder
     explainer

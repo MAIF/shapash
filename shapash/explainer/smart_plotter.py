@@ -18,7 +18,10 @@ class SmartPlotter:
     The smartplotter class includes all the methods used to display graphics
 
     Each SmartPlotter method is easy to use from a Smart explainer object,
-    just use the following syntax:
+    just use the following syntax
+
+    Example:
+    --------
     >>> xpl.plot.my_plot_method(param=value)
 
     Attributes

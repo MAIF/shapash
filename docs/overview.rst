@@ -1,13 +1,16 @@
+.. overview:
+
 Overview
 ========
 
 Installation
 ------------
+You can install **Shapash** using pip:
 
-Shapash works in Python 3.6.
-You can install shapash using pip::
+.. code:: ipython3
 
     pip install shapash
+
 
 How does shapash work?
 ----------------------
@@ -22,11 +25,14 @@ Shapash relies on the different steps necessary to build a Machine Learning mode
 
 User Manual
 -----------
+
 Shapash works for Regression, Binary Classification or Multiclass problem.
-It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, SVM.
+It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*.
+
 Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary.
 
-You can use Shap or Lime, compute your own local contributions and use **Shapash** to display plot or summarize it.
+- Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
+- Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer*, *PowerTransformer*
 
 Using **Shapash** is simple and requires only a few lines of code.
 Most parameters are optional, you can displays plots effortlessly.
@@ -67,4 +73,4 @@ The 3 steps to display results:
 
     app = xpl.run_app()
 
-Watch the tutorial part of this for more details
+Watch the tutorial part of this documentation for more details

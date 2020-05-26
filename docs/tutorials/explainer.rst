@@ -1,8 +1,7 @@
 .. explainer:
 
-Shap & Lime Tutorials
-=====================
-
+Use Shapash with Shap or Lime
+=============================
 
 .. toctree::
     :maxdepth: 2

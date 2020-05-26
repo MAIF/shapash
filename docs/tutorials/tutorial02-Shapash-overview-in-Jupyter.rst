@@ -63,14 +63,14 @@ Encoding Categorical Features
 .. code:: ipython3
 
     from category_encoders import OrdinalEncoder
-    
+
     categorical_features = [col for col in X_df.columns if X_df[col].dtype == 'object']
-    
+
     encoder = OrdinalEncoder(
         cols=categorical_features,
         handle_unknown='ignore',
         return_df=True).fit(X_df)
-    
+
     X_df=encoder.transform(X_df)
 
 Train / Test Split
@@ -103,7 +103,7 @@ Declare and Compile SmartExplainer
 
 .. code:: ipython3
 
-    xpl = SmartExplainer(features_dict=house_dict) # Optional parameter, dict specifies label for features name 
+    xpl = SmartExplainer(features_dict=house_dict) # Optional parameter, dict specifies label for features name
 
 .. code:: ipython3
 
@@ -141,8 +141,8 @@ of features of a subset to the global features importance
 .. code:: ipython3
 
     subset = [ 168, 54, 995, 799, 310, 322, 1374,
-              1106, 232, 645, 1170, 1229, 703, 66,  
-              886, 160, 191, 1183, 1037, 991, 482,  
+              1106, 232, 645, 1170, 1229, 703, 66,
+              886, 160, 191, 1183, 1037, 991, 482,
               725, 410, 59, 28, 719, 337, 36]
     xpl.plot.features_importance(selection=subset)
 
