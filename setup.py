@@ -10,7 +10,7 @@ with open('README.md') as readme_file:
 
 
 requirements = [
-        'pip==19.2.2',
+        'pip==20.1.1',
         'plotly==4.3.0',
         'numpy==1.17.3',
         'pandas==0.25.0',
