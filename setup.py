@@ -10,7 +10,7 @@ with open('README.md') as readme_file:
 
 
 requirements = [
-        'pip==19.2.2',
+        'pip==20.1.1',
         'plotly==4.3.0',
         'numpy==1.17.3',
         'pandas==0.25.0',
@@ -26,10 +26,9 @@ requirements = [
         'dash-table-experiments>=0.6.0'
     ]
 
+setup_requirements = ['pytest-runner', ]
 
-with open('requirements.dev.txt') as f:
-    requirements_dev = f.read().splitlines()
-
+test_requirements = ['pytest', ]
 
 setup(
     name="shapash", # Replace with your own username
@@ -39,6 +38,7 @@ setup(
     author_email="yann.golhen@maif.fr",
     description="Shapash is a Python library which aims to make machine learning interpretable and understandable by everyone.",
     long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -59,8 +59,8 @@ setup(
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
               'shapash.utils', 'shapash.webapp'],
-    setup_requires=requirements,
+    setup_requires=setup_requirements,
     test_suite='tests',
-    tests_require=requirements_dev,
+    tests_require=test_requirements,
     zip_safe=False,
 )
