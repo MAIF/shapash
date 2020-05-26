@@ -2,7 +2,7 @@
 
 [![Build Status](https://api.travis-ci.com/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
 [![PyPI version](https://badge.fury.io/py/shapash.svg)](https://badge.fury.io/py/shapash)
-
+[![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://readthedocs.org/projects/shapash/)
 <img align="right" src="docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 
 <br/>
