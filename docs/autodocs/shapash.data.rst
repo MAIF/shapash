@@ -1,5 +1,5 @@
 Data Loader
-====================
+===========
 
 To test **Shapash** library, it provides a data_loader function which returns clearly
 labeled datasets.
