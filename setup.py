@@ -10,20 +10,17 @@ with open('README.md') as readme_file:
 
 
 requirements = [
-        'pip==20.1.1',
-        'plotly==4.3.0',
+        'plotly==4.5.4',
         'numpy==1.17.3',
-        'pandas==0.25.0',
-        'shap==0.32.1',
-        'dash>=0.41.0',
-        'dash-bootstrap-components>=0.9.1',
-        'dash-core-components>=0.46.0',
-        'dash-dangerously-set-inner-html>=0.0.2',
-        'dash-daq>=0.1.0',
-        'dash-html-components>=0.15.0',
-        'dash-renderer>=0.22.0',
-        'dash-table>=3.6.0',
-        'dash-table-experiments>=0.6.0'
+        'pandas==1.0.3',
+        'shap==0.35.0',
+        'dash==1.9.1'
+        'dash-bootstrap-components==0.9.1',
+        'dash-core-components==1.8.1',
+        'dash-daq==0.5.0',
+        'dash-html-components==1.0.2',
+        'dash-renderer==1.2.4',
+        'dash-table==4.6.1',
     ]
 
 setup_requirements = ['pytest-runner', ]
