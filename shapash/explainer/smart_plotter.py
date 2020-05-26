@@ -14,13 +14,16 @@ import copy
 
 class SmartPlotter:
     """
-    Bridge pattern decoupling plotting functions from SmartExplainer.
-    This class centralizes all the methods necessary for graphic representations.
-    It clarifies the syntax for shapash users who can easily call these methods
-    with a compiled SmartExplainer object.
+    SmartPlotter is a Bridge pattern decoupling plotting functions from SmartExplainer.
+    The smartplotter class includes all the methods used to display graphics
 
-    example: xpl.plot.features_importance
-    
+    Each SmartPlotter method is easy to use from a Smart explainer object,
+    just use the following syntax
+
+    Example:
+    --------
+    >>> xpl.plot.my_plot_method(param=value)
+
     Attributes
     ----------
     explainer: object
@@ -765,6 +768,10 @@ class SmartPlotter:
         you could use the method filter beforehand to modify the parameters of this summary.
         preprocessing is used here to make this graph more intelligible
 
+        index, row_num or query parameter can be used to select the local explanations to display
+
+        local_plot tutorial offers a lot of examples (please check tutorial part of this doc)
+
         Parameters
         ----------
         index: string, int, float, ... type of index in x_val input matrix (default None)
@@ -798,6 +805,10 @@ class SmartPlotter:
         -------
         Plotly Figure Object
             Input arrays updated with masked contributions.
+
+        Example
+        --------
+        >>> xpl.plot.local_plot(row_num=0)
         """
         #checking args
         if sum(arg is not None for arg in [query, row_num, index]) != 1:
@@ -897,14 +908,24 @@ class SmartPlotter:
         """
         contribution_plot method diplays a Plotly scatter or violin plot of a selected feature.
         It represents the contribution of the selected feature to the predicted value.
+
+        This plot allows the user to understand how the value of a feature affects a prediction
+
         Type of plot (Violin/scatter) is automatically selected. It depends on the feature
         to be analyzed, the type of use case (regression / classification) and the presence of
         predicted values attribute.
+
         A sample is taken if the number of points to be displayed is too large
+
+        Using col parameter, shapash user can specify the column num, name or column label of
+        the feature
+
+        contribution_plot tutorial offers many examples (please check tutorial part of this doc)
+
         Parameters
         ----------
         col: String or Int
-            Name of the column whose contributions we want to plot
+            Name, label name or column number of the column whose contributions we want to plot
         selection: list (optional)
             Contains list of index, subset of the input DataFrame that we want to plot
         label: integer or string (default -1)
@@ -925,6 +946,14 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        Plotly Figure Object
+
+        Example
+        --------
+        >>> xpl.plot.contribution_plot(0)
         """
 
         if label and self.explainer._case == "classification":
@@ -1019,8 +1048,16 @@ class SmartPlotter:
                             file_name=None,
                             auto_open=False):
         """
-        Plotly plot of features importance
-        horizontal barchar represents contributions of each feature
+        features_importance display a plotly features importance plot.
+
+        in Multiclass Case, this features_importance focus on a label value.
+        User specifies the label value using label parameter.
+
+        the selection parameter allows the user to compare a subset to the global features
+        importance
+
+        features_importance tutorial offers several examples
+         (please check tutorial part of this doc)
 
         Parameters
         ----------
@@ -1044,6 +1081,14 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        Plotly Figure Object
+
+        Example
+        --------
+        >>> xpl.plot.features_importance()
         """
 
         self.explainer.compute_features_import(force=force)
