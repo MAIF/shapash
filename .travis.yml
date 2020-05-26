@@ -6,9 +6,10 @@ script: tox
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
-  user: sMaif
+  user: __token__
   password:
-    secure: AgEIcHlwaS5vcmcCJGRhMjA4ZTE5LTVkNzUtNDNjMS05MmNmLTY4ZTllODkxMmE5MwACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgjXRetD-PHTHFFqs2HpkJdhHUTJqQiLi6Goxr5S_jTJk
+    secure: 
+      AgEIcHlwaS5vcmcCJDJhYTQzZWMzLTQwYTUtNDUyYi04Njg3LWI1YmJmMzZhNzAwOQACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgDxMFR_3nRxgpPuQcbiblFVnldrnVfRnWF6EtGL9kCq0
   on:
     tags: true
     repo: MAIF/shapash
