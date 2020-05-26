@@ -1,4 +1,4 @@
-The SmartExplainer Object
+SmartExplainer Object
 =========================
 
 SmartExplainer declaration and data preparation
@@ -12,7 +12,6 @@ SmartExplainer declaration and data preparation
 
 The Plot Methods
 ---------------------------------------
-
 
 .. autoclass:: shapash.explainer.smart_plotter.SmartPlotter
    :members: features_importance, contribution_plot, local_plot

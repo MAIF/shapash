@@ -4,14 +4,14 @@ import json
 
 def data_loading(dataset):
     """
-    data_loading allows shapash user to try the library with small but clear datasets
+    data_loading allows shapash user to try the library with small but clear datasets.
     Titanic's or house_prices' reworked data loader from 'titanicdata.csv' and 'house_prices_dataset.csv'
     with well labels in a dictionnary.
 
     Example
     ----------
-    >>>from shapash.data.data_loader import data_loading
-    >>>house_df, house_dict = data_loading('house_prices')
+    >>> from shapash.data.data_loader import data_loading
+    >>> house_df, house_dict = data_loading('house_prices')
 
     Parameters
     ----------
@@ -24,8 +24,8 @@ def data_loading(dataset):
     -------
     data : pandas.DataFrame
         Dataset required
-    dic : Dictionnary
-        Dictionnary associated to the dataset.
+    dict : Dictionnary
+        Columns labels dictionnary associated to the dataset.
     """
     #Path to current file
     dir = op.dirname(op.abspath(__file__))
@@ -50,7 +50,7 @@ def data_loading(dataset):
         #data
         data = pd.read_csv(data_titanic_path, header=0, index_col=0, engine='python')
 
-        #dic
+        #dict
         with open(dict_titanic_path, 'r') as openfile:
             dic = json.load(openfile)
 

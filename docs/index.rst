@@ -30,9 +30,11 @@ The project was developed by **MAIF** Data Scientists.
    :width: 500px
    :align: center
 
-- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability., and understand how the different features contribute:
+- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute:
 
-*LINK + GIF*
+.. image:: ./_static/shapash-webapp.png
+   :width: 700px
+   :align: center
 
 - To **Summarize and export** the local explanation: **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to an summarized and explicit explanation
 
