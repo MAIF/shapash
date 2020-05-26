@@ -14,7 +14,7 @@ requirements = [
         'numpy==1.17.3',
         'pandas==1.0.3',
         'shap==0.35.0',
-        'dash==1.9.1'
+        'dash==1.9.1',
         'dash-bootstrap-components==0.9.1',
         'dash-core-components==1.8.1',
         'dash-daq==0.5.0',
