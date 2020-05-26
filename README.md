@@ -16,15 +16,16 @@ Data Scientists can more easily understand their models and share their results.
 
 <br/> <br/>
 
-**The objectives pursued by shapash:**
-- To display clear and understandable results: Plots and outputs use **explicit labels** for each feature and its modalities:
+**The objectives of shapash:**
+- To display clear and understandable results: Plots and outputs use **explicit labels** for each feature and its values:
 <p align="center">
   <img src="docs/_static/shapash-contribution_plot-example.png" width="700" title="contrib">
 </p>
 
 - To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability., and understand how the different features contribute:
-
-*LINK + GIF*
+<p align="center">
+  <img src="docs/_static/shapash-webapp.png" width="800" title="contrib">
+</p>
 
 - To **Summarize and export** the local explanation:
 <p align="center">
@@ -44,7 +45,7 @@ Data Scientists can more easily understand their models and share their results.
 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
 to compute contributions.
-**Shapash** relies on the different steps necessary to build a Machine Learning model to make the results understandable.
+**Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
 
 <p align="center">
   <img src="docs/_static/shapash-diagram.png" width="900" title="diagram">
@@ -56,6 +57,9 @@ to compute contributions.
 **Shapash** works for Regression, Binary Classification or Multiclass problem. <br />
 It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*. <br />
 Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary. <br />
+- Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
+- Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer*, *PowerTransformer*
+
 
 You can use Shap or Lime, compute your own local contributions and use **Shapash** to display plot or summarize it. <br />
 
@@ -116,12 +120,12 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
 - [Contribution plot to understand how one feature affects a prediction](tutorial/plot/tuto-plot02-contribution_plot.ipynb)
 - [Summarize, display and export local contribution using filter and local_plot method](tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb)
-- Compare Plot  - TO DO*
+- Compare Plot  - *Coming Soon*
 
 ### The different ways to use Encoders and Dictionaries
-- *Use Category_Encoders - TO DO*
-- *Use ColumnTransformers - TO DO*
-- *Use a Simple Dict - TO DO*
+- [Use Category_Encoder & inverse transformation](tutorial/encoder/tuto-encoder01-using-category_encoder.ipynb)
+- [Use ColumnTransformers](tutorial/encoder/tuto-encoder02-using-columntransformer.ipynb)
+- [Use Simple Python Dictionnaries](tutorial/encoder/tuto-encoder03-using-dict.ipynb)
 
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
