@@ -38,6 +38,7 @@ setup(
     author_email="yann.golhen@maif.fr",
     description="Shapash is a Python library which aims to make machine learning interpretable and understandable by everyone.",
     long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
