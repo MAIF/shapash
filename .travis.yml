@@ -6,10 +6,9 @@ script: tox
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
-  user: __token__
+  user: sMaif
   password:
-    secure: 
-      AgEIcHlwaS5vcmcCJDJhYTQzZWMzLTQwYTUtNDUyYi04Njg3LWI1YmJmMzZhNzAwOQACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgDxMFR_3nRxgpPuQcbiblFVnldrnVfRnWF6EtGL9kCq0
+    secure: gHQ6CY+TiL3AAL3W1y7qND1YUXLRNmKZmuOMsAi5jrH2vYT/rzSMKaiHTc4Kt7Th1xX2/c3tGT+gZWOEPnD2fslcSHfjmOKGLAnIP/ylatiFMI4jq4i5zclU9BNN9Wf69qBtlQqE5b9J8kQI6+WbEevFVQ3lI9kCci3yvyYaZ2bGnmjvpFhTJgYM4UvqKgifaAlO+Yt/E2cKQb5vRwSvXfqdSyzLh1WdrvyuNvLkjlzzmQiTjhfIb2KjPQQxFWTI4gYwMPb3LhddJdD2JTvmUOcAGRY7kwx8i7eZn8t1XX/NAXn4QFzwNIGQBgRRY+72MIeyxg5tnKkIkQ2yibH2dgJZxM9rXAGfgHQjMCHupuND5E3/utx+tEeQ3iiMWa12uZLIU0NJ51NhAGWm1ZeYWIvIkmFTRgE5fUefPyj1rT1n514KEhtOf5oucQqRpUlOhQumKP43Vpcip3idZ/S/NhJ6frLviTwAP9hRbm/ATbAf+dOjfCIXpHOwl/1U7Q1aDqJd7q65Bzjm4D9nTRkbV5jZmfd++6CeVL5kncWQbzeGV17atRUnIbgK/81BFIgCXebZdZft2nODkowgprR3DyZT00JMdEzRvtp6kpsatOrkoZXvJ6+UCawYEo75Ck4aUGRrtRhv9KunNrIWqYVbv7K9TV6X9NfqjlGWnWHWM1s=
   on:
     tags: true
     repo: MAIF/shapash
