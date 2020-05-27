@@ -3,7 +3,7 @@
 [![Build Status](https://api.travis-ci.com/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
 [![PyPI version](https://badge.fury.io/py/shapash.svg)](https://badge.fury.io/py/shapash)
 [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://readthedocs.org/projects/shapash/)
-<img align="right" src="docs/_static/shapash-resize.png" width="300" title="shapash-logo">
+<img align="right" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 
 <br/>
 <br/>
@@ -20,21 +20,21 @@ Data Scientists can more easily understand their models and share their results.
 **The objectives of shapash:**
 - To display clear and understandable results: Plots and outputs use **explicit labels** for each feature and its values:
 <p align="center">
-  <img src="docs/_static/shapash-contribution_plot-example.png" width="700" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-contribution_plot-example.png" width="700" title="contrib">
 </p>
 
 - To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability., and understand how the different features contribute:
 <p align="center">
-  <img src="docs/_static/shapash-webapp.png" width="800" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-webapp.png" width="800" title="contrib">
 </p>
 
 - To **Summarize and export** the local explanation:
 <p align="center">
-  <img src="docs/_static/shapash-to_pandas-example.png" width="700" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-to_pandas-example.png" width="700" title="contrib">
 </p>
 
 <p align="center">
-  <img src="docs/_static/shapash-local_plot-example.png" width="700" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-local_plot-example.png" width="700" title="contrib">
 </p>
 
   > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to an summarized and explicit explanation
@@ -49,7 +49,7 @@ to compute contributions.
 **Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
 
 <p align="center">
-  <img src="docs/_static/shapash-diagram.png" width="900" title="diagram">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="900" title="diagram">
 </p>
 
 

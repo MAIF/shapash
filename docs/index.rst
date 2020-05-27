@@ -6,7 +6,7 @@
 Welcome to Shapash's documentation !
 =====================================
 
-.. image:: _static/shapash-resize.png
+.. image:: ./_static/shapash-resize.png
    :width: 300px
    :align: center
 
