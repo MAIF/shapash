@@ -14,6 +14,7 @@ import os
 import sys
 sys.path.insert(0, '..')
 
+import shapash
 
 # -- Project information -----------------------------------------------------
 
@@ -22,10 +23,10 @@ copyright = '2020, Maif'
 author = 'Maif'
 
 # The short X.Y version
-version = '0.1'
+version = shapash.__version__
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = shapash.__version__
 
 
 # -- General configuration ---------------------------------------------------
