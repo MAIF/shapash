@@ -51,11 +51,14 @@ setup(
         'shapash.explainer': 'shapash/explainer',
         'shapash.manipulation': 'shapash/manipulation',
         'shapash.utils': 'shapash/utils',
-        'shapash.webapp': 'shapash/webapp'
+        'shapash.webapp': 'shapash/webapp',
+        'shapash.webapp.utils': 'shapash/webapp/utils',
+        'shapash.webapp.assets': 'shapash/webapp/assets',
+        'shapash.tutorial.data': 'shapash/tutorial/data'
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
-              'shapash.utils', 'shapash.webapp'],
+              'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils'],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
