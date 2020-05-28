@@ -20,14 +20,15 @@ class SmartPlotter:
     Each SmartPlotter method is easy to use from a Smart explainer object,
     just use the following syntax
 
-    Example:
+    Attributes :
+
+    explainer: object
+        SmartExplainer instance to point to.
+
+    Example
     --------
     >>> xpl.plot.my_plot_method(param=value)
 
-    Attributes
-    ----------
-    explainer: object
-        SmartExplainer instance to point to.
     """
 
     def __init__(self, explainer):

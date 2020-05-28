@@ -14,7 +14,7 @@ Display local_plot - to_pandas export
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import numpy as np
     import pandas as pd
@@ -23,16 +23,16 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
     from sklearn.model_selection import train_test_split
     import lime.lime_tabular
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df, titan_dict = data_loading('titanic')
     del titan_df['Name']
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df.head()
 
@@ -60,16 +60,16 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 Create Classification Model
 ---------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-.. code:: ipython3
+.. code:: ipython
 
     varcat=['Pclass','Sex','Embarked','Title']
 
-.. code:: ipython3
+.. code:: ipython
 
     categ_encoding = OrdinalEncoder(cols=varcat, \
                                     handle_unknown='ignore', \
@@ -78,7 +78,7 @@ Create Classification Model
 
 Train Test split + Random Forest fit
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, train_size=0.75, random_state=1)
     
@@ -104,7 +104,7 @@ Train Test split + Random Forest fit
 Create Lime Explainer
 ---------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     #Training Tabular Explainer
     explainer = lime.lime_tabular.LimeTabularExplainer(Xtrain.values, 
@@ -115,7 +115,7 @@ Create Lime Explainer
 Apply Explainer to Test Sample And Preprocessing
 ------------------------------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     # Function features_check Extract feature names from Lime Output to be used by shapash
     def features_check(s):
@@ -124,7 +124,7 @@ Apply Explainer to Test Sample And Preprocessing
                 feat = w
         return feat
 
-.. code:: ipython3
+.. code:: ipython
 
     %%time
     # Compute local Lime Explanation for each row in Test Sample
@@ -140,31 +140,31 @@ Apply Explainer to Test Sample And Preprocessing
     Wall time: 10.9 s
 
 
-.. code:: ipython3
+.. code:: ipython
 
     contribution_df =pd.DataFrame(contrib_l,index=Xtest.index)
     # sorting the columns as in the original dataset
     contribution_df = contribution_df[list(Xtest.columns)]
 
-.. code:: ipython3
+.. code:: ipython
 
     ypred=pd.DataFrame(rf.predict(Xtest),columns=['pred'],index=Xtest.index)
 
 Use Shapash With Lime Contributions
 -----------------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=titan_dict)
 
 Use contributions parameter of compile method to declare Lime contributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(contributions=contribution_df, # Lime Contribution pd.DataFrame
                 y_pred=ypred,
@@ -172,7 +172,7 @@ Use contributions parameter of compile method to declare Lime contributions
                 model=rf,
                 preprocessing=categ_encoding)
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.local_plot(index=3)
 
@@ -181,7 +181,7 @@ Use contributions parameter of compile method to declare Lime contributions
 .. image:: tuto-expl02-Shapash-Viz-using-Lime-contributions_files/tuto-expl02-Shapash-Viz-using-Lime-contributions_23_0.png
 
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df = xpl.to_pandas(max_contrib=3,positive=True,proba=True)
     summary_df.head()

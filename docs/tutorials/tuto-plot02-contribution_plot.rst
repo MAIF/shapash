@@ -14,7 +14,7 @@ own choice
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import pandas as pd
     from category_encoders import OrdinalEncoder
@@ -26,14 +26,14 @@ Building Supervized Model
 
 Load Titanic data
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     titanic_df, titanic_dict = data_loading('titanic')
     y_df=titanic_df['Survived'].to_frame()
     X_df=titanic_df[titanic_df.columns.difference(['Survived'])]
 
-.. code:: ipython3
+.. code:: ipython
 
     titanic_df.head()
 
@@ -62,7 +62,7 @@ Load Titanic data
 
 Load Titanic data
 
-.. code:: ipython3
+.. code:: ipython
 
     from category_encoders import OrdinalEncoder
     
@@ -77,31 +77,31 @@ Load Titanic data
 
 Train / Test Split + model fitting
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=7)
 
-.. code:: ipython3
+.. code:: ipython
 
     clf = XGBClassifier(n_estimators=200,min_child_weight=2).fit(Xtrain,ytrain)
 
 First step: You need to Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     response_dict = {0: 'Death', 1:' Survival'}
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=titanic_dict, # Optional parameters
                          label_dict=response_dict) # Optional parameters, dicts specify labels 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -121,7 +121,7 @@ You can now display contribution plot :
 you have to specify the feature you want to analyse. You can use column
 name, label or column number
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot(col='Age')
 
@@ -130,7 +130,7 @@ name, label or column number
 .. image:: tuto-plot02-contribution_plot_files/tuto-plot02-contribution_plot_17_0.png
 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot(col='Pclass')
 
@@ -147,7 +147,7 @@ Classification Case: Use label parameter to select the target modality you want 
 
 with label parameter, you can specify explicit label or label number
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot(col='Pclass',label='Death')
 
@@ -161,7 +161,7 @@ Add a prediction to better understand your model
 
 You can add your prediction with add or compile method
 
-.. code:: ipython3
+.. code:: ipython
 
     y_pred = pd.DataFrame(clf.predict(Xtest),columns=['pred'],index=Xtest.index)
     xpl.add(y_pred=y_pred)
@@ -191,7 +191,7 @@ Focus on a subset
 With selection params you can specify a list of index of people you wand
 to focus
 
-.. code:: ipython3
+.. code:: ipython
 
     index = list(Xtest[xpl.x_pred['Pclass'].isin(['First class','Second class'])].index.values)
     xpl.plot.contribution_plot(col='Pclass',selection=index)
@@ -208,7 +208,7 @@ Method contribution_plot use random sample to limit the number of points
 displayed. Default size of this sample is 2000, but you can change it
 with the parameter max_points:
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot(col='Pclass',max_points=50)
 
@@ -224,7 +224,7 @@ contribution_plot displays a scatter point if the number of distinct
 values of the feature is greater than 10. You can change this parameter
 violin_maxf:
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot(col='Pclass',violin_maxf=2)
 

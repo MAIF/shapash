@@ -15,7 +15,7 @@ on column position.
 So, the top-Transform feature obtain after the ColumnTransformer
 shouldn’t be sampled.
 
-.. code:: ipython3
+.. code:: ipython
 
     import numpy as np
     import pandas as pd
@@ -28,14 +28,14 @@ shouldn’t be sampled.
 Load titanic Data
 -----------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     
     titan_df, titan_dict = data_loading('titanic')
     del titan_df['Name']
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df.head()
 
@@ -65,14 +65,14 @@ Prepare data for the model
 
 Create Target
 
-.. code:: ipython3
+.. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
 Train a columns transformer with multiple transformers
 
-.. code:: ipython3
+.. code:: ipython
 
     enc_columntransfo = ColumnTransformer(
                 transformers=[
@@ -84,7 +84,7 @@ Train a columns transformer with multiple transformers
 
 Reaffect columns name for the remainder part.
 
-.. code:: ipython3
+.. code:: ipython
 
     #find index that didn't get transformation
     idx_col = enc_columntransfo.transformers_[2][2]
@@ -117,7 +117,7 @@ Reaffect columns name for the remainder part.
 Fit a model
 -----------
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_transform, y, train_size=0.75, random_state=1)
     
@@ -144,15 +144,15 @@ Fit a model
 Using Shapash
 -------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer()
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -169,7 +169,7 @@ Using Shapash
 Visualize data in pandas
 ------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     #Cause in ColumnsTransformer we can apply multiple transformer on the same column.
     #the Pclass colums in now : TransformersName +  Pclass
@@ -194,7 +194,7 @@ Visualize data in pandas
 
 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.x_init.head(4)
 

@@ -11,7 +11,7 @@ object in pickle file
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import pandas as pd
     from category_encoders import OrdinalEncoder
@@ -22,17 +22,17 @@ Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/dat
 Building Supervized Model
 -------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     house_df, house_dict = data_loading('house_prices')
 
-.. code:: ipython3
+.. code:: ipython
 
     y_df=house_df['SalePrice'].to_frame()
     X_df=house_df[house_df.columns.difference(['SalePrice'])]
 
-.. code:: ipython3
+.. code:: ipython
 
     house_df.shape
 
@@ -45,7 +45,7 @@ Building Supervized Model
 
 
 
-.. code:: ipython3
+.. code:: ipython
 
     house_df.head()
 
@@ -74,7 +74,7 @@ Building Supervized Model
 Encoding Categorical Features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from category_encoders import OrdinalEncoder
     
@@ -90,18 +90,18 @@ Encoding Categorical Features
 Train / Test Split
 ^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=1)
 
 Model Fitting
 ^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     regressor = LGBMRegressor(n_estimators=200).fit(Xtrain,ytrain)
 
-.. code:: ipython3
+.. code:: ipython
 
     y_pred = pd.DataFrame(regressor.predict(Xtest),columns=['pred'],index=Xtest.index)
 
@@ -111,15 +111,15 @@ Understanding my model with shapash
 Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=house_dict) # optional parameter, specifies label for features name 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -137,7 +137,7 @@ Declare and Compile SmartExplainer
 Start WebApp
 ^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     app = xpl.run_app()
 
@@ -147,21 +147,21 @@ link <https://shapash-demo.ossbymaif.fr/>`__
 Stop the WebApp after using it
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     app.kill()
 
 Export local explaination in DataFrame
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df= xpl.to_pandas(
         max_contrib=3, # Number Max of features to show in summary
         threshold=5000,
     )
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df.head()
 
@@ -193,6 +193,6 @@ Save SmartExplainer in Pickle File
 You can save the SmartExplainer Object in a pickle file to make new
 plots later or launch the WebApp again
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.save('./xpl.pkl')

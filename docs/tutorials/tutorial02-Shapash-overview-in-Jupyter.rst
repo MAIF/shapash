@@ -11,7 +11,7 @@ with to_pandas method - Save Shapash object in pickle file
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import pandas as pd
     from category_encoders import OrdinalEncoder
@@ -21,17 +21,17 @@ Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/dat
 Building Supervized Model
 -------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     house_df, house_dict = data_loading('house_prices')
 
-.. code:: ipython3
+.. code:: ipython
 
     y_df=house_df['SalePrice'].to_frame()
     X_df=house_df[house_df.columns.difference(['SalePrice'])]
 
-.. code:: ipython3
+.. code:: ipython
 
     house_df.head()
 
@@ -60,7 +60,7 @@ Building Supervized Model
 Encoding Categorical Features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from category_encoders import OrdinalEncoder
 
@@ -76,18 +76,18 @@ Encoding Categorical Features
 Train / Test Split
 ^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=1)
 
 Model Fitting
 ^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     regressor = LGBMRegressor(n_estimators=200).fit(Xtrain,ytrain)
 
-.. code:: ipython3
+.. code:: ipython
 
     y_pred = pd.DataFrame(regressor.predict(Xtest),columns=['pred'],index=Xtest.index)
 
@@ -97,15 +97,15 @@ Understand my model with shapash
 Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=house_dict) # Optional parameter, dict specifies label for features name
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -123,7 +123,7 @@ Declare and Compile SmartExplainer
 Display features importance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.features_importance()
 
@@ -138,7 +138,7 @@ Focus on a specific subset
 You can use the features_importance method to compare the contribution
 of features of a subset to the global features importance
 
-.. code:: ipython3
+.. code:: ipython
 
     subset = [ 168, 54, 995, 799, 310, 322, 1374,
               1106, 232, 645, 1170, 1229, 703, 66,
@@ -160,7 +160,7 @@ Understand how a feature contributes
 -  You can use feature name, feature label or feature number to specify
    which feature you want to analyze
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot("OverallQual")
 
@@ -169,7 +169,7 @@ Understand how a feature contributes
 .. image:: tutorial02-Shapash-overview-in-Jupyter_files/tutorial02-Shapash-overview-in-Jupyter_23_0.png
 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.contribution_plot("Second floor square feet")
 
@@ -191,7 +191,7 @@ contribution (in absolute value) necessary to display a criterion -
 positive : display only positive contribution? Negative?(default None) -
 features_to_hide : list of features you don’t want to display
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.filter(max_contrib=8,threshold=100)
 
@@ -201,7 +201,7 @@ Display local plot, applying your filter
 you can use row_num, index or query parameter to specify which
 prediction you want to explain
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.local_plot(index=560)
 
@@ -218,14 +218,14 @@ Export your local explanation to pandas DataFrame:
 
 to_pandas method has the same parameters as the filter method
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df= xpl.to_pandas(
         max_contrib=3, # Number Max of features to show in summary
         threshold=5000,
     )
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df.head()
 
@@ -255,6 +255,6 @@ Save your explainer in Pickle File
 You can save the SmartExplainer Object in a pickle file to make new
 plots later or launch the WebApp again
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.save('./xpl.pkl')

@@ -15,7 +15,7 @@ explanation with to_pandas
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import pandas as pd
     from category_encoders import OrdinalEncoder
@@ -25,14 +25,14 @@ Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/dat
 Building Supervized Model
 -------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     house_df, house_dict = data_loading('house_prices')
     y_df=house_df['SalePrice'].to_frame()
     X_df=house_df[house_df.columns.difference(['SalePrice'])]
 
-.. code:: ipython3
+.. code:: ipython
 
     house_df.head()
 
@@ -54,7 +54,7 @@ Building Supervized Model
     +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
 
 
-.. code:: ipython3
+.. code:: ipython
 
     from category_encoders import OrdinalEncoder
     
@@ -67,15 +67,15 @@ Building Supervized Model
     
     X_df=encoder.transform(X_df)
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=1)
 
-.. code:: ipython3
+.. code:: ipython
 
     regressor = CatBoostRegressor(n_estimators=50).fit(Xtrain,ytrain,verbose=False)
 
-.. code:: ipython3
+.. code:: ipython
 
     y_pred = pd.DataFrame(regressor.predict(Xtest),columns=['pred'],index=Xtest.index)
 
@@ -85,15 +85,15 @@ Work With filter and local_plot methods
 First step: You need to Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=house_dict) # Optional parameter, dict specifies label for features name 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -118,14 +118,14 @@ contribution (in absolute value) necessary to display a criterion -
 positive : display only positive contribution? Negative?(default None) -
 features_to_hide : list of features you don’t want to display
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.filter(max_contrib=5)
 
 Local_plot
 ^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.local_plot(index=268)
 
@@ -137,7 +137,7 @@ Local_plot
 Threshold parameter to focus on significant contributions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.filter(max_contrib=5,threshold=10000)
     xpl.plot.local_plot(index=268)
@@ -150,7 +150,7 @@ Threshold parameter to focus on significant contributions
 Don’t display hidden contributions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.local_plot(index=268,show_masked=False)
 
@@ -164,7 +164,7 @@ You can also hide the predict value with parameter show_predict=False
 Focus on Negative contribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.filter(max_contrib=8,positive=False)
     xpl.plot.local_plot(index=268)
@@ -184,7 +184,7 @@ unnecessary information
 
 You can use features_to_hide parameter in filter method
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.filter(max_contrib=8,positive=False,features_to_hide=['BsmtFullBath','GarageType'])
     xpl.plot.local_plot(index=268)
@@ -199,7 +199,7 @@ Select a row with a query
 
 You can selct with an index or a row number. You can also use a query:
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.filter(max_contrib=3,positive=False)
     xpl.plot.local_plot(query="LotArea == 8400 and LotShape == 'Regular' and TotalBsmtSF == 720")
@@ -214,12 +214,12 @@ Classification Case
 
 transform our use case into classification:
 
-.. code:: ipython3
+.. code:: ipython
 
     ytrain['PriceClass'] = ytrain['SalePrice'].apply(lambda x: 1 if x < 150000 else (3 if x > 300000 else 2))
     label_dict = { 1 : 'Cheap', 2 : 'Moderately Expensive', 3 : 'Expensive' }
 
-.. code:: ipython3
+.. code:: ipython
 
     clf = CatBoostClassifier(n_estimators=50).fit(Xtrain,ytrain['PriceClass'],verbose=False)
     y_pred_clf = pd.DataFrame(clf.predict(Xtest),columns=['pred'],index=Xtest.index)
@@ -227,11 +227,11 @@ transform our use case into classification:
 Declare new SmartExplainer dedicated to classification problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xplclf = SmartExplainer(features_dict=house_dict,label_dict=label_dict) # Optional parameters: display explicit output
 
-.. code:: ipython3
+.. code:: ipython
 
     xplclf.compile(
         x=Xtest,
@@ -251,7 +251,7 @@ Use label parameter of local_plot parameter to select the explanation you want
 
 with label parameter, you can specify explicit label or label number
 
-.. code:: ipython3
+.. code:: ipython
 
     xplclf.filter(max_contrib=7,positive=True)
     xplclf.plot.local_plot(index=268,label='Moderately Expensive')
@@ -264,7 +264,7 @@ with label parameter, you can specify explicit label or label number
 See the summary parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     xplclf.mask_params
 
@@ -292,7 +292,7 @@ Export your local explanation in pd.DataFrame with to_pandas method :
 -  When you work on classification problem, parameter proba=True output
    predict probability
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df= xplclf.to_pandas(proba=True)
 
@@ -302,7 +302,7 @@ Export your local explanation in pd.DataFrame with to_pandas method :
     to_pandas params: {'features_to_hide': None, 'threshold': None, 'positive': True, 'max_contrib': 7}
 
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df.head()
 
@@ -331,14 +331,14 @@ It is also possible to calculate the probability relating to one of the
 target modality for all the dataset, and to display the elements of
 explainability associated with this target modality
 
-.. code:: ipython3
+.. code:: ipython
 
     #Create One column pd.DataFrame with constant value
     constantpred=pd.DataFrame([3 for x in range(Xtest.shape[0])],columns=['pred'],index=Xtest.index)
     xplclf.add(y_pred=constantpred)
     summary_df = xplclf.to_pandas(proba=True,max_contrib=3,threshold=0.1,positive=True)
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df.head()
 

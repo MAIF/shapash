@@ -42,7 +42,7 @@ The project was developed by **MAIF** Data Scientists.
    :width: 600px
    :align: center
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df.head()
 

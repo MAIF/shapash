@@ -16,7 +16,7 @@ Compile Shapash SmartExplainer - Display local_plot - to_pandas export
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import numpy as np
     import pandas as pd
@@ -25,16 +25,16 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
     from sklearn.model_selection import train_test_split
     import shap
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df, titan_dict = data_loading('titanic')
     del titan_df['Name']
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df.head()
 
@@ -61,16 +61,16 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 Create Classification Model
 ---------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-.. code:: ipython3
+.. code:: ipython
 
     varcat=['Pclass','Sex','Embarked','Title']
 
-.. code:: ipython3
+.. code:: ipython
 
     categ_encoding = OrdinalEncoder(cols=varcat, \
                                     handle_unknown='ignore', \
@@ -79,7 +79,7 @@ Create Classification Model
 
 Train Test split + Random Forest fit
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, train_size=0.75, random_state=1)
     
@@ -102,14 +102,14 @@ Train Test split + Random Forest fit
 
 
 
-.. code:: ipython3
+.. code:: ipython
 
     ypred=pd.DataFrame(rf.predict(Xtest),columns=['pred'],index=Xtest.index)
 
 Compute Shapley Contributions with Shap
 ---------------------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     explainer = shap.KernelExplainer(rf.predict_proba, Xtest)
     shap_contrib = explainer.shap_values(Xtest)
@@ -126,26 +126,24 @@ Compute Shapley Contributions with Shap
     HBox(children=(IntProgress(value=0, max=223), HTML(value='')))
 
 
-.. parsed-literal::
-
     
 
 
 Use Shapash With Shapley Contributions
 --------------------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=titan_dict)
 
 Use contributions parameter of compile method to declare Shapley contributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(contributions=shap_contrib, # Shap Contributions pd.DataFrame
                 y_pred=ypred,
@@ -153,7 +151,7 @@ Use contributions parameter of compile method to declare Shapley contributions
                 model=rf,
                 preprocessing=categ_encoding)
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.local_plot(index=3)
 
@@ -162,7 +160,7 @@ Use contributions parameter of compile method to declare Shapley contributions
 .. image:: tuto-expl01-Shapash-Viz-using-Shap-contributions_files/tuto-expl01-Shapash-Viz-using-Shap-contributions_19_0.png
 
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df = xpl.to_pandas(max_contrib=3,positive=True,proba=True)
     summary_df.head()
