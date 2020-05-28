@@ -23,9 +23,9 @@ Data Scientists can more easily understand their models and share their results.
   <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-contribution_plot-example.png" width="700" title="contrib">
 </p>
 
-- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability., and understand how the different features contribute:
+- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability., and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-webapp.png" width="800" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-webapp-demo.gif" width="800" title="contrib">
 </p>
 
 - To **Summarize and export** the local explanation:
