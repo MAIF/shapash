@@ -70,6 +70,7 @@ Building Supervized Model
 
 
 
+
 Encoding Categorical Features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -140,8 +141,8 @@ Start WebApp
 
     app = xpl.run_app()
 
-Link to App:
-Data from Kaggle `shapash-monitor link <https://shapash-demo.ossbymaif.fr>`__
+Link to App: `shapash-monitor
+link <https://shapash-demo.ossbymaif.fr/>`__
 
 Stop the WebApp after using it
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -182,6 +183,7 @@ Export local explaination in DataFrame
     +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
     |135305.2|Overall material and finish of the house|      5|      -25445.7|Ground living area square feet          |   1188|      -11476.6|Condition of sale                 |Abnormal Sale|       -5071.8|
     +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+
 
 
 
