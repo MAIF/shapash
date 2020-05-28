@@ -1012,7 +1012,7 @@ class SmartApp:
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=selected,
                                                                                                label=label,
                                                                                                show_masked=True,
-                                                                                               yaxis_max_label=8)
+                                                                                               yaxis_max_label=0)
             self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
             return self.components['graph']['detail_feature'].figure
 

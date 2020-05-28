@@ -1,3 +1,7 @@
+"""
+sklearn columntransformer
+"""
+
 import pandas as pd
 from shapash.utils.inverse_category_encoder import inv_transform_ordinal
 from shapash.utils.inverse_category_encoder import inv_transform_ce

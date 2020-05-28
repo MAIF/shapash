@@ -9,7 +9,7 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 This Tutorial: - Encode data with dictionary - Build a Binary Classifier
 (Random Forest) - Using Shapash - Show inversed data
 
-.. code:: ipython3
+.. code:: ipython
 
     import numpy as np
     import pandas as pd
@@ -19,14 +19,14 @@ This Tutorial: - Encode data with dictionary - Build a Binary Classifier
 Load titanic Data
 -----------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     
     titan_df, titan_dict = data_loading('titanic')
     del titan_df['Name']
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df.head()
 
@@ -57,14 +57,14 @@ Prepare data for the model
 
 Create Target
 
-.. code:: ipython3
+.. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
 Train multiple category encoder
 
-.. code:: ipython3
+.. code:: ipython
 
     #construct new variable
     X['new_embarked'] = X.apply(lambda x : 1 if x.Embarked in ['Southampton','Cherbourg'] else 2 if x.Embarked in 'Queenstown' else 3, axis = 1)
@@ -81,12 +81,12 @@ Train multiple category encoder
                     'mapping': pd.Series(data=[1, 2, 3, np.nan], index=['-25 years', '26-40 years', '+40 years','missing']),
                     'data_type': 'object'}
 
-.. code:: ipython3
+.. code:: ipython
 
     #put transformation into list
     encoder = [transfo_age,transfo_embarked]
 
-.. code:: ipython3
+.. code:: ipython
 
     X.head(4)
 
@@ -112,11 +112,11 @@ Train multiple category encoder
 Fit a model
 -----------
 
-.. code:: ipython3
+.. code:: ipython
 
     X = X[['new_embarked','new_ages','Fare','Parch','Age']]
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, train_size=0.75, random_state=1)
     
@@ -143,15 +143,15 @@ Fit a model
 Using Shapash
 -------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer()
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -168,7 +168,7 @@ Using Shapash
 Visualize data in pandas
 ------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.x_pred.head(4)
 
@@ -191,7 +191,7 @@ Visualize data in pandas
 
 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.x_init.head(4)
 

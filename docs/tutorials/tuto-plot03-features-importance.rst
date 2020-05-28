@@ -15,7 +15,7 @@ limits the number of features
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
 
-.. code:: ipython3
+.. code:: ipython
 
     import pandas as pd
     from category_encoders import OrdinalEncoder
@@ -27,7 +27,7 @@ Building Supervized Model
 
 Load Titanic data
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     titanic_df, titanic_dict = data_loading('titanic')
@@ -35,7 +35,7 @@ Load Titanic data
     y_df=titanic_df['Survived'].to_frame()
     X_df=titanic_df[titanic_df.columns.difference(['Survived'])]
 
-.. code:: ipython3
+.. code:: ipython
 
     titanic_df.head()
 
@@ -64,7 +64,7 @@ Load Titanic data
 
 Load Titanic data
 
-.. code:: ipython3
+.. code:: ipython
 
     from category_encoders import OrdinalEncoder
     
@@ -79,31 +79,31 @@ Load Titanic data
 
 Train / Test Split + model fitting
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=7)
 
-.. code:: ipython3
+.. code:: ipython
 
     clf = ExtraTreesClassifier(n_estimators=200).fit(Xtrain,ytrain)
 
 First step: You need to Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     response_dict = {0: 'Death', 1:' Survival'}
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer(features_dict=titanic_dict, # Optional parameters
                          label_dict=response_dict) # Optional parameters, dicts specify labels 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -120,7 +120,7 @@ First step: You need to Declare and Compile SmartExplainer
 Display Feature Importance
 --------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.features_importance()
 
@@ -145,13 +145,13 @@ Focus and compare a subset
 
 selection parameter specify the subset:
 
-.. code:: ipython3
+.. code:: ipython
 
     sel = [581, 610, 524, 636, 298, 420, 568, 817, 363, 557,
            486, 252, 390, 505, 16, 290, 611, 148, 438, 23, 810,
            875, 206, 836, 143, 843, 436, 701, 681, 67, 10]
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.features_importance(selection=sel)
 
@@ -165,7 +165,7 @@ Tune the number of features to display
 
 Use max_features parameter (default value: 20)
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.plot.features_importance(max_features=3)
 

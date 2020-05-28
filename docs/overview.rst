@@ -7,7 +7,7 @@ Installation
 ------------
 You can install **Shapash** using pip:
 
-.. code:: ipython3
+.. code:: ipython
 
     pip install shapash
 
@@ -48,7 +48,7 @@ The 3 steps to display results:
 - Step 1: Declare SmartExplainer Object
   > You can declare features dict here to specify the labels to display
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
     xpl = SmartExplainer(features_dict=house_dict) # optional parameter
@@ -57,7 +57,7 @@ The 3 steps to display results:
 - Step 2: Compile Model, Dataset, Encoders, ...
   > There are 2 mandatory parameters in compile method: Model and Dataset
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest,
@@ -69,7 +69,7 @@ The 3 steps to display results:
 - Step 3: Display output
   > There are several outputs and plots available. for example, you can launch the web app:
 
-.. code:: ipython3
+.. code:: ipython
 
     app = xpl.run_app()
 

@@ -34,9 +34,9 @@ class SmartExplainer:
     linking encoders, models, predictions, label dict and datasets:
     SmartExplainer users have several methods which are described below
 
-    The SmartExplainer Attributes:
-    ----------
-    data : dict
+    The SmartExplainer Attributes :
+
+    data: dict
         Data dictionary has 3 entries. Each key returns a pd.DataFrame (regression) or a list of pd.DataFrame
         (classification - The length of the lists is equivalent to the number of labels.
         All pd.DataFrame have she same shape (n_samples, n_features).
@@ -58,7 +58,7 @@ class SmartExplainer:
             decomposition. These values can only be understood with respect to data['var_dict']
 
     x_init: pandas.DataFrame
-        preprocessed dataset used by the model to perform the prediction
+        preprocessed dataset used by the model to perform the prediction.
     x_pred: pandas.DataFrame
         x_init dataset with inverse transformation.
     y_pred: pandas.DataFrame
@@ -92,9 +92,9 @@ class SmartExplainer:
     --------
     >>> xpl = SmartExplainer(features_dict=featd,label_dict=labeld)
 
-    features_dict & label_dict are both optional
+    features_dict & label_dict are both optional.
     features_dict maps technical feature names to domain names.
-    label_dict specify the labels of target (classification)
+    label_dict specify the labels of target (classification).
     """
 
     def __init__(self, features_dict={}, label_dict=None):
@@ -187,10 +187,10 @@ class SmartExplainer:
     def add(self, y_pred=None, label_dict=None, features_dict=None):
         """
         Add method allows the user to add a label_dict, features_dict
-        or y_pred without compiling again (and it can last a few moments)
-        y_pred can be used in the plot to color scatter
-        y_pred is needed in the to_pandas method
-        label_dict and features_dict displays allow to display clearer results
+        or y_pred without compiling again (and it can last a few moments).
+        y_pred can be used in the plot to color scatter.
+        y_pred is needed in the to_pandas method.
+        label_dict and features_dict displays allow to display clearer results.
 
         Parameters
         ----------

@@ -32,7 +32,7 @@ The project was developed by **MAIF** Data Scientists.
 
 - To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute:
 
-.. image:: ./_static/shapash-webapp.png
+.. image:: ./_static/shapash-webapp-demo.gif
    :width: 700px
    :align: center
 
@@ -42,7 +42,7 @@ The project was developed by **MAIF** Data Scientists.
    :width: 600px
    :align: center
 
-.. code:: ipython3
+.. code:: ipython
 
     summary_df.head()
 

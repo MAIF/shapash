@@ -9,7 +9,7 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 This Tutorial: - Encode data with Category_encoder - Build a Binary
 Classifier (Random Forest) - Using Shapash - Show inversed data
 
-.. code:: ipython3
+.. code:: ipython
 
     import numpy as np
     import pandas as pd
@@ -22,13 +22,13 @@ Classifier (Random Forest) - Using Shapash - Show inversed data
 Load titanic Data
 -----------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.data.data_loader import data_loading
     titan_df, titan_dict = data_loading('titanic')
     del titan_df['Name']
 
-.. code:: ipython3
+.. code:: ipython
 
     titan_df.head()
 
@@ -58,14 +58,14 @@ Prepare data for the model with Category Encoder
 
 Create Target
 
-.. code:: ipython3
+.. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
 Train category encoder
 
-.. code:: ipython3
+.. code:: ipython
 
     #Train category encoder
     onehot = OneHotEncoder(cols=['Pclass']).fit(X)
@@ -75,14 +75,14 @@ Train category encoder
     target = TargetEncoder(cols=['Sex']).fit(result_2,y)
     result_3 =target.transform(result_2)
 
-.. code:: ipython3
+.. code:: ipython
 
     encoder = [onehot,ordinal,target]
 
 Fit a model
 -----------
 
-.. code:: ipython3
+.. code:: ipython
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(result_3, y, train_size=0.75, random_state=1)
     
@@ -109,15 +109,15 @@ Fit a model
 Using Shapash
 -------------
 
-.. code:: ipython3
+.. code:: ipython
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl = SmartExplainer()
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.compile(
         x=Xtest.head(10),
@@ -134,7 +134,7 @@ Using Shapash
 Visualize data in pandas
 ------------------------
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.x_pred
 
@@ -159,7 +159,7 @@ Visualize data in pandas
 
 
 
-.. code:: ipython3
+.. code:: ipython
 
     xpl.x_init
 
