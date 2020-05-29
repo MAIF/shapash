@@ -52,7 +52,6 @@ setup(
         'shapash.utils': 'shapash/utils',
         'shapash.webapp': 'shapash/webapp',
         'shapash.webapp.utils': 'shapash/webapp/utils',
-        'shapash.webapp.assets': 'shapash/webapp/assets'
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
@@ -64,7 +63,7 @@ setup(
                 ('data', ['shapash/data/titaniclabels.json'])],
     include_package_data=True,
     package_data={
-        'shapash/webapp/assets': ['*'],
+        'shapash/webapp/assets': ['*'], 
     },
     setup_requires=setup_requirements,
     test_suite='tests',
