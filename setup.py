@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
-import os
 from setuptools import setup
 
 with open('README.md') as readme_file:
@@ -53,12 +52,16 @@ setup(
         'shapash.utils': 'shapash/utils',
         'shapash.webapp': 'shapash/webapp',
         'shapash.webapp.utils': 'shapash/webapp/utils',
-        'shapash.webapp.assets': 'shapash/webapp/assets',
-        'shapash.tutorial.data': 'shapash/tutorial/data'
+        'shapash.webapp.assets': 'shapash/webapp/assets'
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
-              'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils'],
+              'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils',
+              'shapash.webapp.assets'],
+    data_files=[('data', ['shapash/data/house_prices_dataset.csv']),
+                ('data', ['shapash/data/house_prices_labels.csv']),
+                ('data', ['shapash/data/titanicdata.csv']),
+                ('data', ['shapash/data/titaniclabels.json'])],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
