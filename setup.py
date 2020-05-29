@@ -61,9 +61,6 @@ setup(
                 ('data', ['shapash/data/titanicdata.csv']),
                 ('data', ['shapash/data/titaniclabels.json'])],
     include_package_data=True,
-    package_data={
-        'shapash/webapp/assets': ['*'], 
-    },
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,

@@ -183,6 +183,7 @@ class SmartExplainer:
         )
         self.features_imp = None
         self.features_desc = self.check_features_desc()
+        self.smartapp = SmartApp(self)
 
     def add(self, y_pred=None, label_dict=None, features_dict=None):
         """
@@ -225,6 +226,7 @@ class SmartExplainer:
             self.features_dict = features_dict
             self.check_features_dict()
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
+        self.smartapp = SmartApp(self)
 
     def choose_state(self, contributions):
         """
@@ -792,7 +794,6 @@ class SmartExplainer:
         >>> app.kill()
         """
         if hasattr(self, '_case'):
-            self.smartapp = SmartApp(self)
             if host is None:
                 host = "0.0.0.0"
             if port is None:
