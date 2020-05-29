@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
-import os
 from setuptools import setup
 
 with open('README.md') as readme_file:
@@ -29,7 +28,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash", # Replace with your own username
-    version="0.1.1",
+    version="0.1.2",
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -53,12 +52,18 @@ setup(
         'shapash.utils': 'shapash/utils',
         'shapash.webapp': 'shapash/webapp',
         'shapash.webapp.utils': 'shapash/webapp/utils',
-        'shapash.webapp.assets': 'shapash/webapp/assets',
-        'shapash.tutorial.data': 'shapash/tutorial/data'
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
               'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils'],
+    data_files=[('data', ['shapash/data/house_prices_dataset.csv']),
+                ('data', ['shapash/data/house_prices_labels.json']),
+                ('data', ['shapash/data/titanicdata.csv']),
+                ('data', ['shapash/data/titaniclabels.json'])],
+    include_package_data=True,
+    package_data={
+        'shapash/webapp/assets': ['*'], 
+    },
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
