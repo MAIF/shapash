@@ -178,7 +178,7 @@ Understand how a feature contributes
 .. image:: tutorial02-Shapash-overview-in-Jupyter_files/tutorial02-Shapash-overview-in-Jupyter_24_0.png
 
 
-Display a Synthetic but Explicit local explainability
+Display a Summarized but Explicit local explainability
 -----------------------------------------------------
 
 Filter method
