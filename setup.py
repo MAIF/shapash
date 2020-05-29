@@ -28,7 +28,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash", # Replace with your own username
-    version="0.1.1",
+    version="0.1.2",
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
