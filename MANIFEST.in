@@ -1,0 +1,4 @@
+recursive-include shapash/webapp/assets *
+
+include LICENSE
+include README.md

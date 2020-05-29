@@ -1,0 +1,1 @@
+{"PassengerID": "PassengerID", "Survival": "Has survived ?", "Pclass": "Ticket class", "Name": "Name, First name", "Sex": "Sex", "Age": "Age", "SibSp": "Relatives such as brother or wife", "Parch": "Relatives like children or parents", "Fare": "Passenger fare", "Embarked": "Port of embarkation", "Title": "Title of passenger"}

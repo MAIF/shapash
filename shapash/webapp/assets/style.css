@@ -1,0 +1,160 @@
+:root {
+    --main-color: #f4c000;
+    --bkg-color: #343736;
+}
+
+#shapash_title {
+    color: var(--main-color) !important;
+    padding-left: 20px !important;
+    margin: 0
+}
+
+#shapash_title hover,a {
+    text-decoration: none !important;
+}
+
+.card {
+    position: relative;
+    background-color: #ffffff;
+    padding: 10px;
+    color: #2e404f;
+    -webkit-transition: -webkit-box-shadow .25s;
+    border-radius: 2px;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
+}
+
+.card_filter {
+    position: relative;
+}
+
+/*      FILTER     */
+.filter_dashed {
+    border-top-color: silver;
+    border-top-style: dashed;
+    border-top-width: 1px;
+    width: 100%;
+}
+
+.rc-slider-track {
+  background-color: var(--main-color);
+}
+.rc-slider-dot-active {
+  border-color: var(--bkg-color);
+  border: solid 2px var(--bkg-color);
+}
+.rc-slider-handle {
+  border-color: var(--bkg-color);
+}
+.rc.slider-handle-active:active {
+  border-color: var(--main-color);
+}
+#max_contrib_id, #threshold_id {
+    padding: 0 5px 20px !important;
+}
+
+/*   CHECKBOX     */
+.custom-control-input:checked~.custom-control-label::before {
+    border-color: var(--bkg-color) !important;
+    background-color: var(--main-color) !important;
+    cursor: pointer !important;
+}
+.custom-checkbox .custom-control-input:checked~.custom-control-label::after {
+    background-image: none !important;
+    cursor: pointer !important;
+}
+
+/*   SELECT CONTROL  */
+.Select--multi .Select-value {
+    color: var(--bkg-color) !important;
+    background-color: var(--main-color) !important;
+}
+
+/*   DATATABLE       */
+/* .dash-spreadsheet.dash-freeze-left {
+    max-width: none !important;
+} */
+
+#dataset > div.dash-spreadsheet-container.dash-spreadsheet.dash-freeze-top.dash-list-view.dash-fill-width > div{
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+#datatable-interactivity > div.dash-spreadsheet-container.dash-spreadsheet.dash-empty-01.dash-fill-width > div > div.row.row-1 {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+}
+
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td.cell--selected, td.focused {
+    background-color : Transparent !important;
+}
+/*
+.dash-spreadsheet td div {
+    line-height: 15px !important;
+    max-height: 30px !important;
+    /* min-height: 30px !important;
+    height: 30px !important; */
+/*    display: block !important;
+    overflow-y: hidden !important;
+}
+*/
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td.cell {
+    /* minWidth: 75px !important;
+    width: 75px !important;
+    maxWidth: 150px !important;
+    overflow: 'hidden' !important;
+    textOverflow: 'ellipsis' !important;
+    whiteSpace: 'normal' !important; */
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
+    cursor: pointer !important;
+    border-collapse: collapse;
+    --accent: lightgrey !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner [class^='column-header--sort'] {
+    float: right !important;
+    margin-left: 5px;
+}
+
+.dash-tooltip {
+    text-align: center;
+}
+
+/*   EXPAND      */
+
+.dock-expand {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background-color: white;
+    border-radius: 26px;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
+    text-align:center;
+    cursor: pointer;
+    z-index: 998;
+}
+
+/* PLOTLY MODEBAR */
+.modebar {
+    position: absolute;
+    top: -5px !important;
+    left: -5px !important;
+}
+
+.js-plotly-plot .plotly [data-title]::before, .js-plotly-plot .plotly [data-title]::after {
+    position: absolute !important;
+    left: 25% !important;
+    width: fit-content !important;
+}
+
+/* TOOLTIPS */
+.tooltip-inner {
+    max-width: 400px;
+    color: var(--main-color) !important;
+    background-color: var(--bkg-color);
+    text-align: left;
+}
