@@ -57,7 +57,7 @@ setup(
               'shapash.explainer', 'shapash.manipulation',
               'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils'],
     data_files=[('data', ['shapash/data/house_prices_dataset.csv']),
-                ('data', ['shapash/data/house_prices_labels.csv']),
+                ('data', ['shapash/data/house_prices_labels.json']),
                 ('data', ['shapash/data/titanicdata.csv']),
                 ('data', ['shapash/data/titaniclabels.json'])],
     include_package_data=True,
