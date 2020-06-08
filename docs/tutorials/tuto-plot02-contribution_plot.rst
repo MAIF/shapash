@@ -8,9 +8,11 @@ a prediction.
 This tutorial presents the different parameters you can use in
 contribution_plot to tune output.
 
-Contents: - Classification case: Specify the target modality to display.
-- Sampling parameter - Focus on a subset - Violin or Scatter? Make your
-own choice
+Contents:
+- Classification case: Specify the target modality to display.
+- Sampling parameter
+- Focus on a subset
+- Violin or Scatter? Make your own choice
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
 
@@ -59,8 +61,6 @@ Load Titanic data
 
 
 
-
-Load Titanic data
 
 .. code:: ipython
 

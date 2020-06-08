@@ -5,12 +5,15 @@ This tutorial presents the different parameters you can use to summarize
 and display local explanations. It also shows how to export this summary
 into pandas DataFrame
 
-Contents: - Work with filter and local_plot method to tune output -
-display Positive or Negative contributions - mask hidden contrib or
-prediction - hide some specific features - Use query parameter to select
-without index or row number - Classification: How can you select the
-label value to display? - print the summary params - export local
-explanation with to_pandas
+Contents:
+- Work with filter and local_plot method to tune output
+- display Positive or Negative contributions
+- mask hidden contrib or prediction
+- hide some specific features
+- Use query parameter to select without index or row number
+- Classification: How can you select the label value to display?
+- print the summary params
+- export local explanation with to_pandas
 
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
@@ -112,11 +115,11 @@ Filter method
 ^^^^^^^^^^^^^
 
 Use the filter method to specify how to synthesize local explainability
-you have 4 parameters to customize your summary: - max_contrib : maximum
-number of criteria to display - threshold : minimum value of the
-contribution (in absolute value) necessary to display a criterion -
-positive : display only positive contribution? Negative?(default None) -
-features_to_hide : list of features you don’t want to display
+you have 4 parameters to customize your summary:
+- max_contrib : maximum number of criteria to display
+- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion
+- positive : display only positive contribution? Negative?(default None)
+- features_to_hide : list of features you don’t want to display
 
 .. code:: ipython
 
@@ -179,8 +182,9 @@ You can also focus positive contribution using positive=True
 Hide specific features:
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Because: - some features can be too complex - end user don’t want know
-unnecessary information
+Because:
+- some features can be too complex
+- end user don’t want know unnecessary information
 
 You can use features_to_hide parameter in filter method
 
@@ -197,7 +201,7 @@ You can use features_to_hide parameter in filter method
 Select a row with a query
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can selct with an index or a row number. You can also use a query:
+You can select with an index or a row number. You can also use a query:
 
 .. code:: ipython
 

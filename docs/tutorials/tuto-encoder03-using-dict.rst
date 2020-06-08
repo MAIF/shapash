@@ -6,8 +6,11 @@ data preprocessing and display explicit labels
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 
-This Tutorial: - Encode data with dictionary - Build a Binary Classifier
-(Random Forest) - Using Shapash - Show inversed data
+This Tutorial:
+- Encode data with dictionary
+- Build a Binary Classifier (Random Forest)
+- Using Shapash
+- Show inversed data
 
 .. code:: ipython
 
@@ -62,7 +65,7 @@ Create Target
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-Train multiple category encoder
+Build transformation dict and reversed dict
 
 .. code:: ipython
 

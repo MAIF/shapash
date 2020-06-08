@@ -4,9 +4,12 @@ Shapash in Jupyter - Overview
 With this tutorial you: Understand how Shapash works in Jupyter Notebook
 with a simple use case
 
-Contents: - Build a Regressor - Compile Shapash SmartExplainer - Display
-global and local explanability - Export local summarized explainability
-with to_pandas method - Save Shapash object in pickle file
+Contents:
+- Build a Regressor
+- Compile Shapash SmartExplainer
+- Display global and local explanability
+- Export local summarized explainability with to_pandas method
+- Save Shapash object in pickle file
 
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
@@ -179,7 +182,7 @@ Understand how a feature contributes
 
 
 Display a Summarized but Explicit local explainability
------------------------------------------------------
+------------------------------------------------------
 
 Filter method
 ^^^^^^^^^^^^^

@@ -9,8 +9,11 @@ This Tutorial: - Build a Binary Classifier (Random Forest) - Create
 Explainer using Lime - Use Shapash to plot Local Explanation, and
 summarize it
 
-Contents: - Build a Binary Classifier - Compile Shapash SmartExplainer -
-Display local_plot - to_pandas export
+Contents:
+- Build a Binary Classifier
+- Compile Shapash SmartExplainer
+- Display local_plot
+- to_pandas export
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 

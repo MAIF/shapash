@@ -9,9 +9,10 @@ subset and to compare it with the total population
 
 This short tutorial presents the different parameters you can use.
 
-Contents: - Classification case: Specify the target modality to display.
-- selection parameter to display a subset - max_features parameter
-limits the number of features
+Contents:
+- Classification case: Specify the target modality to display.
+- selection parameter to display a subset
+- max_features parameter limits the number of features
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
 
@@ -61,8 +62,6 @@ Load Titanic data
 
 
 
-
-Load Titanic data
 
 .. code:: ipython
 
@@ -133,7 +132,7 @@ Multiclass: Select the target modality
 --------------------------------------
 
 Features importances sum and display the absolute contribution for one
-target modality. you can change this modality, selectig with label
+target modality. you can change this modality, selecting with label
 parameter:
 
 xpl.plot.features_importance(label=‘Death’)

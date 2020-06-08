@@ -6,8 +6,11 @@ preprocessing and display explicit labels
 
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 
-This Tutorial: - Encode data with ColumnTransformer - Build a Binary
-Classifier (Random Forest) - Using Shapash - Show inversed data
+This Tutorial:
+- Encode data with ColumnTransformer
+- Build a Binary Classifier (Random Forest)
+- Using Shapash
+- Show inversed data
 
 We implement an inverse transform function for ColumnTransformer based
 on column position.
@@ -171,8 +174,8 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    #Cause in ColumnsTransformer we can apply multiple transformer on the same column.
-    #the Pclass colums in now : TransformersName +  Pclass
+    #Cause in ColumnsTransformer we apply multiple transformer on the same column.
+    #the Pclass column is now : TransformersName +  Pclass
     xpl.x_pred.head(4)
 
 
