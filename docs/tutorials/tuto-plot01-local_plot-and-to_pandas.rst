@@ -6,6 +6,7 @@ and display local explanations. It also shows how to export this summary
 into pandas DataFrame
 
 Contents:
+
 - Work with filter and local_plot method to tune output
 - display Positive or Negative contributions
 - mask hidden contrib or prediction

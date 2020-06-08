@@ -12,6 +12,7 @@ This tutorial shows how to use precalculated contributions with Shap in
 Shapash
 
 Contents:
+
 - Build a Binary Classifier
 - Use Shap KernelExplainer
 - Compile Shapash SmartExplainer

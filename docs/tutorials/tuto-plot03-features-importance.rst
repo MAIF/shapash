@@ -10,6 +10,7 @@ subset and to compare it with the total population
 This short tutorial presents the different parameters you can use.
 
 Contents:
+
 - Classification case: Specify the target modality to display.
 - selection parameter to display a subset
 - max_features parameter limits the number of features

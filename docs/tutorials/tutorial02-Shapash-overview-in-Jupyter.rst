@@ -5,6 +5,7 @@ With this tutorial you: Understand how Shapash works in Jupyter Notebook
 with a simple use case
 
 Contents:
+
 - Build a Regressor
 - Compile Shapash SmartExplainer
 - Display global and local explanability

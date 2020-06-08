@@ -7,6 +7,7 @@ preprocessing and display explicit labels
 Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
 
 This Tutorial:
+
 - Encode data with Category_encoder
 - Build a Binary Classifier (Random Forest)
 - Using Shapash
