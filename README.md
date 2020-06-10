@@ -80,7 +80,7 @@ The more you specify parameters, options, dictionaries and more the outputs will
 pip install shapash
 ```
 
-## Getting Started: 3 minutes to shapash
+## Getting Started: 3 minutes to Shapash
 
 The 3 steps to display results:
 
