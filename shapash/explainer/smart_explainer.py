@@ -30,15 +30,15 @@ class SmartExplainer:
     """
     The SmartExplainer class is the main object of the Shapash library.
     It allows the Data Scientists to perform many operations to make the
-    results more understandable
-    linking encoders, models, predictions, label dict and datasets:
-    SmartExplainer users have several methods which are described below
+    results more understandable : 
+    linking encoders, models, predictions, label dict and datasets.
+    SmartExplainer users have several methods which are described below.
 
     The SmartExplainer Attributes :
 
     data: dict
         Data dictionary has 3 entries. Each key returns a pd.DataFrame (regression) or a list of pd.DataFrame
-        (classification - The length of the lists is equivalent to the number of labels.
+        (classification - The length of the lists is equivalent to the number of labels).
         All pd.DataFrame have she same shape (n_samples, n_features).
         For the regression case, data that should be regarded as a single array
         of size (n_samples, n_features, 3).
@@ -49,12 +49,12 @@ class SmartExplainer:
             for each line from left to right. In multi-class problems, this is a list of
             contributions, one for each class.
         data['var_dict']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
-            Must contains only ints. It gives for each line the list of most import features
+            Must contain only ints. It gives, for each line, the list of most import features
             regarding the local decomposition. In order to save space, columns are denoted by
             integers, the conversion being done with the columns_dict member. In multi-class
             problems, this is a list of dataframes, one for each class.
         data['x_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
-            It gives for each line the list of most important features values regarding the local
+            It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
 
     x_init: pandas.DataFrame
@@ -186,7 +186,7 @@ class SmartExplainer:
 
     def add(self, y_pred=None, label_dict=None, features_dict=None):
         """
-        Add method allows the user to add a label_dict, features_dict
+        add method allows the user to add a label_dict, features_dict
         or y_pred without compiling again (and it can last a few moments).
         y_pred can be used in the plot to color scatter.
         y_pred is needed in the to_pandas method.

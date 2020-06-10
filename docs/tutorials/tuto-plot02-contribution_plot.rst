@@ -1,18 +1,21 @@
 Contributions plot
 ==================
 
-contribution_plot is a method that displays violin or scatter plot. the
+*contribution_plot* is a method that displays violin or scatter plots. The
 purpose of these representations is to understand how a feature affects
 a prediction.
 
 This tutorial presents the different parameters you can use in
-contribution_plot to tune output.
+*contribution_plot* to tune output.
 
-Contents: - Classification case: Specify the target modality to display.
-- Sampling parameter - Focus on a subset - Violin or Scatter? Make your
-own choice
+Content : 
 
-Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
+- Classification case: Specify the target modality to display.
+- Sampling parameter 
+- Focus on a subset 
+- Violin or Scatter? Make your own choice
+
+We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
 .. code:: ipython
 
@@ -60,7 +63,7 @@ Load Titanic data
 
 
 
-Load Titanic data
+Encode Categorical Features :
 
 .. code:: ipython
 
@@ -115,11 +118,11 @@ First step: You need to Declare and Compile SmartExplainer
     Backend: Shap TreeExplainer
 
 
-You can now display contribution plot :
+You can now display the contribution plot :
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-you have to specify the feature you want to analyse. You can use column
-name, label or column number
+You have to specify the feature you want to analyse. You can use column
+name, label or column number :
 
 .. code:: ipython
 
@@ -139,13 +142,13 @@ name, label or column number
 .. image:: tuto-plot02-contribution_plot_files/tuto-plot02-contribution_plot_18_0.png
 
 
-Ticket Class seems to affect the prediction of the mode: Third class
-negatively contributes to Survival.
+*Ticket Class* seems to affect the prediction of the model : *Third class*
+negatively contributes to *Survival*.
 
 Classification Case: Use label parameter to select the target modality you want to focus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-with label parameter, you can specify explicit label or label number
+With *label* parameter, you can specify explicit label or label number
 
 .. code:: ipython
 
@@ -159,7 +162,7 @@ with label parameter, you can specify explicit label or label number
 Add a prediction to better understand your model
 ------------------------------------------------
 
-You can add your prediction with add or compile method
+You can add your prediction with *add* or *compile* methods : 
 
 .. code:: ipython
 
@@ -173,23 +176,22 @@ You can add your prediction with add or compile method
 
 
 When you add predict information, you can see that the contribution of
-Ticket class for First and Second class seems to be different for people
-with Survive prediction(orange points), compared to others (grey
+*Ticket class* for *First class* and *Second class* seems to be different for people
+with *Survive* prediction (orange points), compared to others (grey
 points). The contributions for these two ticket classes can be
-correlated to the value of another characteristic
+correlated to the value of another characteristic.
 
-Shapash Webapp can help you refine your understanding of the model. You
-can indeed navigate between the local and the global contribution
+Shapash Webapp can help you to refine your understanding of the model. You
+can navigate between the local and the global contributions.
 
-For Third class, the 2 distributions seem close
+For Third class, the 2 distributions seem to be close.
 
 NB: Multiclass Case - This plot displays One Vs All plot
 
 Focus on a subset
 -----------------
 
-With selection params you can specify a list of index of people you wand
-to focus
+With *selection* param you can specify a list of index of people you want to focus on :
 
 .. code:: ipython
 
@@ -204,9 +206,9 @@ to focus
 Size of Random Sample
 ---------------------
 
-Method contribution_plot use random sample to limit the number of points
+Method *contribution_plot* uses a random sample to limit the number of points
 displayed. Default size of this sample is 2000, but you can change it
-with the parameter max_points:
+with the *max_points* parameter :
 
 .. code:: ipython
 
@@ -220,9 +222,8 @@ with the parameter max_points:
 Violin or Scatter plot?
 -----------------------
 
-contribution_plot displays a scatter point if the number of distinct
-values of the feature is greater than 10. You can change this parameter
-violin_maxf:
+*contribution_plot* displays a scatter point if the number of distinct
+values of the feature is greater than 10. You can change this usin *violin_maxf* parameter :
 
 .. code:: ipython
 

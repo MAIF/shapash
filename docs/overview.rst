@@ -26,27 +26,27 @@ Shapash relies on the different steps necessary to build a Machine Learning mode
 User Manual
 -----------
 
-Shapash works for Regression, Binary Classification or Multiclass problem.
-It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*.
+Shapash works for Regression, Binary Classification or Multiclass problems.
+It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models* and *SVM*.
 
-Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary.
+Shapash can use category-encoder object, sklearn ColumnTransformer or simply features dictionary.
 
-- Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
-- Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer*, *PowerTransformer*
+- Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder* or *TargetEncoder*
+- Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer* or *PowerTransformer*
 
 Using **Shapash** is simple and requires only a few lines of code.
-Most parameters are optional, you can displays plots effortlessly.
+Most parameters are optional, you can easily display plots.
 
-But you can also tune plots and outputs, specifying labels dict, features dict, encoders, predictions, ... :
+You can also tune plots and outputs, specifying labels dict, features dict, encoders, predictions, ... :
 The more you specify parameters, options, dictionaries and more the outputs will be understandable
 
-Getting Start: 3 minutes to Shapash
+Getting Started : 3 minutes to Shapash
 -----------------------------------
 
 The 3 steps to display results:
 
 - Step 1: Declare SmartExplainer Object
-  > You can declare features dict here to specify the labels to display
+  > You can declare features dict here to specify the labels Shapash will display
 
 .. code:: ipython
 
@@ -55,7 +55,7 @@ The 3 steps to display results:
 
 
 - Step 2: Compile Model, Dataset, Encoders, ...
-  > There are 2 mandatory parameters in compile method: Model and Dataset
+  > There are 2 mandatory parameters in the compile method: *Model* and *Dataset*
 
 .. code:: ipython
 
@@ -67,10 +67,10 @@ The 3 steps to display results:
     )
 
 - Step 3: Display output
-  > There are several outputs and plots available. for example, you can launch the web app:
+  > There are several outputs and plots available. For example, you can launch the web app this way :
 
 .. code:: ipython
 
     app = xpl.run_app()
 
-Watch the tutorial part of this documentation for more details
+Watch the tutorial part of this documentation for more details.

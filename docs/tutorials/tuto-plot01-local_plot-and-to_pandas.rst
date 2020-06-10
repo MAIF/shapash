@@ -3,17 +3,21 @@ How to use filter and local_plot methods
 
 This tutorial presents the different parameters you can use to summarize
 and display local explanations. It also shows how to export this summary
-into pandas DataFrame
+to a pandas DataFrame.
 
-Contents: - Work with filter and local_plot method to tune output -
-display Positive or Negative contributions - mask hidden contrib or
-prediction - hide some specific features - Use query parameter to select
-without index or row number - Classification: How can you select the
-label value to display? - print the summary params - export local
-explanation with to_pandas
+Content : 
 
-Data from Kaggle `House
-Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
+- Work with filter and local_plot methods to tune output 
+- display Positive or Negative contributions 
+- mask hidden contrib or prediction 
+- hide some specific features 
+- use query parameter to select without index or row number 
+- Classification: How can you select the label value to display ? 
+- print the summary params 
+- export local explanation with to_pandas
+
+We used Kaggle's `House
+Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__ dataset.
 
 .. code:: ipython
 
@@ -111,12 +115,13 @@ First step: You need to Declare and Compile SmartExplainer
 Filter method
 ^^^^^^^^^^^^^
 
-Use the filter method to specify how to synthesize local explainability
-you have 4 parameters to customize your summary: - max_contrib : maximum
-number of criteria to display - threshold : minimum value of the
-contribution (in absolute value) necessary to display a criterion -
-positive : display only positive contribution? Negative?(default None) -
-features_to_hide : list of features you don’t want to display
+Use the *filter* method to specify how you want to synthesize local explainability
+you have 4 parameters to customize your summary: 
+
+- max_contrib : maximum number of criteria to display 
+- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion 
+- positive : display only positive contribution? Negative?(default None) 
+- features_to_hide : list of features you don’t want to display
 
 .. code:: ipython
 
@@ -159,7 +164,7 @@ Don’t display hidden contributions
 .. image:: tuto-plot01-local_plot-and-to_pandas_files/tuto-plot01-local_plot-and-to_pandas_20_0.png
 
 
-You can also hide the predict value with parameter show_predict=False
+You can also hide the predict value using show_predict=False
 
 Focus on Negative contribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -170,7 +175,6 @@ Focus on Negative contribution
     xpl.plot.local_plot(index=268)
 
 
-
 .. image:: tuto-plot01-local_plot-and-to_pandas_files/tuto-plot01-local_plot-and-to_pandas_23_0.png
 
 
@@ -179,10 +183,12 @@ You can also focus positive contribution using positive=True
 Hide specific features:
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Because: - some features can be too complex - end user don’t want know
-unnecessary information
+You might need to hide some feature because, for example : 
 
-You can use features_to_hide parameter in filter method
+- some features can be too complex 
+- end user don’t want know unnecessary information
+
+You can use *features_to_hide* parameter in *filter* method :
 
 .. code:: ipython
 
@@ -197,7 +203,7 @@ You can use features_to_hide parameter in filter method
 Select a row with a query
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can selct with an index or a row number. You can also use a query:
+You can select an index or a row number. You can also use a query:
 
 .. code:: ipython
 
@@ -212,7 +218,7 @@ You can selct with an index or a row number. You can also use a query:
 Classification Case
 -------------------
 
-transform our use case into classification:
+Transform our use case into classification :
 
 .. code:: ipython
 
@@ -249,7 +255,7 @@ Declare new SmartExplainer dedicated to classification problem
 Use label parameter of local_plot parameter to select the explanation you want
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-with label parameter, you can specify explicit label or label number
+With *label* parameter, you can specify explicit label or label number
 
 .. code:: ipython
 
@@ -286,10 +292,10 @@ Export explanations
 Export your local explanation in pd.DataFrame with to_pandas method :
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  The to_pandas method has the same parameters as the filter method
--  if you don’t specify any parameter, to_pandas use the same params you
-   specified when you call filter method
--  When you work on classification problem, parameter proba=True output
+-  the *to_pandas* method has the same parameters as the *filter* method
+-  if you don’t specify a parameter, *to_pandas* uses the same params you
+   specified when you called *filter* method
+-  when you work on a classification problem, proba=True will output
    predict probability
 
 .. code:: ipython
@@ -328,8 +334,8 @@ Export your local explanation in pd.DataFrame with to_pandas method :
 
 
 It is also possible to calculate the probability relating to one of the
-target modality for all the dataset, and to display the elements of
-explainability associated with this target modality
+target modality for the entire dataset, and to display the elements of
+explainability associated with this target modality :
 
 .. code:: ipython
 
@@ -364,5 +370,5 @@ explainability associated with this target modality
 
 
 
-NB: The to_pandas method returns Nan for lines that do not meet your
+NB: The to_pandas method returns NaN for lines that do not meet your
 conditions

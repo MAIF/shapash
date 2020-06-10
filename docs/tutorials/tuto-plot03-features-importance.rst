@@ -1,19 +1,21 @@
 Features importance
 ===================
 
-The methode Feature importance displays bar chart represent the sum of
+The method *features_importance* displays a bar chart representing the sum of
 absolute contribution values of each feature.
 
-this method also makes it possible to represent this sum calculated on a
+This method also makes it possible to represent this sum calculated on a
 subset and to compare it with the total population
 
 This short tutorial presents the different parameters you can use.
 
-Contents: - Classification case: Specify the target modality to display.
-- selection parameter to display a subset - max_features parameter
-limits the number of features
+Content : 
 
-Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
+- classification case: Specify the target modality to display
+- selection parameter to display a subset 
+- max_features parameter limits the number of features
+
+We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
 .. code:: ipython
 
@@ -25,7 +27,7 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic/data>`__
 Building Supervized Model
 -------------------------
 
-Load Titanic data
+Load Titanic data :
 
 .. code:: ipython
 
@@ -61,8 +63,7 @@ Load Titanic data
 
 
 
-
-Load Titanic data
+Encode Categorical Features :
 
 .. code:: ipython
 
@@ -77,7 +78,7 @@ Load Titanic data
     
     X_df=encoder.transform(X_df)
 
-Train / Test Split + model fitting
+Train / Test Split + model fitting :
 
 .. code:: ipython
 
@@ -133,17 +134,17 @@ Multiclass: Select the target modality
 --------------------------------------
 
 Features importances sum and display the absolute contribution for one
-target modality. you can change this modality, selectig with label
+target modality. You can change this modality, selecting it with label
 parameter:
 
 xpl.plot.features_importance(label=‘Death’)
 
-with label parameter you can specify target value, label or number
+With label parameter you can specify target value, label or number.
 
 Focus and compare a subset
 --------------------------
 
-selection parameter specify the subset:
+Selection parameter specifies the subset :
 
 .. code:: ipython
 
@@ -163,7 +164,7 @@ selection parameter specify the subset:
 Tune the number of features to display
 --------------------------------------
 
-Use max_features parameter (default value: 20)
+Use max_features parameter to tune the number of features to display (default value: 20) : 
 
 .. code:: ipython
 

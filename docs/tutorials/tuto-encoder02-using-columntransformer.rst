@@ -2,17 +2,21 @@ ColumnTransformer tutorial
 ==========================
 
 This tutorial shows how to use ColumnTransformer to reverse data
-preprocessing and display explicit labels
+preprocessing and display explicit labels.
 
-Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
+We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
-This Tutorial: - Encode data with ColumnTransformer - Build a Binary
-Classifier (Random Forest) - Using Shapash - Show inversed data
+Content : 
 
-We implement an inverse transform function for ColumnTransformer based
+- Encode data with ColumnTransformer 
+- Build a Binary Classifier (Random Forest) 
+- Using Shapash 
+- Show inversed data
+
+We want to implement an inverse transform function for ColumnTransformer based
 on column position.
 
-So, the top-Transform feature obtain after the ColumnTransformer
+The top-Transform feature obtained after the ColumnTransformer
 shouldn’t be sampled.
 
 .. code:: ipython
@@ -63,14 +67,14 @@ Load titanic Data
 Prepare data for the model
 --------------------------
 
-Create Target
+Create Target : 
 
 .. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-Train a columns transformer with multiple transformers
+Train a columns transformer with multiple transformers : 
 
 .. code:: ipython
 
@@ -82,7 +86,7 @@ Train a columns transformer with multiple transformers
                 remainder='passthrough')
     X_transform = pd.DataFrame(enc_columntransfo.fit_transform(X, y))
 
-Reaffect columns name for the remainder part.
+Reaffect columns names for the remainder part : 
 
 .. code:: ipython
 

@@ -1,20 +1,25 @@
-Compute Contributions with Shap - Summarize It With Shapash
+Compute Contributions with Shap - Summarize them With Shapash
 ===========================================================
 
 Shapash uses Shap backend to compute the Shapley contributions in order
-to satisfy the most pressed users who wish to display results with
-little line of code.
+to satisfy the most hurry users who wish to display results with a
+little lines of code.
 
-But we recommend that you refer to the excellent `Shap
+But we recommend you to refer to the excellent `Shap
 library <https://github.com/slundberg/shap>`__.
 
 This tutorial shows how to use precalculated contributions with Shap in
-Shapash
+Shapash.
 
-Contents: - Build a Binary Classifier - Use Shap KernelExplainer -
-Compile Shapash SmartExplainer - Display local_plot - to_pandas export
+Contents: 
 
-Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
+- Build a Binary Classifier 
+- Use Shap KernelExplainer 
+- Compile Shapash SmartExplainer 
+- Display local_plot 
+- to_pandas export
+
+We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
 .. code:: ipython
 
@@ -58,8 +63,8 @@ Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
     +--------+-----------+------+---+-----+-----+-----+-----------+-----+
 
 
-Create Classification Model
----------------------------
+Create the Classification Model
+-------------------------------
 
 .. code:: ipython
 
@@ -77,7 +82,7 @@ Create Classification Model
                                     return_df=True).fit(X)
     X = categ_encoding.transform(X)
 
-Train Test split + Random Forest fit
+Train Test split + Random Forest fit :
 
 .. code:: ipython
 
