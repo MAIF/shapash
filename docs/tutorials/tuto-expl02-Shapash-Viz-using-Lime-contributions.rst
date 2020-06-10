@@ -5,14 +5,14 @@ You can compute your local contributions with the
 `Lime <https://github.com/marcotcr/lime>`__ library and summarize it
 with Shapash.
 
-Content : 
+Content :
 
-- Build a Binary Classifier (Random Forest) 
-- Create Explainer using Lime 
+- Build a Binary Classifier (Random Forest)
+- Create Explainer using Lime
 - Use Shapash to plot Local Explanation, and
 summarize it
-- Compile Shapash SmartExplainer 
-- Display local_plot 
+- Compile Shapash SmartExplainer
+- Display local_plot
 - to_pandas export
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.

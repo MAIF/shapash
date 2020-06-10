@@ -8,11 +8,11 @@ a prediction.
 This tutorial presents the different parameters you can use in
 *contribution_plot* to tune output.
 
-Content : 
+Content :
 
 - Classification case: Specify the target modality to display.
-- Sampling parameter 
-- Focus on a subset 
+- Sampling parameter
+- Focus on a subset
 - Violin or Scatter? Make your own choice
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
@@ -162,7 +162,7 @@ With *label* parameter, you can specify explicit label or label number
 Add a prediction to better understand your model
 ------------------------------------------------
 
-You can add your prediction with *add* or *compile* methods : 
+You can add your prediction with *add* or *compile* methods :
 
 .. code:: ipython
 

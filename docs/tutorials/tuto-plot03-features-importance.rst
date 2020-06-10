@@ -9,10 +9,10 @@ subset and to compare it with the total population
 
 This short tutorial presents the different parameters you can use.
 
-Content : 
+Content :
 
 - classification case: Specify the target modality to display
-- selection parameter to display a subset 
+- selection parameter to display a subset
 - max_features parameter limits the number of features
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
@@ -164,7 +164,7 @@ Selection parameter specifies the subset :
 Tune the number of features to display
 --------------------------------------
 
-Use max_features parameter to tune the number of features to display (default value: 20) : 
+Use max_features parameter to tune the number of features to display (default value: 20) :
 
 .. code:: ipython
 

@@ -6,11 +6,11 @@ data preprocessing and display explicit labels.
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
-Content : 
+Content :
 
 - Encode data with dictionary
-- Build a Binary Classifier (Random Forest) 
-- Using Shapash 
+- Build a Binary Classifier (Random Forest)
+- Using Shapash
 - Show inversed data
 
 .. code:: ipython
@@ -59,14 +59,14 @@ Load titanic Data
 Prepare data for the model
 --------------------------
 
-Create Target : 
+Create Target :
 
 .. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-Train multiple category encoder : 
+Train multiple category encoder :
 
 .. code:: ipython
 

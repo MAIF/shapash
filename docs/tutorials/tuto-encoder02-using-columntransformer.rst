@@ -6,11 +6,11 @@ preprocessing and display explicit labels.
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
-Content : 
+Content :
 
-- Encode data with ColumnTransformer 
-- Build a Binary Classifier (Random Forest) 
-- Using Shapash 
+- Encode data with ColumnTransformer
+- Build a Binary Classifier (Random Forest)
+- Using Shapash
 - Show inversed data
 
 We want to implement an inverse transform function for ColumnTransformer based
@@ -67,14 +67,14 @@ Load titanic Data
 Prepare data for the model
 --------------------------
 
-Create Target : 
+Create Target :
 
 .. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-Train a columns transformer with multiple transformers : 
+Train a columns transformer with multiple transformers :
 
 .. code:: ipython
 
@@ -86,7 +86,7 @@ Train a columns transformer with multiple transformers :
                 remainder='passthrough')
     X_transform = pd.DataFrame(enc_columntransfo.fit_transform(X, y))
 
-Reaffect columns names for the remainder part : 
+Reaffect columns names for the remainder part :
 
 .. code:: ipython
 
@@ -175,8 +175,8 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    #Cause in ColumnsTransformer we can apply multiple transformer on the same column.
-    #the Pclass colums in now : TransformersName +  Pclass
+    #Cause in ColumnsTransformer we apply multiple transformer on the same column.
+    #the Pclass column is now : TransformersName +  Pclass
     xpl.x_pred.head(4)
 
 

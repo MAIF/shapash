@@ -11,12 +11,12 @@ library <https://github.com/slundberg/shap>`__.
 This tutorial shows how to use precalculated contributions with Shap in
 Shapash.
 
-Contents: 
+Contents:
 
-- Build a Binary Classifier 
-- Use Shap KernelExplainer 
-- Compile Shapash SmartExplainer 
-- Display local_plot 
+- Build a Binary Classifier
+- Use Shap KernelExplainer
+- Compile Shapash SmartExplainer
+- Display local_plot
 - to_pandas export
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.

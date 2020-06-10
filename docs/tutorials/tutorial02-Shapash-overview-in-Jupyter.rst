@@ -4,12 +4,12 @@ Shapash in Jupyter - Overview
 With this tutorial, you will understand how Shapash works in Jupyter Notebook
 with a simple use case.
 
-Content : 
+Content :
 
-- Build a Regressor 
-- Compile Shapash SmartExplainer 
-- Display global and local explanability 
-- Export local summarized explainability with *to_pandas* method 
+- Build a Regressor
+- Compile Shapash SmartExplainer
+- Display global and local explanability
+- Export local summarized explainability with *to_pandas* method
 - Save Shapash object in pickle file
 
 We used Kaggle's `House
@@ -140,7 +140,7 @@ Focus on a specific subset
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can use the features_importance method to compare the contribution
-of features of a subset to the global features importance : 
+of features of a subset to the global features importance :
 
 .. code:: ipython
 
@@ -189,11 +189,11 @@ Filter method
 ^^^^^^^^^^^^^
 
 Use the *filter* method to specify how to summarize local explainability.
-There are 4 parameters to customize the summary : 
+There are 4 parameters to customize the summary :
 
-- max_contrib : maximum number of criteria to display 
-- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion 
-- positive : display only positive contribution? Negative?(default None) 
+- max_contrib : maximum number of criteria to display
+- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion
+- positive : display only positive contribution? Negative?(default None)
 - features_to_hide : list of features you don’t want to display
 
 .. code:: ipython

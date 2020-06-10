@@ -6,11 +6,11 @@ preprocessing and display explicit labels.
 
 We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
-Content : 
+Content :
 
-- Encode data with Category_encoder 
-- Build a binary classifier (Random Forest) 
-- Using Shapash 
+- Encode data with Category_encoder
+- Build a binary classifier (Random Forest)
+- Using Shapash
 - Show inversed data
 
 .. code:: ipython

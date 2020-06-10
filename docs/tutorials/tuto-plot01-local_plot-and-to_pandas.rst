@@ -5,15 +5,15 @@ This tutorial presents the different parameters you can use to summarize
 and display local explanations. It also shows how to export this summary
 to a pandas DataFrame.
 
-Content : 
+Content :
 
-- Work with filter and local_plot methods to tune output 
-- display Positive or Negative contributions 
-- mask hidden contrib or prediction 
-- hide some specific features 
-- use query parameter to select without index or row number 
-- Classification: How can you select the label value to display ? 
-- print the summary params 
+- Work with filter and local_plot methods to tune output
+- display Positive or Negative contributions
+- mask hidden contrib or prediction
+- hide some specific features
+- use query parameter to select without index or row number
+- Classification: How can you select the label value to display ?
+- print the summary params
 - export local explanation with to_pandas
 
 We used Kaggle's `House
@@ -116,11 +116,11 @@ Filter method
 ^^^^^^^^^^^^^
 
 Use the *filter* method to specify how you want to synthesize local explainability
-you have 4 parameters to customize your summary: 
+you have 4 parameters to customize your summary:
 
-- max_contrib : maximum number of criteria to display 
-- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion 
-- positive : display only positive contribution? Negative?(default None) 
+- max_contrib : maximum number of criteria to display
+- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion
+- positive : display only positive contribution? Negative?(default None)
 - features_to_hide : list of features you don’t want to display
 
 .. code:: ipython
@@ -175,6 +175,7 @@ Focus on Negative contribution
     xpl.plot.local_plot(index=268)
 
 
+
 .. image:: tuto-plot01-local_plot-and-to_pandas_files/tuto-plot01-local_plot-and-to_pandas_23_0.png
 
 
@@ -183,9 +184,9 @@ You can also focus positive contribution using positive=True
 Hide specific features:
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-You might need to hide some feature because, for example : 
+You might need to hide some feature because, for example :
 
-- some features can be too complex 
+- some features can be too complex
 - end user don’t want know unnecessary information
 
 You can use *features_to_hide* parameter in *filter* method :
