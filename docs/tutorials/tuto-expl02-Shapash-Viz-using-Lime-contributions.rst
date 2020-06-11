@@ -3,16 +3,19 @@ Using Shapash with Lime explainer - Titanic
 
 You can compute your local contributions with the
 `Lime <https://github.com/marcotcr/lime>`__ library and summarize it
-with Shapash
+with Shapash.
 
-This Tutorial: - Build a Binary Classifier (Random Forest) - Create
-Explainer using Lime - Use Shapash to plot Local Explanation, and
+Content :
+
+- Build a Binary Classifier (Random Forest)
+- Create Explainer using Lime
+- Use Shapash to plot Local Explanation, and
 summarize it
+- Compile Shapash SmartExplainer
+- Display local_plot
+- to_pandas export
 
-Contents: - Build a Binary Classifier - Compile Shapash SmartExplainer -
-Display local_plot - to_pandas export
-
-Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
+We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
 .. code:: ipython
 
@@ -76,7 +79,7 @@ Create Classification Model
                                     return_df=True).fit(X)
     X = categ_encoding.transform(X)
 
-Train Test split + Random Forest fit
+Train Test split + Random Forest fit :
 
 .. code:: ipython
 

@@ -1,15 +1,19 @@
 Shapash in Jupyter - Overview
 =============================
 
-With this tutorial you: Understand how Shapash works in Jupyter Notebook
-with a simple use case
+With this tutorial, you will understand how Shapash works in Jupyter Notebook
+with a simple use case.
 
-Contents: - Build a Regressor - Compile Shapash SmartExplainer - Display
-global and local explanability - Export local summarized explainability
-with to_pandas method - Save Shapash object in pickle file
+Content :
 
-Data from Kaggle `House
-Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
+- Build a Regressor
+- Compile Shapash SmartExplainer
+- Display global and local explanability
+- Export local summarized explainability with *to_pandas* method
+- Save Shapash object in pickle file
+
+We used Kaggle's `House
+Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__ dataset.
 
 .. code:: ipython
 
@@ -136,7 +140,7 @@ Focus on a specific subset
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can use the features_importance method to compare the contribution
-of features of a subset to the global features importance
+of features of a subset to the global features importance :
 
 .. code:: ipython
 
@@ -154,10 +158,10 @@ of features of a subset to the global features importance
 Understand how a feature contributes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  The contribution_plot allows to analyse how one feature affects
+-  The contribution_plot allows you to analyse how one feature affects
    prediction
 -  Type of plot depends on the type of features
--  You can use feature name, feature label or feature number to specify
+-  You can use feature's name, feature's label or feature's number to specify
    which feature you want to analyze
 
 .. code:: ipython
@@ -184,12 +188,13 @@ Display a Summarized but Explicit local explainability
 Filter method
 ^^^^^^^^^^^^^
 
-Use the filter method to specify how to summarize local explainability
-There are 4 parameters to customize the summary: - max_contrib : maximum
-number of criteria to display - threshold : minimum value of the
-contribution (in absolute value) necessary to display a criterion -
-positive : display only positive contribution? Negative?(default None) -
-features_to_hide : list of features you don’t want to display
+Use the *filter* method to specify how to summarize local explainability.
+There are 4 parameters to customize the summary :
+
+- max_contrib : maximum number of criteria to display
+- threshold : minimum value of the contribution (in absolute value) necessary to display a criterion
+- positive : display only positive contribution? Negative?(default None)
+- features_to_hide : list of features you don’t want to display
 
 .. code:: ipython
 
@@ -198,8 +203,8 @@ features_to_hide : list of features you don’t want to display
 Display local plot, applying your filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-you can use row_num, index or query parameter to specify which
-prediction you want to explain
+You can use row_num, index or query parameter to specify which
+prediction you want to explain :
 
 .. code:: ipython
 
