@@ -41,7 +41,7 @@ You can also tune plots and outputs, specifying labels dict, features dict, enco
 The more you specify parameters, options, dictionaries and more the outputs will be understandable
 
 Getting Started : 3 minutes to Shapash
------------------------------------
+--------------------------------------
 
 The 3 steps to display results:
 
