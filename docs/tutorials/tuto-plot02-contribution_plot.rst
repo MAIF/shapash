@@ -119,7 +119,7 @@ First step: You need to Declare and Compile SmartExplainer
 
 
 You can now display the contribution plot :
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You have to specify the feature you want to analyse. You can use column
 name, label or column number :

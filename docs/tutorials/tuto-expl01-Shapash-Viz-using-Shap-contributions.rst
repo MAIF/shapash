@@ -1,5 +1,5 @@
 Compute Contributions with Shap - Summarize them With Shapash
-===========================================================
+=============================================================
 
 Shapash uses Shap backend to compute the Shapley contributions in order
 to satisfy the most hurry users who wish to display results with a
