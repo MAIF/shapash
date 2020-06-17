@@ -183,7 +183,7 @@ Understand how a feature contributes
 
 
 Display a Summarized but Explicit local explainability
------------------------------------------------------
+------------------------------------------------------
 
 Filter method
 ^^^^^^^^^^^^^

@@ -9,8 +9,7 @@ Content :
 
 - Build a Binary Classifier (Random Forest)
 - Create Explainer using Lime
-- Use Shapash to plot Local Explanation, and
-summarize it
+- Use Shapash to plot Local Explanation, and summarize it
 - Compile Shapash SmartExplainer
 - Display local_plot
 - to_pandas export
