@@ -1,6 +1,6 @@
 import unittest
 from shapash.utils.utils import inclusion, within_dict, is_nested_list,\
-    compute_digit_number, truncate_str, add_line_break
+    compute_digit_number, truncate_str, add_line_break, maximum_difference_sort_value
 
 
 class TestUtils(unittest.TestCase):
@@ -82,3 +82,15 @@ class TestUtils(unittest.TestCase):
         t = add_line_break("this is a very long sentence in order to make a very great test",15,maxlen=30)
         expected = 'this is a very long<br />sentence in order<br />to...'
         assert t == expected
+
+    def test_maximum_difference_sort_value_1(self):
+        t = maximum_difference_sort_value([[1, 20, 3], ['feat1', 'feat2', 'feat3']])
+        assert t == 19
+
+    def test_maximum_difference_sort_value_2(self):
+        t = maximum_difference_sort_value([[100, 11, 281, 64, 6000], ['feat1', 'feat2']])
+        assert t == 5989
+
+    def test_maximum_difference_sort_value_3(self):
+        t = maximum_difference_sort_value(([[1], ['feat1']]))
+        assert t == 1
