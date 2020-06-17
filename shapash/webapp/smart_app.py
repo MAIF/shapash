@@ -49,8 +49,10 @@ class SmartApp:
             SmartExplainer object
         """
         # APP
+        self.server = Flask(__name__)
         self.app = dash.Dash(
             __name__,
+            server=self.server,
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
@@ -397,7 +399,7 @@ class SmartApp:
                                     ],
                                     align="center",
                                 ),
-                                href="https://github.com/MAIF/Diaphane", target="_blank",
+                                href="https://github.com/MAIF/shapash", target="_blank",
                             ),
                             md=3, align="left"
                         ),
