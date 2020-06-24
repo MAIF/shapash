@@ -754,7 +754,8 @@ class SmartPlotter:
         """
         if self.explainer._case == "classification":
             if hasattr(self.explainer.model, 'predict_proba'):
-                value = self.explainer.model.predict_proba(self.explainer.x_init.loc[index].to_frame().T)[0][label]
+                features_type = self.explainer.x_init.dtypes.to_dict()
+                value = self.explainer.model.predict_proba(self.explainer.x_init.loc[index].to_frame().T.astype(features_type))[0][label]
             else:
                 value = None
         elif self.explainer._case == "regression":
