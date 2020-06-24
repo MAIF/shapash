@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
+import warnings
 # TODO: Remove the next 4 lines
 # these lines allow you to run locally the code and import shapash content
 #import os,sys,inspect
@@ -15,7 +16,7 @@ from pandas.core.common import flatten
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
-from shapash.utils.transform import inverse_transform
+from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions
@@ -114,7 +115,7 @@ class SmartExplainer:
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
 
-    def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None):
+    def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -150,6 +151,19 @@ class SmartExplainer:
             - A list with a single ColumnTransformer with optional (dict, list of dict)
             - A dict
             - A list of dict
+        postprocessing : dict, optional (default: None)
+            Dictionnary of postprocessing modifications to apply in x_pred dataframe
+            Dictionnary with feature names as keys (or number, or well labels referencing to features names),
+            which modifies dataset features by features.
+            --> Different types of postprocessing are available, but the syntax is this one:
+
+            One key by features, 5 different types of modifications:
+              { ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
+                ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
+                ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}}
+                ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }}
+                ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
+                }
 
         Example
         --------
@@ -175,6 +189,9 @@ class SmartExplainer:
         self.inv_columns_dict = {v: k for k, v in self.columns_dict.items()}
         self.check_features_dict()
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
+        postprocessing = self.modify_postprocessing(postprocessing)
+        self.check_postprocessing(postprocessing)
+        self.x_pred = self.apply_postprocessing(self.x_pred, postprocessing)
         self.data = self.state.assign_contributions(
             self.state.rank_contributions(
                 self.contributions,
@@ -183,6 +200,7 @@ class SmartExplainer:
         )
         self.features_imp = None
         self.features_desc = self.check_features_desc()
+
 
     def add(self, y_pred=None, label_dict=None, features_dict=None):
         """
@@ -334,6 +352,89 @@ class SmartExplainer:
             )
         else:
             return contributions
+
+    def modify_postprocessing(self, postprocessing=None):
+        """
+        Modifies postprocessing parameter, to change only keys, with features name,
+        in case of parameters are not real feature names (with columns_dict,
+        or inv_features_dict).
+
+        Parameter
+        ---------
+        postprocessing : Dict
+            Dictionnary of postprocessing to modify.
+
+        Returns
+        -------
+        Dict
+            Modified dictionnary, with same values but keys directly referencing to feature names.
+
+        """
+        if postprocessing:
+            new_dic = dict()
+            for i, key in enumerate(postprocessing.keys()):
+                if key in self.columns_dict.keys():
+                    new_dic[self.columns_dict[key]] = postprocessing[key]
+
+                elif key in self.inv_features_dict:
+                    new_dic[self.inv_features_dict[key]] = postprocessing[key]
+
+                elif key in self.features_dict:
+                    new_dic[key] = postprocessing[key]
+                else:
+
+            # if set(new_dic.keys()) > set(self.features_dict.keys()):
+                    warnings.warn(f"Feature name '{key}' not found in postprocessing", UserWarning)
+            # else:
+                # return new_dic
+            return new_dic
+
+
+    def check_postprocessing(self, postprocessing):
+        """
+        Check that postprocessing parameter has good attributes.
+        Check if postprocessing is a dictionnary, and if its parameters are good.
+
+        Parameters
+        ----------
+        postprocessing : dict
+            Dictionnary of postprocessing that need to be checked.
+
+        """
+        if not type(postprocessing) == dict:
+            raise ValueError("Postprocessing parameter must be a dictionnary")
+
+        for key in postprocessing.keys():
+            dict_post = postprocessing[key]
+            if not list(dict_post.keys()) == ['type', 'rule']:
+                raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
+            if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
+                raise ValueError("Wrong postprocessing method")
+            # if dict_post['type'] == 'transcoding' and set(dict_post['rule'].keys()) not in set(self.)
+            if dict_post['type'] == 'case' and dict_post['rule'] not in ['lower', 'upper']:
+                raise ValueError("Case modification unknown")
+            # if
+                # TODO : regex checks
+
+
+    def apply_postprocessing(self, x_pred, postprocessing=None):
+        """
+        Modifies x_pred Dataframe according to postprocessing modifications, if exists.
+
+        Parameters
+        ----------
+        x_pred : pandas.DataFrame
+            Dataset to be modified
+
+        Returns
+        -------
+        pandas.Dataframe
+            Returns x_pred if postprocessing is empty, modified data otherwise.
+        """
+        if postprocessing:
+            return apply_postprocessing(x_pred, postprocessing)
+        else:
+            return x_pred
 
     def check_y_pred(self):
         """
