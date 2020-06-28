@@ -12,7 +12,8 @@ from shapash.explainer.smart_explainer import SmartExplainer
 class TestSmartPlotter(unittest.TestCase):
     """
     Unit test Smart plotter class
-    TODO: Docstring
+    check the different plots available
+
     Parameters
     ----------
     unittest : [type]
@@ -706,7 +707,7 @@ class TestSmartPlotter(unittest.TestCase):
         Classification
         """
         col = 'X1'
-        output = self.smart_explainer.plot.contribution_plot(col, violin_maxf=0)
+        output = self.smart_explainer.plot.contribution_plot(col, violin_maxf=0, proba=False)
         expected_output = go.Scatter(x=self.smart_explainer.x_pred[col],
                                      y=self.smart_explainer.contributions[-1][col],
                                      mode='markers',
@@ -745,7 +746,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.y_pred = pd.DataFrame([0, 1], columns=['pred'], index=xpl.x_pred.index)
         xpl._classes = [0, 1]
-        output = xpl.plot.contribution_plot(col, violin_maxf=0)
+        output = xpl.plot.contribution_plot(col, violin_maxf=0, proba=False)
         expected_output = go.Scatter(x=xpl.x_pred[col],
                                      y=xpl.contributions[-1][col],
                                      mode='markers',
@@ -834,7 +835,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
         np_hv = [f"Id: {x}" for x in xpl.x_pred.index]
         np_hv.sort()
-        output = xpl.plot.contribution_plot(col)
+        output = xpl.plot.contribution_plot(col, proba=False)
         annot_list = []
         for data_plot in output.data:
             annot_list.extend(data_plot.hovertext.tolist())
@@ -943,6 +944,23 @@ class TestSmartPlotter(unittest.TestCase):
         expected_title = "<b>Age</b> - Feature Contribution<span style='font-size: 12px;'><br />" \
             + "Length of user-defined Subset : 4 (50%)</span>"
         assert output.layout.title['text'] == expected_title
+
+    def test_contribution_plot_11(self):
+        """
+        classification with proba
+        """
+        col = 'X1'
+        xpl =self.smart_explainer
+        xpl.proba_values = pd.DataFrame(
+            data = np.array(
+                [[0.4, 0.6],
+                [0.3, 0.7]]),
+            columns = ['class_1','class_2'],
+            index = xpl.x_init.index.values)
+        output = self.smart_explainer.plot.contribution_plot(col)
+        assert str(type(output.data[-1])) == "<class 'plotly.graph_objs.Scatter'>"
+        self.assertListEqual(list(output.data[-1]['marker']['color']), [0.6, 0.7])
+        self.assertListEqual(list(output.data[-1]['y']), [-0.3, 4.7])
 
     def test_plot_features_import_1(self):
         """

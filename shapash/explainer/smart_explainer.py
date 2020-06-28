@@ -635,6 +635,20 @@ class SmartExplainer:
                 "pickle file must contain dictionary"
             )
 
+
+    def predict_proba(self):
+        """
+        The predict_proba compute the proba values for each x_init row
+        """
+        if hasattr(self.model, 'predict_proba'):
+            self.proba_values = pd.DataFrame(
+                self.model.predict_proba(self.x_init),
+                columns=['class_'+str(x) for x in self._classes],
+                index=self.x_init.index)
+        else:
+            raise ValueError("model has no predict_proba method")
+
+
     def to_pandas(
             self,
             features_to_hide=None,
@@ -727,15 +741,14 @@ class SmartExplainer:
             if self.label_dict is not None:
                 y_pred = y_pred.applymap(lambda x: self.label_dict[x])
             if proba:
-                if hasattr(self.model,'predict_proba'):
-                    probamatrix = self.model.predict_proba(self.x_init)
-                    y_proba = pd.DataFrame([proba[ind]
-                                            for ind, proba in zip(indexclas, probamatrix)],
+                if not hasattr(self,'proba_values'):
+                    self.predict_proba()
+                y_proba = pd.DataFrame([proba[ind]
+                                            for ind, proba in zip(indexclas, self.proba_values.values)],
                                            columns=['proba'],
                                            index=y_pred.index)
-                    y_pred = pd.concat([y_pred, y_proba], axis=1)
-                else:
-                    print("model has no predict_proba method")
+                y_pred = pd.concat([y_pred, y_proba], axis=1)
+
         else:
             summary = self.data['summary']
 
