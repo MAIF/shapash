@@ -9,6 +9,7 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from flask import Flask
 import pandas as pd
 import plotly.graph_objs as go
 import random
@@ -49,8 +50,9 @@ class SmartApp:
             SmartExplainer object
         """
         # APP
+        self.server = Flask(__name__)
         self.app = dash.Dash(
-            __name__,
+            server=self.server,
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
