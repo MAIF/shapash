@@ -987,6 +987,8 @@ class SmartApp:
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                 selected = click_data['points'][0]['customdata']
+            elif ctx.triggered[0]['prop_id'] == 'threshold_id.value':
+                selected = index
             elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
                 if cell:
                     selected = data[cell['row']]['_index_']

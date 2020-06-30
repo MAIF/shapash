@@ -1,15 +1,19 @@
 Start the Shapash Web App on a sample dataset
 =============================================
 
-With this tutorial you: Understand how shapash works with a simple use
-case Start WebApp to understand your model and save these results
+With this tutorial, you will understand how shapash works with a simple use
+case, start the webApp to understand your model and save these results.
 
-Contents: - Build a Regressor - Compile Shapash SmartExplainer - Start
-Shapash WebApp - Export synt with to_pandas function - Save Shapash
-object in pickle file
+Content :
 
-Data from Kaggle `House
-Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
+- Build a Regressor
+- Compile Shapash SmartExplainer
+- Start Shapash WebApp
+- Export synt with to_pandas function
+- Save Shapash object in pickle file
+
+We used Kaggle's `House
+Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__ dataset.
 
 .. code:: ipython
 

@@ -2,12 +2,16 @@ Category_encoder tutorial
 =========================
 
 This tutorial shows how to use category_encoder encoders to reverse data
-preprocessing and display explicit labels
+preprocessing and display explicit labels.
 
-Data from Kaggle `Titanic <https://www.kaggle.com/c/titanic>`__
+We used Kaggle's `Titanic <https://www.kaggle.com/c/titanic/data>`__ dataset.
 
-This Tutorial: - Encode data with Category_encoder - Build a Binary
-Classifier (Random Forest) - Using Shapash - Show inversed data
+Content :
+
+- Encode data with Category_encoder
+- Build a binary classifier (Random Forest)
+- Using Shapash
+- Show inversed data
 
 .. code:: ipython
 
@@ -56,14 +60,14 @@ Load titanic Data
 Prepare data for the model with Category Encoder
 ------------------------------------------------
 
-Create Target
+Create Target :
 
 .. code:: ipython
 
     y = titan_df['Survived']
     X = titan_df.drop('Survived', axis=1)
 
-Train category encoder
+Train category encoder :
 
 .. code:: ipython
 

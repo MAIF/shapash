@@ -10,7 +10,7 @@ Welcome to Shapash's documentation !
    :width: 300px
    :align: center
 
-**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone. **Shapash** provides several types of visualization that display explicit labels that everyone can understand. Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+**Shapash** is a Python library which aims to make machine learning interpretable and understandable to everyone. **Shapash** provides several types of visualization which displays explicit labels that everyone can understand. Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
 The project was developed by **MAIF** Data Scientists.
 
 +---------------------------------+----------------------------------------------------------+-----------------------------------------+
@@ -37,7 +37,7 @@ The project was developed by **MAIF** Data Scientists.
    :align: center
    :target: https://shapash-demo.ossbymaif.fr/
 
-- To **Summarize and export** the local explanation: **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to an summarized and explicit explanation
+- To **Summarize and export** the local explanation: **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround is, to understand a local prediction of a supervised model, thanks to a summarized and straightforward explanation
 
 .. image:: ./_static/shapash-local_plot-example.png
    :width: 600px
@@ -69,23 +69,23 @@ The project was developed by **MAIF** Data Scientists.
 ---------------------
 
 - Compatible with Shap & Lime
-- Uses shap backend to display results in a few lines of code
+- Uses Shap backend to display results in a few lines of code
 - Encoders objects and features dictionaries used for clear results
 - Compatible with category_encoders & Sklearn ColumnTransformer
 - Visualizations of global and local explainability
 - Webapp to easily navigate from global to local
 - Summarizes local explanation
-- Offers several parameters in order to summarize in the most suitable way for your use case
-- Exports your local summaries to a Pandas DataFrame
+- Offers several parameters in order to sum up in the most suitable way for your use case
+- Exports your local summaries to Pandas DataFrames
 - Usable for Regression, Binary Classification or Multiclass
 - Compatible with most of sklearn, lightgbm, catboost, xgboost models
 
 
 **Shapash** is easy to install and use:
-It provides a SmartExplainer class to understand your model and summarize explanation with a simple syntax
+It provides a SmartExplainer class to understand your model and summarize explanation with a simple syntax.
 
 High adaptability:
-Very few arguments are required to display results. But the more you work on cleaning and documenting the data, the clearer the results will be for the end user
+Very few arguments are required to display results. But the more you work on cleaning and documenting the data, the clearer the results will be for the end user.
 
 
 .. toctree::

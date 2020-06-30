@@ -14,6 +14,6 @@ The Plot Methods
 ----------------
 
 .. autoclass:: shapash.explainer.smart_plotter.SmartPlotter
-   :members: features_importance, contribution_plot, local_plot
+   :members: features_importance, contribution_plot, local_plot, compare_plot
    :undoc-members:
    :show-inheritance:

@@ -9,7 +9,8 @@ from plotly import graph_objs as go
 from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
-from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text
+from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text,\
+    maximum_difference_sort_value
 import copy
 
 class SmartPlotter:
@@ -59,10 +60,10 @@ class SmartPlotter:
             }
         }
         self.dict_ycolors = {
-            1: "rgb(255, 123, 38)",
-            0: "rgb(199, 198, 204)"
+            1: "rgba(255, 166, 17, 0.9)",
+            0: "rgba(117, 152, 189, 0.9)"
         }
-        self.regr_colorscale = [
+        self.init_colorscale = [
             "rgb(52, 55, 54)",
             "rgb(74, 99, 138)",
             "rgb(116, 153, 214)",
@@ -118,17 +119,34 @@ class SmartPlotter:
                 }
             }
         }
+
+        self.dict_compare_colors = [
+            'rgba(244, 192, 0, 1.0)',
+            'rgba(74, 99, 138, 0.7)',
+            'rgba(113, 101, 59, 1.0)',
+            "rgba(183, 58, 56, 0.9)",
+            "rgba(255, 123, 38, 1.0)",
+            'rgba(0, 21, 179, 0.97)',
+            'rgba(116, 1, 179, 0.9)',
+        ]
+
         self.round_digit = None
 
-    def tuning_colorscale(self):
+    def tuning_colorscale(self,values):
         """
         adapts the color scale to the distribution of points
+
+        Parameters
+        ----------
+        values: 1 column pd.DataFrame
+            values ​​whose quantiles must be calculated
         """
-        desc_df = self.explainer.y_pred.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
         min_pred, max_pred = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
                       (max_pred - min_pred)
-        self.regr_colorscale = list(map(list, (zip(desc_pct_df.values.flatten(), self.regr_colorscale))))
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self.init_colorscale))))
+        return color_scale
 
     def tuning_round_digit(self):
         """
@@ -145,7 +163,9 @@ class SmartPlotter:
                      contributions,
                      feature_name,
                      pred=None,
+                     proba_values=None,
                      col_modality=None,
+                     col_scale=None,
                      addnote=None,
                      subtitle=None,
                      width=900,
@@ -165,9 +185,13 @@ class SmartPlotter:
             Name of the feature, used in title
         pred: 1 column pd.DataFrame (optional)
             predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
         col_modality: Int, Float or String (optional)
             parameter used in classification case,
             specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -193,6 +217,12 @@ class SmartPlotter:
         dict_t['text'] = title
         dict_xaxis['text'] = truncate_str(feature_name,110)
         dict_yaxis['text'] = 'Contribution'
+        if self.explainer._case == "regression":
+            colorpoints = pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == "classification":
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
 
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]),8])
@@ -226,15 +256,15 @@ class SmartPlotter:
             },
             customdata=contributions.index.values
         )
-        if pred is not None:
-            if self.explainer._case == 'classification':
-                fig.data[0].marker.color = pred.iloc[:, 0].apply(lambda \
-                        x: dict_colors[1] if x == col_modality else dict_colors[0])
-            elif self.explainer._case == 'regression':
-                fig.data[0].marker.color = pred.values.flatten()
-                fig.data[0].marker.coloraxis = 'coloraxis'
-                fig.layout.coloraxis.colorscale = self.regr_colorscale
-                fig.layout.coloraxis.colorbar = {'title': {'text': 'predicted'}}
+        if colorpoints is not None:
+            fig.data[0].marker.color = colorpoints.values.flatten()
+            fig.data[0].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+
+        elif self.explainer._case == 'classification' and pred is not None:
+            fig.data[0].marker.color = pred.iloc[:, 0].apply(lambda \
+                    x: dict_colors[1] if x == col_modality else dict_colors[0])
         else:
             fig.data[0].marker.color = default_color
 
@@ -249,7 +279,9 @@ class SmartPlotter:
                     contributions,
                     feature_name,
                     pred=None,
+                    proba_values=None,
                     col_modality=None,
+                    col_scale=None,
                     addnote=None,
                     subtitle=None,
                     width=900,
@@ -268,9 +300,13 @@ class SmartPlotter:
             Name of the feature, used in title
         pred: 1 column pd.DataFrame (optional)
             predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
         col_modality: Int, Float or String (optional)
             parameter used in classification case,
             specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -296,7 +332,14 @@ class SmartPlotter:
         dict_t['text'] = title
         dict_xaxis['text'] = truncate_str(feature_name,110)
         dict_yaxis['text'] = "Contribution"
+        points_param = False if proba_values is not None else "all"
         jitter_param = 0.075
+        if self.explainer._case == "regression":
+            colorpoints = pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == "classification":
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
 
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
@@ -318,7 +361,7 @@ class SmartPlotter:
                                                              (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points="all",
+                                        points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
                                         line_color=dict_colors[0],
@@ -335,7 +378,7 @@ class SmartPlotter:
                                                              (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points="all",
+                                        points=points_param,
                                         pointpos=0.1,
                                         side='positive',
                                         line_color=dict_colors[1],
@@ -362,11 +405,11 @@ class SmartPlotter:
                                         customdata=contributions.index.values
                                         ))
                 if pred is None:
-                    fig.data[-1].points = 'all'
+                    fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
                     fig.data[-1].jitter = jitter_param
 
-        if pred is not None and self.explainer._case == 'regression':
+        if colorpoints is not None :
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
                 y=contributions.values.flatten(),
@@ -376,13 +419,13 @@ class SmartPlotter:
                 hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
                 customdata=contributions.index.values,
                 marker={
-                    'color': pred.values.flatten(),
+                    'color': colorpoints.values.flatten(),
                     'showscale': True,
                     'coloraxis': 'coloraxis'
                 }
             ))
-            fig.layout.coloraxis.colorscale = self.regr_colorscale
-            fig.layout.coloraxis.colorbar = {'title': {'text': 'predicted'}}
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
         fig.update_traces(
             marker={
@@ -742,7 +785,9 @@ class SmartPlotter:
         """
         if self.explainer._case == "classification":
             if hasattr(self.explainer.model, 'predict_proba'):
-                value = self.explainer.model.predict_proba(self.explainer.x_init.loc[index].to_frame().T)[0][label]
+                if not hasattr(self.explainer,"proba_values"):
+                    self.explainer.predict_proba()
+                value = self.explainer.proba_values.iloc[:,[label]].loc[index].values[0]
             else:
                 value = None
         elif self.explainer._case == "regression":
@@ -902,6 +947,7 @@ class SmartPlotter:
                           label=-1,
                           violin_maxf=10,
                           max_points=2000,
+                          proba=True,
                           width=900,
                           height=600,
                           file_name=None,
@@ -939,6 +985,8 @@ class SmartPlotter:
             maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
             nb: you can also limit the number using 'selection' parameter.
+        proba: bool (optional, default: True)
+            use predict_proba to color plot (classification case)
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 600)
@@ -997,17 +1045,36 @@ class SmartPlotter:
                             sep='')
 
         col_value = None
+        proba_values = None
         subtitle = None
+        col_scale = None
+
         # Classification Case
         if self.explainer._case == "classification":
             subcontrib = self.explainer.contributions[label_num]
             if self.explainer.y_pred is not None:
                 col_value = self.explainer._classes[label_num]
             subtitle = f"Response: <b>{label_value}</b>"
+            # predict proba Color scale
+            if proba and hasattr(self.explainer.model,"predict_proba"):
+                if not hasattr(self.explainer,"proba_values"):
+                    self.explainer.predict_proba()
+                proba_values = self.explainer.proba_values.iloc[:,[label_num]]
+                if not hasattr(self,"pred_colorscale"):
+                    self.pred_colorscale = {}
+                if label_num not in self.pred_colorscale:
+                    self.pred_colorscale[label_num] = self.tuning_colorscale(proba_values)
+                col_scale = self.pred_colorscale[label_num]
+                #Proba subset:
+                proba_values = proba_values.loc[list_ind, :]
 
-        # Regression Case
+        # Regression Case - color scale
         elif self.explainer._case == "regression":
             subcontrib = self.explainer.contributions
+            if self.explainer.y_pred is not None:
+                if not hasattr(self, "pred_colorscale"):
+                    self.pred_colorscale = self.tuning_colorscale(self.explainer.y_pred)
+                col_scale = self.pred_colorscale
 
         # Subset
         feature_values = self.explainer.x_pred.loc[list_ind, col_name].to_frame()
@@ -1019,10 +1086,8 @@ class SmartPlotter:
             if self.explainer._case == 'classification' and self.explainer.label_dict is not None:
                 y_pred = y_pred.applymap(lambda x: self.explainer.label_dict[x])
                 col_value = self.explainer.label_dict[col_value]
-            # Tuning colorscale
-            elif self.explainer._case == 'regression' :
-                if isinstance(self.regr_colorscale[0], str):
-                    self.tuning_colorscale()
+            # round predict
+            elif self.explainer._case == 'regression':
                 if self.round_digit is None:
                     self.tuning_round_digit()
                 y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
@@ -1031,10 +1096,10 @@ class SmartPlotter:
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
-            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, col_value, addnote,
+            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale, addnote,
                                     subtitle, width, height, file_name, auto_open)
         else:
-            fig = self.plot_violin(feature_values, contrib, col_label, y_pred, col_value, addnote,
+            fig = self.plot_violin(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale, addnote,
                                    subtitle, width, height, file_name, auto_open)
 
         return fig
@@ -1134,4 +1199,255 @@ class SmartPlotter:
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, addnote,
                                         subtitle, width, height, file_name, auto_open)
+        return fig
+
+    def plot_line_comparison(self,
+                             index,
+                             feature_values,
+                             contributions,
+                             predictions=None,
+                             dict_features=None,
+                             subtitle=None,
+                             width=900,
+                             height=550,
+                             file_name=None,
+                             auto_open=False):
+        """
+        Plotly plot for comparisons. Displays
+        the contributions of several individuals. One line represents
+        the different contributions of a unique individual.
+
+        Parameters
+        ----------
+        index: list
+            List of index corresponding to the individuals we want to compare.
+        feature_values: list
+            String list corresponding to the name of the features.
+        contributions: numpy.ndarray
+            Matrix of contributions.
+            Each row corresponds to an individual.
+        predictions: list
+            List of pandas.Series containing values of individuals.
+        dict_features: dict
+            Dictionnary of feature names.
+        subtitle: string (default : None)
+            Subtitle to display.
+        width: int (default: 900)
+            Plotly figure - layout width
+        height: int (default: 550)
+            Plotly figure - layout height.
+        file_name: string (optional)
+            File name to use to save the plotly scatter chart. If None the scatter chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the scatter plot or not.
+
+        Returns
+        -------
+        Plotly Figure Object
+            Plot of the contributions of individuals, feature by feature.
+        """
+
+        dict_t = copy.deepcopy(self.dict_title)
+        topmargin = 80
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+
+        if len(index) == 0:
+            warnings.warn('No individuals matched', UserWarning)
+            dict_t['text'] = "Compare plot - <b>No Matching Reference Entry</b>"
+        elif len(index) < 2:
+            warnings.warn('Comparison needs at least 2 individuals', UserWarning)
+            dict_t['text'] = "Compare plot - index : " + ' ; '.join(['<b>' + str(id) + '</b>' for id in index])
+        else:
+            dict_t['text'] = "Compare plot - index : " + ' ; '.join(['<b>' + str(id) + '</b>' for id in index])
+
+            dict_xaxis['text'] = "Contributions"
+
+        dict_yaxis['text'] = None
+
+        if subtitle is not None:
+            topmargin += 15 * height/275
+            dict_t['text'] = truncate_str(dict_t['text'], 120) \
+                             + f"<span style='font-size: 12px;'><br />{truncate_str(subtitle, 200)}</span>"
+
+        layout = go.Layout(
+            template='none',
+            title=dict_t,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            yaxis_type='category',
+            width=width,
+            height=height,
+            hovermode='closest',
+            legend=dict(x=1, y=1),
+            margin={
+                'l': 150,
+                'r': 20,
+                't': topmargin,
+                'b': 70
+                }
+            )
+
+        iteration_list = list(zip(contributions, feature_values))
+
+        dic_color = copy.deepcopy(self.dict_compare_colors)
+        lines = list()
+
+        for i, id in enumerate(index):
+            xi = list()
+            features = list()
+            x_val = predictions[i]
+            x_hover = list()
+
+            for contrib, feat in iteration_list:
+                xi.append(contrib[i])
+                features.append('<b>' + str(feat) + '</b>')
+                pred_x_val = x_val[dict_features[feat]]
+                x_hover.append(f"Id: <b>{add_line_break(id, 40, 160)}</b>"
+                               + f"<br /><b>{add_line_break(feat, 40, 160)}</b> <br />"
+                               + f"Contribution: {contrib[i]:.4f} <br />Value: "
+                               + str(add_line_break(pred_x_val, 40, 160)))
+
+            lines.append(go.Scatter(
+                    x=xi,
+                    y=features,
+                    mode='lines+markers',
+                    showlegend=True,
+                    name=f"Id: <b>{index[i]}</b>",
+                    hoverinfo="text",
+                    hovertext=x_hover,
+                    marker={'color': dic_color[i % len(dic_color)]}
+                    )
+            )
+
+        fig = go.Figure(data=lines, layout=layout)
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name is not None:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+        return fig
+
+    def compare_plot(self,
+                     index=None,
+                     row_num=None,
+                     label=None,
+                     max_features=20,
+                     width=900,
+                     height=550,
+                     show_predict=True,
+                     file_name=None,
+                     auto_open=True):
+        """
+        Plotly comparison plot of several individuals' contributions. Plots contributions feature by feature.
+        Allows to see the differences of contributions between two or more individuals,
+        with each individual represented by a unique line.
+
+        Parameters
+        ----------
+
+        index: list
+            1st option to select individual rows.
+            Int list of index referencing rows.
+        row_num: list
+            2nd option to select individual rows.
+            int list corresponding to the row numbers of individuals (starting at 0).
+        label: int or string (default: None)
+            If the label is of string type, check if it can be changed to integer to select the
+            good dataframe object.
+        max_features: int (optional, default: 20)
+            Number of contributions to show.
+            If greater than the total of features, shows all.
+        width: int (default: 900)
+            Plotly figure - layout width.
+        height: int (default: 550)
+            Plotly figure - layout height.
+        show_predict: boolean (default: True)
+            Shows predict or predict_proba value.
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: boolean (optional)
+            Indicates whether to open the bar plot or not.
+
+        Returns
+        -------
+        Plotly Figure Object
+            Comparison plot of the contributions of the different individuals.
+
+        Example
+        -------
+        >>> xpl.plot.compare_plot(row_num=[0, 1, 2])
+        """
+        # Checking input is okay
+        if sum(arg is not None for arg in [row_num, index]) != 1:
+            raise ValueError(
+                "You have to specify just one of these arguments: index, row_num"
+            )
+        # Getting indexes in a list
+        line_reference = []
+        if index is not None:
+            for id in index:
+                if id in self.explainer.x_pred.index:
+                    line_reference.append(id)
+
+        elif row_num is not None:
+            line_reference = [self.explainer.x_pred.index.values[row_nb_reference]
+                              for row_nb_reference in row_num
+                              if self.explainer.x_pred.index.values[row_nb_reference] in self.explainer.x_pred.index]
+
+        subtitle = ""
+        if len(line_reference) < 1:
+            raise ValueError('No matching entry for index')
+
+        # Classification case
+        if self.explainer._case == 'classification':
+            if label is None:
+                label = -1
+
+            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            contrib = self.explainer.contributions[label_num]
+
+            if show_predict:
+                preds = [self.local_pred(line, label_num) for line in line_reference]
+                subtitle = f"Response: <b>{label_value}</b> - " \
+                           + "Probas: " \
+                           + ' ; '.join([str(id) + ': <b>' + str(round(proba, 2)) + '</b>'
+                                         for proba, id in zip(preds, line_reference)])
+
+        # Regression case
+        elif self.explainer._case == 'regression':
+            contrib = self.explainer.contributions
+
+            if show_predict:
+                preds = [self.local_pred(line) for line in line_reference]
+                subtitle = f"Predictions: " + ' ; '.join([str(id) + ': <b>' + str(round(pred, 2)) + '</b>'
+                                                          for id, pred in zip(line_reference, preds)])
+
+        new_contrib = list()
+        for id in line_reference:
+            new_contrib.append(contrib.loc[id])
+        new_contrib = np.array(new_contrib).T
+
+        # Well labels if available
+        feature_values = [0]*len(contrib.columns)
+        if hasattr(self.explainer, 'columns_dict'):
+            for i, name in enumerate(contrib.columns):
+                feature_name = self.explainer.features_dict[name]
+                feature_values[i] = feature_name
+
+        preds = [self.explainer.x_pred.loc[id] for id in line_reference]
+        dict_features = self.explainer.inv_features_dict
+
+        iteration_list = list(zip(new_contrib, feature_values))
+        iteration_list.sort(key=lambda x: maximum_difference_sort_value(x), reverse=True)
+        iteration_list = iteration_list[:max_features]
+        iteration_list = iteration_list[::-1]
+        new_contrib, feature_values = list(zip(*iteration_list))
+
+        fig = self.plot_line_comparison(line_reference, feature_values, new_contrib,
+                                        predictions=preds, dict_features=dict_features,
+                                        width=width, height=height, subtitle=subtitle,
+                                        file_name=file_name, auto_open=auto_open)
+
         return fig

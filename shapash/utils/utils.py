@@ -170,5 +170,34 @@ def add_text(text_list,sep):
     int
         number of digits
     """
-    clean_list = [x for x in text_list if x not in ['', None] ]
+    clean_list = [x for x in text_list if x not in ['', None]]
     return sep.join(clean_list)
+
+def maximum_difference_sort_value(contributions):
+    """
+    Auxiliary function to sort the contributions for the compare_plot.
+    Returns the value of the maximum difference between values in contributions[0].
+
+    Parameters
+    ----------
+    contributions: list
+        list containing 2 elements:
+        a Numpy.ndarray of contributions of the indexes compared, and the features' names.
+
+    Returns
+    -------
+    value_max_difference : float
+        Value of the maximum difference contribution.
+    """
+    if len(contributions[0]) <= 1:
+        max_difference = contributions[0][0]
+    else:
+        max_difference = max(
+            [
+                abs(contrib_i - contrib_j)
+                for i, contrib_i in enumerate(contributions[0])
+                for j, contrib_j in enumerate(contributions[0])
+                if i <= j
+            ]
+        )
+    return max_difference

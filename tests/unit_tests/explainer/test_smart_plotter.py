@@ -12,7 +12,8 @@ from shapash.explainer.smart_explainer import SmartExplainer
 class TestSmartPlotter(unittest.TestCase):
     """
     Unit test Smart plotter class
-    TODO: Docstring
+    check the different plots available
+
     Parameters
     ----------
     unittest : [type]
@@ -706,7 +707,7 @@ class TestSmartPlotter(unittest.TestCase):
         Classification
         """
         col = 'X1'
-        output = self.smart_explainer.plot.contribution_plot(col, violin_maxf=0)
+        output = self.smart_explainer.plot.contribution_plot(col, violin_maxf=0, proba=False)
         expected_output = go.Scatter(x=self.smart_explainer.x_pred[col],
                                      y=self.smart_explainer.contributions[-1][col],
                                      mode='markers',
@@ -745,7 +746,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.y_pred = pd.DataFrame([0, 1], columns=['pred'], index=xpl.x_pred.index)
         xpl._classes = [0, 1]
-        output = xpl.plot.contribution_plot(col, violin_maxf=0)
+        output = xpl.plot.contribution_plot(col, violin_maxf=0, proba=False)
         expected_output = go.Scatter(x=xpl.x_pred[col],
                                      y=xpl.contributions[-1][col],
                                      mode='markers',
@@ -834,7 +835,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
         np_hv = [f"Id: {x}" for x in xpl.x_pred.index]
         np_hv.sort()
-        output = xpl.plot.contribution_plot(col)
+        output = xpl.plot.contribution_plot(col, proba=False)
         annot_list = []
         for data_plot in output.data:
             annot_list.extend(data_plot.hovertext.tolist())
@@ -943,6 +944,23 @@ class TestSmartPlotter(unittest.TestCase):
         expected_title = "<b>Age</b> - Feature Contribution<span style='font-size: 12px;'><br />" \
             + "Length of user-defined Subset : 4 (50%)</span>"
         assert output.layout.title['text'] == expected_title
+
+    def test_contribution_plot_11(self):
+        """
+        classification with proba
+        """
+        col = 'X1'
+        xpl =self.smart_explainer
+        xpl.proba_values = pd.DataFrame(
+            data = np.array(
+                [[0.4, 0.6],
+                [0.3, 0.7]]),
+            columns = ['class_1','class_2'],
+            index = xpl.x_init.index.values)
+        output = self.smart_explainer.plot.contribution_plot(col)
+        assert str(type(output.data[-1])) == "<class 'plotly.graph_objs.Scatter'>"
+        self.assertListEqual(list(output.data[-1]['marker']['color']), [0.6, 0.7])
+        self.assertListEqual(list(output.data[-1]['y']), [-0.3, 4.7])
 
     def test_plot_features_import_1(self):
         """
@@ -1060,3 +1078,259 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         output = xpl.plot.local_pred('person_A',label=0)
         assert output == 0.5
+
+    def test_plot_line_comparison_1(self):
+        """
+        Unit test 1 for plot_line_comparison
+        """
+        xpl = self.smart_explainer
+        index = ['person_A', 'person_B']
+        data = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34],
+                 ['Master', 27]]
+            ),
+            columns=['X1', 'X2'],
+            index=index
+        )
+        features_dict = {'X1': 'X1', 'X2': 'X2'}
+        xpl.inv_features_dict = {'X1': 'X1', 'X2': 'X2'}
+        colors = ['rgba(244, 192, 0, 1.0)', 'rgba(74, 99, 138, 0.7)']
+        var_dict = ['X1', 'X2']
+        contributions = [[-3.4, 0.78], [1.2, 3.6]]
+        title = 'Compare plot - index : <b>person_A</b> ; <b>person_B</b>'
+        predictions = [data.loc[id] for id in index]
+
+        fig = list()
+        for i in range(2):
+            fig.append(go.Scatter(
+                x=[contributions[0][i], contributions[1][i]],
+                y=['<b>' + feat + '</b>' for feat in var_dict],
+                mode='lines+markers',
+                name=f'Id: <b>{index[i]}</b>',
+                hovertext=[f'Id: <b>{index[i]}</b><br /><b>X1</b> <br />Contribution: {contributions[0][i]:.4f} <br />'
+                           + f'Value: {data.iloc[i][0]}',
+                           f'Id: <b>{index[i]}</b><br /><b>X2</b> <br />Contribution: {contributions[1][i]:.4f} <br />'
+                           + f'Value: {data.iloc[i][1]}'
+                           ],
+                marker={'color': colors[i]}
+                )
+            )
+        expected_output = go.Figure(data=fig)
+        output = xpl.plot.plot_line_comparison(['person_A', 'person_B'], var_dict, contributions,
+                                               predictions=predictions, dict_features=features_dict)
+
+        for i in range(2):
+            assert np.array_equal(output.data[i]['x'], expected_output.data[i]['x'])
+            assert np.array_equal(output.data[i]['y'], expected_output.data[i]['y'])
+            assert output.data[i].name == expected_output.data[i].name
+            assert output.data[i].hovertext == expected_output.data[i].hovertext
+            assert output.data[i].marker == expected_output.data[i].marker
+        assert title == output.layout.title.text
+
+    def test_plot_line_comparison_2(self):
+        """
+        Unit test 2 for plot_line_comparison
+        """
+        xpl = self.smart_explainer
+        index = ['person_A', 'person_B']
+        data = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34],
+                 ['Master', 27]]
+            ),
+            columns=['X1', 'X2'],
+            index=index
+        )
+        xpl.inv_features_dict = {'X1': 'X1', 'X2': 'X2'}
+        var_dict = ['X1', 'X2']
+        contributions = [[-3.4, 0.78], [1.2, 3.6]]
+        subtitle = 'This is a good test'
+        title = 'Compare plot - index : <b>person_A</b> ; <b>person_B</b>' \
+                + "<span style='font-size: 12px;'><br />This is a good test</span>"
+        predictions = [data.loc[id] for id in index]
+
+        output = xpl.plot.plot_line_comparison(index, var_dict, contributions,
+                                               subtitle=subtitle, predictions=predictions,
+                                               dict_features=xpl.inv_features_dict)
+
+        assert title == output.layout.title.text
+
+    def test_compare_plot_1(self):
+        """
+        Unit test 1 for compare_plot
+        """
+        xpl = self.smart_explainer
+        xpl.contributions = pd.DataFrame(
+            data=[[-3.4, 0.78], [1.2, 3.6]],
+            index=['person_A', 'person_B'],
+            columns=['X1', 'X2']
+        )
+        xpl.inv_features_dict = {'Education': 'X1', 'Age': 'X2'}
+        xpl._case = "regression"
+        output = xpl.plot.compare_plot(row_num=[1], show_predict=False)
+        title = "Compare plot - index : <b>person_B</b><span style='font-size: 12px;'><br /></span>"
+        data = [go.Scatter(
+            x=[1.2, 3.6],
+            y=['<b>Education</b>', '<b>Age</b>'],
+            name='Id: <b>person_B</b>',
+            hovertext=['Id: <b>person_B</b><br /><b>Education</b> <br />Contribution: 1.2000 <br />Value: Master',
+                       'Id: <b>person_B</b><br /><b>Age</b> <br />Contribution: 3.6000 <br />Value: 27']
+            )
+        ]
+        expected_output = go.Figure(data=data)
+        assert np.array_equal(expected_output.data[0].x, output.data[0].x)
+        assert np.array_equal(expected_output.data[0].y, output.data[0].y)
+        assert np.array_equal(expected_output.data[0].hovertext, output.data[0].hovertext)
+        assert expected_output.data[0].name == output.data[0].name
+        assert title == output.layout.title.text
+
+    def test_compare_plot_2(self):
+        """
+        Unit test 2 for compare_plot
+        """
+        xpl = self.smart_explainer
+        xpl.inv_features_dict = {'Education': 'X1', 'Age': 'X2'}
+        index = ['person_A', 'person_B']
+        contributions = [[-3.4, 0.78], [1.2, 3.6]]
+        xpl.contributions = pd.DataFrame(
+            data=contributions,
+            index=index,
+            columns=['X1', 'X2']
+        )
+        data = np.array(
+                    [['PhD', 34],
+                     ['Master', 27]]
+                )
+        xpl._case = "regression"
+        output = xpl.plot.compare_plot(index=index, show_predict=True)
+        title_and_subtitle = "Compare plot - index : <b>person_A</b> ;" \
+                " <b>person_B</b><span style='font-size: 12px;'><br />" \
+                "Predictions: person_A: <b>1</b> ; person_B: <b>1</b></span>"
+        fig = list()
+        for i in range(2):
+            fig.append(go.Scatter(
+                x=contributions[i][::-1],
+                y=['<b>Age</b>', '<b>Education</b>'],
+                name=f'Id: <b>{index[i]}</b>',
+                hovertext=[
+                    f'Id: <b>{index[i]}</b><br /><b>Age</b> <br />Contribution: {contributions[i][1]:.4f}'
+                    f' <br />Value: {data[i][1]}',
+                    f'Id: <b>{index[i]}</b><br /><b>Education</b> <br />Contribution: {contributions[i][0]:.4f}'
+                    f' <br />Value: {data[i][0]}'
+                ]
+            )
+            )
+
+        expected_output = go.Figure(data=fig)
+        for i in range(2):
+            assert np.array_equal(expected_output.data[i].x, output.data[i].x)
+            assert np.array_equal(expected_output.data[i].y, output.data[i].y)
+            assert np.array_equal(expected_output.data[i].hovertext, output.data[i].hovertext)
+            assert expected_output.data[i].name == output.data[i].name
+        assert title_and_subtitle == output.layout.title.text
+
+    def test_compare_plot_3(self):
+        """
+        Unit test 3 for compare_plot classification
+        """
+        index = ['A', 'B']
+        x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34],
+                 ['Master', 27]]
+            ),
+            columns=['X1', 'X2'],
+            index=index
+        )
+        contributions1 = pd.DataFrame(
+            data=np.array(
+                [[-3.4, 0.78],
+                 [1.2, 3.6]]
+            ),
+            columns=['X1', 'X2'],
+            index=index
+        )
+        contributions2 = pd.DataFrame(
+            data=np.array(
+                [[-0.4, 0.78],
+                 [0.2, 0.6]]
+            ),
+            columns=['X1', 'X2'],
+            index=index
+        )
+        feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
+        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi.contributions = [
+            pd.DataFrame(
+                data=contributions1,
+                index=index,
+                columns=['X1', 'X2']
+            ),
+            pd.DataFrame(
+                data=contributions2,
+                index=index,
+                columns=['X1', 'X2']
+            )
+        ]
+        smart_explainer_mi.inv_features_dict = {'Education': 'X1', 'Age': 'X2'}
+        smart_explainer_mi.data = dict()
+        smart_explainer_mi.x_pred = x_pred
+        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_pred.columns)}
+        smart_explainer_mi._case = "classification"
+        smart_explainer_mi._classes = [0, 1]
+        smart_explainer_mi.model = 'predict_proba'
+
+        output_label0 = smart_explainer_mi.plot.compare_plot(index=['A', 'B'], label=0, show_predict=False)
+        output_label1 = smart_explainer_mi.plot.compare_plot(index=['A', 'B'], show_predict=False)
+
+        title_0 = "Compare plot - index : <b>A</b> ; <b>B</b><span style='font-size: 12px;'><br /></span>"
+        title_1 = "Compare plot - index : <b>A</b> ; <b>B</b><span style='font-size: 12px;'><br /></span>"
+
+        fig_0 = list()
+        x0 = contributions1.to_numpy()
+        x0.sort(axis=1)
+        for i in range(2):
+            fig_0.append(go.Scatter(
+                x=x0[i][::-1],
+                y=['<b>Age</b>', '<b>Education</b>'],
+                name=f'Id: <b>{index[i]}</b>',
+                hovertext=[
+                    f'Id: <b>{index[i]}</b><br /><b>Age</b> <br />Contribution: {x0[i][1]:.4f}'
+                    f' <br />Value: {x_pred.to_numpy()[i][1]}',
+                    f'Id: <b>{index[i]}</b><br /><b>Education</b> <br />Contribution: {x0[i][0]:.4f}'
+                    f' <br />Value: {x_pred.to_numpy()[i][0]}'
+                ]
+                )
+            )
+
+        fig_1 = list()
+        x1 = contributions2.to_numpy()
+        x1.sort(axis=1)
+        for i in range(2):
+            fig_1.append(go.Scatter(
+                x=x1[i][::-1],
+                y=['<b>Age</b>', '<b>Education</b>'],
+                name=f'Id: <b>{index[i]}</b>',
+                hovertext=[
+                    f'Id: <b>{index[i]}</b><br /><b>Age</b> <br />Contribution: {x1[i][1]:.4f}'
+                    f' <br />Value: {x_pred.to_numpy()[i][1]}',
+                    f'Id: <b>{index[i]}</b><br /><b>Education</b> <br />Contribution: {x1[i][0]:.4f}'
+                    f' <br />Value: {x_pred.to_numpy()[i][0]}'
+                ]
+                )
+            )
+
+        expected_output_0 = go.Figure(data=fig_0)
+        expected_output_1 = go.Figure(data=fig_1)
+
+        assert title_0 == output_label0.layout.title.text
+        assert title_1 == output_label1.layout.title.text
+        for i in range(2):
+            assert np.array_equal(output_label1.data[i].x, expected_output_1.data[i].x)
+            assert np.array_equal(output_label1.data[i].y, expected_output_1.data[i].y)
+            assert np.array_equal(output_label1.data[i].hovertext, expected_output_1.data[i].hovertext)
+
+            assert np.array_equal(output_label0.data[i].x, expected_output_0.data[i].x)
+            assert np.array_equal(output_label0.data[i].y, expected_output_0.data[i].y)
+            assert np.array_equal(output_label0.data[i].hovertext, expected_output_0.data[i].hovertext)
