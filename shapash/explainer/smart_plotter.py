@@ -1005,7 +1005,7 @@ class SmartPlotter:
         >>> xpl.plot.contribution_plot(0)
         """
 
-        if label and self.explainer._case == "classification":
+        if self.explainer._case == "classification":
             label_num, label_code, label_value = self.explainer.check_label_name(label)
 
         if not isinstance(col, (str, int)):
