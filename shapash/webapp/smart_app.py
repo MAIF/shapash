@@ -50,9 +50,9 @@ class SmartApp:
             SmartExplainer object
         """
         # APP
-        server = Flask(__name__)
+        self.server = Flask(__name__)
         self.app = dash.Dash(
-            server=server,
+            server=self.server,
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
