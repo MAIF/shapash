@@ -34,6 +34,9 @@
     border-top-width: 1px;
     width: 100%;
 }
+#max_contrib_id, #threshold_id {
+    padding: 0 5px 20px !important;
+}
 
 .rc-slider-track {
   background-color: var(--main-color);
@@ -48,9 +51,7 @@
 .rc.slider-handle-active:active {
   border-color: var(--main-color);
 }
-#max_contrib_id, #threshold_id {
-    padding: 0 5px 20px !important;
-}
+
 
 /*   CHECKBOX     */
 .custom-control-input:checked~.custom-control-label::before {
