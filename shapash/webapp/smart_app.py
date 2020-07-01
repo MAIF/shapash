@@ -815,6 +815,13 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             self.select_point('global_feature_importance', clickData)
 
+            # font size can be adapted to screen size
+            nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
+                          range(len(self.components['graph']['global_feature_importance'].figure.data[0].y))])
+            self.components['graph']['global_feature_importance'].figure.update_layout(
+                yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
+            )
+
             return self.components['graph']['global_feature_importance'].figure, clickData
 
         @app.callback(
@@ -1016,9 +1023,9 @@ class SmartApp:
                                                                                                show_masked=True,
                                                                                                yaxis_max_label=0)
             self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
+            # font size can be adapted to screen size
             nb_car = max([len(self.components['graph']['detail_feature'].figure.data[i].y[0]) for i in
                           range(len(self.components['graph']['detail_feature'].figure.data))])
-            # font size can be adapted to screen size
             self.components['graph']['detail_feature'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
