@@ -9,9 +9,10 @@ from plotly import graph_objs as go
 from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
-from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text,\
+from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value
 import copy
+
 
 class SmartPlotter:
     """
@@ -35,35 +36,35 @@ class SmartPlotter:
     def __init__(self, explainer):
         self.explainer = explainer
         self.dict_title = {
-            'xanchor' : "center",
-            'yanchor' : "middle",
-            'x' : 0.5,
-            'y' : 0.9,
-            'font' : {
+            'xanchor': "center",
+            'yanchor': "middle",
+            'x': 0.5,
+            'y': 0.9,
+            'font': {
                 'size': 24,
-                'family' : "Arial",
-                'color' : "rgb(50, 50, 50)"
+                'family': "Arial",
+                'color': "rgb(50, 50, 50)"
             }
         }
         self.dict_xaxis = {
-            'font' : {
+            'font': {
                 'size': 16,
-                'family' : "Arial Black",
-                'color' : "rgb(50, 50, 50)"
+                'family': "Arial Black",
+                'color': "rgb(50, 50, 50)"
             }
         }
         self.dict_yaxis = {
-            'font' : {
+            'font': {
                 'size': 16,
-                'family' : "Arial Black",
-                'color' : "rgb(50, 50, 50)"
+                'family': "Arial Black",
+                'color': "rgb(50, 50, 50)"
             }
         }
         self.dict_ycolors = {
-            1: "rgb(255, 123, 38)",
-            0: "rgb(199, 198, 204)"
+            1: "rgba(255, 166, 17, 0.9)",
+            0: "rgba(117, 152, 189, 0.9)"
         }
-        self.regr_colorscale = [
+        self.init_colorscale = [
             "rgb(52, 55, 54)",
             "rgb(74, 99, 138)",
             "rgb(116, 153, 214)",
@@ -78,40 +79,40 @@ class SmartPlotter:
         ]
         self.default_color = 'rgba(117, 152, 189, 0.9)'
         self.dict_featimp_colors = {
-            1 : {
-                'color' : 'rgba(244, 192, 0, 1.0)',
+            1: {
+                'color': 'rgba(244, 192, 0, 1.0)',
                 'line': {
                     'color': 'rgba(52, 55, 54, 0.8)',
                     'width': 0.5
                 }
             },
-            2 : {
-                    'color': 'rgba(52, 55, 54, 0.7)'
+            2: {
+                'color': 'rgba(52, 55, 54, 0.7)'
             }
         }
         self.dict_local_plot_colors = {
-            1 : {
-                'color' : 'rgba(244, 192, 0, 1.0)',
+            1: {
+                'color': 'rgba(244, 192, 0, 1.0)',
                 'line': {
                     'color': 'rgba(52, 55, 54, 0.8)',
                     'width': 0.5
                 }
             },
-            -1 : {
+            -1: {
                 'color': 'rgba(74, 99, 138, 0.7)',
                 'line': {
                     'color': 'rgba(27, 28, 28, 1.0)',
                     'width': 0.5
                 }
             },
-            0 : {
-                'color' : 'rgba(113, 101, 59, 1.0)',
+            0: {
+                'color': 'rgba(113, 101, 59, 1.0)',
                 'line': {
                     'color': 'rgba(52, 55, 54, 0.8)',
                     'width': 0.5
                 }
             },
-            -2 : {
+            -2: {
                 'color': 'rgba(52, 55, 54, 0.7)',
                 'line': {
                     'color': 'rgba(27, 28, 28, 1.0)',
@@ -125,22 +126,28 @@ class SmartPlotter:
             'rgba(74, 99, 138, 0.7)',
             'rgba(113, 101, 59, 1.0)',
             "rgba(183, 58, 56, 0.9)",
-            "rgb(255, 123, 38)",
+            "rgba(255, 123, 38, 1.0)",
             'rgba(0, 21, 179, 0.97)',
             'rgba(116, 1, 179, 0.9)',
         ]
 
         self.round_digit = None
 
-    def tuning_colorscale(self):
+    def tuning_colorscale(self, values):
         """
         adapts the color scale to the distribution of points
+
+        Parameters
+        ----------
+        values: 1 column pd.DataFrame
+            values ​​whose quantiles must be calculated
         """
-        desc_df = self.explainer.y_pred.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
         min_pred, max_pred = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
                       (max_pred - min_pred)
-        self.regr_colorscale = list(map(list, (zip(desc_pct_df.values.flatten(), self.regr_colorscale))))
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self.init_colorscale))))
+        return color_scale
 
     def tuning_round_digit(self):
         """
@@ -157,7 +164,9 @@ class SmartPlotter:
                      contributions,
                      feature_name,
                      pred=None,
+                     proba_values=None,
                      col_modality=None,
+                     col_scale=None,
                      addnote=None,
                      subtitle=None,
                      width=900,
@@ -177,9 +186,13 @@ class SmartPlotter:
             Name of the feature, used in title
         pred: 1 column pd.DataFrame (optional)
             predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
         col_modality: Int, Float or String (optional)
             parameter used in classification case,
             specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -196,19 +209,25 @@ class SmartPlotter:
         fig = go.Figure()
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle,addnote],sep=' - ')}</span>"
+            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self.dict_title)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
         dict_yaxis = copy.deepcopy(self.dict_yaxis)
         default_color = self.default_color
         dict_colors = copy.deepcopy(self.dict_ycolors)
         dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str(feature_name,110)
+        dict_xaxis['text'] = truncate_str(feature_name, 110)
         dict_yaxis['text'] = 'Contribution'
+        if self.explainer._case == "regression":
+            colorpoints = pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == "classification":
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
 
         # add break line to X label if necessary
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]),8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row,120,))
+        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
@@ -228,9 +247,9 @@ class SmartPlotter:
             y=contributions.values.flatten(),
             mode='markers',
             hovertext=hv_text,
-            hovertemplate='<b>%{hovertext}</b><br />'+
-            f'{feature_name} : '+
-            '%{x}<br />Contribution: %{y:.4f}<extra></extra>',
+            hovertemplate='<b>%{hovertext}</b><br />' +
+                          f'{feature_name} : ' +
+                          '%{x}<br />Contribution: %{y:.4f}<extra></extra>',
             marker={
                 'size': 10,
                 'opacity': 0.8,
@@ -238,15 +257,16 @@ class SmartPlotter:
             },
             customdata=contributions.index.values
         )
-        if pred is not None:
-            if self.explainer._case == 'classification':
-                fig.data[0].marker.color = pred.iloc[:, 0].apply(lambda \
-                        x: dict_colors[1] if x == col_modality else dict_colors[0])
-            elif self.explainer._case == 'regression':
-                fig.data[0].marker.color = pred.values.flatten()
-                fig.data[0].marker.coloraxis = 'coloraxis'
-                fig.layout.coloraxis.colorscale = self.regr_colorscale
-                fig.layout.coloraxis.colorbar = {'title': {'text': 'predicted'}}
+        if colorpoints is not None:
+            fig.data[0].marker.color = colorpoints.values.flatten()
+            fig.data[0].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+
+        elif self.explainer._case == 'classification' and pred is not None:
+            fig.data[0].marker.color = pred.iloc[:, 0].apply(lambda \
+                                                                     x: dict_colors[1] if x == col_modality else
+            dict_colors[0])
         else:
             fig.data[0].marker.color = default_color
 
@@ -261,7 +281,9 @@ class SmartPlotter:
                     contributions,
                     feature_name,
                     pred=None,
+                    proba_values=None,
                     col_modality=None,
+                    col_scale=None,
                     addnote=None,
                     subtitle=None,
                     width=900,
@@ -280,9 +302,13 @@ class SmartPlotter:
             Name of the feature, used in title
         pred: 1 column pd.DataFrame (optional)
             predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
         col_modality: Int, Float or String (optional)
             parameter used in classification case,
             specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -300,26 +326,33 @@ class SmartPlotter:
         dict_t = copy.deepcopy(self.dict_title)
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle,addnote],sep=' - ')}</span>"
+            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
         dict_yaxis = copy.deepcopy(self.dict_yaxis)
         dict_colors = copy.deepcopy(self.dict_ycolors)
         default_color = self.default_color
         dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str(feature_name,110)
-        dict_yaxis['text'] = "Contribution"
+        dict_xaxis['text'] = truncate_str(feature_name, 110)
+        dict_yaxis['text'] = 'Contribution'
+        points_param = False if proba_values is not None else "all"
         jitter_param = 0.075
+        if self.explainer._case == "regression":
+            colorpoints = pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == 'classification':
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
 
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
-        hv_temp = f'{feature_name} :<br />'+'%{x}<br />Contribution: %{y:.4f}<extra></extra>'
+        hv_temp = f'{feature_name} :<br />' + '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
 
         # add break line to X label
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]),8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row,120,))
+        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(feature_values.values.flatten()))
         uniq_l.sort()
@@ -330,7 +363,7 @@ class SmartPlotter:
                                                              (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points="all",
+                                        points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
                                         line_color=dict_colors[0],
@@ -341,13 +374,13 @@ class SmartPlotter:
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
                                         customdata=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].index.values
+                                                                     (feature_values.iloc[:, 0] == i)].index.values
                                         ))
                 fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] == col_modality) &
                                                              (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points="all",
+                                        points=points_param,
                                         pointpos=0.1,
                                         side='positive',
                                         line_color=dict_colors[1],
@@ -359,7 +392,7 @@ class SmartPlotter:
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
                                         customdata=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].index.values
+                                                                     (feature_values.iloc[:, 0] == i)].index.values
                                         ))
 
             else:
@@ -374,11 +407,11 @@ class SmartPlotter:
                                         customdata=contributions.index.values
                                         ))
                 if pred is None:
-                    fig.data[-1].points = 'all'
+                    fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
                     fig.data[-1].jitter = jitter_param
 
-        if pred is not None and self.explainer._case == 'regression':
+        if colorpoints is not None:
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
                 y=contributions.values.flatten(),
@@ -388,20 +421,20 @@ class SmartPlotter:
                 hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
                 customdata=contributions.index.values,
                 marker={
-                    'color': pred.values.flatten(),
+                    'color': colorpoints.values.flatten(),
                     'showscale': True,
                     'coloraxis': 'coloraxis'
                 }
             ))
-            fig.layout.coloraxis.colorscale = self.regr_colorscale
-            fig.layout.coloraxis.colorbar = {'title': {'text': 'predicted'}}
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
         fig.update_traces(
             marker={
                 'size': 10,
                 'opacity': 0.8,
                 'line': {'width': 0.8, 'color': 'white'}
-                }
+            }
         )
         fig.update_layout(
             template='none',
@@ -461,7 +494,7 @@ class SmartPlotter:
         title = "Features Importance"
         topmargin = 80
         if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle,addnote],sep=' - ')}</span>"
+            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             topmargin = topmargin + 15
         dict_t.update(text=title)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
@@ -483,10 +516,10 @@ class SmartPlotter:
             yaxis_title=dict_yaxis,
             hovermode='closest',
             margin={
-                'l' : 160,
-                'r' : 0,
-                't' : topmargin,
-                'b' : 50
+                'l': 160,
+                'r': 0,
+                't': topmargin,
+                'b': 50
             }
         )
         bar1 = go.Bar(
@@ -571,7 +604,7 @@ class SmartPlotter:
                 title = title + f"<span style='font-size: 12px;'><br />{subtitle}</span>"
                 topmargin += 15
             dict_t['text'] = title
-        dict_xaxis['text'] = "Contribution"
+        dict_xaxis['text'] = 'Contribution'
         dict_yaxis['text'] = None
 
         layout = go.Layout(
@@ -585,27 +618,27 @@ class SmartPlotter:
             yaxis_type='category',
             hovermode='closest',
             margin={
-                'l' : 150,
-                'r' : 20,
-                't' : topmargin,
-                'b' : 70
+                'l': 150,
+                'r': 20,
+                't': topmargin,
+                'b': 70
             }
         )
         bars = []
-        for num, expl in enumerate(list(zip(var_dict,x_val,contrib))):
+        for num, expl in enumerate(list(zip(var_dict, x_val, contrib))):
             if expl[1] == '':
                 ylabel = '<i>{}</i>'.format(expl[0])
                 hoverlabel = '<b>{}</b>'.format(expl[0])
-            else :
-                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0],40,maxlen=120), \
-                                  add_line_break(expl[1],40,maxlen=160))
+            else:
+                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120), \
+                                                          add_line_break(expl[1], 40, maxlen=160))
                 if len(contrib) <= yaxis_max_label:
-                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0],45), truncate_str(expl[1],45))
+                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
                 else:
-                    ylabel = ('<b>{}</b>'.format(truncate_str(expl[0],maxlen=45)))
+                    ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
 
             contrib_value = expl[2]
-            #colors
+            # colors
             if contrib_value >= 0:
                 color = 1 if expl[1] != '' else 0
             else:
@@ -722,7 +755,7 @@ class SmartPlotter:
                 ext_contrib = self.explainer.masked_contributions.loc[line[0], :].values
 
             ext_var_dict = ['Hidden Negative Contributions', 'Hidden Positive Contributions']
-            ext_x = ['','']
+            ext_x = ['', '']
             ext_contrib = ext_contrib.tolist()
 
             exclusion = np.where(np.array(ext_contrib) == 0)[0].tolist()
@@ -754,7 +787,9 @@ class SmartPlotter:
         """
         if self.explainer._case == "classification":
             if hasattr(self.explainer.model, 'predict_proba'):
-                value = self.explainer.model.predict_proba(self.explainer.x_init.loc[index].to_frame().T)[0][label]
+                if not hasattr(self.explainer, "proba_values"):
+                    self.explainer.predict_proba()
+                value = self.explainer.proba_values.iloc[:, [label]].loc[index].values[0]
             else:
                 value = None
         elif self.explainer._case == "regression":
@@ -823,7 +858,7 @@ class SmartPlotter:
         --------
         >>> xpl.plot.local_plot(row_num=0)
         """
-        #checking args
+        # checking args
         if sum(arg is not None for arg in [query, row_num, index]) != 1:
             raise ValueError(
                 "You have to specify just one of these arguments: query, nrow, index"
@@ -850,7 +885,7 @@ class SmartPlotter:
 
         else:
             # apply filter if the method have not yet been asked in order to limit the number of feature to display
-            if not hasattr(self.explainer,'mask_params'):
+            if not hasattr(self.explainer, 'mask_params'):
                 self.explainer.filter(max_contrib=20)
 
             if self.explainer._case == "classification":
@@ -883,14 +918,15 @@ class SmartPlotter:
                         digit = self.round_digit
                     else:
                         digit = compute_digit_number(pred_value)
-                    subtitle = f"Predict: <b>{round(pred_value,digit)}</b>"
+                    subtitle = f"Predict: <b>{round(pred_value, digit)}</b>"
 
             var_dict, x_val, contrib = self.get_selection(line, var_dict, x_val, contrib)
             var_dict, x_val, contrib = self.apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
             # use label of each column
             var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
-                var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib, label=label_num)
+                var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib,
+                                                                           label=label_num)
 
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
@@ -905,7 +941,8 @@ class SmartPlotter:
                 del x_val[expl]
                 del contrib[expl]
 
-        fig = self.plot_bar_chart(line, var_dict, x_val, contrib, yaxis_max_label, subtitle, width, height, file_name, auto_open)
+        fig = self.plot_bar_chart(line, var_dict, x_val, contrib, yaxis_max_label, subtitle, width, height, file_name,
+                                  auto_open)
         return fig
 
     def contribution_plot(self,
@@ -914,6 +951,7 @@ class SmartPlotter:
                           label=-1,
                           violin_maxf=10,
                           max_points=2000,
+                          proba=True,
                           width=900,
                           height=600,
                           file_name=None,
@@ -951,6 +989,8 @@ class SmartPlotter:
             maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
             nb: you can also limit the number using 'selection' parameter.
+        proba: bool (optional, default: True)
+            use predict_proba to color plot (classification case)
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 600)
@@ -969,7 +1009,7 @@ class SmartPlotter:
         >>> xpl.plot.contribution_plot(0)
         """
 
-        if label and self.explainer._case == "classification":
+        if self.explainer._case == "classification":
             label_num, label_code, label_value = self.explainer.check_label_name(label)
 
         if not isinstance(col, (str, int)):
@@ -1006,20 +1046,39 @@ class SmartPlotter:
         if addnote is not None:
             addnote = add_text([addnote,
                                 f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
-                            sep='')
+                               sep='')
 
         col_value = None
+        proba_values = None
         subtitle = None
+        col_scale = None
+
         # Classification Case
         if self.explainer._case == "classification":
             subcontrib = self.explainer.contributions[label_num]
             if self.explainer.y_pred is not None:
                 col_value = self.explainer._classes[label_num]
             subtitle = f"Response: <b>{label_value}</b>"
+            # predict proba Color scale
+            if proba and hasattr(self.explainer.model, "predict_proba"):
+                if not hasattr(self.explainer, "proba_values"):
+                    self.explainer.predict_proba()
+                proba_values = self.explainer.proba_values.iloc[:, [label_num]]
+                if not hasattr(self, "pred_colorscale"):
+                    self.pred_colorscale = {}
+                if label_num not in self.pred_colorscale:
+                    self.pred_colorscale[label_num] = self.tuning_colorscale(proba_values)
+                col_scale = self.pred_colorscale[label_num]
+                # Proba subset:
+                proba_values = proba_values.loc[list_ind, :]
 
-        # Regression Case
+        # Regression Case - color scale
         elif self.explainer._case == "regression":
             subcontrib = self.explainer.contributions
+            if self.explainer.y_pred is not None:
+                if not hasattr(self, "pred_colorscale"):
+                    self.pred_colorscale = self.tuning_colorscale(self.explainer.y_pred)
+                col_scale = self.pred_colorscale
 
         # Subset
         feature_values = self.explainer.x_plot.loc[list_ind, col_name].to_frame()
@@ -1031,10 +1090,8 @@ class SmartPlotter:
             if self.explainer._case == 'classification' and self.explainer.label_dict is not None:
                 y_pred = y_pred.applymap(lambda x: self.explainer.label_dict[x])
                 col_value = self.explainer.label_dict[col_value]
-            # Tuning colorscale
-            elif self.explainer._case == 'regression' :
-                if isinstance(self.regr_colorscale[0], str):
-                    self.tuning_colorscale()
+            # round predict
+            elif self.explainer._case == 'regression':
                 if self.round_digit is None:
                     self.tuning_round_digit()
                 y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
@@ -1043,10 +1100,12 @@ class SmartPlotter:
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
-            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, col_value, addnote,
+            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
+                                    addnote,
                                     subtitle, width, height, file_name, auto_open)
         else:
-            fig = self.plot_violin(feature_values, contrib, col_label, y_pred, col_value, addnote,
+            fig = self.plot_violin(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
+                                   addnote,
                                    subtitle, width, height, file_name, auto_open)
 
         return fig
@@ -1136,12 +1195,12 @@ class SmartPlotter:
                 subset_len = subset.shape[0]
                 total_len = self.explainer.x_pred.shape[0]
                 addnote = add_text([addnote,
-                                     f"Subset length: {subset_len} ({int(np.round(100*subset_len/total_len))}%)"],
-                                sep = " - ")
+                                    f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],
+                                   sep=" - ")
         if self.explainer.x_pred.shape[1] >= max_features:
             addnote = add_text([addnote,
-                                 f"Total number of features: {int(self.explainer.x_pred.shape[1])}"],
-                                sep = " - ")
+                                f"Total number of features: {int(self.explainer.x_pred.shape[1])}"],
+                               sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, addnote,
@@ -1213,7 +1272,7 @@ class SmartPlotter:
         dict_yaxis['text'] = None
 
         if subtitle is not None:
-            topmargin += 15 * height/275
+            topmargin += 15 * height / 275
             dict_t['text'] = truncate_str(dict_t['text'], 120) \
                              + f"<span style='font-size: 12px;'><br />{truncate_str(subtitle, 200)}</span>"
 
@@ -1232,8 +1291,8 @@ class SmartPlotter:
                 'r': 20,
                 't': topmargin,
                 'b': 70
-                }
-            )
+            }
+        )
 
         iteration_list = list(zip(contributions, feature_values))
 
@@ -1256,15 +1315,15 @@ class SmartPlotter:
                                + str(add_line_break(pred_x_val, 40, 160)))
 
             lines.append(go.Scatter(
-                    x=xi,
-                    y=features,
-                    mode='lines+markers',
-                    showlegend=True,
-                    name=f"Id: <b>{index[i]}</b>",
-                    hoverinfo="text",
-                    hovertext=x_hover,
-                    marker={'color': dic_color[i % len(dic_color)]}
-                    )
+                x=xi,
+                y=features,
+                mode='lines+markers',
+                showlegend=True,
+                name=f"Id: <b>{index[i]}</b>",
+                hoverinfo="text",
+                hovertext=x_hover,
+                marker={'color': dic_color[i % len(dic_color)]}
+            )
             )
 
         fig = go.Figure(data=lines, layout=layout)
@@ -1377,7 +1436,7 @@ class SmartPlotter:
         new_contrib = np.array(new_contrib).T
 
         # Well labels if available
-        feature_values = [0]*len(contrib.columns)
+        feature_values = [0] * len(contrib.columns)
         if hasattr(self.explainer, 'columns_dict'):
             for i, name in enumerate(contrib.columns):
                 feature_name = self.explainer.features_dict[name]

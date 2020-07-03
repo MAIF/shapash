@@ -170,7 +170,7 @@ def add_text(text_list,sep):
     int
         number of digits
     """
-    clean_list = [x for x in text_list if x not in ['', None] ]
+    clean_list = [x for x in text_list if x not in ['', None]]
     return sep.join(clean_list)
 
 def maximum_difference_sort_value(contributions):

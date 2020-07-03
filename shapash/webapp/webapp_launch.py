@@ -2,11 +2,8 @@
 Webapp launch module
 This is an example in python how to launch app from explainer
 """
-from sklearn.model_selection import train_test_split
 from lightgbm import LGBMClassifier, LGBMRegressor
 import pandas as pd
-from category_encoders import OrdinalEncoder
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import shap
 # TODO: Remove the next 4 lines, these lines allow you to run locally the code and import shapash content
@@ -25,7 +22,7 @@ cases = {
     '3': 'Titanic multi class classification',
 }
 
-case = 1
+case = 3
 
 titanic = pd.read_pickle('../../tests/data/clean_titanic.pkl')
 if case == 1:
@@ -73,10 +70,10 @@ y_pred = pd.DataFrame(data=y_pred,
                       columns=y.columns.to_list(),
                       index=X_test.index)
 
-# xpl.compile(contributions[0], X_test, y_pred=y_pred)
 xpl.compile(X_test, model, contributions, y_pred=y_pred, preprocessing=encoder)
-app = xpl.run_app(port='8051')
-#sleep(10) # This value is the time to keepalive the server. (Now need to be used in notebook to keepalive and kill it when you want)
-#app.kill()
-# s_dict = xpl.data['var_dict']
-# s_ord = xpl.data['contrib_sorted']xpl = SmartExplainer()
+
+xpl.init_app()
+app = xpl.smartapp.app
+
+if __name__ == "__main__":
+    app.run_server(debug=False, host="0.0.0.0", port=8080)

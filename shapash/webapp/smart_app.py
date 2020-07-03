@@ -9,6 +9,7 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from flask import Flask
 import pandas as pd
 import plotly.graph_objs as go
 import random
@@ -49,8 +50,9 @@ class SmartApp:
             SmartExplainer object
         """
         # APP
+        self.server = Flask(__name__)
         self.app = dash.Dash(
-            __name__,
+            server=self.server,
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
@@ -140,7 +142,7 @@ class SmartApp:
             if typ == float:
                 std = self.dataframe[col].std()
                 if std != 0:
-                    digit = max(round(log10(1/std) + 1)+2, 0)
+                    digit = max(round(log10(1 / std) + 1) + 2, 0)
                     self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format)
 
     def init_components(self):
@@ -749,7 +751,7 @@ class SmartApp:
                     if name == [1]:
                         columns = [
                                       {"name": '_index_', "id": '_index_'},
-                                      {"name": '_predict_', "id": '_predict_'}] +\
+                                      {"name": '_predict_', "id": '_predict_'}] + \
                                   [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
 
             if not filter_query:
@@ -814,6 +816,13 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].adjust_graph()
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             self.select_point('global_feature_importance', clickData)
+
+            # font size can be adapted to screen size
+            nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
+                          range(len(self.components['graph']['global_feature_importance'].figure.data[0].y))])
+            self.components['graph']['global_feature_importance'].figure.update_layout(
+                yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
+            )
 
             return self.components['graph']['global_feature_importance'].figure, clickData
 
@@ -943,14 +952,14 @@ class SmartApp:
                         nb_marks = min(int(max // 5), 10)
                     elif max // 4 == max / 4:
                         nb_marks = min(int(max // 4), 10)
-                    elif max // 3 == max/3:
+                    elif max // 3 == max / 3:
                         nb_marks = min(int(max // 3), 10)
-                    elif max // 7 == max/7:
+                    elif max // 7 == max / 7:
                         nb_marks = min(int(max // 6), 10)
                     else:
                         nb_marks = 2
                     marks = {f'{round(max * feat / nb_marks)}': f'{round(max * feat / nb_marks)}'
-                             for feat in range(1, nb_marks+1)}
+                             for feat in range(1, nb_marks + 1)}
                     marks['1'] = '1'
                     if max < self.components['filter']['max_contrib']['max_contrib_id'].value:
                         value = max
@@ -1016,6 +1025,12 @@ class SmartApp:
                                                                                                show_masked=True,
                                                                                                yaxis_max_label=0)
             self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
+            # font size can be adapted to screen size
+            nb_car = max([len(self.components['graph']['detail_feature'].figure.data[i].y[0]) for i in
+                          range(len(self.components['graph']['detail_feature'].figure.data))])
+            self.components['graph']['detail_feature'].figure.update_layout(
+                yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
+            )
             return self.components['graph']['detail_feature'].figure
 
         @app.callback(
