@@ -62,7 +62,9 @@ class SmartExplainer:
     x_init: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_pred: pandas.DataFrame
-        x_init dataset with inverse transformation.
+        x_init dataset with inverse transformation with eventual postprocessing modifications.
+    x_plot: pandas.DataFrame
+        x_init dataset with inverse transformation, without postprocessing.
     y_pred: pandas.DataFrame
         User-specified prediction values.
     contributions: pandas.DataFrame (regression) or list (classification)
@@ -153,7 +155,7 @@ class SmartExplainer:
             - A dict
             - A list of dict
         postprocessing : dict, optional (default: None)
-            Dictionnary of postprocessing modifications to apply in x_pred dataframe
+            Dictionnary of postprocessing modifications to apply in x_pred dataframe.
             Dictionnary with feature names as keys (or number, or well labels referencing to features names),
             which modifies dataset features by features.
             --> Different types of postprocessing are available, but the syntax is this one:
@@ -165,6 +167,7 @@ class SmartExplainer:
                 ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }}
                 ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
                 }
+            Only one transformation by features is possible.
 
         Example
         --------
