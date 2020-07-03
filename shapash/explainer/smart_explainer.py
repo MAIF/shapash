@@ -7,12 +7,13 @@ import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
 import warnings
+import copy
 # TODO: Remove the next 4 lines
 # these lines allow you to run locally the code and import shapash content
-#import os,sys,inspect
-#currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-#parentdir = os.path.dirname(currentdir)
-#sys.path.insert(0,parentdir)
+# import os,sys,inspect
+# currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+# parentdir = os.path.dirname(currentdir)
+# sys.path.insert(0,parentdir)
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
@@ -24,8 +25,8 @@ from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 
-
 logging.basicConfig(level=logging.INFO)
+
 
 class SmartExplainer:
     """
@@ -99,13 +100,13 @@ class SmartExplainer:
     """
 
     def __init__(self, features_dict={}, label_dict=None):
-        if isinstance(features_dict,dict) == False:
+        if isinstance(features_dict, dict) == False:
             raise ValueError(
                 """
                 features_dict must be a dict  
                 """
             )
-        if label_dict is not None and isinstance(label_dict,dict) == False:
+        if label_dict is not None and isinstance(label_dict, dict) == False:
             raise ValueError(
                 """
                 label_dict must be a dict  
@@ -191,7 +192,8 @@ class SmartExplainer:
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         postprocessing = self.modify_postprocessing(postprocessing)
         self.check_postprocessing(postprocessing)
-        self.x_pred = self.apply_postprocessing(self.x_pred, postprocessing)
+        self.x_plot = copy.deepcopy(self.x_pred)
+        self.x_pred = self.apply_postprocessing(postprocessing)
         self.data = self.state.assign_contributions(
             self.state.rank_contributions(
                 self.contributions,
@@ -200,7 +202,6 @@ class SmartExplainer:
         )
         self.features_imp = None
         self.features_desc = self.check_features_desc()
-
 
     def add(self, y_pred=None, label_dict=None, features_dict=None):
         """
@@ -280,7 +281,7 @@ class SmartExplainer:
             pandas.DataFrame, np.ndarray or list
             contributions object modified
         """
-        if isinstance(contributions, (np.ndarray, pd.DataFrame)) and self._case == 'classification' :
+        if isinstance(contributions, (np.ndarray, pd.DataFrame)) and self._case == 'classification':
             return [contributions * -1, contributions]
         else:
             return contributions
@@ -359,8 +360,8 @@ class SmartExplainer:
         in case of parameters are not real feature names (with columns_dict,
         or inv_features_dict).
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         postprocessing : Dict
             Dictionnary of postprocessing to modify.
 
@@ -372,23 +373,20 @@ class SmartExplainer:
         """
         if postprocessing:
             new_dic = dict()
-            for i, key in enumerate(postprocessing.keys()):
-                if key in self.columns_dict.keys():
+            for key in postprocessing.keys():
+                if key in self.features_dict:
+                    new_dic[key] = postprocessing[key]
+
+                elif key in self.columns_dict.keys():
                     new_dic[self.columns_dict[key]] = postprocessing[key]
 
                 elif key in self.inv_features_dict:
                     new_dic[self.inv_features_dict[key]] = postprocessing[key]
 
-                elif key in self.features_dict:
-                    new_dic[key] = postprocessing[key]
                 else:
+                    raise ValueError(f"Feature name '{key}' not found in the dataset.")
 
-            # if set(new_dic.keys()) > set(self.features_dict.keys()):
-                    warnings.warn(f"Feature name '{key}' not found in postprocessing", UserWarning)
-            # else:
-                # return new_dic
             return new_dic
-
 
     def check_postprocessing(self, postprocessing):
         """
@@ -401,40 +399,63 @@ class SmartExplainer:
             Dictionnary of postprocessing that need to be checked.
 
         """
-        if not type(postprocessing) == dict:
-            raise ValueError("Postprocessing parameter must be a dictionnary")
+        if postprocessing:
+            if not isinstance(postprocessing, dict):
+                raise ValueError("Postprocessing parameter must be a dictionnary")
 
-        for key in postprocessing.keys():
-            dict_post = postprocessing[key]
-            if not list(dict_post.keys()) == ['type', 'rule']:
-                raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
-            if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
-                raise ValueError("Wrong postprocessing method")
-            # if dict_post['type'] == 'transcoding' and set(dict_post['rule'].keys()) not in set(self.)
-            if dict_post['type'] == 'case' and dict_post['rule'] not in ['lower', 'upper']:
-                raise ValueError("Case modification unknown")
-            # if
-                # TODO : regex checks
+            for key in postprocessing.keys():
 
+                dict_post = postprocessing[key]
 
-    def apply_postprocessing(self, x_pred, postprocessing=None):
+                if not isinstance(dict_post, dict):
+                    raise ValueError(f"{key} values must be a dict")
+
+                if not list(dict_post.keys()) == ['type', 'rule']:
+                    raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
+
+                if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
+                    raise ValueError("Wrong postprocessing method. \n"
+                                     "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'")
+
+                if dict_post['type'] == 'transcoding' \
+                        and not set(dict_post['rule'].keys()) == set(self.x_pred[key].unique()):
+                    warnings.warn(f"Transcoding {key} feature incomplete, NaN values will appear. \n"
+                                  f"Check {set(dict_post['rule'].keys()) - set(self.x_pred[key].unique())}"
+                                  f"value(s).", UserWarning)
+
+                if dict_post['type'] == 'case':
+                    if dict_post['rule'] not in ['lower', 'upper']:
+                        raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
+
+                    if not pd.api.types.is_string_dtype(self.x_pred[key]):
+                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+
+                if dict_post['type'] == 'regex':
+                    if not set(dict_post['rule'].keys()) == {'in', 'out'}:
+                        raise ValueError(f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
+                                         f" must be 'in' and 'out'.")
+
+                    if not pd.api.types.is_string_dtype(self.x_pred[key]):
+                        raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
+
+    def apply_postprocessing(self, postprocessing=None):
         """
         Modifies x_pred Dataframe according to postprocessing modifications, if exists.
 
         Parameters
         ----------
-        x_pred : pandas.DataFrame
-            Dataset to be modified
+        postprocessing: Dict
+            Dictionnary of postprocessing modifications to apply in x_pred.
 
         Returns
         -------
         pandas.Dataframe
-            Returns x_pred if postprocessing is empty, modified data otherwise.
+            Returns x_pred if postprocessing is empty, modified dataframe otherwise.
         """
         if postprocessing:
-            return apply_postprocessing(x_pred, postprocessing)
+            return apply_postprocessing(self.x_pred, postprocessing)
         else:
-            return x_pred
+            return self.x_pred
 
     def check_y_pred(self):
         """
@@ -468,17 +489,17 @@ class SmartExplainer:
         """
         _classes = None
         if hasattr(self.model, 'predict'):
-            if hasattr(self.model, 'predict_proba') or\
-                any(hasattr(self.model, attrib) for attrib in ['classes_', '_classes']):
+            if hasattr(self.model, 'predict_proba') or \
+                    any(hasattr(self.model, attrib) for attrib in ['classes_', '_classes']):
                 if hasattr(self.model, '_classes'): _classes = self.model._classes
                 if hasattr(self.model, 'classes_'): _classes = self.model.classes_
-                if isinstance(_classes,np.ndarray): _classes = _classes.tolist()
-                if hasattr(self.model, 'predict_proba') and  _classes == []: _classes = [0, 1] #catboost binary
+                if isinstance(_classes, np.ndarray): _classes = _classes.tolist()
+                if hasattr(self.model, 'predict_proba') and _classes == []: _classes = [0, 1]  # catboost binary
                 if hasattr(self.model, 'predict_proba') and _classes is None:
                     raise ValueError(
                         "No attribute _classes, classification model not supported"
                     )
-            if _classes not in (None,[]):
+            if _classes not in (None, []):
                 return 'classification', _classes
             else:
                 return 'regression', None
@@ -494,9 +515,9 @@ class SmartExplainer:
         if self.label_dict is not None and self._case == 'classification':
             if set(self._classes) != set(list(self.label_dict.keys())):
                 raise ValueError(
-                     "label_dict and don't match: \n"+
-                     f"label_dict keys: {str(list(self.label_dict.keys()))}\n"+
-                     f"Classes model values {str(self._classes)}"
+                    "label_dict and don't match: \n" +
+                    f"label_dict keys: {str(list(self.label_dict.keys()))}\n" +
+                    f"Classes model values {str(self._classes)}"
                 )
 
     def check_features_dict(self):
@@ -678,10 +699,10 @@ class SmartExplainer:
             self.mask
         )
         self.mask_params = {
-            'features_to_hide' : features_to_hide,
-            'threshold' : threshold,
-            'positive' : positive,
-            'max_contrib' : max_contrib
+            'features_to_hide': features_to_hide,
+            'threshold': threshold,
+            'positive': positive,
+            'max_contrib': max_contrib
         }
 
     def save(self, path, protocol=pickle.HIGHEST_PROTOCOL):
@@ -797,7 +818,7 @@ class SmartExplainer:
 
         # Apply filter method if necessary
         if all(var is None for var in [features_to_hide, threshold, positive, max_contrib]) \
-            and hasattr(self,'mask_params'):
+                and hasattr(self, 'mask_params'):
             print('to_pandas params: ' + str(self.mask_params))
         else:
             self.filter(features_to_hide=features_to_hide,
@@ -828,7 +849,7 @@ class SmartExplainer:
             if self.label_dict is not None:
                 y_pred = y_pred.applymap(lambda x: self.label_dict[x])
             if proba:
-                if hasattr(self.model,'predict_proba'):
+                if hasattr(self.model, 'predict_proba'):
                     probamatrix = self.model.predict_proba(self.x_init)
                     y_proba = pd.DataFrame([proba[ind]
                                             for ind, proba in zip(indexclas, probamatrix)],
@@ -869,7 +890,7 @@ class SmartExplainer:
         Simple init of SmartApp in case of host smartapp by another way
         """
         self.smartapp = SmartApp(self)
-    
+
     def run_app(self, port: int = None, host: str = None) -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
@@ -905,7 +926,8 @@ class SmartExplainer:
             if port is None:
                 port = 8050
             host_name = get_host_name()
-            server_instance = CustomThread(target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port))
+            server_instance = CustomThread(
+                target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port))
             if host_name is None:
                 host_name = host
             elif host != "0.0.0.0":
@@ -917,4 +939,3 @@ class SmartExplainer:
 
         else:
             raise ValueError("Explainer must be compiled before running app.")
-

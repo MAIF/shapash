@@ -49,6 +49,7 @@ class TestSmartPlotter(unittest.TestCase):
             columns=['X1', 'X2'],
             index=['person_A', 'person_B']
         )
+        self.x_plot = self.x_pred
         self.contrib0 = pd.DataFrame(
             data=np.array(
                 [[-3.4, 0.78],
@@ -104,6 +105,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.data['var_dict'] = self.var_dict
         self.smart_explainer.x_init = self.x_pred
         self.smart_explainer.x_pred = self.x_pred
+        self.smart_explainer.x_plot = self.x_plot
         self.smart_explainer.columns_dict = {i: col for i, col in enumerate(self.smart_explainer.x_pred.columns)}
         self.smart_explainer.inv_columns_dict = {v: k for k, v in self.smart_explainer.columns_dict.items()}
         self.smart_explainer.mask = self.mask
@@ -789,6 +791,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl._case = "regression"
         xpl.state = xpl.choose_state(xpl.contributions)
         xpl.x_pred = pd.concat([xpl.x_pred]*10, ignore_index=True)
+        xpl.x_plot = xpl.x_pred
         xpl.y_pred = pd.concat([pd.DataFrame([0.46989877093, 12.749302948])]*10, ignore_index=True)
         output = xpl.plot.contribution_plot(col)
         np_hv = np.array([f"Id: {x}<br />Predict: {round(y,2)}" for x, y in zip(xpl.x_pred.index, xpl.y_pred.iloc[:, 0].tolist())])
@@ -809,6 +812,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl._case = "regression"
         xpl.state = xpl.choose_state(xpl.contributions)
         xpl.x_pred = pd.concat([xpl.x_pred]*10, ignore_index=True)
+        xpl.x_plot = xpl.x_pred
         output = xpl.plot.contribution_plot(col)
         np_hv = [f"Id: {x}" for x in xpl.x_pred.index]
         np_hv.sort()
@@ -832,6 +836,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.contributions[0] = pd.concat([xpl.contributions[0]] * 10, ignore_index=True)
         xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 10, ignore_index=True)
         xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
+        xpl.x_plot = xpl.x_pred
         np_hv = [f"Id: {x}" for x in xpl.x_pred.index]
         np_hv.sort()
         output = xpl.plot.contribution_plot(col)
@@ -854,6 +859,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
         xpl.x_pred.index = [i for i in range(xpl.x_pred.shape[0])]
+        xpl.x_plot = xpl.x_pred
         xpl.contributions[0] = pd.concat([xpl.contributions[0]] * 10, ignore_index=True)
         xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 10, ignore_index=True)
         xpl.contributions[0].index = xpl.x_pred.index
@@ -888,6 +894,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.x_pred = pd.concat([xpl.x_pred] * 20, ignore_index=True)
         xpl.x_pred.index = [i for i in range(xpl.x_pred.shape[0])]
+        xpl.x_plot = xpl.x_pred
         xpl.contributions[0] = pd.concat([xpl.contributions[0]] * 20, ignore_index=True)
         xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 20, ignore_index=True)
         xpl.contributions[0].index = xpl.x_pred.index
@@ -922,6 +929,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.x_pred = pd.concat([xpl.x_pred] * 4, ignore_index=True)
         xpl.x_pred.index = [i for i in range(xpl.x_pred.shape[0])]
+        xpl.x_plot = xpl.x_pred
         xpl.contributions = pd.concat([self.contrib1] * 4, ignore_index=True)
         xpl._case = "regression"
         xpl.state = xpl.choose_state(xpl.contributions)

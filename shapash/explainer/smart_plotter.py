@@ -1022,7 +1022,7 @@ class SmartPlotter:
             subcontrib = self.explainer.contributions
 
         # Subset
-        feature_values = self.explainer.x_pred.loc[list_ind, col_name].to_frame()
+        feature_values = self.explainer.x_plot.loc[list_ind, col_name].to_frame()
         contrib = subcontrib.loc[list_ind, col_name].to_frame()
 
         if self.explainer.y_pred is not None:

@@ -5,6 +5,7 @@ from shapash.utils.inverse_category_encoder import inv_transform_ce
 from shapash.utils.inverse_columntransformer import inv_transform_ct
 from shapash.utils.inverse_category_encoder import supported_category_encoder
 from shapash.utils.inverse_columntransformer import columntransformer
+import re
 
 # TODO
 # encode targeted variable ? from sklearn.preprocessing import LabelEncoder
@@ -159,7 +160,7 @@ def apply_postprocessing(x_pred, postprocessing):
     x_pred: pandas.Dataframe
         Dataframe that needs to be modified
     postprocessing: dict
-        Modifications to apply.
+        Modifications to apply in x_pred dataframe.
 
     Returns
     -------
@@ -186,8 +187,8 @@ def apply_postprocessing(x_pred, postprocessing):
             new_preds[feature_name] = new_preds[feature_name].map(dict_postprocessing['rule'])
 
         elif dict_postprocessing['type'] == 'regex':
-            pass
-            # TODO : regex
+            new_preds[feature_name] = new_preds[feature_name].apply(
+                lambda x: re.sub(dict_postprocessing["rule"]['in'], dict_postprocessing["rule"]['out'], x))
 
         elif dict_postprocessing['type'] == 'case':
             if dict_postprocessing['rule'] == 'lower':
@@ -196,4 +197,3 @@ def apply_postprocessing(x_pred, postprocessing):
                 new_preds[feature_name] = new_preds[feature_name].apply(lambda x: x.upper())
 
     return new_preds
-
