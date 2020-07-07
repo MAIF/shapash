@@ -63,8 +63,8 @@ class SmartExplainer:
         preprocessed dataset used by the model to perform the prediction.
     x_pred: pandas.DataFrame
         x_init dataset with inverse transformation with eventual postprocessing modifications.
-    x_plot: pandas.DataFrame
-        x_init dataset with inverse transformation, without postprocessing.
+    x_contrib_plot: pandas.DataFrame
+        x_init dataset with inverse transformation, without postprocessing used for contribution_plot.
     y_pred: pandas.DataFrame
         User-specified prediction values.
     contributions: pandas.DataFrame (regression) or list (classification)
@@ -195,7 +195,7 @@ class SmartExplainer:
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         postprocessing = self.modify_postprocessing(postprocessing)
         self.check_postprocessing(postprocessing)
-        self.x_plot = copy.deepcopy(self.x_pred)
+        self.x_contrib_plot = copy.deepcopy(self.x_pred)
         self.x_pred = self.apply_postprocessing(postprocessing)
         self.data = self.state.assign_contributions(
             self.state.rank_contributions(

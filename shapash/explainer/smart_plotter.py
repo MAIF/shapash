@@ -1081,7 +1081,7 @@ class SmartPlotter:
                 col_scale = self.pred_colorscale
 
         # Subset
-        feature_values = self.explainer.x_plot.loc[list_ind, col_name].to_frame()
+        feature_values = self.explainer.x_contrib_plot.loc[list_ind, col_name].to_frame()
         contrib = subcontrib.loc[list_ind, col_name].to_frame()
 
         if self.explainer.y_pred is not None:
