@@ -100,7 +100,8 @@ xpl.compile(
     x=Xtest,
     model=regressor,
     preprocessing=encoder, # Optional: compile step can use inverse_transform method
-    y_pred=y_pred # Optional
+    y_pred=y_pred, # Optional
+    postprocessing=postprocess # Optional: see tutorial postprocessing
 )
 ```  
 
@@ -119,6 +120,9 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### More Precise Overview
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
+
+### Better displaying data with postprocessing
+- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess.ipynb)
 
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
