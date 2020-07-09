@@ -184,6 +184,10 @@ def apply_postprocessing(x_pred, postprocessing):
             new_preds[feature_name] = new_datai
 
         elif dict_postprocessing['type'] == 'transcoding':
+            unique_values = x_pred[feature_name].unique().tolist()
+            unique_values = [value for value in unique_values if value not in dict_postprocessing['rule'].keys()]
+            for value in unique_values:
+                dict_postprocessing['rule'][value] = value
             new_preds[feature_name] = new_preds[feature_name].map(dict_postprocessing['rule'])
 
         elif dict_postprocessing['type'] == 'regex':

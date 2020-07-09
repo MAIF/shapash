@@ -195,7 +195,9 @@ class SmartExplainer:
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         postprocessing = self.modify_postprocessing(postprocessing)
         self.check_postprocessing(postprocessing)
-        self.x_contrib_plot = copy.deepcopy(self.x_pred)
+        self.postprocessing_modifications = self.check_postprocessing_modif_strings(postprocessing)
+        if self.postprocessing_modifications:
+            self.x_contrib_plot = copy.deepcopy(self.x_pred)
         self.x_pred = self.apply_postprocessing(postprocessing)
         self.data = self.state.assign_contributions(
             self.state.rank_contributions(
@@ -357,6 +359,30 @@ class SmartExplainer:
         else:
             return contributions
 
+    def check_postprocessing_modif_strings(self, postprocessing=None):
+        """
+        Check if any modification of postprocessing will convert numeric values into strings values.
+        If so, return True, otherwise False.
+
+        Parameters
+        ----------
+        postprocessing: dict
+            Dict of postprocessing modifications to apply.
+
+        Returns
+        -------
+        modif: bool
+            Boolean which is True if any numerical variable will be converted into string.
+        """
+        modif = False
+        if postprocessing is not None:
+            for key in postprocessing.keys():
+                dict_postprocess = postprocessing[key]
+                if dict_postprocess['type'] in {'prefix', 'suffix'} \
+                    and pd.api.types.is_numeric_dtype(self.x_pred[key]):
+                    modif = True
+        return modif
+
     def modify_postprocessing(self, postprocessing=None):
         """
         Modifies postprocessing parameter, to change only keys, with features name,
@@ -422,9 +448,8 @@ class SmartExplainer:
 
                 if dict_post['type'] == 'transcoding' \
                         and not set(dict_post['rule'].keys()) == set(self.x_pred[key].unique()):
-                    warnings.warn(f"Transcoding {key} feature incomplete, NaN values will appear. \n"
-                                  f"Check {set(dict_post['rule'].keys()) - set(self.x_pred[key].unique())}"
-                                  f"value(s).", UserWarning)
+                    warnings.warn(f"Transcoding {key} feature incomplete, some values won't be modified. \n"
+                                  f"Check values.", UserWarning)
 
                 if dict_post['type'] == 'case':
                     if dict_post['rule'] not in ['lower', 'upper']:
