@@ -11,7 +11,7 @@ This part offers a series of tutorials and allows users to gradually discover th
 
 
     overview
-    postprocess
     plot
     encoder
+    postprocess
     explainer

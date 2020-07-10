@@ -121,9 +121,6 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
 
-### Better displaying data with postprocessing
-- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess.ipynb)
-
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
 - [Contribution plot to understand how one feature affects a prediction](tutorial/plot/tuto-plot02-contribution_plot.ipynb)
@@ -134,6 +131,9 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use Category_Encoder & inverse transformation](tutorial/encoder/tuto-encoder01-using-category_encoder.ipynb)
 - [Use ColumnTransformers](tutorial/encoder/tuto-encoder02-using-columntransformer.ipynb)
 - [Use Simple Python Dictionnaries](tutorial/encoder/tuto-encoder03-using-dict.ipynb)
+
+### Better displaying data with postprocessing
+- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess.ipynb)
 
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
