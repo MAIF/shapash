@@ -39,124 +39,21 @@ First step : Importing our dataset
 
     titanic_df.head()
 
+.. table::
 
-
-
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>Survived</th>
-          <th>Pclass</th>
-          <th>Name</th>
-          <th>Sex</th>
-          <th>Age</th>
-          <th>SibSp</th>
-          <th>Parch</th>
-          <th>Fare</th>
-          <th>Embarked</th>
-          <th>Title</th>
-        </tr>
-        <tr>
-          <th>PassengerId</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>0</td>
-          <td>Third class</td>
-          <td>Braund Owen Harris</td>
-          <td>male</td>
-          <td>22.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>7.25</td>
-          <td>Southampton</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>1</td>
-          <td>First class</td>
-          <td>Cumings John Bradley (Florence Briggs Thayer)</td>
-          <td>female</td>
-          <td>38.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>71.28</td>
-          <td>Cherbourg</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>1</td>
-          <td>Third class</td>
-          <td>Heikkinen Laina</td>
-          <td>female</td>
-          <td>26.0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>7.92</td>
-          <td>Southampton</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>1</td>
-          <td>First class</td>
-          <td>Futrelle Jacques Heath (Lily May Peel)</td>
-          <td>female</td>
-          <td>35.0</td>
-          <td>1</td>
-          <td>0</td>
-          <td>53.10</td>
-          <td>Southampton</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>0</td>
-          <td>Third class</td>
-          <td>Allen William Henry</td>
-          <td>male</td>
-          <td>35.0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>8.05</td>
-          <td>Southampton</td>
-          <td>Mr</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-
+    +--------+-----------+---------------------------------------------+------+---+-----+-----+-----+-----------+-----+
+    |Survived|  Pclass   |                    Name                     | Sex  |Age|SibSp|Parch|Fare | Embarked  |Title|
+    +========+===========+=============================================+======+===+=====+=====+=====+===========+=====+
+    |       0|Third class|Braund Owen Harris                           |male  | 22|    1|    0| 7.25|Southampton|Mr   |
+    +--------+-----------+---------------------------------------------+------+---+-----+-----+-----+-----------+-----+
+    |       1|First class|Cumings John Bradley (Florence Briggs Thayer)|female| 38|    1|    0|71.28|Cherbourg  |Mrs  |
+    +--------+-----------+---------------------------------------------+------+---+-----+-----+-----+-----------+-----+
+    |       1|Third class|Heikkinen Laina                              |female| 26|    0|    0| 7.92|Southampton|Miss |
+    +--------+-----------+---------------------------------------------+------+---+-----+-----+-----+-----------+-----+
+    |       1|First class|Futrelle Jacques Heath (Lily May Peel)       |female| 35|    1|    0|53.10|Southampton|Mrs  |
+    +--------+-----------+---------------------------------------------+------+---+-----+-----+-----+-----------+-----+
+    |       0|Third class|Allen William Henry                          |male  | 35|    0|    0| 8.05|Southampton|Mr   |
+    +--------+-----------+---------------------------------------------+------+---+-----+-----+-----+-----------+-----+
 
 
 Second step : Encode our categorical variables
@@ -228,191 +125,25 @@ preprocessing.
 
 .. code:: ipython3
 
-    xpl.x_pred
+    xpl.x_pred.head()
 
 
 
+.. table::
 
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>Age</th>
-          <th>Embarked</th>
-          <th>Fare</th>
-          <th>Name</th>
-          <th>Parch</th>
-          <th>Pclass</th>
-          <th>Sex</th>
-          <th>SibSp</th>
-          <th>Title</th>
-        </tr>
-        <tr>
-          <th>PassengerId</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>863</th>
-          <td>48.0</td>
-          <td>Southampton</td>
-          <td>25.93</td>
-          <td>Swift Frederick Joel (Margaret Welles Barron)</td>
-          <td>0</td>
-          <td>First class</td>
-          <td>female</td>
-          <td>0</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>224</th>
-          <td>29.5</td>
-          <td>Southampton</td>
-          <td>7.90</td>
-          <td>Nenkoff Christo</td>
-          <td>0</td>
-          <td>Third class</td>
-          <td>male</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>85</th>
-          <td>17.0</td>
-          <td>Southampton</td>
-          <td>10.50</td>
-          <td>Ilett Bertha</td>
-          <td>0</td>
-          <td>Second class</td>
-          <td>female</td>
-          <td>0</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>681</th>
-          <td>29.5</td>
-          <td>Queenstown</td>
-          <td>8.14</td>
-          <td>Peters Katie</td>
-          <td>0</td>
-          <td>Third class</td>
-          <td>female</td>
-          <td>0</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>536</th>
-          <td>7.0</td>
-          <td>Southampton</td>
-          <td>26.25</td>
-          <td>Hart Eva Miriam</td>
-          <td>2</td>
-          <td>Second class</td>
-          <td>female</td>
-          <td>0</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>...</th>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-        </tr>
-        <tr>
-          <th>507</th>
-          <td>33.0</td>
-          <td>Southampton</td>
-          <td>26.00</td>
-          <td>Quick Frederick Charles (Jane Richards)</td>
-          <td>2</td>
-          <td>Second class</td>
-          <td>female</td>
-          <td>0</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>468</th>
-          <td>56.0</td>
-          <td>Southampton</td>
-          <td>26.55</td>
-          <td>Smart John Montgomery</td>
-          <td>0</td>
-          <td>First class</td>
-          <td>male</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>741</th>
-          <td>29.5</td>
-          <td>Southampton</td>
-          <td>30.00</td>
-          <td>Hawksford Walter James</td>
-          <td>0</td>
-          <td>First class</td>
-          <td>male</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>355</th>
-          <td>29.5</td>
-          <td>Cherbourg</td>
-          <td>7.22</td>
-          <td>Yousif Wazli</td>
-          <td>0</td>
-          <td>Third class</td>
-          <td>male</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>450</th>
-          <td>52.0</td>
-          <td>Southampton</td>
-          <td>30.50</td>
-          <td>Peuchen Arthur Godfrey</td>
-          <td>0</td>
-          <td>First class</td>
-          <td>male</td>
-          <td>0</td>
-          <td>Major</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>223 rows × 9 columns</p>
-    </div>
+    +------------+---------------------------------------------+------+----+-----+-----+-----+-----------+-----+
+    |   Pclass   |                    Name                     | Sex  |Age |SibSp|Parch|Fare | Embarked  |Title|
+    +============+=============================================+======+====+=====+=====+=====+===========+=====+
+    |First class |Swift Frederick Joel (Margaret Welles Barron)|female|48.0|    0|    0|25.93|Southampton|Mrs  |
+    +------------+---------------------------------------------+------+----+-----+-----+-----+-----------+-----+
+    |Third class |Nenkoff Christo                              |male  |29.5|    0|    0| 7.90|Southampton|Mr   |
+    +------------+---------------------------------------------+------+----+-----+-----+-----+-----------+-----+
+    |Second class|Ilett Bertha                                 |female|17.0|    0|    0|10.50|Southampton|Miss |
+    +------------+---------------------------------------------+------+----+-----+-----+-----+-----------+-----+
+    |Third class |Peters Katie                                 |female|29.5|    0|    0| 8.14|Queenstown |Miss |
+    +------------+---------------------------------------------+------+----+-----+-----+-----+-----------+-----+
+    |Second class|Hart Eva Miriam                              |female| 7.0|    0|    2|26.25|Southampton|Miss |
+    +------------+---------------------------------------------+------+----+-----+-----+-----+-----------+-----+
 
 
 
@@ -552,191 +283,25 @@ You can now visualize your dataset, which is modified.
 
 .. code:: ipython3
 
-    xpl_postprocess.x_pred
+    xpl_postprocess.x_pred.head()
 
 
 
+.. table::
 
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>Age</th>
-          <th>Embarked</th>
-          <th>Fare</th>
-          <th>Name</th>
-          <th>Parch</th>
-          <th>Pclass</th>
-          <th>Sex</th>
-          <th>SibSp</th>
-          <th>Title</th>
-        </tr>
-        <tr>
-          <th>PassengerId</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>863</th>
-          <td>48.0 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$25.93</td>
-          <td>Swift Frederick Joel (Margaret Welles Barron)</td>
-          <td>0</td>
-          <td>First</td>
-          <td>Woman</td>
-          <td>0</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>224</th>
-          <td>29.5 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$7.9</td>
-          <td>Nenkoff Christo</td>
-          <td>0</td>
-          <td>Third</td>
-          <td>Man</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>85</th>
-          <td>17.0 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$10.5</td>
-          <td>Ilett Bertha</td>
-          <td>0</td>
-          <td>Second</td>
-          <td>Woman</td>
-          <td>0</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>681</th>
-          <td>29.5 years old</td>
-          <td>QUEENSTOWN</td>
-          <td>$8.14</td>
-          <td>Peters Katie</td>
-          <td>0</td>
-          <td>Third</td>
-          <td>Woman</td>
-          <td>0</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>536</th>
-          <td>7.0 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$26.25</td>
-          <td>Hart Eva Miriam</td>
-          <td>2</td>
-          <td>Second</td>
-          <td>Woman</td>
-          <td>0</td>
-          <td>Miss</td>
-        </tr>
-        <tr>
-          <th>...</th>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-        </tr>
-        <tr>
-          <th>507</th>
-          <td>33.0 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$26.0</td>
-          <td>Quick Frederick Charles (Jane Richards)</td>
-          <td>2</td>
-          <td>Second</td>
-          <td>Woman</td>
-          <td>0</td>
-          <td>Mrs</td>
-        </tr>
-        <tr>
-          <th>468</th>
-          <td>56.0 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$26.55</td>
-          <td>Smart John Montgomery</td>
-          <td>0</td>
-          <td>First</td>
-          <td>Man</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>741</th>
-          <td>29.5 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$30.0</td>
-          <td>Hawksford Walter James</td>
-          <td>0</td>
-          <td>First</td>
-          <td>Man</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>355</th>
-          <td>29.5 years old</td>
-          <td>CHERBOURG</td>
-          <td>$7.22</td>
-          <td>Yousif Wazli</td>
-          <td>0</td>
-          <td>Third</td>
-          <td>Man</td>
-          <td>0</td>
-          <td>Mr</td>
-        </tr>
-        <tr>
-          <th>450</th>
-          <td>52.0 years old</td>
-          <td>SOUTHAMPTON</td>
-          <td>$30.5</td>
-          <td>Peuchen Arthur Godfrey</td>
-          <td>0</td>
-          <td>First</td>
-          <td>Man</td>
-          <td>0</td>
-          <td>Major</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>223 rows × 9 columns</p>
-    </div>
+    +------+---------------------------------------------+-----+--------------+-----+-----+------+-----------+-----+
+    |Pclass|                    Name                     | Sex |     Age      |SibSp|Parch| Fare | Embarked  |Title|
+    +======+=============================================+=====+==============+=====+=====+======+===========+=====+
+    |First |Swift Frederick Joel (Margaret Welles Barron)|Woman|48.0 years old|    0|    0|$25.93|SOUTHAMPTON|Mrs  |
+    +------+---------------------------------------------+-----+--------------+-----+-----+------+-----------+-----+
+    |Third |Nenkoff Christo                              |Man  |29.5 years old|    0|    0|$7.9  |SOUTHAMPTON|Mr   |
+    +------+---------------------------------------------+-----+--------------+-----+-----+------+-----------+-----+
+    |Second|Ilett Bertha                                 |Woman|17.0 years old|    0|    0|$10.5 |SOUTHAMPTON|Miss |
+    +------+---------------------------------------------+-----+--------------+-----+-----+------+-----------+-----+
+    |Third |Peters Katie                                 |Woman|29.5 years old|    0|    0|$8.14 |QUEENSTOWN |Miss |
+    +------+---------------------------------------------+-----+--------------+-----+-----+------+-----------+-----+
+    |Second|Hart Eva Miriam                              |Woman|7.0 years old |    0|    2|$26.25|SOUTHAMPTON|Miss |
+    +------+---------------------------------------------+-----+--------------+-----+-----+------+-----------+-----+
 
 
 
@@ -752,7 +317,7 @@ depending on their importance.
 
 .. code:: ipython3
 
-    xpl_postprocess.to_pandas()
+    xpl_postprocess.to_pandas().head()
 
 
 .. parsed-literal::
@@ -761,318 +326,19 @@ depending on their importance.
 
 
 
+.. table::
 
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>pred</th>
-          <th>feature_1</th>
-          <th>value_1</th>
-          <th>contribution_1</th>
-          <th>feature_2</th>
-          <th>value_2</th>
-          <th>contribution_2</th>
-          <th>feature_3</th>
-          <th>value_3</th>
-          <th>contribution_3</th>
-          <th>...</th>
-          <th>contribution_6</th>
-          <th>feature_7</th>
-          <th>value_7</th>
-          <th>contribution_7</th>
-          <th>feature_8</th>
-          <th>value_8</th>
-          <th>contribution_8</th>
-          <th>feature_9</th>
-          <th>value_9</th>
-          <th>contribution_9</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>863</th>
-          <td>1</td>
-          <td>Title of passenger</td>
-          <td>Mrs</td>
-          <td>0.163479</td>
-          <td>Sex</td>
-          <td>Woman</td>
-          <td>0.154309</td>
-          <td>Ticket class</td>
-          <td>First</td>
-          <td>0.130221</td>
-          <td>...</td>
-          <td>0.0406219</td>
-          <td>Name, First name</td>
-          <td>Swift Frederick Joel (Margaret Welles Barron)</td>
-          <td>-0.0381955</td>
-          <td>Port of embarkation</td>
-          <td>SOUTHAMPTON</td>
-          <td>-0.0147327</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>-0.00538103</td>
-        </tr>
-        <tr>
-          <th>224</th>
-          <td>0</td>
-          <td>Title of passenger</td>
-          <td>Mr</td>
-          <td>0.094038</td>
-          <td>Sex</td>
-          <td>Man</td>
-          <td>0.0696282</td>
-          <td>Age</td>
-          <td>29.5 years old</td>
-          <td>0.0658556</td>
-          <td>...</td>
-          <td>0.0151605</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>-0.00855039</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>0.00124433</td>
-          <td>Name, First name</td>
-          <td>Nenkoff Christo</td>
-          <td>-0.000577095</td>
-        </tr>
-        <tr>
-          <th>85</th>
-          <td>1</td>
-          <td>Title of passenger</td>
-          <td>Miss</td>
-          <td>0.190529</td>
-          <td>Sex</td>
-          <td>Woman</td>
-          <td>0.135507</td>
-          <td>Ticket class</td>
-          <td>Second</td>
-          <td>0.0809714</td>
-          <td>...</td>
-          <td>-0.025286</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>-0.0238222</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>0.0209045</td>
-          <td>Age</td>
-          <td>17.0 years old</td>
-          <td>-0.00702283</td>
-        </tr>
-        <tr>
-          <th>681</th>
-          <td>1</td>
-          <td>Title of passenger</td>
-          <td>Miss</td>
-          <td>0.237477</td>
-          <td>Port of embarkation</td>
-          <td>QUEENSTOWN</td>
-          <td>0.143451</td>
-          <td>Sex</td>
-          <td>Woman</td>
-          <td>0.127931</td>
-          <td>...</td>
-          <td>0.0243567</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>0.0165205</td>
-          <td>Passenger fare</td>
-          <td>$8.14</td>
-          <td>-0.0109633</td>
-          <td>Age</td>
-          <td>29.5 years old</td>
-          <td>0.00327866</td>
-        </tr>
-        <tr>
-          <th>536</th>
-          <td>1</td>
-          <td>Title of passenger</td>
-          <td>Miss</td>
-          <td>0.210166</td>
-          <td>Ticket class</td>
-          <td>Second</td>
-          <td>0.168247</td>
-          <td>Sex</td>
-          <td>Woman</td>
-          <td>0.0876445</td>
-          <td>...</td>
-          <td>0.0147503</td>
-          <td>Relatives like children or parents</td>
-          <td>2</td>
-          <td>0.0125069</td>
-          <td>Port of embarkation</td>
-          <td>SOUTHAMPTON</td>
-          <td>-0.0119119</td>
-          <td>Name, First name</td>
-          <td>Hart Eva Miriam</td>
-          <td>0.00654165</td>
-        </tr>
-        <tr>
-          <th>...</th>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-          <td>...</td>
-        </tr>
-        <tr>
-          <th>507</th>
-          <td>1</td>
-          <td>Title of passenger</td>
-          <td>Mrs</td>
-          <td>0.215332</td>
-          <td>Sex</td>
-          <td>Woman</td>
-          <td>0.194419</td>
-          <td>Ticket class</td>
-          <td>Second</td>
-          <td>0.166437</td>
-          <td>...</td>
-          <td>-0.0079185</td>
-          <td>Relatives like children or parents</td>
-          <td>2</td>
-          <td>0.00407485</td>
-          <td>Age</td>
-          <td>33.0 years old</td>
-          <td>-0.00263589</td>
-          <td>Name, First name</td>
-          <td>Quick Frederick Charles (Jane Richards)</td>
-          <td>0.00162901</td>
-        </tr>
-        <tr>
-          <th>468</th>
-          <td>0</td>
-          <td>Sex</td>
-          <td>Man</td>
-          <td>0.100602</td>
-          <td>Passenger fare</td>
-          <td>$26.55</td>
-          <td>-0.099794</td>
-          <td>Title of passenger</td>
-          <td>Mr</td>
-          <td>0.0967768</td>
-          <td>...</td>
-          <td>0.0243706</td>
-          <td>Port of embarkation</td>
-          <td>SOUTHAMPTON</td>
-          <td>0.0124424</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>-0.0108301</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>-0.00332632</td>
-        </tr>
-        <tr>
-          <th>741</th>
-          <td>0</td>
-          <td>Title of passenger</td>
-          <td>Mr</td>
-          <td>0.131861</td>
-          <td>Sex</td>
-          <td>Man</td>
-          <td>0.110845</td>
-          <td>Age</td>
-          <td>29.5 years old</td>
-          <td>0.104878</td>
-          <td>...</td>
-          <td>0.0339308</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>-0.00715564</td>
-          <td>Name, First name</td>
-          <td>Hawksford Walter James</td>
-          <td>0.00165882</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>-0.00137946</td>
-        </tr>
-        <tr>
-          <th>355</th>
-          <td>0</td>
-          <td>Title of passenger</td>
-          <td>Mr</td>
-          <td>0.12679</td>
-          <td>Sex</td>
-          <td>Man</td>
-          <td>0.0933251</td>
-          <td>Age</td>
-          <td>29.5 years old</td>
-          <td>0.0717939</td>
-          <td>...</td>
-          <td>-0.0271103</td>
-          <td>Name, First name</td>
-          <td>Yousif Wazli</td>
-          <td>0.0163174</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>-0.0108501</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>-0.000543508</td>
-        </tr>
-        <tr>
-          <th>450</th>
-          <td>0</td>
-          <td>Sex</td>
-          <td>Man</td>
-          <td>0.13572</td>
-          <td>Title of passenger</td>
-          <td>Major</td>
-          <td>-0.0723023</td>
-          <td>Age</td>
-          <td>52.0 years old</td>
-          <td>0.0690373</td>
-          <td>...</td>
-          <td>0.027384</td>
-          <td>Relatives such as brother or wife</td>
-          <td>0</td>
-          <td>-0.0134144</td>
-          <td>Relatives like children or parents</td>
-          <td>0</td>
-          <td>0.00256623</td>
-          <td>Name, First name</td>
-          <td>Peuchen Arthur Godfrey</td>
-          <td>0.00229483</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>223 rows × 28 columns</p>
-    </div>
-
+    +-+------------------+-------+--------------+------------------+-------+--------------+-------------------+----------+--------------+----------------+---------------------------------------------+--------------+---------------------------------+-------+--------------+-------------------+---------------+--------------+----------------------------------+---------------+--------------+----------------------------------+------------+--------------+----------------------------------+--------------+--------------+
+    |0|    feature_1     |value_1|contribution_1|    feature_2     |value_2|contribution_2|     feature_3     | value_3  |contribution_3|   feature_4    |                   value_4                   |contribution_4|            feature_5            |value_5|contribution_5|     feature_6     |    value_6    |contribution_6|            feature_7             |    value_7    |contribution_7|            feature_8             |  value_8   |contribution_8|            feature_9             |   value_9    |contribution_9|
+    +=+==================+=======+==============+==================+=======+==============+===================+==========+==============+================+=============================================+==============+=================================+=======+==============+===================+===============+==============+==================================+===============+==============+==================================+============+==============+==================================+==============+==============+
+    |1|Title of passenger|Mrs    |       0.15923|Sex               |Woman  |       0.14733|Ticket class       |First     |       0.10928|Name, First name|Swift Frederick Joel (Margaret Welles Barron)|      -0.10006|Passenger fare                   |$25.93 |      -0.06283|Age                |48.0 years old |      -0.05674|Relatives such as brother or wife |              0|       0.02809|Port of embarkation               |SOUTHAMPTON |     -0.012219|Relatives like children or parents|             0|     -0.011041|
+    +-+------------------+-------+--------------+------------------+-------+--------------+-------------------+----------+--------------+----------------+---------------------------------------------+--------------+---------------------------------+-------+--------------+-------------------+---------------+--------------+----------------------------------+---------------+--------------+----------------------------------+------------+--------------+----------------------------------+--------------+--------------+
+    |0|Title of passenger|Mr     |       0.09118|Passenger fare    |$7.9   |       0.07093|Sex                |Man       |       0.06937|Age             |29.5 years old                               |       0.06333|Ticket class                     |Third  |       0.04726|Port of embarkation|SOUTHAMPTON    |       0.01630|Name, First name                  |Nenkoff Christo|       0.01246|Relatives such as brother or wife |           0|     -0.005863|Relatives like children or parents|             0|      0.003994|
+    +-+------------------+-------+--------------+------------------+-------+--------------+-------------------+----------+--------------+----------------+---------------------------------------------+--------------+---------------------------------+-------+--------------+-------------------+---------------+--------------+----------------------------------+---------------+--------------+----------------------------------+------------+--------------+----------------------------------+--------------+--------------+
+    |1|Sex               |Woman  |       0.18265|Title of passenger|Miss   |       0.17916|Ticket class       |Second    |       0.09173|Name, First name|Ilett Bertha                                 |      -0.05084|Passenger fare                   |$10.5  |      -0.02845|Port of embarkation|SOUTHAMPTON    |      -0.02613|Relatives such as brother or wife |              0|       0.02270|Relatives like children or parents|           0|     -0.010478|Age                               |17.0 years old|      0.000712|
+    +-+------------------+-------+--------------+------------------+-------+--------------+-------------------+----------+--------------+----------------+---------------------------------------------+--------------+---------------------------------+-------+--------------+-------------------+---------------+--------------+----------------------------------+---------------+--------------+----------------------------------+------------+--------------+----------------------------------+--------------+--------------+
+    |1|Title of passenger|Miss   |       0.21210|Sex               |Woman  |       0.15721|Port of embarkation|QUEENSTOWN|       0.11570|Ticket class    |Third                                        |      -0.08853|Relatives such as brother or wife|      0|       0.03107|Passenger fare     |$8.14          |      -0.02470|Relatives like children or parents|              0|       0.01950|Name, First name                  |Peters Katie|      0.016750|Age                               |29.5 years old|      0.011931|
+    +-+------------------+-------+--------------+------------------+-------+--------------+-------------------+----------+--------------+----------------+---------------------------------------------+--------------+---------------------------------+-------+--------------+-------------------+---------------+--------------+----------------------------------+---------------+--------------+----------------------------------+------------+--------------+----------------------------------+--------------+--------------+
+    |1|Title of passenger|Miss   |       0.20752|Ticket class      |Second |       0.15710|Sex                |Woman     |       0.10215|Age             |7.0 years old                                |       0.06272|Relatives such as brother or wife|      0|       0.03309|Name, First name   |Hart Eva Miriam|       0.01338|Port of embarkation               |SOUTHAMPTON    |      -0.01070|Passenger fare                    |$26.25      |      0.010183|Relatives like children or parents|             2|      0.005580|
+    +-+------------------+-------+--------------+------------------+-------+--------------+-------------------+----------+--------------+----------------+---------------------------------------------+--------------+---------------------------------+-------+--------------+-------------------+---------------+--------------+----------------------------------+---------------+--------------+----------------------------------+------------+--------------+----------------------------------+--------------+--------------+
 
