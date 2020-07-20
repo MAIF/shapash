@@ -158,15 +158,18 @@ class SmartExplainer:
             Dictionnary of postprocessing modifications to apply in x_pred dataframe.
             Dictionnary with feature names as keys (or number, or well labels referencing to features names),
             which modifies dataset features by features.
-            --> Different types of postprocessing are available, but the syntax is this one:
 
+            --> Different types of postprocessing are available, but the syntax is this one:
             One key by features, 5 different types of modifications:
-              { ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
-                ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
-                ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}}
-                ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }}
-                ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
-                }
+
+            >>> {
+            ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
+            ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
+            ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}},
+            ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }},
+            ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
+            }
+
             Only one transformation by features is possible.
 
         Example
