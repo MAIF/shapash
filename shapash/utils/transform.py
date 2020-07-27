@@ -5,6 +5,7 @@ from shapash.utils.inverse_category_encoder import inv_transform_ce
 from shapash.utils.inverse_columntransformer import inv_transform_ct
 from shapash.utils.inverse_category_encoder import supported_category_encoder
 from shapash.utils.inverse_columntransformer import columntransformer
+import re
 
 # TODO
 # encode targeted variable ? from sklearn.preprocessing import LabelEncoder
@@ -150,3 +151,53 @@ def check_supported_inverse(list_encoding):
     return use_ct, use_ce
 
 
+def apply_postprocessing(x_pred, postprocessing):
+    """
+    Transforms x_pred depending on postprocessing parameters.
+
+    Parameters
+    ----------
+    x_pred: pandas.Dataframe
+        Dataframe that needs to be modified
+    postprocessing: dict
+        Modifications to apply in x_pred dataframe.
+
+    Returns
+    -------
+    pandas.Dataframe
+        Modified DataFrame.
+    """
+    new_preds = x_pred.copy()
+    for feature_name in postprocessing.keys():
+        dict_postprocessing = postprocessing[feature_name]
+        data_modif = new_preds[feature_name]
+        new_datai = list()
+
+        if dict_postprocessing['type'] == 'prefix':
+            for value in data_modif.values:
+                new_datai.append(dict_postprocessing['rule'] + str(value))
+            new_preds[feature_name] = new_datai
+
+        elif dict_postprocessing['type'] == 'suffix':
+            for value in data_modif.values:
+                new_datai.append(str(value) + dict_postprocessing['rule'])
+            new_preds[feature_name] = new_datai
+
+        elif dict_postprocessing['type'] == 'transcoding':
+            unique_values = x_pred[feature_name].unique().tolist()
+            unique_values = [value for value in unique_values if value not in dict_postprocessing['rule'].keys()]
+            for value in unique_values:
+                dict_postprocessing['rule'][value] = value
+            new_preds[feature_name] = new_preds[feature_name].map(dict_postprocessing['rule'])
+
+        elif dict_postprocessing['type'] == 'regex':
+            new_preds[feature_name] = new_preds[feature_name].apply(
+                lambda x: re.sub(dict_postprocessing["rule"]['in'], dict_postprocessing["rule"]['out'], x))
+
+        elif dict_postprocessing['type'] == 'case':
+            if dict_postprocessing['rule'] == 'lower':
+                new_preds[feature_name] = new_preds[feature_name].apply(lambda x: x.lower())
+            elif dict_postprocessing['rule'] == 'upper':
+                new_preds[feature_name] = new_preds[feature_name].apply(lambda x: x.upper())
+
+    return new_preds

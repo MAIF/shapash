@@ -6,16 +6,18 @@ import logging
 import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
+import warnings
+import copy
 # TODO: Remove the next 4 lines
 # these lines allow you to run locally the code and import shapash content
-#import os,sys,inspect
-#currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-#parentdir = os.path.dirname(currentdir)
-#sys.path.insert(0,parentdir)
+# import os,sys,inspect
+# currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+# parentdir = os.path.dirname(currentdir)
+# sys.path.insert(0,parentdir)
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
-from shapash.utils.transform import inverse_transform
+from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions
@@ -23,8 +25,8 @@ from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 
-
 logging.basicConfig(level=logging.INFO)
+
 
 class SmartExplainer:
     """
@@ -60,7 +62,9 @@ class SmartExplainer:
     x_init: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_pred: pandas.DataFrame
-        x_init dataset with inverse transformation.
+        x_init dataset with inverse transformation with eventual postprocessing modifications.
+    x_contrib_plot: pandas.DataFrame
+        x_init dataset with inverse transformation, without postprocessing used for contribution_plot.
     y_pred: pandas.DataFrame
         User-specified prediction values.
     contributions: pandas.DataFrame (regression) or list (classification)
@@ -98,13 +102,13 @@ class SmartExplainer:
     """
 
     def __init__(self, features_dict={}, label_dict=None):
-        if isinstance(features_dict,dict) == False:
+        if isinstance(features_dict, dict) == False:
             raise ValueError(
                 """
                 features_dict must be a dict  
                 """
             )
-        if label_dict is not None and isinstance(label_dict,dict) == False:
+        if label_dict is not None and isinstance(label_dict, dict) == False:
             raise ValueError(
                 """
                 label_dict must be a dict  
@@ -114,7 +118,7 @@ class SmartExplainer:
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
 
-    def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None):
+    def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -150,6 +154,23 @@ class SmartExplainer:
             - A list with a single ColumnTransformer with optional (dict, list of dict)
             - A dict
             - A list of dict
+        postprocessing : dict, optional (default: None)
+            Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+            Dictionnary with feature names as keys (or number, or well labels referencing to features names),
+            which modifies dataset features by features.
+
+            --> Different types of postprocessing are available, but the syntax is this one:
+            One key by features, 5 different types of modifications:
+
+            >>> {
+            ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
+            ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
+            ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}},
+            ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }},
+            ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
+            }
+
+            Only one transformation by features is possible.
 
         Example
         --------
@@ -175,6 +196,12 @@ class SmartExplainer:
         self.inv_columns_dict = {v: k for k, v in self.columns_dict.items()}
         self.check_features_dict()
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
+        postprocessing = self.modify_postprocessing(postprocessing)
+        self.check_postprocessing(postprocessing)
+        self.postprocessing_modifications = self.check_postprocessing_modif_strings(postprocessing)
+        if self.postprocessing_modifications:
+            self.x_contrib_plot = copy.deepcopy(self.x_pred)
+        self.x_pred = self.apply_postprocessing(postprocessing)
         self.data = self.state.assign_contributions(
             self.state.rank_contributions(
                 self.contributions,
@@ -262,7 +289,7 @@ class SmartExplainer:
             pandas.DataFrame, np.ndarray or list
             contributions object modified
         """
-        if isinstance(contributions, (np.ndarray, pd.DataFrame)) and self._case == 'classification' :
+        if isinstance(contributions, (np.ndarray, pd.DataFrame)) and self._case == 'classification':
             return [contributions * -1, contributions]
         else:
             return contributions
@@ -335,6 +362,132 @@ class SmartExplainer:
         else:
             return contributions
 
+    def check_postprocessing_modif_strings(self, postprocessing=None):
+        """
+        Check if any modification of postprocessing will convert numeric values into strings values.
+        If so, return True, otherwise False.
+
+        Parameters
+        ----------
+        postprocessing: dict
+            Dict of postprocessing modifications to apply.
+
+        Returns
+        -------
+        modif: bool
+            Boolean which is True if any numerical variable will be converted into string.
+        """
+        modif = False
+        if postprocessing is not None:
+            for key in postprocessing.keys():
+                dict_postprocess = postprocessing[key]
+                if dict_postprocess['type'] in {'prefix', 'suffix'} \
+                    and pd.api.types.is_numeric_dtype(self.x_pred[key]):
+                    modif = True
+        return modif
+
+    def modify_postprocessing(self, postprocessing=None):
+        """
+        Modifies postprocessing parameter, to change only keys, with features name,
+        in case of parameters are not real feature names (with columns_dict,
+        or inv_features_dict).
+
+        Parameters
+        ----------
+        postprocessing : Dict
+            Dictionnary of postprocessing to modify.
+
+        Returns
+        -------
+        Dict
+            Modified dictionnary, with same values but keys directly referencing to feature names.
+
+        """
+        if postprocessing:
+            new_dic = dict()
+            for key in postprocessing.keys():
+                if key in self.features_dict:
+                    new_dic[key] = postprocessing[key]
+
+                elif key in self.columns_dict.keys():
+                    new_dic[self.columns_dict[key]] = postprocessing[key]
+
+                elif key in self.inv_features_dict:
+                    new_dic[self.inv_features_dict[key]] = postprocessing[key]
+
+                else:
+                    raise ValueError(f"Feature name '{key}' not found in the dataset.")
+
+            return new_dic
+
+    def check_postprocessing(self, postprocessing):
+        """
+        Check that postprocessing parameter has good attributes.
+        Check if postprocessing is a dictionnary, and if its parameters are good.
+
+        Parameters
+        ----------
+        postprocessing : dict
+            Dictionnary of postprocessing that need to be checked.
+
+        """
+        if postprocessing:
+            if not isinstance(postprocessing, dict):
+                raise ValueError("Postprocessing parameter must be a dictionnary")
+
+            for key in postprocessing.keys():
+
+                dict_post = postprocessing[key]
+
+                if not isinstance(dict_post, dict):
+                    raise ValueError(f"{key} values must be a dict")
+
+                if not list(dict_post.keys()) == ['type', 'rule']:
+                    raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
+
+                if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
+                    raise ValueError("Wrong postprocessing method. \n"
+                                     "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'")
+
+                if dict_post['type'] == 'transcoding' \
+                        and not set(dict_post['rule'].keys()) == set(self.x_pred[key].unique()):
+                    warnings.warn(f"Transcoding {key} feature incomplete, some values won't be modified. \n"
+                                  f"Check values.", UserWarning)
+
+                if dict_post['type'] == 'case':
+                    if dict_post['rule'] not in ['lower', 'upper']:
+                        raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
+
+                    if not pd.api.types.is_string_dtype(self.x_pred[key]):
+                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+
+                if dict_post['type'] == 'regex':
+                    if not set(dict_post['rule'].keys()) == {'in', 'out'}:
+                        raise ValueError(f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
+                                         f" must be 'in' and 'out'.")
+
+                    if not pd.api.types.is_string_dtype(self.x_pred[key]):
+                        raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
+
+    def apply_postprocessing(self, postprocessing=None):
+        """
+        Modifies x_pred Dataframe according to postprocessing modifications, if exists.
+
+        Parameters
+        ----------
+        postprocessing: Dict
+            Dictionnary of postprocessing modifications to apply in x_pred.
+
+        Returns
+        -------
+        pandas.Dataframe
+            Returns x_pred if postprocessing is empty, modified dataframe otherwise.
+        """
+        if postprocessing:
+            return apply_postprocessing(self.x_pred, postprocessing)
+        else:
+            return self.x_pred
+
     def check_y_pred(self):
         """
         Check if y_pred is a one column dataframe of integer or float
@@ -367,17 +520,17 @@ class SmartExplainer:
         """
         _classes = None
         if hasattr(self.model, 'predict'):
-            if hasattr(self.model, 'predict_proba') or\
-                any(hasattr(self.model, attrib) for attrib in ['classes_', '_classes']):
+            if hasattr(self.model, 'predict_proba') or \
+                    any(hasattr(self.model, attrib) for attrib in ['classes_', '_classes']):
                 if hasattr(self.model, '_classes'): _classes = self.model._classes
                 if hasattr(self.model, 'classes_'): _classes = self.model.classes_
-                if isinstance(_classes,np.ndarray): _classes = _classes.tolist()
-                if hasattr(self.model, 'predict_proba') and  _classes == []: _classes = [0, 1] #catboost binary
+                if isinstance(_classes, np.ndarray): _classes = _classes.tolist()
+                if hasattr(self.model, 'predict_proba') and _classes == []: _classes = [0, 1]  # catboost binary
                 if hasattr(self.model, 'predict_proba') and _classes is None:
                     raise ValueError(
                         "No attribute _classes, classification model not supported"
                     )
-            if _classes not in (None,[]):
+            if _classes not in (None, []):
                 return 'classification', _classes
             else:
                 return 'regression', None
@@ -393,9 +546,9 @@ class SmartExplainer:
         if self.label_dict is not None and self._case == 'classification':
             if set(self._classes) != set(list(self.label_dict.keys())):
                 raise ValueError(
-                     "label_dict and don't match: \n"+
-                     f"label_dict keys: {str(list(self.label_dict.keys()))}\n"+
-                     f"Classes model values {str(self._classes)}"
+                    "label_dict and don't match: \n" +
+                    f"label_dict keys: {str(list(self.label_dict.keys()))}\n" +
+                    f"Classes model values {str(self._classes)}"
                 )
 
     def check_features_dict(self):
@@ -577,10 +730,10 @@ class SmartExplainer:
             self.mask
         )
         self.mask_params = {
-            'features_to_hide' : features_to_hide,
-            'threshold' : threshold,
-            'positive' : positive,
-            'max_contrib' : max_contrib
+            'features_to_hide': features_to_hide,
+            'threshold': threshold,
+            'positive': positive,
+            'max_contrib': max_contrib
         }
 
     def save(self, path, protocol=pickle.HIGHEST_PROTOCOL):
@@ -710,7 +863,7 @@ class SmartExplainer:
 
         # Apply filter method if necessary
         if all(var is None for var in [features_to_hide, threshold, positive, max_contrib]) \
-            and hasattr(self,'mask_params'):
+                and hasattr(self, 'mask_params'):
             print('to_pandas params: ' + str(self.mask_params))
         else:
             self.filter(features_to_hide=features_to_hide,
@@ -781,7 +934,7 @@ class SmartExplainer:
         Simple init of SmartApp in case of host smartapp by another way
         """
         self.smartapp = SmartApp(self)
-    
+
     def run_app(self, port: int = None, host: str = None) -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
@@ -817,7 +970,8 @@ class SmartExplainer:
             if port is None:
                 port = 8050
             host_name = get_host_name()
-            server_instance = CustomThread(target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port))
+            server_instance = CustomThread(
+                target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port))
             if host_name is None:
                 host_name = host
             elif host != "0.0.0.0":
@@ -829,4 +983,3 @@ class SmartExplainer:
 
         else:
             raise ValueError("Explainer must be compiled before running app.")
-

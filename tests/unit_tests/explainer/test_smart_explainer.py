@@ -140,6 +140,117 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.apply_preprocessing(contributions, preprocessing)
         xpl.state.inverse_transform_contributions.assert_called()
 
+    def test_modify_postprocessing_1(self):
+        """
+        Unit test modify postprocessing 1
+        """
+        xpl = SmartExplainer()
+        xpl.x_pred = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        xpl.features_dict = {'Col1': 'Column1', 'Col2': 'Column2'}
+        xpl.columns_dict = {0: 'Col1', 1:'Col2'}
+        xpl.inv_features_dict = {'Column1': 'Col1', 'Column2': 'Col2'}
+        postprocessing = {0: {'type' : 'suffix', 'rule':' t'},
+            'Column2': {'type' : 'prefix', 'rule' : 'test'}}
+
+        expected_output = {
+            'Col1': {'type' : 'suffix', 'rule':' t'},
+            'Col2': {'type' : 'prefix', 'rule' : 'test'}
+        }
+        output = xpl.modify_postprocessing(postprocessing)
+        assert output == expected_output
+
+    def test_modify_postprocessing_2(self):
+        """
+        Unit test modify postprocessing 2
+        """
+        xpl = SmartExplainer()
+        xpl.x_pred = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        xpl.features_dict = {'Col1': 'Column1', 'Col2': 'Column2'}
+        xpl.columns_dict = {0: 'Col1', 1: 'Col2'}
+        xpl.inv_features_dict = {'Column1': 'Col1', 'Column2': 'Col2'}
+        postprocessing = {'Error': {'type': 'suffix', 'rule': ' t'}}
+        with self.assertRaises(ValueError):
+            xpl.modify_postprocessing(postprocessing)
+
+    def test_check_postprocessing_1(self):
+        """
+        Unit test check_postprocessing
+        """
+        xpl = SmartExplainer()
+        xpl.x_pred = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        xpl.features_dict = {'Col1': 'Column1', 'Col2': 'Column2'}
+        xpl.columns_dict = {0: 'Col1', 1: 'Col2'}
+        xpl.inv_features_dict = {'Column1': 'Col1', 'Column2': 'Col2'}
+        postprocessing1 = {0: {'Error': 'suffix', 'rule': ' t'}}
+        postprocessing2 = {0: {'type': 'Error', 'rule': ' t'}}
+        postprocessing3 = {0: {'type': 'suffix', 'Error': ' t'}}
+        postprocessing4 = {0: {'type': 'suffix', 'rule': ' '}}
+        postprocessing5 = {0: {'type': 'case', 'rule': 'lower'}}
+        postprocessing6 = {0: {'type': 'case', 'rule': 'Error'}}
+        with self.assertRaises(ValueError):
+            xpl.check_postprocessing(postprocessing1)
+            xpl.check_postprocessing(postprocessing2)
+            xpl.check_postprocessing(postprocessing3)
+            xpl.check_postprocessing(postprocessing4)
+            xpl.check_postprocessing(postprocessing5)
+            xpl.check_postprocessing(postprocessing6)
+
+    def test_apply_postprocessing_1(self):
+        """
+        Unit test apply_postprocessing 1
+        """
+        xpl = SmartExplainer()
+        xpl.x_pred = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        xpl.features_dict = {'Col1': 'Column1', 'Col2': 'Column2'}
+        xpl.columns_dict = {0: 'Col1', 1: 'Col2'}
+        xpl.inv_features_dict = {'Column1': 'Col1', 'Column2': 'Col2'}
+        assert np.array_equal(xpl.x_pred, xpl.apply_postprocessing())
+
+    def test_apply_postprocessing_2(self):
+        """
+        Unit test apply_postprocessing 2
+        """
+        xpl = SmartExplainer()
+        xpl.x_pred = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        xpl.features_dict = {'Col1': 'Column1', 'Col2': 'Column2'}
+        xpl.columns_dict = {0: 'Col1', 1: 'Col2'}
+        xpl.inv_features_dict = {'Column1': 'Col1', 'Column2': 'Col2'}
+        postprocessing = {'Col1': {'type': 'suffix', 'rule': ' t'},
+                          'Col2': {'type': 'prefix', 'rule': 'test'}}
+        expected_output = pd.DataFrame(
+            data=[['1 t', 'test2'],
+                  ['3 t', 'test4']],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        output = xpl.apply_postprocessing(postprocessing)
+        assert np.array_equal(output, expected_output)
+
     def test_check_contributions_1(self):
         """
         Unit test check contributions 1
