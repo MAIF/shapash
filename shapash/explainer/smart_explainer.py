@@ -89,6 +89,10 @@ class SmartExplainer:
         Dictionary that references the numbers of feature values ​​in the x_pred
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
+    preprocessing : category_encoders, ColumnTransformer, list or dict
+        The processing apply to the original data.
+    postprocessing : dict
+        Dictionnary of postprocessing modifications to apply in x_pred dataframe.
 
     How to declare a new SmartExplainer object?
 
@@ -179,6 +183,7 @@ class SmartExplainer:
         """
         self.x_init = x
         self.x_pred = inverse_transform(self.x_init, preprocessing)
+        self.preprocessing = preprocessing
         self.model = model
         self._case, self._classes = self.check_model()
         self.check_label_dict()
@@ -199,6 +204,7 @@ class SmartExplainer:
         postprocessing = self.modify_postprocessing(postprocessing)
         self.check_postprocessing(postprocessing)
         self.postprocessing_modifications = self.check_postprocessing_modif_strings(postprocessing)
+        self.postprocessing = postprocessing
         if self.postprocessing_modifications:
             self.x_contrib_plot = copy.deepcopy(self.x_pred)
         self.x_pred = self.apply_postprocessing(postprocessing)
