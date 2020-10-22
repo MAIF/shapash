@@ -751,8 +751,8 @@ class TestSmartExplainer(unittest.TestCase):
         current = Path(path.abspath(__file__)).parent.parent.parent
         pkl_file = path.join(current, 'data/xpl_to_load.pkl')
         xpl2.load(pkl_file)
-        xpl2.preprocessing =  None
-        xpl2.postprocessing = None
+        print(xpl2.__dict__.keys())
+        print(xpl.__dict__.keys())
         assert xpl.__dict__.keys() == xpl2.__dict__.keys()
 
     def test_check_y_pred_1(self):
