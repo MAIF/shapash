@@ -24,6 +24,7 @@ from shapash.utils.shap_backend import shap_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
+from .smart_predictor import SmartPredictor
 
 logging.basicConfig(level=logging.INFO)
 
@@ -989,3 +990,29 @@ class SmartExplainer:
 
         else:
             raise ValueError("Explainer must be compiled before running app.")
+
+    def to_smartpredictor(self):
+        """
+        Create a SmartPredictor object designed from the following attributes
+        needed from the SmartExplainer Object :
+
+        features_dict: dict
+            Dictionary mapping technical feature names to domain names.
+        label_dict: dict
+            Dictionary mapping integer labels to domain names (classification - target values).
+        columns_dict: dict
+            Dictionary mapping integer column number to technical feature names.
+        model: model object
+            model used to check the different values of target estimate predict proba
+        preprocessing : category_encoders, ColumnTransformer, list or dict
+            The processing apply to the original data.
+        postprocessing : dict
+            Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+        _case : string
+            String that informs if the model used is for classification or regression problem.
+        _classes : list, None
+            List of labels if the model used is for classification problem, None otherwise.
+        mask_params : dict (optional)
+            Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+        """
+        return SmartPredictor(self)
