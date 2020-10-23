@@ -70,12 +70,11 @@ class SmartPredictor :
         if hasattr(explainer,"mask_params"):
             self.mask_params = explainer.mask_params
         else:
-            self.mask_params = self.mask_params = {
-                                    'features_to_hide': None,
-                                    'threshold': None,
-                                    'positive': None,
-                                    'max_contrib': None
-            }
+            self.mask_params = {'features_to_hide': None,
+                                'threshold': None,
+                                'positive': None,
+                                'max_contrib': None
+                                }
 
     def check_attributes(self,explainer,attribute):
         """
