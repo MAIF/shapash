@@ -21,6 +21,8 @@ from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions
+from shapash.utils.check import check_model, check_label_dict
+from shapash.utils.check import check_attributes
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -525,38 +527,16 @@ class SmartExplainer:
         string:
             'regression' or 'classification' according to the attributes of the model
         """
-        _classes = None
-        if hasattr(self.model, 'predict'):
-            if hasattr(self.model, 'predict_proba') or \
-                    any(hasattr(self.model, attrib) for attrib in ['classes_', '_classes']):
-                if hasattr(self.model, '_classes'): _classes = self.model._classes
-                if hasattr(self.model, 'classes_'): _classes = self.model.classes_
-                if isinstance(_classes, np.ndarray): _classes = _classes.tolist()
-                if hasattr(self.model, 'predict_proba') and _classes == []: _classes = [0, 1]  # catboost binary
-                if hasattr(self.model, 'predict_proba') and _classes is None:
-                    raise ValueError(
-                        "No attribute _classes, classification model not supported"
-                    )
-            if _classes not in (None, []):
-                return 'classification', _classes
-            else:
-                return 'regression', None
-        else:
-            raise ValueError(
-                "No method predict in the specified model. Please, check model parameter"
-            )
+        _case,_classes = check_model(self.model)
+        return _case,_classes
+
 
     def check_label_dict(self):
         """
         Check if label_dict and model _classes match
         """
-        if self.label_dict is not None and self._case == 'classification':
-            if set(self._classes) != set(list(self.label_dict.keys())):
-                raise ValueError(
-                    "label_dict and don't match: \n" +
-                    f"label_dict keys: {str(list(self.label_dict.keys()))}\n" +
-                    f"Classes model values {str(self._classes)}"
-                )
+        if self._case != "regression":
+            return check_label_dict(self.label_dict, self._case,self._classes)
 
     def check_features_dict(self):
         """
@@ -678,6 +658,21 @@ class SmartExplainer:
             Number of unique values in x_pred
         """
         return dict(self.x_pred.nunique())
+
+    def check_attributes(self,attribute):
+        """
+        Check that explainer has the attribute precised
+
+        Parameters
+        ----------
+        attribute: string
+            the label of the attribute to test
+
+        Returns
+        -------
+        Object content of the attribute specified from SmartExplainer instance
+        """
+        return check_attributes(self,attribute)
 
     def filter(
             self,
@@ -1004,15 +999,39 @@ class SmartExplainer:
             Dictionary mapping integer column number to technical feature names.
         model: model object
             model used to check the different values of target estimate predict proba
-        preprocessing : category_encoders, ColumnTransformer, list or dict
+        preprocessing: category_encoders, ColumnTransformer, list or dict
             The processing apply to the original data.
-        postprocessing : dict
+        postprocessing: dict
             Dictionnary of postprocessing modifications to apply in x_pred dataframe.
-        _case : string
+        _case: string
             String that informs if the model used is for classification or regression problem.
-        _classes : list, None
+        _classes: list, None
             List of labels if the model used is for classification problem, None otherwise.
-        mask_params : dict (optional)
+        mask_params: dict (optional)
             Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
         """
-        return SmartPredictor(self)
+        features_dict_params = self.check_attributes("features_dict")
+        model_params = self.check_attributes("model")
+        label_dict_params = self.check_attributes("label_dict")
+        columns_dict_params = self.check_attributes("columns_dict")
+        preprocessing_params = self.check_attributes("preprocessing")
+        postprocessing_params = self.check_attributes("postprocessing")
+
+        if hasattr(self,"mask_params"):
+            mask_params_params = self.mask_params
+        else :
+            mask_params_params = {
+                "features_to_hide":None,
+                "threshold":None,
+                "positive":None,
+                "max_contrib":None
+            }
+
+        return SmartPredictor(features_dict_params,
+                              model_params,
+                              columns_dict_params,
+                              label_dict_params,
+                              preprocessing_params,
+                              postprocessing_params,
+                              mask_params_params
+                              )
