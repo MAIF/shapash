@@ -52,7 +52,13 @@ class SmartPredictor :
 
     Example
     --------
-    >>> predictor = SmartPredictor()
+    >>> predictor = SmartPredictor(features_dict,
+                                    model,
+                                    columns_dict,
+                                    label_dict,
+                                    preprocessing,
+                                    postprocessing
+                                    )
 
     or predictor = xpl.to_smartpredictor()
 

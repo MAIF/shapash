@@ -119,7 +119,7 @@ def check_attributes(explainer,attribute):
     ----------
     explainer: object
         SmartExplainer instance to point to.
-    attribute : string
+    attribute: string
         the label of the attribute to test
 
     Returns
