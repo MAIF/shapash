@@ -42,6 +42,8 @@ class SmartPredictor :
         String that informs if the model used is for classification or regression problem.
     _classes : list, None
         List of labels if the model used is for classification problem, None otherwise.
+    mask_params : dict (optional)
+            Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
 
     How to declare a new SmartPredictor object?
 
