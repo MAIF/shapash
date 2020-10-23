@@ -4,10 +4,8 @@ Unit test smart predictor
 
 import unittest
 from shapash.explainer.smart_explainer import SmartExplainer
-
 import pandas as pd
 import numpy as np
-
 import catboost as cb
 import category_encoders as ce
 

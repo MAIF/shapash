@@ -367,7 +367,6 @@ class TestSmartExplainer(unittest.TestCase):
         df_encoded = encoder_fitted.transform(df)
         output = df[["x1", "x2"]].copy()
         output["x2"] = ["single", "married", "single", "divorced", "married"]
-
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
 
         postprocessing_1 = {"x2": {
@@ -377,8 +376,11 @@ class TestSmartExplainer(unittest.TestCase):
             "family_situation": {
                 "type": "transcoding",
                 "rule": {"S": "single", "M": "married", "D": "divorced"}}}
+
         xpl_postprocessing1 = SmartExplainer()
-        xpl_postprocessing2 = SmartExplainer(features_dict={"x1": "age", "x2": "family_situation"})
+        xpl_postprocessing2 = SmartExplainer(features_dict={"x1": "age",
+                                                            "x2": "family_situation"}
+                                             )
         xpl_postprocessing3 = SmartExplainer()
 
         xpl_postprocessing1.compile(model=clf,
@@ -396,19 +398,14 @@ class TestSmartExplainer(unittest.TestCase):
 
         assert hasattr(xpl_postprocessing1, "preprocessing")
         assert hasattr(xpl_postprocessing1, "postprocessing")
-
         assert hasattr(xpl_postprocessing2, "preprocessing")
         assert hasattr(xpl_postprocessing2, "postprocessing")
-
         assert hasattr(xpl_postprocessing3, "preprocessing")
         assert hasattr(xpl_postprocessing3, "postprocessing")
-
         pd.testing.assert_frame_equal(xpl_postprocessing1.x_pred, output)
         pd.testing.assert_frame_equal(xpl_postprocessing2.x_pred, output)
-
         assert xpl_postprocessing1.preprocessing == encoder_fitted
         assert xpl_postprocessing2.preprocessing == encoder_fitted
-
         assert xpl_postprocessing1.postprocessing == postprocessing_1
         assert xpl_postprocessing2.postprocessing == postprocessing_1
 
