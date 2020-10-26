@@ -60,7 +60,7 @@ def check_model(model):
             "No method predict in the specified model. Please, check model parameter"
         )
 
-def check_label_dict(label_dict,case,classes):
+def check_label_dict(label_dict, case, classes):
     """
     Check if label_dict and model _classes match
 

@@ -527,7 +527,7 @@ class SmartExplainer:
             'regression' or 'classification' according to the attributes of the model
         """
         _case, _classes = check_model(self.model)
-        return _case,_classes
+        return _case, _classes
 
 
     def check_label_dict(self):
@@ -535,7 +535,7 @@ class SmartExplainer:
         Check if label_dict and model _classes match
         """
         if self._case != "regression":
-            return check_label_dict(self.label_dict, self._case,self._classes)
+            return check_label_dict(self.label_dict, self._case, self._classes)
 
     def check_features_dict(self):
         """
@@ -1021,12 +1021,12 @@ class SmartExplainer:
         if hasattr(self,"mask_params"):
             params_smartpredictor.append(self.mask_params)
         else :
-            mask_params_params = {
+            mask_params = {
                 "features_to_hide": None,
                 "threshold": None,
                 "positive": None,
                 "max_contrib": None
             }
-            params_smartpredictor.append(mask_params_params)
+            params_smartpredictor.append(mask_params)
 
         return SmartPredictor(*params_smartpredictor)
