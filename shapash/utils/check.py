@@ -17,7 +17,7 @@ def check_preprocessing(preprocessing=None):
     """
     if preprocessing is not None:
         list_preprocessing = preprocessing_tolist(preprocessing)
-        use_ct,use_ce=check_supported_inverse(list_preprocessing)
+        use_ct, use_ce = check_supported_inverse(list_preprocessing)
         if not use_ct and not use_ce:
             raise ValueError(
                 """
@@ -97,7 +97,7 @@ def check_mask_params(mask_params):
             """
         )
     else:
-        conform_arguments = ["features_to_hide","threshold","positive","max_contrib"]
+        conform_arguments = ["features_to_hide", "threshold", "positive", "max_contrib"]
         mask_arguments_not_conform = [argument for argument in mask_params.keys()
                                       if argument not in conform_arguments]
         if len(mask_arguments_not_conform) != 0:
@@ -111,25 +111,3 @@ def check_mask_params(mask_params):
             """
             )
 
-def check_attributes(explainer,attribute):
-    """
-    Check that explainer has the attribute precised
-
-    Parameters
-    ----------
-    explainer: object
-        SmartExplainer instance to point to.
-    attribute: string
-        the label of the attribute to test
-
-    Returns
-    -------
-    Object content of the attribute specified from SmartExplainer instance
-    """
-    if hasattr(explainer, attribute):
-        return explainer.__dict__[attribute]
-    else:
-        raise ValueError(
-            """
-            attribute {0} isn't an attribute of the explainer precised.
-            """.format(attribute))

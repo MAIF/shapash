@@ -69,10 +69,10 @@ class SmartPredictor :
     def __init__(self, features_dict, model,
                  columns_dict, label_dict=None,
                  preprocessing=None,postprocessing=None,
-                 mask_params = {"features_to_hide":None,
-                                "threshold":None,
-                                "positive":None,
-                                "max_contrib":None
+                 mask_params = {"features_to_hide": None,
+                                "threshold": None,
+                                "positive": None,
+                                "max_contrib": None
                                 }
                  ):
 
@@ -129,7 +129,7 @@ class SmartPredictor :
         string:
             'regression' or 'classification' according to the attributes of the model
         """
-        _case,_classes = check_model(self.model)
+        _case, _classes = check_model(self.model)
         return _case,_classes
 
     def check_preprocessing(self):
@@ -143,7 +143,7 @@ class SmartPredictor :
         Check if label_dict and model _classes match
         """
         if self._case != "regression":
-            return check_label_dict(self.label_dict, self._case,self._classes)
+            return check_label_dict(self.label_dict, self._case, self._classes)
 
     def check_mask_params(self):
         """

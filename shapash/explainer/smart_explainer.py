@@ -22,7 +22,6 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions
 from shapash.utils.check import check_model, check_label_dict
-from shapash.utils.check import check_attributes
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -527,7 +526,7 @@ class SmartExplainer:
         string:
             'regression' or 'classification' according to the attributes of the model
         """
-        _case,_classes = check_model(self.model)
+        _case, _classes = check_model(self.model)
         return _case,_classes
 
 
@@ -659,12 +658,14 @@ class SmartExplainer:
         """
         return dict(self.x_pred.nunique())
 
-    def check_attributes(self,attribute):
+    def check_attributes(self, attribute):
         """
         Check that explainer has the attribute precised
 
         Parameters
         ----------
+        explainer: object
+            SmartExplainer instance to point to.
         attribute: string
             the label of the attribute to test
 
@@ -672,7 +673,11 @@ class SmartExplainer:
         -------
         Object content of the attribute specified from SmartExplainer instance
         """
-        return check_attributes(self,attribute)
+        if not hasattr(self, attribute):
+            raise ValueError(
+                """
+                attribute {0} isn't an attribute of the explainer precised.
+                """.format(attribute))
 
     def filter(
             self,
@@ -1010,21 +1015,27 @@ class SmartExplainer:
         mask_params: dict (optional)
             Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
         """
-        features_dict_params = self.check_attributes("features_dict")
-        model_params = self.check_attributes("model")
-        label_dict_params = self.check_attributes("label_dict")
-        columns_dict_params = self.check_attributes("columns_dict")
-        preprocessing_params = self.check_attributes("preprocessing")
-        postprocessing_params = self.check_attributes("postprocessing")
+        
+        listattributes = ["features_dict", "model", "label_dict", "columns_dict", "preprocessing", "postprocessing"]
+        
+        for attribute in listattributes:
+            self.check_attributes(attribute)
+            
+        features_dict_params = self.features_dict
+        model_params = self.model
+        label_dict_params = self.label_dict
+        columns_dict_params = self.columns_dict
+        preprocessing_params = self.preprocessing
+        postprocessing_params = self.postprocessing
 
         if hasattr(self,"mask_params"):
             mask_params_params = self.mask_params
         else :
             mask_params_params = {
-                "features_to_hide":None,
-                "threshold":None,
-                "positive":None,
-                "max_contrib":None
+                "features_to_hide": None,
+                "threshold": None,
+                "positive": None,
+                "max_contrib": None
             }
 
         return SmartPredictor(features_dict_params,
