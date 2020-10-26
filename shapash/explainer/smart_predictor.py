@@ -101,16 +101,16 @@ class SmartPredictor :
         if postprocessing is not None and isinstance(postprocessing, dict) == False:
             raise ValueError(
                 """
-                label_dict must be a dict  
+                postprocessing must be a dict  
                 """
             )
 
         self.postprocessing = postprocessing
 
-        if columns_dict is not None and isinstance(columns_dict, dict) == False:
+        if columns_dict is None or isinstance(columns_dict, dict) == False:
             raise ValueError(
                 """
-                label_dict must be a dict  
+                columns_dict must be a dict  
                 """
             )
         self.columns_dict = columns_dict
