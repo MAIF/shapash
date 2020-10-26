@@ -1,11 +1,8 @@
 """
 Smart predictor module
 """
-
-from shapash.utils.check import check_model,check_preprocessing
-from shapash.utils.check import check_label_dict,check_mask_params
-
-
+from shapash.utils.check import check_model, check_preprocessing
+from shapash.utils.check import check_label_dict, check_mask_params
 
 class SmartPredictor :
     """
@@ -91,7 +88,7 @@ class SmartPredictor :
             )
 
         self.model = model
-        self._case,self._classes = self.check_model()
+        self._case, self._classes = self.check_model()
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict
@@ -107,17 +104,15 @@ class SmartPredictor :
 
         self.postprocessing = postprocessing
 
-        if columns_dict is None or isinstance(columns_dict, dict) == False:
+        if isinstance(columns_dict, dict) == False:
             raise ValueError(
                 """
                 columns_dict must be a dict  
                 """
             )
         self.columns_dict = columns_dict
-
-        self.mask_params= mask_params
+        self.mask_params = mask_params
         self.check_mask_params()
-
 
     def check_model(self):
         """
@@ -130,7 +125,7 @@ class SmartPredictor :
             'regression' or 'classification' according to the attributes of the model
         """
         _case, _classes = check_model(self.model)
-        return _case,_classes
+        return _case, _classes
 
     def check_preprocessing(self):
         """

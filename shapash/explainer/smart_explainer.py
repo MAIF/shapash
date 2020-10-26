@@ -671,7 +671,9 @@ class SmartExplainer:
         -------
         Object content of the attribute specified from SmartExplainer instance
         """
-        if not hasattr(self, attribute):
+        if hasattr(self, attribute):
+            return self.__dict__[attribute]
+        else:
             raise ValueError(
                 """
                 attribute {0} isn't an attribute of the explainer precised.
@@ -1013,21 +1015,11 @@ class SmartExplainer:
         mask_params: dict (optional)
             Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
         """
-        
-        listattributes = ["features_dict", "model", "label_dict", "columns_dict", "preprocessing", "postprocessing"]
-        
-        for attribute in listattributes:
-            self.check_attributes(attribute)
-            
-        features_dict_params = self.features_dict
-        model_params = self.model
-        label_dict_params = self.label_dict
-        columns_dict_params = self.columns_dict
-        preprocessing_params = self.preprocessing
-        postprocessing_params = self.postprocessing
+        listattributes = ["features_dict", "model", "columns_dict", "label_dict", "preprocessing", "postprocessing"]
+        params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
         if hasattr(self,"mask_params"):
-            mask_params_params = self.mask_params
+            params_smartpredictor.append(self.mask_params)
         else :
             mask_params_params = {
                 "features_to_hide": None,
@@ -1035,12 +1027,6 @@ class SmartExplainer:
                 "positive": None,
                 "max_contrib": None
             }
+            params_smartpredictor.append(mask_params_params)
 
-        return SmartPredictor(features_dict_params,
-                              model_params,
-                              columns_dict_params,
-                              label_dict_params,
-                              preprocessing_params,
-                              postprocessing_params,
-                              mask_params_params
-                              )
+        return SmartPredictor(*params_smartpredictor)
