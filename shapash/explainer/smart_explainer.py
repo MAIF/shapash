@@ -664,8 +664,6 @@ class SmartExplainer:
 
         Parameters
         ----------
-        explainer: object
-            SmartExplainer instance to point to.
         attribute: string
             the label of the attribute to test
 
