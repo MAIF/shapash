@@ -89,6 +89,8 @@ class SmartExplainer:
         Dictionary that references the numbers of feature values ​​in the x_pred
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
+    explainer : explainer object
+        explainer must be a shap object
 
     How to declare a new SmartExplainer object?
 
@@ -118,7 +120,7 @@ class SmartExplainer:
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
 
-    def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
+    def compile(self, x, model, explainer=None,contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -136,6 +138,8 @@ class SmartExplainer:
         model : model object
             model used to consistency check. model object can also be used by some method to compute
             predict and predict_proba values
+        explainer : explainer object
+            explainer must be a shap object
         contributions : pandas.DataFrame, np.ndarray or list
             single or multiple contributions (multi-class) to handle.
             if pandas.Dataframe, the index and columns should be share with the prediction set.
@@ -184,8 +188,10 @@ class SmartExplainer:
         self.check_label_dict()
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
+        self.explainer = explainer
+        self.check_explainer()
         if contributions is None:
-            contributions = shap_contributions(model, self.x_init)
+            contributions = shap_contributions(model,self.x_init, explainer)
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
@@ -558,6 +564,16 @@ class SmartExplainer:
         """
         for feature in (set(list(self.columns_dict.values())) - set(list(self.features_dict))):
             self.features_dict[feature] = feature
+
+    def check_explainer(self):
+        """
+        Check if explainer class correspond to a shap explainer object
+        """
+        if self.explainer is not None:
+            if self.explainer.__class__.__base__.__name__ not in ['Explainer']:
+                raise ValueError(
+                    "explainer doesn't correspond to a shap explainer object"
+                )
 
     def check_contributions(self):
         """
