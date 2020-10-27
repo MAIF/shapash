@@ -90,7 +90,7 @@ def check_mask_params(mask_params):
     mask_params: dict (optional)
         Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
     """
-    if not isinstance(mask_params,dict):
+    if not isinstance(mask_params, dict):
         raise ValueError(
             """
             mask_params must be a dict  
