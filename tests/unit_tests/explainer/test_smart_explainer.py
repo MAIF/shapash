@@ -14,6 +14,7 @@ from sklearn.linear_model import LinearRegression
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
+import category_encoders as ce
 
 def init_sme_to_pickle_test():
     """
@@ -350,6 +351,63 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.compile(model=clf, x=df[['x1', 'x2']])
         assert xpl._case == "classification"
         self.assertListEqual(xpl._classes, [0, 1])
+
+    def test_compile_2(self):
+        """
+        Unit test compile 2
+        checking new attributes added to the compile method
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = ["S", "M", "S", "D", "M"]
+        df = df.set_index('id')
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder_fitted = encoder.fit(df)
+        df_encoded = encoder_fitted.transform(df)
+        output = df[["x1", "x2"]].copy()
+        output["x2"] = ["single", "married", "single", "divorced", "married"]
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+
+        postprocessing_1 = {"x2": {
+            "type": "transcoding",
+            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
+        postprocessing_2 = {
+            "family_situation": {
+                "type": "transcoding",
+                "rule": {"S": "single", "M": "married", "D": "divorced"}}}
+
+        xpl_postprocessing1 = SmartExplainer()
+        xpl_postprocessing2 = SmartExplainer(features_dict={"x1": "age",
+                                                            "x2": "family_situation"}
+                                             )
+        xpl_postprocessing3 = SmartExplainer()
+
+        xpl_postprocessing1.compile(model=clf,
+                                    x=df_encoded[['x1', 'x2']],
+                                    preprocessing=encoder_fitted,
+                                    postprocessing=postprocessing_1)
+        xpl_postprocessing2.compile(model=clf,
+                                    x=df_encoded[['x1', 'x2']],
+                                    preprocessing=encoder_fitted,
+                                    postprocessing=postprocessing_2)
+        xpl_postprocessing3.compile(model=clf,
+                                    x=df_encoded[['x1', 'x2']],
+                                    preprocessing=None,
+                                    postprocessing=None)
+
+        assert hasattr(xpl_postprocessing1, "preprocessing")
+        assert hasattr(xpl_postprocessing1, "postprocessing")
+        assert hasattr(xpl_postprocessing2, "preprocessing")
+        assert hasattr(xpl_postprocessing2, "postprocessing")
+        assert hasattr(xpl_postprocessing3, "preprocessing")
+        assert hasattr(xpl_postprocessing3, "postprocessing")
+        pd.testing.assert_frame_equal(xpl_postprocessing1.x_pred, output)
+        pd.testing.assert_frame_equal(xpl_postprocessing2.x_pred, output)
+        assert xpl_postprocessing1.preprocessing == encoder_fitted
+        assert xpl_postprocessing2.preprocessing == encoder_fitted
+        assert xpl_postprocessing1.postprocessing == postprocessing_1
+        assert xpl_postprocessing2.postprocessing == postprocessing_1
 
     def test_filter_0(self):
         """
@@ -690,7 +748,12 @@ class TestSmartExplainer(unittest.TestCase):
         current = Path(path.abspath(__file__)).parent.parent.parent
         pkl_file = path.join(current, 'data/xpl_to_load.pkl')
         xpl2.load(pkl_file)
-        assert xpl.__dict__.keys() == xpl2.__dict__.keys()
+
+        attrib_xpl = [element for element in xpl.__dict__.keys()]
+        attrib_xpl2 = [element for element in xpl2.__dict__.keys()]
+
+        assert all(attrib in attrib_xpl2 for attrib in attrib_xpl)
+        assert all(attrib2 in attrib_xpl for attrib2 in attrib_xpl2)
 
     def test_check_y_pred_1(self):
         """
@@ -1062,3 +1125,59 @@ class TestSmartExplainer(unittest.TestCase):
         xpl._case = "regression"
         output = xpl.adapt_contributions(contrib)
         pd.testing.assert_frame_equal(contrib, output)
+
+    def test_to_smartpredictor_1(self):
+        """
+        Unit test 1  to_smartpredictor
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = ["S", "M", "S", "D", "M"]
+        df = df.set_index('id')
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder_fitted = encoder.fit(df)
+        df_encoded = encoder_fitted.transform(df)
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+
+        postprocessing = {"x2": {
+            "type": "transcoding",
+            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
+        xpl = SmartExplainer(features_dict={"x1": "age", "x2": "family_situation"})
+
+        xpl.compile(model=clf,
+                    x=df_encoded[['x1', 'x2']],
+                    preprocessing=encoder_fitted,
+                    postprocessing=postprocessing)
+        predictor_1 = xpl.to_smartpredictor()
+
+        xpl.mask_params = {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': True,
+            'max_contrib': 1
+        }
+
+        predictor_2 = xpl.to_smartpredictor()
+
+        assert hasattr(predictor_1, 'model')
+        assert hasattr(predictor_1, 'features_dict')
+        assert hasattr(predictor_1, 'label_dict')
+        assert hasattr(predictor_1, '_case')
+        assert hasattr(predictor_1, '_classes')
+        assert hasattr(predictor_1, 'columns_dict')
+        assert hasattr(predictor_1, 'preprocessing')
+        assert hasattr(predictor_1, 'postprocessing')
+        assert hasattr(predictor_1, 'mask_params')
+        assert hasattr(predictor_2, 'mask_params')
+
+        assert predictor_1.model == xpl.model
+        assert predictor_1.features_dict == xpl.features_dict
+        assert predictor_1.label_dict == xpl.label_dict
+        assert predictor_1._case == xpl._case
+        assert predictor_1._classes == xpl._classes
+        assert predictor_1.columns_dict == xpl.columns_dict
+        assert predictor_1.preprocessing == xpl.preprocessing
+        assert predictor_1.postprocessing == xpl.postprocessing
+
+        assert predictor_2.mask_params == xpl.mask_params
