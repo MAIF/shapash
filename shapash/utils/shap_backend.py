@@ -14,7 +14,7 @@ with contributions calculated by lime or eli5 library
 import pandas as pd
 import shap
 
-def shap_contributions(model, x_df):
+def shap_contributions(model, x_df, explainer=None):
     """
     Compute the local shapley contributions of each individual,
     feature.
@@ -26,6 +26,8 @@ def shap_contributions(model, x_df):
         this model is used to choose a shap explainer and to compute
         shapley values
     x_df: pd.DataFrame
+    explainer : explainer object from shap
+        this explainer is used to compute shapley values
 
 
     Returns
@@ -61,27 +63,24 @@ def shap_contributions(model, x_df):
         "<class 'sklearn.svm._classes.SVR'>"
     )
 
-    if str(type(model)) in simple_tree_model:
-        explainer = shap.TreeExplainer(model)
-        contributions = explainer.shap_values(x_df)
-        print("Backend: Shap TreeExplainer")
+    if explainer is None:
+        if str(type(model)) in simple_tree_model:
+            explainer = shap.TreeExplainer(model)
+            print("Backend: Shap TreeExplainer")
 
-    elif str(type(model)) in catboost_model:
-        explainer = shap.TreeExplainer(model)
-        contributions = explainer.shap_values(x_df)
-        print("Backend: Shap TreeExplainer")
+        elif str(type(model)) in catboost_model:
+            explainer = shap.TreeExplainer(model)
+            print("Backend: Shap TreeExplainer")
 
-    elif str(type(model)) in linear_model:
-        explainer = shap.LinearExplainer(model,x_df)
-        contributions = explainer.shap_values(x_df)
-        print("Backend: Shap LinearExplainer")
+        elif str(type(model)) in linear_model:
+            explainer = shap.LinearExplainer(model, x_df)
+            print("Backend: Shap LinearExplainer")
 
-    elif str(type(model)) in svm_model:
-        explainer = shap.KernelExplainer(model.predict, x_df)
-        contributions = explainer.shap_values(x_df)
-        print("Backend: Shap KernelExplainer")
+        elif str(type(model)) in svm_model:
+            explainer = shap.KernelExplainer(model.predict, x_df)
+            print("Backend: Shap KernelExplainer")
 
-    else:
+    if not (str(type(clf)) in i for i in [simple_tree_model,catboost_model,linear_model,svm_model]):
         raise ValueError(
             """
             model not supported by shapash, please compute contributions
@@ -89,4 +88,16 @@ def shap_contributions(model, x_df):
             """
         )
 
+    contributions = explainer.shap_values(x_df)
+
     return contributions
+
+def check_explainer(explainer):
+    """
+            Check if explainer class correspond to a shap explainer object
+            """
+    if explainer is not None:
+        if explainer.__class__.__base__.__name__ not in ['Explainer']:
+            raise ValueError(
+                "explainer doesn't correspond to a shap explainer object"
+            )

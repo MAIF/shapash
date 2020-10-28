@@ -20,7 +20,7 @@ from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.shap_backend import shap_contributions
+from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
@@ -124,7 +124,8 @@ class SmartExplainer:
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
 
-    def compile(self, x, model, contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
+
+    def compile(self, x, model, explainer=None, contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -142,6 +143,8 @@ class SmartExplainer:
         model : model object
             model used to consistency check. model object can also be used by some method to compute
             predict and predict_proba values
+        explainer : explainer object
+            explainer must be a shap object
         contributions : pandas.DataFrame, np.ndarray or list
             single or multiple contributions (multi-class) to handle.
             if pandas.Dataframe, the index and columns should be share with the prediction set.
@@ -191,8 +194,10 @@ class SmartExplainer:
         self.check_label_dict()
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
+        check_explainer(explainer)
+        self.explainer = explainer
         if contributions is None:
-            contributions = shap_contributions(model, self.x_init)
+            contributions = shap_contributions(model, self.x_init, explainer)
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
