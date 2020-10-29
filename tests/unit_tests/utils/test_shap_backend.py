@@ -148,4 +148,4 @@ class TestShapBackend(unittest.TestCase):
             elif str(type(model)) in svm_model:
                 explainer = shap.KernelExplainer(model.predict, self.x_df)
 
-            shap_contributions(model,self.x_df,explainer)
+            shap_contributions(model, self.x_df, explainer)
