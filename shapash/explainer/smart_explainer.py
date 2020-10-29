@@ -18,6 +18,7 @@ from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
+from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions
@@ -297,10 +298,7 @@ class SmartExplainer:
             pandas.DataFrame, np.ndarray or list
             contributions object modified
         """
-        if isinstance(contributions, (np.ndarray, pd.DataFrame)) and self._case == 'classification':
-            return [contributions * -1, contributions]
-        else:
-            return contributions
+        return adapt_contributions(self._case, contributions)
 
     def validate_contributions(self, contributions):
         """
@@ -1015,7 +1013,11 @@ class SmartExplainer:
         mask_params: dict (optional)
             Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
         """
-        listattributes = ["features_dict", "model", "columns_dict", "label_dict", "preprocessing", "postprocessing"]
+        self.features_types = {features : str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
+
+        listattributes = ["features_dict", "model", "columns_dict", "features_types",
+                          "label_dict", "preprocessing", "postprocessing"]
+
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
         if hasattr(self,"mask_params"):

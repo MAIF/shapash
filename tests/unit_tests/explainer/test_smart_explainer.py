@@ -1166,6 +1166,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(predictor_1, '_case')
         assert hasattr(predictor_1, '_classes')
         assert hasattr(predictor_1, 'columns_dict')
+        assert hasattr(predictor_1, 'features_types')
         assert hasattr(predictor_1, 'preprocessing')
         assert hasattr(predictor_1, 'postprocessing')
         assert hasattr(predictor_1, 'mask_params')
@@ -1179,5 +1180,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert predictor_1.columns_dict == xpl.columns_dict
         assert predictor_1.preprocessing == xpl.preprocessing
         assert predictor_1.postprocessing == xpl.postprocessing
+        assert all(predictor_1.features_types[feature] == str(xpl.x_pred[feature].dtypes)
+                   for feature in xpl.x_pred.columns )
 
         assert predictor_2.mask_params == xpl.mask_params

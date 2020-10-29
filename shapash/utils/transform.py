@@ -6,6 +6,8 @@ from shapash.utils.inverse_columntransformer import inv_transform_ct
 from shapash.utils.inverse_category_encoder import supported_category_encoder
 from shapash.utils.inverse_columntransformer import columntransformer
 import re
+import numpy as np
+import pandas as pd
 
 # TODO
 # encode targeted variable ? from sklearn.preprocessing import LabelEncoder
@@ -201,3 +203,26 @@ def apply_postprocessing(x_pred, postprocessing):
                 new_preds[feature_name] = new_preds[feature_name].apply(lambda x: x.upper())
 
     return new_preds
+
+def adapt_contributions(case,contributions):
+    """
+    If _case is "classification" and contributions a np.array or pd.DataFrame
+    this function transform contributions matrix in a list of 2 contributions
+    matrices: Opposite contributions and contributions matrices.
+
+    Parameters
+    ----------
+    case: string
+        String which precised if it's a regression problem or a classification one.
+    contributions: pandas.DataFrame, np.ndarray or list
+        Contribution of each feature to the predicted value.
+
+    Returns
+    -------
+        pandas.DataFrame, np.ndarray or list
+        contributions object modified
+    """
+    if isinstance(contributions, (np.ndarray, pd.DataFrame)) and case == 'classification':
+        return [contributions * -1, contributions]
+    else:
+        return contributions
