@@ -189,6 +189,10 @@ class SmartPredictor :
         """
         x = self.check_dataset_features_types(self.check_dataset_features(self.check_dataset_type(x)))
         if x is not None:
+
+            if hasattr(self, "x"):
+                self.contributions = None
+
             self.x = x
 
             if self.preprocessing is not None:
@@ -261,7 +265,7 @@ class SmartPredictor :
         """
         if type(x) == dict:
             try:
-                x = pd.DataFrame.from_dict(x).T
+                x = pd.DataFrame.from_dict(x, orient="index").T
             except BaseException:
                 raise ValueError(
                     """
