@@ -26,7 +26,7 @@ def shap_contributions(model, x_df, explainer=None):
         this model is used to choose a shap explainer and to compute
         shapley values
     x_df: pd.DataFrame
-    explainer : explainer object from shap
+    explainer : explainer object from shap, optional (default: None)
         this explainer is used to compute shapley values
 
 
@@ -80,7 +80,7 @@ def shap_contributions(model, x_df, explainer=None):
             explainer = shap.KernelExplainer(model.predict, x_df)
             print("Backend: Shap KernelExplainer")
 
-    if not (str(type(clf)) in i for i in [simple_tree_model,catboost_model,linear_model,svm_model]):
+    if not (str(type(model)) in i for i in [simple_tree_model,catboost_model,linear_model,svm_model]):
         raise ValueError(
             """
             model not supported by shapash, please compute contributions
@@ -97,7 +97,7 @@ def check_explainer(explainer):
             Check if explainer class correspond to a shap explainer object
             """
     if explainer is not None:
-        if explainer.__class__.__base__.__name__ not in ['Explainer']:
+        if explainer.__class__.__base__.__name__ != 'Explainer':
             raise ValueError(
                 "explainer doesn't correspond to a shap explainer object"
             )
