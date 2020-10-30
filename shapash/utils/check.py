@@ -112,7 +112,7 @@ def check_mask_params(mask_params):
             """
             )
 
-def check_ypred(case, x,  ypred=None):
+def check_ypred(case=None, x=None,  ypred=None):
     """
     Check that ypred given has the right shape and expected value.
 
@@ -126,8 +126,6 @@ def check_ypred(case, x,  ypred=None):
         Dataset used by the model to perform the prediction (preprocessed or not).
     """
     if ypred is not None:
-        if case != "classification":
-            raise ValueError("ypred should not be specified in classification problems.")
         if not isinstance(ypred, (pd.DataFrame, pd.Series)):
             raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
         if not ypred.index.equals(x.index):

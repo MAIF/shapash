@@ -473,7 +473,16 @@ class SmartExplainer:
         Check if y_pred is a one column dataframe of integer or float
         and if y_pred index matches x_pred index
         """
-        return check_ypred(self._case, self.x_pred, self.y_pred)
+        params_checkypred=[]
+        attributs_explainer=["_case", "x_pred", "y_pred"]
+
+        for attribut in attributs_explainer:
+            if hasattr(self, attribut):
+                params_checkypred.append(self.__dict__[attribut])
+            else:
+                params_checkypred.append(None)
+
+        return check_ypred(*params_checkypred)
 
     def check_model(self):
         """
