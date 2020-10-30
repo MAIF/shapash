@@ -3,6 +3,7 @@ Check Module
 """
 
 import numpy as np
+import pandas as pd
 from shapash.utils.transform import preprocessing_tolist, check_supported_inverse
 
 
@@ -111,3 +112,74 @@ def check_mask_params(mask_params):
             """
             )
 
+def check_ypred(case, x,  ypred=None):
+    """
+    Check that ypred given has the right shape and expected value.
+
+    Parameters
+    ----------
+    ypred: pandas.DataFrame (optional)
+        User-specified prediction values.
+    case: string
+        String that informs if the model used is for classification or regression problem.
+    x: pandas.DataFrame
+        Dataset used by the model to perform the prediction (preprocessed or not).
+    """
+    if ypred is not None:
+        if case != "classification":
+            raise ValueError("ypred should not be specified in classification problems.")
+        if not isinstance(ypred, (pd.DataFrame, pd.Series)):
+            raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
+        if not ypred.index.equals(x.index):
+            raise ValueError("x_pred and y_pred should have the same index.")
+        if isinstance(ypred, pd.DataFrame):
+            if ypred.shape[1] > 1:
+                raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
+            if not (ypred.dtypes[0] in [np.float, np.int]):
+                raise ValueError("y_pred must contain int or float only")
+        if isinstance(ypred, pd.Series):
+            if not (ypred.dtype in [np.float, np.int]):
+                raise ValueError("y_pred must contain int or float only")
+            ypred = ypred.to_frame()
+    return ypred
+
+def validate_contributions(case, classes, contributions):
+    """
+    Check len of list if _case is "classification"
+    Check contributions object type if _case is "regression"
+    Check type of contributions and transform into (list of) pd.Dataframe if necessary
+
+    Parameters
+    ----------
+    case: string
+        String that informs if the model used is for classification or regression problem.
+    classes: list, None
+        List of labels if the model used is for classification problem, None otherwise.
+    contributions : pandas.DataFrame, np.ndarray or list
+    """
+    if case == "regression" and isinstance(contributions, (np.ndarray, pd.DataFrame)) == False:
+        raise ValueError(
+            """
+            Type of contributions parameter specified is not compatible with 
+            regression model.
+            Please check model and contributions parameters.  
+            """
+        )
+    elif case == "classification":
+        if isinstance(contributions, list):
+            if len(contributions) != len(classes):
+                raise ValueError(
+                    """
+                    Length of list of contributions parameter is not equal
+                    to the number of classes in the target.
+                    Please check model and contributions parameters.
+                    """
+                )
+        else:
+            raise ValueError(
+                """
+                Type of contributions parameter specified is not compatible with 
+                classification model.
+                Please check model and contributions parameters.
+                """
+            )

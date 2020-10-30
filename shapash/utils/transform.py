@@ -226,3 +226,4 @@ def adapt_contributions(case,contributions):
         return [contributions * -1, contributions]
     else:
         return contributions
+

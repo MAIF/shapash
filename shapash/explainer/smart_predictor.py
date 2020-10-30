@@ -2,7 +2,7 @@
 Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
-from shapash.utils.check import check_label_dict, check_mask_params
+from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, validate_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -83,26 +83,15 @@ class SmartPredictor :
                                 }
                  ):
 
-        if isinstance(features_dict, dict) == False:
-            raise ValueError(
-                """
-                features_dict must be a dict  
-                """
-            )
+        params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 
-        if isinstance(features_types, dict) == False:
-            raise ValueError(
-                """
-                features_types must be a dict  
-                """
-            )
-
-        if label_dict is not None and isinstance(label_dict, dict) == False:
-            raise ValueError(
-                """
-                label_dict must be a dict  
-                """
-            )
+        for params in params_dict:
+            if params is not None and isinstance(params, dict) == False:
+                raise ValueError(
+                    """
+                    {0} must be a dict.
+                    """.format(str(params))
+                )
 
         self.model = model
         self._case, self._classes = self.check_model()
@@ -112,22 +101,7 @@ class SmartPredictor :
         self.features_types = features_types
         self.label_dict = label_dict
         self.check_label_dict()
-
-        if postprocessing is not None and isinstance(postprocessing, dict) == False:
-            raise ValueError(
-                """
-                postprocessing must be a dict  
-                """
-            )
-
         self.postprocessing = postprocessing
-
-        if isinstance(columns_dict, dict) == False:
-            raise ValueError(
-                """
-                columns_dict must be a dict  
-                """
-            )
         self.columns_dict = columns_dict
         self.mask_params = mask_params
         self.check_mask_params()
@@ -187,13 +161,15 @@ class SmartPredictor :
             local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
 
         """
-        x = self.check_dataset_features_types(self.check_dataset_features(self.check_dataset_type(x)))
         if x is not None:
-
+            x = self.check_dataset_features(self.check_dataset_type(x))
             if hasattr(self, "x"):
                 self.contributions = None
-
             self.x = x
+
+            if hasattr(self,"ypred"):
+                if not self.ypred.index.equals(self.x.index):
+                    self.ypred=None
 
             if self.preprocessing is not None:
                 try :
@@ -204,6 +180,9 @@ class SmartPredictor :
                         Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
                         """
                     )
+        else:
+            if not hasattr(self,"x"):
+                raise ValueError ("No dataset x specified.")
 
         ypred = self.check_ypred(ypred)
         if ypred is not None:
@@ -231,22 +210,14 @@ class SmartPredictor :
             Raw dataset used by the model to perform the prediction (not preprocessed).
 
         """
-        if x is None:
-            if not(hasattr(self, "x")):
-                raise ValueError(
-                    """
-                    No dataset x specified.
-                    """
-                )
+        if not (type(x) in [pd.DataFrame, dict]):
+            raise ValueError(
+                """
+                x must be a dict or a pandas.DataFrame.
+                """
+            )
         else :
-            if not (type(x) in [pd.DataFrame, dict]):
-                raise ValueError(
-                    """
-                    x must be a dict or a pandas.DataFrame.
-                    """
-                )
-            else :
-                x = self.convert_dict_dataset(x)
+            x = self.convert_dict_dataset(x)
         return x
 
     def convert_dict_dataset(self, x):
@@ -265,7 +236,11 @@ class SmartPredictor :
         """
         if type(x) == dict:
             try:
-                x = pd.DataFrame.from_dict(x, orient="index").T
+                if not all(column in self.features_types.keys() for column in x.keys()):
+                    raise ValueError("""
+                    All features from dataset x must be in the features_types dict initialized.
+                    """)
+                x = pd.DataFrame.from_dict(x, orient="index", dtype=self.features_types).T
             except BaseException:
                 raise ValueError(
                     """
@@ -274,31 +249,7 @@ class SmartPredictor :
                 )
         return x
 
-    def check_dataset_features(self, x=None):
-        """
-        Check if dataset x given respect the expected features order and put it in the right one if it's not.
-
-        Parameters
-        ----------
-        x: dict, pandas.DataFrame (optional)
-            Raw dataset used by the model to perform the prediction (not preprocessed).
-
-        """
-        if x is not None:
-            assert all(column in self.columns_dict.values() for column in x.columns)
-            if not(type(key) == int for key in self.columns_dict.keys()):
-                raise ValueError(
-                    """
-                    columns_dict must have only integers keys for features order.
-                    """
-                )
-            features_order = []
-            for order in range(min(self.columns_dict.keys()), max(self.columns_dict.keys())+1):
-                features_order.append(self.columns_dict[order])
-            x = x[features_order]
-        return x
-
-    def check_dataset_features_types(self, x=None):
+    def check_dataset_features(self, x):
         """
         Check if the features of the dataset x has the expected types before using preprocessing and model.
 
@@ -307,14 +258,17 @@ class SmartPredictor :
         x: pandas.DataFrame (optional)
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
-        if x is not None:
-            assert all(column in self.features_types.keys() for column in x.columns)
-            if not(str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns):
-                raise ValueError(
-                    """
-                    Types of features in x doesn't match with the expected one in features_types.
-                    """
-                )
+        assert all(column in self.columns_dict.values() for column in x.columns)
+        if not (type(key) == int for key in self.columns_dict.keys()):
+            raise ValueError("columns_dict must have only integers keys for features order.")
+        features_order = []
+        for order in range(min(self.columns_dict.keys()), max(self.columns_dict.keys()) + 1):
+            features_order.append(self.columns_dict[order])
+        x = x[features_order]
+
+        assert all(column in self.features_types.keys() for column in x.columns)
+        if not(str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns):
+            raise ValueError("Types of features in x doesn't match with the expected one in features_types.")
         return x
 
     def check_ypred(self, ypred=None):
@@ -326,23 +280,7 @@ class SmartPredictor :
         ypred: pandas.DataFrame (optional)
             User-specified prediction values.
         """
-        if ypred is not None:
-            if self._case != "classification":
-                raise ValueError("ypred should not be specified in classification problems.")
-            if not isinstance(ypred, (pd.DataFrame, pd.Series)):
-                raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-            if not ypred.index.equals(self.x.index):
-                raise ValueError("x_pred and y_pred should have the same index.")
-            if isinstance(ypred, pd.DataFrame):
-                if ypred.shape[1] > 1:
-                    raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-                if not (ypred.dtypes[0] in [np.float, np.int]):
-                    raise ValueError("y_pred must contain int or float only")
-            if isinstance(ypred, pd.Series):
-                if not (ypred.dtype in [np.float, np.int]):
-                    raise ValueError("y_pred must contain int or float only")
-                ypred = ypred.to_frame()
-        return ypred
+        return check_ypred(self._case,self.x,ypred)
 
     def choose_state(self, contributions):
         """
@@ -364,6 +302,7 @@ class SmartPredictor :
             return MultiDecorator(SmartState())
         else:
             return SmartState()
+
     def adapt_contributions(self, contributions):
         """
         If _case is "classification" and contributions a np.array or pd.DataFrame
@@ -397,33 +336,7 @@ class SmartPredictor :
         -------
             pandas.DataFrame or list
         """
-        if self._case == "regression" and isinstance(contributions, (np.ndarray, pd.DataFrame)) == False:
-            raise ValueError(
-                """
-                Type of contributions parameter specified is not compatible with 
-                regression model.
-                Please check model and contributions parameters.  
-                """
-            )
-        elif self._case == "classification":
-            if isinstance(contributions, list):
-                if len(contributions) != len(self._classes):
-                    raise ValueError(
-                        """
-                        Length of list of contributions parameter is not equal
-                        to the number of classes in the target.
-                        Please check model and contributions parameters.
-                        """
-                    )
-            else:
-                raise ValueError(
-                    """
-                    Type of contributions parameter specified is not compatible with 
-                    classification model.
-                    Please check model and contributions parameters.
-                    """
-                )
-
+        validate_contributions(self._case, self._classes, contributions)
         return state.validate_contributions(contributions, self.x)
 
     def check_contributions(self, state, contributions):

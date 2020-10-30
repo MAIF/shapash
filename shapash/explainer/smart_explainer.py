@@ -22,7 +22,7 @@ from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions
-from shapash.utils.check import check_model, check_label_dict
+from shapash.utils.check import check_model, check_label_dict, check_ypred, validate_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -315,33 +315,7 @@ class SmartExplainer:
         -------
             pandas.DataFrame or list
         """
-        if self._case == "regression" and isinstance(contributions, (np.ndarray, pd.DataFrame)) == False:
-            raise ValueError(
-                """
-                Type of contributions parameter specified is not compatible with 
-                regression model.
-                Please check model and contributions parameters.  
-                """
-            )
-        elif self._case == "classification":
-            if isinstance(contributions, list):
-                if len(contributions) != len(self._classes):
-                    raise ValueError(
-                        """
-                        Length of list of contributions parameter is not equal
-                        to the number of classes in the target.
-                        Please check model and contributions parameters.
-                        """
-                    )
-            else:
-                raise ValueError(
-                    """
-                    Type of contributions parameter specified is not compatible with 
-                    classification model.
-                    Please check model and contributions parameters.
-                    """
-                )
-
+        validate_contributions(self._case, self._classes, contributions)
         return self.state.validate_contributions(contributions, self.x_init)
 
     def apply_preprocessing(self, contributions, preprocessing=None):
@@ -499,20 +473,7 @@ class SmartExplainer:
         Check if y_pred is a one column dataframe of integer or float
         and if y_pred index matches x_pred index
         """
-        if self.y_pred is not None:
-            if not isinstance(self.y_pred, (pd.DataFrame, pd.Series)):
-                raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-            if not self.y_pred.index.equals(self.x_pred.index):
-                raise ValueError("x_pred and y_pred should have the same index.")
-            if isinstance(self.y_pred, pd.DataFrame):
-                if self.y_pred.shape[1] > 1:
-                    raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-                if not (self.y_pred.dtypes[0] in [np.float, np.int]):
-                    raise ValueError("y_pred must contain int or float only")
-            if isinstance(self.y_pred, pd.Series):
-                if not (self.y_pred.dtype in [np.float, np.int]):
-                    raise ValueError("y_pred must contain int or float only")
-                self.y_pred = self.y_pred.to_frame()
+        return check_ypred(self._case, self.x_pred, self.y_pred)
 
     def check_model(self):
         """
@@ -1000,6 +961,8 @@ class SmartExplainer:
             Dictionary mapping integer labels to domain names (classification - target values).
         columns_dict: dict
             Dictionary mapping integer column number to technical feature names.
+        features_types: dict
+            Dictionnary mapping features with the right types needed.
         model: model object
             model used to check the different values of target estimate predict proba
         preprocessing: category_encoders, ColumnTransformer, list or dict
