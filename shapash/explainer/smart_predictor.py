@@ -9,6 +9,7 @@ import pandas as pd
 from shapash.utils.transform import adapt_contributions
 
 
+
 class SmartPredictor :
     """
     The SmartPredictor class is an object which inherits from the

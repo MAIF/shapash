@@ -84,7 +84,7 @@ class TestCheck(unittest.TestCase):
         with self.assertRaises(Exception):
             check_preprocessing(wrong_prepro)
 
-    def test_check_model(self):
+    def test_check_model_1(self):
         """
         Unit test check model 1
         """
