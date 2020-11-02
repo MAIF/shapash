@@ -146,6 +146,8 @@ class SmartPredictor :
 
         It's possible to not specified one parameter if it has already been defined before.
         For example, if the user want to specified a ypred without reinitialize the dataset x already defined before.
+        If the user declare a new input x, all the parameters stored will be cleaned.
+
         Example
         --------
         >>> predictor.add_input(x=xtest_df)
@@ -163,17 +165,10 @@ class SmartPredictor :
         """
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
-            if hasattr(self, "x"):
-                self.contributions = None
-            self.x = x
-
-            if hasattr(self,"ypred"):
-                if not self.ypred.index.equals(self.x.index):
-                    self.ypred=None
-
+            self.data = self.clean_data(x)
             if self.preprocessing is not None:
                 try :
-                    self.x_preprocessed = self.preprocessing.transform(self.x)
+                    self.data["x_preprocessed"] = self.preprocessing.transform(self.data["x"])
                 except BaseException :
                     raise ValueError(
                         """
@@ -181,19 +176,19 @@ class SmartPredictor :
                         """
                     )
         else:
-            if not hasattr(self,"x"):
+            if not hasattr(self,"data"):
                 raise ValueError ("No dataset x specified.")
 
         ypred = self.check_ypred(ypred)
         if ypred is not None:
-            self.ypred = ypred
+            self.data["ypred"] = ypred
 
         if contributions is not None:
             adapt_contrib = self.adapt_contributions(contributions)
             state = self.choose_state(adapt_contrib)
             contributions = self.validate_contributions(state, adapt_contrib)
             self.check_contributions(state, contributions)
-            self.contributions = contributions
+            self.data["contributions"] = contributions
 
     def check_dataset_type(self, x=None):
         """
@@ -280,7 +275,7 @@ class SmartPredictor :
         ypred: pandas.DataFrame (optional)
             User-specified prediction values.
         """
-        return check_ypred(self._case,self.x,ypred)
+        return check_ypred(self.data["x"],ypred)
 
     def choose_state(self, contributions):
         """
@@ -337,13 +332,13 @@ class SmartPredictor :
             pandas.DataFrame or list
         """
         validate_contributions(self._case, self._classes, contributions)
-        return state.validate_contributions(contributions, self.x)
+        return state.validate_contributions(contributions, self.data["x"])
 
     def check_contributions(self, state, contributions):
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not state.check_contributions(contributions, self.x):
+        if not state.check_contributions(contributions, self.data["x"]):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -351,3 +346,22 @@ class SmartPredictor :
                 Please check x, contributions and preprocessing arguments.
                 """
             )
+
+    def clean_data(self, x):
+        """
+        Clean data stored if x is defined and not None.
+
+        Parameters
+        ----------
+        x: pandas.DataFrame
+            Raw dataset used by the model to perform the prediction (not preprocessed).
+
+        Returns
+        -------
+            dict of data stored
+        """
+        return {"x" : x,
+                "ypred" : None,
+                "contributions" : None,
+                "x_preprocessed": None
+                }

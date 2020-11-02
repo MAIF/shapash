@@ -61,7 +61,7 @@ def check_model(model):
             "No method predict in the specified model. Please, check model parameter"
         )
 
-def check_label_dict(label_dict, case, classes):
+def check_label_dict(label_dict, case, classes=None):
     """
     Check if label_dict and model _classes match
 
@@ -112,7 +112,7 @@ def check_mask_params(mask_params):
             """
             )
 
-def check_ypred(case=None, x=None,  ypred=None):
+def check_ypred(x=None,  ypred=None):
     """
     Check that ypred given has the right shape and expected value.
 
@@ -120,8 +120,6 @@ def check_ypred(case=None, x=None,  ypred=None):
     ----------
     ypred: pandas.DataFrame (optional)
         User-specified prediction values.
-    case: string
-        String that informs if the model used is for classification or regression problem.
     x: pandas.DataFrame
         Dataset used by the model to perform the prediction (preprocessed or not).
     """

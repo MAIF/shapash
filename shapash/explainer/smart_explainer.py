@@ -474,7 +474,7 @@ class SmartExplainer:
         and if y_pred index matches x_pred index
         """
         params_checkypred=[]
-        attributs_explainer=["_case", "x_pred", "y_pred"]
+        attributs_explainer=["x_pred", "y_pred"]
 
         for attribut in attributs_explainer:
             if hasattr(self, attribut):
