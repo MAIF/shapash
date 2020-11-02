@@ -80,7 +80,7 @@ def shap_contributions(model, x_df, explainer=None):
             explainer = shap.KernelExplainer(model.predict, x_df)
             print("Backend: Shap KernelExplainer")
 
-    if not (str(type(model)) in i for i in [simple_tree_model,catboost_model,linear_model,svm_model]):
+    if (str(type(model)) not in [i for i in sum((simple_tree_model,catboost_model,linear_model,svm_model),())]):
         raise ValueError(
             """
             model not supported by shapash, please compute contributions
