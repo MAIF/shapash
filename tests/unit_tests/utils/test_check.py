@@ -47,6 +47,11 @@ class TestCheck(unittest.TestCase):
         input_dict2['mapping'] = pd.Series(data=['G', 'H', np.nan], index=['G', 'H', 'missing'])
         input_dict2['data_type'] = 'object'
 
+        input_dict = dict()
+        input_dict['col'] = 'state'
+        input_dict['mapping'] = pd.Series(data=['US', 'FR-1', 'FR-2'], index=['US', 'FR', 'FR'])
+        input_dict['data_type'] = 'object'
+
         input_dict3 = dict()
         input_dict3['col'] = 'Ordinal2'
         input_dict3['mapping'] = pd.Series(data=['K', 'L', np.nan], index=['K', 'L', 'missing'])
@@ -76,7 +81,7 @@ class TestCheck(unittest.TestCase):
         check_preprocessing(enc)
         check_preprocessing(None)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             check_preprocessing(wrong_prepro)
 
     def test_check_model(self):
@@ -180,7 +185,8 @@ class TestCheck(unittest.TestCase):
             data=np.array(['1', 0]),
             columns=['Y']
         )
-        self.assertRaises(ValueError, check_ypred(x_pred, y_pred))
+        with self.assertRaises(ValueError):
+            check_ypred(x_pred, y_pred)
 
     def test_check_ypred_3(self):
         """
@@ -194,14 +200,16 @@ class TestCheck(unittest.TestCase):
             data=np.array([0]),
             columns=['Y']
         )
-        self.assertRaises(ValueError, check_ypred(x_pred, y_pred))
+        with self.assertRaises(ValueError):
+            check_ypred(x_pred, y_pred)
 
     def test_check_y_pred_4(self):
         """
         Unit test check y pred 4
         """
         y_pred = [0, 1]
-        self.assertRaises(ValueError, check_ypred(ypred=y_pred))
+        with self.assertRaises(ValueError):
+            check_ypred(ypred=y_pred)
 
     def test_check_y_pred_5(self):
         """
@@ -214,7 +222,8 @@ class TestCheck(unittest.TestCase):
         y_pred = pd.Series(
             data=np.array(['0'])
         )
-        self.assertRaises(ValueError, check_ypred(x_pred, y_pred))
+        with self.assertRaises(ValueError):
+            check_ypred(x_pred, y_pred)
 
     def test_validate_contributions_1(self):
         """
@@ -238,7 +247,7 @@ class TestCheck(unittest.TestCase):
         assert isinstance(contributions_1, list)
 
         validate_contributions("regression", None, contributions_2)
-        assert isinstance(contributions_1, np.ndarray)
+        assert isinstance(contributions_2, np.ndarray)
 
         with self.assertRaises(ValueError):
             validate_contributions(_case, _classes, contributions_2)

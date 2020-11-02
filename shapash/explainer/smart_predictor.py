@@ -6,7 +6,6 @@ from shapash.utils.check import check_label_dict, check_mask_params, check_ypred
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
-import numpy as np
 from shapash.utils.transform import adapt_contributions
 
 

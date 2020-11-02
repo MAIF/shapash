@@ -19,11 +19,7 @@ def check_preprocessing(preprocessing=None):
     if preprocessing is not None:
         list_preprocessing = preprocessing_tolist(preprocessing)
         use_ct, use_ce = check_supported_inverse(list_preprocessing)
-        if not use_ct and not use_ce:
-            raise ValueError(
-                """
-                preprocessing isn't supported.  
-                """)
+        return use_ct, use_ce
 
 def check_model(model):
     """
