@@ -656,7 +656,6 @@ class TestSmartPredictor(unittest.TestCase):
         model._classes = np.array([1, 2])
         model.predict = types.MethodType(self.predict, model)
         model.predict_proba = types.MethodType(self.predict_proba, model)
-
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, features_types, label_dict)
 
