@@ -23,6 +23,26 @@ class TestSmartPredictor(unittest.TestCase):
     """
     Unit test Smart Predictor class
     """
+    def predict_proba(self, arg1, arg2):
+        """
+        predict_proba method
+        """
+        matrx = np.array(
+            [[0.2, 0.8],
+             [0.3, 0.7],
+             [0.4, 0.6]]
+        )
+        return matrx
+
+    def predict(self, arg1, arg2):
+        """
+        predict method
+        """
+        matrx = np.array(
+            [12, 3, 7]
+        )
+        return matrx
+
     def test_init_1(self):
         """
         Test init smart predictor
@@ -230,13 +250,15 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, features_types, label_dict,
                                      encoder_fitted, postprocessing)
+        # predictor_1.add_input()
 
         contributions = [
             np.array([[2, 1], [8, 4]]),
             np.array([[5, 5], [0, 0]])
         ]
         state = predictor_1.choose_state(contributions)
-        predictor_1.x = pd.DataFrame(
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data["x"] = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -269,25 +291,23 @@ class TestSmartPredictor(unittest.TestCase):
         df['x2'] = ["S", "M", "S", "D", "M"]
         df = df.set_index('id')
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        columns_dict = {0: "x1", 2: "x2"}
+        encoder_fitted = encoder.fit(df[["x1", "x2"]])
+        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
             "rule": {"S": "single", "M": "married", "D": "divorced"}}}
         features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
-        ypred = pd.DataFrame({"y": [1, 0], "id": [0, 1]}).set_index("id")
         shap_values = clf.get_feature_importance(Pool(df_encoded), type="ShapValues")
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+                                     columns_dict, features_types, label_dict)
 
-        predictor_1.add_input(x = df[["x1","x2"]], contributions = shap_values[:,:-1], ypred=ypred)
+        predictor_1.add_input(x=df[["x1", "x2"]], contributions=shap_values[:, :-1], ypred=df["y"])
 
         adapt_contrib = predictor_1.adapt_contributions(shap_values[:, :-1])
         state = predictor_1.choose_state(adapt_contrib)
@@ -307,20 +327,21 @@ class TestSmartPredictor(unittest.TestCase):
         df['x2'] = ["S", "M", "S", "D", "M"]
         df = df.set_index('id')
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        columns_dict = {0: "x1", 2: "x2"}
+        encoder_fitted = encoder.fit(df[["x1", "x2"]])
+        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
             "rule": {"S": "single", "M": "married", "D": "divorced"}}}
         features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, features_types, label_dict,
                                      encoder_fitted, postprocessing)
+
         model = lambda: None
         model.predict = types.MethodType(self.predict, model)
 
@@ -339,16 +360,16 @@ class TestSmartPredictor(unittest.TestCase):
         df['x2'] = ["S", "M", "S", "D", "M"]
         df = df.set_index('id')
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        columns_dict = {0: "x1", 2: "x2"}
+        encoder_fitted = encoder.fit(df[["x1", "x2"]])
+        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
             "rule": {"S": "single", "M": "married", "D": "divorced"}}}
         features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, features_types, label_dict,
@@ -379,7 +400,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i:features for i,features in enumerate(train.columns)}
         features_types = {features: str(train[features].dtypes) for features in train.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -520,7 +541,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i: features for i, features in enumerate(train.columns)}
         features_types = {features: str(train[features].dtypes) for features in train.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -569,7 +590,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i: features for i, features in enumerate(train.columns)}
         features_types = {features: str(train[features].dtypes) for features in train.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -578,7 +599,7 @@ class TestSmartPredictor(unittest.TestCase):
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, features_types, label_dict)
-
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = train
         y_pred = None
         predictor_1.check_ypred(ypred=y_pred)
@@ -595,7 +616,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -611,7 +632,7 @@ class TestSmartPredictor(unittest.TestCase):
         )
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, features_types, label_dict)
-
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = x_pred
 
         with self.assertRaises(ValueError):
@@ -629,7 +650,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -639,6 +660,7 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, features_types, label_dict)
 
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = x_pred
         y_pred = pd.DataFrame(
             data=np.array([0]),
@@ -659,7 +681,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -668,13 +690,13 @@ class TestSmartPredictor(unittest.TestCase):
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, features_types, label_dict)
-        predictor_1.data["x"] = None
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
 
         y_pred = [0, 1]
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(ypred=y_pred)
 
-    def test_check_y_pred_5(self):
+    def test_check_ypred_5(self):
         """
         Unit test check y pred 5
         """
@@ -686,7 +708,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {}
         columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = {}
+        label_dict = None
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -695,6 +717,7 @@ class TestSmartPredictor(unittest.TestCase):
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, features_types, label_dict)
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = x_pred
 
         y_pred = pd.Series(
