@@ -235,7 +235,9 @@ class SmartPredictor :
                     raise ValueError("""
                     All features from dataset x must be in the features_types dict initialized.
                     """)
-                x = pd.DataFrame.from_dict(x, orient="index", dtype=self.features_types).T
+                x = pd.DataFrame.from_dict(x, orient="index").T
+                for feature, type in self.features_types.items():
+                    x[feature] = x[feature].astype(type)
             except BaseException:
                 raise ValueError(
                     """
