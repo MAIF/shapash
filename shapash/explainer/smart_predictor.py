@@ -236,8 +236,8 @@ class SmartPredictor :
                     All features from dataset x must be in the features_types dict initialized.
                     """)
                 x = pd.DataFrame.from_dict(x, orient="index").T
-                for feature, type in self.features_types.items():
-                    x[feature] = x[feature].astype(type)
+                for feature, type_feature in self.features_types.items():
+                    x[feature] = x[feature].astype(type_feature)
             except BaseException:
                 raise ValueError(
                     """
