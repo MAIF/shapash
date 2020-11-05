@@ -444,19 +444,13 @@ class SmartPredictor :
                 x must be specified in an add_input method to apply detail_contributions.
                 """
             )
-        elif self.data["ypred"] is None:
+        if self.data["ypred"] is None:
             raise ValueError(
             """
             ypred must be specified in an add_input method to apply detail_contributions.
             """
             )
-        elif not all([element in self._classes for element in self.data["ypred"]]):
-            raise ValueError(
-            """
-            ypred must only contain values that matches with label from the model.
-            """
-            )
-        elif self.data["contributions"] is None:
+        if self.data["contributions"] is None:
             contributions = shap_contributions(self.model,
                                                self.data["x_preprocessed"],
                                                self.explainer)
@@ -469,13 +463,22 @@ class SmartPredictor :
                                                                        )
             self.check_contributions(state, contributions)
             self.data["contributions"] = contributions
-        elif self._case == "regression":
+
+        if self._case == "regression":
             self.data["ypred"].columns = ["pred"]
             contrib_final = self.data["contributions"].merge(self.data["ypred"],
                                                              how="left",
                                                              left_index=True,
                                                              right_inde=True)
         else:
+            test_y = self.data["ypred"].copy()
+            if self._case == "classification" and \
+                    test_y[test_y.pred.isin(self._classes)].shape[0] != self.data["x"].shape[0]:
+                raise ValueError(
+                    """
+                    ypred must only contain values that matches with label from the model.
+                    """
+                )
             for label, contrib in enumerate(self.data["contributions"]):
                 contrib["label"] = self._classes[label]
                 contrib["index"] = contrib.index
