@@ -1030,3 +1030,4 @@ class SmartExplainer:
                 params_checkypred.append(self.__dict__[attribut])
             else:
                 params_checkypred.append(None)
+        return params_checkypred
