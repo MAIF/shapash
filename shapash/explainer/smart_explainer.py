@@ -22,7 +22,7 @@ from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
-from shapash.utils.check import check_model, check_label_dict, check_ypred, validate_contributions
+from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -320,7 +320,7 @@ class SmartExplainer:
         -------
             pandas.DataFrame or list
         """
-        validate_contributions(self._case, self._classes, contributions)
+        check_contribution_object(self._case, self._classes, contributions)
         return self.state.validate_contributions(contributions, self.x_init)
 
     def apply_preprocessing(self, contributions, preprocessing=None):

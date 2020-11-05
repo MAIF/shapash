@@ -108,7 +108,7 @@ def check_mask_params(mask_params):
             """
             )
 
-def check_ypred(x=None,  ypred=None):
+def check_ypred(x=None, ypred=None):
     """
     Check that ypred given has the right shape and expected value.
 
@@ -123,7 +123,7 @@ def check_ypred(x=None,  ypred=None):
         if not isinstance(ypred, (pd.DataFrame, pd.Series)):
             raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
         if not ypred.index.equals(x.index):
-            raise ValueError("x_pred and y_pred should have the same index.")
+            raise ValueError("x and y_pred should have the same index.")
         if isinstance(ypred, pd.DataFrame):
             if ypred.shape[1] > 1:
                 raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
@@ -135,7 +135,7 @@ def check_ypred(x=None,  ypred=None):
             ypred = ypred.to_frame()
     return ypred
 
-def validate_contributions(case, classes, contributions):
+def check_contribution_object(case, classes, contributions):
     """
     Check len of list if _case is "classification"
     Check contributions object type if _case is "regression"

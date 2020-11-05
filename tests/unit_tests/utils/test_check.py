@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
-                                check_mask_params, check_ypred, validate_contributions
+                                check_mask_params, check_ypred, check_contribution_object
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -225,9 +225,9 @@ class TestCheck(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_ypred(x_pred, y_pred)
 
-    def test_validate_contributions_1(self):
+    def test_check_contribution_object_1(self):
         """
-        Unit test validate contributions 1
+        Unit test check_contribution_object 1
         """
         contributions_1 = [
             np.array([[2, 1], [8, 4]]),
@@ -242,15 +242,15 @@ class TestCheck(unittest.TestCase):
         _case = "classification"
         _classes = list(model._classes)
 
-        validate_contributions(_case, _classes, contributions_1)
+        check_contribution_object(_case, _classes, contributions_1)
         assert len(contributions_1) == len(_classes)
         assert isinstance(contributions_1, list)
 
-        validate_contributions("regression", None, contributions_2)
+        check_contribution_object("regression", None, contributions_2)
         assert isinstance(contributions_2, np.ndarray)
 
         with self.assertRaises(ValueError):
-            validate_contributions(_case, _classes, contributions_2)
+            check_contribution_object(_case, _classes, contributions_2)
             check_mask_params("regression", None, contributions_1)
 
 

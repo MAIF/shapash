@@ -2,7 +2,7 @@
 Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
-from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, validate_contributions
+from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -179,9 +179,8 @@ class SmartPredictor :
             if not hasattr(self,"data"):
                 raise ValueError ("No dataset x specified.")
 
-        ypred = self.check_ypred(ypred)
         if ypred is not None:
-            self.data["ypred"] = ypred
+            self.data["ypred"] = self.check_ypred(ypred)
 
         if contributions is not None:
             adapt_contrib = self.adapt_contributions(contributions)
@@ -333,7 +332,7 @@ class SmartPredictor :
         -------
             pandas.DataFrame or list
         """
-        validate_contributions(self._case, self._classes, contributions)
+        check_contribution_object(self._case, self._classes, contributions)
         return state.validate_contributions(contributions, self.data["x"])
 
     def check_contributions(self, state, contributions):
