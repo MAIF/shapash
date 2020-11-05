@@ -847,6 +847,59 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
+    def test_detail_contributions_2(self):
+        """
+        Unit test 2 of detail_contributions method.
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(30, 150, df.shape[0])
+        df = df.set_index('id')
+
+        columns_dict = {0: "x1", 2: "x2"}
+        label_dict = {0: "Yes", 1: "No"}
+        features_dict = {"x1": "age", "x2": "weight"}
+
+        features_types = {features: str(df[features].dtypes) for features in df.columns}
+
+        clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, features_types, label_dict)
+
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
+        predictor_1.data["x"] = df[["x1", "x2"]]
+        predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+
+        contributions = predictor_1.detail_contributions()
+
+        assert contributions.shape[0] == predictor_1.data["x"].shape[0]
+        assert all(contributions.index == predictor_1.data["x"].index)
+        assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 1
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, features_types, label_dict)
+
+        df['false_y'] = [2, 2, 1, 1, 1]
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
+        predictor_1.data["x"] = df[["x1", "x2"]]
+        predictor_1.data["ypred"] = pd.DataFrame(df["false_y"])
+
+        with self.assertRaises(ValueError):
+            contributions = predictor_1.detail_contributions()
+
+        predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+        contributions = predictor_1.detail_contributions()
+
+        assert contributions.shape[0] == predictor_1.data["x"].shape[0]
+        assert all(contributions.index == predictor_1.data["x"].index)
+        assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 1
+
 
 
 

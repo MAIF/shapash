@@ -471,6 +471,7 @@ class SmartPredictor :
                                                              right_index=True)
         else:
             test_y = self.data["ypred"].copy()
+            test_y.columns = ["pred"]
             if self._case == "classification" and \
                     test_y[test_y.pred.isin(self._classes)].shape[0] != self.data["x"].shape[0]:
                 raise ValueError(
@@ -496,6 +497,7 @@ class SmartPredictor :
 
             contrib_final = contrib_final.drop(columns=["label"])
             contrib_final = contrib_final.set_index('index')
+            contrib_final = contrib_final.reindex(self.data["x"].index)
 
         return contrib_final
 
