@@ -2,7 +2,9 @@
 Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
-from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
+from shapash.utils.check import check_label_dict, check_mask_params,\
+                                check_ypred, check_contribution_object
+from shapash.utils.shap_backend import shap_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -137,6 +139,7 @@ class SmartPredictor :
         Check if mask_params given respect the expected format.
         """
         return check_mask_params(self.mask_params)
+
 
     def add_input(self, x=None, ypred=None, contributions=None):
         """
@@ -366,3 +369,156 @@ class SmartPredictor :
                 "contributions" : None,
                 "x_preprocessed": None
                 }
+
+    def predict_proba(self):
+        """
+        The predict_proba compute the proba values for each x row defined in add_input
+
+        Returns
+        -------
+        pandas.DataFrame
+            data with all probabilities if there is no ypred data or data with ypred and the associated probability.
+        """
+        if self._case == "regression":
+            raise ValueError("predict_proba can't be applied for a regression problem.")
+        else:
+            if not hasattr(self, "data"):
+                raise ValueError("add_input method must be called at least once.")
+            elif self.data["x"] is not None:
+                if self.preprocessing is None:
+                    prediction = pd.DataFrame(self.model.predict_proba(self.data["x"]),
+                                              columns=["prob_" + str(label)
+                                                       for label in self._classes],
+                                              index=self.data["x"].index)
+                else:
+                    prediction = pd.DataFrame(self.model.predict_proba(self.data["x_preprocessed"]),
+                                              columns=["prob_" + str(label)
+                                                       for label in self._classes],
+                                              index=self.data["x_preprocessed"].index)
+            else:
+                raise ValueError(
+                    """
+                    x must be specified in an add_input to apply predict_proba method.
+                    """
+                )
+
+        if self.data["ypred"] is None:
+            data_pred = self.data["x"].merge(prediction, how="left",
+                                             left_index=True, right_index=True)
+        else:
+            self.data["ypred"].columns = ["pred"]
+            test_y = self.data["ypred"].copy()
+            if test_y[test_y.pred.isin(self._classes)].shape[0] != self.data["x"].shape[0]:
+                raise ValueError(
+                    """
+                    ypred must only contain values that matches with label from the model.
+                    """
+                )
+            else:
+                prediction = prediction.merge(self.data["ypred"], how="left",
+                                              left_index=True, right_index=True)
+                prediction["prob_pred"] = prediction.apply(lambda row: row["prob_" + str(int(row["pred"]))]
+                                                           , axis=1)
+                data_pred = self.data["x"].merge(prediction[["pred", "prob_pred"]],
+                                                 how="left",
+                                                 left_index=True,
+                                                 right_index=True)
+
+        return data_pred
+
+    def detail_contributions(self):
+        """
+        The detail_contributions compute the contributions associated to data ypred specified.
+        Need a data ypred specified in an add_input to display detail_contributions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Data with ypred and the associated contributions.
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+        if self.data["x"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply detail_contributions.
+                """
+            )
+        elif self.data["ypred"] is None:
+            raise ValueError(
+            """
+            ypred must be specified in an add_input method to apply detail_contributions.
+            """
+            )
+        elif not all([element in self._classes for element in self.data["ypred"]]):
+            raise ValueError(
+            """
+            ypred must only contain values that matches with label from the model.
+            """
+            )
+        elif self.data["contributions"] is None:
+            contributions = shap_contributions(self.model,
+                                               self.data["x_preprocessed"],
+                                               self.explainer)
+            adapt_contrib = self.adapt_contributions(contributions)
+            state = self.choose_state(adapt_contrib)
+            contributions = self.validate_contributions(state, adapt_contrib)
+            contributions = self.apply_preprocessing_for_contributions(contributions,
+                                                                       state,
+                                                                       self.preprocessing
+                                                                       )
+            self.check_contributions(state, contributions)
+            self.data["contributions"] = contributions
+        elif self._case == "regression":
+            self.data["ypred"].columns = ["pred"]
+            contrib_final = self.data["contributions"].merge(self.data["ypred"],
+                                                             how="left",
+                                                             left_index=True,
+                                                             right_inde=True)
+        else:
+            for label, contrib in enumerate(self.data["contributions"]):
+                contrib["label"] = self._classes[label]
+                contrib["index"] = contrib.index
+
+            ypred = self.data["ypred"].copy()
+            ypred.columns = ["pred"]
+            ypred["index"] = ypred.index
+            contrib_final = pd.DataFrame()
+
+            for contrib in self.data["contributions"]:
+                contrib_label = ypred.merge(contrib, how="left",
+                                            left_on=["index", "pred"],
+                                            right_on=["index", "label"])
+                contrib_label = contrib_label.dropna(subset=['label'])
+                contrib_final = contrib_final.append(contrib_label)
+
+            contrib_final = contrib_final.drop(columns=["label"])
+            contrib_final = contrib_final.set_index('index')
+
+        return contrib_final
+
+    def apply_preprocessing_for_contributions(self, contributions, state, preprocessing=None):
+        """
+        Reconstruct contributions for original features, taken into account a preprocessing.
+
+        Parameters
+        ----------
+        contributions : object
+            Local contributions, or list of local contributions.
+        state: SmartState or SmartMultiState
+            Implementation adapted to the type of problem (multiclass or not)
+        preprocessing : object
+            Encoder taken from scikit-learn or category_encoders
+
+        Returns
+        -------
+        object
+            Reconstructed local contributions in the original space. Can be a list.
+        """
+        if preprocessing:
+            return state.inverse_transform_contributions(
+                contributions,
+                preprocessing
+            )
+        else:
+            return contributions

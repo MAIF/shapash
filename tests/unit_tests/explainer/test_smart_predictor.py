@@ -725,6 +725,83 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(y_pred)
 
+    def test_predict_proba_1(self):
+        """
+        Unit test of predict_proba method.
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = ["S", "M", "S", "D", "M"]
+        df = df.set_index('id')
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder_fitted = encoder.fit(df)
+        df_encoded = encoder_fitted.transform(df)
+        clf = cb.CatBoostRegressor(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+
+        columns_dict = {0: "x1", 2: "x2"}
+        label_dict = {0: "Yes", 1: "No"}
+
+        postprocessing = {"x2": {
+            "type": "transcoding",
+            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
+        features_dict = {"x1": "age", "x2": "family_situation"}
+
+        features_types = {features: str(df[features].dtypes) for features in df.columns}
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, features_types, label_dict,
+                                     encoder_fitted, postprocessing)
+
+        with self.assertRaises(ValueError):
+            predictor_1.predict_proba()
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, features_types, label_dict,
+                                     encoder_fitted, postprocessing)
+
+        with self.assertRaises(ValueError):
+            predictor_1.predict_proba()
+
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+
+        with self.assertRaises(ValueError):
+            predictor_1.predict_proba()
+
+    def test_predict_proba_2(self):
+        """
+        Unit test of predict_proba method.
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(30, 150, df.shape[0])
+        df = df.set_index('id')
+
+        columns_dict = {0: "x1", 2: "x2"}
+        label_dict = {0: "Yes", 1: "No"}
+        features_dict = {"x1": "age", "x2": "weight"}
+
+        features_types = {features: str(df[features].dtypes) for features in df.columns}
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, features_types, label_dict)
+
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data["x"] = df[["x1", "x2"]]
+
+        result = predictor_1.predict_proba()
+        assert result.shape[0] == predictor_1.data["x"].shape[0]
+        assert result.shape[1] == predictor_1.data["x"].shape[1] + len(predictor_1._classes)
+
+        predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+        result2 = predictor_1.predict_proba()
+
+        assert result2.shape[0] == predictor_1.data["x"].shape[0]
+        assert result2.shape[1] == predictor_1.data["x"].shape[1] + 2
+        assert all([predict_proba_col in result2.columns for predict_proba_col in ["pred", "prob_pred"]])
 
 
 
