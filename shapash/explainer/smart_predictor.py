@@ -68,7 +68,7 @@ class SmartPredictor :
     """
 
     def __init__(self, features_dict, model,
-                 columns_dict, explainer=None, label_dict=None,
+                 columns_dict, explainer, label_dict=None,
                  preprocessing=None, postprocessing=None,
                  mask_params = {"features_to_hide": None,
                                 "threshold": None,

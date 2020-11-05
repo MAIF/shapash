@@ -186,8 +186,6 @@ class SmartExplainer:
         >>> xpl.compile(x=xtest_df,model=my_model)
 
         """
-        if explainer is not None and contributions is not None:
-            raise ValueError("You have to specify just one of these arguments: explainer, contributions")
 
         self.x_init = x
         self.x_pred = inverse_transform(self.x_init, preprocessing)
@@ -197,6 +195,8 @@ class SmartExplainer:
         self.check_label_dict()
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
+        if explainer is not None and contributions is not None:
+            raise ValueError("You have to specify just one of these arguments: explainer, contributions")
         check_explainer(explainer)
         if contributions is None:
             contributions, explainer = shap_contributions(model, self.x_init, explainer)
@@ -204,8 +204,8 @@ class SmartExplainer:
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
         self.check_contributions()
-        self.explainer = explainer
         check_explainer(explainer)
+        self.explainer = explainer
         self.y_pred = y_pred
         self.check_y_pred()
         self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
