@@ -186,6 +186,9 @@ class SmartExplainer:
         >>> xpl.compile(x=xtest_df,model=my_model)
 
         """
+        if explainer is not None and contributions is not None:
+            raise ValueError("You have to specify just one of these arguments: explainer, contributions")
+
         self.x_init = x
         self.x_pred = inverse_transform(self.x_init, preprocessing)
         self.preprocessing = preprocessing
@@ -195,13 +198,14 @@ class SmartExplainer:
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
         check_explainer(explainer)
-        self.explainer = explainer
         if contributions is None:
-            contributions = shap_contributions(model, self.x_init, explainer)
+            contributions, explainer = shap_contributions(model, self.x_init, explainer)
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
         self.check_contributions()
+        self.explainer = explainer
+        check_explainer(explainer)
         self.y_pred = y_pred
         self.check_y_pred()
         self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
@@ -1009,6 +1013,8 @@ class SmartExplainer:
             Dictionary mapping integer column number to technical feature names.
         model: model object
             model used to check the different values of target estimate predict proba
+        explainer : explainer object
+            explainer must be a shap object
         preprocessing: category_encoders, ColumnTransformer, list or dict
             The processing apply to the original data.
         postprocessing: dict
@@ -1020,18 +1026,23 @@ class SmartExplainer:
         mask_params: dict (optional)
             Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
         """
-        listattributes = ["features_dict", "model", "columns_dict", "label_dict", "preprocessing", "postprocessing"]
-        params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
+        if self.explainer is None:
+            raise ValueError("""SmartPredictor need an explainer, please compile without contributions or specify  the
+                                explainer used. Make change in compile() step""")
+        else:
+            listattributes = ["features_dict", "model", "columns_dict", "explainer", "label_dict", "preprocessing",
+                              "postprocessing"]
+            params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
-        if hasattr(self,"mask_params"):
-            params_smartpredictor.append(self.mask_params)
-        else :
-            mask_params = {
-                "features_to_hide": None,
-                "threshold": None,
-                "positive": None,
-                "max_contrib": None
-            }
-            params_smartpredictor.append(mask_params)
+            if hasattr(self,"mask_params"):
+                params_smartpredictor.append(self.mask_params)
+            else:
+                mask_params = {
+                    "features_to_hide": None,
+                    "threshold": None,
+                    "positive": None,
+                    "max_contrib": None
+                }
+                params_smartpredictor.append(mask_params)
 
         return SmartPredictor(*params_smartpredictor)

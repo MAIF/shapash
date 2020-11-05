@@ -3,6 +3,7 @@ Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
 from shapash.utils.check import check_label_dict, check_mask_params
+from shapash.utils.shap_backend import check_explainer
 
 class SmartPredictor :
     """
@@ -34,6 +35,8 @@ class SmartPredictor :
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
     model: model object
         model used to check the different values of target estimate predict_proba
+    explainer : explainer object
+            explainer must be a shap object
     preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
         The processing apply to the original data.
     postprocessing: dict (optional)
@@ -51,6 +54,7 @@ class SmartPredictor :
     --------
     >>> predictor = SmartPredictor(features_dict,
                                     model,
+                                    explainer,
                                     columns_dict,
                                     label_dict,
                                     preprocessing,
@@ -64,7 +68,7 @@ class SmartPredictor :
     """
 
     def __init__(self, features_dict, model,
-                 columns_dict, label_dict=None,
+                 columns_dict, explainer=None, label_dict=None,
                  preprocessing=None, postprocessing=None,
                  mask_params = {"features_to_hide": None,
                                 "threshold": None,
@@ -89,6 +93,8 @@ class SmartPredictor :
 
         self.model = model
         self._case, self._classes = self.check_model()
+        check_explainer(explainer)
+        self.explainer = explainer
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict

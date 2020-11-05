@@ -1161,6 +1161,7 @@ class TestSmartExplainer(unittest.TestCase):
         predictor_2 = xpl.to_smartpredictor()
 
         assert hasattr(predictor_1, 'model')
+        assert hasattr(predictor_1, 'explainer')
         assert hasattr(predictor_1, 'features_dict')
         assert hasattr(predictor_1, 'label_dict')
         assert hasattr(predictor_1, '_case')
@@ -1172,6 +1173,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(predictor_2, 'mask_params')
 
         assert predictor_1.model == xpl.model
+        assert predictor_1.explainer == xpl.explainer
         assert predictor_1.features_dict == xpl.features_dict
         assert predictor_1.label_dict == xpl.label_dict
         assert predictor_1._case == xpl._case

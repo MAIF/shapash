@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import catboost as cb
 import category_encoders as ce
+import shap
 
 
 class TestSmartPredictor(unittest.TestCase):
@@ -27,6 +28,7 @@ class TestSmartPredictor(unittest.TestCase):
         encoder_fitted = encoder.fit(df)
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        clf_explainer = shap.TreeExplainer(clf)
 
         columns_dict = {0:"x1",2:"x2"}
         label_dict = {0:"Yes",1:"No"}
@@ -37,7 +39,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict={"x1": "age", "x2": "family_situation"}
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                 columns_dict, label_dict,
+                 columns_dict, clf_explainer,label_dict,
                  encoder_fitted,postprocessing)
 
         mask_params = {
@@ -48,11 +50,12 @@ class TestSmartPredictor(unittest.TestCase):
         }
 
         predictor_2 = SmartPredictor(features_dict, clf,
-                                     columns_dict, label_dict,
+                                     columns_dict, clf_explainer, label_dict,
                                      encoder_fitted, postprocessing,
                                      mask_params)
 
         assert hasattr(predictor_1, 'model')
+        assert hasattr(predictor_1, 'explainer')
         assert hasattr(predictor_1, 'features_dict')
         assert hasattr(predictor_1, 'label_dict')
         assert hasattr(predictor_1, '_case')
@@ -64,6 +67,7 @@ class TestSmartPredictor(unittest.TestCase):
         assert hasattr(predictor_2, 'mask_params')
 
         assert predictor_1.model == clf
+        assert predictor_1.explainer == clf_explainer
         assert predictor_1.features_dict == features_dict
         assert predictor_1.label_dict == label_dict
         assert predictor_1._case == "classification"

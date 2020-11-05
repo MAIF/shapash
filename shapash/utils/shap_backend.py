@@ -90,7 +90,7 @@ def shap_contributions(model, x_df, explainer=None):
 
     contributions = explainer.shap_values(x_df)
 
-    return contributions
+    return contributions, explainer
 
 def check_explainer(explainer):
     """
