@@ -1003,7 +1003,7 @@ class SmartExplainer:
 
     def check_x_y_attributes(self, x, y):
         """
-        Check if x and y are attributs of the SmartExplainer
+        Check if x and y are attributes of the SmartExplainer
 
         Parameters
         ----------
