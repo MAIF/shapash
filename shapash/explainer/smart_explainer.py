@@ -478,15 +478,7 @@ class SmartExplainer:
         Check if y_pred is a one column dataframe of integer or float
         and if y_pred index matches x_pred index
         """
-        params_checkypred=[]
-        attributs_explainer=["x_pred", "y_pred"]
-
-        for attribut in attributs_explainer:
-            if hasattr(self, attribut):
-                params_checkypred.append(self.__dict__[attribut])
-            else:
-                params_checkypred.append(None)
-
+        params_checkypred = self.check_x_y_attributes("x_pred", "y_pred")
         return check_ypred(*params_checkypred)
 
     def check_model(self):
@@ -501,7 +493,6 @@ class SmartExplainer:
         """
         _case, _classes = check_model(self.model)
         return _case, _classes
-
 
     def check_label_dict(self):
         """
@@ -1009,3 +1000,34 @@ class SmartExplainer:
             params_smartpredictor.append(mask_params)
 
         return SmartPredictor(*params_smartpredictor)
+
+    def check_x_y_attributes(self, x, y):
+        """
+        Check if x and y are attributes of the SmartExplainer
+
+        Parameters
+        ----------
+        x string
+            label of the attribute x
+        y string
+            label of the attribute y
+
+        Returns
+        -------
+        list of object detained by attributes x and y.
+        """
+        if not (isinstance(x, str) and isinstance(y, str)):
+            raise ValueError(
+                """
+                x and y must be strings.
+                """
+            )
+        params_checkypred = []
+        attributs_explainer = [x, y]
+
+        for attribut in attributs_explainer:
+            if hasattr(self, attribut):
+                params_checkypred.append(self.__dict__[attribut])
+            else:
+                params_checkypred.append(None)
+        return params_checkypred

@@ -175,3 +175,4 @@ def check_contribution_object(case, classes, contributions):
                 Please check model and contributions parameters.
                 """
             )
+
