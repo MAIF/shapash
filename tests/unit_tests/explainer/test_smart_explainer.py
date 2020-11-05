@@ -761,6 +761,7 @@ class TestSmartExplainer(unittest.TestCase):
         """
         xpl = SmartExplainer()
         xpl.y_pred = None
+        xpl.x_pred = None
         xpl.check_y_pred()
 
     def test_check_y_pred_2(self):
@@ -799,7 +800,7 @@ class TestSmartExplainer(unittest.TestCase):
         """
         xpl = SmartExplainer()
         xpl.y_pred = [0, 1]
-        self.assertRaises(ValueError, xpl.check_y_pred)
+        self.assertRaises(AttributeError, xpl.check_y_pred)
 
     def test_check_y_pred_5(self):
         """
