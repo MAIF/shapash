@@ -276,6 +276,8 @@ class SmartPredictor :
         ypred: pandas.DataFrame (optional)
             User-specified prediction values.
         """
+        if self.data["x"] is None:
+            raise ValueError("No dataset x specified.")
         return check_ypred(self.data["x"],ypred)
 
     def choose_state(self, contributions):
