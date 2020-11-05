@@ -454,8 +454,7 @@ class SmartPredictor :
             )
         if self.data["contributions"] is None:
             contributions = shap_contributions(self.model,
-                                               self.data["x_preprocessed"],
-                                               self.explainer)
+                                               self.data["x_preprocessed"])
             adapt_contrib = self.adapt_contributions(contributions)
             state = self.choose_state(adapt_contrib)
             contributions = self.validate_contributions(state, adapt_contrib)
@@ -471,7 +470,7 @@ class SmartPredictor :
             contrib_final = self.data["contributions"].merge(self.data["ypred"],
                                                              how="left",
                                                              left_index=True,
-                                                             right_inde=True)
+                                                             right_index=True)
         else:
             test_y = self.data["ypred"].copy()
             if self._case == "classification" and \
