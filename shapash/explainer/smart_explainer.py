@@ -203,8 +203,7 @@ class SmartExplainer:
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
         self.check_contributions()
-        self.y_pred = y_pred
-        self.check_y_pred()
+        self.y_pred = self.check_y_pred(y_pred)
         self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
         self.inv_columns_dict = {v: k for k, v in self.columns_dict.items()}
         self.check_features_dict()
@@ -244,8 +243,7 @@ class SmartExplainer:
             Dictionary mapping technical feature names to domain names.
         """
         if y_pred is not None:
-            self.y_pred = y_pred
-            self.check_y_pred()
+            self.y_pred = self.check_y_pred(y_pred)
         if label_dict is not None:
             if isinstance(label_dict, dict) == False:
                 raise ValueError(
@@ -473,12 +471,17 @@ class SmartExplainer:
         else:
             return self.x_pred
 
-    def check_y_pred(self):
+    def check_y_pred(self, ypred=None):
         """
         Check if y_pred is a one column dataframe of integer or float
         and if y_pred index matches x_pred index
+
+        Parameters
+        ----------
+        ypred: pandas.DataFrame (optional)
+            User-specified prediction values.
         """
-        return check_ypred(self.x_pred, self.y_pred)
+        return check_ypred(self.x_pred, ypred)
 
     def check_model(self):
         """
