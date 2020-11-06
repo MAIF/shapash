@@ -3,6 +3,7 @@ Check Module
 """
 
 import numpy as np
+import pandas as pd
 from shapash.utils.transform import preprocessing_tolist, check_supported_inverse
 
 
@@ -18,11 +19,7 @@ def check_preprocessing(preprocessing=None):
     if preprocessing is not None:
         list_preprocessing = preprocessing_tolist(preprocessing)
         use_ct, use_ce = check_supported_inverse(list_preprocessing)
-        if not use_ct and not use_ce:
-            raise ValueError(
-                """
-                preprocessing isn't supported.  
-                """)
+        return use_ct, use_ce
 
 def check_model(model):
     """
@@ -60,7 +57,7 @@ def check_model(model):
             "No method predict in the specified model. Please, check model parameter"
         )
 
-def check_label_dict(label_dict, case, classes):
+def check_label_dict(label_dict, case, classes=None):
     """
     Check if label_dict and model _classes match
 
@@ -109,5 +106,73 @@ def check_mask_params(mask_params):
             -positive
             -max_contrib 
             """
+            )
+
+def check_ypred(x=None, ypred=None):
+    """
+    Check that ypred given has the right shape and expected value.
+
+    Parameters
+    ----------
+    ypred: pandas.DataFrame (optional)
+        User-specified prediction values.
+    x: pandas.DataFrame
+        Dataset used by the model to perform the prediction (preprocessed or not).
+    """
+    if ypred is not None:
+        if not isinstance(ypred, (pd.DataFrame, pd.Series)):
+            raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
+        if not ypred.index.equals(x.index):
+            raise ValueError("x and y_pred should have the same index.")
+        if isinstance(ypred, pd.DataFrame):
+            if ypred.shape[1] > 1:
+                raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
+            if not (ypred.dtypes[0] in [np.float, np.int]):
+                raise ValueError("y_pred must contain int or float only")
+        if isinstance(ypred, pd.Series):
+            if not (ypred.dtype in [np.float, np.int]):
+                raise ValueError("y_pred must contain int or float only")
+            ypred = ypred.to_frame()
+    return ypred
+
+def check_contribution_object(case, classes, contributions):
+    """
+    Check len of list if _case is "classification"
+    Check contributions object type if _case is "regression"
+    Check type of contributions and transform into (list of) pd.Dataframe if necessary
+
+    Parameters
+    ----------
+    case: string
+        String that informs if the model used is for classification or regression problem.
+    classes: list, None
+        List of labels if the model used is for classification problem, None otherwise.
+    contributions : pandas.DataFrame, np.ndarray or list
+    """
+    if case == "regression" and isinstance(contributions, (np.ndarray, pd.DataFrame)) == False:
+        raise ValueError(
+            """
+            Type of contributions parameter specified is not compatible with 
+            regression model.
+            Please check model and contributions parameters.  
+            """
+        )
+    elif case == "classification":
+        if isinstance(contributions, list):
+            if len(contributions) != len(classes):
+                raise ValueError(
+                    """
+                    Length of list of contributions parameter is not equal
+                    to the number of classes in the target.
+                    Please check model and contributions parameters.
+                    """
+                )
+        else:
+            raise ValueError(
+                """
+                Type of contributions parameter specified is not compatible with 
+                classification model.
+                Please check model and contributions parameters.
+                """
             )
 

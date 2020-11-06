@@ -761,6 +761,7 @@ class TestSmartExplainer(unittest.TestCase):
         """
         xpl = SmartExplainer()
         xpl.y_pred = None
+        xpl.x_pred = None
         xpl.check_y_pred()
 
     def test_check_y_pred_2(self):
@@ -776,7 +777,8 @@ class TestSmartExplainer(unittest.TestCase):
             data=np.array(['1', 0]),
             columns=['Y']
         )
-        self.assertRaises(ValueError, xpl.check_y_pred)
+        with self.assertRaises(ValueError):
+            xpl.check_y_pred(xpl.y_pred)
 
     def test_check_y_pred_3(self):
         """
@@ -791,7 +793,8 @@ class TestSmartExplainer(unittest.TestCase):
             data=np.array([0]),
             columns=['Y']
         )
-        self.assertRaises(ValueError, xpl.check_y_pred)
+        with self.assertRaises(ValueError):
+            xpl.check_y_pred(xpl.y_pred)
 
     def test_check_y_pred_4(self):
         """
@@ -799,7 +802,7 @@ class TestSmartExplainer(unittest.TestCase):
         """
         xpl = SmartExplainer()
         xpl.y_pred = [0, 1]
-        self.assertRaises(ValueError, xpl.check_y_pred)
+        self.assertRaises(AttributeError, xpl.check_y_pred)
 
     def test_check_y_pred_5(self):
         """
@@ -813,7 +816,8 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.y_pred = pd.Series(
             data=np.array(['0'])
         )
-        self.assertRaises(ValueError, xpl.check_y_pred)
+        with self.assertRaises(ValueError):
+            xpl.check_y_pred(xpl.y_pred)
 
     def test_check_model_1(self):
         """
@@ -875,9 +879,9 @@ class TestSmartExplainer(unittest.TestCase):
             [description]
         """
         xpl = SmartExplainer()
-        mock_y_pred = Mock()
-        mock_check_y_pred.return_value = mock_y_pred
         dataframe_yp = pd.DataFrame([1, 3, 1], columns=['pred'], index=[0, 1, 2])
+        mock_y_pred = Mock(return_value=dataframe_yp)
+        mock_check_y_pred.return_value = mock_y_pred()
         xpl.x_pred = dataframe_yp
         xpl.add(y_pred=dataframe_yp)
         expected = SmartExplainer()
@@ -1166,6 +1170,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(predictor_1, '_case')
         assert hasattr(predictor_1, '_classes')
         assert hasattr(predictor_1, 'columns_dict')
+        assert hasattr(predictor_1, 'features_types')
         assert hasattr(predictor_1, 'preprocessing')
         assert hasattr(predictor_1, 'postprocessing')
         assert hasattr(predictor_1, 'mask_params')
@@ -1179,5 +1184,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert predictor_1.columns_dict == xpl.columns_dict
         assert predictor_1.preprocessing == xpl.preprocessing
         assert predictor_1.postprocessing == xpl.postprocessing
+        assert all(predictor_1.features_types[feature] == str(xpl.x_pred[feature].dtypes)
+                   for feature in xpl.x_pred.columns )
 
         assert predictor_2.mask_params == xpl.mask_params
