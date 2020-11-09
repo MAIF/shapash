@@ -90,12 +90,12 @@ def shap_contributions(model, x_df, explainer=None):
 
     contributions = explainer.shap_values(x_df)
 
-    return contributions
+    return contributions, explainer
 
 def check_explainer(explainer):
     """
-            Check if explainer class correspond to a shap explainer object
-            """
+    Check if explainer class correspond to a shap explainer object
+    """
     if explainer is not None:
         if explainer.__class__.__base__.__name__ != 'Explainer':
             raise ValueError(
