@@ -15,6 +15,7 @@ from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 import category_encoders as ce
+import shap
 
 def init_sme_to_pickle_test():
     """
@@ -408,6 +409,31 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl_postprocessing2.preprocessing == encoder_fitted
         assert xpl_postprocessing1.postprocessing == postprocessing_1
         assert xpl_postprocessing2.postprocessing == postprocessing_1
+
+    def test_compile_3(self):
+        """
+        Unit test compile 3
+        checking compile method without model
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+
+        contrib = pd.DataFrame(
+            [[1, 2, 3, 4],
+             [5, 6, 7, 8],
+             [9, 10, 11, 12]],
+            columns=['contribution_0', 'contribution_1', 'contribution_2', 'contribution_3'],
+            index=[0, 1, 2]
+        )
+
+        xpl = SmartExplainer()
+        with self.assertRaises(ValueError):
+            xpl.compile(model=clf, x=df[['x1', 'x2']], explainer=clf_explainer, contributions=contrib)
 
     def test_filter_0(self):
         """
@@ -1165,6 +1191,7 @@ class TestSmartExplainer(unittest.TestCase):
         predictor_2 = xpl.to_smartpredictor()
 
         assert hasattr(predictor_1, 'model')
+        assert hasattr(predictor_1, 'explainer')
         assert hasattr(predictor_1, 'features_dict')
         assert hasattr(predictor_1, 'label_dict')
         assert hasattr(predictor_1, '_case')
@@ -1177,6 +1204,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(predictor_2, 'mask_params')
 
         assert predictor_1.model == xpl.model
+        assert predictor_1.explainer == xpl.explainer
         assert predictor_1.features_dict == xpl.features_dict
         assert predictor_1.label_dict == xpl.label_dict
         assert predictor_1._case == xpl._case
