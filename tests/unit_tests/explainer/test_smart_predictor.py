@@ -821,6 +821,7 @@ class TestSmartPredictor(unittest.TestCase):
         encoder_fitted = encoder.fit(df)
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        clf_explainer = shap.TreeExplainer(clf)
 
         columns_dict = {0: "x1", 2: "x2"}
         label_dict = {0: "Yes", 1: "No"}
@@ -833,15 +834,18 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(df[features].dtypes) for features in df.columns}
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
         with self.assertRaises(ValueError):
             predictor_1.predict_proba()
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        clf_explainer = shap.TreeExplainer(clf)
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
         with self.assertRaises(ValueError):
@@ -869,8 +873,10 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(df[features].dtypes) for features in df.columns}
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict)
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict)
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = df[["x1", "x2"]]
@@ -909,16 +915,18 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {"x1": "age", "x2": "family_situation"}
 
         features_types = {features: str(df[features].dtypes) for features in df.columns}
-
+        clf_explainer = shap.TreeExplainer(clf)
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict,
                                      encoder_fitted, postprocessing)
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
 
@@ -947,9 +955,11 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(df[features].dtypes) for features in df.columns}
 
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict)
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict)
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
@@ -963,9 +973,11 @@ class TestSmartPredictor(unittest.TestCase):
         assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 1
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict)
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict)
 
         df['false_y'] = [2, 2, 1, 1, 1]
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
@@ -974,9 +986,10 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.data["ypred"] = pd.DataFrame(df["false_y"])
 
         with self.assertRaises(ValueError):
-            contributions = predictor_1.detail_contributions()
+            predictor_1.detail_contributions()
 
         predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+
         contributions = predictor_1.detail_contributions()
 
         assert contributions.shape[0] == predictor_1.data["x"].shape[0]

@@ -460,8 +460,9 @@ class SmartPredictor :
             """
             )
         if self.data["contributions"] is None:
-            contributions = shap_contributions(self.model,
-                                               self.data["x_preprocessed"])
+            contributions, explainer = shap_contributions(self.model,
+                                               self.data["x_preprocessed"],
+                                               self.explainer)
             adapt_contrib = self.adapt_contributions(contributions)
             state = self.choose_state(adapt_contrib)
             contributions = self.validate_contributions(state, adapt_contrib)
