@@ -101,3 +101,4 @@ def check_explainer(explainer):
             raise ValueError(
                 "explainer doesn't correspond to a shap explainer object"
             )
+    return explainer

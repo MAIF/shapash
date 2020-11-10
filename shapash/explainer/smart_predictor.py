@@ -99,8 +99,7 @@ class SmartPredictor :
 
         self.model = model
         self._case, self._classes = self.check_model()
-        self.check_explainer(explainer)
-        self.explainer = explainer
+        self.explainer = self.check_explainer(explainer)
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict
