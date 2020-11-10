@@ -3,6 +3,7 @@ Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
+from shapash.utils.shap_backend import check_explainer
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -36,6 +37,8 @@ class SmartPredictor :
         Dictionary mapping technical feature names to domain names.
     model: model object
         model used to check the different values of target estimate predict_proba
+    explainer : explainer object
+            explainer must be a shap object
     columns_dict: dict
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
     features_types: dict
@@ -59,6 +62,7 @@ class SmartPredictor :
     --------
     >>> predictor = SmartPredictor(features_dict,
                                     model,
+                                    explainer,
                                     columns_dict,
                                     features_types,
                                     label_dict,
@@ -73,7 +77,7 @@ class SmartPredictor :
     """
 
     def __init__(self, features_dict, model,
-                 columns_dict, features_types,
+                 columns_dict, explainer, features_types,
                  label_dict=None, preprocessing=None,
                  postprocessing=None,
                  mask_params = {"features_to_hide": None,
@@ -95,6 +99,7 @@ class SmartPredictor :
 
         self.model = model
         self._case, self._classes = self.check_model()
+        self.explainer = self.check_explainer(explainer)
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict
@@ -366,3 +371,9 @@ class SmartPredictor :
                 "contributions" : None,
                 "x_preprocessed": None
                 }
+
+    def check_explainer(self, explainer):
+        """
+        Check if explainer class correspond to a shap explainer object
+        """
+        return check_explainer(explainer)
