@@ -257,13 +257,12 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, clf_explainer, features_types, label_dict,
                                      encoder_fitted, postprocessing)
-        # predictor_1.add_input()
 
         contributions = [
             np.array([[2, 1], [8, 4]]),
             np.array([[5, 5], [0, 0]])
         ]
-        state = predictor_1.choose_state(contributions)
+        predictor_1.state = predictor_1.choose_state(contributions)
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = pd.DataFrame(
             [[1, 2],
@@ -283,7 +282,7 @@ class TestSmartPredictor(unittest.TestCase):
                 index=['Id1', 'Id2']
             )
         ]
-        output = predictor_1.validate_contributions(state, contributions)
+        output = predictor_1.validate_contributions(contributions)
         assert len(expected_output) == len(output)
         test_list = [pd.testing.assert_frame_equal(e, m) for e, m in zip(expected_output, output)]
         assert all(x is None for x in test_list)
@@ -318,12 +317,12 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.add_input(x=df[["x1", "x2"]], contributions=shap_values[:, :-1], ypred=df["y"])
 
         adapt_contrib = predictor_1.adapt_contributions(shap_values[:, :-1])
-        state = predictor_1.choose_state(adapt_contrib)
-        contributions = predictor_1.validate_contributions(state, adapt_contrib)
-        predictor_1.check_contributions(state, contributions)
+        predictor_1.state = predictor_1.choose_state(adapt_contrib)
+        contributions = predictor_1.validate_contributions(adapt_contrib)
+        predictor_1.check_contributions(contributions)
 
         with self.assertRaises(ValueError):
-            predictor_1.check_contributions(state, shap_values[:, :-1])
+            predictor_1.check_contributions(shap_values[:, :-1])
 
     def test_check_model_1(self):
         """
@@ -878,8 +877,9 @@ class TestSmartPredictor(unittest.TestCase):
                                      columns_dict, clf_explainer,
                                      features_types, label_dict)
 
-        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None, "x_preprocessed":None}
         predictor_1.data["x"] = df[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
 
         result = predictor_1.predict_proba()
         assert result.shape[0] == predictor_1.data["x"].shape[0]

@@ -181,6 +181,8 @@ class SmartPredictor :
                         Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
                         """
                     )
+            else:
+                self.data["x_preprocessed"] = self.data["x"]
         else:
             if not hasattr(self,"data"):
                 raise ValueError ("No dataset x specified.")
@@ -190,9 +192,9 @@ class SmartPredictor :
 
         if contributions is not None:
             adapt_contrib = self.adapt_contributions(contributions)
-            state = self.choose_state(adapt_contrib)
-            contributions = self.validate_contributions(state, adapt_contrib)
-            self.check_contributions(state, contributions)
+            self.state = self.choose_state(adapt_contrib)
+            contributions = self.validate_contributions(adapt_contrib)
+            self.check_contributions(contributions)
             self.data["contributions"] = contributions
 
     def check_dataset_type(self, x=None):
@@ -322,7 +324,7 @@ class SmartPredictor :
         """
         return adapt_contributions(self._case, contributions)
 
-    def validate_contributions(self, state, contributions):
+    def validate_contributions(self, contributions):
         """
         Check len of list if _case is "classification"
         Check contributions object type if _case is "regression"
@@ -330,8 +332,6 @@ class SmartPredictor :
 
         Parameters
         ----------
-        state: SmartState or SmartMultiState
-            Implementation adapted to the type of problem (multiclass or not)
         contributions : pandas.DataFrame, np.ndarray or list
 
         Returns
@@ -339,13 +339,13 @@ class SmartPredictor :
             pandas.DataFrame or list
         """
         check_contribution_object(self._case, self._classes, contributions)
-        return state.validate_contributions(contributions, self.data["x"])
+        return self.state.validate_contributions(contributions, self.data["x"])
 
-    def check_contributions(self, state, contributions):
+    def check_contributions(self, contributions):
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not state.check_contributions(contributions, self.data["x"]):
+        if not self.state.check_contributions(contributions, self.data["x"]):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -394,12 +394,6 @@ class SmartPredictor :
             if not hasattr(self, "data"):
                 raise ValueError("add_input method must be called at least once.")
             elif self.data["x"] is not None:
-                if self.preprocessing is None:
-                    prediction = pd.DataFrame(self.model.predict_proba(self.data["x"]),
-                                              columns=["prob_" + str(label)
-                                                       for label in self._classes],
-                                              index=self.data["x"].index)
-                else:
                     prediction = pd.DataFrame(self.model.predict_proba(self.data["x_preprocessed"]),
                                               columns=["prob_" + str(label)
                                                        for label in self._classes],
@@ -464,13 +458,12 @@ class SmartPredictor :
                                                self.data["x_preprocessed"],
                                                self.explainer)
             adapt_contrib = self.adapt_contributions(contributions)
-            state = self.choose_state(adapt_contrib)
-            contributions = self.validate_contributions(state, adapt_contrib)
+            self.state = self.choose_state(adapt_contrib)
+            contributions = self.validate_contributions(adapt_contrib)
             contributions = self.apply_preprocessing_for_contributions(contributions,
-                                                                       state,
                                                                        self.preprocessing
                                                                        )
-            self.check_contributions(state, contributions)
+            self.check_contributions(contributions)
             self.data["contributions"] = contributions
 
         if self._case == "regression":
@@ -511,7 +504,7 @@ class SmartPredictor :
 
         return contrib_final
 
-    def apply_preprocessing_for_contributions(self, contributions, state, preprocessing=None):
+    def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
         Reconstruct contributions for original features, taken into account a preprocessing.
 
@@ -519,8 +512,6 @@ class SmartPredictor :
         ----------
         contributions : object
             Local contributions, or list of local contributions.
-        state: SmartState or SmartMultiState
-            Implementation adapted to the type of problem (multiclass or not)
         preprocessing : object
             Encoder taken from scikit-learn or category_encoders
 
@@ -530,7 +521,7 @@ class SmartPredictor :
             Reconstructed local contributions in the original space. Can be a list.
         """
         if preprocessing:
-            return state.inverse_transform_contributions(
+            return self.state.inverse_transform_contributions(
                 contributions,
                 preprocessing
             )
