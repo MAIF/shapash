@@ -208,3 +208,60 @@ def calc_inv_contrib_ce(x_contrib, encoding):
         return x_contrib
     else:
         return x_contrib
+
+def transform_ce(x_in, encoding):
+    """
+    Choose and apply the transformation for the given encoding.
+
+    Parameters
+    ----------
+    x_in : pandas.DataFrame
+        Raw dataset to apply preprocessing.
+    encoding : list
+        A list of category encoder (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+        or a list of dict
+
+    Returns
+    -------
+    pandas.Dataframe
+        The dataset preprocessed with the given encoding.
+    """
+    encoder = [category_encoder_ordinal, category_encoder_onehot,
+               category_encoder_basen, category_encoder_binary,
+               category_encoder_targetencoder]
+
+    if str(type(encoding)) in encoder:
+        rst = encoding.transform(x_in)
+
+    elif str(type(encoding)) == "<class 'list'>":
+        rst = transform_ordinal(x_in, encoding)
+
+    else:
+        raise Exception(f"{encoding.__class__.__name__} not supported, no preprocessing done.")
+
+    return rst
+
+def transform_ordinal(x_in, encoding):
+    """
+    Transformation based on ordinal category encoder.
+
+    Parameters
+    ----------
+    x_in : pandas.DataFrame
+        Raw dataset to apply preprocessing.
+    encoding : list
+        A list of dict containing the col, the mapping and the data_type use for transformation.
+
+    Returns
+    -------
+    pandas.Dataframe
+        The dataframe preprocessed.
+    """
+    for switch in encoding:
+        col_name = switch.get('col')
+        if not col_name in x_in.columns:
+            raise Exception(f'Columns {col_name} not in dataframe.')
+        column_mapping = switch.get('mapping')
+        transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
+        x_in[col_name] = x_in[col_name].map(transform).astype(switch.get('mapping').values.dtype)
+    return x_in

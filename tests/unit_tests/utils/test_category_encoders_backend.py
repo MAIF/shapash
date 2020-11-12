@@ -5,7 +5,11 @@ import unittest
 import pandas as pd
 import numpy as np
 import category_encoders as ce
-from shapash.utils.transform import inverse_transform
+import catboost as cb
+import sklearn
+import lightgbm
+import xgboost
+from shapash.utils.transform import inverse_transform, apply_preprocessing
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
@@ -396,3 +400,208 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
                                                list_dict])
 
         pd.testing.assert_frame_equal(expected, original)
+
+    def test_transform_ce_onehotencoder(self):
+        """
+        Unit test for apply preprocessing on OneHotEncoder
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.one_hot.OneHotEncoder(cols=["num1", "num2"])
+
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_ordinalencoder(self):
+        """
+        Unit test for apply preprocessing on OrdinalEncoder
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.ordinal.OrdinalEncoder(cols=["num1", "num2"])
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_basenencoder(self):
+        """
+        Unit test for apply preprocessing on BaseNEncoder
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.basen.BaseNEncoder(cols=["num1", "num2"])
+
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_binaryencoder(self):
+        """
+        Unit test for apply preprocessing on BinaryEncoder
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.binary.BinaryEncoder(cols=["num1", "num2"])
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_sklearn_model(self):
+        """
+        Unit test for apply preprocessing with sklearn model
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.ordinal.OrdinalEncoder(cols=["num1", "num2"])
+
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = sklearn.ensemble._gb.GradientBoostingClassifier().fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_catboost_model(self):
+        """
+        Unit test for apply preprocessing with catboost model
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.ordinal.OrdinalEncoder(cols=["num1", "num2"])
+
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_lightgbm_model(self):
+        """
+        Unit test for apply preprocessing with lightgbm model
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.ordinal.OrdinalEncoder(cols=["num1", "num2"])
+
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = lightgbm.sklearn.LGBMClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.booster_.feature_name() for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ce_xgboost_model(self):
+        """
+        Unit test for apply preprocessing with xgboost model
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ce.ordinal.OrdinalEncoder(cols=["num1", "num2"])
+
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = xgboost.sklearn.XGBClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.get_booster().feature_names for column in result.columns]
+        assert all(expected.index == result.index)

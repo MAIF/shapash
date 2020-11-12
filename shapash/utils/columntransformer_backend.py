@@ -3,11 +3,13 @@ sklearn columntransformer
 """
 
 import pandas as pd
-from shapash.utils.inverse_category_encoder import inv_transform_ordinal
-from shapash.utils.inverse_category_encoder import inv_transform_ce
-from shapash.utils.inverse_category_encoder import supported_category_encoder
-from shapash.utils.inverse_category_encoder import dummies_category_encoder
-from shapash.utils.inverse_category_encoder import category_encoder_binary
+from shapash.utils.category_encoder_backend import inv_transform_ordinal
+from shapash.utils.category_encoder_backend import inv_transform_ce
+from shapash.utils.category_encoder_backend import supported_category_encoder
+from shapash.utils.category_encoder_backend import dummies_category_encoder
+from shapash.utils.category_encoder_backend import category_encoder_binary
+from shapash.utils.category_encoder_backend import transform_ordinal
+
 
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
 
@@ -16,6 +18,30 @@ sklearn_ordinal = "<class 'sklearn.preprocessing._encoders.OrdinalEncoder'>"
 sklearn_standardscaler = "<class 'sklearn.preprocessing._data.StandardScaler'>"
 sklearn_quantiletransformer = "<class 'sklearn.preprocessing._data.QuantileTransformer'>"
 sklearn_powertransformer = "<class 'sklearn.preprocessing._data.PowerTransformer'>"
+
+xgboost_model = ("<class 'xgboost.sklearn.XGBClassifier'>",
+                 "<class 'xgboost.sklearn.XGBRegressor'>")
+
+catboost_model = ("<class 'catboost.core.CatBoostClassifier'>",
+                  "<class 'catboost.core.CatBoostRegressor'>")
+
+lightgbm_model =("<class 'lightgbm.sklearn.LGBMClassifier'>",
+                 "<class 'lightgbm.sklearn.LGBMRegressor'>")
+
+sklearn_model = (
+        "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
+        "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
+        "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
+        "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
+        "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
+        "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
+        "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
+        "<class 'sklearn.linear_model._base.LinearRegression'>",
+        "<class 'sklearn.svm._classes.SVC'>",
+        "<class 'sklearn.svm._classes.SVR'>"
+    )
+
+other_model = xgboost_model + catboost_model + lightgbm_model
 
 dummies_sklearn = (sklearn_onehot)
 
@@ -239,3 +265,63 @@ def calc_inv_contrib_ct(x_contrib, encoding):
         return rst
     else:
         return x_contrib
+
+
+def transform_ct(x_in, model, encoding):
+    """
+    Transform when using a ColumnsTransformer.
+
+    As ColumnsTransformer output hstack the result of transformers, if the TOP-preprocessed data are re-ordered
+    after the ColumnTransformer the inverse transform must return false result.
+
+    We successively apply the transformers with columns position. That's why colnames
+    are prefixed by the transformers names.
+
+    Parameters
+    ----------
+    x_in : pandas.DataFrame
+        Raw dataset to apply preprocessing
+    model: model object
+        model used to check the different values of target estimate predict_proba
+    encoding : list
+        The list must contain a single ColumnsTransformer and an optional list of dict.
+
+    Returns
+    -------
+    pandas.Dataframe
+        The data preprocessed for the given list of encoding.
+    """
+    if str(type(encoding)) == columntransformer:
+        # We use inverse tranform from the encoding method base on columns position
+        if str(type(model)) in sklearn_model:
+            rst = pd.DataFrame(encoding.transform(x_in),
+                               index=x_in.index)
+            rst.columns = ["col_" + str(feature) for feature in rst.columns]
+
+        elif str(type(model)) in other_model:
+            if str(type(model)) in xgboost_model:
+                rst = pd.DataFrame(encoding.transform(x_in),
+                                   columns=model.get_booster().feature_names,
+                                   index=x_in.index)
+
+            elif str(type(model)) in lightgbm_model:
+                rst = pd.DataFrame(encoding.transform(x_in),
+                                   columns=model.booster_.feature_name(),
+                                   index=x_in.index)
+
+            else:
+                rst = pd.DataFrame(encoding.transform(x_in),
+                                   columns=model.feature_names_,
+                                   index=x_in.index)
+
+
+        else:
+            raise ValueError("Model specified isn't supported by Shapash.")
+
+    elif str(type(encoding)) == "<class 'list'>":
+        rst = transform_ordinal(x_in, encoding)
+
+    else:
+        raise Exception(f"{encoding.__class__.__name__} not supported, no preprocessing done.")
+
+    return rst

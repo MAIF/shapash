@@ -6,8 +6,8 @@ import pandas as pd
 import numpy as np
 from shapash.utils.transform import preprocessing_tolist
 from shapash.utils.transform import check_supported_inverse
-from shapash.utils.inverse_category_encoder import calc_inv_contrib_ce
-from shapash.utils.inverse_columntransformer import calc_inv_contrib_ct
+from shapash.utils.category_encoder_backend import calc_inv_contrib_ce
+from shapash.utils.columntransformer_backend import calc_inv_contrib_ct
 
 def inverse_transform_contributions(contributions, preprocessing=None):
     """

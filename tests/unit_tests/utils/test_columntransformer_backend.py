@@ -6,7 +6,11 @@ import pandas as pd
 import category_encoders as ce
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
-from shapash.utils.transform import inverse_transform
+import catboost as cb
+import sklearn
+import lightgbm
+import xgboost
+from shapash.utils.transform import inverse_transform, apply_preprocessing
 
 
 # TODO
@@ -638,3 +642,252 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result.columns = ['col1', 'col2']
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
+
+    def test_transform_ct_sklearn_drop(self):
+        """
+        Unit test for apply_preprocessing on ColumnTransformer with drop option and sklearn encoder.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+
+        enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='drop')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 3],
+                             'other': ['A', 'B', 'C']})
+
+        expected = pd.DataFrame(enc.transform(test))
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+        assert all([str(type_result) == str(expected.dtypes[index])
+                    for index, type_result in enumerate(result.dtypes)])
+
+    def test_transform_ct_ce_passthrough(self):
+        """
+        Unit test for apply_preprocessing on ColumnTransformer with passthrough option and category encoder.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ColumnTransformer(transformers=[('onehot_ce', ce.OneHotEncoder(), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 3],
+                             'other': [1, 0, 3]})
+
+        expected = pd.DataFrame(enc.transform(test))
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+        assert all([str(type_result) == str(expected.dtypes[index])
+                    for index, type_result in enumerate(result.dtypes)])
+
+    def test_transform_ct_multi_ce_skp(self):
+        """
+        Unit test for apply_preprocessing on ColumnTransformer with sklearn encoder and category encoder.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ColumnTransformer(transformers=[('onehot_ce', ce.OneHotEncoder(), ['num1', 'num2']),
+                                              ('onehot_skp', skp.OneHotEncoder(), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ct_multi_list_dict(self):
+        """
+        Unit test for apply_preprocessing on list of a dict, a list of dict and a ColumnTransformer.
+        """
+        train = pd.DataFrame({'city': ['CH', 'CH', 'PR'],
+                              'state': ['US-FR', 'US-FR', 'US-FR'],
+                              'other': ['A-B', 'A-B', 'C']},
+                             index=['index1', 'index2', 'index3'])
+
+        y = pd.DataFrame(data=[0, 1, 0], columns=['y'], index=['index1', 'index2', 'index3'])
+
+        train_preprocessed = train.copy()
+        input_dict1 = dict()
+        input_dict1['col'] = 'city'
+        input_dict1['mapping'] = pd.Series(data=['chicago', 'paris'], index=['CH', 'PR'])
+        input_dict1['data_type'] = 'object'
+
+        transform_input_1 = pd.Series(data=input_dict1.get("mapping").values, index=input_dict1.get("mapping").index)
+        train_preprocessed[input_dict1.get("col")] = train_preprocessed[input_dict1.get("col")].map(
+            transform_input_1).astype(input_dict1.get("mapping").values.dtype)
+
+        input_dict2 = dict()
+        input_dict2['col'] = 'other'
+        input_dict2['mapping'] = pd.Series(data=['A', 'C'], index=['A-B', 'C'])
+        input_dict2['data_type'] = 'object'
+
+        transform_input_2 = pd.Series(data=input_dict2.get("mapping").values, index=input_dict2.get("mapping").index)
+        train_preprocessed[input_dict2.get("col")] = train_preprocessed[input_dict2.get("col")].map(
+            transform_input_2).astype(input_dict2.get("mapping").values.dtype)
+
+        input_dict3 = dict()
+        input_dict3['col'] = 'state'
+        input_dict3['mapping'] = pd.Series(data=['US FR'], index=['US-FR'])
+        input_dict3['data_type'] = 'object'
+
+        transform_input_3 = pd.Series(data=input_dict3.get("mapping").values, index=input_dict3.get("mapping").index)
+        train_preprocessed[input_dict3.get("col")] = train_preprocessed[input_dict3.get("col")].map(
+            transform_input_3).astype(input_dict3.get("mapping").values.dtype)
+
+        enc = ColumnTransformer(
+            transformers=[
+                ('onehot_ce', ce.OneHotEncoder(), ['city', 'state']),
+                ('onehot_skp', skp.OneHotEncoder(), ['other'])
+            ],
+            remainder='passthrough')
+
+        enc.fit(train_preprocessed)
+        train_preprocessed = pd.DataFrame(enc.transform(train_preprocessed), index=train.index)
+        train_preprocessed.columns = [str(feature) for feature in train_preprocessed.columns]
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+
+        list_dict = [input_dict2, input_dict3]
+
+        test_preprocessing = apply_preprocessing(train, clf, [input_dict1, list_dict, enc])
+        pd.testing.assert_frame_equal(train_preprocessed, test_preprocessing)
+
+    def test_transform_ct_sklearn_model(self):
+        """
+        Unit test for apply_preprocessing with ColumnTransformer and sklearn model.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ColumnTransformer(transformers=[('onehot_ce', ce.OneHotEncoder(), ['num1', 'num2']),
+                                              ('onehot_skp', skp.OneHotEncoder(), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = sklearn.ensemble._gb.GradientBoostingClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert all(expected.index == result.index)
+
+    def test_transform_ct_catboost_model(self):
+        """
+        Unit test for apply_preprocessing with ColumnTransformer and catboost model.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ColumnTransformer(transformers=[('onehot_ce', ce.OneHotEncoder(), ['num1', 'num2']),
+                                              ('onehot_skp', skp.OneHotEncoder(), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.feature_names_ for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ct_lightgbm_model(self):
+        """
+        Unit test for apply_preprocessing with ColumnTransformer and lightgbm model.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ColumnTransformer(transformers=[('onehot_ce', ce.OneHotEncoder(), ['num1', 'num2']),
+                                              ('onehot_skp', skp.OneHotEncoder(), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = lightgbm.sklearn.LGBMClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.booster_.feature_name() for column in result.columns]
+        assert all(expected.index == result.index)
+
+    def test_transform_ct_xgboost_model(self):
+        """
+        Unit test for apply_preprocessing with ColumnTransformer and xgboost model.
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': [1, 0]})
+
+        enc = ColumnTransformer(transformers=[('onehot_ce', ce.OneHotEncoder(), ['num1', 'num2']),
+                                              ('onehot_skp', skp.OneHotEncoder(), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+
+        train_preprocessed = pd.DataFrame(enc.transform(train))
+        clf = xgboost.sklearn.XGBClassifier(n_estimators=1).fit(train_preprocessed, y)
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 0],
+                             'other': [1, 0, 0]})
+
+        expected = pd.DataFrame(enc.transform(test), index=test.index)
+        result = apply_preprocessing(test, clf, enc)
+        assert result.shape == expected.shape
+        assert [column in clf.get_booster().feature_names for column in result.columns]
+        assert all(expected.index == result.index)
