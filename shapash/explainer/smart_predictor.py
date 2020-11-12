@@ -190,13 +190,10 @@ class SmartPredictor :
 
         if ypred is not None:
             self.data["ypred"] = self.check_ypred(ypred)
-
-        if contributions is not None:
-            adapt_contrib = self.adapt_contributions(contributions)
-            self.state = self.choose_state(adapt_contrib)
-            contributions = self.validate_contributions(adapt_contrib)
-            self.check_contributions(contributions)
-            self.data["contributions"] = contributions
+            if contributions is not None:
+                self.data["contributions"] = self.detail_contributions(contributions=contributions)
+            else:
+                self.data["contributions"] = self.detail_contributions()
 
     def check_dataset_type(self, x=None):
         """
@@ -435,7 +432,7 @@ class SmartPredictor :
 
         return data_pred
 
-    def detail_contributions(self, proba=False):
+    def detail_contributions(self, proba=False, contributions=None):
         """
         The detail_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
@@ -444,6 +441,8 @@ class SmartPredictor :
         -------
         proba: bool, optional (default: False)
             adding proba in output df
+        contributions : object (optional)
+            Local contributions, or list of local contributions.
 
         Returns
         -------
@@ -464,20 +463,19 @@ class SmartPredictor :
             ypred must be specified in an add_input method to apply detail_contributions.
             """
             )
-        if self.data["contributions"] is None:
+        if contributions is None:
             contributions, explainer = shap_contributions(self.model,
                                                self.data["x_preprocessed"],
                                                self.explainer)
-            adapt_contrib = self.adapt_contributions(contributions)
-            self.state = self.choose_state(adapt_contrib)
-            contributions = self.validate_contributions(adapt_contrib)
-            contributions = self.apply_preprocessing_for_contributions(contributions,
-                                                                       self.preprocessing
-                                                                       )
-            self.check_contributions(contributions)
-            self.data["contributions"] = contributions
+        adapt_contrib = self.adapt_contributions(contributions)
+        self.state = self.choose_state(adapt_contrib)
+        contributions = self.validate_contributions(adapt_contrib)
+        contributions = self.apply_preprocessing_for_contributions(contributions,
+                                                                   self.preprocessing
+                                                                   )
+        self.check_contributions(contributions)
 
-        return self.keep_right_contributions(proba)
+        return self.keep_right_contributions(contributions, proba)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
@@ -503,18 +501,30 @@ class SmartPredictor :
         else:
             return contributions
 
-    def keep_right_contributions(self, proba=False):
+    def keep_right_contributions(self, contributions, proba=False):
         """
         Return data ypred specified with the right explicability.
+
+        Parameters
+        -------
+        contributions : object
+            Local contributions, or list of local contributions.
+        proba: bool, optional (default: False)
+            adding proba in output df
+
+        Returns
+        -------
+        pandas.DataFrame
+            Data with ypred and the associated contributions.
         """
         if proba:
             if not hasattr(self, 'proba_values'):
                 self.predict_proba()
-            right_contributions = keep_right_contributions(self.data["ypred"], self.data['contributions'],
+            right_contributions = keep_right_contributions(self.data["ypred"], contributions,
                                                            self._case, self._classes,
                                                            self.label_dict, self.proba_values)
         else:
-            right_contributions = keep_right_contributions(self.data["ypred"], self.data['contributions'],
+            right_contributions = keep_right_contributions(self.data["ypred"], contributions,
                                                            self._case, self._classes,
                                                            self.label_dict)
 
