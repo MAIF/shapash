@@ -23,6 +23,7 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object
+from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -854,32 +855,9 @@ class SmartExplainer:
             self.columns_dict,
             self.features_dict
         )
-
         # Matching with y_pred
-        y_pred = self.y_pred
-        if self._case == "classification":
-            complete_sum = [list(x) for x in list(zip(*[df.values.tolist() for df in self.data['summary']]))]
-            indexclas = [self._classes.index(x) for x in list(flatten(self.y_pred.values))]
-            summary = pd.DataFrame([summar[ind]
-                                    for ind, summar in zip(indexclas, complete_sum)],
-                                   columns=self.data['summary'][0].columns,
-                                   index=self.data['summary'][0].index,
-                                   dtype=object)
-            if self.label_dict is not None:
-                y_pred = y_pred.applymap(lambda x: self.label_dict[x])
-            if proba:
-                if not hasattr(self,'proba_values'):
-                    self.predict_proba()
-                y_proba = pd.DataFrame([proba[ind]
-                                            for ind, proba in zip(indexclas, self.proba_values.values)],
-                                           columns=['proba'],
-                                           index=y_pred.index)
-                y_pred = pd.concat([y_pred, y_proba], axis=1)
 
-        else:
-            summary = self.data['summary']
-
-        return pd.concat([y_pred, summary], axis=1)
+        return self.keep_right_contributions(proba)
 
     def compute_features_import(self, force=False):
         """
@@ -1047,3 +1025,20 @@ class SmartExplainer:
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def keep_right_contributions(self, proba=False):
+        """
+        Return data ypred specified with the right explicability.
+        """
+        if proba:
+            if not hasattr(self, 'proba_values'):
+                self.predict_proba()
+            right_contributions = keep_right_contributions(self.y_pred, self.data['summary'],
+                                                           self._case, self._classes,
+                                                           self.label_dict, self.proba_values)
+        else:
+            right_contributions = keep_right_contributions(self.y_pred, self.data['summary'],
+                                                           self._case, self._classes,
+                                                           self.label_dict)
+
+        return right_contributions

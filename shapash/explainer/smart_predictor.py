@@ -8,6 +8,8 @@ from .multi_decorator import MultiDecorator
 import pandas as pd
 from shapash.utils.transform import adapt_contributions
 from shapash.utils.shap_backend import check_explainer, shap_contributions
+from shapash.manipulation.select_lines import keep_right_contributions
+
 
 
 
@@ -142,7 +144,6 @@ class SmartPredictor :
         Check if mask_params given respect the expected format.
         """
         return check_mask_params(self.mask_params)
-
 
     def add_input(self, x=None, ypred=None, contributions=None):
         """
@@ -398,6 +399,11 @@ class SmartPredictor :
                                               columns=["prob_" + str(label)
                                                        for label in self._classes],
                                               index=self.data["x_preprocessed"].index)
+
+                    self.proba_values = pd.DataFrame(
+                        self.model.predict_proba(self.data["x_preprocessed"]),
+                        columns=['class_' + str(x) for x in self._classes],
+                        index=self.data["x_preprocessed"].index)
             else:
                 raise ValueError(
                     """
@@ -429,10 +435,15 @@ class SmartPredictor :
 
         return data_pred
 
-    def detail_contributions(self):
+    def detail_contributions(self, proba=False):
         """
         The detail_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
+
+        Parameters
+        -------
+        proba: bool, optional (default: False)
+            adding proba in output df
 
         Returns
         -------
@@ -466,43 +477,7 @@ class SmartPredictor :
             self.check_contributions(contributions)
             self.data["contributions"] = contributions
 
-        if self._case == "regression":
-            self.data["ypred"].columns = ["pred"]
-            contrib_final = self.data["contributions"].merge(self.data["ypred"],
-                                                             how="left",
-                                                             left_index=True,
-                                                             right_index=True)
-        else:
-            test_y = self.data["ypred"].copy()
-            test_y.columns = ["pred"]
-            if self._case == "classification" and \
-                    test_y[test_y.pred.isin(self._classes)].shape[0] != self.data["x"].shape[0]:
-                raise ValueError(
-                    """
-                    ypred must only contain values that matches with label from the model.
-                    """
-                )
-            for label, contrib in enumerate(self.data["contributions"]):
-                contrib["label"] = self._classes[label]
-                contrib["index"] = contrib.index
-
-            ypred = self.data["ypred"].copy()
-            ypred.columns = ["pred"]
-            ypred["index"] = ypred.index
-            contrib_final = pd.DataFrame()
-
-            for contrib in self.data["contributions"]:
-                contrib_label = ypred.merge(contrib, how="left",
-                                            left_on=["index", "pred"],
-                                            right_on=["index", "label"])
-                contrib_label = contrib_label.dropna(subset=['label'])
-                contrib_final = contrib_final.append(contrib_label)
-
-            contrib_final = contrib_final.drop(columns=["label"])
-            contrib_final = contrib_final.set_index('index')
-            contrib_final = contrib_final.reindex(self.data["x"].index)
-
-        return contrib_final
+        return self.keep_right_contributions(proba)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
@@ -527,3 +502,20 @@ class SmartPredictor :
             )
         else:
             return contributions
+
+    def keep_right_contributions(self, proba=False):
+        """
+        Return data ypred specified with the right explicability.
+        """
+        if proba:
+            if not hasattr(self, 'proba_values'):
+                self.predict_proba()
+            right_contributions = keep_right_contributions(self.data["ypred"], self.data['contributions'],
+                                                           self._case, self._classes,
+                                                           self.label_dict, self.proba_values)
+        else:
+            right_contributions = keep_right_contributions(self.data["ypred"], self.data['contributions'],
+                                                           self._case, self._classes,
+                                                           self.label_dict)
+
+        return right_contributions
