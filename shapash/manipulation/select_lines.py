@@ -41,7 +41,7 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
         List of labels if the model used is for classification problem, None otherwise.
     label_dict: dict (optional)
         Dictionary mapping integer labels to domain names (classification - target values).
-    proba_values pandas.DataFrame
+    proba_values: pandas.DataFrame
         the proba values for each row of the specified dataset
 
     """

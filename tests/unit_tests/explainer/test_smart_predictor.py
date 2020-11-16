@@ -847,12 +847,12 @@ class TestSmartPredictor(unittest.TestCase):
                                      features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             predictor_1.predict_proba()
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             predictor_1.predict_proba()
 
     def test_predict_proba_2(self):
@@ -881,16 +881,13 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.data["x"] = df[["x1", "x2"]]
         predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
 
-        result = predictor_1.predict_proba()
-        assert result.shape[0] == predictor_1.data["x"].shape[0]
-        assert result.shape[1] == predictor_1.data["x"].shape[1] + len(predictor_1._classes)
+        predictor_1.predict_proba()
+        assert predictor_1.proba_values.shape[0] == predictor_1.data["x"].shape[0]
 
         predictor_1.data["ypred"] = pd.DataFrame(df["y"])
-        result2 = predictor_1.predict_proba()
+        predictor_1.predict_proba()
 
-        assert result2.shape[0] == predictor_1.data["x"].shape[0]
-        assert result2.shape[1] == predictor_1.data["x"].shape[1] + 2
-        assert all([predict_proba_col in result2.columns for predict_proba_col in ["pred", "prob_pred"]])
+        assert predictor_1.proba_values.shape[0] == predictor_1.data["x"].shape[0]
 
     def test_detail_contributions_1(self):
         """
