@@ -176,3 +176,91 @@ def check_contribution_object(case, classes, contributions):
                 """
             )
 
+def check_model_explainer(model, explainer):
+    """
+    Check the consistency between model and explainer
+    If model type and explainer match
+
+    Parameters
+    ----------
+    model: model object
+        model used to check the different values of target estimate predict_proba
+    explainer : explainer object
+        explainer must be a shap object
+    """
+    simple_tree_model = (
+        "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
+        "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
+        "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
+        "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
+        "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
+        "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
+        "<class 'lightgbm.sklearn.LGBMClassifier'>",
+        "<class 'lightgbm.sklearn.LGBMRegressor'>",
+        "<class 'xgboost.sklearn.XGBClassifier'>",
+        "<class 'xgboost.sklearn.XGBRegressor'>"
+    )
+
+    catboost_model = (
+        "<class 'catboost.core.CatBoostClassifier'>",
+        "<class 'catboost.core.CatBoostRegressor'>"
+    )
+
+    linear_model = (
+        "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
+        "<class 'sklearn.linear_model._base.LinearRegression'>"
+    )
+
+    svm_model = (
+        "<class 'sklearn.svm._classes.SVC'>",
+        "<class 'sklearn.svm._classes.SVR'>"
+    )
+
+    if str(type(model)) in simple_tree_model:
+        if explainer.__class__.__name__ not in ('Tree','TreeExplainer'):
+            raise ValueError("model and explainer don't have the same type")
+
+    elif str(type(model)) in catboost_model:
+        if explainer.__class__.__name__ not in ('Tree','TreeExplainer'):
+            raise ValueError("model and explainer don't have the same type")
+
+    elif str(type(model)) in linear_model:
+        if explainer.__class__.__name__ not in ('Linear','LinearExplainer'):
+            raise ValueError("model and explainer don't have the same type")
+
+    elif str(type(model)) in svm_model:
+        if explainer.__class__.__name__ not in ('Kernel','KernelExplainer'):
+            raise ValueError("model and explainer don't have the same type")
+
+def check_smartpredictor_length_attributes(features_dict, model, columns_dict, features_types, label_dict=None):
+    """
+    Check the length of smartpredictor's attributes in number of features
+
+    Parameters
+    ----------
+    features_dict: dict
+        Dictionary mapping technical feature names to domain names.
+    model: model object
+        model used to check the different values of target estimate predict_proba
+    columns_dict: dict
+        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
+    features_types: dict
+        Dictionnary mapping features with the right types needed.
+    label_dict: dict (optional)
+        Dictionary mapping integer labels to domain names (classification - target values).
+    """
+
+    catboost_model = (
+        "<class 'catboost.core.CatBoostClassifier'>",
+        "<class 'catboost.core.CatBoostRegressor'>"
+    )
+
+    list_attributes = [features_dict, features_types, label_dict, columns_dict]
+
+    if str(type(model)) in catboost_model:
+        length = len(model.feature_names_)
+    else:
+        length = model.n_features_in_
+
+    if not all(len(lst) == length for lst in list_attributes if lst is not None):
+        raise ValueError("All attributes have not the same number of features")
