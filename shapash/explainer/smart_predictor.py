@@ -386,51 +386,13 @@ class SmartPredictor :
         pandas.DataFrame
             data with all probabilities if there is no ypred data or data with ypred and the associated probability.
         """
-        if self._case == "regression":
-            raise ValueError("predict_proba can't be applied for a regression problem.")
+        if hasattr(self.model, 'predict_proba'):
+            self.proba_values = pd.DataFrame(
+                self.model.predict_proba(self.data["x_preprocessed"]),
+                columns=['class_'+str(x) for x in self._classes],
+                index=self.data["x_preprocessed"].index)
         else:
-            if not hasattr(self, "data"):
-                raise ValueError("add_input method must be called at least once.")
-            elif self.data["x"] is not None:
-                    prediction = pd.DataFrame(self.model.predict_proba(self.data["x_preprocessed"]),
-                                              columns=["prob_" + str(label)
-                                                       for label in self._classes],
-                                              index=self.data["x_preprocessed"].index)
-
-                    self.proba_values = pd.DataFrame(
-                        self.model.predict_proba(self.data["x_preprocessed"]),
-                        columns=['class_' + str(x) for x in self._classes],
-                        index=self.data["x_preprocessed"].index)
-            else:
-                raise ValueError(
-                    """
-                    x must be specified in an add_input to apply predict_proba method.
-                    """
-                )
-
-        if self.data["ypred"] is None:
-            data_pred = self.data["x"].merge(prediction, how="left",
-                                             left_index=True, right_index=True)
-        else:
-            self.data["ypred"].columns = ["pred"]
-            test_y = self.data["ypred"].copy()
-            if test_y[test_y.pred.isin(self._classes)].shape[0] != self.data["x"].shape[0]:
-                raise ValueError(
-                    """
-                    ypred must only contain values that matches with label from the model.
-                    """
-                )
-            else:
-                prediction = prediction.merge(self.data["ypred"], how="left",
-                                              left_index=True, right_index=True)
-                prediction["prob_pred"] = prediction.apply(lambda row: row["prob_" + str(int(row["pred"]))]
-                                                           , axis=1)
-                data_pred = self.data["x"].merge(prediction[["pred", "prob_pred"]],
-                                                 how="left",
-                                                 left_index=True,
-                                                 right_index=True)
-
-        return data_pred
+            raise ValueError("model has no predict_proba method")
 
     def detail_contributions(self, proba=False, contributions=None):
         """
@@ -474,8 +436,12 @@ class SmartPredictor :
                                                                    self.preprocessing
                                                                    )
         self.check_contributions(contributions)
+        self.predict_proba() if proba else None
+        proba_values = self.proba_values if proba else None
 
-        return self.keep_right_contributions(contributions, proba)
+        return keep_right_contributions(self.data["ypred"], contributions,
+                                        self._case, self._classes,
+                                        self.label_dict, proba_values)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
@@ -500,32 +466,3 @@ class SmartPredictor :
             )
         else:
             return contributions
-
-    def keep_right_contributions(self, contributions, proba=False):
-        """
-        Return data ypred specified with the right explicability.
-
-        Parameters
-        -------
-        contributions : object
-            Local contributions, or list of local contributions.
-        proba: bool, optional (default: False)
-            adding proba in output df
-
-        Returns
-        -------
-        pandas.DataFrame
-            Data with ypred and the associated contributions.
-        """
-        if proba:
-            if not hasattr(self, 'proba_values'):
-                self.predict_proba()
-            right_contributions = keep_right_contributions(self.data["ypred"], contributions,
-                                                           self._case, self._classes,
-                                                           self.label_dict, self.proba_values)
-        else:
-            right_contributions = keep_right_contributions(self.data["ypred"], contributions,
-                                                           self._case, self._classes,
-                                                           self.label_dict)
-
-        return right_contributions
