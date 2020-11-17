@@ -432,8 +432,8 @@ class SmartPredictor :
                                                                    self.preprocessing
                                                                    )
         self.check_contributions(contributions)
-        self.predict_proba() if proba else None
-        proba_values = self.proba_values if proba else None
+        self.predict_proba() if self._case == "classification" else None
+        proba_values = self.proba_values if self._case == "classification" else None
 
         return keep_right_contributions(self.data["ypred"], contributions,
                                         self._case, self._classes,

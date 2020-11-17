@@ -294,19 +294,16 @@ class TestSmartPredictor(unittest.TestCase):
         df = pd.DataFrame(range(0, 5), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
         df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
+        df['x2'] = np.random.randint(1, 100, df.shape[0])
         df = df.set_index('id')
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
         encoder_fitted = encoder.fit(df[["x1", "x2"]])
         df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         clf_explainer = shap.TreeExplainer(clf)
         columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
+        features_dict = {"x1": "age", "x2": "weight"}
         features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
         shap_values = clf.get_feature_importance(Pool(df_encoded), type="ShapValues")
@@ -991,7 +988,7 @@ class TestSmartPredictor(unittest.TestCase):
 
         assert contributions.shape[0] == predictor_1.data["x"].shape[0]
         assert all(contributions.index == predictor_1.data["x"].index)
-        assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 1
+        assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 2
 
     def test_apply_preprocessing_1(self):
         """
