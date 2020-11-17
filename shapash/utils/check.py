@@ -5,6 +5,7 @@ Check Module
 import numpy as np
 import pandas as pd
 from shapash.utils.transform import preprocessing_tolist, check_supported_inverse
+from shapash.utils.inverse_category_encoder import supported_category_encoder
 
 
 def check_preprocessing(preprocessing=None):
@@ -176,63 +177,8 @@ def check_contribution_object(case, classes, contributions):
                 """
             )
 
-def check_model_explainer(model, explainer):
-    """
-    Check the consistency between model and explainer
-    If model type and explainer match
-
-    Parameters
-    ----------
-    model: model object
-        model used to check the different values of target estimate predict_proba
-    explainer : explainer object
-        explainer must be a shap object
-    """
-    simple_tree_model = (
-        "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
-        "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
-        "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
-        "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
-        "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
-        "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
-        "<class 'lightgbm.sklearn.LGBMClassifier'>",
-        "<class 'lightgbm.sklearn.LGBMRegressor'>",
-        "<class 'xgboost.sklearn.XGBClassifier'>",
-        "<class 'xgboost.sklearn.XGBRegressor'>"
-    )
-
-    catboost_model = (
-        "<class 'catboost.core.CatBoostClassifier'>",
-        "<class 'catboost.core.CatBoostRegressor'>"
-    )
-
-    linear_model = (
-        "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
-        "<class 'sklearn.linear_model._base.LinearRegression'>"
-    )
-
-    svm_model = (
-        "<class 'sklearn.svm._classes.SVC'>",
-        "<class 'sklearn.svm._classes.SVR'>"
-    )
-
-    if str(type(model)) in simple_tree_model:
-        if explainer.__class__.__name__ not in ('Tree','TreeExplainer'):
-            raise ValueError("model and explainer don't have the same type")
-
-    elif str(type(model)) in catboost_model:
-        if explainer.__class__.__name__ not in ('Tree','TreeExplainer'):
-            raise ValueError("model and explainer don't have the same type")
-
-    elif str(type(model)) in linear_model:
-        if explainer.__class__.__name__ not in ('Linear','LinearExplainer'):
-            raise ValueError("model and explainer don't have the same type")
-
-    elif str(type(model)) in svm_model:
-        if explainer.__class__.__name__ not in ('Kernel','KernelExplainer'):
-            raise ValueError("model and explainer don't have the same type")
-
-def check_smartpredictor_length_attributes(features_dict, model, columns_dict, features_types, label_dict=None):
+def check_consistency_model_features(features_dict, model, columns_dict, features_types, label_dict=None,
+                                     mask_params=None, preprocessing=None):
     """
     Check the length of smartpredictor's attributes in number of features
 
@@ -248,19 +194,31 @@ def check_smartpredictor_length_attributes(features_dict, model, columns_dict, f
         Dictionnary mapping features with the right types needed.
     label_dict: dict (optional)
         Dictionary mapping integer labels to domain names (classification - target values).
+    preprocessing: category_encoders, ColumnTransformer, list or dict
+            The processing apply to the original data
     """
+    if isinstance(preprocessing, list):
+        raise ValueError("List of encoders is not supported in SmartPredictor")
 
-    catboost_model = (
-        "<class 'catboost.core.CatBoostClassifier'>",
-        "<class 'catboost.core.CatBoostRegressor'>"
-    )
+    elif str(type(preprocessing)) in supported_category_encoder:
+        if features_dict is not None:
+            if not all(feat in model.feature_names_ for feat in [feature for feature in features_dict]):
+                raise ValueError("All features of features_dict must be in model")
 
-    list_attributes = [features_dict, features_types, label_dict, columns_dict]
+        if [feature for feature in columns_dict.values()] != model.feature_names_:
+            raise ValueError("features of columns_dict and model must be the same")
 
-    if str(type(model)) in catboost_model:
-        length = len(model.feature_names_)
-    else:
-        length = model.n_features_in_
+        if [feature for feature in features_types] != model.feature_names_:
+            raise ValueError("features of features_types and model must be the same")
 
-    if not all(len(lst) == length for lst in list_attributes if lst is not None):
-        raise ValueError("All attributes have not the same number of features")
+        if label_dict is not None:
+            if not all(feat in [feature for feature in columns_dict] for feat in [feature for feature in label_dict]):
+                raise ValueError("All features of label_dict must be in model")
+
+        if mask_params is not None:
+            if mask_params['features_to_hide'] is not None:
+                if not all(feature in model.feature_names_ for feature in mask_params['features_to_hide']):
+                    raise ValueError("All features of mask_params must be in model")
+
+    elif str(type(preprocessing)) not in supported_category_encoder and preprocessing is not None:
+        raise ValueError("this type of encoder is not supported in SmartPredictor")

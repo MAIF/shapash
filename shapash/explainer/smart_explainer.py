@@ -21,9 +21,9 @@ from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.shap_backend import shap_contributions, check_explainer
+from shapash.utils.shap_backend import shap_contributions, check_explainer, check_consistency_model_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
-                                check_model_explainer, check_smartpredictor_length_attributes
+                                check_consistency_model_features
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -992,7 +992,7 @@ class SmartExplainer:
                                         explainer used. Make change in compile() step""")
 
         else:
-            check_model_explainer(self.model, self.explainer)
+            check_consistency_model_explainer(self.model, self.explainer)
             self.features_types = {features : str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
             listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
@@ -1003,16 +1003,16 @@ class SmartExplainer:
             if hasattr(self,"mask_params"):
                 params_smartpredictor.append(self.mask_params)
             else :
-                mask_params = {
+                self.mask_params = {
                     "features_to_hide": None,
                     "threshold": None,
                     "positive": None,
                     "max_contrib": None
                 }
-                params_smartpredictor.append(mask_params)
+                params_smartpredictor.append(self.mask_params)
 
-            check_smartpredictor_length_attributes(self.features_dict, self.model, self.columns_dict,
-                                                   self.features_types, self.label_dict)
+            check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
+                                             self.features_types, self.label_dict, self.mask_params, self.preprocessing)
 
         return SmartPredictor(*params_smartpredictor)
 

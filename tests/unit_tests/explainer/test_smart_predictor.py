@@ -59,7 +59,7 @@ class TestSmartPredictor(unittest.TestCase):
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
         clf_explainer = shap.TreeExplainer(clf)
 
-        columns_dict = {0:"x1",2:"x2"}
+        columns_dict = {0:"x1",1:"x2"}
         label_dict = {0:"Yes",1:"No"}
 
         postprocessing = {"x2": {
@@ -123,7 +123,7 @@ class TestSmartPredictor(unittest.TestCase):
         encoder_fitted = encoder.fit(df)
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
@@ -184,7 +184,7 @@ class TestSmartPredictor(unittest.TestCase):
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
         clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
@@ -217,7 +217,7 @@ class TestSmartPredictor(unittest.TestCase):
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
         clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
@@ -246,7 +246,7 @@ class TestSmartPredictor(unittest.TestCase):
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
         clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
@@ -509,19 +509,13 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
         label_dict = {1: 'Yes', 0: 'No'}
 
-        model = lambda: None
-        model.n_features_in_ = 2
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-        model._classes = np.array([0, 1])
-
         df = pd.DataFrame(range(0, 21), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['Col1'] = np.random.randint(1, 123, df.shape[0])
+        df['Col2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
+        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(model)
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, clf_explainer, features_types, label_dict)
@@ -542,17 +536,13 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
         label_dict = None
 
-        model = lambda: None
-        model.n_features_in_ = 2
-        model.predict = types.MethodType(self.predict, model)
-
         df = pd.DataFrame(range(0, 21), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['Col1'] = np.random.randint(1, 123, df.shape[0])
+        df['Col2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
+        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(model)
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, clf_explainer, features_types, label_dict)
@@ -660,19 +650,13 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
         label_dict = None
 
-        model = lambda: None
-        model._classes = np.array([1, 2])
-        model.n_features_in_ = 2
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-
         df = pd.DataFrame(range(0, 21), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['Col1'] = np.random.randint(1, 123, df.shape[0])
+        df['Col2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
+        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(model)
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, clf_explainer, features_types, label_dict)
@@ -703,19 +687,13 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
         label_dict = None
 
-        model = lambda: None
-        model._classes = np.array([1, 2])
-        model.n_features_in_ = 2
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-
         df = pd.DataFrame(range(0, 21), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['Col1'] = np.random.randint(1, 123, df.shape[0])
+        df['Col2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
+        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(model)
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, clf_explainer, features_types, label_dict)
@@ -743,19 +721,13 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
         label_dict = None
 
-        model = lambda: None
-        model._classes = np.array([1, 2])
-        model.n_features_in_ = 2
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-
         df = pd.DataFrame(range(0, 21), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['Col1'] = np.random.randint(1, 123, df.shape[0])
+        df['Col2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
+        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(model)
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, clf_explainer, features_types, label_dict)
@@ -779,19 +751,13 @@ class TestSmartPredictor(unittest.TestCase):
         features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
         label_dict = None
 
-        model = lambda: None
-        model._classes = np.array([1, 2])
-        model.n_features_in_ = 2
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-
         df = pd.DataFrame(range(0, 21), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['Col1'] = np.random.randint(1, 123, df.shape[0])
+        df['Col2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
+        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(model)
 
         predictor_1 = SmartPredictor(features_dict, model,
                                      columns_dict, clf_explainer, features_types, label_dict)

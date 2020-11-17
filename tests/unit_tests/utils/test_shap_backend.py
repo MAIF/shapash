@@ -10,7 +10,7 @@ import sklearn.linear_model as skl
 import xgboost as xgb
 import lightgbm as lgb
 import catboost as cb
-from shapash.utils.shap_backend import shap_contributions, check_explainer
+from shapash.utils.shap_backend import shap_contributions, check_explainer, check_consistency_model_explainer
 import shap
 
 class TestShapBackend(unittest.TestCase):
@@ -22,7 +22,6 @@ class TestShapBackend(unittest.TestCase):
     ----------
     unittest.TestCase
     """
-
     def setUp(self):
         self.modellist = [
             lgb.LGBMRegressor(n_estimators=1), lgb.LGBMClassifier(n_estimators=1),
@@ -43,6 +42,34 @@ class TestShapBackend(unittest.TestCase):
         self.x_df = df[['x1','x2']]
         self.y_df = df['y'].to_frame()
 
+        self.simple_tree_model = (
+            "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
+            "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
+            "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
+            "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
+            "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
+            "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
+            "<class 'lightgbm.sklearn.LGBMClassifier'>",
+            "<class 'lightgbm.sklearn.LGBMRegressor'>",
+            "<class 'xgboost.sklearn.XGBClassifier'>",
+            "<class 'xgboost.sklearn.XGBRegressor'>"
+        )
+
+        self.catboost_model = (
+            "<class 'catboost.core.CatBoostClassifier'>",
+            "<class 'catboost.core.CatBoostRegressor'>"
+        )
+
+        self.linear_model = (
+            "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
+            "<class 'sklearn.linear_model._base.LinearRegression'>"
+        )
+
+        self.svm_model = (
+            "<class 'sklearn.svm._classes.SVC'>",
+            "<class 'sklearn.svm._classes.SVR'>"
+        )
+
     def test_shap_contributions_0(self):
         """
         test shap_backend
@@ -56,47 +83,19 @@ class TestShapBackend(unittest.TestCase):
         """
         test shap_backend with explainer pre-compute
         """
-        simple_tree_model = (
-            "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
-            "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
-            "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
-            "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
-            "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
-            "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
-            "<class 'lightgbm.sklearn.LGBMClassifier'>",
-            "<class 'lightgbm.sklearn.LGBMRegressor'>",
-            "<class 'xgboost.sklearn.XGBClassifier'>",
-            "<class 'xgboost.sklearn.XGBRegressor'>"
-        )
-
-        catboost_model = (
-            "<class 'catboost.core.CatBoostClassifier'>",
-            "<class 'catboost.core.CatBoostRegressor'>"
-        )
-
-        linear_model = (
-            "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
-            "<class 'sklearn.linear_model._base.LinearRegression'>"
-        )
-
-        svm_model = (
-            "<class 'sklearn.svm._classes.SVC'>",
-            "<class 'sklearn.svm._classes.SVR'>"
-        )
-
         for model in self.modellist:
             print(type(model))
             model.fit(self.x_df, self.y_df)
-            if str(type(model)) in simple_tree_model:
+            if str(type(model)) in self.simple_tree_model:
                 explainer = shap.TreeExplainer(model)
 
-            elif str(type(model)) in catboost_model:
+            elif str(type(model)) in self.catboost_model:
                 explainer = shap.TreeExplainer(model)
 
-            elif str(type(model)) in linear_model:
+            elif str(type(model)) in self.linear_model:
                 explainer = shap.LinearExplainer(model, self.x_df)
 
-            elif str(type(model)) in svm_model:
+            elif str(type(model)) in self.svm_model:
                 explainer = shap.KernelExplainer(model.predict, self.x_df)
 
             shap_contributions(model, self.x_df, explainer)
@@ -121,3 +120,58 @@ class TestShapBackend(unittest.TestCase):
         explainer = shap.TreeExplainer(clf)
         assert explainer.__class__.__base__.__name__ == "Explainer"
         check_explainer(explainer)
+
+    def test_check_consistency_model_explainer_1(self):
+        """
+        test check consistency model explainer 1
+        """
+        self.modellist = [
+            lgb.LGBMRegressor(n_estimators=1), lgb.LGBMClassifier(n_estimators=1),
+            xgb.XGBRegressor(n_estimators=1), xgb.XGBRegressor(n_estimators=1),
+            svm.SVR(kernel='linear'), svm.SVC(kernel='linear'),
+            cb.CatBoostRegressor(n_estimators=1), cb.CatBoostClassifier(n_estimators=1),
+            ske.GradientBoostingRegressor(n_estimators=1), ske.GradientBoostingClassifier(n_estimators=1),
+            ske.ExtraTreesRegressor(n_estimators=1), ske.ExtraTreesClassifier(n_estimators=1),
+            ske.RandomForestRegressor(n_estimators=1), ske.RandomForestClassifier(n_estimators=1),
+            skl.LogisticRegression(), skl.LinearRegression()
+        ]
+
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        self.x_df = df[['x1', 'x2']]
+        self.y_df = df['y'].to_frame()
+
+        for model in self.modellist:
+            print(type(model))
+            model.fit(self.x_df, self.y_df)
+            if str(type(model)) in self.simple_tree_model:
+                explainer = shap.TreeExplainer(model)
+
+            elif str(type(model)) in self.catboost_model:
+                explainer = shap.TreeExplainer(model)
+
+            elif str(type(model)) in self.linear_model:
+                explainer = shap.LinearExplainer(model, self.x_df)
+
+            elif str(type(model)) in self.svm_model:
+                explainer = shap.KernelExplainer(model.predict, self.x_df)
+
+            check_consistency_model_explainer(model, explainer)
+
+    def test_check_consistency_model_explainer_2(self):
+        """
+        test check consistency model explainer 2
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        explainer = None
+        with self.assertRaises(ValueError):
+            check_consistency_model_explainer(clf, explainer)
