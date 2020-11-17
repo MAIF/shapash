@@ -856,8 +856,12 @@ class SmartExplainer:
             self.features_dict
         )
         # Matching with y_pred
+        self.predict_proba() if proba else None
+        proba_values = self.proba_values if proba else None
 
-        return self.keep_right_contributions(proba)
+        return keep_right_contributions(self.y_pred, self.data['summary'],
+                                                           self._case, self._classes,
+                                                           self.label_dict, proba_values)
 
     def compute_features_import(self, force=False):
         """
@@ -1025,20 +1029,3 @@ class SmartExplainer:
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
-
-    def keep_right_contributions(self, proba=False):
-        """
-        Return data ypred specified with the right explicability.
-        """
-        if proba:
-            if not hasattr(self, 'proba_values'):
-                self.predict_proba()
-            right_contributions = keep_right_contributions(self.y_pred, self.data['summary'],
-                                                           self._case, self._classes,
-                                                           self.label_dict, self.proba_values)
-        else:
-            right_contributions = keep_right_contributions(self.y_pred, self.data['summary'],
-                                                           self._case, self._classes,
-                                                           self.label_dict)
-
-        return right_contributions
