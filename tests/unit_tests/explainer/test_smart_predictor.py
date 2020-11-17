@@ -834,7 +834,7 @@ class TestSmartPredictor(unittest.TestCase):
                                      features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             predictor_1.predict_proba()
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
@@ -878,13 +878,13 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.data["x"] = df[["x1", "x2"]]
         predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
 
-        predictor_1.predict_proba()
-        assert predictor_1.proba_values.shape[0] == predictor_1.data["x"].shape[0]
+        prediction = predictor_1.predict_proba()
+        assert prediction.shape[0] == predictor_1.data["x"].shape[0]
 
         predictor_1.data["ypred"] = pd.DataFrame(df["y"])
-        predictor_1.predict_proba()
+        prediction = predictor_1.predict_proba()
 
-        assert predictor_1.proba_values.shape[0] == predictor_1.data["x"].shape[0]
+        assert prediction.shape[0] == predictor_1.data["x"].shape[0]
 
     def test_detail_contributions_1(self):
         """

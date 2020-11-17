@@ -28,6 +28,7 @@ from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 from .smart_predictor import SmartPredictor
+from shapash.utils.model import predict_proba
 
 logging.basicConfig(level=logging.INFO)
 
@@ -768,13 +769,8 @@ class SmartExplainer:
         """
         The predict_proba compute the proba values for each x_init row
         """
-        if hasattr(self.model, 'predict_proba'):
-            self.proba_values = pd.DataFrame(
-                self.model.predict_proba(self.x_init),
-                columns=['class_'+str(x) for x in self._classes],
-                index=self.x_init.index)
-        else:
-            raise ValueError("model has no predict_proba method")
+        self.proba_values = predict_proba(self.model, self.x_init, self._classes)
+
 
 
     def to_pandas(
@@ -856,8 +852,11 @@ class SmartExplainer:
             self.features_dict
         )
         # Matching with y_pred
-        self.predict_proba() if proba else None
-        proba_values = self.proba_values if proba else None
+        if proba:
+            self.predict_proba() if proba else None
+            proba_values = self.proba_values
+        else:
+            proba_values = None
 
         return keep_right_contributions(self.y_pred, self.data['summary'],
                                                            self._case, self._classes,

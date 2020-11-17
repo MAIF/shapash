@@ -9,6 +9,7 @@ import pandas as pd
 from shapash.utils.transform import adapt_contributions
 from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.utils.model import predict_proba
 
 
 
@@ -386,13 +387,7 @@ class SmartPredictor :
         pandas.DataFrame
             data with all probabilities if there is no ypred data or data with ypred and the associated probability.
         """
-        if hasattr(self.model, 'predict_proba'):
-            self.proba_values = pd.DataFrame(
-                self.model.predict_proba(self.data["x_preprocessed"]),
-                columns=['class_'+str(x) for x in self._classes],
-                index=self.data["x_preprocessed"].index)
-        else:
-            raise ValueError("model has no predict_proba method")
+        return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
     def detail_contributions(self, proba=False, contributions=None):
         """
@@ -436,8 +431,7 @@ class SmartPredictor :
                                                                    self.preprocessing
                                                                    )
         self.check_contributions(contributions)
-        self.predict_proba() if self._case == "classification" else None
-        proba_values = self.proba_values if self._case == "classification" else None
+        proba_values = self.predict_proba() if self._case == "classification" else None
 
         return keep_right_contributions(self.data["ypred"], contributions,
                                         self._case, self._classes,
