@@ -3,11 +3,14 @@ Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
-from shapash.utils.shap_backend import check_explainer
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
 from shapash.utils.transform import adapt_contributions
+from shapash.utils.shap_backend import check_explainer, shap_contributions
+from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.utils.model import predict_proba
+
 
 
 
@@ -180,19 +183,18 @@ class SmartPredictor :
                         Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
                         """
                     )
+            else:
+                self.data["x_preprocessed"] = self.data["x"]
         else:
             if not hasattr(self,"data"):
                 raise ValueError ("No dataset x specified.")
 
         if ypred is not None:
             self.data["ypred"] = self.check_ypred(ypred)
-
-        if contributions is not None:
-            adapt_contrib = self.adapt_contributions(contributions)
-            state = self.choose_state(adapt_contrib)
-            contributions = self.validate_contributions(state, adapt_contrib)
-            self.check_contributions(state, contributions)
-            self.data["contributions"] = contributions
+            if contributions is not None:
+                self.data["contributions"] = self.detail_contributions(contributions=contributions)
+            else:
+                self.data["contributions"] = self.detail_contributions()
 
     def check_dataset_type(self, x=None):
         """
@@ -321,7 +323,7 @@ class SmartPredictor :
         """
         return adapt_contributions(self._case, contributions)
 
-    def validate_contributions(self, state, contributions):
+    def validate_contributions(self, contributions):
         """
         Check len of list if _case is "classification"
         Check contributions object type if _case is "regression"
@@ -329,8 +331,6 @@ class SmartPredictor :
 
         Parameters
         ----------
-        state: SmartState or SmartMultiState
-            Implementation adapted to the type of problem (multiclass or not)
         contributions : pandas.DataFrame, np.ndarray or list
 
         Returns
@@ -338,13 +338,13 @@ class SmartPredictor :
             pandas.DataFrame or list
         """
         check_contribution_object(self._case, self._classes, contributions)
-        return state.validate_contributions(contributions, self.data["x"])
+        return self.state.validate_contributions(contributions, self.data["x"])
 
-    def check_contributions(self, state, contributions):
+    def check_contributions(self, contributions):
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not state.check_contributions(contributions, self.data["x"]):
+        if not self.state.check_contributions(contributions, self.data["x"]):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -377,3 +377,86 @@ class SmartPredictor :
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def predict_proba(self):
+        """
+        The predict_proba compute the proba values for each x row defined in add_input
+
+        Returns
+        -------
+        pandas.DataFrame
+            data with all probabilities if there is no ypred data or data with ypred and the associated probability.
+        """
+        return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
+
+    def detail_contributions(self, proba=False, contributions=None):
+        """
+        The detail_contributions compute the contributions associated to data ypred specified.
+        Need a data ypred specified in an add_input to display detail_contributions.
+
+        Parameters
+        -------
+        proba: bool, optional (default: False)
+            adding proba in output df
+        contributions : object (optional)
+            Local contributions, or list of local contributions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Data with ypred and the associated contributions.
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+        if self.data["x"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply detail_contributions.
+                """
+            )
+        if self.data["ypred"] is None:
+            raise ValueError(
+            """
+            ypred must be specified in an add_input method to apply detail_contributions.
+            """
+            )
+        if contributions is None:
+            contributions, explainer = shap_contributions(self.model,
+                                               self.data["x_preprocessed"],
+                                               self.explainer)
+        adapt_contrib = self.adapt_contributions(contributions)
+        self.state = self.choose_state(adapt_contrib)
+        contributions = self.validate_contributions(adapt_contrib)
+        contributions = self.apply_preprocessing_for_contributions(contributions,
+                                                                   self.preprocessing
+                                                                   )
+        self.check_contributions(contributions)
+        proba_values = self.predict_proba() if self._case == "classification" else None
+
+        return keep_right_contributions(self.data["ypred"], contributions,
+                                        self._case, self._classes,
+                                        self.label_dict, proba_values)
+
+    def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
+        """
+        Reconstruct contributions for original features, taken into account a preprocessing.
+
+        Parameters
+        ----------
+        contributions : object
+            Local contributions, or list of local contributions.
+        preprocessing : object
+            Encoder taken from scikit-learn or category_encoders
+
+        Returns
+        -------
+        object
+            Reconstructed local contributions in the original space. Can be a list.
+        """
+        if preprocessing:
+            return self.state.inverse_transform_contributions(
+                contributions,
+                preprocessing
+            )
+        else:
+            return contributions
