@@ -109,14 +109,13 @@ def apply_preprocessing(x_pred, model, preprocessing=None):
         use_ct, use_ce = check_transformers(list_encoding)
 
         # Apply Transform
-        x_transform = x_pred.copy()
 
         for encoding in list_encoding:
             if use_ct:
-                x_transform = transform_ct(x_transform, model, encoding)
+                x_pred = transform_ct(x_pred, model, encoding)
             else:
-                x_transform = transform_ce(x_transform, encoding)
-        return x_transform
+                x_pred = transform_ce(x_pred, encoding)
+        return x_pred
 
 def preprocessing_tolist(preprocess):
     """
