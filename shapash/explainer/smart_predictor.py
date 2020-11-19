@@ -465,3 +465,97 @@ class SmartPredictor :
         """
         return apply_preprocessing(self.data["x"], self.model, self.preprocessing)
 
+    def filter(self):
+        """
+        The filter method is an important method which allows to summarize the local explainability
+        by using the user defined mask_params parameters which correspond to its use case.
+        """
+        mask = [self.summary_state.init_mask(self.summary['contrib_sorted'], True)]
+        if self.mask_params["features_to_hide"] is not None:
+            mask.append(
+                self.summary_state.hide_contributions(
+                    self.data['var_dict'],
+                    features_list=self.check_features_name(self.mask_params["features_to_hide"])
+                )
+            )
+        if self.mask_params["threshold"] is not None:
+            mask.append(
+                self.summary_state.cap_contributions(
+                    self.data['contrib_sorted'],
+                    threshold=self.mask_params["threshold"]
+                )
+            )
+        if self.mask_params["positive"] is not None:
+            mask.append(
+                self.summary_state.sign_contributions(
+                    self.summary['contrib_sorted'],
+                    positive=self.mask_params["positive"]
+                )
+            )
+        self.mask = self.summary_state.combine_masks(mask)
+        if self.mask_params["max_contrib"] is not None:
+            self.mask = self.summary_state.cutoff_contributions(self.mask, max_contrib=self.mask_params["max_contrib"])
+        self.masked_contributions = self.summary_state.compute_masked_contributions(
+            self.summary['contrib_sorted'],
+            self.mask
+        )
+
+    def summarize(self):
+        """
+        The summarize method allows to export the summary of local explainability.
+        This method proposes a set of parameters to summarize the explainability of each point.
+        If the user does not specify any, the summarize method uses the mask_params parameters specified during
+        the initialisation of the SmartPredictor.
+
+        In classification case, The summarize method summarizes the explicability which corresponds
+        to the predicted values specified by the user (with add_input method) and the proba from
+        predict_proba associated to the right predicted values.
+
+        Returns
+        -------
+        pandas.DataFrame
+            - selected explanation of each row for classification case
+
+        Examples
+        --------
+        >>> summary_df = xpl.summarize()
+        >>> summary_df
+        	pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
+        0	0	    0.756416	Sex	        1.0	        0.322308	    Pclass	    3.0	        0.155069
+        1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
+        2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
+        """
+        # data is needed : add_input() method must be called at least once
+
+        self.summary_state = SmartState()
+        if not hasattr(self, "data"):
+            raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
+
+        if self._case == "regression":
+            y_pred = self.data["contributions"].iloc[:, :1]
+            contributions = self.data["contributions"].iloc[:, 1:]
+        else:
+            y_pred = self.data["contributions"].iloc[:, :2]
+            contributions = self.data["contributions"].iloc[:, 2:]
+
+        self.summary = self.summary_state.assign_contributions(
+            self.summary_state.rank_contributions(
+                contributions,
+                self.data["x_preprocessed"]
+            )
+        )
+        # Apply filter method with mask_params attributes parameters
+        self.filter()
+
+        # Summarize information
+        self.data['summary'] = self.summary_state.summarize(
+            self.summary['contrib_sorted'],
+            self.summary['var_dict'],
+            self.summary['x_sorted'],
+            self.mask,
+            self.columns_dict,
+            self.features_dict
+        )
+        # Matching with y_pred
+        return pd.concat([y_pred, self.data['summary']], axis=1)
+
