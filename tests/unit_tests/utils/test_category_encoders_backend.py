@@ -13,7 +13,7 @@ from shapash.utils.transform import inverse_transform, apply_preprocessing
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
-    def test_inverse_transform_none(self):
+    def test_inverse_transform_1(self):
         """
         Test no preprocessing
         """
@@ -22,7 +22,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(train)
         pd.testing.assert_frame_equal(original, train)
 
-    def test_multiple_encoding(self):
+    def test_inverse_transform_2(self):
         """
         Test multiple preprocessing
         """
@@ -87,7 +87,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         pd.testing.assert_frame_equal(expected, original)
 
 
-    def test_target(self):
+    def test_inverse_transform_3(self):
         """
         Test target encoding
         """
@@ -107,7 +107,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(expected, original)
 
-    def test_inverse_transform_HaveUnknown_ExpectWarning(self):
+    def test_inverse_transform_4(self):
         """
         Test ordinal encoding
         """
@@ -120,21 +120,30 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(expected, original)
 
-    def test_inverse_transform_HaveNanInTrainAndHandleMissingValue_ExpectReturnedWithNan_Ordinal(self):
+    def test_inverse_transform_5(self):
+        """
+        Test inverse_transform having Nan in train and handle missing value expect returned with nan_Ordinal
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         enc = ce.OrdinalEncoder(handle_missing='value', handle_unknown='value')
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveNanInTrainAndHandleMissingReturnNan_ExpectReturnedWithNan_Ordinal(self):
+    def test_inverse_transform_6(self):
+        """
+        test inverse_transform having Nan in train and handle missing return Nan expect returned with nan_Ordinal
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         enc = ce.OrdinalEncoder(handle_missing='return_nan', handle_unknown='value')
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_BothFieldsAreReturnNanWithNan_ExpectValueError_Ordinal(self):
+    def test_inverse_transform_7(self):
+        """
+        test inverse_transform both fields are return Nan with Nan Expect ValueError Ordinal
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', 'los angeles']})
         enc = ce.OrdinalEncoder(handle_missing='return_nan', handle_unknown='return_nan')
@@ -143,7 +152,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveMissingAndNoUnknown_ExpectInversed_Ordinal(self):
+    def test_inverse_transform_8(self):
+        """
+        test inverse_transform having missing and no Uknown expect inversed ordinal
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', 'los angeles']})
         enc = ce.OrdinalEncoder(handle_missing='value', handle_unknown='return_nan')
@@ -152,7 +164,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveHandleMissingValueAndHandleUnknownReturnNan_ExpectBestInverse_Ordinal(self):
+    def test_inverse_transform_9(self):
+        """
+        test inverse_transform having handle missing value and handle unknown return Nan expect best inverse ordinal
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', np.nan, 'los angeles']})
         expected = pd.DataFrame({'city': ['chicago', np.nan, np.nan]})
@@ -162,7 +177,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = enc.inverse_transform(result)
         pd.testing.assert_frame_equal(expected, original)
 
-    def test_inverse_transform_multiple_ordinal(self):
+    def test_inverse_transform_10(self):
+        """
+        test inverse_transform with multiple ordinal
+        """
         data = pd.DataFrame({'city': ['chicago', 'paris'],
                              'state': ['US', 'FR'],
                              'other': ['a', 'b']})
@@ -177,7 +195,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(test, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_multiple_binary(self):
+    def test_inverse_transform_11(self):
         """
         Test binary encoding
         """
@@ -198,14 +216,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_transform_HaveData_ExpectResultReturned(self):
+    def test_inverse_transform_12(self):
+        """
+        test inverse_transform having data expecting a returned result
+        """
         train = pd.Series(list('abcd')).to_frame('letter')
         enc = ce.BaseNEncoder(base=2)
         result = enc.fit_transform(train)
         inversed_result = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, inversed_result)
 
-    def test_inverse_transform_HaveNanInTrainAndHandleMissingValue_ExpectReturnedWithNan_baseN(self):
+    def test_inverse_transform_13(self):
         """
         Test basen encoding
         """
@@ -215,7 +236,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveNanInTrainAndHandleMissingReturnNan_ExpectReturnedWithNan(self):
+    def test_inverse_transform_14(self):
+        """
+        test inverse_transform having Nan in train and handle missing expected a result with Nan
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
 
         enc = ce.BaseNEncoder(handle_missing='return_nan', handle_unknown='value')
@@ -224,7 +248,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
 
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveMissingAndNoUnknown_ExpectInversed(self):
+    def test_inverse_transform_15(self):
+        """
+        test inverse_transform having missing and no unknown
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', 'los angeles']})
 
@@ -235,7 +262,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
 
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveHandleMissingValueAndHandleUnknownReturnNan_ExpectBestInverse(self):
+    def test_inverse_transform_16(self):
+        """
+        test inverse_transform having handle missing value and Unknown
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', np.nan, 'los angeles']})
         expected = pd.DataFrame({'city': ['chicago', np.nan, np.nan]})
@@ -245,7 +275,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(expected, original)
 
-    def test_inverse_transform_multiple_baseN(self):
+    def test_inverse_transform_17(self):
+        """
+        test inverse_transform with multiple baseN
+        """
         train = pd.DataFrame({'city': ['chicago', 'paris'],
                               'state': ['US', 'FR']})
         test = pd.DataFrame({'city_0': [0, 1],
@@ -257,7 +290,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(test, enc)
         pd.testing.assert_frame_equal(original, train)
 
-    def test_inverse_transform_HaveDedupedColumns_ExpectCorrectInverseTransform(self):
+    def test_inverse_transform_18(self):
         """
         Test Onehot encoding
         """
@@ -267,28 +300,40 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         inversed_result = inverse_transform(transformed, encoder)
         pd.testing.assert_frame_equal(value, inversed_result)
 
-    def test_inverse_transform_HaveNoCatNames_ExpectCorrectInverseTransform(self):
+    def test_inverse_transform_19(self):
+        """
+        test inverse_transform having no categories names
+        """
         encoder = ce.OneHotEncoder(cols=['match', 'match_box'], use_cat_names=False)
         value = pd.DataFrame({'match': pd.Series('box_-1'), 'match_box': pd.Series(-1)})
         transformed = encoder.fit_transform(value)
         inversed_result = inverse_transform(transformed, encoder)
         pd.testing.assert_frame_equal(value, inversed_result)
 
-    def test_inverse_transform_HaveNanInTrainAndHandleMissingValue_ExpectReturnedWithNan_OneHot(self):
+    def test_inverse_transform_20(self):
+        """
+        test inverse_transform with Nan in training expecting Nan_Onehot returned result
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         enc = ce.OneHotEncoder(handle_missing='value', handle_unknown='value')
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveNanInTrainAndHandleMissingReturnNan_ExpectReturnedWithNan_OneHot(self):
+    def test_inverse_transform_21(self):
+        """
+        test inverse_transform with Nan in training expecting Nan_Onehot returned result
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         enc = ce.OneHotEncoder(handle_missing='return_nan', handle_unknown='value')
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_BothFieldsAreReturnNanWithNan_ExpectValueError_Onehot(self):
+    def test_inverse_transform_22(self):
+        """
+        test inverse_transform with Both fields return_nan
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', 'los angeles']})
         expected = pd.DataFrame({'city': ['chicago', np.nan]})
@@ -298,7 +343,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_transform_HaveMissingAndNoUnknown_ExpectInversed_Onehot(self):
+    def test_inverse_transform_23(self):
+        """
+        test inverse_transform having missing and No Unknown
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', 'los angeles']})
         enc = ce.OneHotEncoder(handle_missing='value', handle_unknown='return_nan')
@@ -307,7 +355,10 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(train, original)
 
-    def test_inverse_transform_HaveHandleMissingValueAndHandleUnknownReturnNan_ExpectBestInverse_Onehot(self):
+    def test_inverse_transform_24(self):
+        """
+        test inverse_transform having handle missing value and Handle Unknown
+        """
         train = pd.DataFrame({'city': ['chicago', np.nan]})
         test = pd.DataFrame({'city': ['chicago', np.nan, 'los angeles']})
         expected = pd.DataFrame({'city': ['chicago', np.nan, np.nan]})
@@ -317,7 +368,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(expected, original)
 
-    def test_dict(self):
+    def test_inverse_transform_25(self):
         """
         Test dict encoding
         """
@@ -335,7 +386,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         result = inverse_transform(data, input_dict)
         pd.testing.assert_frame_equal(result, expected)
 
-    def test_multiple_dict_encoding_withindex(self):
+    def test_inverse_transform_26(self):
         """
         Test multiple dict encoding
         """

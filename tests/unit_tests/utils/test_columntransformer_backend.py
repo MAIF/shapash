@@ -18,7 +18,10 @@ from shapash.utils.transform import inverse_transform, apply_preprocessing
 # Target encoding return object vs float
 
 class TestInverseTransformColumnsTransformer(unittest.TestCase):
-    def test_inverse_multiple_ct_drop(self):
+    def test_inv_transform_ct_1(self):
+        """
+        test inv_transform_ct with multiple encoding and drop option
+        """
         train = pd.DataFrame({'city': ['chicago', 'paris'],
                               'state': ['US', 'FR'],
                               'other': ['A', 'B']},
@@ -48,7 +51,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_multiple_ct_passthrough(self):
+    def test_inv_transform_2(self):
+        """
+        test inv_transform_ct with multiple encoding and passthrough option
+        """
         train = pd.DataFrame({'city': ['chicago', 'paris'],
                               'state': ['US', 'FR'],
                               'other': ['A', 'B']},
@@ -79,7 +85,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_multiple_ct_dict(self):
+    def test_inv_transform_ct_3(self):
+        """
+        test inv_transform_ct with multiple encoding and dictionnary
+        """
         train = pd.DataFrame({'city': ['chicago', 'paris'],
                                   'state': ['US', 'FR'],
                                   'other': ['A', 'B']},
@@ -127,7 +136,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, [enc,input_dict1,list_dict])
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_target_passthrough(self):
+    def test_inv_transform_ct_4(self):
+        """
+        test inv_transform_ct with single target category encoders and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1, 1, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris', 'paris', 'chicago'],
@@ -155,7 +167,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_target_drop(self):
+    def test_inv_transform_ct_5(self):
+        """
+        test inv_transform_ct with single target category encoders and drop option
+        """
         y = pd.DataFrame(data=[0, 1, 0, 0], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris', 'chicago', 'paris'],
@@ -181,7 +196,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_OrdinalEncoder_drop(self):
+    def test_inv_transform_ct_6(self):
+        """
+        test inv_transform_ct with Ordinal Category Encoder and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -207,7 +225,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_OrdinalEncoder_passthrough(self):
+    def test_inv_transform_ct_7(self):
+        """
+        test inv_transform_ct with category Ordinal Encoder and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -233,7 +254,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_Binary_drop(self):
+    def test_inv_transform_ct_8(self):
+        """
+        test inv_transform_ct with Binary encoder and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -259,7 +283,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_Binary_passthrough(self):
+    def test_inv_transform_ct_9(self):
+        """
+        test inv_transform_ct with Binary Encoder and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -285,7 +312,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_BaseN_drop(self):
+    def test_inv_transform_ct_10(self):
+        """
+        test inv_transform_ct with BaseN Encoder and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -310,7 +340,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_BaseN_passthrough(self):
+    def test_inv_transform_ct_11(self):
+        """
+        test inv_transform_ct with BaseN Encoder and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -336,7 +369,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_onehot_drop(self):
+    def test_inv_transform_ct_12(self):
+        """
+        test inv_transform_ct with single OneHotEncoder and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -361,7 +397,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_ce_onehot_passthrough(self):
+    def test_inv_transform_ct_13(self):
+        """
+        test inv_transform_ct with OneHotEncoder and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -387,7 +426,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_onehot_drop(self):
+    def test_inv_transform_ct_14(self):
+        """
+        test inv_transform_ct with OneHotEncoder Sklearn and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -412,7 +454,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_onehot_passthrough(self):
+    def test_inv_transform_ct_15(self):
+        """
+        test inv_transform_ct with OneHotEncoder Sklearn and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -438,7 +483,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_ordinal_drop(self):
+    def test_inv_transform_ct_16(self):
+        """
+        test inv_tranform_ct with ordinal Encoder sklearn and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -463,7 +511,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_ordinal_passthrough(self):
+    def test_inv_transform_ct_17(self):
+        """
+        test inv_transform_ct with OrdinalEncoder Sklearn and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'city': ['chicago', 'paris'],
@@ -489,7 +540,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_standardscaler_passthrough(self):
+    def test_inv_transform_ct_18(self):
+        """
+        test inv_transform_ct with Standardscaler Encoder Sklearn and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'num1': [0, 1],
@@ -516,7 +570,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_standardscaler_drop(self):
+    def test_inv_transform_ct_19(self):
+        """
+        test inv_transform_ct with StandarScaler Encoder Sklearn and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'num1': [0, 1],
@@ -541,7 +598,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_quantile_passthrough(self):
+    def test_inv_transform_ct_20(self):
+        """
+        test inv_transform_ct with QuantileTransformer Encoder Sklearn and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'num1': [0, 1],
@@ -567,7 +627,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_quantile_drop(self):
+    def test_inv_transform_ct_21(self):
+        """
+        test inv_transform_ct with QuandtileTransformer Encoder Sklearn and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'num1': [0, 1],
@@ -592,7 +655,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_power_passthrough(self):
+    def test_inv_transform_ct_22(self):
+        """
+        test inv_transform_ct with PowerTransformer Encoder Sklearn and passthrough option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'num1': [0, 1],
@@ -618,7 +684,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inverse_single_skp_power_drop(self):
+    def test_inv_transform_ct_23(self):
+        """
+        test inv_transform_ct with PowerTransformer Encoder Sklearn and drop option
+        """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
 
         train = pd.DataFrame({'num1': [0, 1],
