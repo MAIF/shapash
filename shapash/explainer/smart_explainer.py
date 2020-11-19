@@ -24,10 +24,13 @@ from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
                                 check_consistency_model_features, check_consistency_model_label
+from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object
+from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 from .smart_predictor import SmartPredictor
+from shapash.utils.model import predict_proba
 
 logging.basicConfig(level=logging.INFO)
 
@@ -768,13 +771,8 @@ class SmartExplainer:
         """
         The predict_proba compute the proba values for each x_init row
         """
-        if hasattr(self.model, 'predict_proba'):
-            self.proba_values = pd.DataFrame(
-                self.model.predict_proba(self.x_init),
-                columns=['class_'+str(x) for x in self._classes],
-                index=self.x_init.index)
-        else:
-            raise ValueError("model has no predict_proba method")
+        self.proba_values = predict_proba(self.model, self.x_init, self._classes)
+
 
 
     def to_pandas(
@@ -855,32 +853,16 @@ class SmartExplainer:
             self.columns_dict,
             self.features_dict
         )
-
         # Matching with y_pred
-        y_pred = self.y_pred
-        if self._case == "classification":
-            complete_sum = [list(x) for x in list(zip(*[df.values.tolist() for df in self.data['summary']]))]
-            indexclas = [self._classes.index(x) for x in list(flatten(self.y_pred.values))]
-            summary = pd.DataFrame([summar[ind]
-                                    for ind, summar in zip(indexclas, complete_sum)],
-                                   columns=self.data['summary'][0].columns,
-                                   index=self.data['summary'][0].index,
-                                   dtype=object)
-            if self.label_dict is not None:
-                y_pred = y_pred.applymap(lambda x: self.label_dict[x])
-            if proba:
-                if not hasattr(self,'proba_values'):
-                    self.predict_proba()
-                y_proba = pd.DataFrame([proba[ind]
-                                            for ind, proba in zip(indexclas, self.proba_values.values)],
-                                           columns=['proba'],
-                                           index=y_pred.index)
-                y_pred = pd.concat([y_pred, y_proba], axis=1)
-
+        if proba:
+            self.predict_proba() if proba else None
+            proba_values = self.proba_values
         else:
-            summary = self.data['summary']
+            proba_values = None
 
-        return pd.concat([y_pred, summary], axis=1)
+        return keep_right_contributions(self.y_pred, self.data['summary'],
+                                                           self._case, self._classes,
+                                                           self.label_dict, proba_values)
 
     def compute_features_import(self, force=False):
         """

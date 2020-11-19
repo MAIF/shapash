@@ -980,7 +980,7 @@ class TestSmartExplainer(unittest.TestCase):
         model = lambda : None
         model.predict = types.MethodType(self.predict, model)
         xpl.model = model
-        xpl._case = xpl.check_model()
+        xpl._case, xpl._classes = xpl.check_model()
         xpl.state = xpl.choose_state(xpl.contributions)
         output = xpl.to_pandas(max_contrib=2)
         expected = pd.DataFrame(
