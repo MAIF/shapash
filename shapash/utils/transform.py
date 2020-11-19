@@ -104,12 +104,9 @@ def apply_preprocessing(x_pred, model, preprocessing=None):
     else:
         # Transform preprocessing into a list
         list_encoding = preprocessing_tolist(preprocessing)
-
         # Check encoding are supported
         use_ct, use_ce = check_transformers(list_encoding)
-
         # Apply Transform
-
         for encoding in list_encoding:
             if use_ct:
                 x_pred = transform_ct(x_pred, model, encoding)

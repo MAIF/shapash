@@ -233,7 +233,7 @@ def transform_ce(x_in, encoding):
     if str(type(encoding)) in encoder:
         rst = encoding.transform(x_in)
 
-    elif str(type(encoding)) == "<class 'list'>":
+    elif isinstance(encoding,list):
         rst = transform_ordinal(x_in, encoding)
 
     else:

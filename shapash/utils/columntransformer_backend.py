@@ -9,7 +9,8 @@ from shapash.utils.category_encoder_backend import supported_category_encoder
 from shapash.utils.category_encoder_backend import dummies_category_encoder
 from shapash.utils.category_encoder_backend import category_encoder_binary
 from shapash.utils.category_encoder_backend import transform_ordinal
-from shapash.utils.shap_backend import simple_tree_model,catboost_model,linear_model,svm_model
+from shapash.utils.shap_backend import simple_tree_model_sklearn,catboost_model,\
+    linear_model,svm_model, xgboost_model, lightgbm_model
 
 
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
@@ -20,10 +21,7 @@ sklearn_standardscaler = "<class 'sklearn.preprocessing._data.StandardScaler'>"
 sklearn_quantiletransformer = "<class 'sklearn.preprocessing._data.QuantileTransformer'>"
 sklearn_powertransformer = "<class 'sklearn.preprocessing._data.PowerTransformer'>"
 
-xgboost_model = simple_tree_model[-2:]
-catboost_model = catboost_model
-lightgbm_model = simple_tree_model[-4:-2]
-sklearn_model = linear_model + svm_model + simple_tree_model[:-4]
+sklearn_model = linear_model + svm_model + simple_tree_model_sklearn
 
 other_model = xgboost_model + catboost_model + lightgbm_model
 

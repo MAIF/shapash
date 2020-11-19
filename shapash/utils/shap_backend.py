@@ -14,18 +14,22 @@ with contributions calculated by lime or eli5 library
 import pandas as pd
 import shap
 
-simple_tree_model = (
+simple_tree_model_sklearn = (
         "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
         "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
         "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
         "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
         "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
-        "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
-        "<class 'lightgbm.sklearn.LGBMClassifier'>",
-        "<class 'lightgbm.sklearn.LGBMRegressor'>",
-        "<class 'xgboost.sklearn.XGBClassifier'>",
-        "<class 'xgboost.sklearn.XGBRegressor'>"
+        "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>"
     )
+xgboost_model = (
+    "<class 'xgboost.sklearn.XGBClassifier'>",
+    "<class 'xgboost.sklearn.XGBRegressor'>")
+
+lightgbm_model = (
+    "<class 'lightgbm.sklearn.LGBMClassifier'>",
+    "<class 'lightgbm.sklearn.LGBMRegressor'>"
+)
 
 catboost_model = (
     "<class 'catboost.core.CatBoostClassifier'>",
@@ -38,6 +42,8 @@ linear_model = (
 svm_model = (
     "<class 'sklearn.svm._classes.SVC'>",
     "<class 'sklearn.svm._classes.SVR'>")
+
+simple_tree_model = simple_tree_model_sklearn + xgboost_model + lightgbm_model
 
 def shap_contributions(model, x_df, explainer=None):
     """
@@ -61,7 +67,7 @@ def shap_contributions(model, x_df, explainer=None):
 
     """
     if explainer is None:
-        if str(type(model)) in simple_tree_model:
+        if str(type(model)) in simple_tree_model :
             explainer = shap.TreeExplainer(model)
             print("Backend: Shap TreeExplainer")
 
