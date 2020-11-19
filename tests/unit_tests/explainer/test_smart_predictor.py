@@ -781,7 +781,7 @@ class TestSmartPredictor(unittest.TestCase):
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
         clf_explainer = shap.TreeExplainer(clf)
 
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
 
         postprocessing = {"x2": {
@@ -789,7 +789,7 @@ class TestSmartPredictor(unittest.TestCase):
             "rule": {"S": "single", "M": "married", "D": "divorced"}}}
         features_dict = {"x1": "age", "x2": "family_situation"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, clf_explainer,
@@ -824,11 +824,11 @@ class TestSmartPredictor(unittest.TestCase):
         df['x2'] = np.random.randint(30, 150, df.shape[0])
         df = df.set_index('id')
 
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         features_dict = {"x1": "age", "x2": "weight"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         clf_explainer = shap.TreeExplainer(clf)
@@ -862,7 +862,7 @@ class TestSmartPredictor(unittest.TestCase):
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
 
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
 
         postprocessing = {"x2": {
@@ -870,7 +870,7 @@ class TestSmartPredictor(unittest.TestCase):
             "rule": {"S": "single", "M": "married", "D": "divorced"}}}
         features_dict = {"x1": "age", "x2": "family_situation"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
         clf_explainer = shap.TreeExplainer(clf)
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, clf_explainer,
@@ -904,11 +904,11 @@ class TestSmartPredictor(unittest.TestCase):
         df['x2'] = np.random.randint(30, 150, df.shape[0])
         df = df.set_index('id')
 
-        columns_dict = {0: "x1", 2: "x2"}
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         features_dict = {"x1": "age", "x2": "weight"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         clf_explainer = shap.TreeExplainer(clf)

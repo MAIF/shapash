@@ -24,7 +24,6 @@ from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
                                 check_consistency_model_features, check_consistency_model_label
-from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object
 from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator

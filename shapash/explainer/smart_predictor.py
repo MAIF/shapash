@@ -4,8 +4,6 @@ Smart predictor module
 from shapash.utils.check import check_model, check_preprocessing
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object,\
                                 check_consistency_model_features, check_consistency_model_label
-from shapash.utils.shap_backend import check_explainer
-from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
