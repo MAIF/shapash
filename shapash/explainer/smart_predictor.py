@@ -3,8 +3,8 @@ Smart predictor module
 """
 from shapash.utils.check import check_model, check_preprocessing
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object,\
-                                check_consistency_model_features
-from shapash.utils.shap_backend import check_explainer, check_consistency_model_explainer
+                                check_consistency_model_features, check_consistency_model_label
+from shapash.utils.shap_backend import check_explainer
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -101,7 +101,6 @@ class SmartPredictor :
         self.model = model
         self._case, self._classes = self.check_model()
         self.explainer = self.check_explainer(explainer)
-        check_consistency_model_explainer(self.model, self.explainer)
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict
@@ -113,7 +112,8 @@ class SmartPredictor :
         self.mask_params = mask_params
         self.check_mask_params()
         check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
-                                         self.features_types, self.label_dict, self.mask_params, self.preprocessing)
+                                         self.features_types, self.mask_params, self.preprocessing)
+        check_consistency_model_label(self.columns_dict, self.label_dict)
 
     def check_model(self):
         """

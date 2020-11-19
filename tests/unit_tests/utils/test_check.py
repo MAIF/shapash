@@ -7,15 +7,32 @@ import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
-                                check_consistency_model_features
+                                check_consistency_model_features, check_consistency_model_label
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
+import sklearn.ensemble as ske
+import sklearn.svm as svm
+import sklearn.linear_model as skl
+import xgboost as xgb
+import lightgbm as lgb
 import catboost as cb
 
 
-
 class TestCheck(unittest.TestCase):
+
+    def setUp(self):
+        self.modellist = [
+            lgb.LGBMRegressor(n_estimators=1), lgb.LGBMClassifier(n_estimators=1),
+            xgb.XGBRegressor(n_estimators=1), xgb.XGBRegressor(n_estimators=1),
+            cb.CatBoostRegressor(n_estimators=1), cb.CatBoostClassifier(n_estimators=1),
+            ske.GradientBoostingRegressor(n_estimators=1), ske.GradientBoostingClassifier(n_estimators=1),
+            ske.ExtraTreesRegressor(n_estimators=1), ske.ExtraTreesClassifier(n_estimators=1),
+            ske.RandomForestRegressor(n_estimators=1), ske.RandomForestClassifier(n_estimators=1),
+            skl.LogisticRegression(), skl.LinearRegression(),
+            svm.SVR(kernel='linear'), svm.SVC(kernel='linear')
+        ]
+
     def test_check_preprocessing_1(self):
         """
         Test check preprocessing on multiple preprocessing
@@ -282,7 +299,7 @@ class TestCheck(unittest.TestCase):
         model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
 
         check_consistency_model_features(features_dict, model, columns_dict,
-                                               features_types, label_dict, mask_params, preprocessing)
+                                               features_types, mask_params, preprocessing)
 
     def test_check_consistency_model_features_2(self):
         """
@@ -318,7 +335,7 @@ class TestCheck(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             check_consistency_model_features(features_dict, model, columns_dict,
-                                                   features_types, label_dict, mask_params, preprocessing)
+                                                   features_types, mask_params, preprocessing)
 
     def test_check_consistency_model_features_3(self):
         """
@@ -354,4 +371,54 @@ class TestCheck(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             check_consistency_model_features(features_dict, model, columns_dict,
-                                                   features_types, label_dict, mask_params, preprocessing)
+                                                   features_types, mask_params, preprocessing)
+
+    def test_check_consistency_model_features_4(self):
+        """
+        Test check_consistency_model_features 1
+        """
+        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
+                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
+                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
+                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
+                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
+                              'other': ['other', np.nan, 'other', 'other']})
+
+        features_dict = None
+        columns_dict = {i:features for i,features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        label_dict = None
+        mask_params = None
+
+        enc_ordinal_all = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
+                                            'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
+        train_ordinal_all  = enc_ordinal_all.transform(train)
+        preprocessing = enc_ordinal_all
+
+        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
+
+        for model in self.modellist:
+            print(type(model))
+            model.fit(train_ordinal_all, y)
+
+            check_consistency_model_features(features_dict, model, columns_dict,
+                                             features_types, mask_params, preprocessing)
+
+    def test_check_consistency_model_label_1(self):
+        """
+        Test check_consistency_model_label 1
+        """
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "Yes", 1: "No"}
+
+        check_consistency_model_label(columns_dict, label_dict)
+
+    def test_check_consistency_model_label_2(self):
+        """
+        Test check_consistency_model_label 2
+        """
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "Yes", 2: "No"}
+
+        with self.assertRaises(ValueError):
+            check_consistency_model_label(columns_dict, label_dict)

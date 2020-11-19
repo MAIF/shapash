@@ -102,31 +102,3 @@ def check_explainer(explainer):
                 "explainer doesn't correspond to a shap explainer object"
             )
     return explainer
-
-def check_consistency_model_explainer(model, explainer):
-    """
-    Check the consistency between model and explainer
-    If model type and explainer match
-
-    Parameters
-    ----------
-    model: model object
-        model used to check the different values of target estimate predict_proba
-    explainer : explainer object
-        explainer must be a shap object
-    """
-    if explainer is None:
-        raise ValueError("explainer must be not None")
-
-    else:
-        if str(type(model)) in simple_tree_model:
-            if model._Booster != explainer.model.original_model:
-                raise ValueError("model and explainer don't have the same type of model")
-            if model.get_booster().feature_names != explainer.model.original_model.feature_names_:
-                raise ValueError("model and explainer don't have the same features")
-        elif str(type(model)) in catboost_model:
-            if model != explainer.model.original_model:
-                raise ValueError("model and explainer don't have the same type of model")
-            if model.feature_names_ != explainer.model.original_model.feature_names_:
-                raise ValueError("model and explainer don't have the same features")
-
