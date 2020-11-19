@@ -401,7 +401,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
 
         pd.testing.assert_frame_equal(expected, original)
 
-    def test_transform_ce_onehotencoder(self):
+    def test_transform_ce_1(self):
         """
         Unit test for apply preprocessing on OneHotEncoder
         """
@@ -427,7 +427,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ce_ordinalencoder(self):
+    def test_transform_ce_2(self):
         """
         Unit test for apply preprocessing on OrdinalEncoder
         """
@@ -452,7 +452,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ce_basenencoder(self):
+    def test_transform_ce_3(self):
         """
         Unit test for apply preprocessing on BaseNEncoder
         """
@@ -478,7 +478,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ce_binaryencoder(self):
+    def test_transform_ce_4(self):
         """
         Unit test for apply preprocessing on BinaryEncoder
         """
@@ -503,7 +503,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ce_sklearn_model(self):
+    def test_transform_ce_5(self):
         """
         Unit test for apply preprocessing with sklearn model
         """
@@ -528,7 +528,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert result.shape == expected.shape
         assert all(expected.index == result.index)
 
-    def test_transform_ce_catboost_model(self):
+    def test_transform_ce_6(self):
         """
         Unit test for apply preprocessing with catboost model
         """
@@ -554,7 +554,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ce_lightgbm_model(self):
+    def test_transform_ce_7(self):
         """
         Unit test for apply preprocessing with lightgbm model
         """
@@ -580,7 +580,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert [column in clf.booster_.feature_name() for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ce_xgboost_model(self):
+    def test_transform_ce_8(self):
         """
         Unit test for apply preprocessing with xgboost model
         """

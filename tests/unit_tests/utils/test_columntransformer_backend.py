@@ -643,7 +643,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_transform_ct_sklearn_drop(self):
+    def test_transform_ct_1(self):
         """
         Unit test for apply_preprocessing on ColumnTransformer with drop option and sklearn encoder.
         """
@@ -673,7 +673,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert all([str(type_result) == str(expected.dtypes[index])
                     for index, type_result in enumerate(result.dtypes)])
 
-    def test_transform_ct_ce_passthrough(self):
+    def test_transform_ct_2(self):
         """
         Unit test for apply_preprocessing on ColumnTransformer with passthrough option and category encoder.
         """
@@ -701,7 +701,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert all([str(type_result) == str(expected.dtypes[index])
                     for index, type_result in enumerate(result.dtypes)])
 
-    def test_transform_ct_multi_ce_skp(self):
+    def test_transform_ct_3(self):
         """
         Unit test for apply_preprocessing on ColumnTransformer with sklearn encoder and category encoder.
         """
@@ -728,7 +728,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ct_multi_list_dict(self):
+    def test_transform_ct_4(self):
         """
         Unit test for apply_preprocessing on list of a dict, a list of dict and a ColumnTransformer.
         """
@@ -785,7 +785,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         test_preprocessing = apply_preprocessing(train, clf, [input_dict1, list_dict, enc])
         pd.testing.assert_frame_equal(train_preprocessed, test_preprocessing)
 
-    def test_transform_ct_sklearn_model(self):
+    def test_transform_ct_5(self):
         """
         Unit test for apply_preprocessing with ColumnTransformer and sklearn model.
         """
@@ -811,7 +811,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert result.shape == expected.shape
         assert all(expected.index == result.index)
 
-    def test_transform_ct_catboost_model(self):
+    def test_transform_ct_6(self):
         """
         Unit test for apply_preprocessing with ColumnTransformer and catboost model.
         """
@@ -838,7 +838,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert [column in clf.feature_names_ for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ct_lightgbm_model(self):
+    def test_transform_ct_7(self):
         """
         Unit test for apply_preprocessing with ColumnTransformer and lightgbm model.
         """
@@ -865,7 +865,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert [column in clf.booster_.feature_name() for column in result.columns]
         assert all(expected.index == result.index)
 
-    def test_transform_ct_xgboost_model(self):
+    def test_transform_ct_8(self):
         """
         Unit test for apply_preprocessing with ColumnTransformer and xgboost model.
         """
