@@ -1,10 +1,13 @@
 """
 Transform Module
 """
-from shapash.utils.inverse_category_encoder import inv_transform_ce
-from shapash.utils.inverse_columntransformer import inv_transform_ct
-from shapash.utils.inverse_category_encoder import supported_category_encoder
-from shapash.utils.inverse_columntransformer import columntransformer
+from shapash.utils.category_encoder_backend import inv_transform_ce
+from shapash.utils.columntransformer_backend import inv_transform_ct
+from shapash.utils.category_encoder_backend import supported_category_encoder
+from shapash.utils.columntransformer_backend import columntransformer
+from shapash.utils.columntransformer_backend import supported_sklearn
+from shapash.utils.columntransformer_backend import transform_ct
+from shapash.utils.category_encoder_backend import transform_ce
 import re
 import numpy as np
 import pandas as pd
@@ -51,7 +54,7 @@ def inverse_transform(x_pred, preprocessing=None):
         list_encoding = preprocessing_tolist(preprocessing)
 
         # Check encoding are supported
-        use_ct, use_ce = check_supported_inverse(list_encoding)
+        use_ct, use_ce = check_transformers(list_encoding)
 
         # Apply Inverse Transform
         x_inverse = x_pred.copy()
@@ -62,6 +65,54 @@ def inverse_transform(x_pred, preprocessing=None):
             else:
                 x_inverse = inv_transform_ce(x_inverse, encoding)
         return x_inverse
+
+def apply_preprocessing(x_pred, model, preprocessing=None):
+    """
+    Apply preprocessing on a raw dataset giving a preprocessing.
+
+    Preprocessing could be :
+        - a single category_encoders
+        - a single ColumnTransformer
+        - list with multiple category_encoders with optional (dict, list of dict)
+        - list with a single ColumnTransformer with optional (dict, list of dict)
+        - dict
+        - list of dict
+
+    Preprocessing return an error when using ColumnTransformer and category encoding in the same preprocessing,
+    the category encoding must be used in the ColumnTransformer.
+
+    If ColumnTransformer is used, there is an inverse transformation for each transformers,
+    so a column could be multi-processed, that's why inverse colnames are prefixed by the transformers names.
+
+    Parameters
+    ----------
+    x_pred : pandas.DataFrame
+        Raw dataset to apply preprocessing.
+    model: model object
+        model used to check the different values of target estimate predict_proba
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+        The processing to apply to the original data
+
+    Returns
+    -------
+    pandas.Dataframe
+        return the dataframe with preprocessing.
+    """
+
+    if preprocessing is None:
+        return x_pred
+    else:
+        # Transform preprocessing into a list
+        list_encoding = preprocessing_tolist(preprocessing)
+        # Check encoding are supported
+        use_ct, use_ce = check_transformers(list_encoding)
+        # Apply Transform
+        for encoding in list_encoding:
+            if use_ct:
+                x_pred = transform_ct(x_pred, model, encoding)
+            else:
+                x_pred = transform_ce(x_pred, encoding)
+        return x_pred
 
 def preprocessing_tolist(preprocess):
     """
@@ -81,7 +132,7 @@ def preprocessing_tolist(preprocess):
     list_encoding = [[x] if isinstance(x, dict) else x for x in list_encoding]
     return list_encoding
 
-def check_supported_inverse(list_encoding):
+def check_transformers(list_encoding):
     """
     Check that all transformation are supported.
         - a single category encoders transformer
@@ -117,6 +168,12 @@ def check_supported_inverse(list_encoding):
     for enc in list_encoding:
         if str(type(enc)) in columntransformer:
             use_ct = True
+            for encoding in enc.transformers_:
+                ct_encoding = encoding[1]
+                if (str(type(ct_encoding)) not in supported_sklearn) \
+                        and (str(type(ct_encoding)) not in supported_category_encoder):
+                    if str(type(ct_encoding)) != "<class 'str'>" :
+                        raise ValueError("One of the encoders used in ColumnTransformers isn't supported.")
 
         elif str(type(enc)) in supported_category_encoder:
             use_ce = True
@@ -151,7 +208,6 @@ def check_supported_inverse(list_encoding):
         raise Exception('Columns ' + str(duplicate) + ' is used in multiple category encoding')
 
     return use_ct, use_ce
-
 
 def apply_postprocessing(x_pred, postprocessing):
     """
