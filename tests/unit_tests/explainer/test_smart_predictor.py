@@ -952,6 +952,37 @@ class TestSmartPredictor(unittest.TestCase):
         assert all(contributions.index == predictor_1.data["x"].index)
         assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 2
 
+    def test_apply_preprocessing_1(self):
+        """
+        Unit test for apply preprocessing method
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+        enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='drop')
+        enc.fit(train, y)
+        train_preprocessed = pd.DataFrame(enc.transform(train), index=train.index)
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
+
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        clf_explainer = shap.TreeExplainer(clf)
+        columns_dict = {0: "num1", 1: "num2", 2: "other"}
+        label_dict = {0: "Yes", 1: "No"}
+        features_dict = {"num1": "city", "num2": "state"}
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict, enc)
+        predictor_1.add_input(x=train)
+        output_preprocessed = predictor_1.data["x_preprocessed"]
+        assert output_preprocessed.shape == train_preprocessed.shape
+        assert [column in clf.feature_names_ for column in output_preprocessed.columns]
+        assert all(train.index == output_preprocessed.index)
+        assert all([str(type_result) == str(train_preprocessed.dtypes[index])
+                    for index, type_result in enumerate(output_preprocessed.dtypes)])
+
 
 
 

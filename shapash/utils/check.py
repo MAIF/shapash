@@ -7,6 +7,8 @@ import pandas as pd
 from shapash.utils.transform import preprocessing_tolist, check_supported_inverse
 from shapash.utils.inverse_category_encoder import supported_category_encoder
 from shapash.utils.model import extract_features_model, dict_model_feature
+from shapash.utils.transform import preprocessing_tolist, check_transformers
+
 
 def check_preprocessing(preprocessing=None):
     """
@@ -19,7 +21,7 @@ def check_preprocessing(preprocessing=None):
     """
     if preprocessing is not None:
         list_preprocessing = preprocessing_tolist(preprocessing)
-        use_ct, use_ce = check_supported_inverse(list_preprocessing)
+        use_ct, use_ce = check_transformers(list_preprocessing)
         return use_ct, use_ce
 
 def check_model(model):

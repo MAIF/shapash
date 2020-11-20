@@ -5,9 +5,9 @@ Contributions
 import pandas as pd
 import numpy as np
 from shapash.utils.transform import preprocessing_tolist
-from shapash.utils.transform import check_supported_inverse
-from shapash.utils.inverse_category_encoder import calc_inv_contrib_ce
-from shapash.utils.inverse_columntransformer import calc_inv_contrib_ct
+from shapash.utils.transform import check_transformers
+from shapash.utils.category_encoder_backend import calc_inv_contrib_ce
+from shapash.utils.columntransformer_backend import calc_inv_contrib_ct
 
 def inverse_transform_contributions(contributions, preprocessing=None):
     """
@@ -45,7 +45,7 @@ def inverse_transform_contributions(contributions, preprocessing=None):
         list_encoding = preprocessing_tolist(preprocessing)
 
         # check supported inverse
-        use_ct, use_ce = check_supported_inverse(list_encoding)
+        use_ct, use_ce = check_transformers(list_encoding)
 
         # Apply Inverse Transform
         x_contrib_invers = contributions.copy()

@@ -11,6 +11,7 @@ from shapash.utils.transform import adapt_contributions
 from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.utils.model import predict_proba
+from shapash.utils.transform import apply_preprocessing
 
 
 
@@ -178,17 +179,14 @@ class SmartPredictor :
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
             self.data = self.clean_data(x)
-            if self.preprocessing is not None:
-                try :
-                    self.data["x_preprocessed"] = self.preprocessing.transform(self.data["x"])
-                except BaseException :
-                    raise ValueError(
-                        """
-                        Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
-                        """
-                    )
-            else:
-                self.data["x_preprocessed"] = self.data["x"]
+            try :
+                self.data["x_preprocessed"] = self.apply_preprocessing()
+            except BaseException :
+                raise ValueError(
+                    """
+                    Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
+                    """
+                )
         else:
             if not hasattr(self,"data"):
                 raise ValueError ("No dataset x specified.")
@@ -464,3 +462,10 @@ class SmartPredictor :
             )
         else:
             return contributions
+
+    def apply_preprocessing(self):
+        """
+        Apply preprocessing on new dataset input specified.
+        """
+        return apply_preprocessing(self.data["x"], self.model, self.preprocessing)
+
