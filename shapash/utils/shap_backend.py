@@ -67,7 +67,7 @@ def shap_contributions(model, x_df, explainer=None):
 
     """
     if explainer is None:
-        if str(type(model)) in simple_tree_model :
+        if str(type(model)) in simple_tree_model:
             explainer = shap.TreeExplainer(model)
             print("Backend: Shap TreeExplainer")
 
