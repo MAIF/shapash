@@ -51,7 +51,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
-    def test_inv_transform_2(self):
+    def test_inv_transform_ct_2(self):
         """
         test inv_transform_ct with multiple encoding and passthrough option
         """
