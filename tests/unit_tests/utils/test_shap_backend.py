@@ -11,6 +11,7 @@ import xgboost as xgb
 import lightgbm as lgb
 import catboost as cb
 from shapash.utils.shap_backend import shap_contributions, check_explainer
+from shapash.utils.model_synoptic import simple_tree_model,catboost_model,linear_model,svm_model
 import shap
 
 class TestShapBackend(unittest.TestCase):
@@ -42,34 +43,6 @@ class TestShapBackend(unittest.TestCase):
         self.x_df = df[['x1','x2']]
         self.y_df = df['y'].to_frame()
 
-        self.simple_tree_model = (
-            "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
-            "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
-            "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
-            "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
-            "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
-            "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
-            "<class 'lightgbm.sklearn.LGBMClassifier'>",
-            "<class 'lightgbm.sklearn.LGBMRegressor'>",
-            "<class 'xgboost.sklearn.XGBClassifier'>",
-            "<class 'xgboost.sklearn.XGBRegressor'>"
-        )
-
-        self.catboost_model = (
-            "<class 'catboost.core.CatBoostClassifier'>",
-            "<class 'catboost.core.CatBoostRegressor'>"
-        )
-
-        self.linear_model = (
-            "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
-            "<class 'sklearn.linear_model._base.LinearRegression'>"
-        )
-
-        self.svm_model = (
-            "<class 'sklearn.svm._classes.SVC'>",
-            "<class 'sklearn.svm._classes.SVR'>"
-        )
-
     def test_shap_contributions_0(self):
         """
         test shap_backend
@@ -86,16 +59,16 @@ class TestShapBackend(unittest.TestCase):
         for model in self.modellist:
             print(type(model))
             model.fit(self.x_df, self.y_df)
-            if str(type(model)) in self.simple_tree_model:
+            if str(type(model)) in simple_tree_model:
                 explainer = shap.TreeExplainer(model)
 
-            elif str(type(model)) in self.catboost_model:
+            elif str(type(model)) in catboost_model:
                 explainer = shap.TreeExplainer(model)
 
-            elif str(type(model)) in self.linear_model:
+            elif str(type(model)) in linear_model:
                 explainer = shap.LinearExplainer(model, self.x_df)
 
-            elif str(type(model)) in self.svm_model:
+            elif str(type(model)) in svm_model:
                 explainer = shap.KernelExplainer(model.predict, self.x_df)
 
             shap_contributions(model, self.x_df, explainer)

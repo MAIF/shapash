@@ -1,7 +1,10 @@
 """
 Modele Module
 """
+from inspect import ismethod
+
 import pandas as pd
+
 
 def predict_proba(model, x_init, classes):
     """
@@ -28,3 +31,45 @@ def predict_proba(model, x_init, classes):
         raise ValueError("model has no predict_proba method")
 
     return proba_values
+
+dict_model_feature = {"<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>": ['length'],
+              "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>": ['length'],
+              "<class 'sklearn.ensemble._forest.RandomForestClassifier'>": ['length'],
+              "<class 'sklearn.ensemble._forest.RandomForestRegressor'>": ['length'],
+              "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>": ['length'],
+              "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>": ['length'],
+              "<class 'sklearn.linear_model._logistic.LogisticRegression'>": ['length'],
+              "<class 'sklearn.linear_model._base.LinearRegression'>": ['length'],
+              "<class 'sklearn.svm._classes.SVC'>": ['length'],
+              "<class 'sklearn.svm._classes.SVR'>": ['length'],
+              "<class 'lightgbm.sklearn.LGBMClassifier'>": ["booster_","feature_name"],
+              "<class 'lightgbm.sklearn.LGBMRegressor'>": ["booster_","feature_name"],
+              "<class 'xgboost.sklearn.XGBClassifier'>": ["get_booster","feature_names"],
+              "<class 'xgboost.sklearn.XGBRegressor'>": ["get_booster","feature_names"],
+              "<class 'catboost.core.CatBoostClassifier'>": ["feature_names_"],
+              "<class 'catboost.core.CatBoostRegressor'>": ["feature_names_"],
+             }
+
+def extract_features_model(model, model_attribute):
+    """
+    Extract features of models if it's possible,
+    If not extract the number features of model
+     -------
+    model: model object
+        model used to check the different values of target estimate predict proba
+    model_attribute: String or List
+        if model can give features, attributes to access features, if not 'length'
+    """
+    if model_attribute[0] == 'length':
+        return model.n_features_in_
+    else:
+        if ismethod(getattr(model,model_attribute[0])):
+            if len(model_attribute) == 1:
+                return getattr(model,model_attribute[0])()
+            else:
+                return extract_features_model(getattr(model,model_attribute[0])(), model_attribute[1:])
+        else:
+            if len(model_attribute) == 1:
+                return getattr(model,model_attribute[0])
+            else:
+                return extract_features_model(getattr(model,model_attribute[0]), model_attribute[1:])

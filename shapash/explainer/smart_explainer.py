@@ -980,16 +980,14 @@ class SmartExplainer:
 
             params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
-            if hasattr(self,"mask_params"):
-                params_smartpredictor.append(self.mask_params)
-            else :
+            if not hasattr(self,"mask_params"):
                 self.mask_params = {
                     "features_to_hide": None,
                     "threshold": None,
                     "positive": None,
                     "max_contrib": None
                 }
-                params_smartpredictor.append(self.mask_params)
+            params_smartpredictor.append(self.mask_params)
 
             check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
                                              self.features_types, self.mask_params, self.preprocessing)
