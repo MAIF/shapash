@@ -65,4 +65,6 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
     else:
         summary = contributions
 
-    return pd.concat([y_pred, summary], axis=1)
+    return y_pred, summary
+
+

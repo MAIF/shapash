@@ -11,7 +11,14 @@ from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import apply_preprocessing
-
+from shapash.manipulation.filters import hide_contributions
+from shapash.manipulation.filters import cap_contributions
+from shapash.manipulation.filters import sign_contributions
+from shapash.manipulation.filters import cutoff_contributions
+from shapash.manipulation.filters import combine_masks
+from shapash.manipulation.mask import init_mask
+from shapash.manipulation.mask import compute_masked_contributions
+from shapash.manipulation.summarize import summarize_el
 
 
 
@@ -190,9 +197,9 @@ class SmartPredictor :
         if ypred is not None:
             self.data["ypred"] = self.check_ypred(ypred)
             if contributions is not None:
-                self.data["contributions"] = self.detail_contributions(contributions=contributions)
+                self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
             else:
-                self.data["contributions"] = self.detail_contributions()
+                self.data["ypred"], self.data["contributions"] = self.compute_contributions()
 
     def check_dataset_type(self, x=None):
         """
@@ -387,22 +394,23 @@ class SmartPredictor :
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
-    def detail_contributions(self, proba=False, contributions=None):
+    def compute_contributions(self,contributions=None):
         """
-        The detail_contributions compute the contributions associated to data ypred specified.
+        The compute_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
 
         Parameters
         -------
-        proba: bool, optional (default: False)
-            adding proba in output df
         contributions : object (optional)
             Local contributions, or list of local contributions.
 
         Returns
         -------
         pandas.DataFrame
-            Data with ypred and the associated contributions.
+            Data with contributions associated to the ypred specified.
+        pandas.DataFrame
+            ypred data with right probabilities associated.
+
         """
         if not hasattr(self, "data"):
             raise ValueError("add_input method must be called at least once.")
@@ -430,10 +438,30 @@ class SmartPredictor :
                                                                    )
         self.check_contributions(contributions)
         proba_values = self.predict_proba() if self._case == "classification" else None
+        y_pred, match_contrib = keep_right_contributions(self.data["ypred"], contributions,
+                                 self._case, self._classes,
+                                 self.label_dict, proba_values)
+        return y_pred, match_contrib
 
-        return keep_right_contributions(self.data["ypred"], contributions,
-                                        self._case, self._classes,
-                                        self.label_dict, proba_values)
+    def detail_contributions(self, proba=False, contributions=None):
+        """
+        The detail_contributions compute the contributions associated to data ypred specified.
+        Need a data ypred specified in an add_input to display detail_contributions.
+
+        Parameters
+        -------
+        proba: bool, optional (default: False)
+            adding proba in output df
+        contributions : object (optional)
+            Local contributions, or list of local contributions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Data with ypred and the associated contributions.
+        """
+        y_pred, summary = self.compute_contributions(contributions=contributions)
+        return pd.concat([y_pred, summary], axis=1)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
@@ -470,32 +498,32 @@ class SmartPredictor :
         The filter method is an important method which allows to summarize the local explainability
         by using the user defined mask_params parameters which correspond to its use case.
         """
-        mask = [self.summary_state.init_mask(self.summary['contrib_sorted'], True)]
+        mask = [init_mask(self.summary['contrib_sorted'], True)]
         if self.mask_params["features_to_hide"] is not None:
             mask.append(
-                self.summary_state.hide_contributions(
+                hide_contributions(
                     self.data['var_dict'],
                     features_list=self.check_features_name(self.mask_params["features_to_hide"])
                 )
             )
         if self.mask_params["threshold"] is not None:
             mask.append(
-                self.summary_state.cap_contributions(
+                cap_contributions(
                     self.data['contrib_sorted'],
                     threshold=self.mask_params["threshold"]
                 )
             )
         if self.mask_params["positive"] is not None:
             mask.append(
-                self.summary_state.sign_contributions(
+                sign_contributions(
                     self.summary['contrib_sorted'],
                     positive=self.mask_params["positive"]
                 )
             )
-        self.mask = self.summary_state.combine_masks(mask)
+        self.mask = combine_masks(mask)
         if self.mask_params["max_contrib"] is not None:
-            self.mask = self.summary_state.cutoff_contributions(self.mask, max_contrib=self.mask_params["max_contrib"])
-        self.masked_contributions = self.summary_state.compute_masked_contributions(
+            self.mask = cutoff_contributions(self.mask, max_contrib=self.mask_params["max_contrib"])
+        self.masked_contributions = compute_masked_contributions(
             self.summary['contrib_sorted'],
             self.mask
         )
@@ -531,16 +559,9 @@ class SmartPredictor :
         if not hasattr(self, "data"):
             raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
 
-        if self._case == "regression":
-            y_pred = self.data["contributions"].iloc[:, :1]
-            contributions = self.data["contributions"].iloc[:, 1:]
-        else:
-            y_pred = self.data["contributions"].iloc[:, :2]
-            contributions = self.data["contributions"].iloc[:, 2:]
-
         self.summary = self.summary_state.assign_contributions(
             self.summary_state.rank_contributions(
-                contributions,
+                self.data["contributions"],
                 self.data["x_preprocessed"]
             )
         )
@@ -548,7 +569,7 @@ class SmartPredictor :
         self.filter()
 
         # Summarize information
-        self.data['summary'] = self.summary_state.summarize(
+        self.data['summary'] = summarize_el(
             self.summary['contrib_sorted'],
             self.summary['var_dict'],
             self.summary['x_sorted'],
@@ -557,5 +578,5 @@ class SmartPredictor :
             self.features_dict
         )
         # Matching with y_pred
-        return pd.concat([y_pred, self.data['summary']], axis=1)
+        return pd.concat([self.data["y_pred"], self.data['summary']], axis=1)
 
