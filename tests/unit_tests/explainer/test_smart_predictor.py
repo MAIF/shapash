@@ -264,7 +264,7 @@ class TestSmartPredictor(unittest.TestCase):
         ]
         predictor_1.state = predictor_1.choose_state(contributions)
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x"] = pd.DataFrame(
+        predictor_1.data["x_preprocessed"] = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -927,7 +927,7 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
-        predictor_1.data["x"] = df[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()

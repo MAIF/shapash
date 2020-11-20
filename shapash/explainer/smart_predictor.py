@@ -189,10 +189,11 @@ class SmartPredictor :
 
         if ypred is not None:
             self.data["ypred"] = self.check_ypred(ypred)
-            if contributions is not None:
-                self.data["contributions"] = self.detail_contributions(contributions=contributions)
-            else:
-                self.data["contributions"] = self.detail_contributions()
+
+        if contributions is not None:
+            self.data["contributions"] = self.detail_contributions(contributions=contributions)
+        else:
+            self.data["contributions"] = self.detail_contributions()
 
     def check_dataset_type(self, x=None):
         """
@@ -336,7 +337,7 @@ class SmartPredictor :
             pandas.DataFrame or list
         """
         check_contribution_object(self._case, self._classes, contributions)
-        return self.state.validate_contributions(contributions, self.data["x"])
+        return self.state.validate_contributions(contributions, self.data["x_preprocessed"])
 
     def check_contributions(self, contributions):
         """
@@ -387,15 +388,13 @@ class SmartPredictor :
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
-    def detail_contributions(self, proba=False, contributions=None):
+    def detail_contributions(self, contributions=None):
         """
         The detail_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
 
         Parameters
         -------
-        proba: bool, optional (default: False)
-            adding proba in output df
         contributions : object (optional)
             Local contributions, or list of local contributions.
 
@@ -413,11 +412,8 @@ class SmartPredictor :
                 """
             )
         if self.data["ypred"] is None:
-            raise ValueError(
-            """
-            ypred must be specified in an add_input method to apply detail_contributions.
-            """
-            )
+            self.predict()
+
         if contributions is None:
             contributions, explainer = shap_contributions(self.model,
                                                self.data["x_preprocessed"],
@@ -590,3 +586,29 @@ class SmartPredictor :
             if attribute is not None:
                 self.mask_params[label] = attribute
 
+    def predict(self):
+        """
+        The predict compute the predicted values for each x row defined in add_input
+
+        Returns
+        -------
+        pandas.DataFrame
+            data with predicted values for each x row.
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+        if self.data["x_preprocessed"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply predict.
+                """
+            )
+        if hasattr(self.model, 'predict'):
+            self.data["ypred"] = pd.DataFrame(
+                self.model.predict(self.data["x_preprocessed"]),
+                columns=['ypred'],
+                index=self.data["x_preprocessed"].index)
+        else:
+            raise ValueError("model has no predict method")
+
+        return self.data["ypred"]
