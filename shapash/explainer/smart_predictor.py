@@ -13,8 +13,6 @@ from shapash.utils.model import predict_proba
 from shapash.utils.transform import apply_preprocessing
 
 
-
-
 class SmartPredictor :
     """
     The SmartPredictor class is an object which inherits from the
