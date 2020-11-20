@@ -5,6 +5,8 @@ Check Module
 import numpy as np
 import pandas as pd
 from shapash.utils.transform import preprocessing_tolist, check_transformers
+from shapash.utils.columntransformer_backend import columntransformer
+
 
 
 def check_preprocessing(preprocessing=None):
@@ -175,4 +177,22 @@ def check_contribution_object(case, classes, contributions):
                 Please check model and contributions parameters.
                 """
             )
+
+def check_preprocessing_options(preprocessing=None):
+    """
+    Check if preprocessing for ColumnTransformer doesn't have "drop" option
+    Parameters
+    ----------
+    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
+        The processing apply to the original data.
+    """
+    if preprocessing is not None:
+        list_encoding = preprocessing_tolist(preprocessing)
+        for enc in list_encoding:
+            if str(type(enc)) in columntransformer:
+                for options in enc.transformers_:
+                    if "drop" in options:
+                        raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
+
+
 

@@ -156,6 +156,26 @@ class MultiDecorator:
         bools = self.delegate('check_contributions', contributions, x_pred)
         return all(bools)
 
+    def check_shape_contributions(self, contributions, x_pred):
+        """
+        Override check_contributions from SmartState.
+        Return True if all conditions computed are True.
+
+        Parameters
+        ----------
+        contributions : list
+            List of local contributions to check.
+        x_pred : pandas.DataFrame
+            Prediction set.
+
+        Returns
+        -------
+        Bool
+            True if all inputs share same shape and index with the prediction set.
+        """
+        bools = self.delegate('check_shape_contributions', contributions, x_pred)
+        return all(bools)
+
     def combine_masks(self, masks):
         """
         Override combine_masks. Combine a nested list of masks with the AND operator.

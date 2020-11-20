@@ -287,9 +287,9 @@ class TestSmartPredictor(unittest.TestCase):
         test_list = [pd.testing.assert_frame_equal(e, m) for e, m in zip(expected_output, output)]
         assert all(x is None for x in test_list)
 
-    def test_check_contributions(self):
+    def test_check_shape_contributions(self):
         """
-        Unit test check_contributions 1
+        Unit test check_shape_contributions 1
         """
         df = pd.DataFrame(range(0, 5), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
@@ -316,10 +316,10 @@ class TestSmartPredictor(unittest.TestCase):
         adapt_contrib = predictor_1.adapt_contributions(shap_values[:, :-1])
         predictor_1.state = predictor_1.choose_state(adapt_contrib)
         contributions = predictor_1.validate_contributions(adapt_contrib)
-        predictor_1.check_contributions(contributions)
+        predictor_1.check_shape_contributions(contributions)
 
         with self.assertRaises(ValueError):
-            predictor_1.check_contributions(shap_values[:, :-1])
+            predictor_1.check_shape_contributions(shap_values[:, :-1])
 
     def test_check_model_1(self):
         """
@@ -997,9 +997,9 @@ class TestSmartPredictor(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1], columns=['y'])
         train = pd.DataFrame({'num1': [0, 1],
                               'num2': [0, 2],
-                              'other': ['A', 'B']})
+                              'other': [0, 1]})
         enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
-                                remainder='drop')
+                                remainder='passthrough')
         enc.fit(train, y)
         train_preprocessed = pd.DataFrame(enc.transform(train), index=train.index)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)

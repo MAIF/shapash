@@ -95,6 +95,33 @@ class SmartState:
             return False
         return True
 
+    def check_shape_contributions(self, contributions, x_pred):
+        """
+        Check that contributions and prediction set match in terms of lines and columns shapes.
+
+        Parameters
+        ----------
+        contributions : pandas.DataFrame
+            Local contributions to check.
+        x_pred : pandas.DataFrame
+            Prediction set.
+
+        Returns
+        -------
+        Bool
+            True if inputs share shape and index. False otherwise.
+        """
+        if x_pred.shape != contributions.shape:
+            print("test1")
+            return False
+        if not x_pred.index.equals(contributions.index):
+            print("test2")
+            return False
+        if not len(x_pred.columns) == len(contributions.columns):
+            print("test3")
+            return False
+        return True
+
     def rank_contributions(self, contributions, x_pred):
         """
         Rank contributions line by line and build a reference dictionary to the prediction set.
