@@ -443,7 +443,7 @@ class SmartPredictor :
                                  self.label_dict, proba_values)
         return y_pred, match_contrib
 
-    def detail_contributions(self, proba=False, contributions=None):
+    def detail_contributions(self, contributions=None):
         """
         The detail_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
