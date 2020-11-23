@@ -3,6 +3,7 @@ Unit test smart predictor
 """
 
 import unittest
+from unittest.mock import patch, Mock
 from shapash.explainer.smart_explainer import SmartPredictor
 from shapash.explainer.smart_explainer import SmartExplainer
 import pandas as pd
@@ -958,8 +959,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         y = pd.DataFrame(data=[0, 1], columns=['y'])
         train = pd.DataFrame({'num1': [0, 1],
-                              'num2': [0, 2],
-                              'other': ['A', 'B']})
+                              'num2': [0, 2]})
         enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
                                 remainder='drop')
         enc.fit(train, y)
@@ -968,7 +968,7 @@ class TestSmartPredictor(unittest.TestCase):
 
         features_types = {features: str(train[features].dtypes) for features in train.columns}
         clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "num1", 1: "num2", 2: "other"}
+        columns_dict = {0: "num1", 1: "num2"}
         label_dict = {0: "Yes", 1: "No"}
         features_dict = {"num1": "city", "num2": "state"}
 

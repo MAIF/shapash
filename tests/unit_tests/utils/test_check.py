@@ -315,10 +315,9 @@ class TestCheck(unittest.TestCase):
         features_dict = None
         columns_dict = {i:features for i,features in enumerate(train.columns)}
         features_types = {features: str(train[features].dtypes) for features in train.columns}
-        label_dict = {1: 'Yes', 0: 'No'}
 
         mask_params = {
-            "features_to_hide": 'Binary1',
+            "features_to_hide": 'Binary3',
             "threshold": None,
             "positive": True,
             "max_contrib": 5

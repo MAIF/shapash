@@ -4,8 +4,8 @@ Check Module
 
 import numpy as np
 import pandas as pd
-from shapash.utils.transform import preprocessing_tolist, check_supported_inverse
-from shapash.utils.inverse_category_encoder import supported_category_encoder
+from shapash.utils.category_encoder_backend import supported_category_encoder
+from shapash.utils.columntransformer_backend import columntransformer, supported_sklearn
 from shapash.utils.model import extract_features_model, dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
 
@@ -199,7 +199,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
     """
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
-        if str(type(preprocessing)) in supported_category_encoder:
+        if str(type(preprocessing)) in (supported_category_encoder):
             if features_dict is not None:
                 if not all(feat in model_features for feat in features_dict):
                     raise ValueError("All features of features_dict must be in model")
@@ -215,12 +215,28 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                     if not all(feature in model_features for feature in mask_params['features_to_hide']):
                         raise ValueError("All features of mask_params must be in model")
 
+        elif str(type(preprocessing)) in (columntransformer,supported_sklearn):
+            if features_dict is not None:
+                if not all(feat in features_types for feat in features_dict):
+                    raise ValueError("All features of features_dict must be in model")
+
+            if len(set(columns_dict.values())) != len(set(model_features)):
+                raise ValueError("length of features of columns_dict and model must be the same")
+
+            if set(features_types) != set(columns_dict.values()):
+                raise ValueError("features of features_types and model must be the same")
+
+            if mask_params is not None:
+                if mask_params['features_to_hide'] is not None:
+                    if not all(feature in model_features for feature in mask_params['features_to_hide']):
+                        raise ValueError("All features of mask_params must be in model")
+
         elif str(type(preprocessing)) not in supported_category_encoder and preprocessing is not None:
             raise ValueError("this type of encoder is not supported in SmartPredictor")
 
     else:
         model_length_features = model_features
-        if str(type(preprocessing)) in supported_category_encoder:
+        if str(type(preprocessing)) in (supported_category_encoder,columntransformer,supported_sklearn):
             if features_dict is not None:
                 if not all(feat in columns_dict.values() for feat in features_dict):
                     raise ValueError("All features of features_dict must be in columns_dict")
