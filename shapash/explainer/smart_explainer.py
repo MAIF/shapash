@@ -858,9 +858,11 @@ class SmartExplainer:
         else:
             proba_values = None
 
-        return keep_right_contributions(self.y_pred, self.data['summary'],
+        y_pred, summary = keep_right_contributions(self.y_pred, self.data['summary'],
                                                            self._case, self._classes,
                                                            self.label_dict, proba_values)
+
+        return pd.concat([y_pred,summary], axis=1)
 
     def compute_features_import(self, force=False):
         """
