@@ -346,11 +346,11 @@ class SmartPredictor :
         check_contribution_object(self._case, self._classes, contributions)
         return self.state.validate_contributions(contributions, self.data["x_preprocessed"])
 
-    def check_shape_contributions(self, contributions):
+    def check_contributions(self, contributions):
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not self.state.check_shape_contributions(contributions, self.data["x"]):
+        if not self.state.check_contributions(contributions, self.data["x"], features_names=False):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -434,7 +434,7 @@ class SmartPredictor :
         contributions = self.apply_preprocessing_for_contributions(contributions,
                                                                    self.preprocessing
                                                                    )
-        self.check_shape_contributions(contributions)
+        self.check_contributions(contributions)
         proba_values = self.predict_proba() if self._case == "classification" else None
         y_pred, match_contrib = keep_right_contributions(self.data["ypred"], contributions,
                                  self._case, self._classes,
