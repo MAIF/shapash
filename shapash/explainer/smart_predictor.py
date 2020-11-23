@@ -19,6 +19,7 @@ from shapash.manipulation.filters import combine_masks
 from shapash.manipulation.mask import init_mask
 from shapash.manipulation.mask import compute_masked_contributions
 from shapash.manipulation.summarize import summarize_el
+from shapash.decomposition.contributions import rank_contributions
 
 
 
@@ -555,12 +556,11 @@ class SmartPredictor :
         """
         # data is needed : add_input() method must be called at least once
 
-        self.summary_state = SmartState()
         if not hasattr(self, "data"):
             raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
 
-        self.summary = self.summary_state.assign_contributions(
-            self.summary_state.rank_contributions(
+        self.summary = self.state.assign_contributions(
+            rank_contributions(
                 self.data["contributions"],
                 self.data["x_preprocessed"]
             )
