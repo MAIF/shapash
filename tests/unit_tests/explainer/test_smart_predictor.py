@@ -11,7 +11,6 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import catboost as cb
-from sklearn.linear_model import LinearRegression
 from catboost import Pool
 import category_encoders as ce
 from unittest.mock import patch
