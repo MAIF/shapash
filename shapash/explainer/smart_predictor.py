@@ -395,7 +395,7 @@ class SmartPredictor :
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
-    def compute_contributions(self,contributions=None):
+    def compute_contributions(self, contributions=None):
         """
         The compute_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
