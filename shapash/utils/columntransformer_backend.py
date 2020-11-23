@@ -11,6 +11,7 @@ from shapash.utils.category_encoder_backend import category_encoder_binary
 from shapash.utils.category_encoder_backend import transform_ordinal
 from shapash.utils.shap_backend import simple_tree_model_sklearn,catboost_model,\
     linear_model,svm_model, xgboost_model, lightgbm_model
+from shapash.utils.model import dict_model_feature, extract_features_model
 
 
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
@@ -281,22 +282,9 @@ def transform_ct(x_in, model, encoding):
             rst.columns = ["col_" + str(feature) for feature in rst.columns]
 
         elif str(type(model)) in other_model:
-            if str(type(model)) in xgboost_model:
-                rst = pd.DataFrame(encoding.transform(x_in),
-                                   columns=model.get_booster().feature_names,
-                                   index=x_in.index)
-
-            elif str(type(model)) in lightgbm_model:
-                rst = pd.DataFrame(encoding.transform(x_in),
-                                   columns=model.booster_.feature_name(),
-                                   index=x_in.index)
-
-            else:
-                rst = pd.DataFrame(encoding.transform(x_in),
-                                   columns=model.feature_names_,
-                                   index=x_in.index)
-
-
+            rst = pd.DataFrame(encoding.transform(x_in),
+                                columns=extract_features_model(model, dict_model_feature[str(type(model))]),
+                                index=x_in.index)
         else:
             raise ValueError("Model specified isn't supported by Shapash.")
 
