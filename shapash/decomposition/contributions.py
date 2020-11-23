@@ -120,3 +120,33 @@ def rank_contributions(s_df, x_df):
     s_ord = pd.DataFrame(data=sorted_contrib, columns=contrib_col, index=x_df.index)
     x_ord = pd.DataFrame(data=sorted_features, columns=col, index=x_df.index)
     return [s_ord, x_ord, s_dict]
+
+def assign_contributions(ranked):
+    """
+    Turn a list of results into a dict.
+
+    Parameters
+    ----------
+    ranked : list
+        The output of rank_contributions.
+
+    Returns
+    -------
+    dict
+        Same data but rearrange into a dict with explicit names.
+
+    Raises
+    ------
+    ValueError
+        The output of rank_contributions should always be of length three.
+    """
+    if len(ranked) != 3:
+        raise ValueError(
+            'Expected lenght : 3, observed lenght : {},'
+            'please check the outputs of rank_contributions.'.format(len(ranked))
+        )
+    return {
+        'contrib_sorted': ranked[0],
+        'x_sorted': ranked[1],
+        'var_dict': ranked[2]
+    }
