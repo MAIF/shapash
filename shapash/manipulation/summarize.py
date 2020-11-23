@@ -3,6 +3,7 @@ Summarize Module
 """
 import numpy as np
 import pandas as pd
+from pandas.core.common import flatten
 
 
 def summarize_el(dataframe, mask, prefix):
@@ -59,3 +60,40 @@ def compute_features_import(dataframe):
     feat_imp = dataframe.abs().sum().sort_values(ascending=True)
     tot = feat_imp.sum()
     return feat_imp / tot
+
+def summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
+    """
+    Compute the summarized contributions of features.
+
+    Parameters
+    ----------
+    s_contrib: pd.DataFrame
+        Matrix containing contributions that will be summarized
+    var_dict: pd.DataFrame
+        Matrix of feature names that will be summarized
+    x_sorted: pd.DataFrame
+        Matrix containing the value of each feature
+    mask: pd.DataFrame
+        Mask to apply during the summary step
+    columns_dict:
+        Dict of column Names, matches column num with column name
+    features_dict:
+        Dict of column Label, matches column name with column label
+
+    Returns
+    -------
+    pd.DataFrame
+        Result of the summarize step
+    """
+    contrib_sum = summarize_el(s_contrib, mask, 'contribution_')
+    var_dict_sum = summarize_el(var_dict, mask, 'feature_').applymap(
+        lambda x: features_dict[columns_dict[x]] if not np.isnan(x) else x)
+    x_sorted_sum = summarize_el(x_sorted, mask, 'value_')
+
+    # Concatenate pd.DataFrame
+    summary = pd.concat([contrib_sum, var_dict_sum, x_sorted_sum], axis=1)
+
+    # Ordering columns
+    ordered_columns = list(flatten(zip(var_dict_sum.columns, x_sorted_sum.columns, contrib_sum.columns)))
+    summary = summary[ordered_columns]
+    return summary
