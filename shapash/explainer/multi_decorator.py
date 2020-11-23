@@ -136,7 +136,7 @@ class MultiDecorator:
         keys = list(dicts[0].keys())
         return {key: [d[key] for d in dicts] for key in keys}
 
-    def check_contributions(self, contributions, x_pred):
+    def check_contributions(self, contributions, x_pred, features_names=True):
         """
         Override check_contributions from SmartState.
         Return True if all conditions computed are True.
@@ -153,7 +153,7 @@ class MultiDecorator:
         Bool
             True if all inputs share same shape and index with the prediction set.
         """
-        bools = self.delegate('check_contributions', contributions, x_pred)
+        bools = self.delegate('check_contributions', contributions, x_pred, features_names)
         return all(bools)
 
     def combine_masks(self, masks):

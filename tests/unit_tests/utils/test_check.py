@@ -6,7 +6,8 @@ import pandas as pd
 import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
-                                check_mask_params, check_ypred, check_contribution_object
+                                check_mask_params, check_ypred, check_contribution_object,\
+                                check_preprocessing_options
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -253,6 +254,25 @@ class TestCheck(unittest.TestCase):
             check_contribution_object(_case, _classes, contributions_2)
             check_mask_params("regression", None, contributions_1)
 
+    def test_check_preprocessing_options_1(self):
+        """
+        Unit test 1 for check_preprocessing_options
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+        enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='drop')
+        enc.fit(train, y)
+
+        with self.assertRaises(ValueError):
+            check_preprocessing_options(enc)
+
+        enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+        check_preprocessing_options(enc)
 
 
 
