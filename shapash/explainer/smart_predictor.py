@@ -200,7 +200,7 @@ class SmartPredictor :
         if contributions is not None:
             self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
         else:
-            self.data["contributions"], self.data["contributions"]  = self.compute_contributions()
+            self.data["ypred"], self.data["contributions"]  = self.compute_contributions()
 
     def check_dataset_type(self, x=None):
         """
