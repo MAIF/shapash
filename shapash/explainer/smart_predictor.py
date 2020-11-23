@@ -18,8 +18,8 @@ from shapash.manipulation.filters import cutoff_contributions
 from shapash.manipulation.filters import combine_masks
 from shapash.manipulation.mask import init_mask
 from shapash.manipulation.mask import compute_masked_contributions
-from shapash.manipulation.summarize import summarize_el
-from shapash.decomposition.contributions import rank_contributions
+from shapash.manipulation.summarize import summarize
+from shapash.decomposition.contributions import rank_contributions, assign_contributions
 
 class SmartPredictor :
     """
@@ -395,7 +395,7 @@ class SmartPredictor :
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
-    def detail_contributions(self, proba=False, contributions=None):
+    def compute_contributions(self,contributions=None):
         """
         The compute_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
@@ -520,7 +520,7 @@ class SmartPredictor :
             )
         self.mask = combine_masks(mask)
         if self.mask_params["max_contrib"] is not None:
-            self.mask = cutoff_contributions(self.mask, max_contrib=self.mask_params["max_contrib"])
+            self.mask = cutoff_contributions(mask=self.mask, k=self.mask_params["max_contrib"])
         self.masked_contributions = compute_masked_contributions(
             self.summary['contrib_sorted'],
             self.mask
@@ -556,7 +556,7 @@ class SmartPredictor :
         if not hasattr(self, "data"):
             raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
 
-        self.summary = self.state.assign_contributions(
+        self.summary = assign_contributions(
             rank_contributions(
                 self.data["contributions"],
                 self.data["x_preprocessed"]
@@ -566,16 +566,15 @@ class SmartPredictor :
         self.filter()
 
         # Summarize information
-        self.data['summary'] = summarize_el(
-            self.summary['contrib_sorted'],
-            self.summary['var_dict'],
-            self.summary['x_sorted'],
-            self.mask,
-            self.columns_dict,
-            self.features_dict
-        )
+        self.data['summary'] = summarize(self.summary['contrib_sorted'],
+                                         self.summary['var_dict'],
+                                         self.summary['x_sorted'],
+                                         self.mask,
+                                         self.columns_dict,
+                                         self.features_dict)
+
         # Matching with y_pred
-        return pd.concat([self.data["y_pred"], self.data['summary']], axis=1)
+        return pd.concat([self.data["ypred"], self.data['summary']], axis=1)
 
     def modify_mask(
             self,
