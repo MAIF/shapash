@@ -579,3 +579,34 @@ class SmartPredictor :
         # Matching with y_pred
         return pd.concat([self.data["ypred"], self.data['summary']], axis=1)
 
+    def modify_mask(
+            self,
+            features_to_hide=None,
+            threshold=None,
+            positive=None,
+            max_contrib=None
+    ):
+        """
+        Allow the users to modify the mask_params values.
+        Each parameter is optional, modify_mask method modifies only the values specified in parameters.
+
+        Parameters
+        ----------
+        features_to_hide : list, optional (default: None)
+            List of strings, containing features to hide.
+        threshold : float, optional (default: None)
+            Absolute threshold below which any contribution is hidden.
+        positive: bool, optional (default: None)
+            If True, hide negative values. False, hide positive values
+            If None, hide nothing.
+        max_contrib : int, optional (default: None)
+            Maximum number of contributions to show.
+        """
+        Attributes = {"features_to_hide": features_to_hide,
+                      "threshold": threshold,
+                      "positive": positive,
+                      "max_contrib": max_contrib}
+        for label, attribute in Attributes.items() :
+            if attribute is not None:
+                self.mask_params[label] = attribute
+

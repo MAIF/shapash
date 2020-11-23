@@ -1189,6 +1189,42 @@ class TestSmartPredictor(unittest.TestCase):
         assert not len(contribution_expected) == len(contribution_output)
         assert not len(output.columns) == len(expected_output.columns)
 
+    def test_modfiy_mask(self):
+        """
+        Unit test modify_mask method
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = [25, 39, 50, 43, 67]
+        df['x2'] = [90, 78, 84, 85, 53]
+        df = df.set_index('id')
+
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "No", 1: "Yes"}
+        features_dict = {"x1": "age", "x2": "weight"}
+
+        features_types = {features: str(df[features].dtypes) for features in df.columns}
+
+        mask_params = {"features_to_hide": None,
+                       "threshold": None,
+                       "positive": None,
+                       "max_contrib": None
+                       }
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict, mask_params=mask_params)
+
+        assert all([value is None for value in predictor_1.mask_params.values()])
+
+        predictor_1.modify_mask(max_contrib=1)
+
+        assert not all([value is None for value in predictor_1.mask_params.values()])
+        assert predictor_1.mask_params["max_contrib"] == 1
+        assert predictor_1.mask_params["positive"] == None
 
 
 
