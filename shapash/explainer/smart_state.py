@@ -71,7 +71,7 @@ class SmartState:
         """
         return inverse_transform_contributions(contributions, preprocessing)
 
-    def check_contributions(self, contributions, x_pred):
+    def check_contributions(self, contributions, x_pred, features_names=True):
         """
         Check that contributions and prediction set match in terms of lines and columns.
 
@@ -81,7 +81,8 @@ class SmartState:
             Local contributions to check.
         x_pred : pandas.DataFrame
             Prediction set.
-
+        features_names: bool (optional), defaut = True
+            Boolean whether or not check if contributions and x_pred have the same features names
         Returns
         -------
         Bool
@@ -91,8 +92,12 @@ class SmartState:
             return False
         if not x_pred.index.equals(contributions.index):
             return False
-        if not x_pred.columns.equals(contributions.columns):
-            return False
+        if features_names:
+            if not x_pred.columns.equals(contributions.columns):
+                return False
+        else:
+            if not len(x_pred.columns) == len(contributions.columns):
+                return False
         return True
 
     def rank_contributions(self, contributions, x_pred):

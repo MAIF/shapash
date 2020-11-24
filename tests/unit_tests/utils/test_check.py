@@ -8,6 +8,8 @@ import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
                                 check_consistency_model_features, check_consistency_model_label
+                                check_mask_params, check_ypred, check_contribution_object,\
+                                check_preprocessing_options
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -311,6 +313,25 @@ class TestCheck(unittest.TestCase):
                               'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
                               'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
                               'other': ['other', np.nan, 'other', 'other']})
+    def test_check_preprocessing_options_1(self):
+        """
+        Unit test 1 for check_preprocessing_options
+        """
+        y = pd.DataFrame(data=[0, 1], columns=['y'])
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+        enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='drop')
+        enc.fit(train, y)
+
+        with self.assertRaises(ValueError):
+            check_preprocessing_options(enc)
+
+        enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='passthrough')
+        enc.fit(train, y)
+        check_preprocessing_options(enc)
 
         features_dict = None
         columns_dict = {i:features for i,features in enumerate(train.columns)}

@@ -4,6 +4,8 @@ Smart predictor module
 from shapash.utils.check import check_model, check_preprocessing
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object,\
                                 check_consistency_model_features, check_consistency_model_label
+from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
+from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -21,8 +23,6 @@ from shapash.manipulation.mask import init_mask
 from shapash.manipulation.mask import compute_masked_contributions
 from shapash.manipulation.summarize import summarize
 from shapash.decomposition.contributions import rank_contributions, assign_contributions
-
-
 
 class SmartPredictor :
     """
@@ -113,6 +113,7 @@ class SmartPredictor :
         self.model = model
         self._case, self._classes = self.check_model()
         self.explainer = self.check_explainer(explainer)
+        check_preprocessing_options(preprocessing)
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict
@@ -201,10 +202,11 @@ class SmartPredictor :
 
         if ypred is not None:
             self.data["ypred"] = self.check_ypred(ypred)
-            if contributions is not None:
-                self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
-            else:
-                self.data["ypred"], self.data["contributions"] = self.compute_contributions()
+
+        if contributions is not None:
+            self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
+        else:
+            self.data["ypred"], self.data["contributions"]  = self.compute_contributions()
 
     def check_dataset_type(self, x=None):
         """
@@ -348,13 +350,13 @@ class SmartPredictor :
             pandas.DataFrame or list
         """
         check_contribution_object(self._case, self._classes, contributions)
-        return self.state.validate_contributions(contributions, self.data["x"])
+        return self.state.validate_contributions(contributions, self.data["x_preprocessed"])
 
     def check_contributions(self, contributions):
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not self.state.check_contributions(contributions, self.data["x"]):
+        if not self.state.check_contributions(contributions, self.data["x"], features_names=False):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -426,11 +428,8 @@ class SmartPredictor :
                 """
             )
         if self.data["ypred"] is None:
-            raise ValueError(
-            """
-            ypred must be specified in an add_input method to apply detail_contributions.
-            """
-            )
+            self.predict()
+
         if contributions is None:
             contributions, explainer = shap_contributions(self.model,
                                                self.data["x_preprocessed"],
@@ -613,4 +612,32 @@ class SmartPredictor :
         for label, attribute in Attributes.items() :
             if attribute is not None:
                 self.mask_params[label] = attribute
+
+    def predict(self):
+        """
+        The predict compute the predicted values for each x row defined in add_input
+
+        Returns
+        -------
+        pandas.DataFrame
+            data with predicted values for each x row.
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+        if self.data["x_preprocessed"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply predict.
+                """
+            )
+        if hasattr(self.model, 'predict'):
+            self.data["ypred"] = pd.DataFrame(
+                self.model.predict(self.data["x_preprocessed"]),
+                columns=['ypred'],
+                index=self.data["x_preprocessed"].index)
+        else:
+            raise ValueError("model has no predict method")
+
+        return self.data["ypred"]
+
 
