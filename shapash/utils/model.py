@@ -1,10 +1,8 @@
 """
-Modele Module
+Model Module
 """
 from inspect import ismethod
-
 import pandas as pd
-
 
 def predict_proba(model, x_init, classes):
     """
@@ -31,24 +29,6 @@ def predict_proba(model, x_init, classes):
         raise ValueError("model has no predict_proba method")
 
     return proba_values
-
-dict_model_feature = {"<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>": ['length'],
-              "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>": ['length'],
-              "<class 'sklearn.ensemble._forest.RandomForestClassifier'>": ['length'],
-              "<class 'sklearn.ensemble._forest.RandomForestRegressor'>": ['length'],
-              "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>": ['length'],
-              "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>": ['length'],
-              "<class 'sklearn.linear_model._logistic.LogisticRegression'>": ['length'],
-              "<class 'sklearn.linear_model._base.LinearRegression'>": ['length'],
-              "<class 'sklearn.svm._classes.SVC'>": ['length'],
-              "<class 'sklearn.svm._classes.SVR'>": ['length'],
-              "<class 'lightgbm.sklearn.LGBMClassifier'>": ["booster_","feature_name"],
-              "<class 'lightgbm.sklearn.LGBMRegressor'>": ["booster_","feature_name"],
-              "<class 'xgboost.sklearn.XGBClassifier'>": ["get_booster","feature_names"],
-              "<class 'xgboost.sklearn.XGBRegressor'>": ["get_booster","feature_names"],
-              "<class 'catboost.core.CatBoostClassifier'>": ["feature_names_"],
-              "<class 'catboost.core.CatBoostRegressor'>": ["feature_names_"],
-             }
 
 def extract_features_model(model, model_attribute):
     """
