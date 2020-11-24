@@ -1020,23 +1020,6 @@ class TestSmartPredictor(unittest.TestCase):
         assert path.exists(pkl_file)
         os.remove(pkl_file)
 
-    def test_load_1(self):
-        """
-        Unit test load 1
-        """
-        temp, xpl = init_sme_to_pickle_test()
-        xpl2 = SmartPredictor(features_dict=xpl.features_dict, model=xpl.model, columns_dict=xpl.columns_dict,
-                              explainer=xpl.explainer, features_types=xpl.features_types)
-        current = Path(path.abspath(__file__)).parent.parent.parent
-        pkl_file = path.join(current, 'data/predictor_to_load.pkl')
-        xpl2.load(pkl_file)
-
-        attrib_xpl = [element for element in xpl.__dict__.keys()]
-        attrib_xpl2 = [element for element in xpl2.__dict__.keys()]
-
-        assert all(attrib in attrib_xpl2 for attrib in attrib_xpl)
-        assert all(attrib2 in attrib_xpl for attrib2 in attrib_xpl2)
-
     def test_apply_preprocessing_1(self):
         """
         Unit test for apply preprocessing method

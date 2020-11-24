@@ -12,7 +12,6 @@ from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.utils.model import predict_proba
 from shapash.utils.io import save_pickle
-from shapash.utils.io import load_pickle
 from shapash.utils.transform import apply_preprocessing
 from shapash.manipulation.filters import hide_contributions
 from shapash.manipulation.filters import cap_contributions
@@ -512,36 +511,10 @@ class SmartPredictor :
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
-            if (isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None))) or att == "model") \
-                and not att == "data" :
+            if (isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None))) or att == "model"
+                or att == "explainer") and not att == "data" :
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
-
-    def load(self, path):
-        """
-        Load method allows Shapash user to use pikled SmartExplainer.
-        To use this method you must first declare your SmartExplainer object
-        Watch the following example
-
-        Parameters
-        ----------
-        path : str
-            File path of the pickle file.
-
-        Example
-        --------
-        >>> xpl = SmartPredictor()
-        >>> xpl.load('path_to_pkl/xpl.pkl')
-        """
-        dict_to_load = load_pickle(path)
-        if isinstance(dict_to_load, dict):
-            for elem in dict_to_load.keys():
-                setattr(self, elem, dict_to_load[elem])
-            self._case, self._classes = self.check_model()
-        else:
-            raise ValueError(
-                "pickle file must contain dictionary"
-            )
 
     def apply_preprocessing(self):
         """

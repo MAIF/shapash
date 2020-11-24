@@ -3,6 +3,7 @@ IO module
 """
 import pickle
 
+
 def save_pickle(obj, path, protocol=pickle.HIGHEST_PROTOCOL):
     """
     Save any python Object in pickle file
