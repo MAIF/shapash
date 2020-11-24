@@ -141,10 +141,11 @@ class TestSmartPredictor(unittest.TestCase):
         df['x2'] = ["S", "M", "S", "D", "M"]
         df = df.set_index('id')
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        columns_dict = {0: "x1", 2: "x2"}
+        encoder_fitted = encoder.fit(df[["x1", "x2"]])
+        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+        columns_dict = {0: "x1", 1: "x2"}
         label_dict = {0: "Yes", 1: "No"}
         postprocessing = {"x2": {
             "type": "transcoding",
@@ -152,39 +153,32 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {"x1": "age", "x2": "family_situation"}
         features_types = {features: str(df[features].dtypes) for features in df.columns}
 
-        ypred = pd.DataFrame({"y": [1, 0], "id": [0, 1]}).set_index("id")
+        ypred = df['y']
         shap_values = clf.get_feature_importance(Pool(df_encoded), type="ShapValues")
 
         xpl = SmartExplainer(features_dict, label_dict)
         xpl.compile(contributions=shap_values[:, :-1], x=df_encoded, model=clf, preprocessing=encoder_fitted)
 
         predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, features_types, label_dict,
+                                     columns_dict, clf_explainer, features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
-        predictor_1.add_input(x = df[["x1","x2"]], contributions = shap_values[:,:-1])
+        predictor_1.add_input(x=df[["x1", "x2"]], contributions=shap_values[:, :-1])
         xpl_contrib = xpl.contributions
-        predictor_1_contrib = predictor_1.contributions
+        predictor_1_contrib = predictor_1.data["contributions"]
 
-        assert hasattr(predictor_1, "x")
-        assert hasattr(predictor_1, "x_preprocessed")
-        assert not hasattr(predictor_1, "ypred")
-        assert hasattr(predictor_1, "contributions")
-        assert predictor_1.x.shape == predictor_1.x_preprocessed.shape
-        assert all(feature in predictor_1.x.columns for feature in predictor_1.x_preprocessed.columns)
-
-        assert isinstance(predictor_1_contrib, list)
-        assert len(predictor_1_contrib) == len(xpl_contrib)
-        for i, contrib in enumerate(predictor_1_contrib):
-            pd.testing.assert_frame_equal(contrib, xpl_contrib[i])
-            assert all(contrib.index == xpl_contrib[i].index)
-            assert all(contrib.columns == xpl_contrib[i].columns)
-            assert all(contrib.dtypes == xpl_contrib[i].dtypes)
+        assert all(attribute in predictor_1.data.keys()
+                   for attribute in ["x", "x_preprocessed", "contributions", "ypred"])
+        assert predictor_1.data["x"].shape == predictor_1.data["x_preprocessed"].shape
+        assert all(feature in predictor_1.data["x"].columns
+                   for feature in predictor_1.data["x_preprocessed"].columns)
+        assert predictor_1_contrib.shape == predictor_1.data["x"].shape
 
         predictor_1.add_input(ypred=ypred)
-        assert hasattr(predictor_1, "ypred")
-        assert predictor_1.ypred.shape[0] == predictor_1.x.shape[0]
-        assert all(predictor_1.ypred.index == predictor_1.x.index)
+
+        assert "ypred" in predictor_1.data.keys()
+        assert predictor_1.data["ypred"].shape[0] == predictor_1.data["x"].shape[0]
+        assert all(predictor_1.data["ypred"].index == predictor_1.data["x"].index)
 
     @patch('shapash.explainer.smart_predictor.SmartState')
     def test_choose_state_1(self, mock_smart_state):
@@ -285,7 +279,7 @@ class TestSmartPredictor(unittest.TestCase):
         ]
         predictor_1.state = predictor_1.choose_state(contributions)
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x"] = pd.DataFrame(
+        predictor_1.data["x_preprocessed"] = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -310,7 +304,7 @@ class TestSmartPredictor(unittest.TestCase):
 
     def test_check_contributions(self):
         """
-        Unit test check_contributions 1
+        Unit test check_shape_contributions 1
         """
         df = pd.DataFrame(range(0, 5), columns=['id'])
         df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
@@ -948,7 +942,7 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
-        predictor_1.data["x"] = df[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
@@ -1027,9 +1021,9 @@ class TestSmartPredictor(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1], columns=['y'])
         train = pd.DataFrame({'num1': [0, 1],
                               'num2': [0, 2],
-                              'other': ['A', 'B']})
+                              'other': [0, 1]})
         enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
-                                remainder='drop')
+                                remainder='passthrough')
         enc.fit(train, y)
         train_preprocessed = pd.DataFrame(enc.transform(train), index=train.index)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(train_preprocessed, y)
