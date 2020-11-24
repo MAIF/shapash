@@ -9,9 +9,9 @@ from shapash.utils.category_encoder_backend import supported_category_encoder
 from shapash.utils.category_encoder_backend import dummies_category_encoder
 from shapash.utils.category_encoder_backend import category_encoder_binary
 from shapash.utils.category_encoder_backend import transform_ordinal
-from shapash.utils.shap_backend import simple_tree_model_sklearn,catboost_model,\
-    linear_model,svm_model, xgboost_model, lightgbm_model
-from shapash.utils.model import dict_model_feature, extract_features_model
+from shapash.utils.model_synoptic import simple_tree_model_sklearn,catboost_model,\
+    linear_model,svm_model, xgboost_model, lightgbm_model, dict_model_feature
+from shapash.utils.model import extract_features_model
 
 
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
