@@ -792,14 +792,14 @@ class SmartApp:
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
+                
+                if is_open :
                     raise PreventUpdate
                 else:
-                    if features != self.settings_ini['features']:
-                        self.settings['features'] = features
-                        self.settings_ini['features'] = self.settings['features']
-                    else:
-                        raise PreventUpdate
+                    
+                    self.settings['features'] = features
+                    self.settings_ini['features'] = self.settings['features']
+                    
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
@@ -847,13 +847,11 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    if points != self.settings_ini['points'] or violin != self.settings_ini['violin']:
-                        self.settings['points'] = points
-                        self.settings_ini['points'] = self.settings['points']
-                        self.settings['violin'] = violin
-                        self.settings_ini['violin'] = self.settings['violin']
-                    else:
-                        raise PreventUpdate
+                    self.settings['points'] = points
+                    self.settings_ini['points'] = self.settings['points']
+                    self.settings['violin'] = violin
+                    self.settings_ini['violin'] = self.settings['violin']
+
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
@@ -906,9 +904,9 @@ class SmartApp:
                 if cell is not None:
                     selected = data[cell['row']]['_index_']
                 else:
-                    raise PreventUpdate
+                    selected = data[0]['_index_'] # Set default value to selected in order to fill the filter panel
             else:
-                raise PreventUpdate
+                selected = data[0]['_index_']
             return selected, True
 
         @app.callback(
