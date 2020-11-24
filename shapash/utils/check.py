@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from shapash.utils.transform import preprocessing_tolist, check_transformers
 from shapash.utils.columntransformer_backend import columntransformer
-
+import warnings
 
 
 def check_preprocessing(preprocessing=None):
@@ -194,5 +194,54 @@ def check_preprocessing_options(preprocessing=None):
                     if "drop" in options:
                         raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
 
+def check_consistency_postprocessing(features_types, columns_dict, postprocessing=None):
+    """
+    Check that postprocessing parameter has good attributes.
+    Check if postprocessing is a dictionnary, and if its parameters are good.
 
+    Parameters
+    ----------
+    columns_dict: dict
+        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
+    features_types: dict
+        Dictionnary mapping features with the right types needed.
+    postprocessing : dict
+        Dictionnary of postprocessing that need to be checked.
+    """
+    if postprocessing:
+        if not isinstance(postprocessing, dict):
+            raise ValueError("Postprocessing parameter must be a dictionnary")
+        for feature in postprocessing.keys():
+            if feature not in features_types.keys():
+                raise ValueError("Postprocessing and features_types must have the same features names.")
+            if feature not in columns_dict.values():
+                raise ValueError("Postprocessing and columns_dict must have the same features names.")
 
+        for key in postprocessing.keys():
+
+            dict_post = postprocessing[key]
+
+            if not isinstance(dict_post, dict):
+                raise ValueError(f"{key} values must be a dict")
+
+            if not list(dict_post.keys()) == ['type', 'rule']:
+                raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
+
+            if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
+                raise ValueError("Wrong postprocessing method. \n"
+                                 "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'")
+
+            if dict_post['type'] == 'case':
+                if dict_post['rule'] not in ['lower', 'upper']:
+                    raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
+
+                if features_types[key] != "object":
+                    raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+
+            if dict_post['type'] == 'regex':
+                if not set(dict_post['rule'].keys()) == {'in', 'out'}:
+                    raise ValueError(f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
+                                     f" must be 'in' and 'out'.")
+
+                if features_types[key] != "object":
+                    raise ValueError(f"Expected string object to modify with regex methods in {key} dict")

@@ -7,7 +7,7 @@ import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
-                                check_preprocessing_options
+                                check_preprocessing_options, check_consistency_postprocessing
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -273,6 +273,32 @@ class TestCheck(unittest.TestCase):
                                 remainder='passthrough')
         enc.fit(train, y)
         check_preprocessing_options(enc)
+
+    def test_check_consistency_postprocessing_1(self):
+        """
+        Unit test check_consistency_postprocessing
+        """
+        x = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        columns_dict = {0: 'Col1', 1: 'Col2'}
+        features_types = {features: str(x[features].dtypes) for features in x.columns}
+        postprocessing1 = {0: {'Error': 'suffix', 'rule': ' t'}}
+        postprocessing2 = {0: {'type': 'Error', 'rule': ' t'}}
+        postprocessing3 = {0: {'type': 'suffix', 'Error': ' t'}}
+        postprocessing4 = {0: {'type': 'suffix', 'rule': ' '}}
+        postprocessing5 = {0: {'type': 'case', 'rule': 'lower'}}
+        postprocessing6 = {0: {'type': 'case', 'rule': 'Error'}}
+        with self.assertRaises(ValueError):
+            check_consistency_postprocessing(features_types, columns_dict, postprocessing1)
+            check_consistency_postprocessing(features_types, columns_dict, postprocessing2)
+            check_consistency_postprocessing(features_types, columns_dict, postprocessing3)
+            check_consistency_postprocessing(features_types, columns_dict, postprocessing4)
+            check_consistency_postprocessing(features_types, columns_dict, postprocessing5)
+            check_consistency_postprocessing(features_types, columns_dict, postprocessing6)
 
 
 

@@ -1220,6 +1220,80 @@ class TestSmartPredictor(unittest.TestCase):
         assert predictor_1.mask_params["max_contrib"] == 1
         assert predictor_1.mask_params["positive"] == None
 
+    def test_apply_postprocessing_1(self):
+        """
+        Unit test apply_postprocessing 1
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['Col1'] = [25, 39, 50, 43, 67]
+        df['Col2'] = [90, 78, 84, 85, 53]
+        df = df.set_index('id')
+
+        columns_dict = {0: "Col1", 1: "Col2"}
+        label_dict = {0: "No", 1: "Yes"}
+        features_dict = {"Col1": "'Column1'", "Col2": "Column2"}
+
+        features_types = {features: str(df[features].dtypes) for features in df.columns}
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict)
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data["x"] = pd.DataFrame(
+            [[1, 2],
+            [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        assert np.array_equal(predictor_1.data["x"], predictor_1.apply_postprocessing())
+
+    def test_apply_postprocessing_2(self):
+        """
+        Unit test apply_postprocessing 2
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['Col1'] = [1, 3, 5, 7, 9]
+        df['Col2'] = [2, 4, 6, 9, 10]
+        df = df.set_index('id')
+
+        columns_dict = {0: "Col1", 1: "Col2"}
+        label_dict = {0: "No", 1: "Yes"}
+        features_dict = {"Col1": "'Column1'", "Col2": "Column2"}
+
+        features_types = {features: str(df[features].dtypes) for features in df.columns}
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+
+        postprocessing = {'Col1': {'type': 'suffix', 'rule': ' t'},
+                          'Col2': {'type': 'prefix', 'rule': 'test'}}
+
+        predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict,
+                                     postprocessing = postprocessing)
+
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
+        predictor_1.data["x"] = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        expected_output = pd.DataFrame(
+            data=[['1 t', 'test2'],
+                  ['3 t', 'test4']],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        output = predictor_1.apply_postprocessing(postprocessing)
+        assert np.array_equal(output, expected_output)
+
 
 
 
