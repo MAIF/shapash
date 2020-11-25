@@ -79,6 +79,7 @@ The project was developed by **MAIF** Data Scientists.
 - Exports your local summaries to Pandas DataFrames
 - Usable for Regression, Binary Classification or Multiclass
 - Compatible with most of sklearn, lightgbm, catboost, xgboost models
+- Relevant for exploration and **also** deployment (through an API or in Batch mode) for operational use
 
 
 **Shapash** is easy to install and use:
