@@ -7,7 +7,7 @@ from shapash.utils.io import load_pickle
 
 def load_smartpredictor(path):
     """
-    Load method allows Shapash user to use pikled SmartPredictor.
+    Load function allows Shapash user to use pickled SmartPredictor.
 
     Parameters
     ----------

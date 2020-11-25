@@ -739,7 +739,7 @@ class SmartExplainer:
 
     def load(self, path):
         """
-        Load method allows Shapash user to use pikled SmartExplainer.
+        Load method allows Shapash user to use pickled SmartExplainer.
         To use this method you must first declare your SmartExplainer object
         Watch the following example
 
