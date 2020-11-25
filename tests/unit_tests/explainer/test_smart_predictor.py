@@ -958,8 +958,6 @@ class TestSmartPredictor(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1], columns=['y'])
         train = pd.DataFrame({'num1': [0, 1],
                               'num2': [0, 2]})
-                              'num2': [0, 2],
-                              'other': [0, 1]})
         enc = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
                                 remainder='passthrough')
         enc.fit(train, y)
@@ -997,7 +995,7 @@ class TestSmartPredictor(unittest.TestCase):
         label_dict = {0: "No", 1: "Yes"}
         features_dict = {"x1": "age", "x2": "weight"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
 
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         clf_explainer = shap.TreeExplainer(clf)
@@ -1048,7 +1046,7 @@ class TestSmartPredictor(unittest.TestCase):
         label_dict = {0: "No", 1: "Yes"}
         features_dict = {"x1": "age", "x2": "weight"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         clf_explainer = shap.TreeExplainer(clf)
@@ -1105,7 +1103,7 @@ class TestSmartPredictor(unittest.TestCase):
         label_dict = {0: "No", 1: "Yes"}
         features_dict = {"x1": "age", "x2": "weight"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
 
         mask_params = {"features_to_hide": None,
                        "threshold": None,
@@ -1165,7 +1163,7 @@ class TestSmartPredictor(unittest.TestCase):
         label_dict = {0: "No", 1: "Yes"}
         features_dict = {"x1": "age", "x2": "weight"}
 
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
 
         mask_params = {"features_to_hide": None,
                        "threshold": None,
@@ -1187,13 +1185,3 @@ class TestSmartPredictor(unittest.TestCase):
         assert not all([value is None for value in predictor_1.mask_params.values()])
         assert predictor_1.mask_params["max_contrib"] == 1
         assert predictor_1.mask_params["positive"] == None
-
-
-
-
-
-
-
-
-
-

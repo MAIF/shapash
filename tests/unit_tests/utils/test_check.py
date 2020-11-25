@@ -7,8 +7,7 @@ import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
-                                check_consistency_model_features, check_consistency_model_label
-                                check_mask_params, check_ypred, check_contribution_object,\
+                                check_consistency_model_features, check_consistency_model_label, \
                                 check_preprocessing_options
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp

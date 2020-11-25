@@ -13,7 +13,7 @@ with contributions calculated by lime or eli5 library
 """
 import pandas as pd
 import shap
-from shapash.utils.model_synoptic import simple_tree_model,catboost_model,linear_model,svm_model
+from shapash.utils.model_synoptic import simple_tree_model, catboost_model, linear_model, svm_model
 
 def shap_contributions(model, x_df, explainer=None):
     """

@@ -203,24 +203,6 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
             raise ValueError("All features of features_dict must be in model")
-def check_preprocessing_options(preprocessing=None):
-    """
-    Check if preprocessing for ColumnTransformer doesn't have "drop" option
-    Parameters
-    ----------
-    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
-        The processing apply to the original data.
-    """
-    if preprocessing is not None:
-        list_encoding = preprocessing_tolist(preprocessing)
-        for enc in list_encoding:
-            if str(type(enc)) in columntransformer:
-                for options in enc.transformers_:
-                    if "drop" in options:
-                        raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
-
-
-
 
     if set(features_types) != set(columns_dict.values()):
         raise ValueError("features of features_types and model must be the same")
@@ -248,6 +230,22 @@ def check_preprocessing_options(preprocessing=None):
         model_length_features = model_features
         if len(set(columns_dict.values())) != model_length_features:
             raise ValueError("features of columns_dict and model must have the same length")
+
+def check_preprocessing_options(preprocessing=None):
+    """
+    Check if preprocessing for ColumnTransformer doesn't have "drop" option
+    Parameters
+    ----------
+    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
+        The processing apply to the original data.
+    """
+    if preprocessing is not None:
+        list_encoding = preprocessing_tolist(preprocessing)
+        for enc in list_encoding:
+            if str(type(enc)) in columntransformer:
+                for options in enc.transformers_:
+                    if "drop" in options:
+                        raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
 
 def check_consistency_model_label(columns_dict, label_dict=None):
     """
