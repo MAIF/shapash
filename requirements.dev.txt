@@ -11,7 +11,7 @@ lightgbm==2.3.1
 numpy==1.18.1
 pandas==1.0.3
 plotly==4.5.4
-shap==0.37.0
+shap==0.32.1
 Sphinx==3.0.3
 sphinx-rtd-theme==0.4.3
 sphinxcontrib-applehelp==1.0.2
