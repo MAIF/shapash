@@ -1020,7 +1020,7 @@ class SmartApp:
                                   features_to_hide=masked,
                                   positive=sign,
                                   max_contrib=max_contrib)
-            if np.issubdtype(self.explainer.x_pred.index[0], np.dtype(int).type):
+            if np.issubdtype(type(self.explainer.x_pred.index[0]), np.dtype(int).type):
                 selected = int(selected)
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=selected,
                                                                                                label=label,
