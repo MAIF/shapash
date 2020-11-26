@@ -57,36 +57,6 @@ def inverse_transform_contributions(contributions, preprocessing=None):
                 x_contrib_invers = calc_inv_contrib_ce(x_contrib_invers, encoding)
         return x_contrib_invers
 
-def compute_contributions(x_df, explainer, preprocessing=None):
-    """
-    Compute Shapley contributions of a prediction set for a certain model.
-
-    Parameters
-    ----------
-    x_df: pandas.DataFrame
-        Prediction set : features to be preprocessed before using SHAP.
-    explainer: object
-        Any SHAP explainer already initialized with a model.
-    preprocessing: object, optional (default: None)
-        A single transformer, from sklearn or category_encoders
-
-    Returns
-    -------
-    pandas.DataFrame
-        Shapley contributions of the model on the prediction set, as computed by the explainer.
-    """
-    if preprocessing:
-        x_df = preprocessing.transform(x_df)
-    shap_values = explainer.shap_values(x_df)
-    res = pd.DataFrame()
-    if isinstance(shap_values, list):
-        res = [pd.DataFrame(data=tab, index=x_df.index, columns=x_df.columns) for tab in shap_values]
-    elif isinstance(shap_values, np.ndarray):
-        res = pd.DataFrame(data=shap_values, index=x_df.index, columns=x_df.columns)
-    bias = explainer.expected_value
-    return res, bias
-
-
 def rank_contributions(s_df, x_df):
     """
     Function to sort contributions and input features

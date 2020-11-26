@@ -2,12 +2,9 @@
 Unit test of contributions
 """
 import unittest
-from unittest.mock import Mock, patch
 import pandas as pd
 import numpy as np
-import category_encoders as ce
-from shapash.decomposition.contributions import inverse_transform_contributions
-from shapash.decomposition.contributions import compute_contributions, rank_contributions
+from shapash.decomposition.contributions import rank_contributions
 
     
 class TestContributions(unittest.TestCase):
@@ -19,69 +16,6 @@ class TestContributions(unittest.TestCase):
     unittest : [type]
         [description]
     """
-
-    def test_compute_contributions_1(self):
-        """
-        Unit test compute contributions 1
-        """
-        mock_x = Mock()
-        explainer = Mock()
-        output = compute_contributions(mock_x, explainer)
-        explainer.shap_values.assert_called()
-        assert len(output) == 2
-
-    def test_compute_contributions_2(self):
-        """
-        Unit test compute contributions 2
-        """
-        mock_x = Mock()
-        explainer = Mock()
-        preprocessing = Mock()
-        output = compute_contributions(mock_x, explainer, preprocessing)
-        preprocessing.transform.assert_called()
-        explainer.shap_values.assert_called()
-        assert len(output) == 2
-
-    def test_compute_contribution_3(self):
-        """
-        Unit test compute contributions 3
-        """
-        explainer = Mock()
-        explainer.shap_values.return_value = np.array([[1, 2, 3], [4, 5, 6]])
-        x_pred = pd.DataFrame({'a': [2, 8], 'b': [3, 9], 'c': [4, 10]})
-        expected_output = pd.DataFrame(
-            data=np.array([[1, 2, 3], [4, 5, 6]]),
-            columns=x_pred.columns,
-            index=x_pred.index
-        )
-        s, b = compute_contributions(x_pred, explainer)
-        pd.testing.assert_frame_equal(expected_output, s)
-
-    def test_compute_contribution_4(self):
-        """
-        Unit test compute contributions 4
-        """
-        explainer = Mock()
-        explainer.shap_values.return_value = [
-            np.array([[1, 2, 3], [4, 5, 6]]),
-            np.array([[1.4, -2, 3], [2.4, 5.5, -6]])
-        ]
-        x_pred = pd.DataFrame({'a': [2, 8], 'b': [3, 9], 'c': [4, 10]})
-        expected_output = [
-            pd.DataFrame(
-                data=np.array([[1, 2, 3], [4, 5, 6]]),
-                columns=x_pred.columns,
-                index=x_pred.index
-            ),
-            pd.DataFrame(
-                data=np.array([[1.4, -2, 3], [2.4, 5.5, -6]]),
-                columns=x_pred.columns,
-                index=x_pred.index
-            )
-        ]
-        s, b = compute_contributions(x_pred, explainer)
-        for i in range(2):
-            pd.testing.assert_frame_equal(expected_output[i], s[i])
 
     def test_rank_contributions_1(self):
         """
