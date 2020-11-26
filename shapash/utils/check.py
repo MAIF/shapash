@@ -200,7 +200,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
     """
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
-            raise ValueError("All features of features_dict must be in model")
+            raise ValueError("All features of features_dict must be in features_types")
 
     if set(features_types) != set(columns_dict.values()):
         raise ValueError("features of features_types and model must be the same")

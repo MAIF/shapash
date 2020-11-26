@@ -33,13 +33,12 @@ def init_sme_to_pickle_test():
     """
     current = Path(path.abspath(__file__)).parent.parent.parent
     pkl_file = path.join(current, 'data/predictor.pkl')
-    xpl = SmartExplainer()
+    xpl = SmartExplainer(features_dict={})
     y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
     dataframe_x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
     clf = cb.CatBoostClassifier(n_estimators=1).fit(dataframe_x, y_pred)
     xpl.compile(x=dataframe_x, y_pred=y_pred, model=clf)
     predictor = xpl.to_smartpredictor()
-
     return pkl_file, predictor
 
 class TestSmartPredictor(unittest.TestCase):

@@ -16,7 +16,7 @@ class Test_load_smartpredictor(unittest.TestCase):
         """
         Unit test load_smartpredictor 1
         """
-        xpl = SmartExplainer()
+        xpl = SmartExplainer(features_dict={})
         y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
         dataframe_x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
         clf = cb.CatBoostClassifier(n_estimators=1).fit(dataframe_x, y_pred)
