@@ -987,10 +987,6 @@ class SmartExplainer:
                 }
             params_smartpredictor.append(self.mask_params)
 
-            check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
-                                             self.features_types, self.mask_params, self.preprocessing)
-            check_consistency_model_label(self.columns_dict, self.label_dict)
-
         return SmartPredictor(*params_smartpredictor)
 
     def check_x_y_attributes(self, x, y):

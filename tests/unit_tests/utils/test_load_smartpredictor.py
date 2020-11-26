@@ -9,7 +9,6 @@ from shapash.explainer.smart_explainer import SmartExplainer
 import pandas as pd
 import numpy as np
 import catboost as cb
-import shap
 
 class Test_load_smartpredictor(unittest.TestCase):
     def test_load_smartpredictor_1(self):

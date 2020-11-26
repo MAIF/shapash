@@ -5,7 +5,6 @@ Check Module
 import numpy as np
 import pandas as pd
 from shapash.utils.category_encoder_backend import no_dummies_category_encoder
-
 from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
@@ -195,8 +194,10 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
     features_types: dict
         Dictionnary mapping features with the right types needed.
-    preprocessing: category_encoders, ColumnTransformer, list or dict
+    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
             The processing apply to the original data
+    mask_params: dict (optional)
+        Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
     """
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
