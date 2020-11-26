@@ -4,14 +4,12 @@ Check Module
 
 import numpy as np
 import pandas as pd
-from shapash.utils.category_encoder_backend import supported_category_encoder
-from shapash.utils.columntransformer_backend import columntransformer, supported_sklearn
+from shapash.utils.category_encoder_backend import no_dummies_category_encoder
+
+from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
-from shapash.utils.columntransformer_backend import columntransformer
-
-
 
 def check_preprocessing(preprocessing=None):
     """
@@ -214,15 +212,15 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
 
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
-        if str(type(preprocessing)) in (supported_category_encoder):
+        if str(type(preprocessing)) in no_dummies_category_encoder:
             if set(columns_dict.values()) != set(model_features):
                 raise ValueError("features of columns_dict and model must be the same")
 
-        elif str(type(preprocessing)) in (columntransformer, supported_sklearn):
+        elif str(type(preprocessing)) in (no_dummies_sklearn, columntransformer):
              if len(set(columns_dict.values())) != len(set(model_features)):
                 raise ValueError("length of features of columns_dict and model must be the same")
 
-        elif str(type(preprocessing)) not in (supported_category_encoder, columntransformer, supported_sklearn)\
+        elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
                 and preprocessing is not None:
             raise ValueError("this type of encoder is not supported in SmartPredictor")
 

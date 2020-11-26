@@ -312,6 +312,31 @@ class TestCheck(unittest.TestCase):
                               'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
                               'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
                               'other': ['other', np.nan, 'other', 'other']})
+
+        features_dict = None
+        columns_dict = {i: features for i, features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+
+        mask_params = {
+            "features_to_hide": 'Binary3',
+            "threshold": None,
+            "positive": True,
+            "max_contrib": 5
+        }
+
+        enc_ordinal_all = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
+                                                  'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
+        train_ordinal_all = enc_ordinal_all.transform(train)
+        preprocessing = enc_ordinal_all
+
+        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
+
+        model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
+
+        with self.assertRaises(ValueError):
+            check_consistency_model_features(features_dict, model, columns_dict,
+                                             features_types, mask_params, preprocessing)
+
     def test_check_preprocessing_options_1(self):
         """
         Unit test 1 for check_preprocessing_options
@@ -331,30 +356,6 @@ class TestCheck(unittest.TestCase):
                                 remainder='passthrough')
         enc.fit(train, y)
         check_preprocessing_options(enc)
-
-        features_dict = None
-        columns_dict = {i:features for i,features in enumerate(train.columns)}
-        features_types = {features: str(train[features].dtypes) for features in train.columns}
-
-        mask_params = {
-            "features_to_hide": 'Binary3',
-            "threshold": None,
-            "positive": True,
-            "max_contrib": 5
-        }
-
-        enc_ordinal_all = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
-                                            'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
-        train_ordinal_all  = enc_ordinal_all.transform(train)
-        preprocessing=enc_ordinal_all
-
-        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
-
-        model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
-
-        with self.assertRaises(ValueError):
-            check_consistency_model_features(features_dict, model, columns_dict,
-                                                   features_types, mask_params, preprocessing)
 
     def test_check_consistency_model_features_3(self):
         """
