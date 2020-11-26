@@ -5,6 +5,9 @@ Unit test smart predictor
 import unittest
 from shapash.explainer.smart_explainer import SmartPredictor
 from shapash.explainer.smart_explainer import SmartExplainer
+import os
+from os import path
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import catboost as cb
@@ -18,7 +21,25 @@ import shap
 
 
 
+def init_sme_to_pickle_test():
+    """
+    Init sme to pickle test
+    TODO: Docstring
+    Returns
+    -------
+    [type]
+        [description]
+    """
+    current = Path(path.abspath(__file__)).parent.parent.parent
+    pkl_file = path.join(current, 'data/predictor.pkl')
+    xpl = SmartExplainer()
+    y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
+    dataframe_x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+    clf = cb.CatBoostClassifier(n_estimators=1).fit(dataframe_x, y_pred)
+    xpl.compile(x=dataframe_x, y_pred=y_pred, model=clf)
+    predictor = xpl.to_smartpredictor()
 
+    return pkl_file, predictor
 
 class TestSmartPredictor(unittest.TestCase):
     """
@@ -983,6 +1004,15 @@ class TestSmartPredictor(unittest.TestCase):
         assert contributions.shape[0] == predictor_1.data["x"].shape[0]
         assert all(contributions.index == predictor_1.data["x"].index)
         assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 2
+
+    def test_save_1(self):
+        """
+        Unit test save 1
+        """
+        pkl_file, predictor = init_sme_to_pickle_test()
+        predictor.save(pkl_file)
+        assert path.exists(pkl_file)
+        os.remove(pkl_file)
 
     def test_apply_preprocessing_1(self):
         """

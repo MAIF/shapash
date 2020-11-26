@@ -2,6 +2,32 @@
 Modele Module
 """
 import pandas as pd
+from inspect import ismethod
+
+def extract_features_model(model, model_attribute):
+    """
+    Extract features of models if it's possible,
+    If not extract the number features of model
+     -------
+    model: model object
+        model used to check the different values of target estimate predict proba
+    model_attribute: String or List
+        if model can give features, attributes to access features, if not 'length'
+    """
+    if model_attribute[0] == 'length':
+        return model.n_features_in_
+    else:
+        if ismethod(getattr(model,model_attribute[0])):
+            if len(model_attribute) == 1:
+                return getattr(model,model_attribute[0])()
+            else:
+                return extract_features_model(getattr(model,model_attribute[0])(), model_attribute[1:])
+        else:
+            if len(model_attribute) == 1:
+                return getattr(model,model_attribute[0])
+            else:
+                return extract_features_model(getattr(model,model_attribute[0]), model_attribute[1:])
+
 
 def predict_proba(model, x_init, classes):
     """

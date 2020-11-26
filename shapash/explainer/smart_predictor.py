@@ -10,6 +10,7 @@ from shapash.utils.transform import adapt_contributions
 from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.utils.model import predict_proba
+from shapash.utils.io import save_pickle
 from shapash.utils.transform import apply_preprocessing
 from shapash.manipulation.filters import hide_contributions
 from shapash.manipulation.filters import cap_contributions
@@ -484,6 +485,29 @@ class SmartPredictor :
             )
         else:
             return contributions
+
+    def save(self, path):
+        """
+        Save method allows user to save SmartPredictor object on disk
+        using a pickle file.
+        Save method can be useful: you don't have to recompile to display
+        results later
+
+        Parameters
+        ----------
+        path : str
+            File path to store the pickle file
+
+        Example
+        --------
+        >>> xpl.save('path_to_pkl/xpl.pkl')
+        """
+        dict_to_save = {}
+        for att in self.__dict__.keys():
+            if (isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None))) or att == "model"
+                or att == "explainer" or att == "preprocessing") and not att == "data" :
+                dict_to_save.update({att: getattr(self, att)})
+        save_pickle(dict_to_save, path)
 
     def apply_preprocessing(self):
         """
