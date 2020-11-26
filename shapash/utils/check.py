@@ -230,6 +230,10 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         if len(set(columns_dict.values())) != model_length_features:
             raise ValueError("features of columns_dict and model must have the same length")
 
+    if preprocessing is not None and str(type(preprocessing)) not in columntransformer:
+        if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
+            raise ValueError("All features of preprocessing must be in columns_dict")
+
 def check_preprocessing_options(preprocessing=None):
     """
     Check if preprocessing for ColumnTransformer doesn't have "drop" option
