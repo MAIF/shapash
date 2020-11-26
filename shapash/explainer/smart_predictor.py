@@ -6,7 +6,6 @@ from shapash.utils.check import check_label_dict, check_mask_params, check_ypred
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
-import pickle
 from shapash.utils.transform import adapt_contributions
 from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -487,7 +486,7 @@ class SmartPredictor :
         else:
             return contributions
 
-    def save(self, path, protocol=pickle.HIGHEST_PROTOCOL):
+    def save(self, path):
         """
         Save method allows user to save SmartPredictor object on disk
         using a pickle file.
@@ -498,9 +497,6 @@ class SmartPredictor :
         ----------
         path : str
             File path to store the pickle file
-        protocol : int
-            Int which indicates which protocol should be used by the pickler,
-            default HIGHEST_PROTOCOL
 
         Example
         --------
