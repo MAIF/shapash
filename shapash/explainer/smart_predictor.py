@@ -185,7 +185,7 @@ class SmartPredictor :
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
             self.data = self.clean_data(x)
-            self.data["x"] = self.apply_postprocessing(self.postprocessing)
+            self.data["x_postprocessed"] = self.apply_postprocessing()
             try :
                 self.data["x_preprocessed"] = self.apply_preprocessing()
             except BaseException :
@@ -586,7 +586,7 @@ class SmartPredictor :
         self.summary = assign_contributions(
             rank_contributions(
                 self.data["contributions"],
-                self.data["x_preprocessed"]
+                self.data["x_postprocessed"]
             )
         )
         # Apply filter method with mask_params attributes parameters
@@ -661,7 +661,7 @@ class SmartPredictor :
 
         return self.data["ypred"]
 
-    def apply_postprocessing(self, postprocessing=None):
+    def apply_postprocessing(self):
         """
         Modifies x Dataframe according to postprocessing modifications, if exists.
 
@@ -675,8 +675,8 @@ class SmartPredictor :
         pandas.Dataframe
             Returns x_pred if postprocessing is empty, modified dataframe otherwise.
         """
-        if postprocessing:
-            return apply_postprocessing(self.data["x"], postprocessing)
+        if self.postprocessing:
+            return apply_postprocessing(self.data["x"], self.postprocessing)
         else:
             return self.data["x"]
 

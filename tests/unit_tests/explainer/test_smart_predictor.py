@@ -1321,7 +1321,7 @@ class TestSmartPredictor(unittest.TestCase):
             columns=['Col1', 'Col2'],
             index=['Id1', 'Id2']
         )
-        output = predictor_1.apply_postprocessing(postprocessing)
+        output = predictor_1.apply_postprocessing()
         assert np.array_equal(output, expected_output)
 
 
