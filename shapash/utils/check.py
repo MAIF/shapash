@@ -4,8 +4,8 @@ Check Module
 
 import numpy as np
 import pandas as pd
-from shapash.utils.category_encoder_backend import no_dummies_category_encoder
-from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer
+from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder
+from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer, supported_sklearn
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
@@ -230,7 +230,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         if len(set(columns_dict.values())) != model_length_features:
             raise ValueError("features of columns_dict and model must have the same length")
 
-    if preprocessing is not None and str(type(preprocessing)) not in columntransformer:
+    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
         if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
             raise ValueError("All features of preprocessing must be in columns_dict")
 
