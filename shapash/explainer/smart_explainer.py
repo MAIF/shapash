@@ -21,7 +21,8 @@ from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
-from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object
+from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
+                                check_consistency_model_features, check_consistency_model_label
 from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
@@ -977,16 +978,14 @@ class SmartExplainer:
 
             params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
-            if hasattr(self,"mask_params"):
-                params_smartpredictor.append(self.mask_params)
-            else :
-                mask_params = {
+            if not hasattr(self,"mask_params"):
+                self.mask_params = {
                     "features_to_hide": None,
                     "threshold": None,
                     "positive": None,
                     "max_contrib": None
                 }
-                params_smartpredictor.append(mask_params)
+            params_smartpredictor.append(self.mask_params)
 
         return SmartPredictor(*params_smartpredictor)
 
