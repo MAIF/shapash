@@ -1,5 +1,5 @@
 """
-Modele Synoptic Module
+Model Synoptic Module
 """
 
 simple_tree_model_sklearn = (
@@ -50,3 +50,4 @@ dict_model_feature = {"<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>":
               "<class 'catboost.core.CatBoostClassifier'>": ["feature_names_"],
               "<class 'catboost.core.CatBoostRegressor'>": ["feature_names_"],
              }
+

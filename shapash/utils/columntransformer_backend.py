@@ -13,7 +13,6 @@ from shapash.utils.model_synoptic import simple_tree_model_sklearn,catboost_mode
     linear_model,svm_model, xgboost_model, lightgbm_model, dict_model_feature
 from shapash.utils.model import extract_features_model
 
-
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
 
 sklearn_onehot = "<class 'sklearn.preprocessing._encoders.OneHotEncoder'>"

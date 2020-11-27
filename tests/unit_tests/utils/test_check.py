@@ -7,14 +7,33 @@ import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
+                                check_consistency_model_features, check_consistency_model_label, \
                                 check_preprocessing_options
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
-
+import sklearn.ensemble as ske
+import sklearn.svm as svm
+import sklearn.linear_model as skl
+import xgboost as xgb
+import lightgbm as lgb
+import catboost as cb
 
 
 class TestCheck(unittest.TestCase):
+
+    def setUp(self):
+        self.modellist = [
+            lgb.LGBMRegressor(n_estimators=1), lgb.LGBMClassifier(n_estimators=1),
+            xgb.XGBRegressor(n_estimators=1), xgb.XGBRegressor(n_estimators=1),
+            cb.CatBoostRegressor(n_estimators=1), cb.CatBoostClassifier(n_estimators=1),
+            ske.GradientBoostingRegressor(n_estimators=1), ske.GradientBoostingClassifier(n_estimators=1),
+            ske.ExtraTreesRegressor(n_estimators=1), ske.ExtraTreesClassifier(n_estimators=1),
+            ske.RandomForestRegressor(n_estimators=1), ske.RandomForestClassifier(n_estimators=1),
+            skl.LogisticRegression(), skl.LinearRegression(),
+            svm.SVR(kernel='linear'), svm.SVC(kernel='linear')
+        ]
+
     def test_check_preprocessing_1(self):
         """
         Test check preprocessing on multiple preprocessing
@@ -254,6 +273,70 @@ class TestCheck(unittest.TestCase):
             check_contribution_object(_case, _classes, contributions_2)
             check_mask_params("regression", None, contributions_1)
 
+    def test_check_consistency_model_features_1(self):
+        """
+        Test check_consistency_model_features 1
+        """
+        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
+                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
+                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
+                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
+                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
+                              'other': ['other', np.nan, 'other', 'other']})
+
+        features_dict = None
+        columns_dict = {i:features for i,features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        label_dict = None
+        mask_params = None
+
+        enc_ordinal_all = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
+                                            'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
+        train_ordinal_all  = enc_ordinal_all.transform(train)
+        preprocessing = enc_ordinal_all
+
+        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
+
+        model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
+
+        check_consistency_model_features(features_dict, model, columns_dict,
+                                               features_types, mask_params, preprocessing)
+
+    def test_check_consistency_model_features_2(self):
+        """
+        Test check_consistency_model_features 2
+        """
+        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
+                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
+                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
+                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
+                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
+                              'other': ['other', np.nan, 'other', 'other']})
+
+        features_dict = None
+        columns_dict = {i: features for i, features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+
+        mask_params = {
+            "features_to_hide": 'Binary3',
+            "threshold": None,
+            "positive": True,
+            "max_contrib": 5
+        }
+
+        enc_ordinal_all = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
+                                                  'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
+        train_ordinal_all = enc_ordinal_all.transform(train)
+        preprocessing = enc_ordinal_all
+
+        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
+
+        model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
+
+        with self.assertRaises(ValueError):
+            check_consistency_model_features(features_dict, model, columns_dict,
+                                             features_types, mask_params, preprocessing)
+
     def test_check_preprocessing_options_1(self):
         """
         Unit test 1 for check_preprocessing_options
@@ -274,10 +357,88 @@ class TestCheck(unittest.TestCase):
         enc.fit(train, y)
         check_preprocessing_options(enc)
 
+    def test_check_consistency_model_features_3(self):
+        """
+        Test check_consistency_model_features 3
+        """
+        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
+                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
+                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
+                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
+                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T']})
 
+        features_dict = None
+        columns_dict = {i:features for i,features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        label_dict = None
+        mask_params = None
 
+        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
 
+        enc_onehot = ce.OneHotEncoder(cols=['Onehot1', 'Onehot2']).fit(train)
+        train_onehot = enc_onehot.transform(train)
+        enc_binary = ce.BinaryEncoder(cols=['Binary1', 'Binary2']).fit(train_onehot)
+        train_binary = enc_binary.transform(train_onehot)
+        enc_ordinal = ce.OrdinalEncoder(cols=['Ordinal1', 'Ordinal2']).fit(train_binary)
+        train_ordinal = enc_ordinal.transform(train_binary)
+        enc_basen = ce.BaseNEncoder(cols=['BaseN1', 'BaseN2']).fit(train_ordinal)
+        train_basen = enc_basen.transform(train_ordinal)
+        enc_target = ce.TargetEncoder(cols=['Target1', 'Target2']).fit(train_basen, y)
+        train_all = enc_target.transform(train_basen)
+        preprocessing = [enc_onehot, enc_binary, enc_ordinal, enc_basen, enc_target]
 
+        model = cb.CatBoostClassifier(n_estimators=1).fit(train_all, y)
 
+        with self.assertRaises(ValueError):
+            check_consistency_model_features(features_dict, model, columns_dict,
+                                                   features_types, mask_params, preprocessing)
 
+    def test_check_consistency_model_features_4(self):
+        """
+        Test check_consistency_model_features 1
+        """
+        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
+                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
+                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
+                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
+                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
+                              'other': ['other', np.nan, 'other', 'other']})
 
+        features_dict = None
+        columns_dict = {i:features for i,features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        label_dict = None
+        mask_params = None
+
+        enc_ordinal_all = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
+                                            'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
+        train_ordinal_all  = enc_ordinal_all.transform(train)
+        preprocessing = enc_ordinal_all
+
+        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
+
+        for model in self.modellist:
+            print(type(model))
+            model.fit(train_ordinal_all, y)
+
+            check_consistency_model_features(features_dict, model, columns_dict,
+                                             features_types, mask_params, preprocessing)
+
+    def test_check_consistency_model_label_1(self):
+        """
+        Test check_consistency_model_label 1
+        """
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "Yes", 1: "No"}
+
+        check_consistency_model_label(columns_dict, label_dict)
+
+    def test_check_consistency_model_label_2(self):
+        """
+        Test check_consistency_model_label 2
+        """
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "Yes", 2: "No"}
+
+        with self.assertRaises(ValueError):
+            check_consistency_model_label(columns_dict, label_dict)
