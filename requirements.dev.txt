@@ -10,7 +10,7 @@ dash-html-components==1.0.2
 dash-renderer==1.2.4
 dash-table==4.6.1
 lightgbm==2.3.1
-numpy==1.18.1ss
+numpy==1.18.1
 pandas==1.0.3
 plotly==4.5.4
 shap==0.37.0
