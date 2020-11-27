@@ -1,6 +1,5 @@
 pip==20.2.4
-llvmlite
-numba
+numba==0.49.1
 dash==1.9.1
 catboost==0.22
 category-encoders==2.1.0
