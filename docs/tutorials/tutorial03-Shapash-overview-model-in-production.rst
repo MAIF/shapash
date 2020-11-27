@@ -24,7 +24,6 @@ Building Supervized Model
 .. code:: ipython3
 
     import sys
-    sys.path.insert(0,'/home/78257d/shapash/')
     from shapash.explainer.smart_predictor import SmartPredictor
     from shapash.explainer.smart_explainer import SmartExplainer
     from shapash.data.data_loader import data_loading
@@ -42,201 +41,23 @@ Building Supervized Model
     house_df.head()
 
 
+.. parsed-literal::
 
-
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
+    .. table:: 
     
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>MSSubClass</th>
-          <th>MSZoning</th>
-          <th>LotArea</th>
-          <th>Street</th>
-          <th>LotShape</th>
-          <th>LandContour</th>
-          <th>Utilities</th>
-          <th>LotConfig</th>
-          <th>LandSlope</th>
-          <th>Neighborhood</th>
-          <th>...</th>
-          <th>EnclosedPorch</th>
-          <th>3SsnPorch</th>
-          <th>ScreenPorch</th>
-          <th>PoolArea</th>
-          <th>MiscVal</th>
-          <th>MoSold</th>
-          <th>YrSold</th>
-          <th>SaleType</th>
-          <th>SaleCondition</th>
-          <th>SalePrice</th>
-        </tr>
-        <tr>
-          <th>Id</th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>2-Story 1946 &amp; Newer</td>
-          <td>Residential Low Density</td>
-          <td>8450</td>
-          <td>Paved</td>
-          <td>Regular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Inside lot</td>
-          <td>Gentle slope</td>
-          <td>College Creek</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>2</td>
-          <td>2008</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>208500</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>1-Story 1946 &amp; Newer All Styles</td>
-          <td>Residential Low Density</td>
-          <td>9600</td>
-          <td>Paved</td>
-          <td>Regular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Frontage on 2 sides of property</td>
-          <td>Gentle slope</td>
-          <td>Veenker</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>5</td>
-          <td>2007</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>181500</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>2-Story 1946 &amp; Newer</td>
-          <td>Residential Low Density</td>
-          <td>11250</td>
-          <td>Paved</td>
-          <td>Slightly irregular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Inside lot</td>
-          <td>Gentle slope</td>
-          <td>College Creek</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>9</td>
-          <td>2008</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>223500</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>2-Story 1945 &amp; Older</td>
-          <td>Residential Low Density</td>
-          <td>9550</td>
-          <td>Paved</td>
-          <td>Slightly irregular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Corner lot</td>
-          <td>Gentle slope</td>
-          <td>Crawford</td>
-          <td>...</td>
-          <td>272</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>2</td>
-          <td>2006</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Abnormal Sale</td>
-          <td>140000</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>2-Story 1946 &amp; Newer</td>
-          <td>Residential Low Density</td>
-          <td>14260</td>
-          <td>Paved</td>
-          <td>Slightly irregular</td>
-          <td>Near Flat/Level</td>
-          <td>All public Utilities (E,G,W,&amp; S)</td>
-          <td>Frontage on 2 sides of property</td>
-          <td>Gentle slope</td>
-          <td>Northridge</td>
-          <td>...</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>12</td>
-          <td>2008</td>
-          <td>Warranty Deed - Conventional</td>
-          <td>Normal Sale</td>
-          <td>250000</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>5 rows × 73 columns</p>
-    </div>
-
+        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+        |          MSSubClass           |       MSZoning        |LotArea|Street|     LotShape     |  LandContour  |           Utilities            |           LotConfig           | LandSlope  |Neighborhood |       Condition1        |Condition2|       BldgType       |HouseStyle|OverallQual|OverallCond|YearBuilt|YearRemodAdd|RoofStyle|          RoofMatl          |Exterior1st | Exterior2nd |MasVnrType|MasVnrArea|   ExterQual   |   ExterCond   |  Foundation   |       BsmtQual       |            BsmtCond             |     BsmtExposure      |     BsmtFinType1      |BsmtFinSF1|     BsmtFinType2     |BsmtFinSF2|BsmtUnfSF|TotalBsmtSF|          Heating          |HeatingQC|CentralAir|           Electrical            |1stFlrSF|2ndFlrSF|LowQualFinSF|GrLivArea|BsmtFullBath|BsmtHalfBath|FullBath|HalfBath|BedroomAbvGr|KitchenAbvGr|  KitchenQual  |TotRmsAbvGrd|     Functional      |Fireplaces|    GarageType    |GarageYrBlt|    GarageFinish    |GarageArea|  GarageQual   |  GarageCond   |PavedDrive|WoodDeckSF|OpenPorchSF|EnclosedPorch|3SsnPorch|ScreenPorch|PoolArea|MiscVal|MoSold|YrSold|          SaleType          |SaleCondition|SalePrice|
+        +===============================+=======================+=======+======+==================+===============+================================+===============================+============+=============+=========================+==========+======================+==========+===========+===========+=========+============+=========+============================+============+=============+==========+==========+===============+===============+===============+======================+=================================+=======================+=======================+==========+======================+==========+=========+===========+===========================+=========+==========+=================================+========+========+============+=========+============+============+========+========+============+============+===============+============+=====================+==========+==================+===========+====================+==========+===============+===============+==========+==========+===========+=============+=========+===========+========+=======+======+======+============================+=============+=========+
+        |2-Story 1946 & Newer           |Residential Low Density|   8450|Paved |Regular           |Near Flat/Level|All public Utilities (E,G,W,& S)|Inside lot                     |Gentle slope|College Creek|Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     2003|        2003|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       196|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|No Exposure/No Basement|Good Living Quarters   |       706|Unfinished/No Basement|         0|      150|        856|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|     856|     854|           0|     1710|           1|           0|       2|       1|           3|           1|Good           |           8|Typical Functionality|         0|Attached to home  |       2003|Rough Finished      |       548|Typical/Average|Typical/Average|Paved     |         0|         61|            0|        0|          0|       0|      0|     2|  2008|Warranty Deed - Conventional|Normal Sale  |   208500|
+        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+        |1-Story 1946 & Newer All Styles|Residential Low Density|   9600|Paved |Regular           |Near Flat/Level|All public Utilities (E,G,W,& S)|Frontage on 2 sides of property|Gentle slope|Veenker      |Adjacent to feeder street|Normal    |Single-family Detached|One story |          6|          8|     1976|        1976|Gable    |Standard (Composite) Shingle|Metal Siding|Metal Siding |None      |         0|Average/Typical|Average/Typical|Cinder Block   |Good (90-99 inches)   |Typical - slight dampness allowed|Good Exposure          |Average Living Quarters|       978|Unfinished/No Basement|         0|      284|       1262|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|    1262|       0|           0|     1262|           0|           1|       2|       0|           3|           1|Typical/Average|           6|Typical Functionality|         1|Attached to home  |       1976|Rough Finished      |       460|Typical/Average|Typical/Average|Paved     |       298|          0|            0|        0|          0|       0|      0|     5|  2007|Warranty Deed - Conventional|Normal Sale  |   181500|
+        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+        |2-Story 1946 & Newer           |Residential Low Density|  11250|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Inside lot                     |Gentle slope|College Creek|Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     2001|        2002|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       162|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|Mimimum Exposure       |Good Living Quarters   |       486|Unfinished/No Basement|         0|      434|        920|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|     920|     866|           0|     1786|           1|           0|       2|       1|           3|           1|Good           |           6|Typical Functionality|         1|Attached to home  |       2001|Rough Finished      |       608|Typical/Average|Typical/Average|Paved     |         0|         42|            0|        0|          0|       0|      0|     9|  2008|Warranty Deed - Conventional|Normal Sale  |   223500|
+        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+        |2-Story 1945 & Older           |Residential Low Density|   9550|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Corner lot                     |Gentle slope|Crawford     |Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     1915|        1970|Gable    |Standard (Composite) Shingle|Wood Siding |Wood Shingles|None      |         0|Average/Typical|Average/Typical|Brick & Tile   |Typical (80-89 inches)|Good                             |No Exposure/No Basement|Average Living Quarters|       216|Unfinished/No Basement|         0|      540|        756|Gas forced warm air furnace|Good     |Yes       |Standard Circuit Breakers & Romex|     961|     756|           0|     1717|           1|           0|       1|       0|           3|           1|Good           |           7|Typical Functionality|         1|Detached from home|       1998|Unfinished/No Garage|       642|Typical/Average|Typical/Average|Paved     |         0|         35|          272|        0|          0|       0|      0|     2|  2006|Warranty Deed - Conventional|Abnormal Sale|   140000|
+        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
+        |2-Story 1946 & Newer           |Residential Low Density|  14260|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Frontage on 2 sides of property|Gentle slope|Northridge   |Normal                   |Normal    |Single-family Detached|Two story |          8|          5|     2000|        2000|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       350|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|Average Exposure       |Good Living Quarters   |       655|Unfinished/No Basement|         0|      490|       1145|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|    1145|    1053|           0|     2198|           1|           0|       2|       1|           4|           1|Good           |           9|Typical Functionality|         1|Attached to home  |       2000|Rough Finished      |       836|Typical/Average|Typical/Average|Paved     |       192|         84|            0|        0|          0|       0|      0|    12|  2008|Warranty Deed - Conventional|Normal Sale  |   250000|
+        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
 
 
 Encoding Categorical Features
@@ -254,15 +75,6 @@ Encoding Categorical Features
         return_df=True).fit(X_df)
     
     X_df=encoder.transform(X_df)
-
-
-.. parsed-literal::
-
-    /home/78257d/.conda/envs/test_env_shapash/lib/python3.6/site-packages/category_encoders/utils.py:21: FutureWarning:
-    
-    is_categorical is deprecated and will be removed in a future version.  Use is_categorical_dtype instead
-    
-
 
 Train / Test Split
 ^^^^^^^^^^^^^^^^^^
@@ -291,6 +103,19 @@ Declare and Compile SmartExplainer
 .. code:: ipython3
 
     from shapash.explainer.smart_explainer import SmartExplainer
+
+.. code:: ipython3
+
+    house_dict.pop("GarageCars")
+
+
+
+
+.. parsed-literal::
+
+    'Size of garage in car capacity'
+
+
 
 .. code:: ipython3
 
@@ -357,60 +182,23 @@ Make prediction
     prediction.head()
 
 
+.. parsed-literal::
 
-
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
+    .. table:: 
     
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>ypred</th>
-        </tr>
-        <tr>
-          <th>Id</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>206462.878757</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>181127.963794</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>221478.052244</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>184788.423141</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>256637.518234</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-
+        +--------+
+        | ypred  |
+        +========+
+        |206462.9|
+        +--------+
+        |181128.0|
+        +--------+
+        |221478.1|
+        +--------+
+        |184788.4|
+        +--------+
+        |256637.5|
+        +--------+
 
 
 Get detailed explanability associated to the prediction
@@ -423,6 +211,26 @@ Get detailed explanability associated to the prediction
 .. code:: ipython3
 
     detailed_contributions.head()
+
+
+.. parsed-literal::
+
+    .. table:: 
+    
+        +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
+        | ypred  |1stFlrSF|2ndFlrSF|3SsnPorch|BedroomAbvGr|BldgType|BsmtCond|BsmtExposure|BsmtFinSF1|BsmtFinSF2|BsmtFinType1|BsmtFinType2|BsmtFullBath|BsmtHalfBath|BsmtQual|BsmtUnfSF|CentralAir|Condition1|Condition2|Electrical|EnclosedPorch|ExterCond|ExterQual|Exterior1st|Exterior2nd|Fireplaces|Foundation|FullBath|Functional|GarageArea|GarageCond|GarageFinish|GarageQual|GarageType|GarageYrBlt|GrLivArea|HalfBath|Heating|HeatingQC|HouseStyle|KitchenAbvGr|KitchenQual|LandContour|LandSlope|LotArea|LotConfig|LotShape|LowQualFinSF|MSSubClass|MSZoning|MasVnrArea|MasVnrType|MiscVal|MoSold |Neighborhood|OpenPorchSF|OverallCond|OverallQual|PavedDrive|PoolArea|RoofMatl|RoofStyle|SaleCondition|SaleType|ScreenPorch|Street|TotRmsAbvGrd|TotalBsmtSF|Utilities|WoodDeckSF|YearBuilt|YearRemodAdd|YrSold |
+        +========+========+========+=========+============+========+========+============+==========+==========+============+============+============+============+========+=========+==========+==========+==========+==========+=============+=========+=========+===========+===========+==========+==========+========+==========+==========+==========+============+==========+==========+===========+=========+========+=======+=========+==========+============+===========+===========+=========+=======+=========+========+============+==========+========+==========+==========+=======+=======+============+===========+===========+===========+==========+========+========+=========+=============+========+===========+======+============+===========+=========+==========+=========+============+=======+
+        |206462.9| -1105.0| 1281.45|        0|       375.7|  12.260|   157.2|      -233.0|   -738.45|    -59.29|      1756.7|      -4.464|      1457.5|     -12.514| -156.91|   3769.6|     87.32|     406.3|         0|   -102.72|       64.689|    80.49|    36.93|     395.35|      457.4|    -684.7|     241.8|  -166.0|     335.0|    3107.9|     34.90|     -28.351|     304.5|     832.4|      226.1|   2706.5|   286.1| -17.38|    73.05|    14.206|       71.56|    -1032.4|     -7.534|        0| -12.51|   -276.8|  -109.9|           0|    2069.9|   175.0|     703.6|   -0.7997|-15.600| -629.7|       456.9|     1347.2|    -1507.9|     8248.8|     58.86|       0|       0|  -17.468|       385.57| -104.65|     -351.6|     0|      -498.2|    -5165.5|        0|    -944.0|   3871.0|      2219.3|  17.48|
+        +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
+        |181128.0|  1629.1| -683.69|        0|       127.2|   8.045|   166.5|     -1112.6|   5781.67|    -76.74|      1545.9|      -3.002|      -612.1|      80.065|  484.04|    611.0|    238.35|     513.5|         0|    -72.65|       -4.472|    34.11|  -217.79|     340.65|     -103.3|    4165.2|     436.3|   623.7|     356.6|    -711.4|     51.74|     335.442|     197.4|     288.4|     -962.5| -10016.3|  -294.7| -20.87|   -33.75|    25.084|       88.06|      114.2|     80.720|        0|-794.90|   -100.0|  -319.9|           0|     902.7|   343.6|    -511.0|   58.2999|-18.709|  364.7|      2753.1|     -532.2|     6899.3|   -14555.9|     50.87|       0|       0|  -57.006|       306.40| -229.80|     -217.5|     0|      -546.0|     2783.7|        0|    2388.1|    340.2|     -4310.0| 413.35|
+        +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
+        |221478.1| -1321.1| -556.40|        0|       361.5|  10.475|   197.2|      -532.0|     61.50|    -84.60|      1440.2|      -2.108|      1806.2|     -14.254|  -65.43|    927.8|     89.36|     399.9|         0|   -132.47|       28.185|    69.26|   656.77|     114.67|      440.1|    1218.0|     456.0|  -171.0|     415.1|    5998.6|     29.34|      20.654|     290.1|     518.2|     -168.8|  15708.3|   577.7| -15.56|    59.28|   -24.845|       56.33|     -519.5|    -28.963|        0|-402.46|   -248.8|  -506.4|           0|    2473.1|   175.7|    -295.7|  -12.2395|-18.589| -393.4|       260.4|      207.8|    -1630.0|    11084.5|     67.35|       0|       0|   48.150|       759.31|  -91.18|     -323.3|     0|      -178.8|    -5157.3|        0|    -919.5|   3877.0|      2141.7| -72.95|
+        +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
+        |184788.4|  -991.6|   20.08|        0|       310.4|   9.720|   226.6|      -502.5|  -3170.03|    -95.89|      1441.0|      -4.973|       963.5|     -13.619| -234.37|   -289.7|    158.14|     432.3|         0|   -103.34|     -707.714|   114.40|   -80.38|      82.37|      211.0|    1462.0|     206.6|  -294.7|     387.1|    6651.6|     23.95|      -2.171|     290.4|     679.0|      315.7|   2969.7|  -263.4| -17.00|   419.86|    -2.777|       68.04|    -1288.9|    -86.747|        0|-825.75|   -245.6|  -291.1|           0|    2767.3|   415.8|    -709.2|   13.9822|-18.257| -889.9|      1585.2|      452.0|    -1875.1|     8188.4|     69.15|       0|       0|   86.058|       345.70|  -89.32|     -344.8|     0|      -608.0|    -5882.2|        0|    -853.1|  -3740.8|     -4930.9| 555.38|
+        +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
+        |256637.5| -8807.7|-1061.02|        0|     -1580.4|   7.868|   124.9|      -237.6|  -2109.99|    -95.46|       603.6|       1.101|       833.5|      -4.190| -392.37|   -477.5|    125.15|     200.8|         0|    -56.36|       18.642|    39.93| -1889.29|     253.88|      259.9|     886.0|     190.1|  -309.1|     252.5|   15161.9|     21.99|      22.500|     121.3|     218.2|     -361.6|  16891.9|   577.7| -18.30|    72.30|  -113.239|       52.48|    -4611.8|    -97.218|        0|7905.51|   -412.6|  -498.7|           0|     875.5|   129.9|    6318.0|  266.8708| -9.056|-4240.1|      -214.7|     -828.3|    -2403.3|    58568.4|     43.47|       0|       0|   -9.469|       -50.49| -481.12|     -384.1|     0|     -4071.6|    -4866.8|        0|     270.9|   2394.7|      1533.3|-233.44|
+        +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
+
 
 Summarize explainability of the predictions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -440,176 +248,21 @@ Summarize explainability of the predictions
     explanation.head()
 
 
+.. parsed-literal::
 
-
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
+    .. table:: 
     
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>ypred</th>
-          <th>feature_1</th>
-          <th>value_1</th>
-          <th>contribution_1</th>
-          <th>feature_2</th>
-          <th>value_2</th>
-          <th>contribution_2</th>
-          <th>feature_3</th>
-          <th>value_3</th>
-          <th>contribution_3</th>
-          <th>...</th>
-          <th>contribution_30</th>
-          <th>feature_31</th>
-          <th>value_31</th>
-          <th>contribution_31</th>
-          <th>feature_32</th>
-          <th>value_32</th>
-          <th>contribution_32</th>
-          <th>feature_33</th>
-          <th>value_33</th>
-          <th>contribution_33</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>1</th>
-          <td>206462.878757</td>
-          <td>Overall material and finish of the house</td>
-          <td>7</td>
-          <td>8248.82</td>
-          <td>Total square feet of basement area</td>
-          <td>856</td>
-          <td>-5165.5</td>
-          <td>Original construction date</td>
-          <td>2003</td>
-          <td>3870.96</td>
-          <td>...</td>
-          <td>334.984</td>
-          <td>Garage quality</td>
-          <td>0</td>
-          <td>304.462</td>
-          <td>Half baths above grade</td>
-          <td>0</td>
-          <td>286.121</td>
-          <td>Lot configuration</td>
-          <td>0</td>
-          <td>-276.762</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>181127.963794</td>
-          <td>Overall material and finish of the house</td>
-          <td>6</td>
-          <td>-14555.9</td>
-          <td>Ground living area square feet</td>
-          <td>1262</td>
-          <td>-10016.3</td>
-          <td>Overall condition of the house</td>
-          <td>8</td>
-          <td>6899.3</td>
-          <td>...</td>
-          <td>343.581</td>
-          <td>Exterior covering on house</td>
-          <td>0</td>
-          <td>340.65</td>
-          <td>Original construction date</td>
-          <td>0</td>
-          <td>340.16</td>
-          <td>Interior finish of the garage?</td>
-          <td>0</td>
-          <td>335.442</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>221478.052244</td>
-          <td>Ground living area square feet</td>
-          <td>1786</td>
-          <td>15708.3</td>
-          <td>Overall material and finish of the house</td>
-          <td>7</td>
-          <td>11084.5</td>
-          <td>Size of garage in square feet</td>
-          <td>608</td>
-          <td>5998.61</td>
-          <td>...</td>
-          <td>-323.291</td>
-          <td>Masonry veneer area in square feet</td>
-          <td>0</td>
-          <td>-295.708</td>
-          <td>Garage quality</td>
-          <td>0</td>
-          <td>290.116</td>
-          <td>Physical locations within Ames city limits</td>
-          <td>0</td>
-          <td>260.384</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>184788.423141</td>
-          <td>Overall material and finish of the house</td>
-          <td>7</td>
-          <td>8188.35</td>
-          <td>Size of garage in square feet</td>
-          <td>642</td>
-          <td>6651.57</td>
-          <td>Total square feet of basement area</td>
-          <td>756</td>
-          <td>-5882.2</td>
-          <td>...</td>
-          <td>345.697</td>
-          <td>Screen porch area in square feet</td>
-          <td>0</td>
-          <td>-344.762</td>
-          <td>Year garage was built</td>
-          <td>0</td>
-          <td>315.665</td>
-          <td>Bedrooms above grade</td>
-          <td>0</td>
-          <td>310.41</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>256637.518234</td>
-          <td>Overall material and finish of the house</td>
-          <td>8</td>
-          <td>58568.4</td>
-          <td>Ground living area square feet</td>
-          <td>2198</td>
-          <td>16891.9</td>
-          <td>Size of garage in square feet</td>
-          <td>836</td>
-          <td>15161.9</td>
-          <td>...</td>
-          <td>-361.637</td>
-          <td>Full bathrooms above grade</td>
-          <td>0</td>
-          <td>-309.068</td>
-          <td>Wood deck area in square feet</td>
-          <td>0</td>
-          <td>270.882</td>
-          <td>Masonry veneer type</td>
-          <td>0</td>
-          <td>266.871</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>5 rows × 100 columns</p>
-    </div>
-
-
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
+        | ypred  |               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |value_3|contribution_3|               feature_4               |value_4|contribution_4|          feature_5          |value_5|contribution_5|            feature_6             |value_6|contribution_6|            feature_7             |value_7|contribution_7|                feature_8                 |value_8|contribution_8|           feature_9            |value_9|contribution_9|                feature_10                |value_10|contribution_10|
+        +========+========================================+=======+==============+========================================+=======+==============+==================================+=======+==============+=======================================+=======+==============+=============================+=======+==============+==================================+=======+==============+==================================+=======+==============+==========================================+=======+==============+================================+=======+==============+==========================================+========+===============+
+        |206462.9|Overall material and finish of the house|      7|        8248.8|Total square feet of basement area      |    856|       -5165.5|Original construction date        |   2003|        3871.0|Unfinished square feet of basement area|    150|        3769.6|Size of garage in square feet|    548|        3107.9|Ground living area square feet    |   1710|        2706.5|Remodel date                      |   2003|        2219.3|Building Class                            |      5|        2069.9|Rating of basement finished area|    NaN|        1756.7|Overall condition of the house            |NaN     |        -1507.9|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
+        |181128.0|Overall material and finish of the house|      6|      -14555.9|Ground living area square feet          |   1262|      -10016.3|Overall condition of the house    |      8|        6899.3|Type 1 finished square feet            |    978|        5781.7|Remodel date                 |   1976|       -4310.0|Number of fireplaces              |      1|        4165.2|Total square feet of basement area|   1262|        2783.7|Physical locations within Ames city limits|    298|        2753.1|Wood deck area in square feet   |   1262|        2388.1|First Floor square feet                   |NaN     |         1629.1|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
+        |221478.1|Ground living area square feet          |   1786|       15708.3|Overall material and finish of the house|      7|       11084.5|Size of garage in square feet     |    608|        5998.6|Total square feet of basement area     |    920|       -5157.3|Original construction date   |   2001|        3877.0|Building Class                    |   2002|        2473.1|Remodel date                      |      1|        2141.7|Basement full bathrooms                   |      5|        1806.2|Overall condition of the house  |    NaN|       -1630.0|Rating of basement finished area          |NaN     |         1440.2|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
+        |184788.4|Overall material and finish of the house|      7|        8188.4|Size of garage in square feet           |    642|        6651.6|Total square feet of basement area|    756|       -5882.2|Remodel date                           |   1970|       -4930.9|Original construction date   |   1915|       -3740.8|Type 1 finished square feet       |    216|       -3170.0|Ground living area square feet    |   1717|        2969.7|Building Class                            |      5|        2767.3|Overall condition of the house  |    NaN|       -1875.1|Physical locations within Ames city limits|NaN     |         1585.2|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
+        |256637.5|Overall material and finish of the house|      8|       58568.4|Ground living area square feet          |   2198|       16891.9|Size of garage in square feet     |    836|       15161.9|First Floor square feet                |   1145|       -8807.7|Lot size square feet         |  14260|        7905.5|Masonry veneer area in square feet|    350|        6318.0|Total square feet of basement area|   1145|       -4866.8|Kitchen quality                           |     12|       -4611.8|Month Sold                      |      9|       -4240.1|Total rooms above grade                   |NaN     |        -4071.6|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
 

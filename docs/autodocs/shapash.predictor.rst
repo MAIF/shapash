@@ -1,7 +1,7 @@
 SmartPredictor Object
 =========================
 
-The **SmartPredictor** Object from the library, is provided to also use the library for production project.
+The **SmartPredictor** Object from the library, is provided to use library to deploy interpretability of your project.
 With several methods, it allows users to get predictions and configured summary of the local explanation
 for each new dataset.
 
