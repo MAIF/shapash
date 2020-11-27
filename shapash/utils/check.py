@@ -183,7 +183,7 @@ def check_contribution_object(case, classes, contributions):
             )
 
 def check_consistency_model_features(features_dict, model, columns_dict, features_types,
-                                     mask_params=None, preprocessing=None, postprocessing= None):
+                                     mask_params=None, preprocessing=None, postprocessing=None):
     """
     Check the matching between attributes, features names are same, or include
 
@@ -324,7 +324,6 @@ def check_postprocessing(x, postprocessing=None):
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
-
 
 def check_consistency_postprocessing(features_types, columns_dict, postprocessing=None):
     """
