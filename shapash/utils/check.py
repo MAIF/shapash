@@ -4,8 +4,11 @@ Check Module
 
 import numpy as np
 import pandas as pd
-from shapash.utils.transform import preprocessing_tolist, check_supported_inverse
-
+from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder
+from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer, supported_sklearn
+from shapash.utils.model import extract_features_model
+from shapash.utils.model_synoptic import dict_model_feature
+from shapash.utils.transform import preprocessing_tolist, check_transformers
 
 def check_preprocessing(preprocessing=None):
     """
@@ -18,7 +21,7 @@ def check_preprocessing(preprocessing=None):
     """
     if preprocessing is not None:
         list_preprocessing = preprocessing_tolist(preprocessing)
-        use_ct, use_ce = check_supported_inverse(list_preprocessing)
+        use_ct, use_ce = check_transformers(list_preprocessing)
         return use_ct, use_ce
 
 def check_model(model):
@@ -176,3 +179,89 @@ def check_contribution_object(case, classes, contributions):
                 """
             )
 
+def check_consistency_model_features(features_dict, model, columns_dict, features_types,
+                                     mask_params=None, preprocessing=None):
+    """
+    Check the matching between attributes, features names are same, or include
+
+    Parameters
+    ----------
+    features_dict: dict
+        Dictionary mapping technical feature names to domain names.
+    model: model object
+        model used to check the different values of target estimate predict_proba
+    columns_dict: dict
+        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
+    features_types: dict
+        Dictionnary mapping features with the right types needed.
+    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
+            The processing apply to the original data
+    mask_params: dict (optional)
+        Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+    """
+    if features_dict is not None:
+        if not all(feat in features_types for feat in features_dict):
+            raise ValueError("All features of features_dict must be in features_types")
+
+    if set(features_types) != set(columns_dict.values()):
+        raise ValueError("features of features_types and model must be the same")
+
+    if mask_params is not None:
+        if mask_params['features_to_hide'] is not None:
+            if not all(feature in set(features_types) for feature in mask_params['features_to_hide']):
+                raise ValueError("All features of mask_params must be in model")
+
+    model_features = extract_features_model(model, dict_model_feature[str(type(model))])
+    if isinstance(model_features, list):
+        if str(type(preprocessing)) in no_dummies_category_encoder:
+            if set(columns_dict.values()) != set(model_features):
+                raise ValueError("features of columns_dict and model must be the same")
+
+        elif str(type(preprocessing)) in (no_dummies_sklearn, columntransformer):
+             if len(set(columns_dict.values())) != len(set(model_features)):
+                raise ValueError("length of features of columns_dict and model must be the same")
+
+        elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
+                and preprocessing is not None:
+            raise ValueError("this type of encoder is not supported in SmartPredictor")
+
+    else:
+        model_length_features = model_features
+        if len(set(columns_dict.values())) != model_length_features:
+            raise ValueError("features of columns_dict and model must have the same length")
+
+    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
+        if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
+            raise ValueError("All features of preprocessing must be in columns_dict")
+
+def check_preprocessing_options(preprocessing=None):
+    """
+    Check if preprocessing for ColumnTransformer doesn't have "drop" option
+    Parameters
+    ----------
+    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
+        The processing apply to the original data.
+    """
+    if preprocessing is not None:
+        list_encoding = preprocessing_tolist(preprocessing)
+        for enc in list_encoding:
+            if str(type(enc)) in columntransformer:
+                for options in enc.transformers_:
+                    if "drop" in options:
+                        raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
+
+def check_consistency_model_label(columns_dict, label_dict=None):
+    """
+    Check the matching between attributes, features names are same, or include
+
+    Parameters
+    ----------
+    columns_dict: dict
+        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
+    label_dict: dict (optional)
+        Dictionary mapping integer labels to domain names (classification - target values).
+    """
+
+    if label_dict is not None:
+        if not all(feat in columns_dict for feat in label_dict):
+            raise ValueError("All features of label_dict must be in model")

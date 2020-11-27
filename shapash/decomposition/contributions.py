@@ -5,9 +5,9 @@ Contributions
 import pandas as pd
 import numpy as np
 from shapash.utils.transform import preprocessing_tolist
-from shapash.utils.transform import check_supported_inverse
-from shapash.utils.inverse_category_encoder import calc_inv_contrib_ce
-from shapash.utils.inverse_columntransformer import calc_inv_contrib_ct
+from shapash.utils.transform import check_transformers
+from shapash.utils.category_encoder_backend import calc_inv_contrib_ce
+from shapash.utils.columntransformer_backend import calc_inv_contrib_ct
 
 def inverse_transform_contributions(contributions, preprocessing=None):
     """
@@ -45,7 +45,7 @@ def inverse_transform_contributions(contributions, preprocessing=None):
         list_encoding = preprocessing_tolist(preprocessing)
 
         # check supported inverse
-        use_ct, use_ce = check_supported_inverse(list_encoding)
+        use_ct, use_ce = check_transformers(list_encoding)
 
         # Apply Inverse Transform
         x_contrib_invers = contributions.copy()
@@ -56,36 +56,6 @@ def inverse_transform_contributions(contributions, preprocessing=None):
             for encoding in list_encoding:
                 x_contrib_invers = calc_inv_contrib_ce(x_contrib_invers, encoding)
         return x_contrib_invers
-
-def compute_contributions(x_df, explainer, preprocessing=None):
-    """
-    Compute Shapley contributions of a prediction set for a certain model.
-
-    Parameters
-    ----------
-    x_df: pandas.DataFrame
-        Prediction set : features to be preprocessed before using SHAP.
-    explainer: object
-        Any SHAP explainer already initialized with a model.
-    preprocessing: object, optional (default: None)
-        A single transformer, from sklearn or category_encoders
-
-    Returns
-    -------
-    pandas.DataFrame
-        Shapley contributions of the model on the prediction set, as computed by the explainer.
-    """
-    if preprocessing:
-        x_df = preprocessing.transform(x_df)
-    shap_values = explainer.shap_values(x_df)
-    res = pd.DataFrame()
-    if isinstance(shap_values, list):
-        res = [pd.DataFrame(data=tab, index=x_df.index, columns=x_df.columns) for tab in shap_values]
-    elif isinstance(shap_values, np.ndarray):
-        res = pd.DataFrame(data=shap_values, index=x_df.index, columns=x_df.columns)
-    bias = explainer.expected_value
-    return res, bias
-
 
 def rank_contributions(s_df, x_df):
     """
@@ -120,3 +90,33 @@ def rank_contributions(s_df, x_df):
     s_ord = pd.DataFrame(data=sorted_contrib, columns=contrib_col, index=x_df.index)
     x_ord = pd.DataFrame(data=sorted_features, columns=col, index=x_df.index)
     return [s_ord, x_ord, s_dict]
+
+def assign_contributions(ranked):
+    """
+    Turn a list of results into a dict.
+
+    Parameters
+    ----------
+    ranked : list
+        The output of rank_contributions.
+
+    Returns
+    -------
+    dict
+        Same data but rearrange into a dict with explicit names.
+
+    Raises
+    ------
+    ValueError
+        The output of rank_contributions should always be of length three.
+    """
+    if len(ranked) != 3:
+        raise ValueError(
+            'Expected lenght : 3, observed lenght : {},'
+            'please check the outputs of rank_contributions.'.format(len(ranked))
+        )
+    return {
+        'contrib_sorted': ranked[0],
+        'x_sorted': ranked[1],
+        'var_dict': ranked[2]
+    }

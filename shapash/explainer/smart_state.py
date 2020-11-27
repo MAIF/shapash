@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
 from shapash.decomposition.contributions import inverse_transform_contributions
-from shapash.decomposition.contributions import rank_contributions
+from shapash.decomposition.contributions import rank_contributions, assign_contributions
 from shapash.manipulation.filters import hide_contributions
 from shapash.manipulation.filters import cap_contributions
 from shapash.manipulation.filters import sign_contributions
@@ -13,7 +13,7 @@ from shapash.manipulation.filters import cutoff_contributions
 from shapash.manipulation.filters import combine_masks
 from shapash.manipulation.mask import compute_masked_contributions
 from shapash.manipulation.mask import init_mask
-from shapash.manipulation.summarize import summarize_el
+from shapash.manipulation.summarize import summarize
 from shapash.manipulation.summarize import compute_features_import
 
 
@@ -71,7 +71,7 @@ class SmartState:
         """
         return inverse_transform_contributions(contributions, preprocessing)
 
-    def check_contributions(self, contributions, x_pred):
+    def check_contributions(self, contributions, x_pred, features_names=True):
         """
         Check that contributions and prediction set match in terms of lines and columns.
 
@@ -81,7 +81,8 @@ class SmartState:
             Local contributions to check.
         x_pred : pandas.DataFrame
             Prediction set.
-
+        features_names: bool (optional), defaut = True
+            Boolean whether or not check if contributions and x_pred have the same features names
         Returns
         -------
         Bool
@@ -91,8 +92,12 @@ class SmartState:
             return False
         if not x_pred.index.equals(contributions.index):
             return False
-        if not x_pred.columns.equals(contributions.columns):
-            return False
+        if features_names:
+            if not x_pred.columns.equals(contributions.columns):
+                return False
+        else:
+            if not len(x_pred.columns) == len(contributions.columns):
+                return False
         return True
 
     def rank_contributions(self, contributions, x_pred):
@@ -137,16 +142,7 @@ class SmartState:
         ValueError
             The output of rank_contributions should always be of length three.
         """
-        if len(ranked) != 3:
-            raise ValueError(
-                'Expected lenght : 3, observed lenght : {},'
-                'please check the outputs of rank_contributions.'.format(len(ranked))
-            )
-        return {
-            'contrib_sorted': ranked[0],
-            'x_sorted': ranked[1],
-            'var_dict': ranked[2]
-        }
+        return assign_contributions(ranked)
 
     def hide_contributions(self, var_dict, features_list):
         """
@@ -305,17 +301,7 @@ class SmartState:
         pd.DataFrame
             Result of the summarize step
         """
-        contrib_sum = summarize_el(s_contrib, mask, 'contribution_')
-        var_dict_sum = summarize_el(var_dict, mask, 'feature_').applymap(lambda x: features_dict[columns_dict[x]] if not np.isnan(x) else x)
-        x_sorted_sum = summarize_el(x_sorted, mask, 'value_')
-
-        # Concatenate pd.DataFrame
-        summary = pd.concat([contrib_sum, var_dict_sum, x_sorted_sum], axis=1)
-
-        # Ordering columns
-        ordered_columns = list(flatten(zip(var_dict_sum.columns, x_sorted_sum.columns, contrib_sum.columns)))
-        summary = summary[ordered_columns]
-        return summary
+        return summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict)
 
     def compute_features_import(self, contributions):
         """

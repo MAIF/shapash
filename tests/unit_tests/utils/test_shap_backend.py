@@ -11,6 +11,7 @@ import xgboost as xgb
 import lightgbm as lgb
 import catboost as cb
 from shapash.utils.shap_backend import shap_contributions, check_explainer
+from shapash.utils.model_synoptic import simple_tree_model,catboost_model,linear_model,svm_model
 import shap
 
 class TestShapBackend(unittest.TestCase):
@@ -22,7 +23,6 @@ class TestShapBackend(unittest.TestCase):
     ----------
     unittest.TestCase
     """
-
     def setUp(self):
         self.modellist = [
             lgb.LGBMRegressor(n_estimators=1), lgb.LGBMClassifier(n_estimators=1),
@@ -56,34 +56,6 @@ class TestShapBackend(unittest.TestCase):
         """
         test shap_backend with explainer pre-compute
         """
-        simple_tree_model = (
-            "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",
-            "<class 'sklearn.ensemble._forest.ExtraTreesRegressor'>",
-            "<class 'sklearn.ensemble._forest.RandomForestClassifier'>",
-            "<class 'sklearn.ensemble._forest.RandomForestRegressor'>",
-            "<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>",
-            "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>",
-            "<class 'lightgbm.sklearn.LGBMClassifier'>",
-            "<class 'lightgbm.sklearn.LGBMRegressor'>",
-            "<class 'xgboost.sklearn.XGBClassifier'>",
-            "<class 'xgboost.sklearn.XGBRegressor'>"
-        )
-
-        catboost_model = (
-            "<class 'catboost.core.CatBoostClassifier'>",
-            "<class 'catboost.core.CatBoostRegressor'>"
-        )
-
-        linear_model = (
-            "<class 'sklearn.linear_model._logistic.LogisticRegression'>",
-            "<class 'sklearn.linear_model._base.LinearRegression'>"
-        )
-
-        svm_model = (
-            "<class 'sklearn.svm._classes.SVC'>",
-            "<class 'sklearn.svm._classes.SVR'>"
-        )
-
         for model in self.modellist:
             print(type(model))
             model.fit(self.x_df, self.y_df)

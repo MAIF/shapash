@@ -1,15 +1,28 @@
 """
 Smart predictor module
 """
-from shapash.utils.check import check_model, check_preprocessing
+
+from shapash.utils.check import check_consistency_model_features, check_consistency_model_label
+from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
-from shapash.utils.shap_backend import check_explainer
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
 from shapash.utils.transform import adapt_contributions
-
-
+from shapash.utils.shap_backend import check_explainer, shap_contributions
+from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.utils.model import predict_proba
+from shapash.utils.io import save_pickle
+from shapash.utils.transform import apply_preprocessing
+from shapash.manipulation.filters import hide_contributions
+from shapash.manipulation.filters import cap_contributions
+from shapash.manipulation.filters import sign_contributions
+from shapash.manipulation.filters import cutoff_contributions
+from shapash.manipulation.filters import combine_masks
+from shapash.manipulation.mask import init_mask
+from shapash.manipulation.mask import compute_masked_contributions
+from shapash.manipulation.summarize import summarize
+from shapash.decomposition.contributions import rank_contributions, assign_contributions
 
 class SmartPredictor :
     """
@@ -100,6 +113,7 @@ class SmartPredictor :
         self.model = model
         self._case, self._classes = self.check_model()
         self.explainer = self.check_explainer(explainer)
+        check_preprocessing_options(preprocessing)
         self.preprocessing = preprocessing
         self.check_preprocessing()
         self.features_dict = features_dict
@@ -110,6 +124,9 @@ class SmartPredictor :
         self.columns_dict = columns_dict
         self.mask_params = mask_params
         self.check_mask_params()
+        check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
+                                         self.features_types, self.mask_params, self.preprocessing)
+        check_consistency_model_label(self.columns_dict, self.label_dict)
 
     def check_model(self):
         """
@@ -171,15 +188,14 @@ class SmartPredictor :
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
             self.data = self.clean_data(x)
-            if self.preprocessing is not None:
-                try :
-                    self.data["x_preprocessed"] = self.preprocessing.transform(self.data["x"])
-                except BaseException :
-                    raise ValueError(
-                        """
-                        Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
-                        """
-                    )
+            try :
+                self.data["x_preprocessed"] = self.apply_preprocessing()
+            except BaseException :
+                raise ValueError(
+                    """
+                    Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
+                    """
+                )
         else:
             if not hasattr(self,"data"):
                 raise ValueError ("No dataset x specified.")
@@ -188,11 +204,9 @@ class SmartPredictor :
             self.data["ypred"] = self.check_ypred(ypred)
 
         if contributions is not None:
-            adapt_contrib = self.adapt_contributions(contributions)
-            state = self.choose_state(adapt_contrib)
-            contributions = self.validate_contributions(state, adapt_contrib)
-            self.check_contributions(state, contributions)
-            self.data["contributions"] = contributions
+            self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
+        else:
+            self.data["ypred"], self.data["contributions"]  = self.compute_contributions()
 
     def check_dataset_type(self, x=None):
         """
@@ -321,7 +335,7 @@ class SmartPredictor :
         """
         return adapt_contributions(self._case, contributions)
 
-    def validate_contributions(self, state, contributions):
+    def validate_contributions(self, contributions):
         """
         Check len of list if _case is "classification"
         Check contributions object type if _case is "regression"
@@ -329,8 +343,6 @@ class SmartPredictor :
 
         Parameters
         ----------
-        state: SmartState or SmartMultiState
-            Implementation adapted to the type of problem (multiclass or not)
         contributions : pandas.DataFrame, np.ndarray or list
 
         Returns
@@ -338,13 +350,13 @@ class SmartPredictor :
             pandas.DataFrame or list
         """
         check_contribution_object(self._case, self._classes, contributions)
-        return state.validate_contributions(contributions, self.data["x"])
+        return self.state.validate_contributions(contributions, self.data["x_preprocessed"])
 
-    def check_contributions(self, state, contributions):
+    def check_contributions(self, contributions):
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not state.check_contributions(contributions, self.data["x"]):
+        if not self.state.check_contributions(contributions, self.data["x"], features_names=False):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -377,3 +389,278 @@ class SmartPredictor :
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def predict_proba(self):
+        """
+        The predict_proba compute the proba values for each x row defined in add_input
+
+        Returns
+        -------
+        pandas.DataFrame
+            data with all probabilities if there is no ypred data or data with ypred and the associated probability.
+        """
+        return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
+
+    def compute_contributions(self, contributions=None):
+        """
+        The compute_contributions compute the contributions associated to data ypred specified.
+        Need a data ypred specified in an add_input to display detail_contributions.
+
+        Parameters
+        -------
+        contributions : object (optional)
+            Local contributions, or list of local contributions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Data with contributions associated to the ypred specified.
+        pandas.DataFrame
+            ypred data with right probabilities associated.
+
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+        if self.data["x"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply detail_contributions.
+                """
+            )
+        if self.data["ypred"] is None:
+            self.predict()
+
+        if contributions is None:
+            contributions, explainer = shap_contributions(self.model,
+                                               self.data["x_preprocessed"],
+                                               self.explainer)
+        adapt_contrib = self.adapt_contributions(contributions)
+        self.state = self.choose_state(adapt_contrib)
+        contributions = self.validate_contributions(adapt_contrib)
+        contributions = self.apply_preprocessing_for_contributions(contributions,
+                                                                   self.preprocessing
+                                                                   )
+        self.check_contributions(contributions)
+        proba_values = self.predict_proba() if self._case == "classification" else None
+        y_pred, match_contrib = keep_right_contributions(self.data["ypred"], contributions,
+                                 self._case, self._classes,
+                                 self.label_dict, proba_values)
+        return y_pred, match_contrib
+
+    def detail_contributions(self, contributions=None):
+        """
+        The detail_contributions compute the contributions associated to data ypred specified.
+        Need a data ypred specified in an add_input to display detail_contributions.
+
+        Parameters
+        -------
+        proba: bool, optional (default: False)
+            adding proba in output df
+        contributions : object (optional)
+            Local contributions, or list of local contributions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Data with ypred and the associated contributions.
+        """
+        y_pred, summary = self.compute_contributions(contributions=contributions)
+        return pd.concat([y_pred, summary], axis=1)
+
+    def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
+        """
+        Reconstruct contributions for original features, taken into account a preprocessing.
+
+        Parameters
+        ----------
+        contributions : object
+            Local contributions, or list of local contributions.
+        preprocessing : object
+            Encoder taken from scikit-learn or category_encoders
+
+        Returns
+        -------
+        object
+            Reconstructed local contributions in the original space. Can be a list.
+        """
+        if preprocessing:
+            return self.state.inverse_transform_contributions(
+                contributions,
+                preprocessing
+            )
+        else:
+            return contributions
+
+    def save(self, path):
+        """
+        Save method allows user to save SmartPredictor object on disk
+        using a pickle file.
+        Save method can be useful: you don't have to recompile to display
+        results later
+
+        Parameters
+        ----------
+        path : str
+            File path to store the pickle file
+
+        Example
+        --------
+        >>> xpl.save('path_to_pkl/xpl.pkl')
+        """
+        dict_to_save = {}
+        for att in self.__dict__.keys():
+            if (isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None))) or att == "model"
+                or att == "explainer" or att == "preprocessing") and not att == "data" :
+                dict_to_save.update({att: getattr(self, att)})
+        save_pickle(dict_to_save, path)
+
+    def apply_preprocessing(self):
+        """
+        Apply preprocessing on new dataset input specified.
+        """
+        return apply_preprocessing(self.data["x"], self.model, self.preprocessing)
+
+    def filter(self):
+        """
+        The filter method is an important method which allows to summarize the local explainability
+        by using the user defined mask_params parameters which correspond to its use case.
+        """
+        mask = [init_mask(self.summary['contrib_sorted'], True)]
+        if self.mask_params["features_to_hide"] is not None:
+            mask.append(
+                hide_contributions(
+                    self.data['var_dict'],
+                    features_list=self.check_features_name(self.mask_params["features_to_hide"])
+                )
+            )
+        if self.mask_params["threshold"] is not None:
+            mask.append(
+                cap_contributions(
+                    self.data['contrib_sorted'],
+                    threshold=self.mask_params["threshold"]
+                )
+            )
+        if self.mask_params["positive"] is not None:
+            mask.append(
+                sign_contributions(
+                    self.summary['contrib_sorted'],
+                    positive=self.mask_params["positive"]
+                )
+            )
+        self.mask = combine_masks(mask)
+        if self.mask_params["max_contrib"] is not None:
+            self.mask = cutoff_contributions(mask=self.mask, k=self.mask_params["max_contrib"])
+        self.masked_contributions = compute_masked_contributions(
+            self.summary['contrib_sorted'],
+            self.mask
+        )
+
+    def summarize(self):
+        """
+        The summarize method allows to export the summary of local explainability.
+        This method proposes a set of parameters to summarize the explainability of each point.
+        If the user does not specify any, the summarize method uses the mask_params parameters specified during
+        the initialisation of the SmartPredictor.
+
+        In classification case, The summarize method summarizes the explicability which corresponds
+        to the predicted values specified by the user (with add_input method) and the proba from
+        predict_proba associated to the right predicted values.
+
+        Returns
+        -------
+        pandas.DataFrame
+            - selected explanation of each row for classification case
+
+        Examples
+        --------
+        >>> summary_df = xpl.summarize()
+        >>> summary_df
+        	pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
+        0	0	    0.756416	Sex	        1.0	        0.322308	    Pclass	    3.0	        0.155069
+        1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
+        2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
+        """
+        # data is needed : add_input() method must be called at least once
+
+        if not hasattr(self, "data"):
+            raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
+
+        self.summary = assign_contributions(
+            rank_contributions(
+                self.data["contributions"],
+                self.data["x_preprocessed"]
+            )
+        )
+        # Apply filter method with mask_params attributes parameters
+        self.filter()
+
+        # Summarize information
+        self.data['summary'] = summarize(self.summary['contrib_sorted'],
+                                         self.summary['var_dict'],
+                                         self.summary['x_sorted'],
+                                         self.mask,
+                                         self.columns_dict,
+                                         self.features_dict)
+
+        # Matching with y_pred
+        return pd.concat([self.data["ypred"], self.data['summary']], axis=1)
+
+    def modify_mask(
+            self,
+            features_to_hide=None,
+            threshold=None,
+            positive=None,
+            max_contrib=None
+    ):
+        """
+        Allow the users to modify the mask_params values.
+        Each parameter is optional, modify_mask method modifies only the values specified in parameters.
+
+        Parameters
+        ----------
+        features_to_hide : list, optional (default: None)
+            List of strings, containing features to hide.
+        threshold : float, optional (default: None)
+            Absolute threshold below which any contribution is hidden.
+        positive: bool, optional (default: None)
+            If True, hide negative values. False, hide positive values
+            If None, hide nothing.
+        max_contrib : int, optional (default: None)
+            Maximum number of contributions to show.
+        """
+        Attributes = {"features_to_hide": features_to_hide,
+                      "threshold": threshold,
+                      "positive": positive,
+                      "max_contrib": max_contrib}
+        for label, attribute in Attributes.items() :
+            if attribute is not None:
+                self.mask_params[label] = attribute
+
+    def predict(self):
+        """
+        The predict compute the predicted values for each x row defined in add_input
+
+        Returns
+        -------
+        pandas.DataFrame
+            data with predicted values for each x row.
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+        if self.data["x_preprocessed"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply predict.
+                """
+            )
+        if hasattr(self.model, 'predict'):
+            self.data["ypred"] = pd.DataFrame(
+                self.model.predict(self.data["x_preprocessed"]),
+                columns=['ypred'],
+                index=self.data["x_preprocessed"].index)
+        else:
+            raise ValueError("model has no predict method")
+
+        return self.data["ypred"]
+
+
