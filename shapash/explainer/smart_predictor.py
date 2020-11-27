@@ -442,6 +442,7 @@ class SmartPredictor :
                                                                    )
         self.check_contributions(contributions)
         proba_values = self.predict_proba() if self._case == "classification" else None
+        proba_values = self.predict_proba() if self._case == "classification" else None
         y_pred, match_contrib = keep_right_contributions(self.data["ypred"], contributions,
                                  self._case, self._classes,
                                  self.label_dict, proba_values)

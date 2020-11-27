@@ -8,6 +8,6 @@ for each new dataset.
 It can be used in API mode and batch mode.
 
 .. autoclass:: shapash.explainer.smart_predictor.SmartPredictor
-   :members: add_input, detail_contributions, summarize, modify_mask
+   :members: add_input, detail_contributions, summarize, modify_mask, save
    :undoc-members:
    :show-inheritance:
