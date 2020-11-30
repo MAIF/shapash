@@ -45,6 +45,8 @@ Data Scientists can more easily understand their models and share their results.
 
 - To discuss results: **Shapash** allows Data Scientists to easily share and discuss their results with non-Data users
 
+- To put a model in production: A light and consistent object for API or batch mode to make prediction and have explainability
+
 **How does shapash work?** <br />
 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
@@ -112,6 +114,11 @@ xpl.compile(
 app = xpl.run_app()
 ``` 
 
+- Step 4: Create an object to production
+```
+predictor = xpl.to_smartpredictor()
+```
+
 [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
 ## Tutorials
@@ -120,6 +127,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### More Precise Overview
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
+- [Create an object to make prediction and have explainability in production](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
 
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
@@ -138,3 +146,6 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
 - [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
+
+### More details on restitution of explainability in production context
+- [Restituate an explainability in production](tutorial03-Shapash-overview-model-in-production.ipynb)
