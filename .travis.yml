@@ -1,5 +1,5 @@
 before_install:
-  - sudo apt install llvm-10
+  - sudo apt-get install llvm-10
   - sudo pip3 install llvmlite
   - cd /usr/bin
   - sudo ln -s llvm-config-10 llvm-config
