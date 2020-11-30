@@ -742,7 +742,7 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    #if rows != self.settings_ini['rows']:
+                    
                     self.settings['rows'] = rows
                     self.init_data()
                     active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
