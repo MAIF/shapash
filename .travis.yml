@@ -8,6 +8,7 @@ before_install:
   - cd /usr/bin
   - sudo rm llvm-config
   - sudo ln -s llvm-config-10 llvm-config
+
 install: pip install -U tox-travis
 script: tox
 deploy:
