@@ -2,7 +2,9 @@ language: python
 python:
 - 3.6
 before_install:
-  - sudo apt-get install llvm-10*
+  - wget https://apt.llvm.org/llvm.sh
+  - chmod +x llvm.sh
+  - sudo ./llvm.sh <version number>
   - sudo -i
   - cd /usr/bin
   - rm llvm-config
