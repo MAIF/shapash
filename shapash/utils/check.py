@@ -216,6 +216,10 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             if not all(feature in set(features_types) for feature in mask_params['features_to_hide']):
                 raise ValueError("All features of mask_params must be in model")
 
+    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
+        if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
+            raise ValueError("All features of preprocessing must be in columns_dict")
+
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
         if str(type(preprocessing)) in no_dummies_category_encoder:
@@ -229,17 +233,20 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
                 and preprocessing is not None:
             raise ValueError("this type of encoder is not supported in SmartPredictor")
-
     else:
         model_length_features = model_features
         if len(set(columns_dict.values())) != model_length_features:
             raise ValueError("features of columns_dict and model must have the same length")
 
-    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
-        if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
-            raise ValueError("All features of preprocessing must be in columns_dict")
-
-    check_consistency_postprocessing(features_types, columns_dict, postprocessing)
+    if postprocessing:
+        if not isinstance(postprocessing, dict):
+            raise ValueError("Postprocessing parameter must be a dictionnary")
+        for feature in postprocessing.keys():
+            if feature not in features_types.keys():
+                raise ValueError("Postprocessing and features_types must have the same features names.")
+            if feature not in columns_dict.values():
+                raise ValueError("Postprocessing and columns_dict must have the same features names.")
+        check_postprocessing(features_types, postprocessing)
 
 def check_preprocessing_options(preprocessing=None):
     """
@@ -325,30 +332,6 @@ def check_postprocessing(x, postprocessing=None):
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
 
-def check_consistency_postprocessing(features_types, columns_dict, postprocessing=None):
-    """
-    Check that postprocessing parameter has good attributes.
-    Check if postprocessing is a dictionnary, and if its parameters are good.
-
-    Parameters
-    ----------
-    columns_dict: dict
-        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
-    features_types: dict
-        Dictionnary mapping features with the right types needed.
-    postprocessing : dict
-        Dictionnary of postprocessing that need to be checked.
-    """
-    if postprocessing:
-        if not isinstance(postprocessing, dict):
-            raise ValueError("Postprocessing parameter must be a dictionnary")
-        for feature in postprocessing.keys():
-            if feature not in features_types.keys():
-                raise ValueError("Postprocessing and features_types must have the same features names.")
-            if feature not in columns_dict.values():
-                raise ValueError("Postprocessing and columns_dict must have the same features names.")
-
-        check_postprocessing(features_types, postprocessing)
 
 
 

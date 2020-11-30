@@ -7,7 +7,7 @@ import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
-                                check_preprocessing_options, check_consistency_postprocessing, \
+                                check_preprocessing_options, check_postprocessing, \
                                 check_consistency_model_features, check_consistency_model_label
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
@@ -407,7 +407,7 @@ class TestCheck(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_consistency_model_label(columns_dict, label_dict)
 
-    def test_check_consistency_postprocessing_1(self):
+    def test_check_postprocessing_1(self):
         """
         Unit test check_consistency_postprocessing
         """
@@ -426,10 +426,10 @@ class TestCheck(unittest.TestCase):
         postprocessing5 = {0: {'type': 'case', 'rule': 'lower'}}
         postprocessing6 = {0: {'type': 'case', 'rule': 'Error'}}
         with self.assertRaises(ValueError):
-            check_consistency_postprocessing(features_types, columns_dict, postprocessing1)
-            check_consistency_postprocessing(features_types, columns_dict, postprocessing2)
-            check_consistency_postprocessing(features_types, columns_dict, postprocessing3)
-            check_consistency_postprocessing(features_types, columns_dict, postprocessing4)
-            check_consistency_postprocessing(features_types, columns_dict, postprocessing5)
-            check_consistency_postprocessing(features_types, columns_dict, postprocessing6)
+            check_postprocessing(features_types, postprocessing1)
+            check_postprocessing(features_types, postprocessing2)
+            check_postprocessing(features_types, postprocessing3)
+            check_postprocessing(features_types, postprocessing4)
+            check_postprocessing(features_types, postprocessing5)
+            check_postprocessing(features_types, postprocessing6)
 
