@@ -4,7 +4,7 @@ python:
 before_install:
   - wget https://apt.llvm.org/llvm.sh
   - chmod +x llvm.sh
-  - sudo ./llvm.sh <version number>
+  - sudo ./llvm.sh 10
   - sudo -i
   - cd /usr/bin
   - rm llvm-config
