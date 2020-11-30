@@ -2,13 +2,11 @@ language: python
 python:
 - 3.6
 before_install:
-  - wget https://apt.llvm.org/llvm.sh
-  - chmod +x llvm.sh
-  - sudo ./llvm.sh 10
-  - sudo apt install python3-pip
-  - pip3 install llvmlite
+  - sudo apt-get install llvm-10*
+  - sudo -i
   - cd /usr/bin
-  - sudo ln -s llvm-config-10 llvm-config
+  - rm llvm-config
+  - ln -s llvm-config-10 llvm-config
 install: pip install -U tox-travis
 script: tox
 deploy:
