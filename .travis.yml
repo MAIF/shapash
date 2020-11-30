@@ -5,6 +5,7 @@ before_install:
   - wget https://apt.llvm.org/llvm.sh
   - chmod +x llvm.sh
   - sudo ./llvm.sh 10
+  - sudo apt install python3-pip
   - sudo pip3 install llvmlite
   - cd /usr/bin
   - sudo ln -s llvm-config-10 llvm-config
