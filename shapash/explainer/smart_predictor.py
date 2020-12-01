@@ -530,14 +530,14 @@ class SmartPredictor :
         if self.mask_params["features_to_hide"] is not None:
             mask.append(
                 hide_contributions(
-                    self.data['var_dict'],
+                    self.summary['var_dict'],
                     features_list=self.check_features_name(self.mask_params["features_to_hide"])
                 )
             )
         if self.mask_params["threshold"] is not None:
             mask.append(
                 cap_contributions(
-                    self.data['contrib_sorted'],
+                    self.summary['contrib_sorted'],
                     threshold=self.mask_params["threshold"]
                 )
             )
