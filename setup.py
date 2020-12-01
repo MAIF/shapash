@@ -12,7 +12,7 @@ requirements = [
         'plotly==4.12.0',
         'numpy==1.18.1',
         'pandas==1.0.3',
-        'shap==0.32.1',
+        'shap==0.37.0',
         'dash==1.17.0',
         'dash-bootstrap-components==0.9.1',
         'dash-core-components==1.13.0',
