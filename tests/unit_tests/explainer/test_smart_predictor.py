@@ -42,6 +42,95 @@ class TestSmartPredictor(unittest.TestCase):
     """
     Unit test Smart Predictor class
     """
+    def setUp(self):
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = ["S", "M", "S", "D", "M"]
+        df = df.set_index('id')
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder_fitted = encoder.fit(df)
+        df_encoded = encoder_fitted.transform(df)
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "Yes", 1: "No"}
+
+        postprocessing = {"x2": {
+            "type": "transcoding",
+            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
+        features_dict = {"x1": "age", "x2": "family_situation"}
+
+        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']]}
+
+        self.df_1 = df
+        self.preprocessing_1 = encoder_fitted
+        self.df_encoded_1 = df_encoded
+        self.clf_1 = clf
+        self.clf_explainer_1 = clf_explainer
+        self.columns_dict_1 = columns_dict
+        self.label_dict_1 = label_dict
+        self.postprocessing_1 = postprocessing
+        self.features_dict_1 = features_dict
+        self.features_types_1 = features_types
+
+        self.predictor_1 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer, features_types, label_dict,
+                                     encoder_fitted, postprocessing)
+
+        df['x2'] = np.random.randint(1, 100, df.shape[0])
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder_fitted = encoder.fit(df[["x1", "x2"]])
+        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+        features_dict = {"x1": "age", "x2": "weight"}
+        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
+
+        self.df_2 = df
+        self.preprocessing_2 = encoder_fitted
+        self.df_encoded_2 = df_encoded
+        self.clf_2 = clf
+        self.clf_explainer_2 = clf_explainer
+        self.columns_dict_2 = columns_dict
+        self.label_dict_2 = label_dict
+        self.postprocessing_2 = postprocessing
+        self.features_dict_2 = features_dict
+        self.features_types_2 = features_types
+
+        self.predictor_2 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer, features_types, label_dict,
+                                     encoder_fitted, postprocessing)
+
+        df['x1'] = [25, 39, 50, 43, 67]
+        df['x2'] = [90, 78, 84, 85, 53]
+
+        columns_dict = {0: "x1", 1: "x2"}
+        label_dict = {0: "No", 1: "Yes"}
+        features_dict = {"x1": "age", "x2": "weight"}
+
+        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
+
+        clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+
+        self.df_3 = df
+        self.preprocessing_3 = None
+        self.df_encoded_3 = df
+        self.clf_3 = clf
+        self.clf_explainer_3 = clf_explainer
+        self.columns_dict_3 = columns_dict
+        self.label_dict_3 = label_dict
+        self.postprocessing_3 = None
+        self.features_dict_3 = features_dict
+        self.features_types_3 = features_types
+
+        self.predictor_3 = SmartPredictor(features_dict, clf,
+                                     columns_dict, clf_explainer,
+                                     features_types, label_dict)
+
     def predict_proba(self, arg1, arg2):
         """
         predict_proba method
@@ -66,30 +155,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Test init smart predictor
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-
-        columns_dict = {0:"x1",1:"x2"}
-        label_dict = {0:"Yes",1:"No"}
-
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict={"x1": "age", "x2": "family_situation"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']]}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                 columns_dict, clf_explainer, features_types, label_dict,
-                 encoder_fitted,postprocessing)
+        predictor_1 = self.predictor_1
 
         mask_params = {
             'features_to_hide': None,
@@ -98,10 +164,8 @@ class TestSmartPredictor(unittest.TestCase):
             'max_contrib': 1
         }
 
-        predictor_2 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing,
-                                     mask_params)
+        predictor_2 = predictor_1
+        predictor_2.mask_params = mask_params
 
         assert hasattr(predictor_1, 'model')
         assert hasattr(predictor_1, 'explainer')
@@ -116,15 +180,15 @@ class TestSmartPredictor(unittest.TestCase):
         assert hasattr(predictor_1, 'mask_params')
         assert hasattr(predictor_2, 'mask_params')
 
-        assert predictor_1.model == clf
-        assert predictor_1.explainer == clf_explainer
-        assert predictor_1.features_dict == features_dict
-        assert predictor_1.label_dict == label_dict
+        assert predictor_1.model == self.clf_1
+        assert predictor_1.explainer == self.clf_explainer_1
+        assert predictor_1.features_dict == self.features_dict_1
+        assert predictor_1.label_dict == self.label_dict_1
         assert predictor_1._case == "classification"
         assert predictor_1._classes == [0,1]
-        assert predictor_1.columns_dict == columns_dict
-        assert predictor_1.preprocessing == encoder_fitted
-        assert predictor_1.postprocessing == postprocessing
+        assert predictor_1.columns_dict == self.columns_dict_1
+        assert predictor_1.preprocessing == self.preprocessing_1
+        assert predictor_1.postprocessing == self.postprocessing_1
 
         assert predictor_2.mask_params == mask_params
 
@@ -132,39 +196,15 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Test add_input method from smart predictor
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        columns_dict = {0: "x1", 1: "x2"}
-        encoder_fitted = encoder.fit(df[["x1", "x2"]])
-        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df.columns}
+        ypred = self.df_1['y']
+        shap_values = self.clf_1.get_feature_importance(Pool(self.df_encoded_1), type="ShapValues")
 
-        ypred = df['y']
-        shap_values = clf.get_feature_importance(Pool(df_encoded), type="ShapValues")
+        xpl = SmartExplainer(self.features_dict_1, self.label_dict_1)
+        xpl.compile(contributions=shap_values[:, :-1], x=self.df_encoded_1,
+                    model=self.clf_1, preprocessing=self.preprocessing_1)
 
-        xpl = SmartExplainer(features_dict, label_dict)
-        xpl.compile(contributions=shap_values[:, :-1], x=df_encoded, model=clf, preprocessing=encoder_fitted)
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
-
-        predictor_1.add_input(x=df[["x1", "x2"]], contributions=shap_values[:, :-1])
+        predictor_1 = self.predictor_1
+        predictor_1.add_input(x=self.df_1[["x1", "x2"]], contributions=shap_values[:, :-1])
         xpl_contrib = xpl.contributions
         predictor_1_contrib = predictor_1.data["contributions"]
 
@@ -190,27 +230,7 @@ class TestSmartPredictor(unittest.TestCase):
         mock_smart_state : [type]
             [description]
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']]}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
         predictor_1.choose_state('contributions')
         mock_smart_state.assert_called()
 
@@ -223,27 +243,7 @@ class TestSmartPredictor(unittest.TestCase):
         mock_multi_decorator : [type]
             [description]
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']]}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
         predictor_1.choose_state('contributions')
         predictor_1.choose_state([1, 2, 3])
         mock_multi_decorator.assert_called()
@@ -252,27 +252,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test validate contributions 1
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']]}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
 
         contributions = [
             np.array([[2, 1], [8, 4]]),
@@ -322,12 +302,11 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {"x1": "age", "x2": "weight"}
         features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
-        shap_values = clf.get_feature_importance(Pool(df_encoded), type="ShapValues")
+        shap_values = self.clf_2.get_feature_importance(Pool(self.df_encoded_2), type="ShapValues")
 
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_2
 
-        predictor_1.add_input(x=df[["x1", "x2"]], contributions=shap_values[:, :-1], ypred=df["y"])
+        predictor_1.add_input(x=self.df_2[["x1", "x2"]], contributions=shap_values[:, :-1], ypred=self.df_2["y"])
 
         adapt_contrib = predictor_1.adapt_contributions(shap_values[:, :-1])
         predictor_1.state = predictor_1.choose_state(adapt_contrib)
@@ -341,27 +320,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check model 1
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df[["x1", "x2"]])
-        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
 
         model = lambda: None
         model.n_features_in_ = 2
@@ -376,27 +335,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check model 2
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df[["x1", "x2"]])
-        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer, features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
 
         model = lambda: None
         model._classes = np.array([1, 2])
@@ -511,26 +450,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check label dict 1
         """
-        x_pred = pd.DataFrame(
-            data=np.array([[1, 2], [3, 4]]),
-            columns=['Col1', 'Col2']
-        )
-
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
-        features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = {1: 'Yes', 0: 'No'}
-
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['Col1'] = np.random.randint(1, 123, df.shape[0])
-        df['Col2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_1
 
         predictor_1.check_label_dict()
 
@@ -538,27 +458,9 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check label dict 2
         """
-        x_pred = pd.DataFrame(
-            data=np.array([[1, 2], [3, 4]]),
-            columns=['Col1', 'Col2']
-        )
+        predictor_1 = self.predictor_1
 
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
-        features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = None
-
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['Col1'] = np.random.randint(1, 123, df.shape[0])
-        df['Col2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
-
+        predictor_1.label_dict = None
         predictor_1._case = 'regression'
         predictor_1.check_label_dict()
 
@@ -566,7 +468,6 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check mask params
         """
-
         train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
                               'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
                               'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
@@ -620,31 +521,9 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check y pred
         """
-        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
-                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
-                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
-                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
-                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T'],
-                              'other': ['other', np.nan, 'other', 'other']})
-
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(train.columns)}
-        features_types = {features: str(train[features].dtypes) for features in train.columns}
-        label_dict = None
-
-        enc_ordinal = ce.OrdinalEncoder(cols=['Onehot1', 'Onehot2', 'Binary1', 'Binary2', 'Ordinal1', 'Ordinal2',
-                                              'BaseN1', 'BaseN2', 'Target1', 'Target2', 'other']).fit(train)
-        train_ordinal = enc_ordinal.transform(train)
-
-        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
-
-        model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal, y)
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_1
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x"] = train
+        predictor_1.data["x"] = self.df_1[["x1","x2"]]
         y_pred = None
         predictor_1.check_ypred(ypred=y_pred)
 
@@ -652,35 +531,13 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check y pred 2
         """
-        x_pred = pd.DataFrame(
-            data=np.array([[1, 2], [3, 4]]),
-            columns=['Col1', 'Col2']
-        )
-
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
-        features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = None
-
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['Col1'] = np.random.randint(1, 123, df.shape[0])
-        df['Col2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
-
         y_pred = pd.DataFrame(
-            data=np.array(['1', 0]),
+            data=np.array(['1', 0, 0, 1, 0]),
             columns=['Y']
         )
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_1
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x"] = x_pred
+        predictor_1.data["x"] = self.df_1
 
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(y_pred)
@@ -689,29 +546,10 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check y pred 3
         """
-        x_pred = pd.DataFrame(
-            data=np.array([[1, 2], [3, 4]]),
-            columns=['Col1', 'Col2']
-        )
-
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
-        features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = None
-
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['Col1'] = np.random.randint(1, 123, df.shape[0])
-        df['Col2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_1
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x"] = x_pred
+        predictor_1.data["x"] = self.df_1[["x1","x2"]]
         y_pred = pd.DataFrame(
             data=np.array([0]),
             columns=['Y']
@@ -723,29 +561,10 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check y pred 4
         """
-        x_pred = pd.DataFrame(
-            data=np.array([[1, 2], [3, 4]]),
-            columns=['Col1', 'Col2']
-        )
-
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
-        features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = None
-
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['Col1'] = np.random.randint(1, 123, df.shape[0])
-        df['Col2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_1
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
 
-        y_pred = [0, 1]
+        y_pred = [0, 1, 0, 1, 0]
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(ypred=y_pred)
 
@@ -753,28 +572,9 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test check y pred 5
         """
-        x_pred = pd.DataFrame(
-            data=np.array([[1, 2], [3, 4]]),
-            columns=['Col1', 'Col2']
-        )
-
-        features_dict = None
-        columns_dict = {i: features for i, features in enumerate(x_pred.columns)}
-        features_types = {features: str(x_pred[features].dtypes) for features in x_pred.columns}
-        label_dict = None
-
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
-        df['Col1'] = np.random.randint(1, 123, df.shape[0])
-        df['Col2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        model = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(model)
-
-        predictor_1 = SmartPredictor(features_dict, model,
-                                     columns_dict, clf_explainer, features_types, label_dict)
+        predictor_1 = self.predictor_1
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x"] = x_pred
+        predictor_1.data["x"] = self.df_1[["x1","x2"]]
 
         y_pred = pd.Series(
             data=np.array(['0'])
@@ -786,41 +586,19 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test of predict_proba method.
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostRegressor(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        predictor_1 = self.predictor_1
+
+        clf = cb.CatBoostRegressor(n_estimators=1).fit(self.df_encoded_1[['x1', 'x2']], self.df_encoded_1['y'])
         clf_explainer = shap.TreeExplainer(clf)
-
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1.model = clf
+        predictor_1.explainer = clf_explainer
+        predictor_1._case = "regression"
+        predictor_1._classes = None
 
         with self.assertRaises(AttributeError):
             predictor_1.predict_proba()
 
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
 
         with self.assertRaises(AttributeError):
             predictor_1.predict_proba()
@@ -834,32 +612,22 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test of predict_proba method.
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(30, 150, df.shape[0])
-        df = df.set_index('id')
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(self.df_2[['x1', 'x2']], self.df_2['y'])
+        predictor_1 = self.predictor_2
 
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        features_dict = {"x1": "age", "x2": "weight"}
+        predictor_1.model = clf
+        predictor_1.explainer = shap.TreeExplainer(clf)
+        predictor_1.preprocessing = None
 
-        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
-
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict)
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None, "x_preprocessed":None}
-        predictor_1.data["x"] = df[["x1", "x2"]]
-        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
+        predictor_1.data["x"] = self.df_2[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = self.df_2[["x1", "x2"]]
 
         prediction = predictor_1.predict_proba()
         assert prediction.shape[0] == predictor_1.data["x"].shape[0]
 
-        predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+        predictor_1.data["ypred"] = pd.DataFrame(self.df_2["y"])
         prediction = predictor_1.predict_proba()
 
         assert prediction.shape[0] == predictor_1.data["x"].shape[0]
@@ -868,44 +636,17 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test of detail_contributions method.
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = ["S", "M", "S", "D", "M"]
-        df = df.set_index('id')
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostRegressor(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
-
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-
-        postprocessing = {"x2": {
-            "type": "transcoding",
-            "rule": {"S": "single", "M": "married", "D": "divorced"}}}
-        features_dict = {"x1": "age", "x2": "family_situation"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
-        clf_explainer = shap.TreeExplainer(clf)
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict,
-                                     encoder_fitted, postprocessing)
+        predictor_1 = self.predictor_1
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict,
-                                     encoder_fitted, postprocessing)
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
-        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = self.df_1[["x1", "x2"]]
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
@@ -914,29 +655,19 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test 2 of detail_contributions method.
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(30, 150, df.shape[0])
-        df = df.set_index('id')
+        clf = cb.CatBoostRegressor(n_estimators=1).fit(self.df_2[['x1', 'x2']], self.df_2['y'])
+        predictor_1 = self.predictor_2
 
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "Yes", 1: "No"}
-        features_dict = {"x1": "age", "x2": "weight"}
+        predictor_1.model = clf
+        predictor_1.explainer = shap.TreeExplainer(clf)
+        predictor_1.preprocessing = None
+        predictor_1._case = "regression"
+        predictor_1._classes = None
 
-        features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
-
-        clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict)
-
-        predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
-        predictor_1.data["x"] = df[["x1", "x2"]]
-        predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+        predictor_1.data = {"x": None, "ypred": None, "contributions": None, "x_preprocessed": None}
+        predictor_1.data["x"] = self.df_2[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = self.df_2[["x1", "x2"]]
+        predictor_1.data["ypred"] = pd.DataFrame(self.df_2["y"])
 
         contributions = predictor_1.detail_contributions()
 
@@ -944,23 +675,26 @@ class TestSmartPredictor(unittest.TestCase):
         assert all(contributions.index == predictor_1.data["x"].index)
         assert contributions.shape[1] == predictor_1.data["x"].shape[1] + 1
 
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(self.df_2[['x1', 'x2']], self.df_2['y'])
         clf_explainer = shap.TreeExplainer(clf)
 
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict)
+        predictor_1 = self.predictor_2
+        predictor_1.preprocessing = None
+        predictor_1.model = clf
+        predictor_1.explainer = clf_explainer
+        predictor_1._case = "classification"
+        predictor_1._classes = [0, 1]
 
-        df['false_y'] = [2, 2, 1, 1, 1]
+        false_y = pd.DataFrame({"y_false": [2, 2, 1, 1, 1]})
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
-        predictor_1.data["x_preprocessed"] = df[["x1", "x2"]]
-        predictor_1.data["x"] = df[["x1", "x2"]]
-        predictor_1.data["ypred"] = pd.DataFrame(df["false_y"])
+        predictor_1.data["x_preprocessed"] = self.df_2[["x1", "x2"]]
+        predictor_1.data["x"] = self.df_2[["x1", "x2"]]
+        predictor_1.data["ypred"] = false_y
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
-        predictor_1.data["ypred"] = pd.DataFrame(df["y"])
+        predictor_1.data["ypred"] = pd.DataFrame(self.df_2["y"])
 
         contributions = predictor_1.detail_contributions()
 
@@ -1011,28 +745,19 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test 1 summarize method
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = [25, 39, 50, 43, 67]
-        df['x2'] = [90, 78, 84, 85, 53]
-        df = df.set_index('id')
-
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "No", 1: "Yes"}
-        features_dict = {"x1": "age", "x2": "weight"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
-
-        clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        clf = cb.CatBoostRegressor(n_estimators=1).fit(self.df_3[['x1', 'x2']], self.df_3['y'])
         clf_explainer = shap.TreeExplainer(clf)
 
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict)
+        predictor_1 = self.predictor_3
 
-        predictor_1.add_input(x=df[["x1", "x2"]], ypred=pd.DataFrame(df["y"]), contributions=None)
+        predictor_1.model = clf
+        predictor_1._case = "regression"
+        predictor_1._classes = None
+        predictor_1.explainer = clf_explainer
+        print(predictor_1.mask_params)
+        predictor_1.add_input(x=self.df_3[["x1", "x2"]], ypred=pd.DataFrame(self.df_3["y"]), contributions=None)
         output = predictor_1.summarize()
-
+        print(output)
         expected_output = pd.DataFrame({
             "y": [1, 1, 0, 0, 0],
             "feature_1": ["weight", "weight", "weight", "weight", "weight"],
@@ -1062,29 +787,18 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test 2 summarize method
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = [25, 39, 50, 43, 67]
-        df['x2'] = [90, 78, 84, 85, 53]
-        df = df.set_index('id')
-
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "No", 1: "Yes"}
-        features_dict = {"x1": "age", "x2": "weight"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
-
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        predictor_1 = self.predictor_3
+        predictor_1._case = "classification"
+        predictor_1._classes = [0, 1]
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(self.df_3[['x1', 'x2']], self.df_3['y'])
         clf_explainer = shap.TreeExplainer(clf)
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict)
+        predictor_1.model = clf
+        predictor_1.explainer = clf_explainer
 
         with self.assertRaises(ValueError):
             predictor_1.summarize()
 
-        predictor_1.add_input(x=df[["x1", "x2"]], ypred=pd.DataFrame(df["y"]), contributions=None)
+        predictor_1.add_input(x=self.df_3[["x1", "x2"]], ypred=pd.DataFrame(self.df_3["y"]), contributions=None)
         output = predictor_1.summarize()
 
         expected_output = pd.DataFrame({
@@ -1119,32 +833,13 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test 3 summarize method
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = [25, 39, 50, 43, 67]
-        df['x2'] = [90, 78, 84, 85, 53]
-        df = df.set_index('id')
-
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "No", 1: "Yes"}
-        features_dict = {"x1": "age", "x2": "weight"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
-
-        mask_params = {"features_to_hide": None,
-                       "threshold": None,
-                       "positive": None,
-                       "max_contrib": 1
-                       }
-
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict, mask_params=mask_params)
-
-        predictor_1.add_input(x=df[["x1", "x2"]], ypred=pd.DataFrame(df["y"]), contributions=None)
+        predictor_1 = self.predictor_3
+        predictor_1.mask_params = {"features_to_hide": None,
+                                    "threshold": None,
+                                    "positive": None,
+                                    "max_contrib": 1
+                                   }
+        predictor_1.add_input(x=self.df_3[["x1", "x2"]], ypred=pd.DataFrame(self.df_3["y"]), contributions=None)
         output = predictor_1.summarize()
 
         expected_output = pd.DataFrame({
@@ -1175,34 +870,16 @@ class TestSmartPredictor(unittest.TestCase):
         assert not len(contribution_expected) == len(contribution_output)
         assert not len(output.columns) == len(expected_output.columns)
 
+        predictor_1.mask_params = {"features_to_hide": None,
+                                    "threshold": None,
+                                    "positive": None,
+                                    "max_contrib": None}
+
     def test_modfiy_mask(self):
         """
         Unit test modify_mask method
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = [25, 39, 50, 43, 67]
-        df['x2'] = [90, 78, 84, 85, 53]
-        df = df.set_index('id')
-
-        columns_dict = {0: "x1", 1: "x2"}
-        label_dict = {0: "No", 1: "Yes"}
-        features_dict = {"x1": "age", "x2": "weight"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']].columns}
-
-        mask_params = {"features_to_hide": None,
-                       "threshold": None,
-                       "positive": None,
-                       "max_contrib": None
-                       }
-
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict, mask_params=mask_params)
+        predictor_1 = self.predictor_2
 
         assert all([value is None for value in predictor_1.mask_params.values()])
 
@@ -1212,28 +889,13 @@ class TestSmartPredictor(unittest.TestCase):
         assert predictor_1.mask_params["max_contrib"] == 1
         assert predictor_1.mask_params["positive"] == None
 
+        predictor_1.modify_mask(max_contrib=2)
+
     def test_apply_postprocessing_1(self):
         """
         Unit test apply_postprocessing 1
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['Col1'] = [25, 39, 50, 43, 67]
-        df['Col2'] = [90, 78, 84, 85, 53]
-        df = df.set_index('id')
-
-        columns_dict = {0: "Col1", 1: "Col2"}
-        label_dict = {0: "No", 1: "Yes"}
-        features_dict = {"Col1": "'Column1'", "Col2": "Column2"}
-
-        features_types = {features: str(df[features].dtypes) for features in df[["Col1", "Col2"]].columns}
-
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict)
+        predictor_1 = self.predictor_3
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = pd.DataFrame(
             [[1, 2],
@@ -1247,40 +909,24 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test apply_postprocessing 2
         """
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['Col1'] = [1, 3, 5, 7, 9]
-        df['Col2'] = [2, 4, 6, 9, 10]
-        df = df.set_index('id')
 
-        columns_dict = {0: "Col1", 1: "Col2"}
-        label_dict = {0: "No", 1: "Yes"}
-        features_dict = {"Col1": "'Column1'", "Col2": "Column2"}
+        postprocessing = {'x1': {'type': 'suffix', 'rule': ' t'},
+                          'x2': {'type': 'prefix', 'rule': 'test'}}
 
-        features_types = {features: str(df[features].dtypes) for features in df[["Col1", "Col2"]].columns}
-
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['Col1', 'Col2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
-
-        postprocessing = {'Col1': {'type': 'suffix', 'rule': ' t'},
-                          'Col2': {'type': 'prefix', 'rule': 'test'}}
-
-        predictor_1 = SmartPredictor(features_dict, clf,
-                                     columns_dict, clf_explainer,
-                                     features_types, label_dict,
-                                     postprocessing = postprocessing)
+        predictor_1 = self.predictor_3
+        predictor_1.postprocessing = postprocessing
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = pd.DataFrame(
             [[1, 2],
              [3, 4]],
-            columns=['Col1', 'Col2'],
+            columns=['x1', 'x2'],
             index=['Id1', 'Id2']
         )
         expected_output = pd.DataFrame(
             data=[['1 t', 'test2'],
                   ['3 t', 'test4']],
-            columns=['Col1', 'Col2'],
+            columns=['x1', 'x2'],
             index=['Id1', 'Id2']
         )
         output = predictor_1.apply_postprocessing()
