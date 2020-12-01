@@ -1,7 +1,6 @@
 """
 Smart predictor module
 """
-
 from shapash.utils.check import check_consistency_model_features, check_consistency_model_label
 from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
@@ -13,7 +12,7 @@ from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.utils.model import predict_proba
 from shapash.utils.io import save_pickle
-from shapash.utils.transform import apply_preprocessing
+from shapash.utils.transform import apply_preprocessing, apply_postprocessing
 from shapash.manipulation.filters import hide_contributions
 from shapash.manipulation.filters import cap_contributions
 from shapash.manipulation.filters import sign_contributions
@@ -120,12 +119,13 @@ class SmartPredictor :
         self.features_types = features_types
         self.label_dict = label_dict
         self.check_label_dict()
-        self.postprocessing = postprocessing
         self.columns_dict = columns_dict
         self.mask_params = mask_params
         self.check_mask_params()
+        self.postprocessing = postprocessing
         check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
-                                         self.features_types, self.mask_params, self.preprocessing)
+                                         self.features_types, self.mask_params, self.preprocessing,
+                                         self.postprocessing)
         check_consistency_model_label(self.columns_dict, self.label_dict)
 
     def check_model(self):
@@ -188,6 +188,7 @@ class SmartPredictor :
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
             self.data = self.clean_data(x)
+            self.data["x_postprocessed"] = self.apply_postprocessing()
             try :
                 self.data["x_preprocessed"] = self.apply_preprocessing()
             except BaseException :
@@ -465,8 +466,8 @@ class SmartPredictor :
         pandas.DataFrame
             Data with ypred and the associated contributions.
         """
-        y_pred, summary = self.compute_contributions(contributions=contributions)
-        return pd.concat([y_pred, summary], axis=1)
+        y_pred, detail_contrib = self.compute_contributions(contributions=contributions)
+        return pd.concat([y_pred, detail_contrib], axis=1)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
@@ -589,7 +590,7 @@ class SmartPredictor :
         self.summary = assign_contributions(
             rank_contributions(
                 self.data["contributions"],
-                self.data["x_preprocessed"]
+                self.data["x_postprocessed"]
             )
         )
         # Apply filter method with mask_params attributes parameters
@@ -663,5 +664,24 @@ class SmartPredictor :
             raise ValueError("model has no predict method")
 
         return self.data["ypred"]
+
+    def apply_postprocessing(self):
+        """
+        Modifies x Dataframe according to postprocessing modifications, if exists.
+
+        Parameters
+        ----------
+        postprocessing: Dict
+            Dictionnary of postprocessing modifications to apply in x.
+
+        Returns
+        -------
+        pandas.Dataframe
+            Returns x_pred if postprocessing is empty, modified dataframe otherwise.
+        """
+        if self.postprocessing:
+            return apply_postprocessing(self.data["x"], self.postprocessing)
+        else:
+            return self.data["x"]
 
 

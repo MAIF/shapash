@@ -22,9 +22,9 @@ cases = {
     '3': 'Titanic multi class classification',
 }
 
-case = 3
+case = 1
 
-titanic = pd.read_pickle('../../tests/data/clean_titanic.pkl')
+titanic = pd.read_pickle('tests/data/clean_titanic.pkl')
 if case == 1:
     features = ['Pclass', 'Survived', 'Embarked', 'Sex']
     encoder = one_hot.OneHotEncoder(titanic, cols=['Embarked', 'Sex'])
@@ -63,17 +63,18 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
 explainer = shap.TreeExplainer(model)
-contributions, bias = compute_contributions(X_test, explainer)
+#contributions, bias =compute_contributions(X_test, explainer) #Deprecated
 
 xpl = SmartExplainer()
 y_pred = pd.DataFrame(data=y_pred,
                       columns=y.columns.to_list(),
                       index=X_test.index)
 
-xpl.compile(X_test, model, contributions, y_pred=y_pred, preprocessing=encoder)
+xpl.compile(X_test, model, y_pred=y_pred, preprocessing=encoder)
 
 xpl.init_app()
 app = xpl.smartapp.app
+
 
 if __name__ == "__main__":
     app.run_server(debug=False, host="0.0.0.0", port=8080)

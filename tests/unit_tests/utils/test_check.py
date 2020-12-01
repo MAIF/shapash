@@ -7,8 +7,8 @@ import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
-                                check_consistency_model_features, check_consistency_model_label, \
-                                check_preprocessing_options
+                                check_preprocessing_options, check_postprocessing, \
+                                check_consistency_model_features, check_consistency_model_label
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -357,42 +357,6 @@ class TestCheck(unittest.TestCase):
         enc.fit(train, y)
         check_preprocessing_options(enc)
 
-    def test_check_consistency_model_features_3(self):
-        """
-        Test check_consistency_model_features 3
-        """
-        train = pd.DataFrame({'Onehot1': ['A', 'B', 'A', 'B'], 'Onehot2': ['C', 'D', 'C', 'D'],
-                              'Binary1': ['E', 'F', 'E', 'F'], 'Binary2': ['G', 'H', 'G', 'H'],
-                              'Ordinal1': ['I', 'J', 'I', 'J'], 'Ordinal2': ['K', 'L', 'K', 'L'],
-                              'BaseN1': ['M', 'N', 'M', 'N'], 'BaseN2': ['O', 'P', 'O', 'P'],
-                              'Target1': ['Q', 'R', 'Q', 'R'], 'Target2': ['S', 'T', 'S', 'T']})
-
-        features_dict = None
-        columns_dict = {i:features for i,features in enumerate(train.columns)}
-        features_types = {features: str(train[features].dtypes) for features in train.columns}
-        label_dict = None
-        mask_params = None
-
-        y = pd.DataFrame({'y_class': [0, 0, 0, 1]})
-
-        enc_onehot = ce.OneHotEncoder(cols=['Onehot1', 'Onehot2']).fit(train)
-        train_onehot = enc_onehot.transform(train)
-        enc_binary = ce.BinaryEncoder(cols=['Binary1', 'Binary2']).fit(train_onehot)
-        train_binary = enc_binary.transform(train_onehot)
-        enc_ordinal = ce.OrdinalEncoder(cols=['Ordinal1', 'Ordinal2']).fit(train_binary)
-        train_ordinal = enc_ordinal.transform(train_binary)
-        enc_basen = ce.BaseNEncoder(cols=['BaseN1', 'BaseN2']).fit(train_ordinal)
-        train_basen = enc_basen.transform(train_ordinal)
-        enc_target = ce.TargetEncoder(cols=['Target1', 'Target2']).fit(train_basen, y)
-        train_all = enc_target.transform(train_basen)
-        preprocessing = [enc_onehot, enc_binary, enc_ordinal, enc_basen, enc_target]
-
-        model = cb.CatBoostClassifier(n_estimators=1).fit(train_all, y)
-
-        with self.assertRaises(ValueError):
-            check_consistency_model_features(features_dict, model, columns_dict,
-                                                   features_types, mask_params, preprocessing)
-
     def test_check_consistency_model_features_4(self):
         """
         Test check_consistency_model_features 1
@@ -442,3 +406,30 @@ class TestCheck(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             check_consistency_model_label(columns_dict, label_dict)
+
+    def test_check_postprocessing_1(self):
+        """
+        Unit test check_consistency_postprocessing
+        """
+        x = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        columns_dict = {0: 'Col1', 1: 'Col2'}
+        features_types = {features: str(x[features].dtypes) for features in x.columns}
+        postprocessing1 = {0: {'Error': 'suffix', 'rule': ' t'}}
+        postprocessing2 = {0: {'type': 'Error', 'rule': ' t'}}
+        postprocessing3 = {0: {'type': 'suffix', 'Error': ' t'}}
+        postprocessing4 = {0: {'type': 'suffix', 'rule': ' '}}
+        postprocessing5 = {0: {'type': 'case', 'rule': 'lower'}}
+        postprocessing6 = {0: {'type': 'case', 'rule': 'Error'}}
+        with self.assertRaises(ValueError):
+            check_postprocessing(features_types, postprocessing1)
+            check_postprocessing(features_types, postprocessing2)
+            check_postprocessing(features_types, postprocessing3)
+            check_postprocessing(features_types, postprocessing4)
+            check_postprocessing(features_types, postprocessing5)
+            check_postprocessing(features_types, postprocessing6)
+

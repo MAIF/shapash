@@ -18,7 +18,7 @@ class MyGraph(dcc.Graph):
         self.config = {
             'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'zoomOut2d', 'zoomIn2d', 'resetScale2d',
                                        'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines'],
-            'modeBarStyle': {'orientation': 'v'},
+            #'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
             'displaylogo': False,
 
         }
