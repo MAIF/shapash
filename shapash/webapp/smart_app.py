@@ -742,11 +742,11 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    if rows != self.settings_ini['rows']:
-                        self.settings['rows'] = rows
-                        self.init_data()
-                        active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
-                        self.settings_ini['rows'] = self.settings['rows']
+                    
+                    self.settings['rows'] = rows
+                    self.init_data()
+                    active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
+                    self.settings_ini['rows'] = self.settings['rows']
 
                     if name == [1]:
                         columns = [
@@ -792,14 +792,14 @@ class SmartApp:
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
+                
+                if is_open :
                     raise PreventUpdate
                 else:
-                    if features != self.settings_ini['features']:
-                        self.settings['features'] = features
-                        self.settings_ini['features'] = self.settings['features']
-                    else:
-                        raise PreventUpdate
+                    
+                    self.settings['features'] = features
+                    self.settings_ini['features'] = self.settings['features']
+                    
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
@@ -847,13 +847,11 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    if points != self.settings_ini['points'] or violin != self.settings_ini['violin']:
-                        self.settings['points'] = points
-                        self.settings_ini['points'] = self.settings['points']
-                        self.settings['violin'] = violin
-                        self.settings_ini['violin'] = self.settings['violin']
-                    else:
-                        raise PreventUpdate
+                    self.settings['points'] = points
+                    self.settings_ini['points'] = self.settings['points']
+                    self.settings['violin'] = violin
+                    self.settings_ini['violin'] = self.settings['violin']
+
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
@@ -891,24 +889,28 @@ class SmartApp:
                 Input('dataset', 'active_cell')
             ],
             [
-                State('dataset', 'data')
+                State('dataset', 'data'),
+                State('index_id', 'value') # Get the current value of the index
             ]
         )
-        def update_index_id(click_data, cell, data):
+        def update_index_id(click_data, cell, data, current_index_id):
             """
             update index value according to active cell and click data on feature plot.
             """
             ctx = dash.callback_context
-            if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                selected = click_data['points'][0]['customdata']
-                self.click_graph = True
-            elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
-                if cell is not None:
-                    selected = data[cell['row']]['_index_']
-                else:
-                    raise PreventUpdate
-            else:
-                raise PreventUpdate
+            if ctx.triggered[0]['prop_id'] != 'dataset.data' :
+                if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
+                    selected = click_data['points'][0]['customdata']
+                    self.click_graph = True
+                elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
+                    if cell is not None:
+                        selected = data[cell['row']]['_index_']
+                    else:
+                        selected = current_index_id # Get actual value in field to refresh the selected value
+                elif ctx.triggered[0]['prop_id'] == '.' :
+                    selected = data[0]['_index_']
+            else :
+                raise PreventUpdate  
             return selected, True
 
         @app.callback(
@@ -1018,7 +1020,7 @@ class SmartApp:
                                   features_to_hide=masked,
                                   positive=sign,
                                   max_contrib=max_contrib)
-            if np.issubdtype(self.explainer.x_pred.index[0], np.dtype(int).type):
+            if np.issubdtype(type(self.explainer.x_pred.index[0]), np.dtype(int).type):
                 selected = int(selected)
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=selected,
                                                                                                label=label,
@@ -1056,13 +1058,14 @@ class SmartApp:
                 Output('dataset', 'style_header_conditional'),
                 Output('dataset', 'style_cell_conditional'),
             ],
-            [
+             [
                 Input("validation", "n_clicks")
             ],
             [
                 State('dataset', 'data'),
                 State('index_id', 'value')
             ]
+            
         )
         def datatable_layout(validation, data, index):
             ctx = dash.callback_context
