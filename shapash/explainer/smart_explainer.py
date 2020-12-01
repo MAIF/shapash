@@ -22,7 +22,7 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
-                                check_consistency_model_features, check_consistency_model_label
+                                check_postprocessing
 from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
@@ -417,43 +417,7 @@ class SmartExplainer:
             Dictionnary of postprocessing that need to be checked.
 
         """
-        if postprocessing:
-            if not isinstance(postprocessing, dict):
-                raise ValueError("Postprocessing parameter must be a dictionnary")
-
-            for key in postprocessing.keys():
-
-                dict_post = postprocessing[key]
-
-                if not isinstance(dict_post, dict):
-                    raise ValueError(f"{key} values must be a dict")
-
-                if not list(dict_post.keys()) == ['type', 'rule']:
-                    raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
-
-                if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
-                    raise ValueError("Wrong postprocessing method. \n"
-                                     "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'")
-
-                if dict_post['type'] == 'transcoding' \
-                        and not set(dict_post['rule'].keys()) == set(self.x_pred[key].unique()):
-                    warnings.warn(f"Transcoding {key} feature incomplete, some values won't be modified. \n"
-                                  f"Check values.", UserWarning)
-
-                if dict_post['type'] == 'case':
-                    if dict_post['rule'] not in ['lower', 'upper']:
-                        raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
-
-                    if not pd.api.types.is_string_dtype(self.x_pred[key]):
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
-
-                if dict_post['type'] == 'regex':
-                    if not set(dict_post['rule'].keys()) == {'in', 'out'}:
-                        raise ValueError(f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
-                                         f" must be 'in' and 'out'.")
-
-                    if not pd.api.types.is_string_dtype(self.x_pred[key]):
-                        raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
+        check_postprocessing(self.x_pred, postprocessing)
 
     def apply_postprocessing(self, postprocessing=None):
         """

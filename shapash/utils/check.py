@@ -9,6 +9,9 @@ from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntr
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
+from shapash.utils.columntransformer_backend import columntransformer
+
+
 
 def check_preprocessing(preprocessing=None):
     """
@@ -180,7 +183,7 @@ def check_contribution_object(case, classes, contributions):
             )
 
 def check_consistency_model_features(features_dict, model, columns_dict, features_types,
-                                     mask_params=None, preprocessing=None):
+                                     mask_params=None, preprocessing=None, postprocessing=None):
     """
     Check the matching between attributes, features names are same, or include
 
@@ -198,6 +201,8 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             The processing apply to the original data
     mask_params: dict (optional)
         Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+    postprocessing : dict
+        Dictionnary of postprocessing that need to be checked.
     """
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
@@ -210,6 +215,10 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         if mask_params['features_to_hide'] is not None:
             if not all(feature in set(features_types) for feature in mask_params['features_to_hide']):
                 raise ValueError("All features of mask_params must be in model")
+
+    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
+        if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
+            raise ValueError("All features of preprocessing must be in columns_dict")
 
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
@@ -224,15 +233,20 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
                 and preprocessing is not None:
             raise ValueError("this type of encoder is not supported in SmartPredictor")
-
     else:
         model_length_features = model_features
         if len(set(columns_dict.values())) != model_length_features:
             raise ValueError("features of columns_dict and model must have the same length")
 
-    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
-        if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
-            raise ValueError("All features of preprocessing must be in columns_dict")
+    if postprocessing:
+        if not isinstance(postprocessing, dict):
+            raise ValueError("Postprocessing parameter must be a dictionnary")
+        for feature in postprocessing.keys():
+            if feature not in features_types.keys():
+                raise ValueError("Postprocessing and features_types must have the same features names.")
+            if feature not in columns_dict.values():
+                raise ValueError("Postprocessing and columns_dict must have the same features names.")
+        check_postprocessing(features_types, postprocessing)
 
 def check_preprocessing_options(preprocessing=None):
     """
@@ -265,3 +279,59 @@ def check_consistency_model_label(columns_dict, label_dict=None):
     if label_dict is not None:
         if not all(feat in columns_dict for feat in label_dict):
             raise ValueError("All features of label_dict must be in model")
+
+def check_postprocessing(x, postprocessing=None):
+    """
+    Check that postprocessing parameter has good attributes matching with x dataset or with dict of types of
+    the expected data set x
+
+    Parameters
+    ----------
+    x: pandas.DataFrame, dict
+        Dataset x without preprocessing or dictionnary mapping features with the right types needed.
+    postprocessing : dict
+        Dictionnary of postprocessing that need to be checked.
+    """
+    if postprocessing:
+        if not isinstance(postprocessing, dict):
+            raise ValueError("Postprocessing parameter must be a dictionnary")
+
+        for key in postprocessing.keys():
+
+            dict_post = postprocessing[key]
+
+            if not isinstance(dict_post, dict):
+                raise ValueError(f"{key} values must be a dict")
+
+            if not list(dict_post.keys()) == ['type', 'rule']:
+                raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
+
+            if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
+                raise ValueError("Wrong postprocessing method. \n"
+                                 "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'")
+
+            if dict_post['type'] == 'case':
+                if dict_post['rule'] not in ['lower', 'upper']:
+                    raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
+
+                if isinstance(x, dict):
+                    if x[key] != "object":
+                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                else:
+                    if not pd.api.types.is_string_dtype(x[key]):
+                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+
+            if dict_post['type'] == 'regex':
+                if not set(dict_post['rule'].keys()) == {'in', 'out'}:
+                    raise ValueError(f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
+                                     f" must be 'in' and 'out'.")
+                if isinstance(x,dict):
+                    if x[key] != "object":
+                        raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
+                else:
+                    if not pd.api.types.is_string_dtype(x[key]):
+                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+
+
+
+
