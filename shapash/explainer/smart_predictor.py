@@ -465,8 +465,8 @@ class SmartPredictor :
         pandas.DataFrame
             Data with ypred and the associated contributions.
         """
-        y_pred, summary = self.compute_contributions(contributions=contributions)
-        return pd.concat([y_pred, summary], axis=1)
+        y_pred, detail_contrib = self.compute_contributions(contributions=contributions)
+        return pd.concat([y_pred, detail_contrib], axis=1)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
         """
