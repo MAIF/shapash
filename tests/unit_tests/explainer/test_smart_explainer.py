@@ -742,7 +742,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.columns_dict = {0: 'tech_0', 1: 'tech_1', 2: 'tech_2'}
         xpl.inv_columns_dict = {v: k for k, v in xpl.columns_dict.items()}
         feature_list = ['tech_2']
-        output = xpl.check_features_name(feature_list)
+        output = xpl.check_features_name (feature_list)
         expected_output = [2]
         np.testing.assert_array_equal(output, expected_output)
 
@@ -751,6 +751,8 @@ class TestSmartExplainer(unittest.TestCase):
         Unit test check features name 4
         """
         xpl = SmartExplainer()
+        xpl.columns_dict = None
+        xpl.features_dict = None
         feature_list = [1, 2, 4]
         output = xpl.check_features_name(feature_list)
         expected_output = feature_list
