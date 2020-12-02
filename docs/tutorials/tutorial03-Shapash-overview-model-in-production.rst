@@ -1,8 +1,12 @@
-Shapash in Jupyter - Overview
-=============================
+Shapash model in production - Overview
+======================================
 
-With this tutorial you: Understand how Shapash works in Jupyter Notebook
-with a simple use case
+With this tutorial you: Understand how create a Shapash SmartPredictor
+to make prediction and have explanation in production with a simple use
+case.
+
+A tutorial more detailed, will go further to help you getting started
+with the SmartPredictor Object.
 
 Contents: - Build a Regressor - Compile Shapash SmartExplainer - Compile
 Shapash SmartExplainer to SmartPredictor - Save Shapash Smartpredictor
@@ -21,14 +25,12 @@ Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/dat
 Building Supervized Model
 -------------------------
 
+In this section, we will train a Machine Learning supervized model with
+our data House Prices.
+
 .. code:: ipython3
 
-    import sys
-    from shapash.explainer.smart_predictor import SmartPredictor
-    from shapash.explainer.smart_explainer import SmartExplainer
     from shapash.data.data_loader import data_loading
-    from shapash.utils.load_smartpredictor import load_smartpredictor
-    #from shapash.data.data_loader import data_loading
     house_df, house_dict = data_loading('house_prices')
 
 .. code:: ipython3
@@ -36,32 +38,11 @@ Building Supervized Model
     y_df=house_df['SalePrice'].to_frame()
     X_df=house_df[house_df.columns.difference(['SalePrice'])]
 
-.. code:: ipython3
-
-    house_df.head()
-
-
-.. parsed-literal::
-
-    .. table:: 
-    
-        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
-        |          MSSubClass           |       MSZoning        |LotArea|Street|     LotShape     |  LandContour  |           Utilities            |           LotConfig           | LandSlope  |Neighborhood |       Condition1        |Condition2|       BldgType       |HouseStyle|OverallQual|OverallCond|YearBuilt|YearRemodAdd|RoofStyle|          RoofMatl          |Exterior1st | Exterior2nd |MasVnrType|MasVnrArea|   ExterQual   |   ExterCond   |  Foundation   |       BsmtQual       |            BsmtCond             |     BsmtExposure      |     BsmtFinType1      |BsmtFinSF1|     BsmtFinType2     |BsmtFinSF2|BsmtUnfSF|TotalBsmtSF|          Heating          |HeatingQC|CentralAir|           Electrical            |1stFlrSF|2ndFlrSF|LowQualFinSF|GrLivArea|BsmtFullBath|BsmtHalfBath|FullBath|HalfBath|BedroomAbvGr|KitchenAbvGr|  KitchenQual  |TotRmsAbvGrd|     Functional      |Fireplaces|    GarageType    |GarageYrBlt|    GarageFinish    |GarageArea|  GarageQual   |  GarageCond   |PavedDrive|WoodDeckSF|OpenPorchSF|EnclosedPorch|3SsnPorch|ScreenPorch|PoolArea|MiscVal|MoSold|YrSold|          SaleType          |SaleCondition|SalePrice|
-        +===============================+=======================+=======+======+==================+===============+================================+===============================+============+=============+=========================+==========+======================+==========+===========+===========+=========+============+=========+============================+============+=============+==========+==========+===============+===============+===============+======================+=================================+=======================+=======================+==========+======================+==========+=========+===========+===========================+=========+==========+=================================+========+========+============+=========+============+============+========+========+============+============+===============+============+=====================+==========+==================+===========+====================+==========+===============+===============+==========+==========+===========+=============+=========+===========+========+=======+======+======+============================+=============+=========+
-        |2-Story 1946 & Newer           |Residential Low Density|   8450|Paved |Regular           |Near Flat/Level|All public Utilities (E,G,W,& S)|Inside lot                     |Gentle slope|College Creek|Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     2003|        2003|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       196|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|No Exposure/No Basement|Good Living Quarters   |       706|Unfinished/No Basement|         0|      150|        856|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|     856|     854|           0|     1710|           1|           0|       2|       1|           3|           1|Good           |           8|Typical Functionality|         0|Attached to home  |       2003|Rough Finished      |       548|Typical/Average|Typical/Average|Paved     |         0|         61|            0|        0|          0|       0|      0|     2|  2008|Warranty Deed - Conventional|Normal Sale  |   208500|
-        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
-        |1-Story 1946 & Newer All Styles|Residential Low Density|   9600|Paved |Regular           |Near Flat/Level|All public Utilities (E,G,W,& S)|Frontage on 2 sides of property|Gentle slope|Veenker      |Adjacent to feeder street|Normal    |Single-family Detached|One story |          6|          8|     1976|        1976|Gable    |Standard (Composite) Shingle|Metal Siding|Metal Siding |None      |         0|Average/Typical|Average/Typical|Cinder Block   |Good (90-99 inches)   |Typical - slight dampness allowed|Good Exposure          |Average Living Quarters|       978|Unfinished/No Basement|         0|      284|       1262|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|    1262|       0|           0|     1262|           0|           1|       2|       0|           3|           1|Typical/Average|           6|Typical Functionality|         1|Attached to home  |       1976|Rough Finished      |       460|Typical/Average|Typical/Average|Paved     |       298|          0|            0|        0|          0|       0|      0|     5|  2007|Warranty Deed - Conventional|Normal Sale  |   181500|
-        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
-        |2-Story 1946 & Newer           |Residential Low Density|  11250|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Inside lot                     |Gentle slope|College Creek|Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     2001|        2002|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       162|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|Mimimum Exposure       |Good Living Quarters   |       486|Unfinished/No Basement|         0|      434|        920|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|     920|     866|           0|     1786|           1|           0|       2|       1|           3|           1|Good           |           6|Typical Functionality|         1|Attached to home  |       2001|Rough Finished      |       608|Typical/Average|Typical/Average|Paved     |         0|         42|            0|        0|          0|       0|      0|     9|  2008|Warranty Deed - Conventional|Normal Sale  |   223500|
-        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
-        |2-Story 1945 & Older           |Residential Low Density|   9550|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Corner lot                     |Gentle slope|Crawford     |Normal                   |Normal    |Single-family Detached|Two story |          7|          5|     1915|        1970|Gable    |Standard (Composite) Shingle|Wood Siding |Wood Shingles|None      |         0|Average/Typical|Average/Typical|Brick & Tile   |Typical (80-89 inches)|Good                             |No Exposure/No Basement|Average Living Quarters|       216|Unfinished/No Basement|         0|      540|        756|Gas forced warm air furnace|Good     |Yes       |Standard Circuit Breakers & Romex|     961|     756|           0|     1717|           1|           0|       1|       0|           3|           1|Good           |           7|Typical Functionality|         1|Detached from home|       1998|Unfinished/No Garage|       642|Typical/Average|Typical/Average|Paved     |         0|         35|          272|        0|          0|       0|      0|     2|  2006|Warranty Deed - Conventional|Abnormal Sale|   140000|
-        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
-        |2-Story 1946 & Newer           |Residential Low Density|  14260|Paved |Slightly irregular|Near Flat/Level|All public Utilities (E,G,W,& S)|Frontage on 2 sides of property|Gentle slope|Northridge   |Normal                   |Normal    |Single-family Detached|Two story |          8|          5|     2000|        2000|Gable    |Standard (Composite) Shingle|Vinyl Siding|Vinyl Siding |Brick Face|       350|Good           |Average/Typical|Poured Contrete|Good (90-99 inches)   |Typical - slight dampness allowed|Average Exposure       |Good Living Quarters   |       655|Unfinished/No Basement|         0|      490|       1145|Gas forced warm air furnace|Excellent|Yes       |Standard Circuit Breakers & Romex|    1145|    1053|           0|     2198|           1|           0|       2|       1|           4|           1|Good           |           9|Typical Functionality|         1|Attached to home  |       2000|Rough Finished      |       836|Typical/Average|Typical/Average|Paved     |       192|         84|            0|        0|          0|       0|      0|    12|  2008|Warranty Deed - Conventional|Normal Sale  |   250000|
-        +-------------------------------+-----------------------+-------+------+------------------+---------------+--------------------------------+-------------------------------+------------+-------------+-------------------------+----------+----------------------+----------+-----------+-----------+---------+------------+---------+----------------------------+------------+-------------+----------+----------+---------------+---------------+---------------+----------------------+---------------------------------+-----------------------+-----------------------+----------+----------------------+----------+---------+-----------+---------------------------+---------+----------+---------------------------------+--------+--------+------------+---------+------------+------------+--------+--------+------------+------------+---------------+------------+---------------------+----------+------------------+-----------+--------------------+----------+---------------+---------------+----------+----------+-----------+-------------+---------+-----------+--------+-------+------+------+----------------------------+-------------+---------+
-
-
 Encoding Categorical Features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We need to use a preprocessing on our data for handling categorical
+features before the training step.
 
 .. code:: ipython3
 
@@ -97,6 +78,14 @@ Model Fitting
 Understand my model with shapash
 --------------------------------
 
+-  In this section, we will use the SmartExplainer Object from shapash
+   which allow the users to understand how the model works with the
+   dataset specified.
+-  This object must be used only for data mining step. Shapash provide
+   another object for deployment.
+-  In this tutorial, we will not explore possibilites of the
+   SmartExplainer but others will. (you can go check them)
+
 Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -106,20 +95,7 @@ Declare and Compile SmartExplainer
 
 .. code:: ipython3
 
-    house_dict.pop("GarageCars")
-
-
-
-
-.. parsed-literal::
-
-    'Size of garage in car capacity'
-
-
-
-.. code:: ipython3
-
-    xpl = SmartExplainer(features_dict=house_dict) # Optional parameter, dict specifies label for features name 
+    xpl = SmartExplainer()
 
 .. code:: ipython3
 
@@ -139,12 +115,26 @@ Declare and Compile SmartExplainer
 Compile SmartExplainer to SmartPredictor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+-  When you are satisfied by your results and the explainablity given by
+   Shapash, you can use the SmartPredictor object for deployement.
+-  In this section, we will learn how to easily switch from
+   SmartExplainer to a SmartPredictor.
+-  SmartPredictor allows you not to only understand results of your
+   models but also to produce those results on new data automatically.
+-  It will make new predictions and summarize explainability that you
+   configured to make it operational to your needs.
+-  SmartPredictor take only neccessary attribute to be lighter and more
+   consistent than Smartexplainer for deployment context.
+-  SmartPredictor can be use with API or in batch mode.
+
 .. code:: ipython3
 
     predictor = xpl.to_smartpredictor()
 
 Save and Load your Predictor
 ----------------------------
+
+You can easily save and load your SmartPredictor Object in pickle.
 
 Save your predictor in Pickle File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -158,10 +148,27 @@ Load your predictor in Pickle File
 
 .. code:: ipython3
 
+    from shapash.utils.load_smartpredictor import load_smartpredictor
+
+.. code:: ipython3
+
     predictor_load = load_smartpredictor('./predictor.pkl')
 
 Make a prediction with your Predictor
 -------------------------------------
+
+-  In order to make new predictions and summarize local explainability
+   of your model on new datasets, you can use the method add_input of
+   the SmartPredictor.
+-  The add_input method is the first step to add a dataset for
+   prediction and explainability.
+-  It checks the structure of the dataset, the prediction and the
+   contribution if specified.
+-  It applies the preprocessing specified in the initialisation and
+   reorder the features with the order used by the model. (see the
+   documentation on this method)
+-  In API mode, this method can handle dictionnaries data which can be
+   received from a GET or a POST request.
 
 Add data
 ^^^^^^^^
@@ -172,6 +179,9 @@ Add data
 
 Make prediction
 ^^^^^^^^^^^^^^^
+
+You can use the method predict of the SmartPredictor to make prediction
+on your newdata added before with add_input.
 
 .. code:: ipython3
 
@@ -204,6 +214,14 @@ Make prediction
 Get detailed explanability associated to the prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+-  You can use the method detail_contributions to see the detailed
+   contributions of each of your features for each row of your new
+   dataset.
+-  For classification problems, it will automatically associated
+   contributions with the right predicted label.
+-  The predicted label can be compute automatically with predict method
+   or you can specify in add_input method an ypred
+
 .. code:: ipython3
 
     detailed_contributions = predictor_load.detail_contributions()
@@ -232,16 +250,30 @@ Get detailed explanability associated to the prediction
         +--------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
 
 
-Summarize explainability of the predictions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Summarize explanability of the predictions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+-  You can use the summarize method to summarize your local
+   explainability
+-  This summary can be configured with the method modify_mask in order
+   for you to have the explainability that satisfy your operational
+   needs
+-  You can also specify : >- a postprocessing when you initialize your
+   SmartPredictor to apply a wording to several values of your dataset.
+   >- a label_dict to rename your label in classification problems
+   (during the initialisation of your SmartPredictor). >- a
+   features_dict to rename your features.
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(max_contrib=10)
+    predictor_load.modify_mask(max_contrib=5)
 
 .. code:: ipython3
 
     explanation = predictor_load.summarize()
+
+For example, here, we choose to only build a summary with 5 most
+contributives features of your datasets.
 
 .. code:: ipython3
 
@@ -252,17 +284,17 @@ Summarize explainability of the predictions
 
     .. table:: 
     
-        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
-        | ypred  |               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |value_3|contribution_3|               feature_4               |value_4|contribution_4|          feature_5          |value_5|contribution_5|            feature_6             |value_6|contribution_6|            feature_7             |value_7|contribution_7|                feature_8                 |value_8|contribution_8|           feature_9            |value_9|contribution_9|                feature_10                |value_10|contribution_10|
-        +========+========================================+=======+==============+========================================+=======+==============+==================================+=======+==============+=======================================+=======+==============+=============================+=======+==============+==================================+=======+==============+==================================+=======+==============+==========================================+=======+==============+================================+=======+==============+==========================================+========+===============+
-        |206462.9|Overall material and finish of the house|      7|        8248.8|Total square feet of basement area      |    856|       -5165.5|Original construction date        |   2003|        3871.0|Unfinished square feet of basement area|    150|        3769.6|Size of garage in square feet|    548|        3107.9|Ground living area square feet    |   1710|        2706.5|Remodel date                      |   2003|        2219.3|Building Class                            |      5|        2069.9|Rating of basement finished area|    NaN|        1756.7|Overall condition of the house            |NaN     |        -1507.9|
-        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
-        |181128.0|Overall material and finish of the house|      6|      -14555.9|Ground living area square feet          |   1262|      -10016.3|Overall condition of the house    |      8|        6899.3|Type 1 finished square feet            |    978|        5781.7|Remodel date                 |   1976|       -4310.0|Number of fireplaces              |      1|        4165.2|Total square feet of basement area|   1262|        2783.7|Physical locations within Ames city limits|    298|        2753.1|Wood deck area in square feet   |   1262|        2388.1|First Floor square feet                   |NaN     |         1629.1|
-        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
-        |221478.1|Ground living area square feet          |   1786|       15708.3|Overall material and finish of the house|      7|       11084.5|Size of garage in square feet     |    608|        5998.6|Total square feet of basement area     |    920|       -5157.3|Original construction date   |   2001|        3877.0|Building Class                    |   2002|        2473.1|Remodel date                      |      1|        2141.7|Basement full bathrooms                   |      5|        1806.2|Overall condition of the house  |    NaN|       -1630.0|Rating of basement finished area          |NaN     |         1440.2|
-        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
-        |184788.4|Overall material and finish of the house|      7|        8188.4|Size of garage in square feet           |    642|        6651.6|Total square feet of basement area|    756|       -5882.2|Remodel date                           |   1970|       -4930.9|Original construction date   |   1915|       -3740.8|Type 1 finished square feet       |    216|       -3170.0|Ground living area square feet    |   1717|        2969.7|Building Class                            |      5|        2767.3|Overall condition of the house  |    NaN|       -1875.1|Physical locations within Ames city limits|NaN     |         1585.2|
-        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
-        |256637.5|Overall material and finish of the house|      8|       58568.4|Ground living area square feet          |   2198|       16891.9|Size of garage in square feet     |    836|       15161.9|First Floor square feet                |   1145|       -8807.7|Lot size square feet         |  14260|        7905.5|Masonry veneer area in square feet|    350|        6318.0|Total square feet of basement area|   1145|       -4866.8|Kitchen quality                           |     12|       -4611.8|Month Sold                      |      9|       -4240.1|Total rooms above grade                   |NaN     |        -4071.6|
-        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+---------------------------------------+-------+--------------+-----------------------------+-------+--------------+----------------------------------+-------+--------------+----------------------------------+-------+--------------+------------------------------------------+-------+--------------+--------------------------------+-------+--------------+------------------------------------------+--------+---------------+
+        +--------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
+        | ypred  | feature_1 |value_1|contribution_1| feature_2 |value_2|contribution_2| feature_3 |value_3|contribution_3| feature_4  |value_4|contribution_4| feature_5  |value_5|contribution_5|
+        +========+===========+=======+==============+===========+=======+==============+===========+=======+==============+============+=======+==============+============+=======+==============+
+        |206462.9|OverallQual|      7|        8248.8|TotalBsmtSF|    856|       -5165.5|YearBuilt  |   2003|        3871.0|BsmtUnfSF   |    150|        3769.6|GarageArea  |    548|        3107.9|
+        +--------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
+        |181128.0|OverallQual|      6|      -14555.9|GrLivArea  |   1262|      -10016.3|OverallCond|      8|        6899.3|BsmtFinSF1  |    978|        5781.7|YearRemodAdd|   1976|       -4310.0|
+        +--------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
+        |221478.1|GrLivArea  |   1786|       15708.3|OverallQual|      7|       11084.5|GarageArea |    608|        5998.6|TotalBsmtSF |    920|       -5157.3|YearBuilt   |   2001|        3877.0|
+        +--------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
+        |184788.4|OverallQual|      7|        8188.4|GarageArea |    642|        6651.6|TotalBsmtSF|    756|       -5882.2|YearRemodAdd|   1970|       -4930.9|YearBuilt   |   1915|       -3740.8|
+        +--------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
+        |256637.5|OverallQual|      8|       58568.4|GrLivArea  |   2198|       16891.9|GarageArea |    836|       15161.9|1stFlrSF    |   1145|       -8807.7|LotArea     |  14260|        7905.5|
+        +--------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
 
