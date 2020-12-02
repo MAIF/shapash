@@ -332,6 +332,51 @@ def check_postprocessing(x, postprocessing=None):
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
 
+def check_features_name(columns_dict, features_dict, features):
+    """
+    Convert a list of feature names (string) or features ids into features ids.
+    Features names can be part of columns_dict or features_dict.
+
+    Parameters
+    ----------
+    features : List
+        List of ints (columns ids) or of strings (business names)
+    columns_dict: dict
+    Dictionary mapping integer column number to technical feature names.
+    features_dict: dict
+    Dictionary mapping technical feature names to domain names.
+
+    Returns
+    -------
+    list of ints
+        Columns ids compatible with var_dict
+    """
+    if all(isinstance(f, int) for f in features):
+        features_ids = features
+
+    elif all(isinstance(f, str) for f in features):
+        inv_columns_dict = {v: k for k, v in columns_dict.items()}
+        inv_features_dict = {v: k for k, v in features_dict.items()}
+
+        if features_dict and all(f in features_dict.values() for f in features):
+            columns_list = [inv_features_dict[f] for f in features]
+            features_ids = [inv_columns_dict[c] for c in columns_list]
+        elif inv_columns_dict and all(f in columns_dict.values() for f in features):
+            features_ids = [inv_columns_dict[f] for f in features]
+        else:
+            raise ValueError(
+                'All features must came from the same dict of features (technical names or domain names).'
+            )
+
+    else:
+        raise ValueError(
+            """
+            features must be a list of ints (representing ids of columns)
+            or a list of string from technical features names or from domain names.
+            """
+        )
+    return features_ids
+
 
 
 
