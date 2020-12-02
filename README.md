@@ -45,7 +45,7 @@ Data Scientists can more easily understand their models and share their results.
 
 - To discuss results: **Shapash** allows Data Scientists to easily share and discuss their results with non-Data users
 
-- To put a model in production: A light and consistent object for API or batch mode to make prediction and have explainability
+- Use Shapash to deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
 **How does shapash work?** <br />
 
@@ -115,6 +115,13 @@ app = xpl.run_app()
 ``` 
 
 - Step 4: Create an object to production
+  > Shapash created a SmartPredictor object to make prediction and have explainability for operational needs in deployment 
+  context. It is an object dedicated to deployment, lighter and more consistent than SmartExplainer.
+  SmartPredictor can be used with an API or in batch mode. It allows users to configure the summary to 
+  satisfy their operational needs.
+  
+  > SmartPredictor allows you not to only understand results of your models but also to produce those results on new datasets automatically.
+
 ```
 predictor = xpl.to_smartpredictor()
 ```
@@ -127,7 +134,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### More Precise Overview
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
-- [Create an object to make prediction and have explainability in production](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
+- [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
 
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
@@ -148,4 +155,4 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 
 ### More details on restitution of explainability in production context
-- [Restituate an explainability in production](tutorial03-Shapash-overview-model-in-production.ipynb)
+- [Restituate an explainability in production](tutorial/predictor/tuto-smartpredictor-restituate-an-explainability.ipynb)
