@@ -253,28 +253,24 @@ to ypred.
 Make prediction
 ^^^^^^^^^^^^^^^
 
-Then, we can use the predict method of the SmartPredictor to
-automatically compute a predicted label thanks to our model trained and
-the new dataset given.
+Then, we can see that ypred is automatically computed in add_input
+method by checking the attribute data[“ypred”] thanks to our model
+trained and the new dataset given.
 
 .. code:: ipython3
 
-    prediction = predictor_load.predict()
-
-.. code:: ipython3
-
-    prediction.head()
+    predictor_load.data["ypred"].head()
 
 
 .. parsed-literal::
 
     .. table:: 
     
-        +-----+
-        |ypred|
-        +=====+
-        |    1|
-        +-----+
+        +--------+------+
+        | ypred  |proba |
+        +========+======+
+        |Survived|0.7156|
+        +--------+------+
 
 
 We can also use the predict_proba method of the SmartPredictor to

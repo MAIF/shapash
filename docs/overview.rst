@@ -76,11 +76,7 @@ The 3 steps to display results:
 - Step 4: Create an object to production
 
 Shapash created a SmartPredictor object to make prediction and have explainability for operational needs in deployment
-context. It is an object dedicated to deployment, lighter and more consistent than SmartExplainer.
-SmartPredictor can be used with an API or in batch mode. It allows users to configure the summary to
-satisfy their operational needs.
-
-SmartPredictor allows you not to only understand results of your models but also to produce those results on new datasets automatically.
+context.
 
 .. code:: ipython
 
