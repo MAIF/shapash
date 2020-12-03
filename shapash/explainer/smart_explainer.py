@@ -22,7 +22,7 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
-                                check_postprocessing
+                                check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
@@ -555,29 +555,7 @@ class SmartExplainer:
         list of ints
             Columns ids compatible with var_dict
         """
-
-        if all(isinstance(f, int) for f in features):
-            features_ids = features
-
-        elif all(isinstance(f, str) for f in features):
-            if self.features_dict and all(f in self.features_dict.values() for f in features):
-                columns_list = [self.inv_features_dict[f] for f in features]
-                features_ids = [self.inv_columns_dict[c] for c in columns_list]
-            elif self.inv_columns_dict and all(f in self.columns_dict.values() for f in features):
-                features_ids = [self.inv_columns_dict[f] for f in features]
-            else:
-                raise ValueError(
-                    'All features must came from the same dict of features (technical names or domain names).'
-                )
-
-        else:
-            raise ValueError(
-                """
-                features must be a list of ints (representing ids of columns)
-                or a list of string from technical features names or from domain names.
-                """
-            )
-        return features_ids
+        return check_features_name(self.columns_dict, self.features_dict, features)
 
     def check_features_desc(self):
         """

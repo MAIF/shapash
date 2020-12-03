@@ -3,7 +3,8 @@ Smart predictor module
 """
 from shapash.utils.check import check_consistency_model_features, check_consistency_model_label
 from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
-from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object
+from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object,\
+                                check_features_name
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -531,14 +532,14 @@ class SmartPredictor :
         if self.mask_params["features_to_hide"] is not None:
             mask.append(
                 hide_contributions(
-                    self.data['var_dict'],
+                    self.summary['var_dict'],
                     features_list=self.check_features_name(self.mask_params["features_to_hide"])
                 )
             )
         if self.mask_params["threshold"] is not None:
             mask.append(
                 cap_contributions(
-                    self.data['contrib_sorted'],
+                    self.summary['contrib_sorted'],
                     threshold=self.mask_params["threshold"]
                 )
             )
@@ -683,5 +684,22 @@ class SmartPredictor :
             return apply_postprocessing(self.data["x"], self.postprocessing)
         else:
             return self.data["x"]
+
+    def check_features_name(self, features):
+        """
+        Convert a list of feature names (string) or features ids into features ids.
+        Features names can be part of columns_dict or features_dict.
+
+        Parameters
+        ----------
+        features : List
+            List of ints (columns ids) or of strings (business names)
+
+        Returns
+        -------
+        list of ints
+            Columns ids compatible with var_dict
+        """
+        return check_features_name(self.columns_dict, self.features_dict, features)
 
 
