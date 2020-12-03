@@ -114,19 +114,19 @@ xpl.compile(
 app = xpl.run_app()
 ``` 
 
-- Step 4: Create an object to production
-  > Shapash created a SmartPredictor object to make prediction and have explainability for operational needs in deployment 
-  context. It is an object dedicated to deployment, lighter and more consistent than SmartExplainer.
-  SmartPredictor can be used with an API or in batch mode. It allows users to configure the summary to 
-  satisfy their operational needs.
-  
-  > SmartPredictor allows you not to only understand results of your models but also to produce those results on new datasets automatically.
+[Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
+- Step 4: From training to deployment : SmartPredictor Object
+  > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
+  It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.
+  SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local 
+  explainability using appropriate wording.
+  
 ```
 predictor = xpl.to_smartpredictor()
 ```
+See the tutorial part to know how to use the SmartPredictor object
 
-[Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
 ## Tutorials
 This github repository offers a lot of tutorials to allow you to start more concretely in the use of Shapash.
@@ -154,5 +154,5 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
 - [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 
-### More details on restitution of explainability in production context
-- [Restituate an explainability in production](tutorial/predictor/tuto-smartpredictor-restituate-an-explainability.ipynb)
+### Deploy local explainability in production
+- [Restituate an explainability in production](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
