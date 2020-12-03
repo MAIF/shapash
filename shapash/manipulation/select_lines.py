@@ -47,21 +47,30 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
     """
     if _case == "classification":
         complete_sum = [list(x) for x in list(zip(*[df.values.tolist() for df in contributions]))]
-        indexclas = [_classes.index(x) for x in list(flatten(y_pred.values))]
-        summary = pd.DataFrame([summar[ind]
-                                for ind, summar in zip(indexclas, complete_sum)],
-                               columns=contributions[0].columns,
-                               index=contributions[0].index,
-                               dtype=object)
-        if label_dict is not None:
-            y_pred = y_pred.applymap(lambda x: label_dict[x])
-        if proba_values is not None:
-            y_proba = pd.DataFrame([proba[ind]
-                                    for ind, proba in zip(indexclas, proba_values.values)],
-                                   columns=['proba'],
-                                   index=y_pred.index)
-            y_pred = pd.concat([y_pred, y_proba], axis=1)
-
+        if y_pred.shape[1] != 1 and label_dict is not None :
+            inv_dict = {value: key for key, value in label_dict.items()}
+            y_pred_prepared = y_pred[y_pred.columns.difference(["proba"])].applymap(lambda x: inv_dict[x])
+            indexclas = [_classes.index(x) for x in list(flatten(y_pred_prepared.values))]
+            summary = pd.DataFrame([summar[ind]
+                                    for ind, summar in zip(indexclas, complete_sum)],
+                                   columns=contributions[0].columns,
+                                   index=contributions[0].index,
+                                   dtype=object)
+        else :
+            indexclas = [_classes.index(x) for x in list(flatten(y_pred.values))]
+            summary = pd.DataFrame([summar[ind]
+                                    for ind, summar in zip(indexclas, complete_sum)],
+                                   columns=contributions[0].columns,
+                                   index=contributions[0].index,
+                                   dtype=object)
+            if label_dict is not None:
+                y_pred = y_pred.applymap(lambda x: label_dict[x])
+            if proba_values is not None:
+                y_proba = pd.DataFrame([proba[ind]
+                                        for ind, proba in zip(indexclas, proba_values.values)],
+                                       columns=['proba'],
+                                       index=y_pred.index)
+                y_pred = pd.concat([y_pred, y_proba], axis=1)
     else:
         summary = contributions
 
