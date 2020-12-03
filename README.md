@@ -155,4 +155,4 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 
 ### More details on restitution of explainability in production context
-- [Restituate an explainability in production](tutorial/predictor/tuto-smartpredictor-restituate-an-explainability.ipynb)
+- [Restituate an explainability in production](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)

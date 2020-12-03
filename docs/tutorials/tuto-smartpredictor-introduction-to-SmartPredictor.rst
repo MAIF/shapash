@@ -1,12 +1,12 @@
 From model training to deployment - an introduction to the SmartPredictor object
 ================================================================================
 
-Shapash create a SmartPredictor to make prediction and have
-explainability for operational needs in deployment context.
-Explainability can be restitutate to users to have a simple synthetic
-explanation. SmartPredictor allows users to configure the summary to
-satisfy their operational needs. It is an object dedicated to
-deployment, lighter and more consistent than Smartexplainer.
+Shapash provide a SmartPredictor Object to make prediction and local
+explainability for operational needs in deployment context. It gives a
+simple synthetic explanation from your model predictions results.
+SmartPredictor allows users to configure the summary to satisfy their
+operational needs. It is an object dedicated to deployment, lighter than
+SmartExplainer Object with additionnal consistency checks.
 SmartPredictor can be used with an API or in batch mode.
 
 In this tutorial, we will go further to help you getting started with
@@ -17,8 +17,11 @@ Add input - Use label and wording - Summarize explaination
 
 We used Kaggle’s `Titanic <https://www.kaggle.com/c/titanic>`__ dataset
 
+Step 1: Exploration and training of the model
+---------------------------------------------
+
 Import Dataset
---------------
+~~~~~~~~~~~~~~
 
 First, we need to import a dataset. Here we chose the famous dataset
 Titanic from Kaggle.
@@ -69,7 +72,7 @@ Titanic from Kaggle.
 
 
 Create Classification Model
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this section, we will train a Machine Learning supervized model with
 our data. In our example, we are confronted to a classification problem.
@@ -96,6 +99,12 @@ features before the training step.
                                     return_df=True).fit(X)
     X = categ_encoding.transform(X)
 
+
+.. parsed-literal::
+
+    is_categorical is deprecated and will be removed in a future version.  Use is_categorical_dtype instead
+
+
 Train Test split + Random Forest fit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -119,8 +128,8 @@ Train Test split + Random Forest fit
 
     ypred=pd.DataFrame(rf.predict(Xtest),columns=['pred'],index=Xtest.index)
 
-Create a Smarpredictor from you SmartExplainer
-----------------------------------------------
+Explore your trained model results Step with SmartExplainer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When the training step is done, we can start to initialize our
 SmartExplainer Object.
@@ -160,9 +169,21 @@ wanted
 
     postprocessing = {"Pclass": {'type': 'transcoding', 'rule': { 'First class' : '1st class', 'Second class' : '2nd class', "Third class" : "3rd class"}}}
 
+Define a SmartExplainer
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Initialize our SmartExplainer Object with wording defined above.
+
 .. code:: ipython3
 
     xpl = SmartExplainer(label_dict = label_dict, features_dict=feature_dict)
+
+Then, we need to use the compile method of the SmartExplainer Object.
+This method is the first step to understand model and prediction. It
+performs the sorting of contributions, the reverse preprocessing steps
+and performs all the calculations necessary for a quick display of plots
+and efficient display of summary of explanation. (see the documentation
+on SmartExplainer Object and the associated tutorials to go further)
 
 .. code:: ipython3
 
@@ -180,8 +201,42 @@ wanted
     Backend: Shap TreeExplainer
 
 
-Switch to SmartPredictor Object
--------------------------------
+Understand results of your trained model with SmartExplainer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Then, we can easily get a first summary of the explanation of the model
+results. - Here, we chose to get the 3 most contributive features for
+each prediction - We used a wording to get features names more
+understandable in operationnal case. - We renamed the label predicted
+with more interpretable labels. - We chose to apply a postprocessing to
+some values of our features.
+
+.. code:: ipython3
+
+    xpl.to_pandas(max_contrib=3).head()
+
+
+.. parsed-literal::
+
+    .. table:: 
+    
+        +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
+        |    pred    |    feature_1     |value_1|contribution_1|    feature_2     | value_2 |contribution_2|     feature_3     | value_3  |contribution_3|
+        +============+==================+=======+==============+==================+=========+==============+===================+==========+==============+
+        |Survived    |Sex               |female |       0.21532|Title of passenger|Mrs      |       0.14547|Ticket class       |1st class |       0.11036|
+        +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
+        |Not Survived|Sex               |male   |       0.09482|Passenger fare    |      7.9|       0.07359|Title of passenger |Mr        |       0.07174|
+        +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
+        |Survived    |Sex               |female |       0.20562|Title of passenger|Miss     |       0.17692|Ticket class       |2nd class |       0.10963|
+        +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
+        |Survived    |Sex               |female |       0.19006|Title of passenger|Miss     |       0.15338|Port of embarkation|Queenstown|       0.12506|
+        +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
+        |Survived    |Title of passenger|Miss   |       0.16244|Ticket class      |2nd class|       0.13620|Sex                |female    |       0.12088|
+        +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
+
+
+Step 2: SmartPredictor in production
+------------------------------------
 
 -  to_smartpredictor() is a method create to get a SmartPredictor
    object.
@@ -198,6 +253,10 @@ Switch to SmartPredictor Object
 -  SmartPredictor take only neccessary attribute to be lighter and more
    consistent than Smartexplainer for deployment context.
 -  SmartPredictor can be use with API or in batch mode.
+-  It handles dataframes and dictionnaries input data.
+
+Switch from SmartExplainer Object to SmartPredictor Object
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: ipython3
 
@@ -218,7 +277,7 @@ Load your predictor in Pickle File
     predictor_load = load_smartpredictor('./predictor.pkl')
 
 Make a prediction with your SmartPredictor
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  Once our SmartPredictor has been initialized, we can easily apply
    predictions and summary to new datasets.
@@ -269,7 +328,7 @@ trained and the new dataset given.
         +--------+------+
         | ypred  |proba |
         +========+======+
-        |Survived|0.7156|
+        |Survived|0.7234|
         +--------+------+
 
 
@@ -293,12 +352,12 @@ with our model and the new dataset.
         +-------+-------+
         |class_0|class_1|
         +=======+=======+
-        | 0.2376| 0.7624|
+        | 0.2766| 0.7234|
         +-------+-------+
 
 
 Get detailed explanability associated to the prediction
--------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  You can use the method detail_contributions to see the detailed
    contributions of each of your features for each row of your new
@@ -325,15 +384,15 @@ value that we have given in the label_dict.
 
     .. table:: 
     
-        +--------+------+------+------+--------+--------+---------+--------+--------+------+
-        | ypred  |proba |Pclass| Sex  |  Age   | SibSp  |  Parch  |  Fare  |Embarked|Title |
-        +========+======+======+======+========+========+=========+========+========+======+
-        |Survived|0.7624|0.1097|0.1586|-0.02100|0.007639|-0.003601|-0.09370| 0.04038|0.1928|
-        +--------+------+------+------+--------+--------+---------+--------+--------+------+
+        +--------+------+-------+------+--------+-------+---------+-------+--------+------+
+        | ypred  |proba |Pclass | Sex  |  Age   | SibSp |  Parch  | Fare  |Embarked|Title |
+        +========+======+=======+======+========+=======+=========+=======+========+======+
+        |Survived|0.7234|0.08820|0.1813|-0.01737|0.01680|-0.006701|-0.1106| 0.04849|0.1569|
+        +--------+------+-------+------+--------+-------+---------+-------+--------+------+
 
 
 Summarize explanability of the predictions
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  You can use the summarize method to summarize your local
    explainability
@@ -373,15 +432,15 @@ contributives features in our explanability.
 
     .. table:: 
     
-        +--------+------+------------------+-------+--------------+---------+-------+--------------+------------+---------+--------------+
-        | ypred  |proba |    feature_1     |value_1|contribution_1|feature_2|value_2|contribution_2| feature_3  | value_3 |contribution_3|
-        +========+======+==================+=======+==============+=========+=======+==============+============+=========+==============+
-        |Survived|0.7624|Title of passenger|Miss   |        0.1928|Sex      |female |        0.1586|Ticket class|1st class|        0.1097|
-        +--------+------+------------------+-------+--------------+---------+-------+--------------+------------+---------+--------------+
+        +--------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
+        | ypred  |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2|  feature_3   |value_3|contribution_3|
+        +========+======+=========+=======+==============+==================+=======+==============+==============+=======+==============+
+        |Survived|0.7234|Sex      |female |        0.1813|Title of passenger|Miss   |        0.1569|Passenger fare|   7.25|       -0.1106|
+        +--------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
 
 
 Configure your summary easily
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If contributions wanted are the ones associated to the class 0 (More useful in multiclass classification)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -417,11 +476,11 @@ the right label predicted.
 
     .. table:: 
     
-        +------------+------+------------------+-------+--------------+---------+-------+--------------+------------+---------+--------------+
-        |     0      |proba |    feature_1     |value_1|contribution_1|feature_2|value_2|contribution_2| feature_3  | value_3 |contribution_3|
-        +============+======+==================+=======+==============+=========+=======+==============+============+=========+==============+
-        |Not Survived|0.2376|Title of passenger|Miss   |       -0.1928|Sex      |female |       -0.1586|Ticket class|1st class|       -0.1097|
-        +------------+------+------------------+-------+--------------+---------+-------+--------------+------------+---------+--------------+
+        +------------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
+        |     0      |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2|  feature_3   |value_3|contribution_3|
+        +============+======+=========+=======+==============+==================+=======+==============+==============+=======+==============+
+        |Not Survived|0.2766|Sex      |female |       -0.1813|Title of passenger|Miss   |       -0.1569|Passenger fare|   7.25|        0.1106|
+        +------------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
 
 
 If users don’t want one feature and want only positive contributions to restituate
@@ -452,7 +511,7 @@ If users don’t want one feature and want only positive contributions to restit
         +------------+------+--------------+-------+--------------+---------+-------+--------------+----------------------------------+-------+--------------+
         |     0      |proba |  feature_1   |value_1|contribution_1|feature_2|value_2|contribution_2|            feature_3             |value_3|contribution_3|
         +============+======+==============+=======+==============+=========+=======+==============+==================================+=======+==============+
-        |Not Survived|0.2376|Passenger fare|   7.25|       0.09370|Age      |     36|       0.02100|Relatives like children or parents|      0|      0.003601|
+        |Not Survived|0.2766|Passenger fare|   7.25|        0.1106|Age      |     36|       0.01737|Relatives like children or parents|      0|      0.006701|
         +------------+------+--------------+-------+--------------+---------+-------+--------------+----------------------------------+-------+--------------+
 
 
@@ -482,6 +541,6 @@ greater than 0.05.
         +------------+------+--------------+-------+--------------+
         |     0      |proba |  feature_1   |value_1|contribution_1|
         +============+======+==============+=======+==============+
-        |Not Survived|0.2376|Passenger fare|   7.25|       0.09370|
+        |Not Survived|0.2766|Passenger fare|   7.25|        0.1106|
         +------------+------+--------------+-------+--------------+
 

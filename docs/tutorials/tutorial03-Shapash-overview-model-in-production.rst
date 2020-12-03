@@ -2,11 +2,13 @@ Shapash model in production - Overview
 ======================================
 
 With this tutorial you: Understand how create a Shapash SmartPredictor
-to make prediction and have explanation in production with a simple use
-case.
+to make prediction and have local explanation in production with a
+simple use case.
 
-A tutorial more detailed, will go further to help you getting started
-with the SmartPredictor Object.
+This tutorial describes the different steps from training the model to
+deploying the Shapash SmartPredictor Object. A tutorial more detailed,
+will go further to help you getting started with the SmartPredictor
+Object.
 
 Contents: - Build a Regressor - Compile Shapash SmartExplainer - Compile
 Shapash SmartExplainer to SmartPredictor - Save Shapash Smartpredictor
@@ -22,8 +24,11 @@ Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/dat
     from lightgbm import LGBMRegressor
     from sklearn.model_selection import train_test_split
 
+Step 1 : Exploration and training of the model
+----------------------------------------------
+
 Building Supervized Model
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this section, we will train a Machine Learning supervized model with
 our data House Prices.
@@ -82,7 +87,7 @@ Model Fitting
     y_pred = pd.DataFrame(regressor.predict(Xtest),columns=['pred'],index=Xtest.index)
 
 Understand my model with shapash
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  In this section, we will use the SmartExplainer Object from shapash
    which allow the users to understand how the model works with the
@@ -99,9 +104,41 @@ Declare and Compile SmartExplainer
 
     from shapash.explainer.smart_explainer import SmartExplainer
 
+Use wording on features names to better understanding results
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Here, we will use a wording to rename our features label with more
+understandable terms. It will make our local explainability more
+operational and understandable to any users. - To do this, we will use
+the house_dict dictionnary which match for each features of our datasets
+a description - We need to remove the key features “GarageCars” because
+this features isn’t available in our trained dataset - We can next
+declare this as our features_dict in the initialisation of our
+SmartExplainer object
+
 .. code:: ipython3
 
-    xpl = SmartExplainer()
+    house_dict.pop("GarageCars")
+
+
+
+
+.. parsed-literal::
+
+    'Size of garage in car capacity'
+
+
+
+.. code:: ipython3
+
+    xpl = SmartExplainer(features_dict=house_dict)
+
+Then, we need to use the compile method of the SmartExplainer Object.
+This method is the first step to understand model and prediction. It
+performs the sorting of contributions, the reverse preprocessing steps
+and performs all the calculations necessary for a quick display of plots
+and efficient display of summary of explanation. (see the documentation
+on SmartExplainer Object and the associated tutorials to go further)
 
 .. code:: ipython3
 
@@ -118,39 +155,74 @@ Declare and Compile SmartExplainer
     Backend: Shap TreeExplainer
 
 
-Compile SmartExplainer to SmartPredictor
+Understand results of your trained model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Then, we can easily get a first summary of the explanation of the model
+results. - Here, we chose to get the 3 most contributive features for
+each prediction - We used a wording to get features names more
+understandable in operationnal case.
+
+.. code:: ipython3
+
+    xpl.to_pandas(max_contrib=3).head()
+
+
+.. parsed-literal::
+
+    .. table:: 
+    
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+        |  pred  |               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |   value_3   |contribution_3|
+        +========+========================================+=======+==============+========================================+=======+==============+==================================+=============+==============+
+        |209141.3|Ground living area square feet          |   1792|       13710.4|Overall material and finish of the house|      7|       12776.3|Total square feet of basement area|          963|       -5103.0|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+        |178734.5|Ground living area square feet          |   2192|       29747.0|Overall material and finish of the house|      5|      -26151.3|Overall condition of the house    |            8|        9190.8|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+        |113950.8|Overall material and finish of the house|      5|      -24730.0|Ground living area square feet          |    900|      -16342.6|Total square feet of basement area|          882|       -5922.6|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+        | 74957.2|Overall material and finish of the house|      4|      -33927.7|Ground living area square feet          |    630|      -23234.4|Total square feet of basement area|          630|      -11687.9|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+        |135305.2|Overall material and finish of the house|      5|      -25445.7|Ground living area square feet          |   1188|      -11476.6|Condition of sale                 |Abnormal Sale|       -5071.8|
+        +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
+
+
+Step 2 : SmartPredictor in production
+-------------------------------------
+
+Switch from SmartExplainer to SmartPredictor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  When you are satisfied by your results and the explainablity given by
    Shapash, you can use the SmartPredictor object for deployement.
 -  In this section, we will learn how to easily switch from
    SmartExplainer to a SmartPredictor.
--  SmartPredictor allows you not to only understand results of your
-   models but also to produce those results on new data automatically.
--  It will make new predictions and summarize explainability that you
-   configured to make it operational to your needs.
--  SmartPredictor take only neccessary attribute to be lighter and more
-   consistent than Smartexplainer for deployment context.
--  SmartPredictor can be use with API or in batch mode.
+-  SmartPredictor allows you to make predictions, detailed and
+   summarized contributions on new data automatically.
+-  It takes only necessary attributes to be lighter than SmartExplainer
+   object with additional consistency checks.
+-  Smart predictor allows you to configure the way of summary to suit
+   your use cases.
+-  It can be use with API or in batch mode.
 
 .. code:: ipython3
 
     predictor = xpl.to_smartpredictor()
 
-Save and Load your Predictor
-----------------------------
+Save and Load your SmartPredictor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can easily save and load your SmartPredictor Object in pickle.
 
-Save your predictor in Pickle File
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Save your SmartPredictor in Pickle File
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: ipython3
 
     predictor.save('./predictor.pkl')
 
-Load your predictor in Pickle File
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Load your SmartPredictor in Pickle File
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: ipython3
 
@@ -160,8 +232,8 @@ Load your predictor in Pickle File
 
     predictor_load = load_smartpredictor('./predictor.pkl')
 
-Make a prediction with your Predictor
--------------------------------------
+Make a prediction with your SmartPredictor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  In order to make new predictions and summarize local explainability
    of your model on new datasets, you can use the method add_input of
@@ -192,7 +264,7 @@ computed in the method.
 
 .. code:: ipython3
 
-    predictor_load.data["ypred"]
+    predictor_load.data["ypred"].head()
 
 
 .. parsed-literal::
@@ -254,7 +326,7 @@ Get detailed explanability associated to the prediction
 
 
 Summarize explanability of the predictions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  You can use the summarize method to summarize your local
    explainability
@@ -269,14 +341,16 @@ Summarize explanability of the predictions
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(max_contrib=5)
+    predictor_load.modify_mask(max_contrib=3)
 
 .. code:: ipython3
 
     explanation = predictor_load.summarize()
 
-For example, here, we choose to only build a summary with 5 most
-contributives features of your datasets.
+For example, here, we choose to only build a summary with 3 most
+contributive features of your dataset. - As you can see below, the
+wording defined in the first step of this tutorial has been kept by the
+SmartPredictor and used in the summarize method.
 
 .. code:: ipython3
 
@@ -287,17 +361,17 @@ contributives features of your datasets.
 
     .. table:: 
     
-        +---------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
-        |SalePrice| feature_1 |value_1|contribution_1| feature_2 |value_2|contribution_2| feature_3 |value_3|contribution_3| feature_4  |value_4|contribution_4| feature_5  |value_5|contribution_5|
-        +=========+===========+=======+==============+===========+=======+==============+===========+=======+==============+============+=======+==============+============+=======+==============+
-        |   208500|OverallQual|      7|        8248.8|TotalBsmtSF|    856|       -5165.5|YearBuilt  |   2003|        3871.0|BsmtUnfSF   |    150|        3769.6|GarageArea  |    548|        3107.9|
-        +---------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
-        |   181500|OverallQual|      6|      -14555.9|GrLivArea  |   1262|      -10016.3|OverallCond|      8|        6899.3|BsmtFinSF1  |    978|        5781.7|YearRemodAdd|   1976|       -4310.0|
-        +---------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
-        |   223500|GrLivArea  |   1786|       15708.3|OverallQual|      7|       11084.5|GarageArea |    608|        5998.6|TotalBsmtSF |    920|       -5157.3|YearBuilt   |   2001|        3877.0|
-        +---------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
-        |   140000|OverallQual|      7|        8188.4|GarageArea |    642|        6651.6|TotalBsmtSF|    756|       -5882.2|YearRemodAdd|   1970|       -4930.9|YearBuilt   |   1915|       -3740.8|
-        +---------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
-        |   250000|OverallQual|      8|       58568.4|GrLivArea  |   2198|       16891.9|GarageArea |    836|       15161.9|1stFlrSF    |   1145|       -8807.7|LotArea     |  14260|        7905.5|
-        +---------+-----------+-------+--------------+-----------+-------+--------------+-----------+-------+--------------+------------+-------+--------------+------------+-------+--------------+
+        +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
+        |SalePrice|               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |value_3|contribution_3|
+        +=========+========================================+=======+==============+========================================+=======+==============+==================================+=======+==============+
+        |   208500|Overall material and finish of the house|      7|        8248.8|Total square feet of basement area      |    856|       -5165.5|Original construction date        |   2003|        3871.0|
+        +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
+        |   181500|Overall material and finish of the house|      6|      -14555.9|Ground living area square feet          |   1262|      -10016.3|Overall condition of the house    |      8|        6899.3|
+        +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
+        |   223500|Ground living area square feet          |   1786|       15708.3|Overall material and finish of the house|      7|       11084.5|Size of garage in square feet     |    608|        5998.6|
+        +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
+        |   140000|Overall material and finish of the house|      7|        8188.4|Size of garage in square feet           |    642|        6651.6|Total square feet of basement area|    756|       -5882.2|
+        +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
+        |   250000|Overall material and finish of the house|      8|       58568.4|Ground living area square feet          |   2198|       16891.9|Size of garage in square feet     |    836|       15161.9|
+        +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
 

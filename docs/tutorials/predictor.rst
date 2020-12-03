@@ -8,4 +8,4 @@ Use Shapash SmartPredictor Object
 
 
     tutorial03-Shapash-overview-model-in-production
-    tuto-smartpredictor-restituate-an-explainability
+    tuto-smartpredictor-introduction-to-SmartPredictor
