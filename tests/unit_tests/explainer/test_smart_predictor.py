@@ -3,8 +3,10 @@ Unit test smart predictor
 """
 
 import unittest
-from shapash.explainer.smart_explainer import SmartPredictor
+from shapash.explainer.smart_predictor import SmartPredictor
 from shapash.explainer.smart_explainer import SmartExplainer
+from shapash.explainer.smart_state import SmartState
+from shapash.explainer.multi_decorator import MultiDecorator
 import os
 from os import path
 from pathlib import Path
@@ -192,20 +194,30 @@ class TestSmartPredictor(unittest.TestCase):
 
         assert predictor_2.mask_params == mask_params
 
-    def add_input_1(self):
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
+    @patch('shapash.utils.check.check.check_preprocessing_options')
+    @patch('shapash.utils.check.check_consistency_model_features')
+    @patch('shapash.utils.check.check_consistency_model_label')
+    def add_input_1(self, check_consistency_model_label,
+                    check_consistency_model_features,
+                    check_preprocessing_options,
+                    check_explainer,
+                    check_model):
         """
         Test add_input method from smart predictor
         """
+        check_preprocessing_options.return_value = True
+        check_consistency_model_features.return_value = True
+        check_consistency_model_label.return_value = True
+        check_explainer.return_value = self.clf_explainer_1
+        check_model.return_value = "classification", [0, 1]
+
         ypred = self.df_1['y']
         shap_values = self.clf_1.get_feature_importance(Pool(self.df_encoded_1), type="ShapValues")
 
-        xpl = SmartExplainer(self.features_dict_1, self.label_dict_1)
-        xpl.compile(contributions=shap_values[:, :-1], x=self.df_encoded_1,
-                    model=self.clf_1, preprocessing=self.preprocessing_1)
-
         predictor_1 = self.predictor_1
         predictor_1.add_input(x=self.df_1[["x1", "x2"]], contributions=shap_values[:, :-1])
-        xpl_contrib = xpl.contributions
         predictor_1_contrib = predictor_1.data["contributions"]
 
         assert all(attribute in predictor_1.data.keys()
@@ -222,7 +234,16 @@ class TestSmartPredictor(unittest.TestCase):
         assert all(predictor_1.data["ypred"].index == predictor_1.data["x"].index)
 
     @patch('shapash.explainer.smart_predictor.SmartState')
-    def test_choose_state_1(self, mock_smart_state):
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
+    @patch('shapash.utils.check.check_preprocessing_options')
+    @patch('shapash.utils.check.check_consistency_model_features')
+    @patch('shapash.utils.check.check_consistency_model_label')
+    def test_choose_state_1(self, check_consistency_model_label,
+                    check_consistency_model_features,
+                    check_preprocessing_options,
+                    check_explainer,
+                    check_model, mock_smart_state):
         """
         Unit test choose state 1
         Parameters
@@ -230,12 +251,27 @@ class TestSmartPredictor(unittest.TestCase):
         mock_smart_state : [type]
             [description]
         """
+        check_preprocessing_options.return_value = True
+        check_consistency_model_features.return_value = True
+        check_consistency_model_label.return_value = True
+        check_explainer.return_value = self.clf_explainer_1
+        check_model.return_value = "classification", [0, 1]
+
         predictor_1 = self.predictor_1
         predictor_1.choose_state('contributions')
         mock_smart_state.assert_called()
 
     @patch('shapash.explainer.smart_predictor.MultiDecorator')
-    def test_choose_state_2(self, mock_multi_decorator):
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
+    @patch('shapash.utils.check.check_preprocessing_options')
+    @patch('shapash.utils.check.check_consistency_model_features')
+    @patch('shapash.utils.check.check_consistency_model_label')
+    def test_choose_state_2(self, check_consistency_model_label,
+                    check_consistency_model_features,
+                    check_preprocessing_options,
+                    check_explainer,
+                    check_model, mock_multi_decorator):
         """
         Unit test choose state 2
         Parameters
@@ -243,15 +279,39 @@ class TestSmartPredictor(unittest.TestCase):
         mock_multi_decorator : [type]
             [description]
         """
+        check_preprocessing_options.return_value = True
+        check_consistency_model_features.return_value = True
+        check_consistency_model_label.return_value = True
+        check_explainer.return_value = self.clf_explainer_1
+        check_model.return_value = "classification", [0, 1]
+
         predictor_1 = self.predictor_1
         predictor_1.choose_state('contributions')
         predictor_1.choose_state([1, 2, 3])
         mock_multi_decorator.assert_called()
 
-    def test_validate_contributions_1(self):
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
+    @patch('shapash.utils.check.check_preprocessing_options')
+    @patch('shapash.utils.check.check_consistency_model_features')
+    @patch('shapash.utils.check.check_consistency_model_label')
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.choose_state')
+    def test_validate_contributions_1(self, choose_state,
+                                      check_consistency_model_label,
+                                      check_consistency_model_features,
+                                      check_preprocessing_options,
+                                      check_explainer,
+                                      check_model):
         """
         Unit test validate contributions 1
         """
+        check_preprocessing_options.return_value = True
+        check_consistency_model_features.return_value = True
+        check_consistency_model_label.return_value = True
+        check_explainer.return_value = self.clf_explainer_1
+        check_model.return_value = "classification", [0, 1]
+        choose_state.return_value = MultiDecorator(SmartState())
+
         predictor_1 = self.predictor_1
 
         contributions = [
