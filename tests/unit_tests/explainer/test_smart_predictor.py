@@ -194,25 +194,10 @@ class TestSmartPredictor(unittest.TestCase):
 
         assert predictor_2.mask_params == mask_params
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def add_input_1(self, check_consistency_model_label,
-                    check_consistency_model_features,
-                    check_preprocessing_options,
-                    check_explainer,
-                    check_model):
+    def add_input_1(self):
         """
         Test add_input method from smart predictor
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         ypred = self.df_1['y']
         shap_values = self.clf_1.get_feature_importance(Pool(self.df_encoded_1), type="ShapValues")
 
@@ -234,16 +219,7 @@ class TestSmartPredictor(unittest.TestCase):
         assert all(predictor_1.data["ypred"].index == predictor_1.data["x"].index)
 
     @patch('shapash.explainer.smart_predictor.SmartState')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_choose_state_1(self, check_consistency_model_label,
-                    check_consistency_model_features,
-                    check_preprocessing_options,
-                    check_explainer,
-                    check_model, mock_smart_state):
+    def test_choose_state_1(self, mock_smart_state):
         """
         Unit test choose state 1
         Parameters
@@ -251,27 +227,12 @@ class TestSmartPredictor(unittest.TestCase):
         mock_smart_state : [type]
             [description]
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
         predictor_1.choose_state('contributions')
         mock_smart_state.assert_called()
 
     @patch('shapash.explainer.smart_predictor.MultiDecorator')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_choose_state_2(self, check_consistency_model_label,
-                    check_consistency_model_features,
-                    check_preprocessing_options,
-                    check_explainer,
-                    check_model, mock_multi_decorator):
+    def test_choose_state_2(self, mock_multi_decorator):
         """
         Unit test choose state 2
         Parameters
@@ -279,37 +240,16 @@ class TestSmartPredictor(unittest.TestCase):
         mock_multi_decorator : [type]
             [description]
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
         predictor_1.choose_state('contributions')
         predictor_1.choose_state([1, 2, 3])
         mock_multi_decorator.assert_called()
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
     @patch('shapash.explainer.smart_predictor.SmartPredictor.choose_state')
-    def test_validate_contributions_1(self, choose_state,
-                                      check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_validate_contributions_1(self, choose_state):
         """
         Unit test validate contributions 1
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
         choose_state.return_value = MultiDecorator(SmartState())
 
         predictor_1 = self.predictor_1
@@ -343,26 +283,11 @@ class TestSmartPredictor(unittest.TestCase):
         test_list = [pd.testing.assert_frame_equal(e, m) for e, m in zip(expected_output, output)]
         assert all(x is None for x in test_list)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
     @patch('shapash.explainer.smart_predictor.SmartPredictor.choose_state')
-    def test_check_contributions(self, choose_state,
-                                      check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_contributions(self, choose_state):
         """
         Unit test check_shape_contributions 1
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_2
-        check_model.return_value = "classification", [0, 1]
         choose_state.return_value = MultiDecorator(SmartState())
 
         shap_values = self.clf_2.get_feature_importance(Pool(self.df_encoded_2), type="ShapValues")
@@ -370,7 +295,9 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1 = self.predictor_2
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None, "x_preprocessed": None}
+        predictor_1.data["x"] = self.df_2[["x1", "x2"]]
         predictor_1.data["x_preprocessed"] = self.df_2[["x1", "x2"]]
+        predictor_1.data["ypred"] = self.df_2["y"]
 
         adapt_contrib = [np.array([[-0.04395604, 0.13186813],
                                    [-0.04395604, 0.13186813],
@@ -392,22 +319,10 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.check_contributions(shap_values[:, :-1])
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_model_1(self, check_consistency_model_label,
-                                 check_consistency_model_features,
-                                 check_preprocessing_options,
-                                 check_explainer):
+    def test_check_model_1(self):
         """
         Unit test check model 1
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-
         predictor_1 = self.predictor_1
 
         model = lambda: None
@@ -419,22 +334,10 @@ class TestSmartPredictor(unittest.TestCase):
         assert _case == 'regression'
         assert _classes is None
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_model_2(self, check_consistency_model_label,
-                                 check_consistency_model_features,
-                                 check_preprocessing_options,
-                                 check_explainer):
+    def test_check_model_2(self):
         """
         Unit test check model 2
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-
         predictor_1 = self.predictor_1
 
         model = lambda: None
@@ -561,47 +464,18 @@ class TestSmartPredictor(unittest.TestCase):
             predictor_1.preprocessing = wrong_prepro
             predictor_1.check_preprocessing()
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_label_dict_1(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_label_dict_1(self):
         """
         Unit test check label dict 1
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
         predictor_1 = self.predictor_1
 
         predictor_1.check_label_dict()
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_label_dict_2(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_label_dict_2(self):
         """
         Unit test check label dict 2
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
 
         predictor_1.label_dict = None
@@ -676,24 +550,10 @@ class TestSmartPredictor(unittest.TestCase):
                                      columns_dict, clf_explainer, features_types, label_dict,
                                      mask_params=wright_mask_params)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_ypred_1(self,check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_ypred_1(self):
         """
         Unit test check y pred
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
         predictor_1 = self.predictor_1
 
 
@@ -702,25 +562,10 @@ class TestSmartPredictor(unittest.TestCase):
         y_pred = None
         predictor_1.check_ypred(ypred=y_pred)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_ypred_2(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_ypred_2(self):
         """
         Unit test check y pred 2
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         y_pred = pd.DataFrame(
             data=np.array(['1', 0, 0, 1, 0]),
             columns=['Y']
@@ -732,25 +577,10 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(y_pred)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_ypred_3(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_ypred_3(self):
         """
         Unit test check y pred 3
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
 
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
@@ -762,25 +592,10 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(y_pred)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_y_pred_4(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_y_pred_4(self):
         """
         Unit test check y pred 4
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
 
@@ -788,25 +603,10 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(ypred=y_pred)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_check_ypred_5(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_check_ypred_5(self):
         """
         Unit test check y pred 5
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x"] = self.df_1[["x1","x2"]]
@@ -817,25 +617,10 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.check_ypred(y_pred)
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_predict_proba_1(self, check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_predict_proba_1(self):
         """
         Unit test of predict_proba method.
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         predictor_1 = self.predictor_1
 
         clf = cb.CatBoostRegressor(n_estimators=1).fit(self.df_encoded_1[['x1', 'x2']], self.df_encoded_1['y'])
@@ -858,25 +643,10 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(KeyError):
             predictor_1.predict_proba()
 
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
-    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
-    @patch('shapash.utils.check.check_preprocessing_options')
-    @patch('shapash.utils.check.check_consistency_model_features')
-    @patch('shapash.utils.check.check_consistency_model_label')
-    def test_predict_proba_2(self,check_consistency_model_label,
-                                      check_consistency_model_features,
-                                      check_preprocessing_options,
-                                      check_explainer,
-                                      check_model):
+    def test_predict_proba_2(self):
         """
         Unit test of predict_proba method.
         """
-        check_preprocessing_options.return_value = True
-        check_consistency_model_features.return_value = True
-        check_consistency_model_label.return_value = True
-        check_explainer.return_value = self.clf_explainer_1
-        check_model.return_value = "classification", [0, 1]
-
         clf = cb.CatBoostClassifier(n_estimators=1).fit(self.df_2[['x1', 'x2']], self.df_2['y'])
         predictor_1 = self.predictor_2
 
@@ -976,7 +746,16 @@ class TestSmartPredictor(unittest.TestCase):
         assert path.exists(pkl_file)
         os.remove(pkl_file)
 
-    def test_apply_preprocessing_1(self):
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_model')
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.check_explainer')
+    @patch('shapash.utils.check.check_preprocessing_options')
+    @patch('shapash.utils.check.check_consistency_model_features')
+    @patch('shapash.utils.check.check_consistency_model_label')
+    def test_apply_preprocessing_1(self,check_consistency_model_label,
+                                      check_consistency_model_features,
+                                      check_preprocessing_options,
+                                      check_explainer,
+                                      check_model ):
         """
         Unit test for apply preprocessing method
         """
@@ -995,10 +774,19 @@ class TestSmartPredictor(unittest.TestCase):
         label_dict = {0: "Yes", 1: "No"}
         features_dict = {"num1": "city", "num2": "state"}
 
+        check_preprocessing_options.return_value = True
+        check_consistency_model_features.return_value = True
+        check_consistency_model_label.return_value = True
+        check_explainer.return_value = clf_explainer
+        check_model.return_value = "classification", [0, 1]
+
         predictor_1 = SmartPredictor(features_dict, clf,
                                      columns_dict, clf_explainer,
                                      features_types, label_dict, enc)
-        predictor_1.add_input(x=train)
+        predictor_1.data = {"x":None}
+        predictor_1.data["x"] = train
+        predictor_1.data["x_preprocessed"] = predictor_1.apply_preprocessing()
+
         output_preprocessed = predictor_1.data["x_preprocessed"]
         assert output_preprocessed.shape == train_preprocessed.shape
         assert [column in clf.feature_names_ for column in output_preprocessed.columns]
@@ -1014,13 +802,25 @@ class TestSmartPredictor(unittest.TestCase):
         clf_explainer = shap.TreeExplainer(clf)
 
         predictor_1 = self.predictor_3
-
         predictor_1.model = clf
-        predictor_1._case = "regression"
-        predictor_1._classes = None
         predictor_1.explainer = clf_explainer
-        print(predictor_1.mask_params)
-        predictor_1.add_input(x=self.df_3[["x1", "x2"]], ypred=pd.DataFrame(self.df_3["y"]), contributions=None)
+        predictor_1.data = {"x": None,
+                            "x_preprocessed": None,
+                            "x_postprocessed": None,
+                            "ypred": None,
+                            "contributions": None}
+
+        predictor_1.data["x"] = self.df_3[['x1', 'x2']]
+        predictor_1.data["x_postprocessed"] = self.df_3[['x1', 'x2']]
+        predictor_1.data["x_preprocessed"] = self.df_3[['x1', 'x2']]
+        predictor_1.data["ypred"] = self.df_3["y"]
+        contribution = pd.DataFrame([[0.0, 0.094286],
+                                     [0.0, -0.023571],
+                                     [0.0, -0.023571],
+                                     [0.0, -0.023571],
+                                     [0.0, -0.023571]], columns=["x1", "x2"])
+        predictor_1.data["contributions"] = contribution
+
         output = predictor_1.summarize()
         print(output)
         expected_output = pd.DataFrame({
@@ -1063,20 +863,36 @@ class TestSmartPredictor(unittest.TestCase):
         with self.assertRaises(ValueError):
             predictor_1.summarize()
 
-        predictor_1.add_input(x=self.df_3[["x1", "x2"]], ypred=pd.DataFrame(self.df_3["y"]), contributions=None)
+        predictor_1.data = {"x": None,
+                            "x_preprocessed": None,
+                            "x_postprocessed": None,
+                            "ypred": None,
+                            "contributions": None}
+
+        predictor_1.data["x"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["x_postprocessed"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["ypred"] = pd.DataFrame(
+                                        {"y": ["Yes", "Yes", "No", "No", "No"],
+                                         "proba": [0.519221, 0.468791, 0.531209, 0.531209, 0.531209]}
+                                    )
+
+        predictor_1.data["contributions"] = pd.DataFrame(
+                                                {"x1": [0, 0, -0, -0, -0],
+                                                 "x2": [0.161538, -0.0403846, 0.0403846, 0.0403846, 0.0403846]}
+                                            )
         output = predictor_1.summarize()
 
         expected_output = pd.DataFrame({
-            "y": [1, 1, 0, 0, 0],
+            "y": ["Yes", "Yes", "No", "No", "No"],
             "proba": [0.519221, 0.468791, 0.531209, 0.531209, 0.531209],
             "feature_1": ["weight", "weight", "weight", "weight", "weight"],
             "value_1": ["90", "78", "84", "85", "53"],
-            "contribution_1": ["0.0942857", "-0.0235714", "-0.0235714", "-0.0235714", "-0.0235714"],
+            "contribution_1": ["0.161538", "-0.0403846", "0.0403846", "0.0403846", "0.0403846"],
             "feature_2": ["age", "age", "age", "age", "age"],
             "value_2": ["25", "39", "50", "43", "67"],
             "contribution_2": ["0", "0", "0", "0", "0"]
         }, dtype=object)
-        expected_output["y"] = expected_output["y"].astype(int)
         expected_output["proba"] = expected_output["proba"].astype(float)
 
         feature_expected = [column for column in expected_output.columns if column.startswith("feature_")]
@@ -1104,20 +920,36 @@ class TestSmartPredictor(unittest.TestCase):
                                     "positive": None,
                                     "max_contrib": 1
                                    }
-        predictor_1.add_input(x=self.df_3[["x1", "x2"]], ypred=pd.DataFrame(self.df_3["y"]), contributions=None)
+
+        predictor_1.data = {"x": None,
+                            "x_preprocessed": None,
+                            "x_postprocessed": None,
+                            "ypred": None,
+                            "contributions": None}
+
+        predictor_1.data["x"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["x_postprocessed"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["ypred"] = pd.DataFrame(
+                                        {"y": ["Yes", "Yes", "No", "No", "No"],
+                                         "proba": [0.519221, 0.468791, 0.531209, 0.531209, 0.531209]}
+                                    )
+        predictor_1.data["contributions"] = pd.DataFrame(
+                                            {"x1": [0, 0, -0, -0, -0],
+                                             "x2": [0.161538, -0.0403846, 0.0403846, 0.0403846, 0.0403846]}
+                                        )
         output = predictor_1.summarize()
 
         expected_output = pd.DataFrame({
-            "y": [1, 1, 0, 0, 0],
+            "y": ["Yes", "Yes", "No", "No", "No"],
             "proba": [0.519221, 0.468791, 0.531209, 0.531209, 0.531209],
             "feature_1": ["weight", "weight", "weight", "weight", "weight"],
             "value_1": ["90", "78", "84", "85", "53"],
-            "contribution_1": ["0.0942857", "-0.0235714", "-0.0235714", "-0.0235714", "-0.0235714"],
+            "contribution_1": ["0.161538", "-0.0403846", "0.0403846", "0.0403846", "0.0403846"],
             "feature_2": ["age", "age", "age", "age", "age"],
             "value_2": ["25", "39", "50", "43", "67"],
             "contribution_2": ["0", "0", "0", "0", "0"]
         }, dtype=object)
-        expected_output["y"] = expected_output["y"].astype(int)
         expected_output["proba"] = expected_output["proba"].astype(float)
 
         feature_expected = [column for column in expected_output.columns if column.startswith("feature_")]
@@ -1174,7 +1006,6 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Unit test apply_postprocessing 2
         """
-
         postprocessing = {'x1': {'type': 'suffix', 'rule': ' t'},
                           'x2': {'type': 'prefix', 'rule': 'test'}}
 
