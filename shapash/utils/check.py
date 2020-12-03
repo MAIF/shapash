@@ -139,6 +139,8 @@ def check_ypred(x=None, ypred=None):
             if not (ypred.dtype in [np.float, np.int]):
                 raise ValueError("y_pred must contain int or float only")
             ypred = ypred.to_frame()
+            if isinstance(ypred.columns[0], (np.int, np.float)):
+                ypred.columns = ["ypred"]
     return ypred
 
 def check_contribution_object(case, classes, contributions):

@@ -2,10 +2,7 @@
 Smart explainer module
 """
 import logging
-import numpy as np
 import pandas as pd
-from pandas.core.common import flatten
-import warnings
 import copy
 # TODO: Remove the next 4 lines
 # these lines allow you to run locally the code and import shapash content
