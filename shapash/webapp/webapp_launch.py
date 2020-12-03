@@ -5,14 +5,14 @@ This is an example in python how to launch app from explainer
 from lightgbm import LGBMClassifier, LGBMRegressor
 import pandas as pd
 from sklearn.model_selection import train_test_split
-import shap
+
 # TODO: Remove the next 4 lines, these lines allow you to run locally the code and import shapash content
 import os,sys,inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 # TODO: Remove the 4 previous lines
-from decomposition.contributions import compute_contributions
+
 from explainer.smart_explainer import SmartExplainer
 from category_encoders import one_hot
 
@@ -62,9 +62,6 @@ df.reset_index(level=0, inplace=True)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
-explainer = shap.TreeExplainer(model)
-#contributions, bias =compute_contributions(X_test, explainer) #Deprecated
-
 xpl = SmartExplainer()
 y_pred = pd.DataFrame(data=y_pred,
                       columns=y.columns.to_list(),
@@ -74,7 +71,6 @@ xpl.compile(X_test, model, y_pred=y_pred, preprocessing=encoder)
 
 xpl.init_app()
 app = xpl.smartapp.app
-
 
 if __name__ == "__main__":
     app.run_server(debug=False, host="0.0.0.0", port=8080)
