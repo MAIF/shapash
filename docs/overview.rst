@@ -73,10 +73,11 @@ The 3 steps to display results:
 
     app = xpl.run_app()
 
-- Step 4: Create an object to production
-
-Shapash created a SmartPredictor object to make prediction and have explainability for operational needs in deployment
-context.
+- Step 4: From training to deployment : SmartPredictor Object
+  > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
+It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.
+SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local
+explainability using appropriate wording.
 
 .. code:: ipython
 
@@ -88,11 +89,10 @@ From data mining to deployment
 
 **Shapash** isn't just a tool used for data mining purposes. Thanks to different object from Shapash
 such as *SmartExplainer* and *SmartPredictor*, you can easily switch from data mining to deployment.
-**Shapash** can be used through an API or in batch mode.
+**Shapash SmartPredictor Object** can be used through an API or in batch mode.
 
-It allows you not to only understand results of your models but also to produce those results on new
-data automatically. Indeed, **Shapash** summarize explainability that you configured  to make it
-operational to your needs.
+It allows you to produce prediction, detailed and summarized explanations on new datasets.
+In fact, **Shapash** summarize explainability that you configured to make it operational to your needs.
 
 
 Watch the tutorial part of this documentation for more details.
