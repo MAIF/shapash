@@ -751,6 +751,8 @@ class TestSmartExplainer(unittest.TestCase):
         Unit test check features name 4
         """
         xpl = SmartExplainer()
+        xpl.columns_dict = None
+        xpl.features_dict = None
         feature_list = [1, 2, 4]
         output = xpl.check_features_name(feature_list)
         expected_output = feature_list
