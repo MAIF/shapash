@@ -157,17 +157,14 @@ class TestSmartPredictor(unittest.TestCase):
         """
         Test init smart predictor
         """
-        predictor_1 = self.predictor_1
-
-        mask_params = {
-            'features_to_hide': None,
-            'threshold': None,
-            'positive': True,
-            'max_contrib': 1
-        }
-
-        predictor_2 = predictor_1
-        predictor_2.mask_params = mask_params
+        predictor_1 = SmartPredictor(self.features_dict_1,
+                                     self.clf_1,
+                                     self.columns_dict_1,
+                                     self.clf_explainer_1,
+                                     self.features_types_1,
+                                     self.label_dict_1,
+                                     self.preprocessing_1,
+                                     self.postprocessing_1)
 
         assert hasattr(predictor_1, 'model')
         assert hasattr(predictor_1, 'explainer')
@@ -180,7 +177,6 @@ class TestSmartPredictor(unittest.TestCase):
         assert hasattr(predictor_1, 'preprocessing')
         assert hasattr(predictor_1, 'postprocessing')
         assert hasattr(predictor_1, 'mask_params')
-        assert hasattr(predictor_2, 'mask_params')
 
         assert predictor_1.model == self.clf_1
         assert predictor_1.explainer == self.clf_explainer_1
@@ -192,7 +188,13 @@ class TestSmartPredictor(unittest.TestCase):
         assert predictor_1.preprocessing == self.preprocessing_1
         assert predictor_1.postprocessing == self.postprocessing_1
 
-        assert predictor_2.mask_params == mask_params
+        mask_params = {'features_to_hide': None,
+                                   'threshold': None,
+                                   'positive': True,
+                                   'max_contrib': 1
+                                   }
+        predictor_1.mask_params = mask_params
+        assert predictor_1.mask_params == mask_params
 
     def add_input_1(self):
         """
