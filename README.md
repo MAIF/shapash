@@ -84,7 +84,7 @@ pip install shapash
 
 ## Getting Started: 3 minutes to Shapash
 
-The 4 steps to display results:
+The 4:/ steps to display results:
 
 - Step 1: Declare SmartExplainer Object
   > You can declare features dict here to specify the labels to display
@@ -155,4 +155,4 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 
 ### Deploy local explainability in production
-- [Restituate an explainability in production](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
+- [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
