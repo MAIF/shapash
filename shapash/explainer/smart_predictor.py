@@ -203,7 +203,7 @@ class SmartPredictor :
                 raise ValueError ("No dataset x specified.")
 
         if ypred is not None:
-            self.data["ypred"] = self.check_ypred(ypred)
+            self.data["ypred_init"] = self.check_ypred(ypred)
 
         if contributions is not None:
             self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
@@ -381,9 +381,11 @@ class SmartPredictor :
             dict of data stored
         """
         return {"x" : x,
+                "ypred_init": None,
                 "ypred" : None,
                 "contributions" : None,
-                "x_preprocessed": None
+                "x_preprocessed": None,
+                "x_postprocessed": None
                 }
 
     def check_explainer(self, explainer):
@@ -429,7 +431,7 @@ class SmartPredictor :
                 x must be specified in an add_input method to apply detail_contributions.
                 """
             )
-        if self.data["ypred"] is None:
+        if self.data["ypred_init"] is None:
             self.predict()
 
         if contributions is None:
@@ -444,8 +446,7 @@ class SmartPredictor :
                                                                    )
         self.check_contributions(contributions)
         proba_values = self.predict_proba() if self._case == "classification" else None
-        proba_values = self.predict_proba() if self._case == "classification" else None
-        y_pred, match_contrib = keep_right_contributions(self.data["ypred"], contributions,
+        y_pred, match_contrib = keep_right_contributions(self.data["ypred_init"], contributions,
                                  self._case, self._classes,
                                  self.label_dict, proba_values)
         return y_pred, match_contrib
@@ -657,14 +658,14 @@ class SmartPredictor :
                 """
             )
         if hasattr(self.model, 'predict'):
-            self.data["ypred"] = pd.DataFrame(
+            self.data["ypred_init"] = pd.DataFrame(
                 self.model.predict(self.data["x_preprocessed"]),
                 columns=['ypred'],
                 index=self.data["x_preprocessed"].index)
         else:
             raise ValueError("model has no predict method")
 
-        return self.data["ypred"]
+        return self.data["ypred_init"]
 
     def apply_postprocessing(self):
         """
