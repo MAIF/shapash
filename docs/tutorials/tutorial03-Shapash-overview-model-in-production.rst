@@ -1,9 +1,9 @@
 Shapash model in production - Overview
 ======================================
 
-With this tutorial you: Understand how create a Shapash SmartPredictor
-to make prediction and have local explanation in production with a
-simple use case.
+With this tutorial you: Understand how to create a Shapash
+SmartPredictor to make prediction and have local explanation in
+production with a simple use case.
 
 This tutorial describes the different steps from training the model to
 deploying the Shapash SmartPredictor Object. A tutorial more detailed,
@@ -16,6 +16,11 @@ Object in pickle file - Make a prediction
 
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
+
+.. code:: ipython3
+
+    from shapash.explainer.smart_explainer import SmartExplainer
+    from shapash.explainer.smart_predictor import SmartPredictor
 
 .. code:: ipython3
 
@@ -61,12 +66,6 @@ features before the training step.
         return_df=True).fit(X_df)
     
     X_df=encoder.transform(X_df)
-
-
-.. parsed-literal::
-
-    is_categorical is deprecated and will be removed in a future version.  Use is_categorical_dtype instead
-
 
 Train / Test Split
 ^^^^^^^^^^^^^^^^^^
@@ -194,7 +193,7 @@ Switch from SmartExplainer to SmartPredictor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  When you are satisfied by your results and the explainablity given by
-   Shapash, you can use the SmartPredictor object for deployement.
+   Shapash, you can use the SmartPredictor object for deployment.
 -  In this section, we will learn how to easily switch from
    SmartExplainer to a SmartPredictor.
 -  SmartPredictor allows you to make predictions, detailed and

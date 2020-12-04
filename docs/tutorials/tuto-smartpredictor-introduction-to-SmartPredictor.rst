@@ -4,10 +4,10 @@ From model training to deployment - an introduction to the SmartPredictor object
 Shapash provide a SmartPredictor Object to make prediction and local
 explainability for operational needs in deployment context. It gives a
 simple synthetic explanation from your model predictions results.
-SmartPredictor allows users to configure the summary to satisfy their
-operational needs. It is an object dedicated to deployment, lighter than
-SmartExplainer Object with additionnal consistency checks.
-SmartPredictor can be used with an API or in batch mode.
+SmartPredictor allows users to configure the summary as they wanted. It
+is an object dedicated to deployment, lighter than SmartExplainer Object
+with additionnal consistency checks. SmartPredictor can be used with an
+API or in batch mode.
 
 In this tutorial, we will go further to help you getting started with
 the SmartPredictor Object of Shapash.
@@ -98,12 +98,6 @@ features before the training step.
                                     handle_unknown='ignore', \
                                     return_df=True).fit(X)
     X = categ_encoding.transform(X)
-
-
-.. parsed-literal::
-
-    is_categorical is deprecated and will be removed in a future version.  Use is_categorical_dtype instead
-
 
 Train Test split + Random Forest fit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -223,15 +217,15 @@ some values of our features.
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
         |    pred    |    feature_1     |value_1|contribution_1|    feature_2     | value_2 |contribution_2|     feature_3     | value_3  |contribution_3|
         +============+==================+=======+==============+==================+=========+==============+===================+==========+==============+
-        |Survived    |Sex               |female |       0.21532|Title of passenger|Mrs      |       0.14547|Ticket class       |1st class |       0.11036|
+        |Survived    |Sex               |female |       0.20155|Title of passenger|Mrs      |       0.18300|Ticket class       |1st class |       0.13430|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Not Survived|Sex               |male   |       0.09482|Passenger fare    |      7.9|       0.07359|Title of passenger |Mr        |       0.07174|
+        |Not Survived|Title of passenger|Mr     |       0.09785|Sex               |male     |       0.07526|Passenger fare     |       7.9|       0.06353|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Survived    |Sex               |female |       0.20562|Title of passenger|Miss     |       0.17692|Ticket class       |2nd class |       0.10963|
+        |Survived    |Title of passenger|Miss   |       0.19711|Sex               |female   |       0.17263|Ticket class       |2nd class |       0.10864|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Survived    |Sex               |female |       0.19006|Title of passenger|Miss     |       0.15338|Port of embarkation|Queenstown|       0.12506|
+        |Survived    |Title of passenger|Miss   |       0.18776|Sex               |female   |       0.15852|Port of embarkation|Queenstown|       0.11498|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Survived    |Title of passenger|Miss   |       0.16244|Ticket class      |2nd class|       0.13620|Sex                |female    |       0.12088|
+        |Survived    |Title of passenger|Miss   |       0.19374|Ticket class      |2nd class|       0.14687|Sex                |female    |       0.11817|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
 
 
@@ -318,7 +312,7 @@ trained and the new dataset given.
 
 .. code:: ipython3
 
-    predictor_load.data["ypred"].head()
+    predictor_load.data["ypred"]
 
 
 .. parsed-literal::
@@ -328,7 +322,7 @@ trained and the new dataset given.
         +--------+------+
         | ypred  |proba |
         +========+======+
-        |Survived|0.7234|
+        |Survived|0.7435|
         +--------+------+
 
 
@@ -352,7 +346,7 @@ with our model and the new dataset.
         +-------+-------+
         |class_0|class_1|
         +=======+=======+
-        | 0.2766| 0.7234|
+        | 0.2565| 0.7435|
         +-------+-------+
 
 
@@ -377,18 +371,18 @@ value that we have given in the label_dict.
 
 .. code:: ipython3
 
-    detailed_contributions.head()
+    detailed_contributions
 
 
 .. parsed-literal::
 
     .. table:: 
     
-        +--------+------+-------+------+--------+-------+---------+-------+--------+------+
-        | ypred  |proba |Pclass | Sex  |  Age   | SibSp |  Parch  | Fare  |Embarked|Title |
-        +========+======+=======+======+========+=======+=========+=======+========+======+
-        |Survived|0.7234|0.08820|0.1813|-0.01737|0.01680|-0.006701|-0.1106| 0.04849|0.1569|
-        +--------+------+-------+------+--------+-------+---------+-------+--------+------+
+        +--------+------+------+------+--------+-------+---------+--------+--------+------+
+        | ypred  |proba |Pclass| Sex  |  Age   | SibSp |  Parch  |  Fare  |Embarked|Title |
+        +========+======+======+======+========+=======+=========+========+========+======+
+        |Survived|0.7435|0.1043|0.1752|-0.02407|0.01940|-0.004212|-0.09591| 0.02561|0.1724|
+        +--------+------+------+------+--------+-------+---------+--------+--------+------+
 
 
 Summarize explanability of the predictions
@@ -425,18 +419,18 @@ contributives features in our explanability.
 
 .. code:: ipython3
 
-    explanation.head()
+    explanation
 
 
 .. parsed-literal::
 
     .. table:: 
     
-        +--------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
-        | ypred  |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2|  feature_3   |value_3|contribution_3|
-        +========+======+=========+=======+==============+==================+=======+==============+==============+=======+==============+
-        |Survived|0.7234|Sex      |female |        0.1813|Title of passenger|Miss   |        0.1569|Passenger fare|   7.25|       -0.1106|
-        +--------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
+        +--------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
+        | ypred  |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2| feature_3  | value_3 |contribution_3|
+        +========+======+=========+=======+==============+==================+=======+==============+============+=========+==============+
+        |Survived|0.7435|Sex      |female |        0.1752|Title of passenger|Miss   |        0.1724|Ticket class|1st class|        0.1043|
+        +--------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
 
 
 Configure your summary easily
@@ -469,18 +463,18 @@ the right label predicted.
 
 .. code:: ipython3
 
-    explanation.head()
+    explanation
 
 
 .. parsed-literal::
 
     .. table:: 
     
-        +------------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
-        |     0      |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2|  feature_3   |value_3|contribution_3|
-        +============+======+=========+=======+==============+==================+=======+==============+==============+=======+==============+
-        |Not Survived|0.2766|Sex      |female |       -0.1813|Title of passenger|Miss   |       -0.1569|Passenger fare|   7.25|        0.1106|
-        +------------+------+---------+-------+--------------+------------------+-------+--------------+--------------+-------+--------------+
+        +------------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
+        |     0      |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2| feature_3  | value_3 |contribution_3|
+        +============+======+=========+=======+==============+==================+=======+==============+============+=========+==============+
+        |Not Survived|0.2565|Sex      |female |       -0.1752|Title of passenger|Miss   |       -0.1724|Ticket class|1st class|       -0.1043|
+        +------------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
 
 
 If users don’t want one feature and want only positive contributions to restituate
@@ -493,7 +487,7 @@ If users don’t want one feature and want only positive contributions to restit
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(features_to_hide=["Sex"], positive=True)
+    predictor_load.modify_mask(features_to_hide=["Fare"], positive=True)
 
 .. code:: ipython3
 
@@ -501,29 +495,29 @@ If users don’t want one feature and want only positive contributions to restit
 
 .. code:: ipython3
 
-    explanation.head()
+    explanation
 
 
 .. parsed-literal::
 
     .. table:: 
     
-        +------------+------+--------------+-------+--------------+---------+-------+--------------+----------------------------------+-------+--------------+
-        |     0      |proba |  feature_1   |value_1|contribution_1|feature_2|value_2|contribution_2|            feature_3             |value_3|contribution_3|
-        +============+======+==============+=======+==============+=========+=======+==============+==================================+=======+==============+
-        |Not Survived|0.2766|Passenger fare|   7.25|        0.1106|Age      |     36|       0.01737|Relatives like children or parents|      0|      0.006701|
-        +------------+------+--------------+-------+--------------+---------+-------+--------------+----------------------------------+-------+--------------+
+        +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+
+        |     0      |proba |feature_1|value_1|contribution_1|            feature_2             |value_2|contribution_2|
+        +============+======+=========+=======+==============+==================================+=======+==============+
+        |Not Survived|0.2565|Age      |     36|       0.02407|Relatives like children or parents|      0|      0.004212|
+        +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+
 
 
 If users want to restituate only contributions with a minimum of impact
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Here, we chose to only show the features which has a contribution
-greater than 0.05.
+greater than 0.01.
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(threshold=0.05)
+    predictor_load.modify_mask(threshold=0.01)
 
 .. code:: ipython3
 
@@ -531,16 +525,16 @@ greater than 0.05.
 
 .. code:: ipython3
 
-    explanation.head()
+    explanation
 
 
 .. parsed-literal::
 
     .. table:: 
     
-        +------------+------+--------------+-------+--------------+
-        |     0      |proba |  feature_1   |value_1|contribution_1|
-        +============+======+==============+=======+==============+
-        |Not Survived|0.2766|Passenger fare|   7.25|        0.1106|
-        +------------+------+--------------+-------+--------------+
+        +------------+------+---------+-------+--------------+
+        |     0      |proba |feature_1|value_1|contribution_1|
+        +============+======+=========+=======+==============+
+        |Not Survived|0.2565|Age      |     36|       0.02407|
+        +------------+------+---------+-------+--------------+
 
