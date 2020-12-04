@@ -6,9 +6,8 @@ SmartPredictor to make prediction and have local explanation in
 production with a simple use case.
 
 This tutorial describes the different steps from training the model to
-deploying the Shapash SmartPredictor Object. A tutorial more detailed,
-will go further to help you getting started with the SmartPredictor
-Object.
+Shapash SmartPredictor deployment. A tutorial more detailed, will go
+further to help you getting started with the SmartPredictor Object.
 
 Contents: - Build a Regressor - Compile Shapash SmartExplainer - Compile
 Shapash SmartExplainer to SmartPredictor - Save Shapash Smartpredictor
@@ -16,11 +15,6 @@ Object in pickle file - Make a prediction
 
 Data from Kaggle `House
 Prices <https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data>`__
-
-.. code:: ipython3
-
-    from shapash.explainer.smart_explainer import SmartExplainer
-    from shapash.explainer.smart_predictor import SmartPredictor
 
 .. code:: ipython3
 
@@ -35,8 +29,8 @@ Step 1 : Exploration and training of the model
 Building Supervized Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this section, we will train a Machine Learning supervized model with
-our data House Prices.
+In this section, we train a Machine Learning supervized model with our
+data House Prices.
 
 .. code:: ipython3
 
@@ -88,13 +82,13 @@ Model Fitting
 Understand my model with shapash
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  In this section, we will use the SmartExplainer Object from shapash
-   which allow the users to understand how the model works with the
-   dataset specified.
--  This object must be used only for data mining step. Shapash provide
+-  In this section, we use the SmartExplainer Object from shapash which
+   allow the users to understand how the model works with the dataset
+   specified.
+-  This object must be used only for data mining step. Shapash provides
    another object for deployment.
--  In this tutorial, we will not explore possibilites of the
-   SmartExplainer but others will. (you can go check them)
+-  In this tutorial, we are not explore possibilites of the
+   SmartExplainer but others will. (Look at them)
 
 Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -106,11 +100,11 @@ Declare and Compile SmartExplainer
 Use wording on features names to better understanding results
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here, we will use a wording to rename our features label with more
-understandable terms. It will make our local explainability more
-operational and understandable to any users. - To do this, we will use
-the house_dict dictionnary which match for each features of our datasets
-a description - We need to remove the key features “GarageCars” because
+Here, we use a wording to rename our features label with more
+understandable terms. It’s usefull to make our local explainability more
+operational and understandable to any users. - To do this, we use the
+house_dict dictionnary which match for each features of our datasets a
+description - We need to remove the key features “GarageCars” because
 this features isn’t available in our trained dataset - We can next
 declare this as our features_dict in the initialisation of our
 SmartExplainer object
@@ -194,8 +188,8 @@ Switch from SmartExplainer to SmartPredictor
 
 -  When you are satisfied by your results and the explainablity given by
    Shapash, you can use the SmartPredictor object for deployment.
--  In this section, we will learn how to easily switch from
-   SmartExplainer to a SmartPredictor.
+-  In this section, we learn how to easily switch from SmartExplainer to
+   a SmartPredictor.
 -  SmartPredictor allows you to make predictions, detailed and
    summarized contributions on new data automatically.
 -  It takes only necessary attributes to be lighter than SmartExplainer
@@ -291,9 +285,9 @@ Get detailed explanability associated to the prediction
 -  You can use the method detail_contributions to see the detailed
    contributions of each of your features for each row of your new
    dataset.
--  For classification problems, it will automatically associated
+-  For classification problems, it automatically associates
    contributions with the right predicted label.
--  The predicted label can be compute automatically with predict method
+-  The predicted label can be computed automatically with predict method
    or you can specify in add_input method an ypred
 
 .. code:: ipython3
@@ -346,7 +340,7 @@ Summarize explanability of the predictions
 
     explanation = predictor_load.summarize()
 
-For example, here, we choose to only build a summary with 3 most
+For example, here, we chose to only build a summary with 3 most
 contributive features of your dataset. - As you can see below, the
 wording defined in the first step of this tutorial has been kept by the
 SmartPredictor and used in the summarize method.

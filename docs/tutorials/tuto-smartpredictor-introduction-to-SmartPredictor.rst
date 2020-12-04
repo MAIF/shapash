@@ -4,12 +4,12 @@ From model training to deployment - an introduction to the SmartPredictor object
 Shapash provide a SmartPredictor Object to make prediction and local
 explainability for operational needs in deployment context. It gives a
 simple synthetic explanation from your model predictions results.
-SmartPredictor allows users to configure the summary as they wanted. It
-is an object dedicated to deployment, lighter than SmartExplainer Object
-with additionnal consistency checks. SmartPredictor can be used with an
-API or in batch mode.
+SmartPredictor allows users to configure the summary to adapt to it to
+its use. It is an object dedicated to deployment, lighter than
+SmartExplainer Object with additionnal consistency checks.
+SmartPredictor can be used with an API or in batch mode.
 
-In this tutorial, we will go further to help you getting started with
+This tutorial provides more information to help you getting started with
 the SmartPredictor Object of Shapash.
 
 Contents: - Build a SmartPredictor - Save and Load a Smartpredictor -
@@ -37,7 +37,6 @@ Titanic from Kaggle.
 
 .. code:: ipython3
 
-    from shapash.explainer.smart_explainer import SmartExplainer
     from shapash.explainer.smart_predictor import SmartPredictor
     from shapash.utils.load_smartpredictor import load_smartpredictor
     from shapash.data.data_loader import data_loading
@@ -74,8 +73,8 @@ Titanic from Kaggle.
 Create Classification Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this section, we will train a Machine Learning supervized model with
-our data. In our example, we are confronted to a classification problem.
+In this section, we train a Machine Learning supervized model with our
+data. In our example, we are confronted to a classification problem.
 
 .. code:: ipython3
 
@@ -89,8 +88,8 @@ our data. In our example, we are confronted to a classification problem.
 Encoding Categorical Features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We need to use a preprocessing on our data for handling categorical
-features before the training step.
+We use a preprocessing on our data for handling categorical features
+before the training step.
 
 .. code:: ipython3
 
@@ -125,8 +124,7 @@ Train Test split + Random Forest fit
 Explore your trained model results Step with SmartExplainer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When the training step is done, we can start to initialize our
-SmartExplainer Object.
+We can initialize our SmartExplainer Object now.
 
 .. code:: ipython3
 
@@ -137,8 +135,8 @@ SmartExplainer takes only necessary dicts of the model features
 Use Label and Wording
 ^^^^^^^^^^^^^^^^^^^^^
 
-Here, we will use labels and wording to get a more understandable
-explanabily. - features_dict : allow users to rename the features of
+Here, we use labels and wording to get a more understandable
+explainabily. - features_dict : allow users to rename the features of
 their datasets with the one needed - label_dict : allow users in
 classification problems to rename label predicted with the one needed -
 postprocessing : allow users to apply some wording to the features
@@ -172,12 +170,12 @@ Initialize our SmartExplainer Object with wording defined above.
 
     xpl = SmartExplainer(label_dict = label_dict, features_dict=feature_dict)
 
-Then, we need to use the compile method of the SmartExplainer Object.
-This method is the first step to understand model and prediction. It
-performs the sorting of contributions, the reverse preprocessing steps
-and performs all the calculations necessary for a quick display of plots
-and efficient display of summary of explanation. (see the documentation
-on SmartExplainer Object and the associated tutorials to go further)
+We use the compile method of the SmartExplainer Object. This method is
+the first step to understand model and prediction. It performs the
+sorting of contributions, the reverse preprocessing steps and performs
+all the calculations necessary for a quick display of plots and
+efficient display of summary of explanation. (see the documentation on
+SmartExplainer Object and the associated tutorials to go further)
 
 .. code:: ipython3
 
@@ -198,12 +196,12 @@ on SmartExplainer Object and the associated tutorials to go further)
 Understand results of your trained model with SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Then, we can easily get a first summary of the explanation of the model
-results. - Here, we chose to get the 3 most contributive features for
-each prediction - We used a wording to get features names more
-understandable in operationnal case. - We renamed the label predicted
-with more interpretable labels. - We chose to apply a postprocessing to
-some values of our features.
+We can easily get a first summary of the explanation of the model
+results. - We choose to get the 3 most contributive features for each
+prediction. - We use a wording to get features names more understandable
+in operationnal case. - We rename the predicted label to show a more
+explicit prediction. - We apply a post-processing to transform some
+feature’s values.
 
 .. code:: ipython3
 
@@ -217,15 +215,15 @@ some values of our features.
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
         |    pred    |    feature_1     |value_1|contribution_1|    feature_2     | value_2 |contribution_2|     feature_3     | value_3  |contribution_3|
         +============+==================+=======+==============+==================+=========+==============+===================+==========+==============+
-        |Survived    |Sex               |female |       0.20155|Title of passenger|Mrs      |       0.18300|Ticket class       |1st class |       0.13430|
+        |Survived    |Sex               |female |       0.19436|Title of passenger|Mrs      |       0.17604|Ticket class       |1st class |       0.11808|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Not Survived|Title of passenger|Mr     |       0.09785|Sex               |male     |       0.07526|Passenger fare     |       7.9|       0.06353|
+        |Not Survived|Title of passenger|Mr     |       0.09666|Sex               |male     |       0.07588|Passenger fare     |       7.9|       0.07022|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Survived    |Title of passenger|Miss   |       0.19711|Sex               |female   |       0.17263|Ticket class       |2nd class |       0.10864|
+        |Survived    |Title of passenger|Miss   |       0.19177|Sex               |female   |       0.18144|Ticket class       |2nd class |       0.09883|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Survived    |Title of passenger|Miss   |       0.18776|Sex               |female   |       0.15852|Port of embarkation|Queenstown|       0.11498|
+        |Survived    |Title of passenger|Miss   |       0.17709|Sex               |female   |       0.15871|Port of embarkation|Queenstown|       0.11797|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
-        |Survived    |Title of passenger|Miss   |       0.19374|Ticket class      |2nd class|       0.14687|Sex                |female    |       0.11817|
+        |Survived    |Title of passenger|Miss   |       0.18757|Ticket class      |2nd class|       0.15013|Sex                |female    |       0.11195|
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
 
 
@@ -236,16 +234,12 @@ Step 2: SmartPredictor in production
    object.
 -  It allows users to switch from a SmartExplainer used for data mining
    to the SmartPredictor.
--  SmartPredictor takes only neccessary attribute to be lighter and more
-   consistent than Smartexplainer.
--  SmartPredictor object is specific for deployement.
--  In this section, we will learn how to initialize a SmartPredictor.
--  SmartPredictor allows you not to only understand results of your
-   models but also to produce those results on new data automatically.
--  It will make new predictions and summarize explainability that you
+-  SmartPredictor takes only neccessary attribute to be lighter than
+   SmartExplainer Object with additionnal consistency checks.
+-  SmartPredictor object is specific for deployment.
+-  In this section, we learn how to initialize a SmartPredictor.
+-  It makes new predictions and summarize explainability that you
    configured to make it operational to your needs.
--  SmartPredictor take only neccessary attribute to be lighter and more
-   consistent than Smartexplainer for deployment context.
 -  SmartPredictor can be use with API or in batch mode.
 -  It handles dataframes and dictionnaries input data.
 
@@ -273,12 +267,12 @@ Load your predictor in Pickle File
 Make a prediction with your SmartPredictor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  Once our SmartPredictor has been initialized, we can easily apply
-   predictions and summary to new datasets.
--  First, we have to specify a new dataset which can be a
-   pandas.DataFrame or a dictionnary (usefull when you decide to use an
-   API in your deployment process)
--  We will use the add_input method of the SmartPredictor. (see the
+-  Once our SmartPredictor has been initialized, we apply predictions
+   and summary to new datasets.
+-  First, we specify a new dataset which can be a pandas.DataFrame or a
+   dictionnary (usefull when you decide to use an API in your deployment
+   process)
+-  We use the add_input method of the SmartPredictor. (see the
    documentation for this method)
 
 Add data
@@ -300,15 +294,14 @@ Add data
     predictor_load.add_input(x=person_x)
 
 If you don’t specify an ypred in the add_input method, SmartPredictor
-will use its predict method to automatically affect the predicted value
-to ypred.
+use its predict method to automatically affect the predicted value to
+ypred.
 
 Make prediction
 ^^^^^^^^^^^^^^^
 
-Then, we can see that ypred is automatically computed in add_input
-method by checking the attribute data[“ypred”] thanks to our model
-trained and the new dataset given.
+Let’s display ypred which has been automatically computed in add_input
+method.
 
 .. code:: ipython3
 
@@ -322,13 +315,12 @@ trained and the new dataset given.
         +--------+------+
         | ypred  |proba |
         +========+======+
-        |Survived|0.7435|
+        |Survived|0.6614|
         +--------+------+
 
 
-We can also use the predict_proba method of the SmartPredictor to
-automatically compute the probabilties associated to each label possible
-with our model and the new dataset.
+The predict_proba method of Smartpredictor compute the probabilties
+associated to each label.
 
 .. code:: ipython3
 
@@ -346,28 +338,27 @@ with our model and the new dataset.
         +-------+-------+
         |class_0|class_1|
         +=======+=======+
-        | 0.2565| 0.7435|
+        | 0.3386| 0.6614|
         +-------+-------+
 
 
 Get detailed explanability associated to the prediction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  You can use the method detail_contributions to see the detailed
+-  You can use the method detail_contributions for detailed
    contributions of each of your features for each row of your new
    dataset.
--  For classification problems, it will automatically associated
-   contributions with the right predicted label. (like you can see
-   below)
--  The predicted label can be compute automatically with predict method
-   or you can specify in add_input method an ypred
+-  For classification problems, it automatically associates
+   contributions with the right predicted label.
+-  The predicted label are computed automatically with predict method or
+   you can specify in add_input method an ypred.
 
 .. code:: ipython3
 
     detailed_contributions = predictor_load.detail_contributions()
 
-You can notice here that the ypred has already been renamed with the
-value that we have given in the label_dict.
+The ypred has already been renamed with the value that we have given in
+the label_dict.
 
 .. code:: ipython3
 
@@ -378,11 +369,11 @@ value that we have given in the label_dict.
 
     .. table:: 
     
-        +--------+------+------+------+--------+-------+---------+--------+--------+------+
-        | ypred  |proba |Pclass| Sex  |  Age   | SibSp |  Parch  |  Fare  |Embarked|Title |
-        +========+======+======+======+========+=======+=========+========+========+======+
-        |Survived|0.7435|0.1043|0.1752|-0.02407|0.01940|-0.004212|-0.09591| 0.02561|0.1724|
-        +--------+------+------+------+--------+-------+---------+--------+--------+------+
+        +--------+------+-------+------+--------+---------+---------+-------+--------+------+
+        | ypred  |proba |Pclass | Sex  |  Age   |  SibSp  |  Parch  | Fare  |Embarked|Title |
+        +========+======+=======+======+========+=========+=========+=======+========+======+
+        |Survived|0.6614|0.07670|0.1589|-0.01645|-0.001494|-0.006346|-0.1140| 0.02749|0.1661|
+        +--------+------+-------+------+--------+---------+---------+-------+--------+------+
 
 
 Summarize explanability of the predictions
@@ -390,32 +381,29 @@ Summarize explanability of the predictions
 
 -  You can use the summarize method to summarize your local
    explainability
--  This summary can be configured with the method modify_mask in order
-   for you to have the explainability that satisfy your operational
-   needs
--  You can also specify : >- a postprocessing when you initialize your
-   SmartPredictor to apply a wording to several values of your dataset.
-   >- a label_dict to rename your label in classification problems
-   (during the initialisation of your SmartPredictor). >- a
-   features_dict to rename your features.
+-  This summary can be configured with the modify_mask method to suit
+   your use case
+-  You can also specify : >- post-processing when you initialize your
+   SmartPredictor to tune the wording >- label_dict to rename your label
+   in classification problems (during the initialisation of your
+   SmartPredictor). >- features_dict to rename your features.
 
-Here, we chose to use modify_mask method to only get the 3 most
-contributives features in our explanability.
+We use modify_mask method to only get the 4 most contributives features
+in our local summary.
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(max_contrib=3)
+    predictor_load.modify_mask(max_contrib=4)
 
 .. code:: ipython3
 
     explanation = predictor_load.summarize()
 
--  You can notice in the summarize that the dictionnary of mapping given
-   to the SmartExplainer Object allow us to rename the ‘Title’ feature
-   into ‘Title of passenger’.
--  Also, we can see that the value of this features has been worded
-   correctly has we configured it : First class became 1st class.
--  Our explanability is focused on the 3 most contributive features.
+-  The dictionnary of mapping given to the SmartExplainer Object allow
+   us to rename the ‘Title’ feature into ‘Title of passenger’.
+-  The value of this features has been worded correctly has we
+   configured it : First class became 1st class.
+-  Our explanability is focused on the 4 most contributives features.
 
 .. code:: ipython3
 
@@ -426,11 +414,11 @@ contributives features in our explanability.
 
     .. table:: 
     
-        +--------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
-        | ypred  |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2| feature_3  | value_3 |contribution_3|
-        +========+======+=========+=======+==============+==================+=======+==============+============+=========+==============+
-        |Survived|0.7435|Sex      |female |        0.1752|Title of passenger|Miss   |        0.1724|Ticket class|1st class|        0.1043|
-        +--------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
+        +--------+------+------------------+-------+--------------+---------+-------+--------------+--------------+-------+--------------+------------+---------+--------------+
+        | ypred  |proba |    feature_1     |value_1|contribution_1|feature_2|value_2|contribution_2|  feature_3   |value_3|contribution_3| feature_4  | value_4 |contribution_4|
+        +========+======+==================+=======+==============+=========+=======+==============+==============+=======+==============+============+=========+==============+
+        |Survived|0.6614|Title of passenger|Miss   |        0.1661|Sex      |female |        0.1589|Passenger fare|   7.25|       -0.1140|Ticket class|1st class|       0.07670|
+        +--------+------+------------------+-------+--------------+---------+-------+--------------+--------------+-------+--------------+------------+---------+--------------+
 
 
 Configure your summary easily
@@ -439,15 +427,15 @@ Configure your summary easily
 If contributions wanted are the ones associated to the class 0 (More useful in multiclass classification)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Then, you can easily change the ypred or the x given to the add_input to
-make new prediction and summary of your explanability
+You can change the ypred or the x given to the add_input to make new
+prediction and summary of your explanability.
 
-You can specify an ypred to get explanability from the label that you
-prefer to predict instead.
+Specify an ypred to get explanability from the label that you prefer to
+predict instead.
 
 .. code:: ipython3
 
-    predictor_load.add_input(x=person_x, ypred=pd.DataFrame({0}))
+    predictor_load.add_input(x=person_x, ypred=pd.DataFrame({"ypred":[0]}))
 
 .. code:: ipython3
 
@@ -457,7 +445,7 @@ prefer to predict instead.
 
     explanation = predictor_load.summarize()
 
-Here, we changed the ypred from label predicted 1 to 0 which allow us to
+We change the ypred from label predicted 1 to 0 which allow us to
 automatically get the explanability of features that are associated to
 the right label predicted.
 
@@ -470,18 +458,18 @@ the right label predicted.
 
     .. table:: 
     
-        +------------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
-        |     0      |proba |feature_1|value_1|contribution_1|    feature_2     |value_2|contribution_2| feature_3  | value_3 |contribution_3|
-        +============+======+=========+=======+==============+==================+=======+==============+============+=========+==============+
-        |Not Survived|0.2565|Sex      |female |       -0.1752|Title of passenger|Miss   |       -0.1724|Ticket class|1st class|       -0.1043|
-        +------------+------+---------+-------+--------------+------------------+-------+--------------+------------+---------+--------------+
+        +------------+------+------------------+-------+--------------+---------+-------+--------------+--------------+-------+--------------+
+        |   ypred    |proba |    feature_1     |value_1|contribution_1|feature_2|value_2|contribution_2|  feature_3   |value_3|contribution_3|
+        +============+======+==================+=======+==============+=========+=======+==============+==============+=======+==============+
+        |Not Survived|0.3386|Title of passenger|Miss   |       -0.1661|Sex      |female |       -0.1589|Passenger fare|   7.25|        0.1140|
+        +------------+------+------------------+-------+--------------+---------+-------+--------------+--------------+-------+--------------+
 
 
-If users don’t want one feature and want only positive contributions to restituate
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If users don’t want one feature and want only positive contributions to display
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  The modify_mask method allows us to configure the explanability to
-   satisfy our needs in opeartional process.
+-  The modify_mask method allows us to configure the summary parameters
+   of your explainability.
 -  Here, we can choose to hide some features from our explanability and
    only get the one which has positive contributions.
 
@@ -502,18 +490,18 @@ If users don’t want one feature and want only positive contributions to restit
 
     .. table:: 
     
-        +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+
-        |     0      |proba |feature_1|value_1|contribution_1|            feature_2             |value_2|contribution_2|
-        +============+======+=========+=======+==============+==================================+=======+==============+
-        |Not Survived|0.2565|Age      |     36|       0.02407|Relatives like children or parents|      0|      0.004212|
-        +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+
+        +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+---------------------------------+-------+--------------+
+        |   ypred    |proba |feature_1|value_1|contribution_1|            feature_2             |value_2|contribution_2|            feature_3            |value_3|contribution_3|
+        +============+======+=========+=======+==============+==================================+=======+==============+=================================+=======+==============+
+        |Not Survived|0.3386|Age      |     36|       0.01645|Relatives like children or parents|      0|      0.006346|Relatives such as brother or wife|      1|      0.001494|
+        +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+---------------------------------+-------+--------------+
 
 
-If users want to restituate only contributions with a minimum of impact
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If users want to display only contributions with a minimum of impact
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here, we chose to only show the features which has a contribution
-greater than 0.01.
+We choose to only show the features which has a contribution greater
+than 0.01.
 
 .. code:: ipython3
 
@@ -533,8 +521,8 @@ greater than 0.01.
     .. table:: 
     
         +------------+------+---------+-------+--------------+
-        |     0      |proba |feature_1|value_1|contribution_1|
+        |   ypred    |proba |feature_1|value_1|contribution_1|
         +============+======+=========+=======+==============+
-        |Not Survived|0.2565|Age      |     36|       0.02407|
+        |Not Survived|0.3386|Age      |     36|       0.01645|
         +------------+------+---------+-------+--------------+
 
