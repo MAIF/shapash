@@ -704,7 +704,7 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.data = {"x": None, "ypred": None, "contributions": None, "x_preprocessed": None}
         predictor_1.data["x"] = self.df_2[["x1", "x2"]]
         predictor_1.data["x_preprocessed"] = self.df_2[["x1", "x2"]]
-        predictor_1.data["ypred"] = pd.DataFrame(self.df_2["y"])
+        predictor_1.data["ypred_init"] = pd.DataFrame(self.df_2["y"])
 
         contributions = predictor_1.detail_contributions()
 
@@ -726,12 +726,12 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.data = {"x": None, "ypred": None, "contributions": None}
         predictor_1.data["x_preprocessed"] = self.df_2[["x1", "x2"]]
         predictor_1.data["x"] = self.df_2[["x1", "x2"]]
-        predictor_1.data["ypred"] = false_y
+        predictor_1.data["ypred_init"] = false_y
 
         with self.assertRaises(ValueError):
             predictor_1.detail_contributions()
 
-        predictor_1.data["ypred"] = pd.DataFrame(self.df_2["y"])
+        predictor_1.data["ypred_init"] = pd.DataFrame(self.df_2["y"])
 
         contributions = predictor_1.detail_contributions()
 
