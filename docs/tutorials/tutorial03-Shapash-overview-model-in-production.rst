@@ -6,10 +6,10 @@ SmartPredictor to make prediction and have local explanation in
 production with a simple use case.
 
 This tutorial describes the different steps from training the model to
-Shapash SmartPredictor deployment. A tutorial more detailed, will go
-further to help you getting started with the SmartPredictor Object.
+Shapash SmartPredictor deployment. A more detailed tutorial allows you
+to know more about the SmartPredictor Object.
 
-Contents: - Build a Regressor - Compile Shapash SmartExplainer - Compile
+Contents: - Build a Regressor - Compile Shapash SmartExplainer - From
 Shapash SmartExplainer to SmartPredictor - Save Shapash Smartpredictor
 Object in pickle file - Make a prediction
 
@@ -42,11 +42,10 @@ data House Prices.
     y_df=house_df['SalePrice'].to_frame()
     X_df=house_df[house_df.columns.difference(['SalePrice'])]
 
-Encoding Categorical Features
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Preprocessing step
+^^^^^^^^^^^^^^^^^^
 
-We need to use a preprocessing on our data for handling categorical
-features before the training step.
+Encoding Categorical Features
 
 .. code:: ipython3
 
@@ -54,10 +53,9 @@ features before the training step.
     
     categorical_features = [col for col in X_df.columns if X_df[col].dtype == 'object']
     
-    encoder = OrdinalEncoder(
-        cols=categorical_features,
-        handle_unknown='ignore',
-        return_df=True).fit(X_df)
+    encoder = OrdinalEncoder(cols = categorical_features,
+                             handle_unknown = 'ignore',
+                             return_df = True).fit(X_df)
     
     X_df=encoder.transform(X_df)
 
@@ -66,25 +64,25 @@ Train / Test Split
 
 .. code:: ipython3
 
-    Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=1)
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size = 0.75, random_state = 1)
 
 Model Fitting
 ^^^^^^^^^^^^^
 
 .. code:: ipython3
 
-    regressor = LGBMRegressor(n_estimators=200).fit(Xtrain,ytrain)
+    regressor = LGBMRegressor(n_estimators = 200).fit(Xtrain, ytrain)
 
 .. code:: ipython3
 
-    y_pred = pd.DataFrame(regressor.predict(Xtest),columns=['pred'],index=Xtest.index)
+    y_pred = pd.DataFrame(regressor.predict(Xtest), columns = ['pred'], index = Xtest.index)
 
 Understand my model with shapash
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  In this section, we use the SmartExplainer Object from shapash which
-   allow the users to understand how the model works with the dataset
-   specified.
+   allow the users to understand how the model works with the specified
+   data.
 -  This object must be used only for data mining step. Shapash provides
    another object for deployment.
 -  In this tutorial, we are not explore possibilites of the
@@ -102,29 +100,13 @@ Use wording on features names to better understanding results
 
 Here, we use a wording to rename our features label with more
 understandable terms. It’s usefull to make our local explainability more
-operational and understandable to any users. - To do this, we use the
-house_dict dictionnary which match for each features of our datasets a
-description - We need to remove the key features “GarageCars” because
-this features isn’t available in our trained dataset - We can next
-declare this as our features_dict in the initialisation of our
-SmartExplainer object
+operational and understandable for all users. - To do this, we use the
+house_dict dictionary which maps a description to each features. - We
+can then use it features_dict as a parameter of the SmartExplainer.
 
 .. code:: ipython3
 
-    house_dict.pop("GarageCars")
-
-
-
-
-.. parsed-literal::
-
-    'Size of garage in car capacity'
-
-
-
-.. code:: ipython3
-
-    xpl = SmartExplainer(features_dict=house_dict)
+    xpl = SmartExplainer(features_dict = house_dict)
 
 Then, we need to use the compile method of the SmartExplainer Object.
 This method is the first step to understand model and prediction. It
@@ -136,11 +118,11 @@ on SmartExplainer Object and the associated tutorials to go further)
 .. code:: ipython3
 
     xpl.compile(
-        x=Xtest,
-        model=regressor,
-        preprocessing=encoder, # Optional: compile step can use inverse_transform method
-        y_pred=y_pred # Optional
-    )
+                x = Xtest,
+                model = regressor,
+                preprocessing = encoder, # Optional: compile step can use inverse_transform method
+                y_pred = y_pred # Optional
+                )
 
 
 .. parsed-literal::
@@ -158,7 +140,7 @@ understandable in operationnal case.
 
 .. code:: ipython3
 
-    xpl.to_pandas(max_contrib=3).head()
+    xpl.to_pandas(max_contrib = 3).head()
 
 
 .. parsed-literal::
@@ -192,9 +174,11 @@ Switch from SmartExplainer to SmartPredictor
    a SmartPredictor.
 -  SmartPredictor allows you to make predictions, detailed and
    summarized contributions on new data automatically.
--  It takes only necessary attributes to be lighter than SmartExplainer
-   object with additional consistency checks.
--  Smart predictor allows you to configure the way of summary to suit
+-  It only keeps the attributes needed for deployment to be lighter than
+   the SmartExplainer object.
+-  SmartPredictor performs additional consistency checks before
+   deployment.
+-  SmartPredictor allows you to configure the way of summary to suit
    your use cases.
 -  It can be use with API or in batch mode.
 
@@ -246,7 +230,7 @@ Add data
 
 .. code:: ipython3
 
-    predictor_load.add_input(x=X_df, ypred=y_df)
+    predictor_load.add_input(x = X_df, ypred = y_df)
 
 Make prediction
 ^^^^^^^^^^^^^^^
@@ -323,9 +307,8 @@ Summarize explanability of the predictions
 
 -  You can use the summarize method to summarize your local
    explainability
--  This summary can be configured with the method modify_mask in order
-   for you to have the explainability that satisfy your operational
-   needs
+-  This summary can be configured with modify_mask method so that you
+   have explainability that meets your operational needs.
 -  You can also specify : >- a postprocessing when you initialize your
    SmartPredictor to apply a wording to several values of your dataset.
    >- a label_dict to rename your label in classification problems
@@ -334,7 +317,7 @@ Summarize explanability of the predictions
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(max_contrib=3)
+    predictor_load.modify_mask(max_contrib = 3)
 
 .. code:: ipython3
 
