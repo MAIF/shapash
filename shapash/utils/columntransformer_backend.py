@@ -3,6 +3,7 @@ sklearn columntransformer
 """
 
 import pandas as pd
+import numpy as np
 from shapash.utils.category_encoder_backend import inv_transform_ordinal
 from shapash.utils.category_encoder_backend import inv_transform_ce
 from shapash.utils.category_encoder_backend import supported_category_encoder
@@ -294,3 +295,68 @@ def transform_ct(x_in, model, encoding):
         raise Exception(f"{encoding.__class__.__name__} not supported, no preprocessing done.")
 
     return rst
+
+def get_names(name, trans, column, column_transformer):
+    """
+    Allow to extract features names from one encoder of the ColumnTransformer.
+    If the right names aren't available, It creates a list with customized names.
+
+    Parameters
+    ----------
+    name: string
+        String which indicates the name of the transformer.
+    trans: sklearn encoder or category_encoders
+        One of the encoder fitted through the ColumnTransformer.
+    column: list
+        List of features impacted by the specific transformer.
+    column_transformer: sklearn ColumnTransformer
+        The fitted ColumnTransformer containing the specific encoder.
+
+    Returns
+    -------
+    list:
+        List of returned features when specific transformer is applied.
+    """
+    if trans == 'drop' or (
+            hasattr(column, '__len__') and not len(column)):
+        return []
+    if trans == 'passthrough':
+        if hasattr(column_transformer, '_df_columns'):
+            if ((not isinstance(column, slice))
+                    and all(isinstance(col, str) for col in column)):
+                return column
+            else:
+                return column_transformer._df_columns[column]
+        else:
+            indices = np.arange(column_transformer._n_features)
+            return ['x%d' % i for i in indices[column]]
+    if not hasattr(trans, 'get_feature_names'):
+        if column is None:
+            return []
+        else:
+            return [name + "__" + f for f in column]
+
+    return [name + "__" + f for f in trans.get_feature_names()]
+
+def get_feature_names(column_transformer):
+    """
+    Allow to extract all features names from encoders of the ColumnTransformer once it has been applied.
+    If the right names aren't available, It creates a list with customized names.
+
+    Parameters
+    ----------
+    column_transformer: sklearn ColumnTransformer
+        The fitted ColumnTransformer containing the specific encoder.
+
+    Returns
+    -------
+    feature_names: list
+        List of returned features names when ColumnTransformer is applied.
+    """
+    feature_names = []
+    l_transformers = list(column_transformer._iter(fitted=True))
+
+    for name, trans, column, _ in l_transformers:
+        feature_names.extend(get_names(name, trans, column, column_transformer))
+
+    return feature_names

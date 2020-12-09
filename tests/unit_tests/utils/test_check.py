@@ -388,6 +388,51 @@ class TestCheck(unittest.TestCase):
             check_consistency_model_features(features_dict, model, columns_dict,
                                              features_types, mask_params, preprocessing)
 
+    def test_check_consistency_model_features_5(self):
+        """
+        Unit test check_consistency_model_features 5
+        """
+        train = pd.DataFrame({'city': ['chicago', 'paris'],
+                              'state': ['US', 'FR'],
+                              'other': [5, 10]},
+                             index=['index1', 'index2'])
+
+        features_dict = None
+        columns_dict = {i: features for i, features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        mask_params = None
+
+        enc = ColumnTransformer(
+            transformers=[
+                ('onehot_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('onehot_skp', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='passthrough')
+
+        enc_2 = ColumnTransformer(
+            transformers=[
+                ('onehot_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('onehot_skp', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        enc.fit(train)
+        train_1 = pd.DataFrame(enc.transform(train), columns=["city_ce","state_ce","city_skp", "state_skp", "other"])
+        train_1["y"] = np.array([1, 0])
+
+        clf = cb.CatBoostClassifier(n_estimators=1)\
+                .fit(train_1[["city_ce","state_ce","city_skp", "state_skp", "other"]],
+                     train_1['y'])
+
+        enc_2.fit(train)
+        train_2 = enc_2.transform(train)
+
+        check_consistency_model_features(features_dict, clf, columns_dict,
+                                         features_types, mask_params, enc)
+        with self.assertRaises(ValueError):
+            check_consistency_model_features(features_dict, clf, columns_dict,
+                                             features_types, mask_params, enc_2)
+
     def test_check_consistency_model_label_1(self):
         """
         Test check_consistency_model_label 1

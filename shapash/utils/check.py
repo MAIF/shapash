@@ -9,7 +9,7 @@ from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntr
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
-from shapash.utils.columntransformer_backend import columntransformer
+from shapash.utils.columntransformer_backend import columntransformer, get_feature_names
 
 
 
@@ -228,17 +228,35 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             if set(columns_dict.values()) != set(model_features):
                 raise ValueError("features of columns_dict and model must be the same")
 
-        elif str(type(preprocessing)) in (no_dummies_sklearn, columntransformer):
-             if len(set(columns_dict.values())) != len(set(model_features)):
-                raise ValueError("length of features of columns_dict and model must be the same")
+        elif str(type(preprocessing)) in columntransformer:
+            for encoding in preprocessing.transformers_:
+                ct_encoding = encoding[1]
+                if (str(type(ct_encoding)) not in no_dummies_sklearn) \
+                        and (str(type(ct_encoding)) not in no_dummies_category_encoder):
+                    if str(type(ct_encoding)) != "<class 'str'>" :
+                        raise ValueError("One of the encoders used in ColumnTransformers isn't supported.")
+
+            feature_encoded = get_feature_names(preprocessing)
+            if len(set(model_features)) != len(feature_encoded):
+                raise ValueError(
+                    "Number of features returned by the preprocessing doesn't match the model's expected features."
+                                 )
 
         elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
                 and preprocessing is not None:
             raise ValueError("this type of encoder is not supported in SmartPredictor")
+
     else:
         model_length_features = model_features
         if len(set(columns_dict.values())) != model_length_features:
             raise ValueError("features of columns_dict and model must have the same length")
+
+        elif str(type(preprocessing)) in columntransformer and preprocessing is not None:
+            feature_encoded = get_feature_names(preprocessing)
+            if model_length_features != len(feature_encoded):
+                raise ValueError(
+                    "Number of features returned by the preprocessing doesn't match the model's expected features."
+                                 )
 
     if postprocessing:
         if not isinstance(postprocessing, dict):
