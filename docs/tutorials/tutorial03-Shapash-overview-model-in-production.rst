@@ -53,9 +53,9 @@ Encoding Categorical Features
     
     categorical_features = [col for col in X_df.columns if X_df[col].dtype == 'object']
     
-    encoder = OrdinalEncoder(cols = categorical_features,
-                             handle_unknown = 'ignore',
-                             return_df = True).fit(X_df)
+    encoder = OrdinalEncoder(cols=categorical_features,
+                             handle_unknown='ignore',
+                             return_df=True).fit(X_df)
     
     X_df=encoder.transform(X_df)
 
@@ -64,29 +64,28 @@ Train / Test Split
 
 .. code:: ipython3
 
-    Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size = 0.75, random_state = 1)
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=1)
 
 Model Fitting
 ^^^^^^^^^^^^^
 
 .. code:: ipython3
 
-    regressor = LGBMRegressor(n_estimators = 200).fit(Xtrain, ytrain)
+    regressor = LGBMRegressor(n_estimators=200).fit(Xtrain, ytrain)
 
 .. code:: ipython3
 
-    y_pred = pd.DataFrame(regressor.predict(Xtest), columns = ['pred'], index = Xtest.index)
+    y_pred = pd.DataFrame(regressor.predict(Xtest), columns=['pred'], index=Xtest.index)
 
 Understand my model with shapash
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  In this section, we use the SmartExplainer Object from shapash which
-   allow the users to understand how the model works with the specified
-   data.
--  This object must be used only for data mining step. Shapash provides
-   another object for deployment.
--  In this tutorial, we are not explore possibilites of the
-   SmartExplainer but others will. (Look at them)
+In this section, we use the SmartExplainer Object from shapash. - It
+allows users to understand how the model works with the specified data.
+- This object must be used only for data mining step. Shapash provides
+another object for deployment. - In this tutorial, we are not exploring
+possibilites of the SmartExplainer but others will. (see other
+tutorials)
 
 Declare and Compile SmartExplainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -100,28 +99,27 @@ Use wording on features names to better understanding results
 
 Here, we use a wording to rename our features label with more
 understandable terms. It’s usefull to make our local explainability more
-operational and understandable for all users. - To do this, we use the
+operational and understandable for users. - To do this, we use the
 house_dict dictionary which maps a description to each features. - We
 can then use it features_dict as a parameter of the SmartExplainer.
 
 .. code:: ipython3
 
-    xpl = SmartExplainer(features_dict = house_dict)
+    xpl = SmartExplainer(features_dict=house_dict)
 
-Then, we need to use the compile method of the SmartExplainer Object.
-This method is the first step to understand model and prediction. It
-performs the sorting of contributions, the reverse preprocessing steps
-and performs all the calculations necessary for a quick display of plots
-and efficient display of summary of explanation. (see the documentation
-on SmartExplainer Object and the associated tutorials to go further)
+**compile()** This method is the first step to understand model and
+prediction. It performs the sorting of contributions, the reverse
+preprocessing steps and all the calculations necessary for a quick
+display of plots and efficient summary of explanation. (see
+SmartExplainer documentation and tutorials)
 
 .. code:: ipython3
 
     xpl.compile(
-                x = Xtest,
-                model = regressor,
-                preprocessing = encoder, # Optional: compile step can use inverse_transform method
-                y_pred = y_pred # Optional
+                x=Xtest,
+                model=regressor,
+                preprocessing=encoder, # Optional: compile step can use inverse_transform method
+                y_pred=y_pred # Optional
                 )
 
 
@@ -135,12 +133,12 @@ Understand results of your trained model
 
 Then, we can easily get a first summary of the explanation of the model
 results. - Here, we chose to get the 3 most contributive features for
-each prediction - We used a wording to get features names more
+each prediction. - We used a wording to get features names more
 understandable in operationnal case.
 
 .. code:: ipython3
 
-    xpl.to_pandas(max_contrib = 3).head()
+    xpl.to_pandas(max_contrib=3).head()
 
 
 .. parsed-literal::
@@ -168,19 +166,16 @@ Step 2 : SmartPredictor in production
 Switch from SmartExplainer to SmartPredictor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  When you are satisfied by your results and the explainablity given by
-   Shapash, you can use the SmartPredictor object for deployment.
--  In this section, we learn how to easily switch from SmartExplainer to
-   a SmartPredictor.
--  SmartPredictor allows you to make predictions, detailed and
-   summarized contributions on new data automatically.
--  It only keeps the attributes needed for deployment to be lighter than
-   the SmartExplainer object.
--  SmartPredictor performs additional consistency checks before
-   deployment.
--  SmartPredictor allows you to configure the way of summary to suit
-   your use cases.
--  It can be use with API or in batch mode.
+When you are satisfied by your results and the explainablity given by
+Shapash, you can use the SmartPredictor object for deployment. - In this
+section, we learn how to easily switch from SmartExplainer to a
+SmartPredictor. - SmartPredictor allows you to make predictions, detail
+and summarize contributions on new data automatically. - It only keeps
+the attributes needed for deployment to be lighter than the
+SmartExplainer object. - SmartPredictor performs additional consistency
+checks before deployment. - SmartPredictor allows you to configure the
+way of summary to suit your use cases. - It can be used with API or in
+batch mode.
 
 .. code:: ipython3
 
@@ -212,25 +207,22 @@ Load your SmartPredictor in Pickle File
 Make a prediction with your SmartPredictor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  In order to make new predictions and summarize local explainability
-   of your model on new datasets, you can use the method add_input of
-   the SmartPredictor.
--  The add_input method is the first step to add a dataset for
-   prediction and explainability.
--  It checks the structure of the dataset, the prediction and the
-   contribution if specified.
--  It applies the preprocessing specified in the initialisation and
-   reorder the features with the order used by the model. (see the
-   documentation on this method)
--  In API mode, this method can handle dictionnaries data which can be
-   received from a GET or a POST request.
+In order to make new predictions and summarize local explainability of
+your model on new datasets, you can use the method add_input of the
+SmartPredictor. - The add_input method is the first step to add a
+dataset for prediction and explainability. - It checks the structure of
+the dataset, the prediction and the contribution if specified. - It
+applies the preprocessing specified in the initialisation and reorder
+the features with the order used by the model. (see the documentation of
+this method) - In API mode, this method can handle dictionnaries data
+which can be received from a GET or a POST request.
 
 Add data
 ^^^^^^^^
 
 .. code:: ipython3
 
-    predictor_load.add_input(x = X_df, ypred = y_df)
+    predictor_load.add_input(x=X_df, ypred=y_df)
 
 Make prediction
 ^^^^^^^^^^^^^^^
@@ -266,13 +258,12 @@ computed in the method.
 Get detailed explanability associated to the prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  You can use the method detail_contributions to see the detailed
-   contributions of each of your features for each row of your new
-   dataset.
--  For classification problems, it automatically associates
-   contributions with the right predicted label.
--  The predicted label can be computed automatically with predict method
-   or you can specify in add_input method an ypred
+You can use the method detail_contributions to see the detailed
+contributions of each of your features for each row of your new dataset.
+- For classification problems, it automatically associates contributions
+with the right predicted label. - The predicted label can be computed
+automatically in the method or you can specify an ypred with add_input
+method.
 
 .. code:: ipython3
 
@@ -309,24 +300,23 @@ Summarize explanability of the predictions
    explainability
 -  This summary can be configured with modify_mask method so that you
    have explainability that meets your operational needs.
--  You can also specify : >- a postprocessing when you initialize your
-   SmartPredictor to apply a wording to several values of your dataset.
-   >- a label_dict to rename your label in classification problems
-   (during the initialisation of your SmartPredictor). >- a
-   features_dict to rename your features.
+-  When you initialize the SmartPredictor, you can also specify : >-
+   postprocessing: to apply a wording to several values of your dataset.
+   >- label_dict: to rename your label for classification problems. >-
+   features_dict: to rename your features.
 
 .. code:: ipython3
 
-    predictor_load.modify_mask(max_contrib = 3)
+    predictor_load.modify_mask(max_contrib=3)
 
 .. code:: ipython3
 
     explanation = predictor_load.summarize()
 
-For example, here, we chose to only build a summary with 3 most
-contributive features of your dataset. - As you can see below, the
-wording defined in the first step of this tutorial has been kept by the
-SmartPredictor and used in the summarize method.
+For example, here, we chose to build a summary with 3 most contributive
+features of your dataset. - As you can see below, the wording defined in
+the first step of this tutorial has been kept by the SmartPredictor and
+used in the summarize method.
 
 .. code:: ipython3
 
