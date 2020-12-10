@@ -84,7 +84,7 @@ pip install shapash
 
 ## Getting Started: 3 minutes to Shapash
 
-The 4:/ steps to display results:
+The 4 steps to display results:
 
 - Step 1: Declare SmartExplainer Object
   > You can declare features dict here to specify the labels to display
