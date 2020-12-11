@@ -45,6 +45,8 @@ Data Scientists can more easily understand their models and share their results.
 
 - To discuss results: **Shapash** allows Data Scientists to easily share and discuss their results with non-Data users
 
+- Use Shapash to deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
+
 **How does shapash work?** <br />
 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
@@ -82,7 +84,7 @@ pip install shapash
 
 ## Getting Started: 3 minutes to Shapash
 
-The 3 steps to display results:
+The 4 steps to display results:
 
 - Step 1: Declare SmartExplainer Object
   > You can declare features dict here to specify the labels to display
@@ -114,12 +116,25 @@ app = xpl.run_app()
 
 [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
+- Step 4: From training to deployment : SmartPredictor Object
+  > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
+  It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.
+  SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local 
+  explainability using appropriate wording.
+  
+```
+predictor = xpl.to_smartpredictor()
+```
+See the tutorial part to know how to use the SmartPredictor object
+
+
 ## Tutorials
 This github repository offers a lot of tutorials to allow you to start more concretely in the use of Shapash.
 
 ### More Precise Overview
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
+- [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
 
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
@@ -138,3 +153,6 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
 - [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
+
+### Deploy local explainability in production
+- [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
