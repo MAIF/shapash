@@ -141,9 +141,8 @@ understandable in operationnal case.
     xpl.to_pandas(max_contrib=3).head()
 
 
-.. parsed-literal::
 
-    .. table:: 
+.. table:: 
     
         +--------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------------+--------------+
         |  pred  |               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |   value_3   |contribution_3|
@@ -236,9 +235,8 @@ computed in the method.
     predictor_load.data["ypred"].head()
 
 
-.. parsed-literal::
 
-    .. table:: 
+.. table:: 
     
         +---------+
         |SalePrice|
@@ -274,9 +272,8 @@ method.
     detailed_contributions.head()
 
 
-.. parsed-literal::
 
-    .. table:: 
+.. table:: 
     
         +---------+--------+--------+---------+------------+--------+--------+------------+----------+----------+------------+------------+------------+------------+--------+---------+----------+----------+----------+----------+-------------+---------+---------+-----------+-----------+----------+----------+--------+----------+----------+----------+------------+----------+----------+-----------+---------+--------+-------+---------+----------+------------+-----------+-----------+---------+-------+---------+--------+------------+----------+--------+----------+----------+-------+-------+------------+-----------+-----------+-----------+----------+--------+--------+---------+-------------+--------+-----------+------+------------+-----------+---------+----------+---------+------------+-------+
         |SalePrice|1stFlrSF|2ndFlrSF|3SsnPorch|BedroomAbvGr|BldgType|BsmtCond|BsmtExposure|BsmtFinSF1|BsmtFinSF2|BsmtFinType1|BsmtFinType2|BsmtFullBath|BsmtHalfBath|BsmtQual|BsmtUnfSF|CentralAir|Condition1|Condition2|Electrical|EnclosedPorch|ExterCond|ExterQual|Exterior1st|Exterior2nd|Fireplaces|Foundation|FullBath|Functional|GarageArea|GarageCond|GarageFinish|GarageQual|GarageType|GarageYrBlt|GrLivArea|HalfBath|Heating|HeatingQC|HouseStyle|KitchenAbvGr|KitchenQual|LandContour|LandSlope|LotArea|LotConfig|LotShape|LowQualFinSF|MSSubClass|MSZoning|MasVnrArea|MasVnrType|MiscVal|MoSold |Neighborhood|OpenPorchSF|OverallCond|OverallQual|PavedDrive|PoolArea|RoofMatl|RoofStyle|SaleCondition|SaleType|ScreenPorch|Street|TotRmsAbvGrd|TotalBsmtSF|Utilities|WoodDeckSF|YearBuilt|YearRemodAdd|YrSold |
@@ -323,9 +320,8 @@ used in the summarize method.
     explanation.head()
 
 
-.. parsed-literal::
 
-    .. table:: 
+.. table:: 
     
         +---------+----------------------------------------+-------+--------------+----------------------------------------+-------+--------------+----------------------------------+-------+--------------+
         |SalePrice|               feature_1                |value_1|contribution_1|               feature_2                |value_2|contribution_2|            feature_3             |value_3|contribution_3|

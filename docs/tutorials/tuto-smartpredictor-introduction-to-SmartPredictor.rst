@@ -51,9 +51,8 @@ Titanic from Kaggle.
     titan_df.head()
 
 
-.. parsed-literal::
 
-    .. table:: 
+.. table:: 
     
         +--------+-----------+------+---+-----+-----+-----+-----------+-----+
         |Survived|  Pclass   | Sex  |Age|SibSp|Parch|Fare | Embarked  |Title|
@@ -201,9 +200,9 @@ feature’s values.
     xpl.to_pandas(max_contrib=3).head()
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+.. table:: 
     
         +------------+------------------+-------+--------------+------------------+---------+--------------+-------------------+----------+--------------+
         |    pred    |    feature_1     |value_1|contribution_1|    feature_2     | value_2 |contribution_2|     feature_3     | value_3  |contribution_3|
@@ -300,9 +299,9 @@ method.
     predictor_load.data["ypred"]
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+.. table:: 
     
         +--------+------+
         | ypred  |proba |
@@ -323,9 +322,9 @@ associated to each label.
     prediction_proba
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+.. table:: 
     
         +-------+-------+
         |class_0|class_1|
@@ -357,9 +356,10 @@ the label_dict.
     detailed_contributions
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+
+.. table:: 
     
         +--------+------+-------+------+--------+--------+---------+-------+--------+------+
         | ypred  |proba |Pclass | Sex  |  Age   | SibSp  |  Parch  | Fare  |Embarked|Title |
@@ -402,9 +402,9 @@ in our local summary.
     explanation
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+.. table:: 
     
         +--------+------+------------------+-------+--------------+---------+-------+--------------+--------------+-------+--------------+------------+---------+--------------+
         | ypred  |proba |    feature_1     |value_1|contribution_1|feature_2|value_2|contribution_2|  feature_3   |value_3|contribution_3| feature_4  | value_4 |contribution_4|
@@ -442,9 +442,10 @@ value of y_pred from 1 to 0.
     explanation
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+
+.. table:: 
     
         +------------+------+------------------+-------+--------------+---------+-------+--------------+--------------+-------+--------------+
         |   ypred    |proba |    feature_1     |value_1|contribution_1|feature_2|value_2|contribution_2|  feature_3   |value_3|contribution_3|
@@ -474,9 +475,10 @@ Configure summary: mask one feature, select positives contributions
     explanation
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+
+.. table:: 
     
         +------------+------+---------+-------+--------------+----------------------------------+-------+--------------+
         |   ypred    |proba |feature_1|value_1|contribution_1|            feature_2             |value_2|contribution_2|
@@ -503,9 +505,10 @@ We display features which has contributions greater than 0.01.
     explanation
 
 
-.. parsed-literal::
 
-    .. table:: 
+
+
+.. table:: 
     
         +------------+------+---------+-------+--------------+
         |   ypred    |proba |feature_1|value_1|contribution_1|

@@ -43,7 +43,7 @@ The more you specify parameters, options, dictionaries and more the outputs will
 Getting Started : 3 minutes to Shapash
 --------------------------------------
 
-The 3 steps to display results:
+The 4 steps to display results:
 
 - Step 1: Declare SmartExplainer Object
   > You can declare features dict here to specify the labels Shapash will display
@@ -74,7 +74,8 @@ The 3 steps to display results:
     app = xpl.run_app()
 
 - Step 4: From training to deployment : SmartPredictor Object
-  > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
+
+Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
 It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.
 SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local
 explainability using appropriate wording.
@@ -87,7 +88,7 @@ explainability using appropriate wording.
 From data mining to deployment
 ------------------------------
 
-**Shapash** isn't just a tool used for data mining purposes. Thanks to different object from Shapash
+**Shapash** isn't just a tool used for data mining purposes. Thanks to different objects from Shapash
 such as *SmartExplainer* and *SmartPredictor*, you can easily switch from data mining to deployment.
 **Shapash SmartPredictor Object** can be used through an API or in batch mode.
 

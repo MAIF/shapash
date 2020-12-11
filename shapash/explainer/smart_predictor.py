@@ -26,22 +26,25 @@ from shapash.decomposition.contributions import rank_contributions, assign_contr
 
 class SmartPredictor :
     """
-    The SmartPredictor class is an object which inherits from the
-    SmartExplainer class.
+    The SmartPredictor class is an object lighter than SmartExplainer Object with
+    additionnal consistency checks.
 
-    Thanks to an explainer, It allows the Data Scientists to perform operations
-    to make results more understandable on new datasets with the same structure as
-    the one used to build the explainer.
+    The SmartPredictor object is provided to deploy the summary of local explanation
+    for the operational needs.
 
-    As a lighter layer of the SmartExplainer, SmartPredictor is designed to perform
-    the essential operations to make new results understandable :
-    linking to preprocessing and postprocessing already used, models contributions,
-    predictions, local epxlainability.
+    Switching from SmartExplainer to SmartPredictor, allows users to reproduce
+    the same results automatically on datasets with right structure.
+
+    SmartPredictor is designed to make new results understandable :
+        - It checks consistency of all parameters
+        - It applies preprocessing and postprocessing
+        - It computes models contributions
+        - It makes predictions
+        - It summarizes local epxlainability
 
     This class allows the user to automatically summarize the results of his model
     on new datasets (prediction, preprocessing and postprocessing linking,
     explainability).
-
     The SmartPredictor has several methods described below.
 
     The SmartPredictor Attributes :
@@ -50,24 +53,24 @@ class SmartPredictor :
         Dictionary mapping technical feature names to domain names.
     model: model object
         model used to check the different values of target estimate predict_proba
-    explainer : explainer object
-            explainer must be a shap object
+    explainer: explainer object
+        explainer must be a shap object (TreeExplainer, LinearExplainer, KernelExplainer)
     columns_dict: dict
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
     features_types: dict
-        Dictionnary mapping features with the right types needed.
+        Dictionary mapping features with the right types needed.
     label_dict: dict (optional)
         Dictionary mapping integer labels to domain names (classification - target values).
     preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
         The processing apply to the original data.
     postprocessing: dict (optional)
-        Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+        Dictionary of postprocessing modifications to apply in x_pred dataframe.
     _case: string
         String that informs if the model used is for classification or regression problem.
     _classes: list, None
         List of labels if the model used is for classification problem, None otherwise.
     mask_params: dict (optional)
-        Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+        Dictionary allowing the user to define a apply a filter to summarize the local explainability.
 
     How to declare a new SmartPredictor object?
 
@@ -163,12 +166,15 @@ class SmartPredictor :
 
     def add_input(self, x=None, ypred=None, contributions=None):
         """
-        The add_input method is the first step to add a dataset for prediction and explainability. It checks
-        the structure of the dataset, the prediction and the contribution if specified. It applies the preprocessing
-        specified in the initialisation and reorder the features with the order used by the model.
+        The add_input method is the first step to add a dataset for prediction and explainability.
+
+        It applies :
+            - consistencies checks on dataset, predictions and contributions if provided.
+            - preprocessing and postprocessing specified in the initialisation
+            - features reordering with the right order for the model
 
         It's possible to not specified one parameter if it has already been defined before.
-        For example, if the user want to specified a ypred without reinitialize the dataset x already defined before.
+        For example, if the user want to specified an ypred without reinitialize the dataset x already defined.
         If the user declare a new input x, all the parameters stored will be cleaned.
 
         Example
@@ -184,7 +190,6 @@ class SmartPredictor :
             User-specified prediction values.
         contributions: pandas.DataFrame (regression) or list (classification) (optional)
             local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
-
         """
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
@@ -396,12 +401,18 @@ class SmartPredictor :
 
     def predict_proba(self):
         """
-        The predict_proba compute the proba values for each x row defined in add_input
+        The predict_proba compute the probababilities predicted for each x row defined in add_input.
 
         Returns
         -------
         pandas.DataFrame
-            data with all probabilities if there is no ypred data or data with ypred and the associated probability.
+            A dataset with all probabilities of each label if there is no ypred data or a dataset with ypred and the associated probability.
+
+        Example
+        --------
+        >>> predictor.add_input(x=xtest_df)
+        >>> predictor.predict_proba()
+
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
@@ -453,20 +464,25 @@ class SmartPredictor :
 
     def detail_contributions(self, contributions=None):
         """
-        The detail_contributions compute the contributions associated to data ypred specified.
-        Need a data ypred specified in an add_input to display detail_contributions.
+        The detail_contributions method associates the right contributions with the right data predicted.
+        (with ypred specified in add_input or computed automatically)
 
         Parameters
         -------
-        proba: bool, optional (default: False)
-            adding proba in output df
         contributions : object (optional)
             Local contributions, or list of local contributions.
 
         Returns
         -------
         pandas.DataFrame
-            Data with ypred and the associated contributions.
+            A Dataset with ypred and the right associated contributions.
+
+        Example
+        --------
+
+        >>> predictor.add_input(x=xtest_df)
+        >>> predictor.detail_contributions()
+
         """
         y_pred, detail_contrib = self.compute_contributions(contributions=contributions)
         return pd.concat([y_pred, detail_contrib], axis=1)
@@ -497,10 +513,10 @@ class SmartPredictor :
 
     def save(self, path):
         """
-        Save method allows user to save SmartPredictor object on disk
-        using a pickle file.
-        Save method can be useful: you don't have to recompile to display
-        results later
+        Save method allows users to save SmartPredictor object on disk using a pickle file.
+        Save method can be useful: you don't have to recompile to display results later.
+
+        Load_smartpredictor method allow to load your SmartPredictor object saved. (See example below)
 
         Parameters
         ----------
@@ -509,7 +525,10 @@ class SmartPredictor :
 
         Example
         --------
-        >>> xpl.save('path_to_pkl/xpl.pkl')
+
+        >>> predictor.save('path_to_pkl/predictor.pkl')
+        >>> from shapash.utils.load_smartpredictor import load_smartpredictor
+        >>> predictor_load = load_smartpredictor('path_to_pkl/predictor.pkl')
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
@@ -561,14 +580,17 @@ class SmartPredictor :
 
     def summarize(self):
         """
-        The summarize method allows to export the summary of local explainability.
-        This method proposes a set of parameters to summarize the explainability of each point.
-        If the user does not specify any, the summarize method uses the mask_params parameters specified during
+        The summarize method allows to display the summary of local explainability.
+        This method can be configured with modify_mask method to summarize the explainability to suit needs.
+
+        If the user doesn't use modify_mask, the summarize method uses the mask_params parameters specified during
         the initialisation of the SmartPredictor.
 
-        In classification case, The summarize method summarizes the explicability which corresponds
-        to the predicted values specified by the user (with add_input method) and the proba from
-        predict_proba associated to the right predicted values.
+        In classification case, The summarize method summarizes the explainability which corresponds
+        to :
+            - the predicted values specified by the user or automatically computed (with add_input method)
+            - the right probabilities from predict_proba associated to the right predicted values
+            - the right contributions ranked
 
         Returns
         -------
@@ -577,12 +599,20 @@ class SmartPredictor :
 
         Examples
         --------
-        >>> summary_df = xpl.summarize()
+        >>> summary_df = predictor.summarize()
         >>> summary_df
         	pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
         0	0	    0.756416	Sex	        1.0	        0.322308	    Pclass	    3.0	        0.155069
         1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
         2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
+
+        >>> predictor.modify_mask(max_contrib=1)
+        >>> summary_df = predictor.summarize()
+        >>> summary_df
+        	pred	proba	    feature_1	value_1	    contribution_1
+        0	0	    0.756416	Sex	        1.0	        0.322308
+        1	3	    0.628911	Sex	        2.0	        0.585475
+        2	0	    0.543308	Sex	        2.0	        -0.486667
         """
         # data is needed : add_input() method must be called at least once
 
@@ -617,8 +647,10 @@ class SmartPredictor :
             max_contrib=None
     ):
         """
-        Allow the users to modify the mask_params values.
+        This method allows the users to modify the mask_params values.
         Each parameter is optional, modify_mask method modifies only the values specified in parameters.
+
+        This method has to be used to configure the summary displayed with summarize method.
 
         Parameters
         ----------
@@ -631,6 +663,17 @@ class SmartPredictor :
             If None, hide nothing.
         max_contrib : int, optional (default: None)
             Maximum number of contributions to show.
+
+        Examples
+        --------
+        >>> predictor.modify_mask(max_contrib=1)
+        >>> summary_df = predictor.summarize()
+        >>> summary_df
+        	pred	proba	    feature_1	value_1	    contribution_1
+        0	0	    0.756416	Sex	        1.0	        0.322308
+        1	3	    0.628911	Sex	        2.0	        0.585475
+        2	0	    0.543308	Sex	        2.0	        -0.486667
+
         """
         Attributes = {"features_to_hide": features_to_hide,
                       "threshold": threshold,
@@ -642,12 +685,19 @@ class SmartPredictor :
 
     def predict(self):
         """
-        The predict compute the predicted values for each x row defined in add_input
+        The predict method compute the predicted values for each x row defined in add_input.
 
         Returns
         -------
         pandas.DataFrame
-            data with predicted values for each x row.
+            A dataset with predicted values for each x row.
+
+        Example
+        --------
+        >>> predictor.add_input(x=xtest_df)
+        >>> predictor.predict()
+
+
         """
         if not hasattr(self, "data"):
             raise ValueError("add_input method must be called at least once.")

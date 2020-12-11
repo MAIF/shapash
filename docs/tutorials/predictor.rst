@@ -7,5 +7,4 @@ Use Shapash SmartPredictor Object
     :maxdepth: 2
 
 
-    tutorial03-Shapash-overview-model-in-production
     tuto-smartpredictor-introduction-to-SmartPredictor

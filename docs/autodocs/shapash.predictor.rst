@@ -1,13 +1,14 @@
 SmartPredictor Object
 =========================
 
-The **SmartPredictor** Object from the library, is provided to use library to deploy interpretability of your project.
-With several methods, it allows users to get predictions and configured summary of the local explanation
-for each new dataset.
+The **SmartPredictor** Object allows to:
+    - compute predictions
+    - configure summary of the local explanation
+    - deploy interpretability of your model for operational needs
 
 It can be used in API mode and batch mode.
 
 .. autoclass:: shapash.explainer.smart_predictor.SmartPredictor
-   :members: add_input, detail_contributions, summarize, modify_mask, save
+   :members: add_input, predict, predict_proba, detail_contributions, summarize, modify_mask, save
    :undoc-members:
    :show-inheritance:
