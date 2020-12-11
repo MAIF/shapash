@@ -251,7 +251,7 @@ class SmartPredictor :
         """
         if type(x) == dict:
             try:
-                if not all(column in self.features_types.keys() for column in x.keys()):
+                if not all([column in self.features_types.keys() for column in x.keys()]):
                     raise ValueError("""
                     All features from dataset x must be in the features_types dict initialized.
                     """)
@@ -276,7 +276,7 @@ class SmartPredictor :
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
         assert all(column in self.columns_dict.values() for column in x.columns)
-        if not (type(key) == int for key in self.columns_dict.keys()):
+        if not all([type(key) == int for key in self.columns_dict.keys()]):
             raise ValueError("columns_dict must have only integers keys for features order.")
         features_order = []
         for order in range(min(self.columns_dict.keys()), max(self.columns_dict.keys()) + 1):
@@ -284,7 +284,7 @@ class SmartPredictor :
         x = x[features_order]
 
         assert all(column in self.features_types.keys() for column in x.columns)
-        if not(str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns):
+        if not all([str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns]):
             raise ValueError("Types of features in x doesn't match with the expected one in features_types.")
         return x
 
