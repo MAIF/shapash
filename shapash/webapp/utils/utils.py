@@ -38,7 +38,7 @@ def check_row(data, index):
         row number corresponding to index
     """
     df = pd.DataFrame.from_records(data, index='_index_')
-    if np.issubdtype(df.index[0], np.dtype(int).type):
+    if np.issubdtype(type(df.index[0]), np.dtype(int).type):
         index = int(index)
     row = df.index.get_loc(index) if index in list(df.index) else None
     return row
