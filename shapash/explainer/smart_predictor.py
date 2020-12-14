@@ -250,11 +250,11 @@ class SmartPredictor :
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
         if type(x) == dict:
+            if not all([column in self.features_types.keys() for column in x.keys()]):
+                raise ValueError("""
+                All features from dataset x must be in the features_types dict initialized.
+                """)
             try:
-                if not all([column in self.features_types.keys() for column in x.keys()]):
-                    raise ValueError("""
-                    All features from dataset x must be in the features_types dict initialized.
-                    """)
                 x = pd.DataFrame.from_dict(x, orient="index").T
                 for feature, type_feature in self.features_types.items():
                     x[feature] = x[feature].astype(type_feature)

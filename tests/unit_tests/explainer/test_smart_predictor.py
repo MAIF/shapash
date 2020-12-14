@@ -1030,6 +1030,66 @@ class TestSmartPredictor(unittest.TestCase):
         output = predictor_1.apply_postprocessing()
         assert np.array_equal(output, expected_output)
 
+    def test_convert_dict_dataset(self):
+        """
+        Unit test convert_dict_dataset
+        """
+        predictor_1 = self.predictor_1
+
+        x = predictor_1.convert_dict_dataset(x={"x1": 1, "x2": "M"})
+
+        assert all([str(x[feature].dtypes) == predictor_1.features_types[feature]
+                    for feature in predictor_1.features_types.keys()])
+
+        with self.assertRaises(ValueError):
+            predictor_1.convert_dict_dataset(x={"x1":"M", "x2":"M"})
+            predictor_1.convert_dict_dataset(x={"x1": 1, "x2": "M", "x3": "M"})
+
+    @patch('shapash.explainer.smart_predictor.SmartPredictor.convert_dict_dataset')
+    def test_check_dataset_type(self, convert_dict_dataset):
+        """
+        Unit test check_dataset_type
+        """
+        convert_dict_dataset.return_value = pd.DataFrame({"x1": [1], "x2": ["M"]})
+        predictor_1 = self.predictor_1
+
+        with self.assertRaises(ValueError):
+            predictor_1.check_dataset_type(x=1)
+            predictor_1.check_dataset_type(x=["x1", "x2"])
+            predictor_1.check_dataset_type(x=("x1", "x2"))
+
+        predictor_1.check_dataset_type(x=pd.DataFrame({"x1": [1], "x2": ["M"]}))
+        predictor_1.check_dataset_type(x={"x1": 1, "x2": "M"})
+
+    def test_check_dataset_features(self):
+        """
+        Unit test check_dataset_features
+        """
+        predictor_1 = self.predictor_1
+
+        with self.assertRaises(AssertionError):
+            predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"], "x3": ["M"]}))
+
+        with self.assertRaises(ValueError):
+            predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": [1]}))
+            predictor_1.check_dataset_features(x=pd.DataFrame({"x1": ["M"], "x2": ["M"]}))
+
+        x = predictor_1.check_dataset_features(x=pd.DataFrame({"x2": ["M"], "x1": [1]}))
+        assert all ([str(x[feature].dtypes) == predictor_1.features_types[feature]
+                     for feature in predictor_1.features_types.keys()])
+
+        features_order = []
+        for order in range(min(predictor_1.columns_dict.keys()), max(predictor_1.columns_dict.keys()) + 1):
+            features_order.append(predictor_1.columns_dict[order])
+        assert all(x.columns == features_order)
+
+        predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"]}))
+
+
+
+
+
+
 
 
 
