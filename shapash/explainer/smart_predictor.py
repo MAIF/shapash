@@ -70,7 +70,7 @@ class SmartPredictor :
     _classes: list, None
         List of labels if the model used is for classification problem, None otherwise.
     mask_params: dict (optional)
-        Dictionary allowing the user to define a apply a filter to summarize the local explainability.
+        Dictionary that specify how to summarize the explainability.
 
     How to declare a new SmartPredictor object?
 
@@ -168,11 +168,12 @@ class SmartPredictor :
         """
         The add_input method is the first step to add a dataset for prediction and explainability.
 
-        It applies :
-            - consistencies checks on dataset, predictions and contributions if provided.
-            - preprocessing and postprocessing specified in the initialisation
+        add_input applies to x parameter :
+            - consistencies checks
+            - preprocessing and postprocessing specified during the initialisation
             - features reordering with the right order for the model
 
+        If you don't specify ypred or contributions, add_input compute them.
         It's possible to not specified one parameter if it has already been defined before.
         For example, if the user want to specified an ypred without reinitialize the dataset x already defined.
         If the user declare a new input x, all the parameters stored will be cleaned.
@@ -401,7 +402,7 @@ class SmartPredictor :
 
     def predict_proba(self):
         """
-        The predict_proba compute the probababilities predicted for each x row defined in add_input.
+        The predict_proba compute the probabilities predicted for each x row defined in add_input.
 
         Returns
         -------
@@ -586,11 +587,10 @@ class SmartPredictor :
         If the user doesn't use modify_mask, the summarize method uses the mask_params parameters specified during
         the initialisation of the SmartPredictor.
 
-        In classification case, The summarize method summarizes the explainability which corresponds
-        to :
+        In classification case, The summarize method summarizes the explainability which corresponds to :
             - the predicted values specified by the user or automatically computed (with add_input method)
             - the right probabilities from predict_proba associated to the right predicted values
-            - the right contributions ranked
+            - the right contributions ranked and filtered as specify with modify_mask method
 
         Returns
         -------
