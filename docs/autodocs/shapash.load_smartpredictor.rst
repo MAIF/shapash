@@ -1,7 +1,7 @@
-SmartPredictor Loader Method
-============================
+SmartPredictor Loader Function
+==============================
 
-This method allows users to load SmartPredictor object saved into a pickle.
+This function allows users to load SmartPredictor object saved into a pickle.
 
 .. automodule:: shapash.utils.load_smartpredictor
    :members:

@@ -35,12 +35,12 @@ class SmartPredictor :
     Switching from SmartExplainer to SmartPredictor, allows users to reproduce
     the same results automatically on datasets with right structure.
 
-    SmartPredictor is designed to make new results understandable :
+    SmartPredictor is designed to make new results understandable:
         - It checks consistency of all parameters
         - It applies preprocessing and postprocessing
         - It computes models contributions
         - It makes predictions
-        - It summarizes local epxlainability
+        - It summarizes local explainability
 
     This class allows the user to automatically summarize the results of his model
     on new datasets (prediction, preprocessing and postprocessing linking,
@@ -75,18 +75,19 @@ class SmartPredictor :
     How to declare a new SmartPredictor object?
 
     Example
-    --------
-    >>> predictor = SmartPredictor(features_dict,
-                                    model,
-                                    explainer,
-                                    columns_dict,
-                                    features_types,
-                                    label_dict,
-                                    preprocessing,
-                                    postprocessing
-                                    )
+    -------
+    >>> predictor = SmartPredictor(features_dict=my_features_dict,
+    >>>                             model=my_model,
+    >>>                             explainer=my_explainer,
+    >>>                             columns_dict=my_columns_dict,
+    >>>                             features_types=my_features_type_dict,
+    >>>                             label_dict=my_label_dict,
+    >>>                             preprocessing=my_preprocess,
+    >>>                             postprocessing=my_postprocess)
 
-    or predictor = xpl.to_smartpredictor()
+    or the most common syntax
+
+    >>> predictor = xpl.to_smartpredictor()
 
     xpl, explainer: object
         SmartExplainer instance to point to.
@@ -752,5 +753,3 @@ class SmartPredictor :
             Columns ids compatible with var_dict
         """
         return check_features_name(self.columns_dict, self.features_dict, features)
-
-

@@ -1,7 +1,7 @@
 SmartPredictor Object
-=========================
+=====================
 
-The **SmartPredictor** Object allows to:
+The SmartPredictor object allows to:
     - compute predictions
     - configure summary of the local explanation
     - deploy interpretability of your model for operational needs
