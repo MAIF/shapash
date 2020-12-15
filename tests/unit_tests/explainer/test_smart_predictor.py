@@ -1075,7 +1075,7 @@ class TestSmartPredictor(unittest.TestCase):
             predictor_1.check_dataset_features(x=pd.DataFrame({"x1": ["M"], "x2": ["M"]}))
 
         x = predictor_1.check_dataset_features(x=pd.DataFrame({"x2": ["M"], "x1": [1]}))
-        assert all ([str(x[feature].dtypes) == predictor_1.features_types[feature]
+        assert all([str(x[feature].dtypes) == predictor_1.features_types[feature]
                      for feature in predictor_1.features_types.keys()])
 
         features_order = []
