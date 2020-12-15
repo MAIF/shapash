@@ -1,5 +1,5 @@
 SmartExplainer Object
-=========================
+=====================
 
 SmartExplainer declaration and data preparation
 -----------------------------------------------
