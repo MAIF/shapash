@@ -856,6 +856,10 @@ class SmartExplainer:
         >>> app = xpl.run_app()
         >>> app.kill()
         """
+        if self.y_pred is None:
+            raise ValueError(
+                "You have to specify y_pred argument. Please use add() or compile() method"
+            )
         if hasattr(self, '_case'):
             self.smartapp = SmartApp(self)
             if host is None:
