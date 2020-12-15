@@ -222,6 +222,14 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
             raise ValueError("All features of preprocessing must be in columns_dict")
 
+    if str(type(preprocessing)) in columntransformer:
+        for encoding in preprocessing.transformers_:
+            ct_encoding = encoding[1]
+            if (str(type(ct_encoding)) not in no_dummies_sklearn) \
+                    and (str(type(ct_encoding)) not in no_dummies_category_encoder):
+                if str(type(ct_encoding)) != "<class 'str'>":
+                    raise ValueError("One of the encoders used in ColumnTransformers isn't supported.")
+
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
         if str(type(preprocessing)) in no_dummies_category_encoder:
@@ -229,18 +237,12 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 raise ValueError("features of columns_dict and model must be the same")
 
         elif str(type(preprocessing)) in columntransformer:
-            for encoding in preprocessing.transformers_:
-                ct_encoding = encoding[1]
-                if (str(type(ct_encoding)) not in no_dummies_sklearn) \
-                        and (str(type(ct_encoding)) not in no_dummies_category_encoder):
-                    if str(type(ct_encoding)) != "<class 'str'>" :
-                        raise ValueError("One of the encoders used in ColumnTransformers isn't supported.")
-
             feature_encoded = get_feature_names(preprocessing)
             if len(set(model_features)) != len(feature_encoded):
-                raise ValueError(
-                    "Number of features returned by the preprocessing doesn't match the model's expected features."
-                                 )
+                raise ValueError("""
+                    Number of features returned by the ColumnTransformer preprocessing doesn't
+                    match the model's expected features.
+                                 """)
 
         elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
                 and preprocessing is not None:
