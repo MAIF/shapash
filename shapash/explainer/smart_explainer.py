@@ -2,14 +2,8 @@
 Smart explainer module
 """
 import logging
-import pandas as pd
 import copy
-# TODO: Remove the next 4 lines
-# these lines allow you to run locally the code and import shapash content
-# import os,sys,inspect
-# currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-# parentdir = os.path.dirname(currentdir)
-# sys.path.insert(0,parentdir)
+import pandas as pd
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
@@ -34,7 +28,7 @@ class SmartExplainer:
     """
     The SmartExplainer class is the main object of the Shapash library.
     It allows the Data Scientists to perform many operations to make the
-    results more understandable : 
+    results more understandable :
     linking encoders, models, predictions, label dict and datasets.
     SmartExplainer users have several methods which are described below.
 
@@ -111,13 +105,13 @@ class SmartExplainer:
         if isinstance(features_dict, dict) == False:
             raise ValueError(
                 """
-                features_dict must be a dict  
+                features_dict must be a dict
                 """
             )
         if label_dict is not None and isinstance(label_dict, dict) == False:
             raise ValueError(
                 """
-                label_dict must be a dict  
+                label_dict must be a dict
                 """
             )
         self.features_dict = features_dict
@@ -579,13 +573,13 @@ class SmartExplainer:
         -------
         Object content of the attribute specified from SmartExplainer instance
         """
-        if hasattr(self, attribute):
-            return self.__dict__[attribute]
-        else:
+        if not hasattr(self, attribute):
             raise ValueError(
                 """
                 attribute {0} isn't an attribute of the explainer precised.
                 """.format(attribute))
+
+        return self.__dict__[attribute]
 
     def filter(
             self,
@@ -875,7 +869,7 @@ class SmartExplainer:
                 host_name = host
             server_instance.start()
             logging.info(f"Your Shapash application run on http://{host_name}:{port}/")
-            logging.info(f"Use the method .kill() to down your app.")
+            logging.info("Use the method .kill() to down your app.")
             return server_instance
 
         else:
@@ -913,48 +907,47 @@ class SmartExplainer:
             raise ValueError("""SmartPredictor need an explainer, please compile without contributions or specify  the
                                         explainer used. Make change in compile() step""")
 
-        else:
-            self.features_types = {features : str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
+        self.features_types = {features : str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
-            listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
-                              "label_dict", "preprocessing", "postprocessing"]
+        listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
+                            "label_dict", "preprocessing", "postprocessing"]
 
-            params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
+        params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
-            if not hasattr(self,"mask_params"):
-                self.mask_params = {
-                    "features_to_hide": None,
-                    "threshold": None,
-                    "positive": None,
-                    "max_contrib": None
-                }
-            params_smartpredictor.append(self.mask_params)
+        if not hasattr(self,"mask_params"):
+            self.mask_params = {
+                "features_to_hide": None,
+                "threshold": None,
+                "positive": None,
+                "max_contrib": None
+            }
+        params_smartpredictor.append(self.mask_params)
 
         return SmartPredictor(*params_smartpredictor)
 
-    def check_x_y_attributes(self, x, y):
+    def check_x_y_attributes(self, x_str, y_str):
         """
-        Check if x and y are attributes of the SmartExplainer
+        Check if x_str and y_str are attributes of the SmartExplainer
 
         Parameters
         ----------
-        x string
+        x_str: string
             label of the attribute x
-        y string
+        y_str: string
             label of the attribute y
 
         Returns
         -------
         list of object detained by attributes x and y.
         """
-        if not (isinstance(x, str) and isinstance(y, str)):
+        if not (isinstance(x_str, str) and isinstance(y_str, str)):
             raise ValueError(
                 """
                 x and y must be strings.
                 """
             )
         params_checkypred = []
-        attributs_explainer = [x, y]
+        attributs_explainer = [x_str, y_str]
 
         for attribut in attributs_explainer:
             if hasattr(self, attribut):

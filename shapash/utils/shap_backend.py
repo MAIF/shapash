@@ -57,7 +57,7 @@ def shap_contributions(model, x_df, explainer=None):
         raise ValueError(
             """
             model not supported by shapash, please compute contributions
-            by yourself before using shapash 
+            by yourself before using shapash
             """
         )
 

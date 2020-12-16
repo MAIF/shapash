@@ -3,6 +3,7 @@ Smart plotter module
 """
 import warnings
 import random
+import copy
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -11,8 +12,6 @@ from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value
-import copy
-
 
 class SmartPlotter:
     """
@@ -155,8 +154,8 @@ class SmartPlotter:
         """
         quantile = [0.25, 0.75]
         desc_df = self.explainer.y_pred.describe(percentiles=quantile)
-        p1, p2 = list(desc_df.loc[[str(int(p * 100)) + '%' for p in quantile]].values)
-        p_diff = p2 - p1
+        perc1, perc2 = list(desc_df.loc[[str(int(p * 100)) + '%' for p in quantile]].values)
+        p_diff = perc2 - perc1
         self.round_digit = compute_digit_number(p_diff)
 
     def plot_scatter(self,
@@ -644,7 +643,7 @@ class SmartPlotter:
             else:
                 color = -1 if expl[1] != '' else -2
 
-            bar = go.Bar(
+            barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
                 customdata=[hoverlabel],
@@ -653,7 +652,7 @@ class SmartPlotter:
                 showlegend=False,
                 hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
             )
-            bars.append([color, contrib_value, num, bar])
+            bars.append([color, contrib_value, num, barobj])
 
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
@@ -1032,14 +1031,14 @@ class SmartPlotter:
                 addnote = None
             else:
                 list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
-                addnote = f"Length of random Subset : "
+                addnote = "Length of random Subset : "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
-                addnote = f"Length of user-defined Subset : "
+                addnote = "Length of user-defined Subset : "
             else:
                 list_ind = random.sample(selection, max_points)
-                addnote = f"Length of random Subset : "
+                addnote = "Length of random Subset : "
         else:
             ValueError('parameter selection must be a list')
 
@@ -1194,16 +1193,15 @@ class SmartPlotter:
             subset_feat_imp.index = subset_feat_imp.index.map(self.explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
-            else:
-                subset_len = subset.shape[0]
-                total_len = self.explainer.x_pred.shape[0]
-                addnote = add_text([addnote,
-                                    f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],
-                                   sep=" - ")
+            subset_len = subset.shape[0]
+            total_len = self.explainer.x_pred.shape[0]
+            addnote = add_text([addnote,
+                                f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],
+                                sep=" - ")
         if self.explainer.x_pred.shape[1] >= max_features:
             addnote = add_text([addnote,
                                 f"Total number of features: {int(self.explainer.x_pred.shape[1])}"],
-                               sep=" - ")
+                                sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, addnote,
@@ -1302,23 +1300,23 @@ class SmartPlotter:
         dic_color = copy.deepcopy(self.dict_compare_colors)
         lines = list()
 
-        for i, id in enumerate(index):
-            xi = list()
+        for i, id_i in enumerate(index):
+            x_i = list()
             features = list()
             x_val = predictions[i]
             x_hover = list()
 
             for contrib, feat in iteration_list:
-                xi.append(contrib[i])
+                x_i.append(contrib[i])
                 features.append('<b>' + str(feat) + '</b>')
                 pred_x_val = x_val[dict_features[feat]]
-                x_hover.append(f"Id: <b>{add_line_break(id, 40, 160)}</b>"
+                x_hover.append(f"Id: <b>{add_line_break(id_i, 40, 160)}</b>"
                                + f"<br /><b>{add_line_break(feat, 40, 160)}</b> <br />"
                                + f"Contribution: {contrib[i]:.4f} <br />Value: "
                                + str(add_line_break(pred_x_val, 40, 160)))
 
             lines.append(go.Scatter(
-                x=xi,
+                x=x_i,
                 y=features,
                 mode='lines+markers',
                 showlegend=True,
@@ -1396,9 +1394,9 @@ class SmartPlotter:
         # Getting indexes in a list
         line_reference = []
         if index is not None:
-            for id in index:
-                if id in self.explainer.x_pred.index:
-                    line_reference.append(id)
+            for ident in index:
+                if ident in self.explainer.x_pred.index:
+                    line_reference.append(ident)
 
         elif row_num is not None:
             line_reference = [self.explainer.x_pred.index.values[row_nb_reference]
@@ -1430,12 +1428,12 @@ class SmartPlotter:
 
             if show_predict:
                 preds = [self.local_pred(line) for line in line_reference]
-                subtitle = f"Predictions: " + ' ; '.join([str(id) + ': <b>' + str(round(pred, 2)) + '</b>'
+                subtitle = "Predictions: " + ' ; '.join([str(id) + ': <b>' + str(round(pred, 2)) + '</b>'
                                                           for id, pred in zip(line_reference, preds)])
 
         new_contrib = list()
-        for id in line_reference:
-            new_contrib.append(contrib.loc[id])
+        for ident in line_reference:
+            new_contrib.append(contrib.loc[ident])
         new_contrib = np.array(new_contrib).T
 
         # Well labels if available

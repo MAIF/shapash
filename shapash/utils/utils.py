@@ -126,10 +126,10 @@ def truncate_str(text, maxlen= 40):
         tot_length = 0
         input_words = text.split()
         output_words = []
-        for w in input_words[:-1]:
-            tot_length = tot_length + len(w)
+        for word in input_words[:-1]:
+            tot_length = tot_length + len(word)
             if tot_length <= maxlen:
-                output_words.append(w)
+                output_words.append(word)
 
         text = " ".join(output_words)
         if len(input_words) > len(output_words):
