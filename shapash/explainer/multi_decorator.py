@@ -44,9 +44,10 @@ class MultiDecorator:
         first_arg, other_args = args[0], args[1:]
         self.check_first_arg(first_arg, func)
         if isinstance(first_arg[0], tuple):
-            return [method(*elem, *other_args, **kwargs) for elem in first_arg]
+            output_list = [method(*elem, *other_args, **kwargs) for elem in first_arg]
         else:
-            return [method(elem, *other_args, **kwargs) for elem in first_arg]
+            output_list = [method(elem, *other_args, **kwargs) for elem in first_arg]
+        return output_list
 
     def check_args(self, args, name):
         """
