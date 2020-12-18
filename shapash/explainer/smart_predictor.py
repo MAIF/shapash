@@ -753,3 +753,90 @@ class SmartPredictor :
             Columns ids compatible with var_dict
         """
         return check_features_name(self.columns_dict, self.features_dict, features)
+
+    def aggregate(self, features_to_aggregate=None, mapping=None):
+        """
+        Compute aggregation on intial data used to display summary.
+
+        Parameters
+        ----------
+        features_to_aggregate: dict
+            Dictionary with new label keys associated to a list of features to aggregate
+        mapping: dict
+            Dictionary mapping the new label taken by the aggregated new features
+        """
+
+    def aggregate_data(self, features_to_aggregate=None, mapping=None):
+        """
+        aggregate_data compute aggregation on dataset to display a custom summary.
+
+        Parameters
+        ----------
+        features_to_aggregate: dict
+            Dictionary with new label keys associated to a list of features to aggregate
+        mapping: dict
+            Dictionary mapping the new label taken by the aggregated new features
+        """
+        ### CHECK AGGREGATE_FEATURES
+        feature_to_test = list()
+        for value in features_to_aggregate.values():
+            feature_to_test.extend(value)
+
+        if not all([feature in self.aggregate["aggregate_x"].columns for feature in feature_to_test]):
+            raise ValueError("All features to aggregate aren't in the initial expected dataset.")
+        if len(list(set(features_to_aggregate))) != len(feature_to_test):
+            raise ValueError("Aggregation can't be done several times on features.")
+
+        ### CHECK AGGREGATE_MAPPING
+        if mapping is not None:
+            if not isinstance(mapping, dict):
+                raise ValueError("aggregate_mapping parameter must be a dict of dict.")
+            if not all([feature in features_to_aggregate.keys() for feature in mapping.keys()]):
+                raise ValueError(
+                    "All features to apply mapping after aggregation must have same label as one given in features_to_aggregate.")
+            for feature in mapping.keys():
+                if not isinstance(mapping[feature], dict):
+                    raise ValueError("All values associated to a feature in aggregate_mapping must be a dict.")
+
+        # Aggregate Data
+        # Change for SmartExplainer
+        self.aggregate = {"aggregate_x": None, "aggregate_contributions": None, "data": None, "mask": None,
+                          "masked_contributions": None, "features_dict": None, "columns_dict": None}
+        self.aggregate["aggregate_x"] = self.data["x_postprocessed"]
+        self.aggregate["aggregate_contributions"] = self.data["contributions"]
+
+        for feature in features_to_aggregate.keys():
+            self.aggregate["aggregate_x"][feature] = self.aggregate["aggregate_x"].apply(
+                lambda row: "-".join([str(row[value]) for value in features_to_aggregate[feature]]), axis=1)
+            self.aggregate["aggregate_x"] = self.aggregate["aggregate_x"].drop(columns=features_to_aggregate[feature],
+                                                                               axis=1)
+
+        if isinstance(self.aggregate["aggregate_contributions"], list):
+            for i, contribution in enumerate(self.aggregate["aggregate_contributions"]):
+                for feature in features_to_aggregate.keys():
+                    self.aggregate["aggregate_contributions"][i][feature] = \
+                    self.aggregate["aggregate_contributions"][i][features_to_aggregate[feature]].sum(axis=1)
+                    self.aggregate["aggregate_contributions"][i] = self.aggregate["aggregate_contributions"][i].drop(
+                        columns=features_to_aggregate[feature], axis=1)
+
+        else:
+            for feature in features_to_aggregate.keys():
+                self.aggregate["aggregate_contributions"][feature] = self.aggregate["aggregate_contributions"][
+                    features_to_aggregate[feature]].sum(axis=1)
+                self.aggregate["aggregate_contributions"] = self.aggregate["aggregate_contributions"].drop(
+                    columns=features_to_aggregate[feature], axis=1)
+
+        if mapping is not None:
+            for feature_name in mapping.keys():
+                dict_postprocessing = mapping[feature_name]
+                unique_values = self.aggregate["aggregate_x"][feature_name].unique().tolist()
+                unique_values = [value for value in unique_values if
+                                 value not in dict_postprocessing[feature_name].keys()]
+                for value in unique_values:
+                    dict_postprocessing[feature_name][value] = value
+                self.aggregate["aggregate_x"] = self.aggregate["aggregate_x"].map(dict_postprocessing[feature_name])
+
+        self.aggregate["features_dict"] = {key: value for key, value in self.features_dict.items()
+                                           if key not in feature_to_test}
+        self.aggregate["columns_dict"] = {i: col for i, col in enumerate(self.aggregate["aggregate_x"].columns)}
+
