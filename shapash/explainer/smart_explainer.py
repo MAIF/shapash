@@ -19,7 +19,8 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
-                                check_postprocessing, check_features_name
+                                check_postprocessing, check_features_name,check_aggregate_features,\
+                                check_aggregate_mapping
 from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
@@ -715,7 +716,7 @@ class SmartExplainer:
             threshold=None,
             positive=None,
             max_contrib=None,
-            proba=False
+            proba=False,
     ):
         """
         The to_pandas method allows to export the summary of local explainability.
@@ -741,10 +742,12 @@ class SmartExplainer:
             Absolute threshold below which any contribution is hidden.
         positive: bool, optional (default: None)
             If True, hide negative values. Hide positive values otherwise. If None, hide nothing.
-        max_contrib : int, optional (default: 5)
+        max_contrib: int, optional (default: 5)
             Number of contributions to show in the pandas df
-        proba : bool, optional (default: False)
+        proba: bool, optional (default: False)
             adding proba in output df
+        aggregate: bool, optional (default: False)
+            applying aggregation specified in aggregate method on to_pandas method result.
 
         Returns
         -------
@@ -769,14 +772,10 @@ class SmartExplainer:
             )
 
         # Apply filter method if necessary
-        if all(var is None for var in [features_to_hide, threshold, positive, max_contrib]) \
-                and hasattr(self, 'mask_params'):
-            print('to_pandas params: ' + str(self.mask_params))
-        else:
-            self.filter(features_to_hide=features_to_hide,
-                        threshold=threshold,
-                        positive=positive,
-                        max_contrib=max_contrib)
+        self.filter(features_to_hide=features_to_hide,
+                    threshold=threshold,
+                    positive=positive,
+                    max_contrib=max_contrib)
 
         # Summarize information
         self.data['summary'] = self.state.summarize(
@@ -968,3 +967,94 @@ class SmartExplainer:
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def aggregate(self, features_to_aggregate=None, mapping=None):
+        """
+        Compute aggregation on intial data used to display summary.
+
+        Parameters
+        ----------
+        features_to_aggregate: dict
+            Dictionary with new label keys associated to a list of features to aggregate
+        mapping: dict
+            Dictionary mapping the new label taken by the aggregated new features
+        """
+        # Aggregate Data
+        if not hasattr(self, "aggregate_data"):
+            self.aggregate_data = {"x_pred": None, "contributions": None, "data": None, "mask": None,
+                              "masked_contributions": None, "features_dict": None, "columns_dict": None,
+                              "features_desc": None}
+            if self.aggregate_data["x_pred"] is None:
+                self.aggregate_data["x_pred"] = copy.deepcopy(self.x_pred)
+                self.aggregate_data["contributions"] = copy.deepcopy(self.contributions)
+                self.aggregate_data["features_dict"] = copy.deepcopy(self.features_dict)
+                self.aggregate_data["columns_dict"] = copy.deepcopy(self.columns_dict)
+                self.aggregate_data["features_desc"] = copy.deepcopy(self.features_desc)
+                self.aggregate_data["data"] = copy.deepcopy(self.data)
+
+        ### CHECK AGGREGATE_FEATURES
+        feature_to_test = check_aggregate_features(self.x_pred, features_to_aggregate)
+        ### CHECK AGGREGATE_MAPPING
+        check_aggregate_mapping(mapping, features_to_aggregate)
+
+        for feature in features_to_aggregate.keys():
+            self.x_pred[feature] = self.x_pred.apply(
+                lambda row: "-".join([str(row[value]) for value in features_to_aggregate[feature]]), axis=1)
+            self.x_pred = self.x_pred.drop(columns=features_to_aggregate[feature],axis=1)
+
+        if isinstance(self.contributions, list):
+            for i, contribution in enumerate(self.contributions):
+                for feature in features_to_aggregate.keys():
+                    self.contributions[i][feature] = self.contributions[i][features_to_aggregate[feature]].sum(axis=1)
+                    self.contributions[i] = self.contributions[i].drop(columns = features_to_aggregate[feature], axis = 1)
+        else:
+            for feature in features_to_aggregate.keys():
+                self.contributions[feature] = self.contributions[features_to_aggregate[feature]].sum(axis=1)
+                self.contributions = self.contributions.drop(columns = features_to_aggregate[feature], axis = 1)
+
+        if mapping is not None:
+            dict_postprocessing = dict()
+            for feature_name in mapping.keys():
+                dict_postprocessing[feature_name] = mapping[feature_name]
+                unique_values = self.x_pred[feature_name].unique().tolist()
+                unique_values = [value for value in unique_values if
+                value not in dict_postprocessing[feature_name].keys()]
+                for value in unique_values:
+                    dict_postprocessing[feature_name][value] = value
+                self.x_pred[feature_name] = self.x_pred[feature_name].map(dict_postprocessing[feature_name])
+
+        self.features_dict = {key: value for key, value in self.features_dict.items()
+                              if key not in feature_to_test}
+        for key in features_to_aggregate.keys():
+            self.features_dict[key] = key
+        self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
+        self.features_desc = self.check_features_desc()
+
+        self.data = self.state.assign_contributions(
+            self.state.rank_contributions(
+                self.contributions,
+                self.x_pred
+            )
+        )
+
+    def reverse_aggregate(self):
+        """
+        Reverse aggregation on initial dataset.
+        Aggregate must has been called at least once.
+        """
+        if not hasattr(self, "aggregate_data"):
+            raise ValueError("aggregate method must has been called at least once.")
+        if self.aggregate_data["x_pred"] is None:
+            raise ValueError("reverse aggregate has already been applied.")
+
+        self.x_pred = copy.deepcopy(self.aggregate_data["x_pred"])
+        self.contributions = copy.deepcopy(self.aggregate_data["contributions"])
+        self.features_dict = copy.deepcopy(self.aggregate_data["features_dict"])
+        self.columns_dict = copy.deepcopy(self.aggregate_data["columns_dict"])
+        self.features_desc = copy.deepcopy(self.aggregate_data["features_desc"])
+        self.data = copy.deepcopy(self.aggregate_data["data"])
+        self.mask = None
+        self.mask_params = None
+        self.masked_contributions = None
+        delattr(self, 'aggregate_data')
+

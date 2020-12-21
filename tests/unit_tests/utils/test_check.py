@@ -8,7 +8,8 @@ import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_ypred, check_contribution_object,\
                                 check_preprocessing_options, check_postprocessing, \
-                                check_consistency_model_features, check_consistency_model_label
+                                check_consistency_model_features, check_consistency_model_label,\
+                                check_aggregate_features, check_aggregate_mapping
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -433,3 +434,53 @@ class TestCheck(unittest.TestCase):
             check_postprocessing(features_types, postprocessing5)
             check_postprocessing(features_types, postprocessing6)
 
+    def test_check_aggregate_features(self):
+        """
+        Unit test test_check_aggregate_features
+        """
+        train = pd.DataFrame({'city': ['chicago', 'paris'],
+                              'state': ['US', 'FR'],
+                              'other': ['A', 'B']})
+
+        feature_to_aggregate_1 = ["test"]
+        feature_to_aggregate_2 = {"test": "chicago"}
+        feature_to_aggregate_3 = {"test": ["chicago"]}
+        feature_to_aggregate_4 = {"test_1": ["city", "state"], "test_2": ["city", "other"]}
+        feature_to_aggregate_5 = {"test_1": ["city", "state"]}
+
+        with self.assertRaises(ValueError):
+            check_aggregate_features(train, feature_to_aggregate_1)
+
+        with self.assertRaises(ValueError):
+            check_aggregate_features(train, feature_to_aggregate_2)
+
+        with self.assertRaises(ValueError):
+            check_aggregate_features(train, feature_to_aggregate_3)
+
+        with self.assertRaises(ValueError):
+            check_aggregate_features(train, feature_to_aggregate_4)
+
+        check_aggregate_features(train, feature_to_aggregate_5)
+
+    def test_check_aggregate_mapping(self):
+        """
+        Unit test check_aggregate_mapping
+        """
+        feature_to_aggregate = {"test_1": ["city", "state"]}
+        mapping_1 = ["test_1"]
+        with self.assertRaises(ValueError):
+            check_aggregate_mapping(mapping_1, feature_to_aggregate)
+
+        mapping_2 = {"test": {"chicago-US": "US : Chicago",
+                              "paris-FR": "FR : Paris"}}
+        with self.assertRaises(ValueError):
+            check_aggregate_mapping(mapping_2, feature_to_aggregate)
+
+        mapping_3 = {"test_1": ["chicago-US", "US : Chicago",
+                                "paris-FR", "FR : Paris"]}
+        with self.assertRaises(ValueError):
+            check_aggregate_mapping(mapping_3, feature_to_aggregate)
+
+        mapping_4 = {"test_1": {"chicago-US": "US : Chicago",
+                                "paris-FR": "FR : Paris"}}
+        check_aggregate_mapping(mapping_4, feature_to_aggregate)
