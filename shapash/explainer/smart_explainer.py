@@ -1054,7 +1054,12 @@ class SmartExplainer:
         self.features_desc = copy.deepcopy(self.aggregate_data["features_desc"])
         self.data = copy.deepcopy(self.aggregate_data["data"])
         self.mask = None
-        self.mask_params = None
+        self.mask_params = {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': None,
+            'max_contrib': None
+        }
         self.masked_contributions = None
         delattr(self, 'aggregate_data')
 

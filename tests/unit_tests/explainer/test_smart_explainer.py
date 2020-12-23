@@ -1342,5 +1342,10 @@ class TestSmartExplainer(unittest.TestCase):
         assert Explainer.features_desc == features_desc
         assert Explainer.data == data
         assert Explainer.mask == None
-        assert Explainer.mask_params == None
+        assert Explainer.mask_params == {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': None,
+            'max_contrib': None
+            }
         assert Explainer.masked_contributions == None

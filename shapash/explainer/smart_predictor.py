@@ -824,6 +824,11 @@ class SmartPredictor :
         self.features_dict = copy.deepcopy(self.aggregate_data["features_dict"])
         self.columns_dict = copy.deepcopy(self.aggregate_data["columns_dict"])
         self.mask = None
-        self.mask_params = None
+        self.mask_params = {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': None,
+            'max_contrib': None
+        }
         self.masked_contributions = None
         delattr(self, 'aggregate_data')

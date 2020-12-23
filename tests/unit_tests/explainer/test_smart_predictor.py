@@ -1170,7 +1170,12 @@ class TestSmartPredictor(unittest.TestCase):
         assert predictor_1.features_dict == self.features_dict_2
         assert predictor_1.columns_dict == self.columns_dict_2
         assert predictor_1.mask == None
-        assert predictor_1.mask_params == None
+        assert predictor_1.mask_params == {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': None,
+            'max_contrib': None
+        }
         assert predictor_1.masked_contributions == None
 
 
