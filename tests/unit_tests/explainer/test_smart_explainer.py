@@ -16,6 +16,7 @@ from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 import category_encoders as ce
 import shap
+import copy
 
 def init_sme_to_pickle_test():
     """
@@ -1218,3 +1219,128 @@ class TestSmartExplainer(unittest.TestCase):
                    for feature in xpl.x_pred.columns )
 
         assert predictor_2.mask_params == xpl.mask_params
+
+    @patch('shapash.explainer.smart_explainer.SmartExplainer.choose_state')
+    def test_aggregate(self, choose_state):
+        """
+        Unit test aggregate
+        """
+        choose_state.return_value = MultiDecorator(SmartState())
+        Explainer = SmartExplainer()
+
+        x_pred = pd.DataFrame({"x1": [33, 112, 77, 74, 14],
+                               "x2": [99, 45, 33, 51, 9],
+                               "id": [0, 1, 2, 3, 4]})
+        x_pred = x_pred.set_index("id")
+
+        contributions = [pd.DataFrame({"x1": [-0, -0, -0, -0, -0],
+                                       "x2": [0.0403846, 0.0403846, 0.0403846, 0.0403846, 0.0403846],
+                                       "id": [0, 1, 2, 3, 4]}),
+                         pd.DataFrame({"x1": [-0, -0, -0, -0, -0],
+                                       "x2": [-0.0403846, -0.0403846, -0.0403846, -0.0403846, -0.0403846],
+                                       "id": [0, 1, 2, 3, 4]})]
+        for indice, element in enumerate(contributions):
+            contributions[indice] = element.set_index("id")
+        features_dict = {"x1": "age", "x2": "weight"}
+        columns_dict = {0: "x1", 1: "x2"}
+        features_desc = None
+        data = {'contrib_sorted': None, 'x_sorted': None, 'var_dict': None}
+
+        Explainer.x_pred = copy.deepcopy(x_pred)
+        Explainer.contributions = copy.deepcopy(contributions)
+        Explainer.features_dict = features_dict
+        Explainer.columns_dict = columns_dict
+        Explainer.features_desc = features_desc
+        Explainer.data = data
+        Explainer.state = Explainer.choose_state(Explainer.contributions)
+
+        Explainer.aggregate(features_to_aggregate={"x3": ["x1", "x2"]},
+                            mapping={"x3": {"33-99": "strong difference",
+                                            "112-45": "huge difference",
+                                            "77-33": "middle difference",
+                                            "74-51": "middle difference",
+                                            "14-9": "small difference"}
+                                     }
+                            )
+        assert hasattr(Explainer, "aggregate_data")
+        assert Explainer.aggregate_data["x_pred"].equals(x_pred)
+
+        for index, element in enumerate(Explainer.aggregate_data["contributions"]):
+            assert element.equals(contributions[index])
+        assert Explainer.aggregate_data["features_dict"] == features_dict
+        assert Explainer.aggregate_data["columns_dict"] == columns_dict
+        assert Explainer.aggregate_data["features_desc"] == features_desc
+        assert Explainer.aggregate_data["data"] == data
+
+        assert Explainer.x_pred.shape[1] == 1
+        assert Explainer.x_pred.columns == ["x3"]
+        assert Explainer.features_dict == {"x3": "x3"}
+        assert Explainer.columns_dict == {0: "x3"}
+
+        for element in Explainer.contributions:
+            assert element.shape[1] == 1
+            assert element.columns == ["x3"]
+
+        assert all(Explainer.x_pred["x3"].isin(["strong difference",
+                                                "huge difference",
+                                                "middle difference",
+                                                "small difference"]))
+
+        for key, value in Explainer.data.items():
+            for data in value:
+                assert data.shape[1] == 1
+
+    def test_reverse_aggregate(self):
+        """Unit test reverse_aggregate"""
+        Explainer = SmartExplainer()
+
+        with self.assertRaises(ValueError):
+            Explainer.reverse_aggregate()
+
+        Explainer.aggregate_data = {"x_pred": None, "contributions": None, "data": None, "mask": None,
+                                    "masked_contributions": None, "features_dict": None, "columns_dict": None,
+                                    "features_desc": None}
+
+        with self.assertRaises(ValueError):
+            Explainer.reverse_aggregate()
+
+        x_pred = pd.DataFrame({"x1": [33, 112, 77, 74, 14],
+                               "x2": [99, 45, 33, 51, 9],
+                               "id": [0, 1, 2, 3, 4]})
+        x_pred = x_pred.set_index("id")
+
+        contributions = [pd.DataFrame({"x1": [-0, -0, -0, -0, -0],
+                                       "x2": [0.0403846, 0.0403846, 0.0403846, 0.0403846, 0.0403846],
+                                       "id": [0, 1, 2, 3, 4]}),
+                         pd.DataFrame({"x1": [-0, -0, -0, -0, -0],
+                                       "x2": [-0.0403846, -0.0403846, -0.0403846, -0.0403846, -0.0403846],
+                                       "id": [0, 1, 2, 3, 4]})]
+        for indice, element in enumerate(contributions):
+            contributions[indice] = element.set_index("id")
+        features_dict = {"x1": "age", "x2": "weight"}
+        columns_dict = {0: "x1", 1: "x2"}
+        features_desc = None
+        data = {'contrib_sorted': None, 'x_sorted': None, 'var_dict': None}
+
+        Explainer.aggregate_data["x_pred"] = copy.deepcopy(x_pred)
+        Explainer.aggregate_data["contributions"] = copy.deepcopy(contributions)
+        Explainer.aggregate_data["data"] = data
+        Explainer.aggregate_data["mask"] = None
+        Explainer.aggregate_data["masked_contributions"] = None
+        Explainer.aggregate_data["features_dict"] = features_dict
+        Explainer.aggregate_data["columns_dict"] = columns_dict
+        Explainer.aggregate_data["features_desc"] = features_desc
+
+        Explainer.reverse_aggregate()
+
+        assert not hasattr(Explainer, "aggregate_data")
+        assert Explainer.x_pred.equals(x_pred)
+        for index, element in enumerate(Explainer.contributions):
+            assert Explainer.contributions[index].equals(contributions[index])
+        assert Explainer.features_dict == features_dict
+        assert Explainer.columns_dict == columns_dict
+        assert Explainer.features_desc == features_desc
+        assert Explainer.data == data
+        assert Explainer.mask == None
+        assert Explainer.mask_params == None
+        assert Explainer.masked_contributions == None

@@ -20,6 +20,7 @@ import types
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import shap
+import copy
 
 def init_sme_to_pickle_test():
     """
@@ -1084,6 +1085,94 @@ class TestSmartPredictor(unittest.TestCase):
         assert all(x.columns == features_order)
 
         predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"]}))
+
+    @patch('shapash.utils.check.check_aggregate_features')
+    @patch('shapash.utils.check.check_aggregate_mapping')
+    def test_aggregate(self, check_aggregate_mapping, check_aggregate_features):
+        """
+        Unit test aggregate
+        """
+        check_aggregate_features.return_value = ["x1", "x2"]
+        check_aggregate_mapping.return_value = True
+
+        predictor_1 = self.predictor_2
+
+        x_postprocessed = pd.DataFrame({"x1": [33, 112, 77, 74, 14],
+                                        "x2": [99, 45, 33, 51, 9],
+                                        "id": [0, 1, 2, 3, 4]})
+        x_postprocessed = x_postprocessed.set_index("id")
+
+        contributions = pd.DataFrame({"x1": [-0, -0, -0, -0, -0],
+                                      "x2": [0.0403846, 0.0403846, 0.0403846, 0.0403846, 0.0403846],
+                                      "id": [0, 1, 2, 3, 4]})
+        contributions = contributions.set_index("id")
+
+        predictor_1.data = {"x_postprocessed": None, "contributions": None}
+
+        predictor_1.data["x_postprocessed"] = copy.deepcopy(x_postprocessed)
+        predictor_1.data["contributions"] = copy.deepcopy(contributions)
+        predictor_1.aggregate(features_to_aggregate={"x3": ["x1", "x2"]},
+                              mapping={"x3": {"33-99": "strong difference",
+                                              "112-45": "huge difference",
+                                              "77-33": "middle difference",
+                                              "74-51": "middle difference",
+                                              "14-9": "small difference"}
+                                       }
+                              )
+
+        assert hasattr(predictor_1, "aggregate_data")
+        assert predictor_1.aggregate_data["x_pred"].equals(x_postprocessed)
+        assert predictor_1.aggregate_data["contributions"].equals(contributions)
+        assert predictor_1.aggregate_data["features_dict"] == self.features_dict_2
+        assert predictor_1.aggregate_data["columns_dict"] == self.columns_dict_2
+        assert predictor_1.data["x_postprocessed"].shape[1] == 1
+        assert predictor_1.data["x_postprocessed"].columns == ["x3"]
+        assert predictor_1.data["contributions"].shape[1] == 1
+        assert predictor_1.data["contributions"].columns == ["x3"]
+        assert predictor_1.features_dict == {"x3": "x3"}
+        assert predictor_1.columns_dict == {0: "x3"}
+        assert all(predictor_1.data["x_postprocessed"]["x3"].isin(["strong difference",
+                                                                   "huge difference",
+                                                                   "middle difference",
+                                                                   "small difference"]))
+
+    def test_reverse_aggregate(self):
+        """
+        Unit test reverse_aggregate
+        """
+        predictor_1 = self.predictor_2
+        with self.assertRaises(ValueError):
+            predictor_1.reverse_aggregate()
+
+        predictor_1.aggregate_data = {"x_pred": None, "contributions": None,
+                                      "features_dict": None, "columns_dict": None}
+        with self.assertRaises(ValueError):
+            predictor_1.reverse_aggregate()
+
+        x_postprocessed = pd.DataFrame({"x1": [33, 112, 77, 74, 14],
+                                        "x2": [99, 45, 33, 51, 9],
+                                        "id": [0, 1, 2, 3, 4]})
+        x_postprocessed = x_postprocessed.set_index("id")
+        contributions = pd.DataFrame({"x1": [-0, -0, -0, -0, -0],
+                                      "x2": [0.0403846, 0.0403846, 0.0403846, 0.0403846, 0.0403846],
+                                      "id": [0, 1, 2, 3, 4]})
+        contributions = contributions.set_index("id")
+        predictor_1.data = {"x_postprocessed": None, "contributions": None}
+        predictor_1.aggregate_data["x_pred"] = copy.deepcopy(x_postprocessed)
+        predictor_1.aggregate_data["contributions"] = copy.deepcopy(contributions)
+        predictor_1.aggregate_data["features_dict"] = self.features_dict_2
+        predictor_1.aggregate_data["columns_dict"] = self.columns_dict_2
+        predictor_1.reverse_aggregate()
+
+        assert not hasattr(predictor_1, "aggregate_data")
+        assert predictor_1.data["x_postprocessed"].equals(x_postprocessed)
+        assert predictor_1.data["contributions"].equals(contributions)
+        assert predictor_1.features_dict == self.features_dict_2
+        assert predictor_1.columns_dict == self.columns_dict_2
+        assert predictor_1.mask == None
+        assert predictor_1.mask_params == None
+        assert predictor_1.masked_contributions == None
+
 
 
 
