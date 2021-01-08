@@ -34,6 +34,15 @@ Shapash can use category-encoder object, sklearn ColumnTransformer or simply fea
 - Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder* or *TargetEncoder*
 - Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer* or *PowerTransformer*
 
+Compatible versions for those dependencies :
+
+- scikit-learn==0.23.2
+- catboost==0.22
+- xgboost==1.0.0
+- lightgbm==2.3.1
+- shap==0.37.0
+- category-encoders==2.1.0
+
 Using **Shapash** is simple and requires only a few lines of code.
 Most parameters are optional, you can easily display plots.
 
