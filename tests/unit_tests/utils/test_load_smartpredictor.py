@@ -2,6 +2,7 @@
 Unit test smart predictor
 """
 import unittest
+import sys
 from os import path
 from pathlib import Path
 from shapash.utils.load_smartpredictor import load_smartpredictor
@@ -23,7 +24,11 @@ class Test_load_smartpredictor(unittest.TestCase):
         predictor = xpl.to_smartpredictor()
 
         current = Path(path.abspath(__file__)).parent.parent.parent
-        pkl_file = path.join(current, 'data/predictor_to_load.pkl')
+        if str(sys.version)[0:3] == '3.7':
+            pkl_file = path.join(current, 'data/predictor_to_load_37.pkl')
+        elif str(sys.version)[0:3] == '3.6':
+            pkl_file = path.join(current, 'data/predictor_to_load_36.pkl')
+
         predictor2 = load_smartpredictor(pkl_file)
 
         attrib_predictor = [element for element in predictor.__dict__.keys()]
