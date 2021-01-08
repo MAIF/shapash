@@ -3,7 +3,6 @@ Smart State Module
 """
 import numpy as np
 import pandas as pd
-from pandas.core.common import flatten
 from shapash.decomposition.contributions import inverse_transform_contributions
 from shapash.decomposition.contributions import rank_contributions, assign_contributions
 from shapash.manipulation.filters import hide_contributions
@@ -15,7 +14,6 @@ from shapash.manipulation.mask import compute_masked_contributions
 from shapash.manipulation.mask import init_mask
 from shapash.manipulation.summarize import summarize
 from shapash.manipulation.summarize import compute_features_import
-
 
 
 class SmartState:

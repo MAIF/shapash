@@ -31,7 +31,6 @@ def save_pickle(obj, path, protocol=pickle.HIGHEST_PROTOCOL):
         )
     with open(path, "wb") as file:
         pickle.dump(obj, file, protocol=protocol)
-    file.closed
 
 
 def load_pickle(path):
@@ -55,5 +54,5 @@ def load_pickle(path):
 
     with open(path, "rb") as file:
         pklobj = pickle.load(file)
-    file.closed
+
     return pklobj
