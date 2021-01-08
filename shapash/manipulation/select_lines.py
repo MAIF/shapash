@@ -66,5 +66,3 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
         summary = contributions
 
     return y_pred, summary
-
-

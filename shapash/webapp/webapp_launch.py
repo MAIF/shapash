@@ -5,14 +5,6 @@ This is an example in python how to launch app from explainer
 from lightgbm import LGBMClassifier, LGBMRegressor
 import pandas as pd
 from sklearn.model_selection import train_test_split
-
-# TODO: Remove the next 4 lines, these lines allow you to run locally the code and import shapash content
-import os,sys,inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-# TODO: Remove the 4 previous lines
-
 from explainer.smart_explainer import SmartExplainer
 from category_encoders import one_hot
 
@@ -22,17 +14,17 @@ cases = {
     '3': 'Titanic multi class classification',
 }
 
-case = 1
+CASE = 1
 
 titanic = pd.read_pickle('tests/data/clean_titanic.pkl')
-if case == 1:
+if CASE == 1:
     features = ['Pclass', 'Survived', 'Embarked', 'Sex']
     encoder = one_hot.OneHotEncoder(titanic, cols=['Embarked', 'Sex'])
     X = titanic[features]
     y = titanic['Age'].to_frame()
     model = LGBMRegressor()
 
-elif case == 2:
+elif CASE == 2:
     features = ['Pclass', 'Age', 'Embarked', 'Sex']
     encoder = one_hot.OneHotEncoder(titanic, cols=['Embarked', 'Sex'])
     X = titanic[features]

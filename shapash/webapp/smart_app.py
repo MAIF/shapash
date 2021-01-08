@@ -127,7 +127,7 @@ class SmartApp:
             else:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
-            raise ValueError(f'y_pred must be set when calling compile function.')
+            raise ValueError('y_pred must be set when calling compile function.')
 
         self.dataframe['_index_'] = self.explainer.x_pred.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
@@ -165,7 +165,7 @@ class SmartApp:
 
         self.components['settings']['input_features'] = create_input_modal(
             id='features',
-            label=f"Number of features to plot",
+            label="Number of features to plot",
             tooltip="Set max number of features to plot in features importance and local explanation plots.",
         )
 
