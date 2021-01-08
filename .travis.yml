@@ -1,6 +1,7 @@
 language: python
 python:
 - 3.6
+- 3.7
 install: pip install -U tox-travis
 script: tox
 deploy:
@@ -12,4 +13,3 @@ deploy:
   on:
     tags: true
     repo: MAIF/shapash
-    python: 3.6
