@@ -1,7 +1,9 @@
 # Shapash
 
-[![Build Status](https://api.travis-ci.com/MAIF/shapash.svg?branch=master)](https://travis-ci.org/MAIF/shapash)
-[![PyPI version](https://badge.fury.io/py/shapash.svg)](https://badge.fury.io/py/shapash)
+![Actions Status](https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg)
+![PyPI](https://img.shields.io/pypi/v/shapash)
+![Python Version](https://img.shields.io/pypi/pyversions/shapash)
+![PyPI - License](https://img.shields.io/pypi/l/shapash)
 [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://readthedocs.org/projects/shapash/)
 <img align="right" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 
