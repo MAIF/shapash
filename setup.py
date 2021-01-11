@@ -38,7 +38,9 @@ setup(
     long_description_content_type='text/markdown',
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        "OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
     install_requires=requirements,
