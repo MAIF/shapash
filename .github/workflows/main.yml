@@ -33,7 +33,7 @@ jobs:
       run: |
         python setup.py sdist bdist_wheel
     - name: Trigger next workflow
-      if: success() && startsWith(github.ref, 'refs/tags')
+      if: success() && startsWith(github.ref, 'refs/tags') && matrix.python-version == 3.7
       uses: pypa/gh-action-pypi-publish@master
       with:
         user: __token__
