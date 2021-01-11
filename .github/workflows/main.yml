@@ -2,7 +2,7 @@ name: Build & Test
 on: push
 
 jobs:
-  build and publish:
+  build_test_publish:
     name: "Build & Test"
     runs-on: ubuntu-latest
     strategy:
