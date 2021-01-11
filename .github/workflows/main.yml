@@ -2,11 +2,11 @@ name: Build & Test
 on: push
 
 jobs:
-  simplepush:
+  build_test_publish:
     name: "Build & Test"
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         python-version: [3.6, 3.7]
     steps:
@@ -32,12 +32,9 @@ jobs:
     - name: Build python package
       run: |
         python setup.py sdist bdist_wheel
-  push_tag:
-    name: "Deploy to PyPI"
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-    runs-on: ubuntu-latest
-    steps:
-    - uses: pypa/gh-action-pypi-publish@master
+    - name: Trigger next workflow
+      if: success() && startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
