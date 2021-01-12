@@ -399,7 +399,7 @@ class SmartApp:
                                     ],
                                     align="center",
                                 ),
-                                href="https://github.com/MAIF/Diaphane", target="_blank",
+                                href="https://github.com/MAIF/shapash", target="_blank",
                             ),
                             md=3, align="left"
                         ),
