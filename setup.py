@@ -21,6 +21,7 @@ requirements = [
         'dash-renderer==1.8.3',
         'dash-table==4.11.0',
         'nbformat==5.0.8',
+        'numba==0.51.2',
     ]
 
 setup_requirements = ['pytest-runner', ]
