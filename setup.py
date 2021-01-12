@@ -20,6 +20,7 @@ requirements = [
         'dash-html-components==1.1.1',
         'dash-renderer==1.8.3',
         'dash-table==4.11.0',
+        'nbformat==5.0.8',
     ]
 
 setup_requirements = ['pytest-runner', ]
