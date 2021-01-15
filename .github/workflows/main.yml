@@ -8,7 +8,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.6, 3.7]
+        python-version: [3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -32,8 +32,8 @@ jobs:
     - name: Build python package
       run: |
         python setup.py sdist bdist_wheel
-    - name: Trigger next workflow
-      if: success() && startsWith(github.ref, 'refs/tags') && matrix.python-version == 3.7
+    - name: Deploy to PyPI
+      if: success() && startsWith(github.ref, 'refs/tags') && matrix.python-version == 3.8
       uses: pypa/gh-action-pypi-publish@master
       with:
         user: __token__
