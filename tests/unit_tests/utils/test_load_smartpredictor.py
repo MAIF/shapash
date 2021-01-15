@@ -28,6 +28,8 @@ class Test_load_smartpredictor(unittest.TestCase):
             pkl_file = path.join(current, 'data/predictor_to_load_37.pkl')
         elif str(sys.version)[0:3] == '3.6':
             pkl_file = path.join(current, 'data/predictor_to_load_36.pkl')
+        elif str(sys.version)[0:3] == '3.8':
+            pkl_file = path.join(current, 'data/predictor_to_load_38.pkl')
 
         predictor2 = load_smartpredictor(pkl_file)
 

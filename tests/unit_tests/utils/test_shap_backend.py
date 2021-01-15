@@ -78,7 +78,7 @@ class TestShapBackend(unittest.TestCase):
         Unit test check explainer 1
         """
         explainer = None
-        self.assertRaises(ValueError, check_explainer(explainer))
+        assert check_explainer(explainer) == None
 
     def test_check_explainer_2(self):
         """
