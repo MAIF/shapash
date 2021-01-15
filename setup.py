@@ -20,7 +20,7 @@ requirements = [
         'dash-html-components==1.1.1',
         'dash-renderer==1.8.3',
         'dash-table==4.11.0',
-        'nbformat==5.0.8',
+        'nbformat>4.2.0',
         'numba==0.51.2',
     ]
 
@@ -31,7 +31,7 @@ test_requirements = ['pytest', ]
 setup(
     name="shapash", # Replace with your own username
     version="1.0.1",
-    python_requires='>3.5, < 3.8',
+    python_requires='>3.5, < 3.9',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -42,6 +42,7 @@ setup(
         "Programming Language :: Python :: 3",
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
