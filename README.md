@@ -5,6 +5,8 @@
 ![Python Version](https://img.shields.io/pypi/pyversions/shapash)
 ![PyPI - License](https://img.shields.io/pypi/l/shapash)
 [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://readthedocs.org/projects/shapash/)
+[![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 <img align="right" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 
 <br/>
