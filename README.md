@@ -4,7 +4,7 @@
 ![PyPI](https://img.shields.io/pypi/v/shapash)
 ![Python Version](https://img.shields.io/pypi/pyversions/shapash)
 ![PyPI - License](https://img.shields.io/pypi/l/shapash)
-[![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://readthedocs.org/projects/shapash/)
+[![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
 [![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <img align="right" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
@@ -18,6 +18,9 @@ It provides several types of visualization that display explicit labels that eve
 <br/>
 
 Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+
+- Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
+- Chat: [![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <br/> <br/>
 
