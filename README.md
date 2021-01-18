@@ -19,8 +19,8 @@ It provides several types of visualization that display explicit labels that eve
 
 Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
 
-- Readthedoc: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
-- Chat : [![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+- Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
+- Chat: [![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <br/> <br/>
 
