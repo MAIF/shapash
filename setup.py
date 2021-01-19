@@ -11,7 +11,7 @@ with open('README.md') as readme_file:
 requirements = [
         'plotly==4.12.0',
         'numpy==1.18.1',
-        'pandas==1.0.3',
+        'pandas>1.0.2',
         'shap==0.37.0',
         'dash==1.17.0',
         'dash-bootstrap-components==0.9.1',
