@@ -1,3 +1,14 @@
+# How to open a GitHub issue & file a bug report
+
+Before opening a pull request to contribute, we prefer that you create an issue in first time.
+
+An issue will open a discussion to evaluate if the problem / feature that you identify is elligible, and legitim for Shapash.
+
+A Pull Request must be linked with an issue.
+Before you open your issue, please check what issues are already open to don't duplicate issues. Define if it's a feature or a bugfix.
+
+Next, Shapash team, or community, will answer you to see if your issue must be implemented in Shapash, or if it can be resolved easily without a pull request.
+
 # How to contribute to Shapash Open source
 
 This guide aims to help you to contribute to Shapash. If you found any problems, improvement to do, or you want to help us to develop features, you can help us to make Shapash better.
@@ -18,7 +29,7 @@ Click on the "Code" button to copy the url of your repository, and next, you can
 git clone https://github.com/YOUR_GITHUB_PROFILE/shapash.git
 ```
 
-## 3. Be sure that your repostiry is updated 
+## 3. Be sure that your repository is updated
 
 To be sure that your forked repo you have in local is good, you have to update your repo with the Shapash's master branch. So in your forked, do this :
 
@@ -74,13 +85,9 @@ Next step is now to create a Pull Request, to ask Shapash's Team to add your cha
 
 A pull request allows you to ask to the Shapash's team to review your changes, and merge your changes into the master branch of the official repository.
 
-To create one, go to the "Pull Request" tab of your forked repo.
+To create one, on the top of your forked repository, you will find a button "Compare & pull request"
 
-<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-pr.png" alt="pull request" />
-
-Next, click on "New Pull Request".
-
-<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-create-pr.png" alt="create pull request" />
+<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-compare-pr.png" alt="pull request" />
 
 As you can see, you can select on the right side which branch of your forked repo you want to associate to the pull request. 
 
@@ -93,4 +100,19 @@ In the left side, there is the official Shapash repo master branch.
 
 <img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-pr-branch.png" alt="clone your forked repository" />
 
-Once you selected the godo branch, let's create the pull request with the green button "Create pull request".
+Once you selected the good branch, let's create the pull request with the green button "Create pull request".
+
+<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-pr-description.png" alt="clone your forked repository" />
+
+In the description, a template is initialized with all informations you have to give about what you are doing on your PR.
+
+Please follow this to write your PR content.
+
+
+## 7. Finally, create your pull request
+
+Your pull request is now ready, you can create it, a member of the Shapash's team will contact you and will review your code.
+
+You have contribute to an Open source project, congratulations ! 🥳
+
+Show that you contribute to Shapash in your CV, and share it on your social medias. Be proud of you, you gave some code lines to the entire world !
