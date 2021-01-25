@@ -1,3 +1,11 @@
+---
+name: Bug report
+about: Create a report to help us improve
+title: ''
+labels: 'type:bug'
+assignees: ''
+---
+
 Hey there and thank you for using Issue Tracker!
 
 Do the checklist before filing an issue:
@@ -13,3 +21,10 @@ Make sure to add all the information needed to understand the bug so that someon
 - Provide screenshots where appropriate
 - What's the version of Python you're using?
 - Are you using Mac, Linux or Windows?
+
+**Python version** :
+
+**Shapash version** :
+
+**Operating System** :
+
