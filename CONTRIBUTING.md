@@ -4,13 +4,13 @@ This guide aims to help you contributing to Shapash. If you have found any probl
 
 - [How to open an **issue** : **Bugfix** - **Feature request** - **Doc improvement**](#how-to-open-an-issue-:-Bugfix---Feature-request--Doc-improvement)
 - [Create your contribution to submit a pull request](#create-your-contribution-to-submit-a-pull-request)
-    - [Fork and code your contribution](#fork-and-code-your-contribution)
+    - [Fork to code in your personal Shapash repo](#fork-to-code-in-your-personalshapash-repo)
     - [Clone your forked repository](#clone-your-forked-repository)
-    - [Be sure that your repository is updated](#be-sure-that-your-repository-is-updated)
-    - [Start your code contribution](#start-your-code-contribution)
+    - [Make sure that your repository is up to date](#make-sure-that-your-repository-is-up-to-date)
+    - [Start your contribution code](#start-your-contribution-code)
     - [Commit your changes](#commit-your-changes)
     - [Create a pull request](#create-a-pull-request)
-    - [Submit your pull request](#submit-your-pull-request)
+    - [Finally submit your pull request](#finally-submit-your-pull-request)
 
 # How to open an **issue** : **Bugfix** - **Feature request** - **Doc improvement**
 
@@ -42,7 +42,7 @@ Click on the "Code" button to copy the url of your repository, and next, you can
 git clone https://github.com/YOUR_GITHUB_PROFILE/shapash.git
 ```
 
-## Make that your repository is up to date
+## Make sure that your repository is up to date
 
 To insure that your local forked repository is synced, you have to update your repo with the master branch of Shapash (MAIF). So, go to your repository and as follow :
 
