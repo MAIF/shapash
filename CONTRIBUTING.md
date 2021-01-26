@@ -4,7 +4,7 @@ This guide aims to help you contributing to Shapash. If you have found any probl
 
 - [How to open an **issue** : **Bugfix** - **Feature request** - **Doc improvement**](#how-to-open-an-issue-:-Bugfix---Feature-request--Doc-improvement)
 - [Create your contribution to submit a pull request](#create-your-contribution-to-submit-a-pull-request)
-    - [Fork to code in your personal Shapash repo](#fork-to-code-in-your-personalshapash-repo)
+    - [Fork to code in your personal Shapash repo](#fork-to-code-in-your-personal-shapash-repo)
     - [Clone your forked repository](#clone-your-forked-repository)
     - [Make sure that your repository is up to date](#make-sure-that-your-repository-is-up-to-date)
     - [Start your contribution code](#start-your-contribution-code)
@@ -119,7 +119,7 @@ Once you have selected the right branch, let's create the pull request with the 
 
 <img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-pr-description.png" alt="clone your forked repository" />
 
-n the description, a template is initialized with all informations you have to give about what you are doing on what your PR is doing.
+In the description, a template is initialized with all informations you have to give about what you are doing on what your PR is doing.
 
 Please follow this to write your PR content.
 
