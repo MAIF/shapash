@@ -4,7 +4,7 @@ Any change needs to be discussed before proceeding. Failure to do so may result 
 
 Please provide enough information so that others can review your pull request:
 
-Explain the details for making this change. What existing problem does the pull request solve?
+Explain the details for making this change. What existing problem does the pull request solve ?
 
 Test plan (required)
 
@@ -34,6 +34,7 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 **Test Configuration**:
 * OS:
 * Python version:
+* Shapash version:
 
 # Checklist:
 
