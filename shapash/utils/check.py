@@ -133,10 +133,10 @@ def check_ypred(x=None, ypred=None):
         if isinstance(ypred, pd.DataFrame):
             if ypred.shape[1] > 1:
                 raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-            if not (ypred.dtypes[0] in [np.float, np.int]):
+            if not (ypred.dtypes[0] in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
                 raise ValueError("y_pred must contain int or float only")
         if isinstance(ypred, pd.Series):
-            if not (ypred.dtype in [np.float, np.int]):
+            if not (ypred.dtype in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
                 raise ValueError("y_pred must contain int or float only")
             ypred = ypred.to_frame()
             if isinstance(ypred.columns[0], (np.int, np.float)):
