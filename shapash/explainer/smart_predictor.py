@@ -292,7 +292,10 @@ class SmartPredictor :
 
         assert all(column in self.features_types.keys() for column in x.columns)
         if not all([str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns]):
-            raise ValueError("Types of features in x doesn't match with the expected one in features_types.")
+            raise ValueError("""
+                  Types of features in x doesn't match with the expected one in features_types.
+                  x input must be initial dataset without preprocessing applied.
+                  """)
         return x
 
     def check_ypred(self, ypred=None):
