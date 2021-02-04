@@ -2,7 +2,7 @@
 
 This guide aims to help you contributing to Shapash. If you have found any problems, improvements that can be done, or you have a burning desire to develop new features for Shapash, please make sure to follow the steps bellow.
 
-- [How to open an **issue** : **Bugfix** - **Feature request** - **Doc improvement**](#how-to-open-an-issue-:-Bugfix---Feature-request--Doc-improvement)
+- [How to open an issue](#how-to-open-an-issue)
 - [Create your contribution to submit a pull request](#create-your-contribution-to-submit-a-pull-request)
     - [Fork to code in your personal Shapash repo](#fork-to-code-in-your-personal-shapash-repo)
     - [Clone your forked repository](#clone-your-forked-repository)
@@ -12,7 +12,7 @@ This guide aims to help you contributing to Shapash. If you have found any probl
     - [Create a pull request](#create-a-pull-request)
     - [Finally submit your pull request](#finally-submit-your-pull-request)
 
-# How to open an **issue** : **Bugfix** - **Feature request** - **Doc improvement**
+# How to open an issue
 
 **Screenshots are coming soon**
 
@@ -30,11 +30,11 @@ Next, the Shapash team, or the community, will give you a feedback on whether yo
 
 The first step is to get our MAIF repository on your personal GitHub repositories. To do so, use the "Fork" button.
 
-<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-fork.png" alt="fork this repository" />
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-fork.png" alt="fork this repository" />
 
 ## Clone your forked repository
 
-<img align="right" width="300" src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-clone.png" alt="clone your forked repository" />
+<img align="right" width="300" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-clone.png" alt="clone your forked repository" />
 
 Click on the "Code" button to copy the url of your repository, and next, you can paste this url to clone your forked repository.
 
@@ -102,7 +102,7 @@ A pull request allows you to ask the Shapash team to review your changes, and me
 
 To create one, on the top of your forked repository, you will find a button "Compare & pull request"
 
-<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-compare-pr.png" alt="pull request" />
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-compare-pr.png" alt="pull request" />
 
 As you can see, you can select on the right side which branch of your forked repository you want to associate to the pull request. 
 
@@ -113,11 +113,11 @@ On the left side, you will find the official Shapash repository.
 - Head repository: your-github-username/shapash
 - Head branch: your-contribution-branch
 
-<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-pr-branch.png" alt="clone your forked repository" />
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-branch.png" alt="clone your forked repository" />
 
 Once you have selected the right branch, let's create the pull request with the green button "Create pull request".
 
-<img src="https://raw.githubusercontent.com/MaxGdr/shapash/contributing/docs/assets/images/contributing/shapash-pr-description.png" alt="clone your forked repository" />
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-description.png" alt="clone your forked repository" />
 
 In the description, a template is initialized with all informations you have to give about what you are doing on what your PR is doing.
 
@@ -126,7 +126,7 @@ Please follow this to write your PR content.
 
 ## Finally submit your pull request
 
-Your pull request is now ready to be submitted. A member of the Shapash team will contact you and will review your code and contact you if need.
+Your pull request is now ready to be submitted. A member of the Shapash team will contact you and will review your code and contact you if needed.
 
 You have contributed to an Open source project, thank you and congratulations ! 🥳
 
