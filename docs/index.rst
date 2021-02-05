@@ -94,6 +94,7 @@ Very few arguments are required to display results. But the more you work on cle
 
 
    overview
+   installation-instructions/index
    tutorials/index
    autodocs/index
 
