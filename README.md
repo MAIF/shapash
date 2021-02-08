@@ -5,7 +5,6 @@
 ![Python Version](https://img.shields.io/pypi/pyversions/shapash)
 ![PyPI - License](https://img.shields.io/pypi/l/shapash)
 [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
-[![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <img align="right" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 
@@ -20,7 +19,6 @@ It provides several types of visualization that display explicit labels that eve
 Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
-- Chat: [![Gitter](https://badges.gitter.im/MAIF/shapash.svg)](https://gitter.im/MAIF/shapash?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <br/> <br/>
 
@@ -159,7 +157,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
-- [Use **Lime** to compute local explanation, Sumarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
+- [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 
 ### Deploy local explainability in production
 - [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
