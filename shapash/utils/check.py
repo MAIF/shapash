@@ -229,8 +229,9 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 raise ValueError("features of columns_dict and model must be the same")
 
         elif str(type(preprocessing)) in (no_dummies_sklearn, columntransformer):
-             if len(set(columns_dict.values())) != len(set(model_features)):
-                raise ValueError("length of features of columns_dict and model must be the same")
+            if not check_preprocessing_options(preprocessing):
+                if len(set(columns_dict.values())) != len(set(model_features)):
+                    raise ValueError("length of features of columns_dict and model must be the same")
 
         elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
                 and preprocessing is not None:
@@ -250,21 +251,51 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 raise ValueError("Postprocessing and columns_dict must have the same features names.")
         check_postprocessing(features_types, postprocessing)
 
-def check_preprocessing_options(preprocessing=None):
+def check_preprocessing_options(columns_dict, features_dict, preprocessing=None):
     """
-    Check if preprocessing for ColumnTransformer doesn't have "drop" option
+    Check if preprocessing for ColumnTransformer doesn't have "drop" option otherwise compute several
+    informations to adapt the SmartPredictor's actions
+
     Parameters
     ----------
     preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
         The processing apply to the original data.
+    columns_dict: dict
+        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
+    features_dict: dict
+        Dictionary mapping technical feature names to domain names.
+    Returns
+    -------
+    None, dict
+        None if there isn't drop options in ColumnTransformer otherwise dict of informations to adapt.
     """
+    feature_to_drop = list()
     if preprocessing is not None:
         list_encoding = preprocessing_tolist(preprocessing)
+
         for enc in list_encoding:
-            if str(type(enc)) in columntransformer:
-                for options in enc.transformers_:
-                    if "drop" in options:
-                        raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
+            for options in enc.transformers_:
+                if "drop" in options:
+                    feature_to_drop.extend(options[2])
+
+    if len(feature_to_drop) != 0:
+        feature_to_drop = [columns_dict[index] for index in feature_to_drop]
+        features_dict_op = {key: value for key, value in features_dict.items()
+                            if key not in feature_to_drop}
+
+        i = 0
+        columns_dict_op = dict()
+        for value in columns_dict.values():
+            if value not in feature_to_drop:
+                columns_dict_op[i] = value
+                i += 1
+
+        return {"features_to_drop": feature_to_drop,
+                "features_dict_op": features_dict_op,
+                "columns_dict_op": columns_dict_op}
+
+    else:
+        return None
 
 def check_consistency_model_label(columns_dict, label_dict=None):
     """
