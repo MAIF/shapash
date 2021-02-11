@@ -4,13 +4,13 @@ Check Module
 
 import numpy as np
 import pandas as pd
-from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder
-from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer, supported_sklearn
+from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder,\
+                                                   dummies_category_encoder
+from shapash.utils.columntransformer_backend import no_dummies_sklearn, supported_sklearn
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
-from shapash.utils.columntransformer_backend import columntransformer
-
+from shapash.utils.columntransformer_backend import columntransformer, get_feature_names, get_list_features_names
 
 
 def check_preprocessing(preprocessing=None):
@@ -218,28 +218,49 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             if not all(feature in set(features_types) for feature in mask_params['features_to_hide']):
                 raise ValueError("All features of mask_params must be in model")
 
-    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
+    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder):
         if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
             raise ValueError("All features of preprocessing must be in columns_dict")
 
+    if str(type(preprocessing)) in columntransformer:
+        for encoding in preprocessing.transformers_:
+            ct_encoding = encoding[1]
+            if (str(type(ct_encoding)) not in supported_category_encoder) \
+                    and (str(type(ct_encoding)) not in supported_sklearn):
+                if str(type(ct_encoding)) != "<class 'str'>":
+                    raise ValueError("{0} used in ColumnTransformers isn't supported.".format(str(type(ct_encoding))))
+
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
-        if str(type(preprocessing)) in no_dummies_category_encoder:
-            if set(columns_dict.values()) != set(model_features):
-                raise ValueError("features of columns_dict and model must be the same")
-
-        elif str(type(preprocessing)) in (no_dummies_sklearn, columntransformer):
-            if not check_preprocessing_options(preprocessing):
-                if len(set(columns_dict.values())) != len(set(model_features)):
-                    raise ValueError("length of features of columns_dict and model must be the same")
-
-        elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
-                and preprocessing is not None:
-            raise ValueError("this type of encoder is not supported in SmartPredictor")
+        model_expected = len(set(model_features))
     else:
-        model_length_features = model_features
-        if len(set(columns_dict.values())) != model_length_features:
-            raise ValueError("features of columns_dict and model must have the same length")
+        model_expected = model_features
+
+    if str(type(preprocessing)) in supported_category_encoder:
+        if len(set(preprocessing.feature_names)) != model_expected:
+            raise ValueError("""
+                                Number of features returned by the Category_Encoders preprocessing doesn't
+                                match the model's expected features.
+                                             """)
+
+    elif str(type(preprocessing)) in columntransformer:
+        feature_encoded = get_feature_names(preprocessing)
+        if model_expected != len(feature_encoded):
+            raise ValueError("""
+                Number of features returned by the ColumnTransformer preprocessing doesn't
+                match the model's expected features.
+                             """)
+
+    elif str(type(preprocessing)) == "<class 'list'>":
+        feature_encoded = get_list_features_names(preprocessing, columns_dict)
+        if model_expected != len(feature_encoded):
+            raise ValueError("""
+                Number of features returned by the list preprocessing doesn't
+                match the model's expected features.
+                             """)
+
+    elif preprocessing is not None and str(type(preprocessing)) != "<class 'dict'>":
+        raise ValueError("{0} type is not supported in SmartPredictor".format(str(type(preprocessing))))
 
     if postprocessing:
         if not isinstance(postprocessing, dict):
@@ -274,9 +295,10 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None)
         list_encoding = preprocessing_tolist(preprocessing)
 
         for enc in list_encoding:
-            for options in enc.transformers_:
-                if "drop" in options:
-                    feature_to_drop.extend(options[2])
+            if str(type(enc)) in columntransformer:
+                for options in enc.transformers_:
+                    if "drop" in options:
+                        feature_to_drop.extend(options[2])
 
     if len(feature_to_drop) != 0:
         feature_to_drop = [columns_dict[index] for index in feature_to_drop]

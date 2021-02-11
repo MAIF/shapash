@@ -1168,9 +1168,9 @@ class TestSmartExplainer(unittest.TestCase):
         df['x2'] = ["S", "M", "S", "D", "M"]
         df = df.set_index('id')
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
-        encoder_fitted = encoder.fit(df)
-        df_encoded = encoder_fitted.transform(df)
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df_encoded['y'])
+        encoder_fitted = encoder.fit(df[["x1", "x2"]])
+        df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[['x1', 'x2']], df['y'])
 
         postprocessing = {"x2": {
             "type": "transcoding",

@@ -11,6 +11,7 @@ import sklearn
 import lightgbm
 import xgboost
 from shapash.utils.transform import inverse_transform, apply_preprocessing
+from shapash.utils.columntransformer_backend import get_feature_names, get_names
 
 
 # TODO
@@ -960,3 +961,59 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert result.shape == expected.shape
         assert [column in clf.get_booster().feature_names for column in result.columns]
         assert all(expected.index == result.index)
+
+    def test_get_feature_names_1(self):
+        """
+        Unit test get_feature_names 1
+        """
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+
+        enc_1 = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='drop')
+
+        enc_2 = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='passthrough')
+
+        enc_1.fit(train)
+        enc_2.fit(train)
+
+        feature_enc_1 = get_feature_names(enc_1)
+        feature_enc_2 = get_feature_names(enc_2)
+
+        assert len(feature_enc_1) == 2
+        assert len(feature_enc_2) == 3
+
+    def test_get_names_1(self):
+        """
+        Unit test get_names 1
+        """
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+
+        enc_1 = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                  remainder='drop')
+
+        enc_2 = ColumnTransformer(transformers=[('power', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                  remainder='passthrough')
+
+        enc_1.fit(train)
+        enc_2.fit(train)
+
+        feature_names_1 = []
+        l_transformers = list(enc_1._iter(fitted=True))
+
+        for name, trans, column, _ in l_transformers:
+            feature_names_1.extend(get_names(name, trans, column, enc_1))
+
+        feature_names_2 = []
+        l_transformers = list(enc_2._iter(fitted=True))
+
+        for name, trans, column, _ in l_transformers:
+            feature_names_2.extend(get_names(name, trans, column, enc_2))
+
+        assert len(feature_names_1) == 2
+        assert len(feature_names_2) == 3
+
