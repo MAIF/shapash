@@ -92,11 +92,18 @@ def get_shap_interaction_values(x_df, explainer):
 
     Returns
     -------
-    np.ndarray
+    shap_interaction_values : np.ndarray
         Shap interaction values for each sample as an array of shape (# samples x # features x # features).
     """
     if not isinstance(explainer, shap.TreeExplainer):
         raise ValueError(f"Explainer type ({type(explainer)}) is not a TreeExplainer. "
                          f"Shap interaction values can only be computed for TreeExplainer types")
 
-    return explainer.shap_interaction_values(x_df)
+    shap_interaction_values = explainer.shap_interaction_values(x_df)
+
+    # For models with vector outputs the previous function returns one array for each output.
+    # We sum the contributions here.
+    if isinstance(shap_interaction_values, list):
+        shap_interaction_values = np.sum(shap_interaction_values, axis=0)
+
+    return shap_interaction_values
