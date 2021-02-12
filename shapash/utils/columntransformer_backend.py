@@ -386,7 +386,7 @@ def get_list_features_names(list_preprocessing, columns_dict):
         elif str(type(enc)) in columntransformer:
             feature_expected = get_feature_names(enc)
 
-        elif str(type(enc)) in ("<class 'dict'>", "<class 'list'>"):
+        elif str(type(enc)) in ("<class 'list'>"):
             feature_expected = feature_expected
 
     return feature_expected

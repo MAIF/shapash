@@ -404,15 +404,15 @@ class TestCheck(unittest.TestCase):
 
         enc = ColumnTransformer(
             transformers=[
-                ('onehot_ce', ce.OrdinalEncoder(), ['city', 'state']),
-                ('onehot_skp', skp.OrdinalEncoder(), ['city', 'state'])
+                ('Ordinal_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('Ordinal_skp', skp.OrdinalEncoder(), ['city', 'state'])
             ],
             remainder='passthrough')
 
         enc_2 = ColumnTransformer(
             transformers=[
-                ('onehot_ce', ce.OrdinalEncoder(), ['city', 'state']),
-                ('onehot_skp', skp.OrdinalEncoder(), ['city', 'state'])
+                ('Ordinal_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('Ordinal_skp', skp.OrdinalEncoder(), ['city', 'state'])
             ],
             remainder='drop')
 
@@ -451,24 +451,24 @@ class TestCheck(unittest.TestCase):
                                        index=['chicago', 'paris']),
                   'data_type': 'object'}
 
-        enc_4 = [enc_3, dict_4]
+        enc_4 = [enc_3, [dict_4]]
 
-        enc_5 = [enc_3, [dict_4]]
+        enc_5 = [enc_3, [dict_4, dict_5]]
 
         check_consistency_model_features(features_dict, clf_1, columns_dict,
-                                         features_types, mask_params, enc)
+                                         features_types, mask_params, enc, list_preprocessing=[enc])
 
         check_consistency_model_features(features_dict, clf_2, columns_dict,
-                                             features_types, mask_params, enc_2)
+                                             features_types, mask_params, enc_2, list_preprocessing=[enc_2])
 
         check_consistency_model_features(features_dict, clf_3, columns_dict,
-                                         features_types, mask_params, enc_3)
+                                         features_types, mask_params, enc_3, list_preprocessing=[enc_3])
 
         check_consistency_model_features(features_dict, clf_3, columns_dict,
-                                         features_types, mask_params, enc_4)
+                                         features_types, mask_params, enc_4, list_preprocessing=enc_4)
 
         check_consistency_model_features(features_dict, clf_3, columns_dict,
-                                         features_types, mask_params, enc_5)
+                                         features_types, mask_params, enc_5, list_preprocessing=enc_5)
 
     def test_check_consistency_model_label_1(self):
         """
@@ -546,8 +546,8 @@ class TestCheck(unittest.TestCase):
 
         expected_dict_2 = None
 
-        drop_option_1 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted)
-        drop_option_2 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted_2)
+        drop_option_1 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted, [encoder_fitted])
+        drop_option_2 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted_2, [encoder_fitted_2])
         assert drop_option_1 == expected_dict
         assert drop_option_2 == expected_dict_2
 

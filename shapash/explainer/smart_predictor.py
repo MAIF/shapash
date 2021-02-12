@@ -13,7 +13,7 @@ from shapash.utils.shap_backend import check_explainer, shap_contributions
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.utils.model import predict_proba
 from shapash.utils.io import save_pickle
-from shapash.utils.transform import apply_preprocessing, apply_postprocessing
+from shapash.utils.transform import apply_preprocessing, apply_postprocessing, preprocessing_tolist
 from shapash.manipulation.filters import hide_contributions
 from shapash.manipulation.filters import cap_contributions
 from shapash.manipulation.filters import sign_contributions
@@ -127,11 +127,12 @@ class SmartPredictor :
         self.mask_params = mask_params
         self.check_mask_params()
         self.postprocessing = postprocessing
+        list_preprocessing = preprocessing_tolist(self.preprocessing)
         check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
                                          self.features_types, self.mask_params, self.preprocessing,
-                                         self.postprocessing)
+                                         self.postprocessing, list_preprocessing)
         check_consistency_model_label(self.columns_dict, self.label_dict)
-        self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing)
+        self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing, list_preprocessing)
 
     def check_model(self):
         """
@@ -369,25 +370,19 @@ class SmartPredictor :
         Check if contributions and prediction set match in terms of shape and index.
         """
         if self._drop_option is not None:
-            if not self.state.check_contributions(contributions, \
-            self.data["x"][self.data["x"].columns.difference(self._drop_option["features_to_drop"])],
-                                                  features_names=False):
-                raise ValueError(
-                    """
-                    Prediction set and contributions should have exactly the same number of lines
-                    and number of columns. the order of the columns must be the same
-                    Please check x, contributions and preprocessing arguments.
-                    """
-                )
+            x = self.data["x"][self.data["x"].columns.difference(self._drop_option["features_to_drop"])]
         else:
-            if not self.state.check_contributions(contributions, self.data["x"], features_names=False):
-                raise ValueError(
-                    """
-                    Prediction set and contributions should have exactly the same number of lines
-                    and number of columns. the order of the columns must be the same
-                    Please check x, contributions and preprocessing arguments.
-                    """
-                )
+            x = self.data["x"]
+
+        if not self.state.check_contributions(contributions, x, features_names=False):
+            raise ValueError(
+                """
+                Prediction set and contributions should have exactly the same number of lines
+                and number of columns. the order of the columns must be the same
+                Please check x, contributions and preprocessing arguments.
+                """
+            )
+
 
     def clean_data(self, x):
         """
@@ -636,40 +631,31 @@ class SmartPredictor :
             raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
 
         if self._drop_option is not None:
-            self.summary = assign_contributions(
-                rank_contributions(
-                    self.data["contributions"],
-                    self.data["x_postprocessed"][self.data["x_postprocessed"].\
-                                                columns.difference(self._drop_option["features_to_drop"])]
-                )
-            )
-            # Apply filter method with mask_params attributes parameters
-            self.filter()
-
-            # Summarize information
-            self.data['summary'] = summarize(self.summary['contrib_sorted'],
-                                             self.summary['var_dict'],
-                                             self.summary['x_sorted'],
-                                             self.mask,
-                                             self._drop_option["columns_dict_op"],
-                                             self._drop_option["features_dict_op"])
+            x_preprocessed = self.data["x_postprocessed"][self._drop_option["columns_dict_op"].values()]
+            columns_dict =self._drop_option["columns_dict_op"]
+            features_dict = self._drop_option["features_dict_op"]
         else:
-            self.summary = assign_contributions(
-                rank_contributions(
-                    self.data["contributions"],
-                    self.data["x_postprocessed"]
-                )
-            )
-            # Apply filter method with mask_params attributes parameters
-            self.filter()
+            x_preprocessed = self.data["x_postprocessed"]
+            columns_dict = self.columns_dict
+            features_dict = self.features_dict
 
-            # Summarize information
-            self.data['summary'] = summarize(self.summary['contrib_sorted'],
-                                             self.summary['var_dict'],
-                                             self.summary['x_sorted'],
-                                             self.mask,
-                                             self.columns_dict,
-                                             self.features_dict)
+
+        self.summary = assign_contributions(
+            rank_contributions(
+                self.data["contributions"],
+                x_preprocessed
+            )
+        )
+        # Apply filter method with mask_params attributes parameters
+        self.filter()
+
+        # Summarize information
+        self.data['summary'] = summarize(self.summary['contrib_sorted'],
+                                         self.summary['var_dict'],
+                                         self.summary['x_sorted'],
+                                         self.mask,
+                                         columns_dict,
+                                         features_dict)
 
         # Matching with y_pred
         return pd.concat([self.data["ypred"], self.data['summary']], axis=1)

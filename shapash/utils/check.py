@@ -185,7 +185,8 @@ def check_contribution_object(case, classes, contributions):
             )
 
 def check_consistency_model_features(features_dict, model, columns_dict, features_types,
-                                     mask_params=None, preprocessing=None, postprocessing=None):
+                                     mask_params=None, preprocessing=None, postprocessing=None,
+                                     list_preprocessing=None):
     """
     Check the matching between attributes, features names are same, or include
 
@@ -205,6 +206,8 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
     postprocessing : dict
         Dictionnary of postprocessing that need to be checked.
+    list_preprocessing: list (optional)
+         list containing all preprocessing.
     """
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
@@ -222,14 +225,6 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
             raise ValueError("All features of preprocessing must be in columns_dict")
 
-    if str(type(preprocessing)) in columntransformer:
-        for encoding in preprocessing.transformers_:
-            ct_encoding = encoding[1]
-            if (str(type(ct_encoding)) not in supported_category_encoder) \
-                    and (str(type(ct_encoding)) not in supported_sklearn):
-                if str(type(ct_encoding)) != "<class 'str'>":
-                    raise ValueError("{0} used in ColumnTransformers isn't supported.".format(str(type(ct_encoding))))
-
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
         model_expected = len(set(model_features))
@@ -241,26 +236,14 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             raise ValueError("""
                                 Number of features returned by the Category_Encoders preprocessing doesn't
                                 match the model's expected features.
-                                             """)
-
-    elif str(type(preprocessing)) in columntransformer:
-        feature_encoded = get_feature_names(preprocessing)
+                            """)
+    elif preprocessing is not None:
+        feature_encoded = get_list_features_names(list_preprocessing, columns_dict)
         if model_expected != len(feature_encoded):
             raise ValueError("""
-                Number of features returned by the ColumnTransformer preprocessing doesn't
+                Number of features returned by the preprocessing step doesn't
                 match the model's expected features.
-                             """)
-
-    elif str(type(preprocessing)) == "<class 'list'>":
-        feature_encoded = get_list_features_names(preprocessing, columns_dict)
-        if model_expected != len(feature_encoded):
-            raise ValueError("""
-                Number of features returned by the list preprocessing doesn't
-                match the model's expected features.
-                             """)
-
-    elif preprocessing is not None and str(type(preprocessing)) != "<class 'dict'>":
-        raise ValueError("{0} type is not supported in SmartPredictor".format(str(type(preprocessing))))
+                        """)
 
     if postprocessing:
         if not isinstance(postprocessing, dict):
@@ -272,7 +255,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 raise ValueError("Postprocessing and columns_dict must have the same features names.")
         check_postprocessing(features_types, postprocessing)
 
-def check_preprocessing_options(columns_dict, features_dict, preprocessing=None):
+def check_preprocessing_options(columns_dict, features_dict, preprocessing=None, list_preprocessing=None):
     """
     Check if preprocessing for ColumnTransformer doesn't have "drop" option otherwise compute several
     informations to adapt the SmartPredictor's actions
@@ -285,6 +268,8 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None)
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
     features_dict: dict
         Dictionary mapping technical feature names to domain names.
+    list_preprocessing: list (optional)
+         list containing all preprocessing.
     Returns
     -------
     None, dict
@@ -292,9 +277,7 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None)
     """
     feature_to_drop = list()
     if preprocessing is not None:
-        list_encoding = preprocessing_tolist(preprocessing)
-
-        for enc in list_encoding:
+        for enc in list_preprocessing:
             if str(type(enc)) in columntransformer:
                 for options in enc.transformers_:
                     if "drop" in options:
