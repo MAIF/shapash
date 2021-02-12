@@ -1,10 +1,11 @@
 """
 Smart predictor module
 """
+import copy
 from shapash.utils.check import check_consistency_model_features, check_consistency_model_label
 from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
 from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object,\
-                                check_features_name
+                                check_features_name, check_aggregate_features, check_aggregate_mapping
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 import pandas as pd
@@ -756,3 +757,81 @@ class SmartPredictor :
             Columns ids compatible with var_dict
         """
         return check_features_name(self.columns_dict, self.features_dict, features)
+
+    def aggregate(self, features_to_aggregate=None, mapping=None):
+        """
+        Compute aggregation on intial data used to display summary.
+
+        Parameters
+        ----------
+        features_to_aggregate: dict
+            Dictionary with new label keys associated to a list of features to aggregate
+        mapping: dict
+            Dictionary mapping the new label taken by the aggregated new features
+        """
+        # Aggregate Data
+        # Aggregate Data
+        if not hasattr(self, "aggregate_data"):
+            self.aggregate_data = {"x_pred": None, "contributions": None,
+                                   "features_dict": None, "columns_dict": None}
+            if self.aggregate_data["x_pred"] is None:
+                self.aggregate_data["x_pred"] = copy.deepcopy(self.data["x_postprocessed"])
+                self.aggregate_data["contributions"] = copy.deepcopy(self.data["contributions"])
+                self.aggregate_data["features_dict"] = copy.deepcopy(self.features_dict)
+                self.aggregate_data["columns_dict"] = copy.deepcopy(self.columns_dict)
+
+        ### CHECK AGGREGATE_FEATURES
+
+        feature_to_test = check_aggregate_features(self.data["x_postprocessed"], features_to_aggregate)
+        ### CHECK AGGREGATE_MAPPING
+        check_aggregate_mapping(mapping, features_to_aggregate)
+
+        for feature in features_to_aggregate.keys():
+            self.data["x_postprocessed"][feature] = self.data["x_postprocessed"].apply(
+                lambda row: "-".join([str(row[value]) for value in features_to_aggregate[feature]]), axis=1)
+            self.data["x_postprocessed"] = self.data["x_postprocessed"].drop(columns=features_to_aggregate[feature],
+                                                                             axis=1)
+            self.data["contributions"][feature] = self.data["contributions"][features_to_aggregate[feature]].sum(axis=1)
+            self.data["contributions"] = self.data["contributions"].drop(columns=features_to_aggregate[feature], axis=1)
+
+        if mapping is not None:
+            dict_postprocessing = dict()
+            for feature_name in mapping.keys():
+                dict_postprocessing[feature_name] = mapping[feature_name]
+                unique_values = self.data["x_postprocessed"][feature_name].unique().tolist()
+                unique_values = [value for value in unique_values if
+                                 value not in dict_postprocessing[feature_name].keys()]
+                for value in unique_values:
+                    dict_postprocessing[feature_name][value] = value
+                self.data["x_postprocessed"][feature_name] = \
+                    self.data["x_postprocessed"][feature_name].map(dict_postprocessing[feature_name])
+
+        self.features_dict = {key: value for key, value in self.features_dict.items()
+                              if key not in feature_to_test}
+        for key in features_to_aggregate.keys():
+            self.features_dict[key] = key
+        self.columns_dict = {i: col for i, col in enumerate(self.data["x_postprocessed"].columns)}
+
+    def reverse_aggregate(self):
+        """
+        Reverse aggregation on initial dataset.
+        Aggregate must has been called at least once.
+        """
+        if not hasattr(self, "aggregate_data"):
+            raise ValueError("aggregate method must has been called at least once.")
+        if self.aggregate_data["x_pred"] is None:
+            raise ValueError("reverse aggregate has already been applied.")
+
+        self.data["x_postprocessed"] = copy.deepcopy(self.aggregate_data["x_pred"])
+        self.data["contributions"] = copy.deepcopy(self.aggregate_data["contributions"])
+        self.features_dict = copy.deepcopy(self.aggregate_data["features_dict"])
+        self.columns_dict = copy.deepcopy(self.aggregate_data["columns_dict"])
+        self.mask = None
+        self.mask_params = {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': None,
+            'max_contrib': None
+        }
+        self.masked_contributions = None
+        delattr(self, 'aggregate_data')

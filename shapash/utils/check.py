@@ -379,6 +379,61 @@ def check_features_name(columns_dict, features_dict, features):
         )
     return features_ids
 
+def check_aggregate_features(x, features_to_aggregate):
+    """
+    Check that aggregate_features parameter has the right expected format.
+
+    Parameters
+    ----------
+    x : pd.DataFrame
+        dataset to apply aggregate_data method
+    feature_to_test: list
+        List of unique feature concerned by the aggregation.
+    features_to_aggregate: dict
+        Dictionary with new label keys associated to a list of features to aggregate.
+    """
+    feature_aggregated = list()
+    if not isinstance(features_to_aggregate,dict):
+        raise ValueError("feature_to_aggregate must be a dict.")
+
+    feature_to_test = list()
+    for value in features_to_aggregate.values():
+        feature_to_test.extend(value)
+
+    feature_to_test = list(set(feature_to_test))
+
+    for value in features_to_aggregate.values():
+        if not isinstance(value,list):
+            raise ValueError("feature_to_aggregate must contain list values.")
+        feature_aggregated.extend(value)
+
+    if not all([feature in x.columns for feature in feature_to_test]):
+        raise ValueError("All features to aggregate aren't in the initial expected dataset.")
+    if len((feature_aggregated)) != len(feature_to_test):
+        raise ValueError("Aggregation can't be done several times on features.")
+
+    return feature_to_test
+
+def check_aggregate_mapping(mapping, features_to_aggregate):
+    """
+    Check that mapping parameter has the right expected format.
+
+    Parameters
+    ----------
+    features_to_aggregate: dict
+        Dictionary with new label keys associated to a list of features to aggregate
+    mapping: dict
+        Dictionary mapping the new label taken by the aggregated new features
+    """
+    if mapping is not None:
+        if not isinstance(mapping, dict):
+            raise ValueError("aggregate_mapping parameter must be a dict of dict.")
+        if not all([feature in features_to_aggregate.keys() for feature in mapping.keys()]):
+            raise ValueError(
+                "All features to apply mapping after aggregation must have same label as one given in features_to_aggregate.")
+        for feature in mapping.keys():
+            if not isinstance(mapping[feature], dict):
+                raise ValueError("All values associated to a feature in aggregate_mapping must be a dict.")
 
 
 
