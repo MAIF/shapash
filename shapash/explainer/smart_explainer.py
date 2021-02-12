@@ -4,6 +4,7 @@ Smart explainer module
 import logging
 import copy
 import pandas as pd
+import numpy as np
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
@@ -11,7 +12,7 @@ from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.shap_backend import shap_contributions, check_explainer
+from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
                                 check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -314,6 +315,24 @@ class SmartExplainer:
         """
         check_contribution_object(self._case, self._classes, contributions)
         return self.state.validate_contributions(contributions, self.x_init)
+
+    def get_interaction_values(self, n_samples_max=None):
+        """
+        Compute shap interaction values for each row of x_init.
+        This function is only available for explainer of type TreeExplainer (used for tree based models).
+        Please refer to the official tree shap paper for more information : https://arxiv.org/pdf/1802.03888.pdf
+
+        Parameters
+        ----------
+        n_samples_max : int, optional
+            Limit the number of points for which we compute the interactions.
+
+        Returns
+        -------
+        np.ndarray
+            Shap interaction values for each sample as an array of shape (# samples x # features x # features).
+        """
+        return get_shap_interaction_values(self.x_init[:n_samples_max], self.explainer)
 
     def apply_preprocessing(self, contributions, preprocessing=None):
         """
