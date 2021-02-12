@@ -1218,3 +1218,21 @@ class TestSmartExplainer(unittest.TestCase):
                    for feature in xpl.x_pred.columns )
 
         assert predictor_2.mask_params == xpl.mask_params
+
+    def test_get_interaction_values_1(self):
+        df = pd.DataFrame({
+            "y": np.random.randint(2, size=50),
+            "a": np.random.rand(50),
+            "b": np.random.rand(50),
+        })
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['a', 'b']], df['y'])
+
+        xpl = SmartExplainer()
+        xpl.compile(x=df.drop('y', axis=1), model=clf)
+
+        shap_interaction_values = xpl.get_interaction_values(n_samples_max=10)
+        assert shap_interaction_values.shape[0] == 10
+
+        shap_interaction_values = xpl.get_interaction_values()
+        assert shap_interaction_values.shape[0] == df.shape[0]

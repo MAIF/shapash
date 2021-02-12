@@ -10,7 +10,7 @@ import sklearn.linear_model as skl
 import xgboost as xgb
 import lightgbm as lgb
 import catboost as cb
-from shapash.utils.shap_backend import shap_contributions, check_explainer
+from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.model_synoptic import simple_tree_model,catboost_model,linear_model,svm_model
 import shap
 
@@ -93,3 +93,34 @@ class TestShapBackend(unittest.TestCase):
         explainer = shap.TreeExplainer(clf)
         assert explainer.__class__.__base__.__name__ == "Explainer"
         check_explainer(explainer)
+
+    def test_shap_interaction_values_1(self):
+        """
+        Unit test assert shap_interaction_values function raises an error when not dealing with TreeExplainer object
+        """
+        for model in self.modellist:
+            print(type(model))
+            model.fit(self.x_df, self.y_df)
+            if str(type(model)) in linear_model:
+                explainer = shap.LinearExplainer(model, self.x_df)
+            elif str(type(model)) in svm_model:
+                explainer = shap.KernelExplainer(model.predict, self.x_df)
+            else:
+                explainer = None
+
+            if explainer:
+                self.assertRaises(ValueError, get_shap_interaction_values, self.x_df, explainer)
+
+    def test_shap_interaction_values_2(self):
+        """
+        Unit test shap_interaction_values function
+        """
+        for model in [ske.RandomForestRegressor(n_estimators=1), ske.RandomForestClassifier(n_estimators=1)]:
+            self.x_df = self.x_df.astype(float)
+            model.fit(self.x_df, self.y_df)
+            print(model)
+            explainer = shap.TreeExplainer(model)
+            interaction_values = get_shap_interaction_values(self.x_df, explainer)
+            assert interaction_values.shape[0] == self.x_df.shape[0]
+            assert interaction_values.shape[1] == self.x_df.shape[1]
+            assert interaction_values.shape[2] == self.x_df.shape[1]
