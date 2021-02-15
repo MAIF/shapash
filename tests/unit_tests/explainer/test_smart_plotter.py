@@ -1,12 +1,14 @@
 """
 Unit test smart plotter
 """
+import copy
 import types
 import unittest
 from unittest.mock import patch
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 from shapash.explainer.smart_explainer import SmartExplainer
 
 class TestSmartPlotter(unittest.TestCase):
@@ -1342,3 +1344,29 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array_equal(output_label0.data[i].x, expected_output_0.data[i].x)
             assert np.array_equal(output_label0.data[i].y, expected_output_0.data[i].y)
             assert np.array_equal(output_label0.data[i].hovertext, expected_output_0.data[i].hovertext)
+
+    def test_interactions_plot_1(self):
+        """
+        Unit test 1 for test interaction plot : scatter plot for categorical x categorical features
+        """
+
+        col1 = 'X1'
+        col2 = 'X2'
+
+        interaction_values = np.array([
+            [[0.1, -0.7], [-0.6, 0.3]],
+            [[0.2, -0.1], [-0.2, 0.1]]
+        ])
+        self.smart_explainer.interaction_values = interaction_values
+        self.smart_explainer.x_interaction = self.smart_explainer.x_init
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        expected_output = px.scatter(x=self.x_pred[col1],
+                                     y=self.smart_explainer.interaction_values[:, 0, 1],
+                                     color=self.x_pred[col1])
+
+        assert np.array_equal(output.data[0].x, expected_output.data[0].x)
+        assert np.array_equal(output.data[1].y, expected_output.data[1].y)
+        assert output.data[0].showlegend is True
+        assert len(output.data) == 2
