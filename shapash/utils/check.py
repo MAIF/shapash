@@ -227,14 +227,16 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
 
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
+        feature_expected_model = model_features
         model_expected = len(set(model_features))
     else:
+        feature_expected_model = None
         model_expected = model_features
 
-    if str(type(preprocessing)) in supported_category_encoder:
-        if len(set(preprocessing.feature_names)) != model_expected:
+    if str(type(preprocessing)) in supported_category_encoder and isinstance(feature_expected_model, list):
+        if set(preprocessing.feature_names) != set(feature_expected_model):
             raise ValueError("""
-                                Number of features returned by the Category_Encoders preprocessing doesn't
+                                One of features returned by the Category_Encoders preprocessing doesn't
                                 match the model's expected features.
                             """)
     elif preprocessing is not None:

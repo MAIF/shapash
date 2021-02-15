@@ -386,7 +386,8 @@ class TestCheck(unittest.TestCase):
             model.fit(train_ordinal_all, y)
 
             check_consistency_model_features(features_dict, model, columns_dict,
-                                             features_types, mask_params, preprocessing)
+                                             features_types, mask_params, preprocessing,
+                                             list_preprocessing=[preprocessing])
 
     def test_check_consistency_model_features_5(self):
         """
