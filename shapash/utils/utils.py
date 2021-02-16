@@ -1,6 +1,7 @@
 """
 Utils is a group of function for the library
 """
+import numpy as np
 import socket
 import math
 
@@ -201,3 +202,28 @@ def maximum_difference_sort_value(contributions):
             ]
         )
     return max_difference
+
+
+def compute_sorted_variables_interactions_list_indices(interaction_values):
+    """
+    Returns the sorted interactions as a list of pairs of indices.
+    Computes the (absolute) sum of all contributions of each pair of variables in a 2D matrix.
+    Then returns the list of all unique pairs of indices of the sorted values in descending order.
+
+    Parameters
+    ----------
+    interaction_values : np.ndarray
+        Numpy array of shape (# samples x # features x # features) containing all interactions for each sample.
+
+
+    Returns
+    -------
+    interaction_contrib_sorted_indices : list
+        List containing all pairs of indices in descending order of most important interactions.
+    """
+    tmp = np.abs(interaction_values).sum(0)
+    for i in range(tmp.shape[0]):
+        tmp[i, i:] = 0
+
+    interaction_contrib_sorted_indices = np.dstack(np.unravel_index(np.argsort(tmp.ravel()), tmp.shape))[0][::-1]
+    return interaction_contrib_sorted_indices
