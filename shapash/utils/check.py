@@ -214,7 +214,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             raise ValueError("All features of features_dict must be in features_types")
 
     if set(features_types) != set(columns_dict.values()):
-        raise ValueError("features of features_types and model must be the same")
+        raise ValueError("features of features_types and columns_dict must be the same")
 
     if mask_params is not None:
         if mask_params['features_to_hide'] is not None:
@@ -232,6 +232,16 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
     else:
         feature_expected_model = None
         model_expected = model_features
+
+    if preprocessing is None:
+        if isinstance(feature_expected_model, list):
+            if set(columns_dict.values()) != set(feature_expected_model):
+                columns_dict_feature = [str(feature) for feature in columns_dict.values()]
+                if set(columns_dict_feature) != set(feature_expected_model):
+                    raise ValueError("Features of columns_dict and model must be the same.")
+        else:
+            if len(set(columns_dict.values())) != model_expected :
+                raise ValueError("Features of columns_dict and model must have the same length")
 
     if str(type(preprocessing)) in supported_category_encoder and isinstance(feature_expected_model, list):
         if set(preprocessing.feature_names) != set(feature_expected_model):
