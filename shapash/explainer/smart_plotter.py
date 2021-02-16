@@ -12,7 +12,7 @@ from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
-    maximum_difference_sort_value
+    maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
 
 class SmartPlotter:
     """
@@ -1614,6 +1614,37 @@ class SmartPlotter:
 
         return fig
 
+    def _select_indices_interactions_plot(self, selection, max_points):
+        """
+        Method used for sampling indices.
+        """
+        # Sampling
+        addnote = None
+        if selection is None:
+            # interaction_selection attribute is used to store already computed indices of interaction_values
+            if hasattr(self, 'interaction_selection'):
+                list_ind = self.interaction_selection
+            elif self.explainer.x_pred.shape[0] <= max_points:
+                list_ind = self.explainer.x_pred.index.tolist()
+            else:
+                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                addnote = "Length of random Subset : "
+        elif isinstance(selection, list):
+            if hasattr(self, 'interaction_selection'):
+                if set(self.interaction_selection).issubset(set(selection)):
+                    list_ind = self.interaction_selection
+            elif len(selection) <= max_points:
+                list_ind = selection
+                addnote = "Length of user-defined Subset : "
+            else:
+                list_ind = random.sample(selection, max_points)
+                addnote = "Length of random Subset : "
+        else:
+            ValueError('parameter selection must be a list')
+        self.interaction_selection = list_ind
+
+        return list_ind, addnote
+
     def interactions_plot(self,
                           col1,
                           col2,
@@ -1677,30 +1708,7 @@ class SmartPlotter:
 
         col_value_count1 = self.explainer.features_desc[col_name1]
 
-        # Sampling
-        addnote = None
-        if selection is None:
-            # interaction_selection attribute is used to store already computed indices of interaction_values
-            if hasattr(self, 'interaction_selection'):
-                list_ind = self.interaction_selection
-            elif self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
-            else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
-        elif isinstance(selection, list):
-            if hasattr(self, 'interaction_selection'):
-                if set(self.interaction_selection).issubset(set(selection)):
-                    list_ind = self.interaction_selection
-            elif len(selection) <= max_points:
-                list_ind = selection
-                addnote = "Length of user-defined Subset : "
-            else:
-                list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
-        else:
-            ValueError('parameter selection must be a list')
-        self.interaction_selection = list_ind
+        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
         if addnote is not None:
             addnote = add_text([addnote,
@@ -1743,6 +1751,98 @@ class SmartPlotter:
             height=height,
             file_name=file_name,
             auto_open=auto_open
+        )
+
+        return fig
+
+    def generate_figure_interactions_contributions(self,
+                                                   nb_top_interactions,
+                                                   selection=None,
+                                                   violin_maxf=10,
+                                                   max_points=1000,
+                                                   width=900,
+                                                   height=600,
+                                                   file_name=None,
+                                                   auto_open=False):
+
+        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
+
+        interaction_values = self.explainer.get_interaction_values(selection=list_ind)
+
+        sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
+
+        indices_to_plot = sorted_top_features_indices[:nb_top_interactions]
+        interactions_indices_traces_mapping = []
+        fig = go.Figure()
+        for i, ids in enumerate(indices_to_plot):
+            id0, id1 = ids
+
+            fig_one_interaction = self.interactions_plot(
+                col1=self.explainer.columns_dict[id0],
+                col2=self.explainer.columns_dict[id1],
+                selection=selection,
+                violin_maxf=violin_maxf,
+                max_points=max_points,
+                width=width,
+                height=height,
+                file_name=None,
+                auto_open=False
+            )
+
+            # The number of traces of each figure is stored
+            interactions_indices_traces_mapping.append(len(fig_one_interaction.data))
+
+            for trace in fig_one_interaction.data:
+                trace.visible = True if i == 0 else False
+                fig.add_trace(trace=trace)
+
+        fig.update_layout(
+            xaxis_title=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
+            yaxis_title="Shap interaction value",
+            updatemenus=[
+                dict(
+                    active=0,
+                    buttons=list([
+                        dict(label=f"{self.explainer.columns_dict[i]} - {self.explainer.columns_dict[j]}",
+                             method="update",
+                             args=[{"visible": [True if i == id_trace else False
+                                                for i, x in enumerate(interactions_indices_traces_mapping)
+                                                for _ in range(x)]},
+                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[j]}, **self.dict_xaxis}}}
+                                   ])
+                        for id_trace, (i, j) in enumerate(indices_to_plot)
+                    ]),
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.35,
+                    xanchor="left",
+                    y=1.25,
+                    yanchor="top"
+                )],
+            annotations=[
+                dict(text=f"Sorted top {len(indices_to_plot)} SHAP interaction Variables :",
+                     x=0, xref="paper", y=1.2, yref="paper", align="left", showarrow=False)
+            ]
+        )
+
+        self._update_interactions_fig(
+            fig=fig,
+            col_name1=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
+            col_name2=self.explainer.columns_dict[sorted_top_features_indices[0][1]],
+            addnote=addnote,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open
+        )
+
+        fig.update_layout(
+            title={
+                'y': 0.88,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'}
         )
 
         return fig
