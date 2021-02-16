@@ -182,9 +182,9 @@ class SmartPlotter:
 
         Parameters
         ----------
-        feature_values : List of values or pd.Series or 1d Array
+        feature_values : 1 column pd.Dataframe
             The values of one feature
-        contributions : List of values or pd.Serie or 1d Array
+        contributions : 1 column pd.Dataframe
             The contributions associate
         feature_name : String
             Name of the feature, used in title
@@ -1565,6 +1565,27 @@ class SmartPlotter:
     def _update_interactions_fig(self, fig, col_name1, col_name2, addnote, width, height, file_name, auto_open):
         """
         Function used for the interactions plot to update the layout of the plotly figure.
+
+        Parameters
+        ----------
+        col_name1 : str
+            Name of the first column whose contributions we want to plot
+        col_name2 : str
+            Name of the second column whose contributions we want to plot
+        addnote : str
+            Text to be added to the figure title
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
         """
         fig.data[0].marker.size = 8
 
@@ -1629,7 +1650,7 @@ class SmartPlotter:
                           file_name=None,
                           auto_open=False):
         """
-        diplays a Plotly scatter plot or violin plot of two selected features and their combined
+        Diplays a Plotly scatter plot or violin plot of two selected features and their combined
         contributions for each of their values.
 
         This plot allows the user to understand how the different combinations of values of the
