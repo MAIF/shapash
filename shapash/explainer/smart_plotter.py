@@ -1589,12 +1589,13 @@ class SmartPlotter:
         """
         fig.data[0].marker.size = 8
 
-        if fig.data[0]['showlegend'] is False:  # Case where col2 is not categorical
+        if fig.data[-1]['showlegend'] is False:  # Case where col2 is not categorical
             fig.layout.coloraxis.colorbar = {'title': {'text': col_name2}}
             fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
                                             f'{col_name2}: ' + '%{marker.color}<br />'
                                             'Shap interaction value: %{y:.4f}<extra></extra>',
                               hovertext=None)
+            fig.layout.coloraxis.colorscale = self.interactions_col_scale
         else:
             fig.update_layout(legend=dict(title=dict(text=col_name2)))
             fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
@@ -1675,7 +1676,7 @@ class SmartPlotter:
                           col2,
                           selection=None,
                           violin_maxf=10,
-                          max_points=1000,
+                          max_points=500,
                           width=900,
                           height=600,
                           file_name=None,
@@ -1779,15 +1780,53 @@ class SmartPlotter:
 
         return fig
 
-    def generate_figure_interactions_contributions(self,
-                                                   nb_top_interactions,
-                                                   selection=None,
-                                                   violin_maxf=10,
-                                                   max_points=1000,
-                                                   width=900,
-                                                   height=600,
-                                                   file_name=None,
-                                                   auto_open=False):
+    def top_interactions_plot(self,
+                              nb_top_interactions=5,
+                              selection=None,
+                              violin_maxf=10,
+                              max_points=500,
+                              width=900,
+                              height=600,
+                              file_name=None,
+                              auto_open=False):
+        """
+        Displays a dynamic plot with the `nb_top_interactions` most important interactions existing
+        between two variables.
+
+        The most important interactions are determined computing the sum of all absolute shap interactions
+        values between all existing pairs of variables.
+        A button allows to select and display the corresponding features values and their shap contribution values.
+
+        Parameters
+        ----------
+        nb_top_interactions : int
+            Number of top interactions to display.
+        selection : list (optional)
+            Contains list of index, subset of the input DataFrame that we want to plot
+        violin_maxf : int (optional, default: 10)
+            maximum number modality to plot violin. If the feature specified with col argument
+            has more modalities than violin_maxf, a scatter plot will be choose
+        max_points : int (optional, default: 500)
+            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+
+        Example
+        --------
+        >>> xpl.plot.top_interactions_plot()
+        """
 
         list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
@@ -1820,6 +1859,14 @@ class SmartPlotter:
                 trace.visible = True if i == 0 else False
                 fig.add_trace(trace=trace)
 
+        def generate_title_dict(col_name1, col_name2, addnote):
+            title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
+            if addnote:
+                title = title + f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+            dict_t = copy.deepcopy(self.dict_title)
+            dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
+            return dict_t
+
         fig.update_layout(
             xaxis_title=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
             yaxis_title="Shap interaction value",
@@ -1832,14 +1879,16 @@ class SmartPlotter:
                              args=[{"visible": [True if i == id_trace else False
                                                 for i, x in enumerate(interactions_indices_traces_mapping)
                                                 for _ in range(x)]},
-                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[j]}, **self.dict_xaxis}}}
+                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[j]}, **self.dict_xaxis}},
+                                    'title': generate_title_dict(self.explainer.columns_dict[i],
+                                                                 self.explainer.columns_dict[j], addnote)}
                                    ])
                         for id_trace, (i, j) in enumerate(indices_to_plot)
                     ]),
                     direction="down",
                     pad={"r": 10, "t": 10},
                     showactive=True,
-                    x=0.35,
+                    x=0.37,
                     xanchor="left",
                     y=1.25,
                     yanchor="top"
@@ -1857,8 +1906,8 @@ class SmartPlotter:
             addnote=addnote,
             width=width,
             height=height,
-            file_name=file_name,
-            auto_open=auto_open
+            file_name=None,
+            auto_open=False
         )
 
         fig.update_layout(
@@ -1868,5 +1917,8 @@ class SmartPlotter:
                 'xanchor': 'center',
                 'yanchor': 'top'}
         )
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig
