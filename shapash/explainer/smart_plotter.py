@@ -133,6 +133,10 @@ class SmartPlotter:
 
         self.round_digit = None
 
+        self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
+
+        self.interactions_discrete_colors = px.colors.qualitative.Antique
+
     def tuning_colorscale(self, values):
         """
         adapts the color scale to the distribution of points
@@ -178,9 +182,9 @@ class SmartPlotter:
 
         Parameters
         ----------
-        feature_values : List of values or pd.Series or 1d Array
+        feature_values : 1 column pd.Dataframe
             The values of one feature
-        contributions : List of values or pd.Serie or 1d Array
+        contributions : 1 column pd.Dataframe
             The contributions associate
         feature_name : String
             Name of the feature, used in title
@@ -1491,7 +1495,7 @@ class SmartPlotter:
             fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(),
                              color=col_values.values.flatten(),
                              size=[8 for _ in range(len(x_values))],
-                             color_discrete_sequence=px.colors.qualitative.Antique,
+                             color_discrete_sequence=self.interactions_discrete_colors,
                              text=col_values.values.flatten())
         else:
             fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(), color=col_values.values.flatten(),
@@ -1561,6 +1565,27 @@ class SmartPlotter:
     def _update_interactions_fig(self, fig, col_name1, col_name2, addnote, width, height, file_name, auto_open):
         """
         Function used for the interactions plot to update the layout of the plotly figure.
+
+        Parameters
+        ----------
+        col_name1 : str
+            Name of the first column whose contributions we want to plot
+        col_name2 : str
+            Name of the second column whose contributions we want to plot
+        addnote : str
+            Text to be added to the figure title
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
         """
         fig.data[0].marker.size = 8
 
@@ -1656,7 +1681,7 @@ class SmartPlotter:
                           file_name=None,
                           auto_open=False):
         """
-        diplays a Plotly scatter plot or violin plot of two selected features and their combined
+        Diplays a Plotly scatter plot or violin plot of two selected features and their combined
         contributions for each of their values.
 
         This plot allows the user to understand how the different combinations of values of the
@@ -1724,7 +1749,6 @@ class SmartPlotter:
             feature_values2 = self.explainer.x_pred.loc[list_ind, col_name2].to_frame()
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
-        col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
@@ -1732,14 +1756,14 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=col_scale
+                col_scale=self.interactions_col_scale
             )
         else:
             fig = self._plot_interactions_violin(
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=col_scale
+                col_scale=self.interactions_col_scale
             )
 
         self._update_interactions_fig(
