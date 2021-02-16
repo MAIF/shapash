@@ -1515,3 +1515,73 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array_equal(output.data[2].marker.color, [34., 27.])
 
         self.setUp()
+
+    def test_top_interactions_plot_1(self):
+        """
+        Test top interactions plot with scatter plots only
+        """
+        smart_explainer = self.smart_explainer
+        smart_explainer.x_init = smart_explainer.x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34, 16, 0.2, 12],
+                 ['Master', 27, -10, 0.65, 18]]),
+            columns=['X1', 'X2', 'X3', 'X4', 'X5'],
+            index=['person_A', 'person_B']
+        ).astype({'X1': str, 'X2': float, 'X3': float, 'X4': float, 'X5': float})
+
+        smart_explainer.features_desc = smart_explainer.check_features_desc()
+        smart_explainer.columns_dict = {i: col for i, col in enumerate(smart_explainer.x_pred.columns)}
+
+        interaction_values = np.array([
+            [[0.1, -0.7, 0.01, -0.9, 0.6], [-0.1, 0.8, 0.02, 0.7, -0.5], [0.2, 0.5, 0.04, -0.88, 0.7],
+             [0.15, 0.6, -0.2, 0.5, 0.3]],
+            [[0.2, -0.1, 0.2, 0.8, 0.55], [-0.2, 0.6, 0.02, -0.67, -0.6], [0.1, -0.5, 0.05, 1, 0.5],
+             [0.3, 0.6, 0.02, -0.9, 0.4]]
+        ])
+
+        smart_explainer.interaction_values = interaction_values
+        smart_explainer.x_interaction = smart_explainer.x_init
+
+        output = smart_explainer.plot.top_interactions_plot(nb_top_interactions=5, violin_maxf=0)
+
+        assert len(output.layout.updatemenus[0].buttons) == 5
+        assert isinstance(output.layout.updatemenus[0].buttons[0].args[0]['visible'], list)
+        assert len(output.layout.updatemenus[0].buttons[0].args[0]['visible']) >= 5
+        assert True in output.layout.updatemenus[0].buttons[0].args[0]['visible']
+
+        self.setUp()
+
+    def test_top_interactions_plot_2(self):
+            """
+            Test top interactions plot with violin and scatter plots
+            """
+            smart_explainer = self.smart_explainer
+            smart_explainer.x_init = smart_explainer.x_pred = pd.DataFrame(
+                data=np.array(
+                    [['PhD', 34, 16, 0.2, 12],
+                     ['Master', 27, -10, 0.65, 18]]),
+                columns=['X1', 'X2', 'X3', 'X4', 'X5'],
+                index=['person_A', 'person_B']
+            ).astype({'X1': str, 'X2': float, 'X3': float, 'X4': float, 'X5': float})
+
+            smart_explainer.features_desc = smart_explainer.check_features_desc()
+            smart_explainer.columns_dict = {i: col for i, col in enumerate(smart_explainer.x_pred.columns)}
+
+            interaction_values = np.array([
+                [[0.1, -0.7, 0.01, -0.9, 0.6], [-0.1, 0.8, 0.02, 0.7, -0.5], [0.2, 0.5, 0.04, -0.88, 0.7],
+                 [0.15, 0.6, -0.2, 0.5, 0.3]],
+                [[0.2, -0.1, 0.2, 0.8, 0.55], [-0.2, 0.6, 0.02, -0.67, -0.6], [0.1, -0.5, 0.05, 1, 0.5],
+                 [0.3, 0.6, 0.02, -0.9, 0.4]]
+            ])
+
+            smart_explainer.interaction_values = interaction_values
+            smart_explainer.x_interaction = smart_explainer.x_init
+
+            output = smart_explainer.plot.top_interactions_plot(nb_top_interactions=4)
+
+            assert len(output.layout.updatemenus[0].buttons) == 4
+            assert isinstance(output.layout.updatemenus[0].buttons[0].args[0]['visible'], list)
+            assert len(output.layout.updatemenus[0].buttons[0].args[0]['visible']) >= 4
+            assert True in output.layout.updatemenus[0].buttons[0].args[0]['visible']
+
+            self.setUp()
