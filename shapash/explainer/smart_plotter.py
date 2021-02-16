@@ -133,6 +133,10 @@ class SmartPlotter:
 
         self.round_digit = None
 
+        self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
+
+        self.interactions_discrete_colors = px.colors.qualitative.Antique
+
     def tuning_colorscale(self, values):
         """
         adapts the color scale to the distribution of points
@@ -1491,7 +1495,7 @@ class SmartPlotter:
             fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(),
                              color=col_values.values.flatten(),
                              size=[8 for _ in range(len(x_values))],
-                             color_discrete_sequence=px.colors.qualitative.Antique,
+                             color_discrete_sequence=self.interactions_discrete_colors,
                              text=col_values.values.flatten())
         else:
             fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(), color=col_values.values.flatten(),
@@ -1716,7 +1720,6 @@ class SmartPlotter:
             feature_values2 = self.explainer.x_pred.loc[list_ind, col_name2].to_frame()
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
-        col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
@@ -1724,14 +1727,14 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=col_scale
+                col_scale=self.interactions_col_scale
             )
         else:
             fig = self._plot_interactions_violin(
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=col_scale
+                col_scale=self.interactions_col_scale
             )
 
         self._update_interactions_fig(
