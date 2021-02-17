@@ -1,12 +1,14 @@
 """
 Unit test smart plotter
 """
+import copy
 import types
 import unittest
 from unittest.mock import patch
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 from shapash.explainer.smart_explainer import SmartExplainer
 
 class TestSmartPlotter(unittest.TestCase):
@@ -1342,3 +1344,174 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array_equal(output_label0.data[i].x, expected_output_0.data[i].x)
             assert np.array_equal(output_label0.data[i].y, expected_output_0.data[i].y)
             assert np.array_equal(output_label0.data[i].hovertext, expected_output_0.data[i].hovertext)
+
+    def test_interactions_plot_1(self):
+        """
+        Unit test 1 for test interaction plot : scatter plot for categorical x categorical features
+        """
+
+        col1 = 'X1'
+        col2 = 'X2'
+
+        interaction_values = np.array([
+            [[0.1, -0.7], [-0.6, 0.3]],
+            [[0.2, -0.1], [-0.2, 0.1]]
+        ])
+        self.smart_explainer.interaction_values = interaction_values
+        self.smart_explainer.x_interaction = self.smart_explainer.x_init
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        expected_output = px.scatter(x=self.x_pred[col1],
+                                     y=self.smart_explainer.interaction_values[:, 0, 1],
+                                     color=self.x_pred[col1])
+
+        assert np.array_equal(output.data[0].x, expected_output.data[0].x)
+        assert np.array_equal(output.data[1].y, expected_output.data[1].y)
+        assert output.data[0].showlegend is True
+        assert len(output.data) == 2
+
+    def test_interactions_plot_2(self):
+        """
+        Unit test 1 for test interaction plot : scatter plot for categorical x numeric features
+        """
+        col1 = 'X1'
+        col2 = 'X2'
+        smart_explainer = self.smart_explainer
+        smart_explainer.x_init = smart_explainer.x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34],
+                 ['Master', 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        smart_explainer.x_init['X2'] = smart_explainer.x_init['X2'].astype(float)
+
+        interaction_values = np.array([
+            [[0.1, -0.7], [-0.6, 0.3]],
+            [[0.2, -0.1], [-0.2, 0.1]]
+        ])
+
+        smart_explainer.interaction_values = interaction_values
+        smart_explainer.x_interaction = smart_explainer.x_init
+
+        output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        assert np.array_equal(output.data[0].x, ['PhD', 'Master'])
+        assert np.array_equal(output.data[0].y, [-0.7, -0.1])
+        assert np.array_equal(output.data[0].marker.color, [34., 27.])
+        assert len(output.data) == 1
+
+        self.setUp()
+
+    def test_interactions_plot_3(self):
+        """
+        Unit test 1 for test interaction plot : scatter plot for numeric x categorical features
+        """
+        col1 = 'X1'
+        col2 = 'X2'
+        smart_explainer = self.smart_explainer
+        smart_explainer.x_init = smart_explainer.x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34],
+                 ['Master', 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        smart_explainer.x_init['X2'] = smart_explainer.x_init['X2'].astype(float)
+
+        interaction_values = np.array([
+            [[0.1, -0.7], [-0.6, 0.3]],
+            [[0.2, -0.1], [-0.2, 0.1]]
+        ])
+
+        smart_explainer.interaction_values = interaction_values
+        smart_explainer.x_interaction = smart_explainer.x_init
+
+        output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0)
+
+        assert np.array_equal(output.data[0].x, [34.])
+        assert np.array_equal(output.data[0].y, [-0.6])
+        assert output.data[0].name == 'PhD'
+
+        assert np.array_equal(output.data[1].x, [27.])
+        assert np.array_equal(output.data[1].y, [-0.2])
+        assert output.data[1].name == 'Master'
+
+        assert len(output.data) == 2
+
+        self.setUp()
+
+    def test_interactions_plot_4(self):
+        """
+        Unit test 1 for test interaction plot : scatter plot for numeric x numeric features
+        """
+        col1 = 'X1'
+        col2 = 'X2'
+        smart_explainer = self.smart_explainer
+
+        smart_explainer.x_init = smart_explainer.x_pred = pd.DataFrame(
+            data=np.array(
+                [[520, 34],
+                 [12800, 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        smart_explainer.x_init['X1'] = smart_explainer.x_init['X1'].astype(float)
+        smart_explainer.x_init['X2'] = smart_explainer.x_init['X2'].astype(float)
+
+        interaction_values = np.array([
+            [[0.1, -0.7], [-0.6, 0.3]],
+            [[0.2, -0.1], [-0.2, 0.1]]
+        ])
+
+        smart_explainer.interaction_values = interaction_values
+        smart_explainer.x_interaction = smart_explainer.x_init
+
+        output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        assert np.array_equal(output.data[0].x, [520, 12800])
+        assert np.array_equal(output.data[0].y, [-0.7, -0.1])
+        assert np.array_equal(output.data[0].marker.color, [34., 27.])
+
+        assert len(output.data) == 1
+
+        self.setUp()
+
+    def test_interactions_plot_5(self):
+        """
+        Unit test 1 for test interaction plot : violin plot for categorical x numeric features
+        """
+        col1 = 'X1'
+        col2 = 'X2'
+        smart_explainer = self.smart_explainer
+        smart_explainer.x_init = smart_explainer.x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34],
+                 ['Master', 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        smart_explainer.x_init['X2'] = smart_explainer.x_init['X2'].astype(float)
+
+        interaction_values = np.array([
+            [[0.1, -0.7], [-0.6, 0.3]],
+            [[0.2, -0.1], [-0.2, 0.1]]
+        ])
+
+        smart_explainer.interaction_values = interaction_values
+        smart_explainer.x_interaction = smart_explainer.x_init
+
+        output = smart_explainer.plot.interactions_plot(col1, col2)
+
+        assert len(output.data) == 3
+
+        assert output.data[0].type == 'violin'
+        assert output.data[1].type == 'violin'
+        assert output.data[2].type == 'scatter'
+
+        assert np.array_equal(output.data[2].x, ['PhD', 'Master'])
+        assert np.array_equal(output.data[2].y, [-0.7, -0.1])
+        assert np.array_equal(output.data[2].marker.color, [34., 27.])
+
+        self.setUp()

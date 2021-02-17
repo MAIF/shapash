@@ -316,7 +316,7 @@ class SmartExplainer:
         check_contribution_object(self._case, self._classes, contributions)
         return self.state.validate_contributions(contributions, self.x_init)
 
-    def get_interaction_values(self, n_samples_max=None):
+    def get_interaction_values(self, n_samples_max=None, selection=None):
         """
         Compute shap interaction values for each row of x_init.
         This function is only available for explainer of type TreeExplainer (used for tree based models).
@@ -326,13 +326,26 @@ class SmartExplainer:
         ----------
         n_samples_max : int, optional
             Limit the number of points for which we compute the interactions.
+        selection : list, optional
+            Contains list of index, subset of the input DataFrame that we want to plot
 
         Returns
         -------
         np.ndarray
             Shap interaction values for each sample as an array of shape (# samples x # features x # features).
         """
-        return get_shap_interaction_values(self.x_init[:n_samples_max], self.explainer)
+        x = copy.deepcopy(self.x_init)
+
+        if selection:
+            x = x.loc[selection]
+
+        if hasattr(self, 'x_interaction'):
+            if self.x_interaction.equals(x[:n_samples_max]):
+                return self.interaction_values
+
+        self.x_interaction = x[:n_samples_max]
+        self.interaction_values = get_shap_interaction_values(self.x_interaction, self.explainer)
+        return self.interaction_values
 
     def apply_preprocessing(self, contributions, preprocessing=None):
         """

@@ -7,6 +7,7 @@ import copy
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
+import plotly.express as px
 from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
@@ -132,6 +133,10 @@ class SmartPlotter:
 
         self.round_digit = None
 
+        self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
+
+        self.interactions_discrete_colors = px.colors.qualitative.Antique
+
     def tuning_colorscale(self, values):
         """
         adapts the color scale to the distribution of points
@@ -177,9 +182,9 @@ class SmartPlotter:
 
         Parameters
         ----------
-        feature_values : List of values or pd.Series or 1d Array
+        feature_values : 1 column pd.Dataframe
             The values of one feature
-        contributions : List of values or pd.Serie or 1d Array
+        contributions : 1 column pd.Dataframe
             The contributions associate
         feature_name : String
             Name of the feature, used in title
@@ -1456,5 +1461,312 @@ class SmartPlotter:
                                         predictions=preds, dict_features=dict_features,
                                         width=width, height=height, subtitle=subtitle,
                                         file_name=file_name, auto_open=auto_open)
+
+        return fig
+
+    def _plot_interactions_scatter(self,
+                                   x_values,
+                                   y_values,
+                                   col_values,
+                                   col_scale):
+        """
+        Function used to generate a scatter plot figure for the interactions plots.
+
+        Parameters
+        ----------
+        x_values : pd.DataFrame
+            Values of the points on the x axis as a 1 column DataFrame
+        y_values : pd.DataFrame
+            Values of the points on the y axis as a 1 column DataFrame
+        col_values : pd.DataFrame
+            Values of the color of the points as a 1 column DataFrame
+        col_scale : list
+            color scale
+
+        Returns
+        -------
+        go.Figure
+        """
+        # add break line to X label if necessary
+        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
+        x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
+
+        if isinstance(col_values.values.flatten()[0], str):
+            fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(),
+                             color=col_values.values.flatten(),
+                             size=[8 for _ in range(len(x_values))],
+                             color_discrete_sequence=self.interactions_discrete_colors,
+                             text=col_values.values.flatten())
+        else:
+            fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(), color=col_values.values.flatten(),
+                             size=[8 for _ in range(len(x_values))], color_continuous_scale=col_scale)
+        fig.update_traces(mode='markers')
+
+        return fig
+
+    def _plot_interactions_violin(self,
+                                  x_values,
+                                  y_values,
+                                  col_values,
+                                  col_scale):
+        """
+        Function used to generate a violin plot figure for the interactions plots.
+
+        Parameters
+        ----------
+        x_values : pd.DataFrame
+            Values of the points on the x axis as a 1 column DataFrame
+        y_values : pd.DataFrame
+            Values of the points on the y axis as a 1 column DataFrame
+        col_values : pd.DataFrame
+            Values of the color of the points as a 1 column DataFrame
+        col_scale : list
+            color scale
+
+        Returns
+        -------
+        go.Figure
+        """
+
+        fig = go.Figure()
+
+        # add break line to X label
+        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
+        x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
+
+        uniq_l = list(pd.unique(x_values.values.flatten()))
+        uniq_l.sort()
+
+        for i in uniq_l:
+            fig.add_trace(go.Violin(x=x_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
+                                    y=y_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
+                                    line_color=self.default_color,
+                                    showlegend=False,
+                                    meanline_visible=True,
+                                    scalemode='count',
+                                    ))
+        scatter_fig = self._plot_interactions_scatter(x_values, y_values, col_values, col_scale)
+        for trace in scatter_fig.data:
+            fig.add_trace(trace)
+
+        fig.update_layout(
+            autosize=False,
+            hovermode='closest',
+            violingap=0.05,
+            violingroupgap=0,
+            violinmode='overlay',
+            xaxis_type='category'
+        )
+
+        fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+
+        return fig
+
+    def _update_interactions_fig(self, fig, col_name1, col_name2, addnote, width, height, file_name, auto_open):
+        """
+        Function used for the interactions plot to update the layout of the plotly figure.
+
+        Parameters
+        ----------
+        col_name1 : str
+            Name of the first column whose contributions we want to plot
+        col_name2 : str
+            Name of the second column whose contributions we want to plot
+        addnote : str
+            Text to be added to the figure title
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+        """
+        fig.data[0].marker.size = 8
+
+        if fig.data[0]['showlegend'] is False:  # Case where col2 is not categorical
+            fig.layout.coloraxis.colorbar = {'title': {'text': col_name2}}
+            fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
+                                            f'{col_name2}: ' + '%{marker.color}<br />'
+                                            'Shap interaction value: %{y:.4f}<extra></extra>',
+                              hovertext=None)
+        else:
+            fig.update_layout(legend=dict(title=dict(text=col_name2)))
+            fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
+                                            f'{col_name2}: ' + '%{text}<br />'
+                                            'Shap interaction value: %{y:.4f}<extra></extra>',
+                              hovertext=None)
+
+        title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
+        if addnote:
+            title = title + f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+        dict_t = copy.deepcopy(self.dict_title)
+        dict_t['text'] = title
+
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_xaxis['text'] = truncate_str(col_name1, 110)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_yaxis['text'] = 'Shap interaction value'
+
+        fig.update_traces(
+            marker={
+                'size': 8,
+                'opacity': 0.8,
+                'line': {'width': 0.8, 'color': 'white'}
+            }
+        )
+
+        fig.update_layout(
+            yaxis_title=dict_yaxis,
+            title=dict_t,
+            template='none',
+            width=width,
+            height=height,
+            xaxis_title=dict_xaxis,
+            hovermode='closest'
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+        return fig
+
+    def interactions_plot(self,
+                          col1,
+                          col2,
+                          selection=None,
+                          violin_maxf=10,
+                          max_points=1000,
+                          width=900,
+                          height=600,
+                          file_name=None,
+                          auto_open=False):
+        """
+        Diplays a Plotly scatter plot or violin plot of two selected features and their combined
+        contributions for each of their values.
+
+        This plot allows the user to understand how the different combinations of values of the
+        two selected features influence the importance of the two features in the model output.
+
+        A sample is taken if the number of points to be displayed is too large
+
+        Parameters
+        ----------
+        col1: String or Int
+            Name, label name or column number of the first column whose contributions we want to plot
+        col2: String or Int
+            Name, label name or column number of the second column whose contributions we want to plot
+        selection: list (optional)
+            Contains list of index, subset of the input DataFrame that we want to plot
+        violin_maxf: int (optional, default: 10)
+            maximum number modality to plot violin. If the feature specified with col argument
+            has more modalities than violin_maxf, a scatter plot will be choose
+        max_points: int (optional, default: 2000)
+            maximum number of points to plot in contribution plot. if input dataset is bigger than
+            max_points, a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        Plotly Figure Object
+
+        Example
+        --------
+        >>> xpl.plot.interactions_plot(0, 1)
+        """
+
+        if not (isinstance(col1, (str, int)) or isinstance(col2, (str, int))):
+            raise ValueError('parameters col1 and col2 must be string or int.')
+
+        col_id1 = self.explainer.check_features_name([col1])[0]
+        col_name1 = self.explainer.columns_dict[col_id1]
+
+        col_id2 = self.explainer.check_features_name([col2])[0]
+        col_name2 = self.explainer.columns_dict[col_id2]
+
+        col_value_count1 = self.explainer.features_desc[col_name1]
+
+        # Sampling
+        addnote = None
+        if selection is None:
+            # interaction_selection attribute is used to store already computed indices of interaction_values
+            if hasattr(self, 'interaction_selection'):
+                list_ind = self.interaction_selection
+            elif self.explainer.x_pred.shape[0] <= max_points:
+                list_ind = self.explainer.x_pred.index.tolist()
+            else:
+                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                addnote = "Length of random Subset : "
+        elif isinstance(selection, list):
+            if hasattr(self, 'interaction_selection'):
+                if set(self.interaction_selection).issubset(set(selection)):
+                    list_ind = self.interaction_selection
+            elif len(selection) <= max_points:
+                list_ind = selection
+                addnote = "Length of user-defined Subset : "
+            else:
+                list_ind = random.sample(selection, max_points)
+                addnote = "Length of random Subset : "
+        else:
+            ValueError('parameter selection must be a list')
+        self.interaction_selection = list_ind
+
+        if addnote is not None:
+            addnote = add_text([addnote,
+                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
+                               sep='')
+
+        # Subset
+        if self.explainer.postprocessing_modifications:
+            feature_values1 = self.explainer.x_contrib_plot.loc[list_ind, col_name1].to_frame()
+            feature_values2 = self.explainer.x_contrib_plot.loc[list_ind, col_name2].to_frame()
+        else:
+            feature_values1 = self.explainer.x_pred.loc[list_ind, col_name1].to_frame()
+            feature_values2 = self.explainer.x_pred.loc[list_ind, col_name2].to_frame()
+
+        interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
+
+        # selecting the best plot : Scatter, Violin?
+        if col_value_count1 > violin_maxf:
+            fig = self._plot_interactions_scatter(
+                x_values=feature_values1,
+                y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
+                col_values=feature_values2,
+                col_scale=self.interactions_col_scale
+            )
+        else:
+            fig = self._plot_interactions_violin(
+                x_values=feature_values1,
+                y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
+                col_values=feature_values2,
+                col_scale=self.interactions_col_scale
+            )
+
+        self._update_interactions_fig(
+            fig=fig,
+            col_name1=col_name1,
+            col_name2=col_name2,
+            addnote=addnote,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open
+        )
 
         return fig
