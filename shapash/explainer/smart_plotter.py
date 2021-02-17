@@ -1465,6 +1465,9 @@ class SmartPlotter:
         return fig
 
     def _plot_interactions_scatter(self,
+                                   x_name,
+                                   y_name,
+                                   col_name,
                                    x_values,
                                    y_values,
                                    col_values,
@@ -1474,6 +1477,12 @@ class SmartPlotter:
 
         Parameters
         ----------
+        x_name : str
+            Name of the variable used as the x axis
+        y_name : str
+            Name of the variable used as the y axis
+        col_name : str
+            Name of the variable used as the color attribute
         x_values : pd.DataFrame
             Values of the points on the x axis as a 1 column DataFrame
         y_values : pd.DataFrame
@@ -1491,20 +1500,26 @@ class SmartPlotter:
         max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
         x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
+        data_df = pd.DataFrame({
+            x_name: x_values.values.flatten(),
+            y_name: y_values.values.flatten(),
+            col_name: col_values.values.flatten()
+        })
+
         if isinstance(col_values.values.flatten()[0], str):
-            fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(),
-                             color=col_values.values.flatten(),
-                             size=[8 for _ in range(len(x_values))],
-                             color_discrete_sequence=self.interactions_discrete_colors,
-                             text=col_values.values.flatten())
+            fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name,
+                             color_discrete_sequence=self.interactions_discrete_colors)
         else:
-            fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(), color=col_values.values.flatten(),
-                             size=[8 for _ in range(len(x_values))], color_continuous_scale=col_scale)
+            fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name, color_continuous_scale=col_scale)
+
         fig.update_traces(mode='markers')
 
         return fig
 
     def _plot_interactions_violin(self,
+                                  x_name,
+                                  y_name,
+                                  col_name,
                                   x_values,
                                   y_values,
                                   col_values,
@@ -1514,6 +1529,12 @@ class SmartPlotter:
 
         Parameters
         ----------
+        x_name : str
+            Name of the variable used as the x axis
+        y_name : str
+            Name of the variable used as the y axis
+        col_name : str
+            Name of the variable used as the color attribute
         x_values : pd.DataFrame
             Values of the points on the x axis as a 1 column DataFrame
         y_values : pd.DataFrame
@@ -1545,7 +1566,9 @@ class SmartPlotter:
                                     meanline_visible=True,
                                     scalemode='count',
                                     ))
-        scatter_fig = self._plot_interactions_scatter(x_values, y_values, col_values, col_scale)
+        scatter_fig = self._plot_interactions_scatter(x_name=x_name, y_name=y_name, col_name=col_name,
+                                                      x_values=x_values, y_values=y_values, col_values=col_values,
+                                                      col_scale=col_scale)
         for trace in scatter_fig.data:
             fig.add_trace(trace)
 
@@ -1587,21 +1610,11 @@ class SmartPlotter:
         -------
         go.Figure
         """
-        fig.data[0].marker.size = 8
 
         if fig.data[-1]['showlegend'] is False:  # Case where col2 is not categorical
-            fig.layout.coloraxis.colorbar = {'title': {'text': col_name2}}
-            fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
-                                            f'{col_name2}: ' + '%{marker.color}<br />'
-                                            'Shap interaction value: %{y:.4f}<extra></extra>',
-                              hovertext=None)
             fig.layout.coloraxis.colorscale = self.interactions_col_scale
         else:
             fig.update_layout(legend=dict(title=dict(text=col_name2)))
-            fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
-                                            f'{col_name2}: ' + '%{text}<br />'
-                                            'Shap interaction value: %{y:.4f}<extra></extra>',
-                              hovertext=None)
 
         title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
         if addnote:
@@ -1623,6 +1636,7 @@ class SmartPlotter:
         )
 
         fig.update_layout(
+            coloraxis=dict(colorbar={'title': {'text': col_name2}}),
             yaxis_title=dict_yaxis,
             title=dict_t,
             template='none',
@@ -1770,6 +1784,9 @@ class SmartPlotter:
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
             fig = self._plot_interactions_scatter(
+                x_name=col_name1,
+                y_name='Shap interaction value',
+                col_name=col_name2,
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
@@ -1777,6 +1794,9 @@ class SmartPlotter:
             )
         else:
             fig = self._plot_interactions_violin(
+                x_name=col_name1,
+                y_name='Shap interaction value',
+                col_name=col_name2,
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
@@ -1883,6 +1903,7 @@ class SmartPlotter:
             dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
             return dict_t
 
+        fig.layout.coloraxis.colorscale = self.interactions_col_scale
         fig.update_layout(
             xaxis_title=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
             yaxis_title="Shap interaction value",
@@ -1895,9 +1916,12 @@ class SmartPlotter:
                              args=[{"visible": [True if i == id_trace else False
                                                 for i, x in enumerate(interactions_indices_traces_mapping)
                                                 for _ in range(x)]},
-                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[j]}, **self.dict_xaxis}},
+                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[i]}, **self.dict_xaxis}},
+                                    'legend': {'title': {'text': self.explainer.columns_dict[j]}},
+                                    'coloraxis': {'colorbar': {'title': {'text': self.explainer.columns_dict[j]}},
+                                                  'colorscale': fig.layout.coloraxis.colorscale},
                                     'title': generate_title_dict(self.explainer.columns_dict[i],
-                                                                 self.explainer.columns_dict[j], addnote)}
+                                                                 self.explainer.columns_dict[j], addnote)},
                                    ])
                         for id_trace, (i, j) in enumerate(indices_to_plot)
                     ]),
