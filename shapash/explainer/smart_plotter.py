@@ -12,7 +12,7 @@ from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
-    maximum_difference_sort_value
+    maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
 
 class SmartPlotter:
     """
@@ -1465,6 +1465,9 @@ class SmartPlotter:
         return fig
 
     def _plot_interactions_scatter(self,
+                                   x_name,
+                                   y_name,
+                                   col_name,
                                    x_values,
                                    y_values,
                                    col_values,
@@ -1474,6 +1477,12 @@ class SmartPlotter:
 
         Parameters
         ----------
+        x_name : str
+            Name of the variable used as the x axis
+        y_name : str
+            Name of the variable used as the y axis
+        col_name : str
+            Name of the variable used as the color attribute
         x_values : pd.DataFrame
             Values of the points on the x axis as a 1 column DataFrame
         y_values : pd.DataFrame
@@ -1491,20 +1500,26 @@ class SmartPlotter:
         max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
         x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
+        data_df = pd.DataFrame({
+            x_name: x_values.values.flatten(),
+            y_name: y_values.values.flatten(),
+            col_name: col_values.values.flatten()
+        })
+
         if isinstance(col_values.values.flatten()[0], str):
-            fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(),
-                             color=col_values.values.flatten(),
-                             size=[8 for _ in range(len(x_values))],
-                             color_discrete_sequence=self.interactions_discrete_colors,
-                             text=col_values.values.flatten())
+            fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name,
+                             color_discrete_sequence=self.interactions_discrete_colors)
         else:
-            fig = px.scatter(x=x_values.values.flatten(), y=y_values.values.flatten(), color=col_values.values.flatten(),
-                             size=[8 for _ in range(len(x_values))], color_continuous_scale=col_scale)
+            fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name, color_continuous_scale=col_scale)
+
         fig.update_traces(mode='markers')
 
         return fig
 
     def _plot_interactions_violin(self,
+                                  x_name,
+                                  y_name,
+                                  col_name,
                                   x_values,
                                   y_values,
                                   col_values,
@@ -1514,6 +1529,12 @@ class SmartPlotter:
 
         Parameters
         ----------
+        x_name : str
+            Name of the variable used as the x axis
+        y_name : str
+            Name of the variable used as the y axis
+        col_name : str
+            Name of the variable used as the color attribute
         x_values : pd.DataFrame
             Values of the points on the x axis as a 1 column DataFrame
         y_values : pd.DataFrame
@@ -1545,7 +1566,9 @@ class SmartPlotter:
                                     meanline_visible=True,
                                     scalemode='count',
                                     ))
-        scatter_fig = self._plot_interactions_scatter(x_values, y_values, col_values, col_scale)
+        scatter_fig = self._plot_interactions_scatter(x_name=x_name, y_name=y_name, col_name=col_name,
+                                                      x_values=x_values, y_values=y_values, col_values=col_values,
+                                                      col_scale=col_scale)
         for trace in scatter_fig.data:
             fig.add_trace(trace)
 
@@ -1587,20 +1610,11 @@ class SmartPlotter:
         -------
         go.Figure
         """
-        fig.data[0].marker.size = 8
 
-        if fig.data[0]['showlegend'] is False:  # Case where col2 is not categorical
-            fig.layout.coloraxis.colorbar = {'title': {'text': col_name2}}
-            fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
-                                            f'{col_name2}: ' + '%{marker.color}<br />'
-                                            'Shap interaction value: %{y:.4f}<extra></extra>',
-                              hovertext=None)
+        if fig.data[-1]['showlegend'] is False:  # Case where col2 is not categorical
+            fig.layout.coloraxis.colorscale = self.interactions_col_scale
         else:
             fig.update_layout(legend=dict(title=dict(text=col_name2)))
-            fig.update_traces(hovertemplate=f'<br>{col_name1}: ' + '%{x}<br />'
-                                            f'{col_name2}: ' + '%{text}<br />'
-                                            'Shap interaction value: %{y:.4f}<extra></extra>',
-                              hovertext=None)
 
         title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
         if addnote:
@@ -1622,6 +1636,7 @@ class SmartPlotter:
         )
 
         fig.update_layout(
+            coloraxis=dict(colorbar={'title': {'text': col_name2}}),
             yaxis_title=dict_yaxis,
             title=dict_t,
             template='none',
@@ -1639,12 +1654,59 @@ class SmartPlotter:
 
         return fig
 
+    def _select_indices_interactions_plot(self, selection, max_points):
+        """
+        Method used for sampling indices.
+
+        Parameters
+        ----------
+        selection : list
+            Contains list of index, subset of the input DataFrame that we want to plot
+        max_points : int
+            Maximum number to plot in contribution plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+
+        Returns
+        -------
+        list_ind : list
+            List of indices to select
+        addnote : str
+            Text to inform the user the selection that has been done.
+        """
+        # Sampling
+        addnote = None
+        if selection is None:
+            # interaction_selection attribute is used to store already computed indices of interaction_values
+            if hasattr(self, 'interaction_selection'):
+                list_ind = self.interaction_selection
+            elif self.explainer.x_pred.shape[0] <= max_points:
+                list_ind = self.explainer.x_pred.index.tolist()
+            else:
+                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                addnote = "Length of random Subset : "
+        elif isinstance(selection, list):
+            if hasattr(self, 'interaction_selection'):
+                if set(self.interaction_selection).issubset(set(selection)):
+                    list_ind = self.interaction_selection
+            elif len(selection) <= max_points:
+                list_ind = selection
+                addnote = "Length of user-defined Subset : "
+            else:
+                list_ind = random.sample(selection, max_points)
+                addnote = "Length of random Subset : "
+        else:
+            ValueError('parameter selection must be a list')
+        self.interaction_selection = list_ind
+
+        return list_ind, addnote
+
     def interactions_plot(self,
                           col1,
                           col2,
                           selection=None,
                           violin_maxf=10,
-                          max_points=1000,
+                          max_points=500,
                           width=900,
                           height=600,
                           file_name=None,
@@ -1702,30 +1764,7 @@ class SmartPlotter:
 
         col_value_count1 = self.explainer.features_desc[col_name1]
 
-        # Sampling
-        addnote = None
-        if selection is None:
-            # interaction_selection attribute is used to store already computed indices of interaction_values
-            if hasattr(self, 'interaction_selection'):
-                list_ind = self.interaction_selection
-            elif self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
-            else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
-        elif isinstance(selection, list):
-            if hasattr(self, 'interaction_selection'):
-                if set(self.interaction_selection).issubset(set(selection)):
-                    list_ind = self.interaction_selection
-            elif len(selection) <= max_points:
-                list_ind = selection
-                addnote = "Length of user-defined Subset : "
-            else:
-                list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
-        else:
-            ValueError('parameter selection must be a list')
-        self.interaction_selection = list_ind
+        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
         if addnote is not None:
             addnote = add_text([addnote,
@@ -1745,6 +1784,9 @@ class SmartPlotter:
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
             fig = self._plot_interactions_scatter(
+                x_name=col_name1,
+                y_name='Shap interaction value',
+                col_name=col_name2,
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
@@ -1752,6 +1794,9 @@ class SmartPlotter:
             )
         else:
             fig = self._plot_interactions_violin(
+                x_name=col_name1,
+                y_name='Shap interaction value',
+                col_name=col_name2,
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
@@ -1768,5 +1813,152 @@ class SmartPlotter:
             file_name=file_name,
             auto_open=auto_open
         )
+
+        return fig
+
+    def top_interactions_plot(self,
+                              nb_top_interactions=5,
+                              selection=None,
+                              violin_maxf=10,
+                              max_points=500,
+                              width=900,
+                              height=600,
+                              file_name=None,
+                              auto_open=False):
+        """
+        Displays a dynamic plot with the `nb_top_interactions` most important interactions existing
+        between two variables.
+
+        The most important interactions are determined computing the sum of all absolute shap interactions
+        values between all existing pairs of variables.
+        A button allows to select and display the corresponding features values and their shap contribution values.
+
+        Parameters
+        ----------
+        nb_top_interactions : int
+            Number of top interactions to display.
+        selection : list (optional)
+            Contains list of index, subset of the input DataFrame that we want to plot
+        violin_maxf : int (optional, default: 10)
+            maximum number modality to plot violin. If the feature specified with col argument
+            has more modalities than violin_maxf, a scatter plot will be choose
+        max_points : int (optional, default: 500)
+            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+
+        Example
+        --------
+        >>> xpl.plot.top_interactions_plot()
+        """
+
+        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
+
+        interaction_values = self.explainer.get_interaction_values(selection=list_ind)
+
+        sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
+
+        indices_to_plot = sorted_top_features_indices[:nb_top_interactions]
+        interactions_indices_traces_mapping = []
+        fig = go.Figure()
+        for i, ids in enumerate(indices_to_plot):
+            id0, id1 = ids
+
+            fig_one_interaction = self.interactions_plot(
+                col1=self.explainer.columns_dict[id0],
+                col2=self.explainer.columns_dict[id1],
+                selection=selection,
+                violin_maxf=violin_maxf,
+                max_points=max_points,
+                width=width,
+                height=height,
+                file_name=None,
+                auto_open=False
+            )
+
+            # The number of traces of each figure is stored
+            interactions_indices_traces_mapping.append(len(fig_one_interaction.data))
+
+            for trace in fig_one_interaction.data:
+                trace.visible = True if i == 0 else False
+                fig.add_trace(trace=trace)
+
+        def generate_title_dict(col_name1, col_name2, addnote):
+            title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
+            if addnote:
+                title = title + f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+            dict_t = copy.deepcopy(self.dict_title)
+            dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
+            return dict_t
+
+        fig.layout.coloraxis.colorscale = self.interactions_col_scale
+        fig.update_layout(
+            xaxis_title=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
+            yaxis_title="Shap interaction value",
+            updatemenus=[
+                dict(
+                    active=0,
+                    buttons=list([
+                        dict(label=f"{self.explainer.columns_dict[i]} - {self.explainer.columns_dict[j]}",
+                             method="update",
+                             args=[{"visible": [True if i == id_trace else False
+                                                for i, x in enumerate(interactions_indices_traces_mapping)
+                                                for _ in range(x)]},
+                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[i]}, **self.dict_xaxis}},
+                                    'legend': {'title': {'text': self.explainer.columns_dict[j]}},
+                                    'coloraxis': {'colorbar': {'title': {'text': self.explainer.columns_dict[j]}},
+                                                  'colorscale': fig.layout.coloraxis.colorscale},
+                                    'title': generate_title_dict(self.explainer.columns_dict[i],
+                                                                 self.explainer.columns_dict[j], addnote)},
+                                   ])
+                        for id_trace, (i, j) in enumerate(indices_to_plot)
+                    ]),
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.37,
+                    xanchor="left",
+                    y=1.25,
+                    yanchor="top"
+                )],
+            annotations=[
+                dict(text=f"Sorted top {len(indices_to_plot)} SHAP interaction Variables :",
+                     x=0, xref="paper", y=1.2, yref="paper", align="left", showarrow=False)
+            ]
+        )
+
+        self._update_interactions_fig(
+            fig=fig,
+            col_name1=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
+            col_name2=self.explainer.columns_dict[sorted_top_features_indices[0][1]],
+            addnote=addnote,
+            width=width,
+            height=height,
+            file_name=None,
+            auto_open=False
+        )
+
+        fig.update_layout(
+            title={
+                'y': 0.88,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'}
+        )
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig
