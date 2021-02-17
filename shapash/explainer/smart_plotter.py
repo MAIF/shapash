@@ -1643,6 +1643,22 @@ class SmartPlotter:
     def _select_indices_interactions_plot(self, selection, max_points):
         """
         Method used for sampling indices.
+
+        Parameters
+        ----------
+        selection : list
+            Contains list of index, subset of the input DataFrame that we want to plot
+        max_points : int
+            Maximum number to plot in contribution plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+
+        Returns
+        -------
+        list_ind : list
+            List of indices to select
+        addnote : str
+            Text to inform the user the selection that has been done.
         """
         # Sampling
         addnote = None
