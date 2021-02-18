@@ -166,6 +166,10 @@ class SmartPlotter:
     def _update_contributions_layout(self,
                                      fig,
                                      feature_name,
+                                     pred,
+                                     proba_values,
+                                     col_modality,
+                                     col_scale,
                                      addnote,
                                      subtitle,
                                      width,
@@ -181,6 +185,27 @@ class SmartPlotter:
         dict_t['text'] = title
         dict_xaxis['text'] = truncate_str(feature_name, 110)
         dict_yaxis['text'] = 'Contribution'
+
+        if self.explainer._case == "regression":
+            colorpoints = pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == "classification":
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
+
+        if colorpoints is not None:
+            fig.data[-1].marker.color = colorpoints.values.flatten()
+            fig.data[-1].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+
+        elif fig.data[0].type != 'violin':
+            if self.explainer._case == 'classification' and pred is not None:
+                fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda \
+                                                                         x: self.dict_ycolors[1] if x == col_modality else
+                self.dict_ycolors[0])
+            else:
+                fig.data[-1].marker.color = self.default_color
 
         fig.update_traces(
             marker={
@@ -254,16 +279,6 @@ class SmartPlotter:
         """
         fig = go.Figure()
 
-        default_color = self.default_color
-        dict_colors = copy.deepcopy(self.dict_ycolors)
-
-        if self.explainer._case == "regression":
-            colorpoints = pred
-            colorbar_title = 'Predicted'
-        elif self.explainer._case == "classification":
-            colorpoints = proba_values
-            colorbar_title = 'Predicted Proba'
-
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
         feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
@@ -283,27 +298,19 @@ class SmartPlotter:
                           '%{x}<br />Contribution: %{y:.4f}<extra></extra>',
             customdata=contributions.index.values
         )
-        if colorpoints is not None:
-            fig.data[0].marker.color = colorpoints.values.flatten()
-            fig.data[0].marker.coloraxis = 'coloraxis'
-            fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
-        elif self.explainer._case == 'classification' and pred is not None:
-            fig.data[0].marker.color = pred.iloc[:, 0].apply(lambda \
-                                                                     x: dict_colors[1] if x == col_modality else
-            dict_colors[0])
-        else:
-            fig.data[0].marker.color = default_color
-
-        self._update_contributions_layout(fig,
-                                         feature_name,
-                                         addnote,
-                                         subtitle,
-                                         width,
-                                         height,
-                                         file_name,
-                                         auto_open)
+        self._update_contributions_layout(fig=fig,
+                                          feature_name=feature_name,
+                                          pred=pred,
+                                          proba_values=proba_values,
+                                          col_modality=col_modality,
+                                          col_scale=col_scale,
+                                          addnote=addnote,
+                                          subtitle=subtitle,
+                                          width=width,
+                                          height=height,
+                                          file_name=file_name,
+                                          auto_open=auto_open)
 
         return fig
 
@@ -355,17 +362,8 @@ class SmartPlotter:
         """
         fig = go.Figure()
 
-        dict_colors = copy.deepcopy(self.dict_ycolors)
-        default_color = self.default_color
-
         points_param = False if proba_values is not None else "all"
         jitter_param = 0.075
-        if self.explainer._case == "regression":
-            colorpoints = pred
-            colorbar_title = 'Predicted'
-        elif self.explainer._case == 'classification':
-            colorpoints = proba_values
-            colorbar_title = 'Predicted Proba'
 
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
@@ -390,7 +388,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
-                                        line_color=dict_colors[0],
+                                        line_color=self.dict_ycolors[0],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -407,7 +405,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=0.1,
                                         side='positive',
-                                        line_color=dict_colors[1],
+                                        line_color=self.dict_ycolors[1],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -422,7 +420,7 @@ class SmartPlotter:
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        line_color=default_color,
+                                        line_color=self.default_color,
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
@@ -435,6 +433,9 @@ class SmartPlotter:
                     fig.data[-1].pointpos = 0
                     fig.data[-1].jitter = jitter_param
 
+        colorpoints = pred if self.explainer._case == "regression" else proba_values if \
+            self.explainer._case == 'classification' else None
+
         if colorpoints is not None:
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
@@ -444,14 +445,7 @@ class SmartPlotter:
                 hovertext=hv_text,
                 hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
                 customdata=contributions.index.values,
-                marker={
-                    'color': colorpoints.values.flatten(),
-                    'showscale': True,
-                    'coloraxis': 'coloraxis'
-                }
             ))
-            fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
         fig.update_layout(
             violingap=0.05,
@@ -462,14 +456,18 @@ class SmartPlotter:
 
         fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
 
-        self._update_contributions_layout(fig,
-                                         feature_name,
-                                         addnote,
-                                         subtitle,
-                                         width,
-                                         height,
-                                         file_name,
-                                         auto_open)
+        self._update_contributions_layout(fig=fig,
+                                          feature_name=feature_name,
+                                          pred=pred,
+                                          proba_values=proba_values,
+                                          col_modality=col_modality,
+                                          col_scale=col_scale,
+                                          addnote=addnote,
+                                          subtitle=subtitle,
+                                          width=width,
+                                          height=height,
+                                          file_name=file_name,
+                                          auto_open=auto_open)
 
         return fig
 
