@@ -163,6 +163,48 @@ class SmartPlotter:
         p_diff = perc2 - perc1
         self.round_digit = compute_digit_number(p_diff)
 
+    def _update_contributions_layout(self,
+                                     fig,
+                                     feature_name,
+                                     addnote,
+                                     subtitle,
+                                     width,
+                                     height,
+                                     file_name,
+                                     auto_open):
+        title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
+        if subtitle or addnote:
+            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+        dict_t = copy.deepcopy(self.dict_title)
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t['text'] = title
+        dict_xaxis['text'] = truncate_str(feature_name, 110)
+        dict_yaxis['text'] = 'Contribution'
+
+        fig.update_traces(
+            marker={
+                'size': 10,
+                'opacity': 0.8,
+                'line': {'width': 0.8, 'color': 'white'}
+            }
+        )
+
+        fig.update_layout(
+            template='none',
+            title=dict_t,
+            width=width,
+            height=height,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            hovermode='closest'
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
     def plot_scatter(self,
                      feature_values,
                      contributions,
@@ -211,17 +253,10 @@ class SmartPlotter:
             open automatically the plot
         """
         fig = go.Figure()
-        title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
-        if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+
         default_color = self.default_color
         dict_colors = copy.deepcopy(self.dict_ycolors)
-        dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str(feature_name, 110)
-        dict_yaxis['text'] = 'Contribution'
+
         if self.explainer._case == "regression":
             colorpoints = pred
             colorbar_title = 'Predicted'
@@ -237,15 +272,7 @@ class SmartPlotter:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}<br />" for x in feature_values.index]
-        fig.update_layout(
-            template='none',
-            title=dict_t,
-            width=width,
-            height=height,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
-            hovermode='closest'
-        )
+
         fig.add_scatter(
             x=feature_values.values.flatten(),
             y=contributions.values.flatten(),
@@ -254,11 +281,6 @@ class SmartPlotter:
             hovertemplate='<b>%{hovertext}</b><br />' +
                           f'{feature_name} : ' +
                           '%{x}<br />Contribution: %{y:.4f}<extra></extra>',
-            marker={
-                'size': 10,
-                'opacity': 0.8,
-                'line': {'width': 0.8, 'color': 'white'}
-            },
             customdata=contributions.index.values
         )
         if colorpoints is not None:
@@ -274,10 +296,15 @@ class SmartPlotter:
         else:
             fig.data[0].marker.color = default_color
 
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
-        if file_name:
-            plot(fig, filename=file_name, auto_open=auto_open)
+        self._update_contributions_layout(fig,
+                                         feature_name,
+                                         addnote,
+                                         subtitle,
+                                         width,
+                                         height,
+                                         file_name,
+                                         auto_open)
+
         return fig
 
     def plot_violin(self,
@@ -327,17 +354,10 @@ class SmartPlotter:
             open automatically the plot
         """
         fig = go.Figure()
-        dict_t = copy.deepcopy(self.dict_title)
-        title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
-        if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+
         dict_colors = copy.deepcopy(self.dict_ycolors)
         default_color = self.default_color
-        dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str(feature_name, 110)
-        dict_yaxis['text'] = 'Contribution'
+
         points_param = False if proba_values is not None else "all"
         jitter_param = 0.075
         if self.explainer._case == "regression":
@@ -433,22 +453,7 @@ class SmartPlotter:
             fig.layout.coloraxis.colorscale = col_scale
             fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
-        fig.update_traces(
-            marker={
-                'size': 10,
-                'opacity': 0.8,
-                'line': {'width': 0.8, 'color': 'white'}
-            }
-        )
         fig.update_layout(
-            template='none',
-            autosize=False,
-            title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
-            width=width,
-            height=height,
-            hovermode='closest',
             violingap=0.05,
             violingroupgap=0,
             violinmode='overlay',
@@ -457,10 +462,15 @@ class SmartPlotter:
 
         fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
 
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
-        if file_name:
-            plot(fig, filename=file_name, auto_open=auto_open)
+        self._update_contributions_layout(fig,
+                                         feature_name,
+                                         addnote,
+                                         subtitle,
+                                         width,
+                                         height,
+                                         file_name,
+                                         auto_open)
+
         return fig
 
     def plot_features_import(self,
