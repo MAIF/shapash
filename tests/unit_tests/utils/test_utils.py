@@ -1,6 +1,8 @@
 import unittest
+import numpy as np
 from shapash.utils.utils import inclusion, within_dict, is_nested_list,\
-    compute_digit_number, truncate_str, add_line_break, maximum_difference_sort_value
+    compute_digit_number, truncate_str, add_line_break, maximum_difference_sort_value, \
+    compute_sorted_variables_interactions_list_indices
 
 
 class TestUtils(unittest.TestCase):
@@ -94,3 +96,16 @@ class TestUtils(unittest.TestCase):
     def test_maximum_difference_sort_value_3(self):
         t = maximum_difference_sort_value(([[1], ['feat1']]))
         assert t == 1
+
+    def test_compute_sorted_variables_interactions_list_indices_1(self):
+        interaction_values = np.array([
+            [[0.1, -0.7, 0.01, -0.9], [-0.1, 0.8, 0.02, 0.7], [0.2, 0.5, 0.04, -0.88], [0.15, 0.6, -0.2, 0.5]],
+            [[0.2, -0.1, 0.2, 0.8], [-0.2, 0.6, 0.02, -0.67], [0.1, -0.5, 0.05, 1], [0.3, 0.6, 0.02, -0.9]]
+        ])
+
+        expected_output = ([[3, 1], [2, 1], [3, 0], [2, 0], [1, 0], [3, 2], [3, 3], [2, 3], [2, 2], [1, 3],
+                           [1, 2], [1, 1], [0, 3], [0, 2], [0, 1], [0, 0]])
+
+        output = compute_sorted_variables_interactions_list_indices(interaction_values)
+
+        assert np.array_equal(expected_output, output)
