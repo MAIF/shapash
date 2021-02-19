@@ -163,19 +163,52 @@ class SmartPlotter:
         p_diff = perc2 - perc1
         self.round_digit = compute_digit_number(p_diff)
 
-    def _update_contributions_layout(self,
-                                     fig,
-                                     feature_name,
-                                     pred,
-                                     proba_values,
-                                     col_modality,
-                                     col_scale,
-                                     addnote,
-                                     subtitle,
-                                     width,
-                                     height,
-                                     file_name,
-                                     auto_open):
+    def _update_contributions_fig(self,
+                                  fig,
+                                  feature_name,
+                                  pred,
+                                  proba_values,
+                                  col_modality,
+                                  col_scale,
+                                  addnote,
+                                  subtitle,
+                                  width,
+                                  height,
+                                  file_name,
+                                  auto_open):
+        """
+        Function used by both violin and scatter methods for contributions plots in order to update the layout
+        of the (already) created plotly figure.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure to be modified.
+        feature_name : String
+            Name of the feature, used in title
+        pred: 1 column pd.DataFrame (optional)
+            predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
+        col_modality: Int, Float or String (optional)
+            parameter used in classification case,
+            specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
+        addnote : String (default: None)
+            Specify a note to display
+        subtitle : String (default: None)
+            Subtitle to display
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
+
+        """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
             title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
@@ -299,18 +332,18 @@ class SmartPlotter:
             customdata=contributions.index.values
         )
 
-        self._update_contributions_layout(fig=fig,
-                                          feature_name=feature_name,
-                                          pred=pred,
-                                          proba_values=proba_values,
-                                          col_modality=col_modality,
-                                          col_scale=col_scale,
-                                          addnote=addnote,
-                                          subtitle=subtitle,
-                                          width=width,
-                                          height=height,
-                                          file_name=file_name,
-                                          auto_open=auto_open)
+        self._update_contributions_fig(fig=fig,
+                                       feature_name=feature_name,
+                                       pred=pred,
+                                       proba_values=proba_values,
+                                       col_modality=col_modality,
+                                       col_scale=col_scale,
+                                       addnote=addnote,
+                                       subtitle=subtitle,
+                                       width=width,
+                                       height=height,
+                                       file_name=file_name,
+                                       auto_open=auto_open)
 
         return fig
 
@@ -456,18 +489,18 @@ class SmartPlotter:
 
         fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
 
-        self._update_contributions_layout(fig=fig,
-                                          feature_name=feature_name,
-                                          pred=pred,
-                                          proba_values=proba_values,
-                                          col_modality=col_modality,
-                                          col_scale=col_scale,
-                                          addnote=addnote,
-                                          subtitle=subtitle,
-                                          width=width,
-                                          height=height,
-                                          file_name=file_name,
-                                          auto_open=auto_open)
+        self._update_contributions_fig(fig=fig,
+                                       feature_name=feature_name,
+                                       pred=pred,
+                                       proba_values=proba_values,
+                                       col_modality=col_modality,
+                                       col_scale=col_scale,
+                                       addnote=addnote,
+                                       subtitle=subtitle,
+                                       width=width,
+                                       height=height,
+                                       file_name=file_name,
+                                       auto_open=auto_open)
 
         return fig
 
