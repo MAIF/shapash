@@ -163,6 +163,106 @@ class SmartPlotter:
         p_diff = perc2 - perc1
         self.round_digit = compute_digit_number(p_diff)
 
+    def _update_contributions_fig(self,
+                                  fig,
+                                  feature_name,
+                                  pred,
+                                  proba_values,
+                                  col_modality,
+                                  col_scale,
+                                  addnote,
+                                  subtitle,
+                                  width,
+                                  height,
+                                  file_name,
+                                  auto_open):
+        """
+        Function used by both violin and scatter methods for contributions plots in order to update the layout
+        of the (already) created plotly figure.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure to be modified.
+        feature_name : String
+            Name of the feature, used in title
+        pred: 1 column pd.DataFrame (optional)
+            predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
+        col_modality: Int, Float or String (optional)
+            parameter used in classification case,
+            specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
+        addnote : String (default: None)
+            Specify a note to display
+        subtitle : String (default: None)
+            Subtitle to display
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
+
+        """
+        title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
+        if subtitle or addnote:
+            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+        dict_t = copy.deepcopy(self.dict_title)
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t['text'] = title
+        dict_xaxis['text'] = truncate_str(feature_name, 110)
+        dict_yaxis['text'] = 'Contribution'
+
+        if self.explainer._case == "regression":
+            colorpoints = pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == "classification":
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
+
+        if colorpoints is not None:
+            fig.data[-1].marker.color = colorpoints.values.flatten()
+            fig.data[-1].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+
+        elif fig.data[0].type != 'violin':
+            if self.explainer._case == 'classification' and pred is not None:
+                fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda \
+                                                                         x: self.dict_ycolors[1] if x == col_modality else
+                self.dict_ycolors[0])
+            else:
+                fig.data[-1].marker.color = self.default_color
+
+        fig.update_traces(
+            marker={
+                'size': 10,
+                'opacity': 0.8,
+                'line': {'width': 0.8, 'color': 'white'}
+            }
+        )
+
+        fig.update_layout(
+            template='none',
+            title=dict_t,
+            width=width,
+            height=height,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            hovermode='closest'
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
     def plot_scatter(self,
                      feature_values,
                      contributions,
@@ -211,23 +311,6 @@ class SmartPlotter:
             open automatically the plot
         """
         fig = go.Figure()
-        title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
-        if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
-        default_color = self.default_color
-        dict_colors = copy.deepcopy(self.dict_ycolors)
-        dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str(feature_name, 110)
-        dict_yaxis['text'] = 'Contribution'
-        if self.explainer._case == "regression":
-            colorpoints = pred
-            colorbar_title = 'Predicted'
-        elif self.explainer._case == "classification":
-            colorpoints = proba_values
-            colorbar_title = 'Predicted Proba'
 
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
@@ -237,15 +320,7 @@ class SmartPlotter:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}<br />" for x in feature_values.index]
-        fig.update_layout(
-            template='none',
-            title=dict_t,
-            width=width,
-            height=height,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
-            hovermode='closest'
-        )
+
         fig.add_scatter(
             x=feature_values.values.flatten(),
             y=contributions.values.flatten(),
@@ -254,30 +329,22 @@ class SmartPlotter:
             hovertemplate='<b>%{hovertext}</b><br />' +
                           f'{feature_name} : ' +
                           '%{x}<br />Contribution: %{y:.4f}<extra></extra>',
-            marker={
-                'size': 10,
-                'opacity': 0.8,
-                'line': {'width': 0.8, 'color': 'white'}
-            },
             customdata=contributions.index.values
         )
-        if colorpoints is not None:
-            fig.data[0].marker.color = colorpoints.values.flatten()
-            fig.data[0].marker.coloraxis = 'coloraxis'
-            fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
-        elif self.explainer._case == 'classification' and pred is not None:
-            fig.data[0].marker.color = pred.iloc[:, 0].apply(lambda \
-                                                                     x: dict_colors[1] if x == col_modality else
-            dict_colors[0])
-        else:
-            fig.data[0].marker.color = default_color
+        self._update_contributions_fig(fig=fig,
+                                       feature_name=feature_name,
+                                       pred=pred,
+                                       proba_values=proba_values,
+                                       col_modality=col_modality,
+                                       col_scale=col_scale,
+                                       addnote=addnote,
+                                       subtitle=subtitle,
+                                       width=width,
+                                       height=height,
+                                       file_name=file_name,
+                                       auto_open=auto_open)
 
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
-        if file_name:
-            plot(fig, filename=file_name, auto_open=auto_open)
         return fig
 
     def plot_violin(self,
@@ -327,25 +394,9 @@ class SmartPlotter:
             open automatically the plot
         """
         fig = go.Figure()
-        dict_t = copy.deepcopy(self.dict_title)
-        title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
-        if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
-        dict_colors = copy.deepcopy(self.dict_ycolors)
-        default_color = self.default_color
-        dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str(feature_name, 110)
-        dict_yaxis['text'] = 'Contribution'
+
         points_param = False if proba_values is not None else "all"
         jitter_param = 0.075
-        if self.explainer._case == "regression":
-            colorpoints = pred
-            colorbar_title = 'Predicted'
-        elif self.explainer._case == 'classification':
-            colorpoints = proba_values
-            colorbar_title = 'Predicted Proba'
 
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
@@ -370,7 +421,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
-                                        line_color=dict_colors[0],
+                                        line_color=self.dict_ycolors[0],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -387,7 +438,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=0.1,
                                         side='positive',
-                                        line_color=dict_colors[1],
+                                        line_color=self.dict_ycolors[1],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -402,7 +453,7 @@ class SmartPlotter:
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        line_color=default_color,
+                                        line_color=self.default_color,
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
@@ -415,6 +466,9 @@ class SmartPlotter:
                     fig.data[-1].pointpos = 0
                     fig.data[-1].jitter = jitter_param
 
+        colorpoints = pred if self.explainer._case == "regression" else proba_values if \
+            self.explainer._case == 'classification' else None
+
         if colorpoints is not None:
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
@@ -424,31 +478,9 @@ class SmartPlotter:
                 hovertext=hv_text,
                 hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
                 customdata=contributions.index.values,
-                marker={
-                    'color': colorpoints.values.flatten(),
-                    'showscale': True,
-                    'coloraxis': 'coloraxis'
-                }
             ))
-            fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
-        fig.update_traces(
-            marker={
-                'size': 10,
-                'opacity': 0.8,
-                'line': {'width': 0.8, 'color': 'white'}
-            }
-        )
         fig.update_layout(
-            template='none',
-            autosize=False,
-            title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
-            width=width,
-            height=height,
-            hovermode='closest',
             violingap=0.05,
             violingroupgap=0,
             violinmode='overlay',
@@ -457,10 +489,19 @@ class SmartPlotter:
 
         fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
 
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
-        if file_name:
-            plot(fig, filename=file_name, auto_open=auto_open)
+        self._update_contributions_fig(fig=fig,
+                                       feature_name=feature_name,
+                                       pred=pred,
+                                       proba_values=proba_values,
+                                       col_modality=col_modality,
+                                       col_scale=col_scale,
+                                       addnote=addnote,
+                                       subtitle=subtitle,
+                                       width=width,
+                                       height=height,
+                                       file_name=file_name,
+                                       auto_open=auto_open)
+
         return fig
 
     def plot_features_import(self,
