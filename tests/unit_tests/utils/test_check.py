@@ -386,7 +386,90 @@ class TestCheck(unittest.TestCase):
             model.fit(train_ordinal_all, y)
 
             check_consistency_model_features(features_dict, model, columns_dict,
-                                             features_types, mask_params, preprocessing)
+                                             features_types, mask_params, preprocessing,
+                                             list_preprocessing=[preprocessing])
+
+    def test_check_consistency_model_features_5(self):
+        """
+        Unit test check_consistency_model_features 5
+        """
+        train = pd.DataFrame({'city': ['chicago', 'paris'],
+                              'state': ['US', 'FR'],
+                              'other': [5, 10]},
+                             index=['index1', 'index2'])
+
+        features_dict = None
+        columns_dict = {i: features for i, features in enumerate(train.columns)}
+        features_types = {features: str(train[features].dtypes) for features in train.columns}
+        mask_params = None
+
+        enc = ColumnTransformer(
+            transformers=[
+                ('Ordinal_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('Ordinal_skp', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='passthrough')
+
+        enc_2 = ColumnTransformer(
+            transformers=[
+                ('Ordinal_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('Ordinal_skp', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        enc.fit(train)
+        train_1 = pd.DataFrame(enc.transform(train), columns=["city_ce", "state_ce", "city_skp", "state_skp", "other"])
+        train_1["y"] = np.array([1, 0])
+
+        clf_1 = cb.CatBoostClassifier(n_estimators=1) \
+            .fit(train_1[["city_ce", "state_ce", "city_skp", "state_skp", "other"]],
+                 train_1['y'])
+
+        enc_2.fit(train)
+        train_2 = pd.DataFrame(enc_2.transform(train), columns=["city_ce", "state_ce", "city_skp", "state_skp"])
+        train_2["y"] = np.array([1, 0])
+
+        clf_2 = cb.CatBoostClassifier(n_estimators=1) \
+            .fit(train_2[["city_ce", "state_ce", "city_skp", "state_skp"]],
+                 train_2['y'])
+
+        enc_3 = ce.OneHotEncoder(cols=['city', 'state'])
+        enc_3.fit(train)
+        train_3 = enc_3.transform(train)
+        train_3["y"] = np.array([1, 0])
+
+        clf_3 = cb.CatBoostClassifier(n_estimators=1) \
+            .fit(train_3[["city_1", "city_2", "state_1", "state_2", "other"]],
+                 train_3['y'])
+
+        dict_4 = {'col': 'state',
+                  'mapping': pd.Series(data=[1, 2],
+                                       index=['US', 'FR']),
+                  'data_type': 'object'}
+
+        dict_5 = {'col': 'city',
+                  'mapping': pd.Series(data=[1, 2],
+                                       index=['chicago', 'paris']),
+                  'data_type': 'object'}
+
+        enc_4 = [enc_3, [dict_4]]
+
+        enc_5 = [enc_3, [dict_4, dict_5]]
+
+        check_consistency_model_features(features_dict, clf_1, columns_dict,
+                                         features_types, mask_params, enc, list_preprocessing=[enc])
+
+        check_consistency_model_features(features_dict, clf_2, columns_dict,
+                                             features_types, mask_params, enc_2, list_preprocessing=[enc_2])
+
+        check_consistency_model_features(features_dict, clf_3, columns_dict,
+                                         features_types, mask_params, enc_3, list_preprocessing=[enc_3])
+
+        check_consistency_model_features(features_dict, clf_3, columns_dict,
+                                         features_types, mask_params, enc_4, list_preprocessing=enc_4)
+
+        check_consistency_model_features(features_dict, clf_3, columns_dict,
+                                         features_types, mask_params, enc_5, list_preprocessing=enc_5)
 
     def test_check_consistency_model_label_1(self):
         """
@@ -432,4 +515,41 @@ class TestCheck(unittest.TestCase):
             check_postprocessing(features_types, postprocessing4)
             check_postprocessing(features_types, postprocessing5)
             check_postprocessing(features_types, postprocessing6)
+
+    def test_check_preprocessing_options_1(self):
+        """
+        Unit test check_preprocessing_options 1
+        """
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df = df.set_index('id')
+        df['x2'] = ["S", "M", "S", "D", "M"]
+        df['x3'] = np.random.randint(1, 123, df.shape[0])
+        df['x4'] = ["S", "M", "S", "D", "M"]
+
+        features_dict = {"x1": "age", "x2": "weight", "x3": 'test', 'x4': "test2"}
+        columns_dict = {0: "x1", 1: "x2", 2: "x3", 3: "x4"}
+
+        encoder = ColumnTransformer(transformers=[('onehot_ce_1', ce.OneHotEncoder(), ['x2']),
+                                                  ('onehot_ce_2', ce.OneHotEncoder(), ['x4'])],
+                                    remainder='drop')
+        encoder_fitted = encoder.fit(df[["x1", "x2", "x3", 'x4']])
+
+        encoder_2 = ColumnTransformer(transformers=[('onehot_ce_1', ce.OneHotEncoder(), ['x2']),
+                                                    ('onehot_ce_2', ce.OneHotEncoder(), ['x4'])],
+                                      remainder='passthrough')
+        encoder_fitted_2 = encoder_2.fit(df[["x1", "x2", "x3", 'x4']])
+
+        expected_dict = {'features_to_drop': ['x1', 'x3'],
+                         'features_dict_op': {'x2': 'weight', 'x4': 'test2'},
+                         'columns_dict_op': {0: 'x2', 1: 'x4'}}
+
+        expected_dict_2 = None
+
+        drop_option_1 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted, [encoder_fitted])
+        drop_option_2 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted_2, [encoder_fitted_2])
+        assert drop_option_1 == expected_dict
+        assert drop_option_2 == expected_dict_2
+
 

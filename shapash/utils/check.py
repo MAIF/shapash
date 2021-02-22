@@ -4,13 +4,13 @@ Check Module
 
 import numpy as np
 import pandas as pd
-from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder
-from shapash.utils.columntransformer_backend import no_dummies_sklearn, columntransformer, supported_sklearn
+from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder,\
+                                                   dummies_category_encoder
+from shapash.utils.columntransformer_backend import no_dummies_sklearn, supported_sklearn
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import preprocessing_tolist, check_transformers
-from shapash.utils.columntransformer_backend import columntransformer
-
+from shapash.utils.columntransformer_backend import columntransformer, get_feature_names, get_list_features_names
 
 
 def check_preprocessing(preprocessing=None):
@@ -185,7 +185,8 @@ def check_contribution_object(case, classes, contributions):
             )
 
 def check_consistency_model_features(features_dict, model, columns_dict, features_types,
-                                     mask_params=None, preprocessing=None, postprocessing=None):
+                                     mask_params=None, preprocessing=None, postprocessing=None,
+                                     list_preprocessing=None):
     """
     Check the matching between attributes, features names are same, or include
 
@@ -205,40 +206,56 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
     postprocessing : dict
         Dictionnary of postprocessing that need to be checked.
+    list_preprocessing: list (optional)
+         list containing all preprocessing.
     """
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
             raise ValueError("All features of features_dict must be in features_types")
 
     if set(features_types) != set(columns_dict.values()):
-        raise ValueError("features of features_types and model must be the same")
+        raise ValueError("features of features_types and columns_dict must be the same")
 
     if mask_params is not None:
         if mask_params['features_to_hide'] is not None:
             if not all(feature in set(features_types) for feature in mask_params['features_to_hide']):
                 raise ValueError("All features of mask_params must be in model")
 
-    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder, supported_sklearn):
+    if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder):
         if not all(feature in set(columns_dict.values()) for feature in set(preprocessing.cols)):
             raise ValueError("All features of preprocessing must be in columns_dict")
 
     model_features = extract_features_model(model, dict_model_feature[str(type(model))])
     if isinstance(model_features, list):
-        if str(type(preprocessing)) in no_dummies_category_encoder:
-            if set(columns_dict.values()) != set(model_features):
-                raise ValueError("features of columns_dict and model must be the same")
-
-        elif str(type(preprocessing)) in (no_dummies_sklearn, columntransformer):
-             if len(set(columns_dict.values())) != len(set(model_features)):
-                raise ValueError("length of features of columns_dict and model must be the same")
-
-        elif str(type(preprocessing)) not in (no_dummies_category_encoder, no_dummies_sklearn, columntransformer)\
-                and preprocessing is not None:
-            raise ValueError("this type of encoder is not supported in SmartPredictor")
+        feature_expected_model = model_features
+        model_expected = len(set(model_features))
     else:
-        model_length_features = model_features
-        if len(set(columns_dict.values())) != model_length_features:
-            raise ValueError("features of columns_dict and model must have the same length")
+        feature_expected_model = None
+        model_expected = model_features
+
+    if preprocessing is None:
+        if isinstance(feature_expected_model, list):
+            if set(columns_dict.values()) != set(feature_expected_model):
+                columns_dict_feature = [str(feature) for feature in columns_dict.values()]
+                if set(columns_dict_feature) != set(feature_expected_model):
+                    raise ValueError("Features of columns_dict and model must be the same.")
+        else:
+            if len(set(columns_dict.values())) != model_expected :
+                raise ValueError("Features of columns_dict and model must have the same length")
+
+    if str(type(preprocessing)) in supported_category_encoder and isinstance(feature_expected_model, list):
+        if set(preprocessing.feature_names) != set(feature_expected_model):
+            raise ValueError("""
+                                One of features returned by the Category_Encoders preprocessing doesn't
+                                match the model's expected features.
+                            """)
+    elif preprocessing is not None:
+        feature_encoded = get_list_features_names(list_preprocessing, columns_dict)
+        if model_expected != len(feature_encoded):
+            raise ValueError("""
+                Number of features returned by the preprocessing step doesn't
+                match the model's expected features.
+                        """)
 
     if postprocessing:
         if not isinstance(postprocessing, dict):
@@ -250,21 +267,52 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 raise ValueError("Postprocessing and columns_dict must have the same features names.")
         check_postprocessing(features_types, postprocessing)
 
-def check_preprocessing_options(preprocessing=None):
+def check_preprocessing_options(columns_dict, features_dict, preprocessing=None, list_preprocessing=None):
     """
-    Check if preprocessing for ColumnTransformer doesn't have "drop" option
+    Check if preprocessing for ColumnTransformer doesn't have "drop" option otherwise compute several
+    informations to adapt the SmartPredictor's actions
+
     Parameters
     ----------
     preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
         The processing apply to the original data.
+    columns_dict: dict
+        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
+    features_dict: dict
+        Dictionary mapping technical feature names to domain names.
+    list_preprocessing: list (optional)
+         list containing all preprocessing.
+    Returns
+    -------
+    None, dict
+        None if there isn't drop options in ColumnTransformer otherwise dict of informations to adapt.
     """
+    feature_to_drop = list()
     if preprocessing is not None:
-        list_encoding = preprocessing_tolist(preprocessing)
-        for enc in list_encoding:
+        for enc in list_preprocessing:
             if str(type(enc)) in columntransformer:
                 for options in enc.transformers_:
                     if "drop" in options:
-                        raise ValueError("ColumnTransformer remainder 'drop' isn't supported by the SmartPredictor.")
+                        feature_to_drop.extend(options[2])
+
+    if len(feature_to_drop) != 0:
+        feature_to_drop = [columns_dict[index] for index in feature_to_drop]
+        features_dict_op = {key: value for key, value in features_dict.items()
+                            if key not in feature_to_drop}
+
+        i = 0
+        columns_dict_op = dict()
+        for value in columns_dict.values():
+            if value not in feature_to_drop:
+                columns_dict_op[i] = value
+                i += 1
+
+        return {"features_to_drop": feature_to_drop,
+                "features_dict_op": features_dict_op,
+                "columns_dict_op": columns_dict_op}
+
+    else:
+        return None
 
 def check_consistency_model_label(columns_dict, label_dict=None):
     """

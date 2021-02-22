@@ -3,6 +3,7 @@ Unit test of Inverse Transform
 """
 import unittest
 import pandas as pd
+import numpy as np
 import category_encoders as ce
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
@@ -11,6 +12,7 @@ import sklearn
 import lightgbm
 import xgboost
 from shapash.utils.transform import inverse_transform, apply_preprocessing
+from shapash.utils.columntransformer_backend import get_feature_names, get_names, get_list_features_names
 
 
 # TODO
@@ -960,3 +962,145 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert result.shape == expected.shape
         assert [column in clf.get_booster().feature_names for column in result.columns]
         assert all(expected.index == result.index)
+
+    def test_get_feature_names_1(self):
+        """
+        Unit test get_feature_names 1
+        """
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+
+        enc_1 = ColumnTransformer(transformers=[('Quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='drop')
+
+        enc_2 = ColumnTransformer(transformers=[('Quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                remainder='passthrough')
+
+        enc_1.fit(train)
+        enc_2.fit(train)
+
+        feature_enc_1 = get_feature_names(enc_1)
+        feature_enc_2 = get_feature_names(enc_2)
+
+        assert len(feature_enc_1) == 2
+        assert len(feature_enc_2) == 3
+
+    def test_get_names_1(self):
+        """
+        Unit test get_names 1
+        """
+        train = pd.DataFrame({'num1': [0, 1],
+                              'num2': [0, 2],
+                              'other': ['A', 'B']})
+
+        enc_1 = ColumnTransformer(transformers=[('quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                  remainder='drop')
+
+        enc_2 = ColumnTransformer(transformers=[('quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
+                                  remainder='passthrough')
+
+        enc_3 = ColumnTransformer(transformers=[('onehot', skp.OneHotEncoder(), ['other'])],
+                                  remainder='drop')
+
+        enc_4 = ColumnTransformer(transformers=[('onehot', skp.OneHotEncoder(), ['other'])],
+                                  remainder='passthrough')
+
+        enc_1.fit(train)
+        enc_2.fit(train)
+        enc_3.fit(train)
+        enc_4.fit(train)
+
+        feature_names_1 = []
+        l_transformers = list(enc_1._iter(fitted=True))
+
+        for name, trans, column, _ in l_transformers:
+            feature_names_1.extend(get_names(name, trans, column, enc_1))
+
+        feature_names_2 = []
+        l_transformers = list(enc_2._iter(fitted=True))
+
+        for name, trans, column, _ in l_transformers:
+            feature_names_2.extend(get_names(name, trans, column, enc_2))
+
+        feature_names_3 = []
+        l_transformers = list(enc_3._iter(fitted=True))
+
+        for name, trans, column, _ in l_transformers:
+            feature_names_3.extend(get_names(name, trans, column, enc_3))
+
+        feature_names_4 = []
+        l_transformers = list(enc_4._iter(fitted=True))
+
+        for name, trans, column, _ in l_transformers:
+            feature_names_4.extend(get_names(name, trans, column, enc_4))
+
+        assert len(feature_names_1) == 2
+        assert len(feature_names_2) == 3
+        assert len(feature_names_3) == 2
+        assert len(feature_names_4) == 4
+
+    def test_get_list_features_names_1(self):
+        """
+        Unit test get_list_features_names 1
+        """
+        train = pd.DataFrame({'city': ['chicago', 'paris'],
+                              'state': ['US', 'FR'],
+                              'other': [5, 10]},
+                             index=['index1', 'index2'])
+
+        columns_dict = {i: features for i, features in enumerate(train.columns)}
+
+        enc = ColumnTransformer(
+            transformers=[
+                ('Ordinal_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('Ordinal_skp', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='passthrough')
+
+        enc_2 = ColumnTransformer(
+            transformers=[
+                ('Ordinal_ce', ce.OrdinalEncoder(), ['city', 'state']),
+                ('Ordinal_skp', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        enc.fit(train)
+        train_1 = pd.DataFrame(enc.transform(train), columns=["city_ce", "state_ce", "city_skp", "state_skp", "other"])
+        train_1["y"] = np.array([1, 0])
+
+        enc_2.fit(train)
+        train_2 = pd.DataFrame(enc_2.transform(train), columns=["city_ce", "state_ce", "city_skp", "state_skp"])
+        train_2["y"] = np.array([1, 0])
+
+        enc_3 = ce.OneHotEncoder(cols=['city', 'state'])
+        enc_3.fit(train)
+        train_3 = enc_3.transform(train)
+        train_3["y"] = np.array([1, 0])
+
+        dict_4 = {'col': 'state',
+                  'mapping': pd.Series(data=[1, 2],
+                                       index=['US', 'FR']),
+                  'data_type': 'object'}
+
+        dict_5 = {'col': 'city',
+                  'mapping': pd.Series(data=[1, 2],
+                                       index=['chicago', 'paris']),
+                  'data_type': 'object'}
+
+        enc_4 = [enc_3, [dict_4]]
+
+        enc_5 = [enc_3, [dict_4, dict_5]]
+
+        list_1 = get_list_features_names([enc], columns_dict)
+        list_2 = get_list_features_names([enc_2], columns_dict)
+        list_3 = get_list_features_names([enc_3], columns_dict)
+        list_4 = get_list_features_names(enc_4, columns_dict)
+        list_5 = get_list_features_names(enc_5, columns_dict)
+
+        assert len(list_1) == 5
+        assert len(list_2) == 4
+        assert len(list_3) == 5
+        assert len(list_4) == 5
+        assert len(list_5) == 5
+
