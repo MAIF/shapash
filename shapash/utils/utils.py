@@ -227,3 +227,14 @@ def compute_sorted_variables_interactions_list_indices(interaction_values):
 
     interaction_contrib_sorted_indices = np.dstack(np.unravel_index(np.argsort(tmp.ravel()), tmp.shape))[0][::-1]
     return interaction_contrib_sorted_indices
+
+
+def get_project_root():
+    """
+    Returns project root absolute path.
+    """
+    from pathlib import Path
+
+    current_path = Path(__file__)
+
+    return current_path.parent.parent.parent.resolve()
