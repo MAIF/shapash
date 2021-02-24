@@ -2,6 +2,7 @@
 IO module
 """
 import pickle
+import yaml
 
 def save_pickle(obj, path, protocol=pickle.HIGHEST_PROTOCOL):
     """
@@ -56,3 +57,29 @@ def load_pickle(path):
         pklobj = pickle.load(file)
 
     return pklobj
+
+
+def load_yaml(path):
+    """
+    Loads a yaml file
+
+    Parameters
+    ----------
+    path : str
+        File path where the yaml file is stored.
+    Returns
+    -------
+    d : dict
+        Python dict containing the parsed yaml file.
+    """
+    if not isinstance(path, str):
+        raise ValueError(
+            """
+            path parameter must be a string
+            """
+        )
+
+    with open(path, "r") as f:
+        d = yaml.load(f)
+
+    return d
