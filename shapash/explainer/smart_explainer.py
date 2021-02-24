@@ -3,14 +3,19 @@ Smart explainer module
 """
 import logging
 import copy
+import tempfile
+import os
+import shutil
 import pandas as pd
 import numpy as np
+from nbconvert import HTMLExporter
+import papermill as pm
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.transform import adapt_contributions
-from shapash.utils.utils import get_host_name
+from shapash.utils.utils import get_host_name, get_project_root
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
@@ -993,3 +998,46 @@ class SmartExplainer:
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def generate_report(self, output_file, metadata_file, config=None):
+        """
+        This method will generate an HTML report containing different information about the project.
+
+        It analyzes the data and the model used in order to provide interesting
+        insights that can be shared using the HTML format.
+
+        It requires a metadata file on which can figure different information about the project.
+
+        Parameters
+        ----------
+        output_file : str
+            Path to the HTML file to write.
+        metadata_file : str
+            Path to the metadata file used o display some information about the project in the report.
+        config : dict, optional
+            Report configuration options.
+        """
+
+        root_path = get_project_root()
+        tmp_dir_path = tempfile.mkdtemp()
+        self.save(path=os.path.join(tmp_dir_path, 'smart_explainer.pickle'))
+
+        pm.execute_notebook(
+           os.path.join(root_path, 'shapash', 'report', 'base_report.ipynb'),
+           os.path.join(tmp_dir_path, 'base_report.ipynb'),
+           parameters=dict(
+               dir_path=tmp_dir_path,
+               metadata_file=metadata_file,
+               config=config
+           )
+        )
+
+        exporter = HTMLExporter(exclude_input=True)
+
+        (body, resources) = exporter.from_filename(filename=os.path.join(tmp_dir_path, 'base_report.ipynb'))
+
+        with open(output_file, "w") as file:
+            file.write(body)
+
+        shutil.rmtree(tmp_dir_path)
+
