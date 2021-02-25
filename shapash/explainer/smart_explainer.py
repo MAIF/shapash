@@ -734,7 +734,7 @@ class SmartExplainer:
 
     def predict(self):
         """
-        The predict_proba compute the proba values for each x_init row
+        The predict method computes the model output for each x_init row and stores it in y_pred attribute
         """
         self.y_pred = predict(self.model, self.x_init)
 
