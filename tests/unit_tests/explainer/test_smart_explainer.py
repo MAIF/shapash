@@ -847,6 +847,35 @@ class TestSmartExplainer(unittest.TestCase):
         with self.assertRaises(ValueError):
             xpl.check_y_pred(xpl.y_pred)
 
+    def test_predict_1(self):
+        """
+        Test predict method 1
+        """
+        xpl = SmartExplainer()
+        X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
+        y_false = pd.DataFrame(data=np.array([1, 2, 4]), columns=['pred'])
+        model = LinearRegression().fit(X, y_true)
+
+        xpl.compile(x=X, y_pred=y_false, model=model)
+        xpl.predict()  # y_false should be replaced by predictions which are equal to y_true
+
+        pd.testing.assert_frame_equal(xpl.y_pred, y_true, check_dtype=False)
+
+    def test_predict_2(self):
+        """
+        Test predict method 2
+        """
+        xpl = SmartExplainer()
+        X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
+        model = LinearRegression().fit(X, y_true)
+
+        xpl.compile(x=X, model=model)
+        xpl.predict()  # y_false should be replaced by predictions which are equal to y_true
+
+        pd.testing.assert_frame_equal(xpl.y_pred, y_true, check_dtype=False)
+
     def test_check_model_1(self):
         """
         Unit test check model 1
@@ -1236,3 +1265,23 @@ class TestSmartExplainer(unittest.TestCase):
 
         shap_interaction_values = xpl.get_interaction_values()
         assert shap_interaction_values.shape[0] == df.shape[0]
+
+
+    @patch('shapash.explainer.smart_explainer.SmartApp')
+    @patch('shapash.explainer.smart_explainer.CustomThread')
+    @patch('shapash.explainer.smart_explainer.get_host_name')
+    def test_run_app_1(self, mock_get_host_name, mock_custom_thread, mock_smartapp):
+        """
+        Test that when y_pred is not given, y_pred is automatically computed.
+        """
+        xpl = SmartExplainer()
+
+        X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        contributions = pd.DataFrame([[0.1, -0.2, 0.3], [0.1, -0.2, 0.3], [0.1, -0.2, 0.3]])
+        y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
+        model = LinearRegression().fit(X, y_true)
+
+        xpl.compile(contributions=contributions, x=X, model=model)
+        xpl.run_app()
+
+        assert xpl.y_pred is not None
