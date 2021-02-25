@@ -872,7 +872,7 @@ class TestSmartExplainer(unittest.TestCase):
         model = LinearRegression().fit(X, y_true)
 
         xpl.compile(x=X, model=model)
-        xpl.predict()  # y_false should be replaced by predictions which are equal to y_true
+        xpl.predict()
 
         pd.testing.assert_frame_equal(xpl.y_pred, y_true, check_dtype=False)
 
