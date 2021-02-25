@@ -79,3 +79,27 @@ def extract_features_model(model, model_attribute):
                 return getattr(model,model_attribute[0])
             else:
                 return extract_features_model(getattr(model,model_attribute[0]), model_attribute[1:])
+
+
+def predict(model, x_init):
+    """
+    The predict function computes the prediction values for each x_init row
+
+    Parameters
+    -------
+    model: model object
+        model used to perform predictions
+    x_init: pandas.DataFrame
+        Observations on which to compute predictions.
+
+    Returns
+    -------
+    pandas.DataFrame
+            1-column dataframe containing the predictions.
+    """
+    if hasattr(model, 'predict'):
+        y_pred = pd.DataFrame(model.predict(x_init), columns=['pred'], index=x_init.index)
+    else:
+        raise ValueError("model has no predict method")
+
+    return y_pred
