@@ -20,7 +20,7 @@ from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 from .smart_predictor import SmartPredictor
-from shapash.utils.model import predict_proba
+from shapash.utils.model import predict_proba, predict
 
 logging.basicConfig(level=logging.INFO)
 
@@ -144,7 +144,7 @@ class SmartExplainer:
             single or multiple contributions (multi-class) to handle.
             if pandas.Dataframe, the index and columns should be share with the prediction set.
             if np.ndarray, index and columns will be generated according to x dataset
-        y_pred : pandas.Series, optional (default: None)
+        y_pred : pandas.Series or pandas.DataFrame, optional (default: None)
             Prediction values (1 column only).
             The index must be identical to the index of x_pred.
             This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
@@ -726,14 +726,17 @@ class SmartExplainer:
                 "pickle file must contain dictionary"
             )
 
-
     def predict_proba(self):
         """
         The predict_proba compute the proba values for each x_init row
         """
         self.proba_values = predict_proba(self.model, self.x_init, self._classes)
 
-
+    def predict(self):
+        """
+        The predict_proba compute the proba values for each x_init row
+        """
+        self.y_pred = predict(self.model, self.x_init)
 
     def to_pandas(
             self,
@@ -883,9 +886,7 @@ class SmartExplainer:
         >>> app.kill()
         """
         if self.y_pred is None:
-            raise ValueError(
-                "You have to specify y_pred argument. Please use add() or compile() method"
-            )
+            self.predict()
         if hasattr(self, '_case'):
             self.smartapp = SmartApp(self)
             if host is None:
