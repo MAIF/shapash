@@ -783,6 +783,22 @@ class TestSmartExplainer(unittest.TestCase):
         assert all(attrib in attrib_xpl2 for attrib in attrib_xpl)
         assert all(attrib2 in attrib_xpl for attrib2 in attrib_xpl2)
 
+    def test_save_load(self):
+        """
+        Test save + load methods
+        """
+        pkl_file, xpl = init_sme_to_pickle_test()
+        xpl.save(pkl_file)
+        xpl2 = SmartExplainer()
+        xpl2.load(pkl_file)
+
+        attrib_xpl = [element for element in xpl.__dict__.keys()]
+        attrib_xpl2 = [element for element in xpl2.__dict__.keys()]
+
+        assert all(attrib in attrib_xpl2 for attrib in attrib_xpl)
+        assert all(attrib2 in attrib_xpl for attrib2 in attrib_xpl2)
+        os.remove(pkl_file)
+
     def test_check_y_pred_1(self):
         """
         Unit test check y pred
