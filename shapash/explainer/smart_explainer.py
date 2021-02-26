@@ -4,23 +4,21 @@ Smart explainer module
 import logging
 import copy
 import tempfile
-import os
 import shutil
 import pandas as pd
 import numpy as np
-from nbconvert import HTMLExporter
-import papermill as pm
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.transform import adapt_contributions
-from shapash.utils.utils import get_host_name, get_project_root
+from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
                                 check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.report.generation import execute_report, export_and_save_report
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -1018,26 +1016,9 @@ class SmartExplainer:
             Report configuration options.
         """
 
-        root_path = get_project_root()
         tmp_dir_path = tempfile.mkdtemp()
-        self.save(path=os.path.join(tmp_dir_path, 'smart_explainer.pickle'))
 
-        pm.execute_notebook(
-           os.path.join(root_path, 'shapash', 'report', 'base_report.ipynb'),
-           os.path.join(tmp_dir_path, 'base_report.ipynb'),
-           parameters=dict(
-               dir_path=tmp_dir_path,
-               metadata_file=metadata_file,
-               config=config
-           )
-        )
-
-        exporter = HTMLExporter(exclude_input=True)
-
-        (body, resources) = exporter.from_filename(filename=os.path.join(tmp_dir_path, 'base_report.ipynb'))
-
-        with open(output_file, "w") as file:
-            file.write(body)
+        execute_report(explainer=self, metadata_file=metadata_file, config=config, working_dir=tmp_dir_path)
+        export_and_save_report(working_dir=tmp_dir_path, output_file=output_file)
 
         shutil.rmtree(tmp_dir_path)
-
