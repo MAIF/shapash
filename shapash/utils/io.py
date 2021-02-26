@@ -59,18 +59,18 @@ def load_pickle(path):
     return pklobj
 
 
-def load_yaml(path):
+def load_yml(path):
     """
-    Loads a yaml file
+    Loads a yml file
 
     Parameters
     ----------
     path : str
-        File path where the yaml file is stored.
+        File path where the yml file is stored.
     Returns
     -------
     d : dict
-        Python dict containing the parsed yaml file.
+        Python dict containing the parsed yml file.
     """
     if not isinstance(path, str):
         raise ValueError(

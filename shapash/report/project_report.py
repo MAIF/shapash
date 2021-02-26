@@ -3,7 +3,7 @@ import sys
 from datetime import date
 
 from shapash.explainer.smart_explainer import SmartExplainer
-from shapash.utils.io import load_yaml
+from shapash.utils.io import load_yml
 from shapash.report.visualisation import print_md
 
 
@@ -19,7 +19,7 @@ class ProjectReport:
     explainer : shapash.explainer.smart_explainer.SmartExplainer
         A shapash SmartExplainer object that has already be compiled.
     metadata_file : str
-        Path to the yaml file containing information about the project (author, description, ...).
+        Path to the yml file containing information about the project (author, description, ...).
     config : dict, optional
         Contains configuration options for the report.
 
@@ -35,7 +35,7 @@ class ProjectReport:
     """
     def __init__(self, explainer: SmartExplainer, metadata_file: str, config: Optional[dict] = None):
         self.explainer = explainer
-        self.metadata = load_yaml(path=metadata_file)
+        self.metadata = load_yml(path=metadata_file)
         self.config = config
 
     def display_general_information(self):
