@@ -56,6 +56,8 @@ class SmartApp:
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
+        if  explainer.title_story:
+            self.app.title += ' - ' + explainer.title_story
         self.explainer = explainer
 
         # SETTINGS
@@ -401,11 +403,23 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=3, align="left"
+                            md=4, align="left"
+                        ),
+                        dbc.Col(
+                            html.A(
+                                dbc.Row(
+                                    [
+                                        html.H3(self.explainer.title_story, id="shapash_title_story"),
+                                    ],
+                                    align="center",
+                                ),
+                                href="https://github.com/MAIF/shapash", target="_blank",
+                            ),
+                            md=4, align="center"
                         ),
                         dbc.Col(
                             self.components['menu'],
-                            md=9, align='right',
+                            md=4, align='right',
                         )
                     ],
                     style={'padding': "5px 15px", "verticalAlign": "middle"},

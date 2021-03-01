@@ -857,7 +857,7 @@ class SmartExplainer:
         """
         self.smartapp = SmartApp(self)
 
-    def run_app(self, port: int = None, host: str = None) -> CustomThread:
+    def run_app(self, port: int = None, host: str = None, title_story: str = '') -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
         run_app method can be used directly in a Jupyter notebook
@@ -873,7 +873,10 @@ class SmartExplainer:
             for your webapp.
         host: str (default: None)
             The default host is '0.0.0.0'. You can specify a custom
-            ip address for your app
+            ip address for your webapp
+        title_story: str (default: None)
+            The default title is empty. You can specify a custom title 
+            for your webapp
 
         Returns
         -------
@@ -885,6 +888,7 @@ class SmartExplainer:
         >>> app = xpl.run_app()
         >>> app.kill()
         """
+        self.title_story = title_story
         if self.y_pred is None:
             self.predict()
         if hasattr(self, '_case'):

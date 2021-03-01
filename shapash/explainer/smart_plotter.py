@@ -937,7 +937,7 @@ class SmartPlotter:
                 if label is None:
                     label = -1
 
-                label_num, label_code, label_value = self.explainer.check_label_name(label)
+                label_num, _, label_value = self.explainer.check_label_name(label)
 
                 contrib = self.explainer.data['contrib_sorted'][label_num]
                 x_val = self.explainer.data['x_sorted'][label_num]
@@ -1055,7 +1055,7 @@ class SmartPlotter:
         """
 
         if self.explainer._case == "classification":
-            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            label_num, _, label_value = self.explainer.check_label_name(label)
 
         if not isinstance(col, (str, int)):
             raise ValueError('parameter col must be string or int.')
@@ -1216,7 +1216,7 @@ class SmartPlotter:
 
         # classification
         if self.explainer._case == "classification":
-            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            label_num, _, label_value = self.explainer.check_label_name(label)
             global_feat_imp = self.explainer.features_imp[label_num].tail(max_features)
             if selection is not None:
                 subset = self.explainer.contributions[label_num].loc[selection]
@@ -1458,7 +1458,7 @@ class SmartPlotter:
             if label is None:
                 label = -1
 
-            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            label_num, _, label_value = self.explainer.check_label_name(label)
             contrib = self.explainer.contributions[label_num]
 
             if show_predict:

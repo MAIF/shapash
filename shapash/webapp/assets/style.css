@@ -13,6 +13,15 @@
     text-decoration: none !important;
 }
 
+#shapash_title_story {
+    color: #ffffff !important;
+    margin: auto;
+}
+
+#shapash_title_story hover,a {
+    text-decoration: none !important;
+}
+
 .card {
     position: relative;
     background-color: #ffffff;
