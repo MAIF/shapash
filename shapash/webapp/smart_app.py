@@ -18,6 +18,7 @@ import re
 from math import log10
 from shapash.webapp.utils.utils import apply_filter, check_row, round_to_1
 from shapash.webapp.utils.MyGraph import MyGraph
+from shapash.utils.utils import truncate_str
 
 
 def create_input_modal(id, label, tooltip):
@@ -381,9 +382,8 @@ class SmartApp:
             [
                 dbc.Label(
                     "Feature(s) to mask :"),
-                dcc.Dropdown(
-                    options=[{'label': key, 'value': value}
-                             for key, value in self.explainer.inv_features_dict.items()],
+                dcc.Dropdown(options=[{'label': key, 'value': value} for key, value in sorted(
+                    self.explainer.inv_features_dict.items(), key=lambda item: item[0])],
                     value='', multi=True, searchable=True,
                     id="masked_contrib_id"
                 ),
@@ -416,7 +416,7 @@ class SmartApp:
                             html.A(
                                 dbc.Row(
                                     [
-                                        html.H3(self.explainer.title_story,
+                                        html.H3(truncate_str(self.explainer.title_story, maxlen= 40),
                                                 id="shapash_title_story"),
                                     ],
                                     align="center",

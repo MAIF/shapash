@@ -5,13 +5,13 @@ This is an example in python how to launch app from explainer
 from lightgbm import LGBMClassifier, LGBMRegressor
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from explainer.smart_explainer import SmartExplainer
+from shapash.explainer.smart_explainer import SmartExplainer
 from category_encoders import one_hot
 
 cases = {
-    '1': 'Titanic regression',
-    '2': 'Titanic binary classification',
-    '3': 'Titanic multi class classification',
+    1: 'Titanic regression',
+    2: 'Titanic binary classification',
+    3: 'Titanic multi class classification',
 }
 
 CASE = 1
@@ -59,7 +59,7 @@ y_pred = pd.DataFrame(data=y_pred,
                       columns=y.columns.to_list(),
                       index=X_test.index)
 
-xpl.compile(X_test, model, y_pred=y_pred, preprocessing=encoder)
+xpl.compile(X_test, model, y_pred=y_pred, preprocessing=encoder, title_story=cases[CASE])
 
 xpl.init_app()
 app = xpl.smartapp.app

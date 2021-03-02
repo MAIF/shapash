@@ -1,8 +1,6 @@
 """
 Smart explainer module
 """
-
-
 import logging
 import copy
 import pandas as pd
@@ -22,7 +20,6 @@ from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 from .smart_predictor import SmartPredictor
 from shapash.utils.model import predict_proba, predict
-from shapash.utils.utils import truncate_str
 
 logging.basicConfig(level=logging.INFO)
 
@@ -227,7 +224,7 @@ class SmartExplainer:
         self.features_imp = None
         self.features_desc = self.check_features_desc()
         if title_story is not None:
-            self.title_story = truncate_str(title_story, maxlen= 40)
+            self.title_story = title_story
         elif hasattr(self, 'title_story') is False:
             self.title_story = ''
 
@@ -275,7 +272,7 @@ class SmartExplainer:
             self.check_features_dict()
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         if title_story is not None:
-            self.title_story = truncate_str(title_story, maxlen= 40)
+            self.title_story = title_story
         elif hasattr(self, 'title_story') is False:
             self.title_story = ''
 
@@ -908,7 +905,7 @@ class SmartExplainer:
         """
 
         if title_story is not None:
-            self.title_story = truncate_str(title_story, maxlen= 40)
+            self.title_story = title_story
         elif hasattr(self, 'title_story') is False:
             self.title_story = ''
 

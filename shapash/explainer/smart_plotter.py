@@ -322,8 +322,8 @@ class SmartPlotter:
             add_line_break, args=(max_len_by_row, 120,))
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x,
-                       y in zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in
+                       zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}<br />" for x in feature_values.index]
 
@@ -1612,8 +1612,8 @@ class SmartPlotter:
         fig = go.Figure()
 
         # add break line to X label
-        max_len_by_row = max(
-            [round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
+        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]),
+                              8])
         x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(x_values.values.flatten()))

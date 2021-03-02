@@ -143,7 +143,7 @@ Start WebApp
 
 .. code:: ipython
 
-    app = xpl.run_app()
+    app = xpl.run_app(title_story='House Prices')
 
 Link to App: `shapash-monitor
 link <https://shapash-demo.ossbymaif.fr/>`__
