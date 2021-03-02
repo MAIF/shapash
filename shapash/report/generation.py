@@ -50,7 +50,9 @@ def export_and_save_report(working_dir: str, output_file: str):
         Path to the html file that will be created.
     """
 
-    exporter = HTMLExporter(exclude_input=True)
+    exporter = HTMLExporter(exclude_input=True,
+                            extra_template_basedirs=[os.path.join(get_project_root(), 'shapash', 'report', 'template')],
+                            template_name='custom', exclude_anchor_links=True)
     (body, resources) = exporter.from_filename(filename=os.path.join(working_dir, 'base_report.ipynb'))
 
     with open(output_file, "w") as file:

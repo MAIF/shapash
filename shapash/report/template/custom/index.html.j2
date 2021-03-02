@@ -1,0 +1,49 @@
+{%- extends 'classic/index.html.j2' -%}
+
+{%- block header -%}
+{{ super() }}
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.rawgit.com/afeld/bootstrap-toc/2f761d4/dist/bootstrap-toc.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" integrity="sha512-K1qjQ+NcF2TYO/eI3M6v8EiNYZfA95pQumfvcVrTHtwQVDG+aHRqLi/ETn2uB+1JqwYqVG3LIvdm9lj6imS/pQ==" crossorigin="anonymous"></script>
+<script src="https://cdn.rawgit.com/afeld/bootstrap-toc/2f761d4/dist/bootstrap-toc.min.js"></script>
+
+<style type="text/css">
+nav[data-toggle="toc"] {
+  top: 42px;
+}
+@media (max-width: 768px) {
+  nav[data-toggle="toc"] {
+    margin-bottom: 42px;
+    position: static;
+  }
+  nav[data-toggle="toc"] .nav .active .nav {
+    display: none;
+  }
+}
+</style>
+{%- endblock header -%}
+
+{% block body_header %}
+<body data-spy="scroll" data-target="#toc">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-2">
+              <nav id="toc" data-spy="affix" data-toggle="toc"></nav>
+            </div>
+            <div class="col-sm-10">
+                <div tabindex="-1" id="notebook" class="border-box-sizing">
+                    <div id="notebook-container">
+{% endblock body_header %}
+
+{% block input_group -%}
+{% endblock input_group %}
+
+{% block body_footer %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+{% endblock body_footer %}
