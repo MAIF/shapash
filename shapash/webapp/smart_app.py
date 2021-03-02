@@ -374,7 +374,7 @@ class SmartApp:
                 dbc.Label(
                     "Feature(s) to mask :"),
                 dcc.Dropdown(
-                    options=[{'label': key, 'value': value} for key, value in sorted(self.explainer.inv_features_dict, key=self.explainer.inv_features_dict.get).items()],
+                    options=[{'label': key, 'value': value} for key, value in sorted(self.explainer.inv_features_dict.items(), key=lambda item: item[0])],
                     value='', multi=True, searchable=True,
                     id="masked_contrib_id"
                 ),
