@@ -416,7 +416,7 @@ class SmartApp:
                             html.A(
                                 dbc.Row(
                                     [
-                                        html.H3(truncate_str(self.explainer.title_story, maxlen= 40),
+                                        html.H3(truncate_str(self.explainer.title_story, maxlen=40),
                                                 id="shapash_title_story"),
                                     ],
                                     align="center",
