@@ -461,17 +461,15 @@ class SmartPlotter:
 
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        y=contributions.loc[feature_values.iloc[:, 0]
-                                                            == i].values.flatten(),
+                                        y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         line_color=self.default_color,
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
-                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(
-                ),
-                    hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                    customdata=contributions.index.values
-                ))
+                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
+                                        customdata=contributions.index.values
+                                        ))
                 if pred is None:
                     fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
@@ -1612,8 +1610,8 @@ class SmartPlotter:
         fig = go.Figure()
 
         # add break line to X label
-        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]),
-                              8])
+        max_len_by_row = max(
+            [round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
         x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(x_values.values.flatten()))

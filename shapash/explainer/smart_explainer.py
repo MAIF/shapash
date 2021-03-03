@@ -101,7 +101,7 @@ class SmartExplainer:
     label_dict specify the labels of target (classification).
     """
 
-    def __init__(self, features_dict={}, label_dict=None):
+    def __init__(self, features_dict={}, label_dict=None, title_story: str = None):
         if isinstance(features_dict, dict) is False:
             raise ValueError(
                 """
@@ -117,6 +117,10 @@ class SmartExplainer:
         self.features_dict = features_dict
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
+        if title_story is not None:
+            self.title_story = title_story
+        else:
+            self.title_story = ''
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None):
@@ -225,8 +229,6 @@ class SmartExplainer:
         self.features_desc = self.check_features_desc()
         if title_story is not None:
             self.title_story = title_story
-        elif hasattr(self, 'title_story') is False:
-            self.title_story = ''
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -273,8 +275,6 @@ class SmartExplainer:
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         if title_story is not None:
             self.title_story = title_story
-        elif hasattr(self, 'title_story') is False:
-            self.title_story = ''
 
     def choose_state(self, contributions):
         """
@@ -906,9 +906,6 @@ class SmartExplainer:
 
         if title_story is not None:
             self.title_story = title_story
-        elif hasattr(self, 'title_story') is False:
-            self.title_story = ''
-
         if self.y_pred is None:
             self.predict()
         if hasattr(self, '_case'):
