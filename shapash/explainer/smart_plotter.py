@@ -213,8 +213,7 @@ class SmartPlotter:
         """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
-            title = title + \
-                f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self.dict_title)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
         dict_yaxis = copy.deepcopy(self.dict_yaxis)
@@ -405,8 +404,8 @@ class SmartPlotter:
         jitter_param = 0.075
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x,
-                       y in zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in
+                       zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
@@ -461,15 +460,17 @@ class SmartPlotter:
 
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                                        y=contributions.loc[feature_values.iloc[:, 0]
+                                                            == i].values.flatten(),
                                         line_color=self.default_color,
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
-                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.index.values
-                                        ))
+                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(
+                ),
+                    hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
+                    customdata=contributions.index.values
+                ))
                 if pred is None:
                     fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
@@ -548,8 +549,7 @@ class SmartPlotter:
         title = "Features Importance"
         topmargin = 80
         if subtitle or addnote:
-            title = title + \
-                f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             topmargin = topmargin + 15
         dict_t.update(text=title)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
@@ -656,7 +656,7 @@ class SmartPlotter:
         else:
             title = f"Local Explanation - Id: <b>{index_value[0]}</b>"
             if subtitle:
-                title = title + f"<span style='font-size: 12px;'><br />{subtitle}</span>"
+                title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
                 topmargin += 15
             dict_t['text'] = title
         dict_xaxis['text'] = 'Contribution'
@@ -688,8 +688,8 @@ class SmartPlotter:
                 hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
                                                           add_line_break(expl[1], 40, maxlen=160))
                 if len(contrib) <= yaxis_max_label:
-                    ylabel = '<b>{} :</b><br />{}'.format(
-                        truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45),
+                                                          truncate_str(expl[1], 45))
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
 
@@ -989,9 +989,9 @@ class SmartPlotter:
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
             if hasattr(self.explainer, 'mask_params'):
-                if self.explainer.mask_params['positive'] == True:
+                if self.explainer.mask_params['positive'] is True:
                     exclusion = np.where(np.array(contrib) < 0)[0].tolist()
-                elif self.explainer.mask_params['positive'] == False:
+                elif self.explainer.mask_params['positive'] is False:
                     exclusion = np.where(np.array(contrib) > 0)[0].tolist()
             exclusion.sort(reverse=True)
             for expl in exclusion:
@@ -1677,8 +1677,7 @@ class SmartPlotter:
 
         title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
         if addnote:
-            title = title + \
-                f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+            title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self.dict_title)
         dict_t['text'] = title
 
@@ -1962,8 +1961,7 @@ class SmartPlotter:
         def generate_title_dict(col_name1, col_name2, addnote):
             title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
             if addnote:
-                title = title + \
-                    f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+                title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
             dict_t = copy.deepcopy(self.dict_title)
             dict_t.update({'text': title, 'y': 0.88, 'x': 0.5,
                            'xanchor': 'center', 'yanchor': 'top'})
