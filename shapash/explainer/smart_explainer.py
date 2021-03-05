@@ -196,8 +196,7 @@ class SmartExplainer:
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
         if explainer is not None and contributions is not None:
-            raise ValueError(
-                "You have to specify just one of these arguments: explainer, contributions")
+            raise ValueError("You have to specify just one of these arguments: explainer, contributions")
         if contributions is None:
             contributions, explainer = shap_contributions(
                 model, self.x_init, self.check_explainer(explainer))

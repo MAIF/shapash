@@ -134,8 +134,7 @@ class SmartPlotter:
 
         self.round_digit = None
 
-        self.interactions_col_scale = [
-            "rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
+        self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
 
         self.interactions_discrete_colors = px.colors.qualitative.Antique
 
@@ -404,18 +403,15 @@ class SmartPlotter:
         jitter_param = 0.075
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in
-                       zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
         hv_temp = f'{feature_name} :<br />' + '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
 
         # add break line to X label
-        max_len_by_row = max(
-            [round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
-            add_line_break, args=(max_len_by_row, 120,))
+        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(feature_values.values.flatten()))
         uniq_l.sort()
@@ -460,17 +456,14 @@ class SmartPlotter:
 
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        y=contributions.loc[feature_values.iloc[:, 0]
-                                                            == i].values.flatten(),
+                                        y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         line_color=self.default_color,
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
-                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(
-                ),
-                    hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                    customdata=contributions.index.values
-                ))
+                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
+                                        customdata=contributions.index.values))
                 if pred is None:
                     fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
@@ -983,8 +976,7 @@ class SmartPlotter:
             var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]]
                         for x in var_dict]
             if show_masked:
-                var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib,
-                                                                           label=label_num)
+                var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib, label=label_num)
 
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
@@ -1839,8 +1831,7 @@ class SmartPlotter:
             feature_values1 = self.explainer.x_pred.loc[list_ind, col_name1].to_frame()
             feature_values2 = self.explainer.x_pred.loc[list_ind, col_name2].to_frame()
 
-        interaction_values = self.explainer.get_interaction_values(selection=list_ind)[
-            :, col_id1, col_id2]
+        interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
@@ -1930,8 +1921,7 @@ class SmartPlotter:
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)
 
-        sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(
-            interaction_values)
+        sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
 
         indices_to_plot = sorted_top_features_indices[:nb_top_interactions]
         interactions_indices_traces_mapping = []
