@@ -73,8 +73,7 @@ class SmartApp:
         }
         self.settings = self.settings_ini.copy()
         self.predict_col = ['_predict_']
-        self.explainer.features_imp = self.explainer.state.compute_features_import(
-            self.explainer.contributions)
+        self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
         if self.explainer._case == 'classification':
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, 'num')[1]
             self.selected_feature = self.explainer.features_imp[-1].idxmax()
@@ -83,8 +82,7 @@ class SmartApp:
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.applymap(
-                lambda x: round_to_1(x)).max().max())
+            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_1(x)).max().max())
         self.list_index = []
         self.subset = None
 
@@ -136,11 +134,9 @@ class SmartApp:
 
         self.dataframe['_index_'] = self.explainer.x_pred.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
-        col_order = ['_index_', '_predict_'] + \
-            self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
+        col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
         self.list_index = random.sample(population=self.dataframe.index.tolist(),
-                                        k=min(self.settings['rows'], len(
-                                            self.dataframe.index.tolist()))
+                                        k=min(self.settings['rows'], len(self.dataframe.index.tolist()))
                                         )
         self.dataframe = self.dataframe[col_order].loc[self.list_index].sort_index()
         self.round_dataframe = self.dataframe.copy()
@@ -233,14 +229,12 @@ class SmartApp:
                     dbc.Collapse(
                         dbc.FormGroup(
                             [
-                                dbc.Label("Class to analyse", style={
-                                          'color': 'white', 'margin': '0px 5px'}),
+                                dbc.Label("Class to analyse", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
                                     clearable=False, searchable=False,
-                                    style={"verticalAlign": "middle",
-                                           "zIndex": '1010', "min-width": '200px'}
+                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '200px'}
                                 )
                             ],
                             row=True, style={"margin": "0px 0px 0px 5px", "align-items": "center"}
@@ -277,9 +271,8 @@ class SmartApp:
                 } for row in self.dataframe.to_dict('rows')
             ], tooltip_duration=2000,
 
-            columns=[{"name": '_index_', "id": '_index_'},
-                     {"name": '_predict_', "id": '_predict_'}] +
-            [{"name": i, "id": i} for i in self.explainer.x_pred],
+            columns=[{"name": '_index_', "id": '_index_'}, {"name": '_predict_', "id": '_predict_'}] +
+                    [{"name": i, "id": i} for i in self.explainer.x_pred],
             editable=False, row_deletable=False,
             style_as_list_view=True,
             virtualization=True,
@@ -528,10 +521,8 @@ class SmartApp:
         """
         Override menu from explainer object depending on classification or regression case.
         """
-        on_style = {'backgroundColor': self.color,
-                    'color': self.bkg_color, 'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': '#71653B',
-                     'color': self.bkg_color, 'margin-right': '0.5rem'}
+        on_style = {'backgroundColor': self.color, 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        off_style = {'backgroundColor': '#71653B', 'color': self.bkg_color, 'margin-right': '0.5rem'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -776,8 +767,7 @@ class SmartApp:
                         columns = [
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.explainer.features_dict[i], "id": i}
-                             for i in self.explainer.x_pred]
+                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
 
             if not filter_query:
                 df = self.round_dataframe
@@ -900,8 +890,7 @@ class SmartApp:
 
             self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event'
             subset_graph = True if self.subset is not None else False
-            self.components['graph']['feature_selector'].adjust_graph(
-                subset_graph=subset_graph, title_size_adjust=True)
+            self.components['graph']['feature_selector'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
 
             return self.components['graph']['feature_selector'].figure
 
@@ -1118,7 +1107,6 @@ class SmartApp:
 
             selected = check_row(data, index)
             if selected is not None:
-                style_data_conditional += [{"if": {"row_index": selected},
-                                            "backgroundColor": self.color}]
+                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color}]
 
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional

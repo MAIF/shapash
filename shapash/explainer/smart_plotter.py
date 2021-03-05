@@ -320,8 +320,7 @@ class SmartPlotter:
             add_line_break, args=(max_len_by_row, 120,))
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in
-                       zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}<br />" for x in feature_values.index]
 
@@ -1815,8 +1814,7 @@ class SmartPlotter:
 
         col_value_count1 = self.explainer.features_desc[col_name1]
 
-        list_ind, addnote = self._select_indices_interactions_plot(
-            selection=selection, max_points=max_points)
+        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
         if addnote is not None:
             addnote = add_text([addnote,
@@ -1916,8 +1914,7 @@ class SmartPlotter:
         >>> xpl.plot.top_interactions_plot()
         """
 
-        list_ind, addnote = self._select_indices_interactions_plot(
-            selection=selection, max_points=max_points)
+        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)
 
@@ -1953,8 +1950,7 @@ class SmartPlotter:
             if addnote:
                 title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
             dict_t = copy.deepcopy(self.dict_title)
-            dict_t.update({'text': title, 'y': 0.88, 'x': 0.5,
-                           'xanchor': 'center', 'yanchor': 'top'})
+            dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
             return dict_t
 
         fig.layout.coloraxis.colorscale = self.interactions_col_scale

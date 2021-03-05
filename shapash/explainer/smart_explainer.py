@@ -960,8 +960,7 @@ class SmartExplainer:
             raise ValueError("""SmartPredictor need an explainer, please compile without contributions or specify  the
                                         explainer used. Make change in compile() step""")
 
-        self.features_types = {features: str(
-            self.x_pred[features].dtypes) for features in self.x_pred.columns}
+        self.features_types = {features: str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
         listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
                           "label_dict", "preprocessing", "postprocessing"]
