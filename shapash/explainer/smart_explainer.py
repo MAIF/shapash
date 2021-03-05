@@ -202,8 +202,7 @@ class SmartExplainer:
                 model, self.x_init, self.check_explainer(explainer))
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
-        self.contributions = self.apply_preprocessing(
-            self.validate_contributions(adapt_contrib), preprocessing)
+        self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
         self.check_contributions()
         self.explainer = explainer
         self.y_pred = self.check_y_pred(y_pred)

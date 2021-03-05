@@ -314,8 +314,7 @@ class SmartPlotter:
         fig = go.Figure()
 
         # add break line to X label if necessary
-        max_len_by_row = max(
-            [round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
         feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
             add_line_break, args=(max_len_by_row, 120,))
 
@@ -680,8 +679,7 @@ class SmartPlotter:
                 hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
                                                           add_line_break(expl[1], 40, maxlen=160))
                 if len(contrib) <= yaxis_max_label:
-                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45),
-                                                          truncate_str(expl[1], 45))
+                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
 
@@ -969,11 +967,9 @@ class SmartPlotter:
                     subtitle = f"Predict: <b>{round(pred_value, digit)}</b>"
 
             var_dict, x_val, contrib = self.get_selection(line, var_dict, x_val, contrib)
-            var_dict, x_val, contrib = self.apply_mask_one_line(
-                line, var_dict, x_val, contrib, label=label_num)
+            var_dict, x_val, contrib = self.apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
             # use label of each column
-            var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]]
-                        for x in var_dict]
+            var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
                 var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib, label=label_num)
 
@@ -1314,11 +1310,9 @@ class SmartPlotter:
             dict_t['text'] = "Compare plot - <b>No Matching Reference Entry</b>"
         elif len(index) < 2:
             warnings.warn('Comparison needs at least 2 individuals', UserWarning)
-            dict_t['text'] = "Compare plot - index : " + \
-                ' ; '.join(['<b>' + str(id) + '</b>' for id in index])
+            dict_t['text'] = "Compare plot - index : " + ' ; '.join(['<b>' + str(id) + '</b>' for id in index])
         else:
-            dict_t['text'] = "Compare plot - index : " + \
-                ' ; '.join(['<b>' + str(id) + '</b>' for id in index])
+            dict_t['text'] = "Compare plot - index : " + ' ; '.join(['<b>' + str(id) + '</b>' for id in index])
 
             dict_xaxis['text'] = "Contributions"
 
@@ -1544,8 +1538,7 @@ class SmartPlotter:
         go.Figure
         """
         # add break line to X label if necessary
-        max_len_by_row = max(
-            [round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
+        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
         x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         data_df = pd.DataFrame({
@@ -1558,8 +1551,7 @@ class SmartPlotter:
             fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name,
                              color_discrete_sequence=self.interactions_discrete_colors)
         else:
-            fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name,
-                             color_continuous_scale=col_scale)
+            fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name, color_continuous_scale=col_scale)
 
         fig.update_traces(mode='markers')
 
@@ -1601,8 +1593,7 @@ class SmartPlotter:
         fig = go.Figure()
 
         # add break line to X label
-        max_len_by_row = max(
-            [round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
+        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
         x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(x_values.values.flatten()))
