@@ -198,8 +198,7 @@ class SmartExplainer:
         if explainer is not None and contributions is not None:
             raise ValueError("You have to specify just one of these arguments: explainer, contributions")
         if contributions is None:
-            contributions, explainer = shap_contributions(
-                model, self.x_init, self.check_explainer(explainer))
+            contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)

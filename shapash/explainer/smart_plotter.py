@@ -315,8 +315,7 @@ class SmartPlotter:
 
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
-            add_line_break, args=(max_len_by_row, 120,))
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
 
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
@@ -461,7 +460,8 @@ class SmartPlotter:
                                         scalemode='count',
                                         hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.index.values))
+                                        customdata=contributions.index.values
+                                        ))
                 if pred is None:
                     fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
