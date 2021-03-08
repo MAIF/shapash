@@ -18,6 +18,7 @@ import re
 from math import log10
 from shapash.webapp.utils.utils import apply_filter, check_row, round_to_1
 from shapash.webapp.utils.MyGraph import MyGraph
+from shapash.utils.utils import truncate_str
 
 
 def create_input_modal(id, label, tooltip):
@@ -56,6 +57,8 @@ class SmartApp:
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = 'Shapash Monitor'
+        if explainer.title_story:
+            self.app.title += ' - ' + explainer.title_story
         self.explainer = explainer
 
         # SETTINGS
@@ -268,8 +271,7 @@ class SmartApp:
                 } for row in self.dataframe.to_dict('rows')
             ], tooltip_duration=2000,
 
-            columns=[{"name": '_index_', "id": '_index_'},
-                     {"name": '_predict_', "id": '_predict_'}] +
+            columns=[{"name": '_index_', "id": '_index_'}, {"name": '_predict_', "id": '_predict_'}] +
                     [{"name": i, "id": i} for i in self.explainer.x_pred],
             editable=False, row_deletable=False,
             style_as_list_view=True,
@@ -373,8 +375,8 @@ class SmartApp:
             [
                 dbc.Label(
                     "Feature(s) to mask :"),
-                dcc.Dropdown(
-                    options=[{'label': key, 'value': value} for key, value in sorted(self.explainer.inv_features_dict.items(), key=lambda item: item[0])],
+                dcc.Dropdown(options=[{'label': key, 'value': value} for key, value in sorted(
+                    self.explainer.inv_features_dict.items(), key=lambda item: item[0])],
                     value='', multi=True, searchable=True,
                     id="masked_contrib_id"
                 ),
@@ -401,11 +403,24 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=3, align="left"
+                            md=4, align="left"
+                        ),
+                        dbc.Col(
+                            html.A(
+                                dbc.Row(
+                                    [
+                                        html.H3(truncate_str(self.explainer.title_story, maxlen=40),
+                                                id="shapash_title_story"),
+                                    ],
+                                    align="center",
+                                ),
+                                href="https://github.com/MAIF/shapash", target="_blank",
+                            ),
+                            md=4, align="center"
                         ),
                         dbc.Col(
                             self.components['menu'],
-                            md=9, align='right',
+                            md=4, align='right',
                         )
                     ],
                     style={'padding': "5px 15px", "verticalAlign": "middle"},
@@ -514,7 +529,7 @@ class SmartApp:
                     {'label': f'{self.explainer.label_dict[label] if self.explainer.label_dict else label}',
                      'value': label}
                     for label in self.explainer._classes
-                ]
+            ]
             self.components['menu']['classification_badge'].style = on_style
             self.components['menu']['regression_badge'].style = off_style
             self.components['menu']['select_label'].value = self.label
@@ -742,7 +757,7 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    
+
                     self.settings['rows'] = rows
                     self.init_data()
                     active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
@@ -750,9 +765,9 @@ class SmartApp:
 
                     if name == [1]:
                         columns = [
-                                      {"name": '_index_', "id": '_index_'},
-                                      {"name": '_predict_', "id": '_predict_'}] + \
-                                  [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
+                            {"name": '_index_', "id": '_index_'},
+                            {"name": '_predict_', "id": '_predict_'}] + \
+                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
 
             if not filter_query:
                 df = self.round_dataframe
@@ -792,14 +807,14 @@ class SmartApp:
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                
-                if is_open :
+
+                if is_open:
                     raise PreventUpdate
                 else:
-                    
+
                     self.settings['features'] = features
                     self.settings_ini['features'] = self.settings['features']
-                    
+
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
@@ -890,7 +905,7 @@ class SmartApp:
             ],
             [
                 State('dataset', 'data'),
-                State('index_id', 'value') # Get the current value of the index
+                State('index_id', 'value')  # Get the current value of the index
             ]
         )
         def update_index_id(click_data, cell, data, current_index_id):
@@ -898,7 +913,7 @@ class SmartApp:
             update index value according to active cell and click data on feature plot.
             """
             ctx = dash.callback_context
-            if ctx.triggered[0]['prop_id'] != 'dataset.data' :
+            if ctx.triggered[0]['prop_id'] != 'dataset.data':
                 if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                     selected = click_data['points'][0]['customdata']
                     self.click_graph = True
@@ -906,11 +921,11 @@ class SmartApp:
                     if cell is not None:
                         selected = data[cell['row']]['_index_']
                     else:
-                        selected = current_index_id # Get actual value in field to refresh the selected value
-                elif ctx.triggered[0]['prop_id'] == '.' :
+                        selected = current_index_id  # Get actual value in field to refresh the selected value
+                elif ctx.triggered[0]['prop_id'] == '.':
                     selected = data[0]['_index_']
-            else :
-                raise PreventUpdate  
+            else:
+                raise PreventUpdate
             return selected, True
 
         @app.callback(
@@ -1058,14 +1073,14 @@ class SmartApp:
                 Output('dataset', 'style_header_conditional'),
                 Output('dataset', 'style_cell_conditional'),
             ],
-             [
+            [
                 Input("validation", "n_clicks")
             ],
             [
                 State('dataset', 'data'),
                 State('index_id', 'value')
             ]
-            
+
         )
         def datatable_layout(validation, data, index):
             ctx = dash.callback_context
