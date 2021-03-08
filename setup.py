@@ -23,7 +23,9 @@ requirements = [
         'nbformat>4.2.0',
         'numba==0.51.2',
         'nbconvert==6.0.7',
-        'papermill==2.3.2'
+        'papermill==2.3.2',
+        'matplotlib>=3.0',
+        'seaborn==0.11.1'
     ]
 
 setup_requirements = ['pytest-runner', ]
