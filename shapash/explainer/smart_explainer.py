@@ -698,7 +698,8 @@ class SmartExplainer:
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
-            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) or att == "model":
+            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
+                    or att == "model" or att == 'preprocessing' or att == 'postprocessing':
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
 
@@ -997,7 +998,7 @@ class SmartExplainer:
         """
         return check_explainer(explainer)
 
-    def generate_report(self, output_file, metadata_file, config=None):
+    def generate_report(self, output_file, metadata_file, x_train=None, config=None):
         """
         This method will generate an HTML report containing different information about the project.
 
@@ -1012,13 +1013,16 @@ class SmartExplainer:
             Path to the HTML file to write.
         metadata_file : str
             Path to the metadata file used o display some information about the project in the report.
+        x_train : pd.DataFrame
+            DataFrame used for training the model.
         config : dict, optional
             Report configuration options.
         """
 
         tmp_dir_path = tempfile.mkdtemp()
 
-        execute_report(explainer=self, metadata_file=metadata_file, config=config, working_dir=tmp_dir_path)
+        execute_report(working_dir=tmp_dir_path, explainer=self, metadata_file=metadata_file,
+                       x_train=x_train, config=config)
         export_and_save_report(working_dir=tmp_dir_path, output_file=output_file)
 
         shutil.rmtree(tmp_dir_path)
