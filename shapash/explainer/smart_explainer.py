@@ -3,6 +3,8 @@ Smart explainer module
 """
 import logging
 import copy
+import tempfile
+import shutil
 import pandas as pd
 import numpy as np
 from shapash.webapp.smart_app import SmartApp
@@ -16,6 +18,7 @@ from shapash.utils.shap_backend import shap_contributions, check_explainer, get_
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
                                 check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.report.generation import execute_report, export_and_save_report
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -994,3 +997,29 @@ class SmartExplainer:
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def generate_report(self, output_file, metadata_file, config=None):
+        """
+        This method will generate an HTML report containing different information about the project.
+
+        It analyzes the data and the model used in order to provide interesting
+        insights that can be shared using the HTML format.
+
+        It requires a metadata file on which can figure different information about the project.
+
+        Parameters
+        ----------
+        output_file : str
+            Path to the HTML file to write.
+        metadata_file : str
+            Path to the metadata file used o display some information about the project in the report.
+        config : dict, optional
+            Report configuration options.
+        """
+
+        tmp_dir_path = tempfile.mkdtemp()
+
+        execute_report(explainer=self, metadata_file=metadata_file, config=config, working_dir=tmp_dir_path)
+        export_and_save_report(working_dir=tmp_dir_path, output_file=output_file)
+
+        shutil.rmtree(tmp_dir_path)
