@@ -19,6 +19,10 @@ It provides several types of visualization that display explicit labels that eve
 Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
+- Medium: [Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
+- Presentation video for french speakers:
+
+<a href="https://www.youtube.com/watch?v=r1R_A9B9apk" target="_blank"><img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webinar_screenshot.png" width="450" alt="French Webinar"/></a>
 
 <br/> <br/>
 
