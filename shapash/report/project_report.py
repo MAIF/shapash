@@ -1,4 +1,5 @@
 from typing import Optional
+import logging
 import sys
 from datetime import date
 
@@ -11,7 +12,9 @@ from shapash.utils.io import load_yml
 from shapash.report.visualisation import print_md, print_html, print_css_table, print_df_and_image, print_figure
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, generate_scatter_plot_fig
-from shapash.report.common import series_dtype
+from shapash.report.common import series_dtype, get_callable
+
+logging.basicConfig(level=logging.INFO)
 
 
 class ProjectReport:
@@ -36,6 +39,10 @@ class ProjectReport:
          A shapash SmartExplainer object that has already be compiled.
     metadata : dict
         Information about the project (author, description, ...).
+    x_train : pd.DataFrame
+        DataFrame used for training the model.
+    y_test : pd.Series or pd.DataFrame
+        Series of labels in the test set.
     config : dict
         Configuration options for the report.
 
@@ -45,6 +52,7 @@ class ProjectReport:
             explainer: SmartExplainer,
             metadata_file: str,
             x_train: Optional[pd.DataFrame] = None,
+            y_test: Optional[pd.DataFrame] = None,
             config: Optional[dict] = None
     ):
         self.explainer = explainer
@@ -56,11 +64,16 @@ class ProjectReport:
                 self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
         else:
             self.x_train_pre = None
+        self.y_test = y_test
         self.x_pred = self.explainer.x_pred
-        self.config = config
+        self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
         self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
         print_css_table()
+
+        if 'metrics' in self.config.keys() and not isinstance(self.config['metrics'], dict):
+            raise ValueError(f"The report config dict includes a 'metrics' key but this key expects a dict, "
+                             f"but an object of type {type(self.config['metrics'])} was found")
 
     @staticmethod
     def _create_train_test_df(x_pred: pd.DataFrame, x_train_pre: Optional[pd.DataFrame]) -> pd.DataFrame:
@@ -159,4 +172,18 @@ class ProjectReport:
         for feature in self.explainer.features_imp.index[::-1][:5]:
             fig = self.explainer.plot.contribution_plot(feature)
             fig.show()
+
+    def display_model_performance(self):
+        if self.y_test is None:
+            logging.info("No labels given for test set. Skipping model performance part")
+            return
+        if 'metrics' not in self.config.keys():
+            logging.info("No 'metrics' key found in report config dict. Skipping model performance part.")
+            return
+
+        y_pred = self.explainer.model.predict(self.explainer.x_init)
+        y_true = self.y_test
+        for metric_name, metric_path in self.config['metrics'].items():
+            metric_fn = get_callable(path=metric_path)
+            print_md(f"**{metric_name} :** {metric_fn(y_true, y_pred)}")
 
