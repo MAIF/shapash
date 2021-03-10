@@ -2,14 +2,15 @@ from typing import Optional
 import sys
 from datetime import date
 
+import numpy as np
 import pandas as pd
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.utils.io import load_yml
-from shapash.report.visualisation import print_md, print_html, print_css_table, print_df_and_image
+from shapash.report.visualisation import print_md, print_html, print_css_table, print_df_and_image, print_figure
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate
+from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, generate_scatter_plot_fig
 from shapash.report.common import series_dtype
 
 
@@ -100,7 +101,7 @@ class ProjectReport:
 
         if multivariate_analysis:
             print_md("### Multivariate analysis")
-            pass
+            self._display_dataset_analysis_multivariate()
 
     def _display_dataset_analysis_global(self):
         df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
@@ -111,7 +112,7 @@ class ProjectReport:
         test_stats_univariate = perform_univariate_dataframe_analysis(self.x_pred)
         train_stats_univariate = perform_univariate_dataframe_analysis(self.x_train_pre)
 
-        for col in self.col_names:
+        for col in self.col_names[:5]:
             print_md(f"#### {col} - {str(series_dtype(self.df_train_test[col]))}")
             fig = generate_fig_univariate(df_train_test=self.df_train_test, col=col)
             df_col_stats = self._stats_to_table(
@@ -119,6 +120,17 @@ class ProjectReport:
                 train_stats=train_stats_univariate[col] if self.x_train_pre is not None else {}
             )
             print_df_and_image(df_col_stats, fig=fig)
+
+    def _display_dataset_analysis_multivariate(self):
+        print_md("#### Numerical vs Numerical")
+        fig = generate_correlation_matrix_fig(df_train_test=self.df_train_test)
+        print_figure(fig=fig)
+        if len(self.df_train_test.select_dtypes(include=np.number).columns.to_list()) < 8:
+            fig = generate_scatter_plot_fig(df_train_test=self.df_train_test)
+            print_figure(fig=fig)
+        else:
+            fig = generate_scatter_plot_fig(df_train_test=self.df_train_test[self.col_names[:10] + ['data_train_test']])
+            print_figure(fig=fig)
 
     def _stats_to_table(self, test_stats: dict, train_stats: Optional[dict] = None) -> pd.DataFrame:
         if self.x_train_pre is not None:

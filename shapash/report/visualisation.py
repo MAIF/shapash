@@ -72,3 +72,8 @@ def print_df_and_image(df: pd.DataFrame, fig):
       <div class="col-sm-6">{convert_fig_to_html(fig)}</div>
     </div>
     """)
+
+
+def print_figure(fig):
+    print_html(convert_fig_to_html(fig))
+
