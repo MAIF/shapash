@@ -62,6 +62,13 @@ class ProjectReport:
         self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
         print_css_table()
 
+    @staticmethod
+    def _create_train_test_df(x_pred: pd.DataFrame, x_train_pre: Optional[pd.DataFrame]) -> pd.DataFrame:
+        if 'data_train_test' in x_pred.columns:
+            raise ValueError('"data_train_test" column must be renamed as it is used in ProjectReport')
+        return pd.concat([x_pred.assign(data_train_test="test"),
+                          x_train_pre.assign(data_train_test="train") if x_train_pre is not None else None])
+
     def display_general_information(self):
         for k, v in self.metadata['general'].items():
             if k.lower() == 'date' and v.lower() == 'auto':
@@ -125,6 +132,7 @@ class ProjectReport:
         print_md("#### Numerical vs Numerical")
         fig = generate_correlation_matrix_fig(df_train_test=self.df_train_test)
         print_figure(fig=fig)
+        print_md(" ")
         if len(self.df_train_test.select_dtypes(include=np.number).columns.to_list()) < 8:
             fig = generate_scatter_plot_fig(df_train_test=self.df_train_test)
             print_figure(fig=fig)
@@ -141,10 +149,14 @@ class ProjectReport:
         else:
             return pd.DataFrame({'Prediction dataset': pd.Series(test_stats)})
 
-    @staticmethod
-    def _create_train_test_df(x_pred: pd.DataFrame, x_train_pre: Optional[pd.DataFrame]) -> pd.DataFrame:
-        if 'data_train_test' in x_pred.columns:
-            raise ValueError('"data_train_test" column must be renamed as it is used in ProjectReport')
-        return pd.concat([x_pred.assign(data_train_test="test"),
-                          x_train_pre.assign(data_train_test="train") if x_train_pre is not None else None])
+    def display_model_explainability(self):
+        print_md("*Note : the explainability graphs were generated using the test set only.*")
+        print_md("### Global feature importance plot")
+        fig = self.explainer.plot.features_importance()
+        fig.show()
+
+        print_md("### Top 5 features contribution plot")
+        for feature in self.explainer.features_imp.index[::-1][:5]:
+            fig = self.explainer.plot.contribution_plot(feature)
+            fig.show()
 

@@ -77,5 +77,8 @@ def generate_scatter_plot_fig(df_train_test: pd.DataFrame):
     sns.set_theme(style="ticks")
 
     g = sns.pairplot(df_train_test, hue="data_train_test")
+    fig = g.fig
+    fig.suptitle('Scatter plot matrix', fontsize=20, x=0.45)
+    plt.tight_layout()
 
-    return g.fig
+    return fig
