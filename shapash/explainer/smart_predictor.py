@@ -23,6 +23,9 @@ from shapash.manipulation.mask import init_mask
 from shapash.manipulation.mask import compute_masked_contributions
 from shapash.manipulation.summarize import summarize
 from shapash.decomposition.contributions import rank_contributions, assign_contributions
+from shapash.utils.columntransformer_backend import columntransformer
+import copy
+import shapash.explainer.smart_explainer
 
 class SmartPredictor :
     """
@@ -773,3 +776,33 @@ class SmartPredictor :
             Columns ids compatible with var_dict
         """
         return check_features_name(self.columns_dict, self.features_dict, features)
+
+    def to_smartexplainer(self):
+        """
+        Create a SmartExplainer object compiled with the data specified in add_input method with
+        SmartPredictor attributes
+        """
+        if not hasattr(self, "data"):
+            raise ValueError("add_input method must be called at least once.")
+
+        if self.data["x"] is None:
+            raise ValueError(
+                """
+                x must be specified in an add_input method to apply to_smartexplainer method.
+                """
+            )
+
+        list_preprocessing = preprocessing_tolist(self.preprocessing)
+        for enc in list_preprocessing:
+            if str(type(enc)) in columntransformer:
+                raise ValueError("SmartPredictor can't switch to SmartExplainer for ColumnTransformer preprocessing.")
+
+        xpl = shapash.explainer.smart_explainer.SmartExplainer(features_dict=copy.deepcopy(self.features_dict),
+                                                               label_dict=copy.deepcopy(self.label_dict))
+        xpl.compile(x=copy.deepcopy(self.data["x_preprocessed"]),
+                    model=self.model,
+                    explainer=self.explainer,
+                    y_pred=copy.deepcopy(self.data["ypred_init"]),
+                    preprocessing=self.preprocessing,
+                    postprocessing=self.postprocessing)
+        return xpl

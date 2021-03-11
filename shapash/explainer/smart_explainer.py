@@ -18,7 +18,7 @@ from shapash.manipulation.select_lines import keep_right_contributions
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
-from .smart_predictor import SmartPredictor
+import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
 
 logging.basicConfig(level=logging.INFO)
@@ -974,7 +974,7 @@ class SmartExplainer:
             }
         params_smartpredictor.append(self.mask_params)
 
-        return SmartPredictor(*params_smartpredictor)
+        return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
 
     def check_x_y_attributes(self, x_str, y_str):
         """

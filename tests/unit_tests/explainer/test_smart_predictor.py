@@ -1085,6 +1085,49 @@ class TestSmartPredictor(unittest.TestCase):
 
         predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"]}))
 
+    def test_to_smartexplainer(self):
+        """
+        Unit test to_smartexplainer
+        """
+        predictor_1 = self.predictor_1
+
+        data_x = pd.DataFrame({"x1": [113, 51, 60, 110, 60], "x2": ["S", "M", "S", "D", "M"]})
+        data_x["id"] = [0, 1, 2, 3, 4]
+        data_x = data_x.set_index("id")
+        data_x_preprocessed = self.preprocessing_1.transform(data_x)
+        data_ypred_init = pd.DataFrame({"ypred": [1, 0, 0, 0, 0]})
+        data_ypred_init.index = data_x.index
+
+        predictor_1.data = {"x": data_x,
+                            "ypred_init": data_ypred_init,
+                            "x_preprocessed": data_x_preprocessed}
+
+        xpl = predictor_1.to_smartexplainer()
+
+        assert str(type(xpl)) == "<class 'shapash.explainer.smart_explainer.SmartExplainer'>"
+        assert xpl.x_init.equals(predictor_1.data["x_preprocessed"])
+        assert predictor_1.model == xpl.model
+        assert predictor_1.explainer == xpl.explainer
+        assert predictor_1.features_dict == xpl.features_dict
+        assert predictor_1.label_dict == xpl.label_dict
+        assert predictor_1._case == xpl._case
+        assert predictor_1._classes == xpl._classes
+        assert predictor_1.columns_dict == xpl.columns_dict
+        assert predictor_1.preprocessing == xpl.preprocessing
+        assert predictor_1.postprocessing == xpl.postprocessing
+
+        ct = ColumnTransformer(
+            transformers=[
+                ('onehot_ce', ce.OrdinalEncoder(), ['x2']),
+            ],
+            remainder='passthrough')
+        ct.fit(data_x)
+
+        predictor_1.preprocessing = ct
+        with self.assertRaises(ValueError):
+            predictor_1.to_smartexplainer()
+
+
 
 
 
