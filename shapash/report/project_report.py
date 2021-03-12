@@ -161,6 +161,7 @@ class ProjectReport:
                 train_stats=train_stats_univariate[col] if self.x_train_pre is not None else {}
             )
             univariate_features_desc.append({
+                'feature_index': int(self.explainer.inv_columns_dict[col]),
                 'name': col,
                 'type': str(series_dtype(self.df_train_test[col])),
                 'description': self.explainer.features_dict[col],

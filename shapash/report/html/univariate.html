@@ -12,7 +12,7 @@
     </div>
 </div>
 {% for col in features %}
-    <div class="row" id="univariate-div-{{ col['name'] }}" style="display:none; margin-right:5px; margin-left:5px;">
+    <div class="row" id="univariate-div-{{ col['name'] }}" style="{% if col['feature_index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px;">
         <h4>{{ col['name'] }} - {{ col['type'] }}</h4>
         {% if col['name'] != col['description'] %}
             <blockquote class="panel-content">{{ col['description'] }}</blockquote>
