@@ -1,15 +1,19 @@
 from typing import Optional
 import logging
 import sys
+import os
 from datetime import date
-
+from IPython.display import HTML, display
+from jinja2 import Template
 import numpy as np
 import pandas as pd
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.utils.io import load_yml
-from shapash.report.visualisation import print_md, print_html, print_css_table, print_df_and_image, print_figure
+from shapash.utils.utils import get_project_root
+from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, print_figure, \
+    print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, generate_scatter_plot_fig
 from shapash.report.common import series_dtype, get_callable
@@ -69,7 +73,8 @@ class ProjectReport:
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
         self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
-        print_css_table()
+        print_css_style()
+        print_javascript_misc()
 
         if 'metrics' in self.config.keys() and not isinstance(self.config['metrics'], dict):
             raise ValueError(f"The report config dict includes a 'metrics' key but this key expects a dict, "
@@ -132,14 +137,24 @@ class ProjectReport:
         test_stats_univariate = perform_univariate_dataframe_analysis(self.x_pred)
         train_stats_univariate = perform_univariate_dataframe_analysis(self.x_train_pre)
 
+        with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'univariate.html')) as file_:
+            univariate_template = Template(file_.read())
+
+        univariate_features_desc = list()
         for col in self.col_names[:5]:
-            print_md(f"#### {col} - {str(series_dtype(self.df_train_test[col]))}")
             fig = generate_fig_univariate(df_train_test=self.df_train_test, col=col)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if self.x_train_pre is not None else {}
             )
-            print_df_and_image(df_col_stats, fig=fig)
+            univariate_features_desc.append({
+                'name': col,
+                'type': str(series_dtype(self.df_train_test[col])),
+                'description': self.explainer.features_dict[col],
+                'table': df_col_stats.to_html(classes="greyGridTable"),
+                'image': convert_fig_to_html(fig)
+            })
+        display(HTML(univariate_template.render(features=univariate_features_desc)))
 
     def _display_dataset_analysis_multivariate(self):
         print_md("#### Numerical vs Numerical")

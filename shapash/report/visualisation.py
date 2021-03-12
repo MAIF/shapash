@@ -1,3 +1,4 @@
+from typing import Optional
 from IPython.display import display, Markdown, Latex, HTML
 import matplotlib.pyplot as plt
 
@@ -25,7 +26,7 @@ def print_html(text: str):
     display(HTML(text))
 
 
-def print_css_table():
+def print_css_style():
     print_html("""
     <style type="text/css">
         table.greyGridTable {
@@ -50,7 +51,59 @@ def print_css_table():
             text-align: center;
             text-shadow: 1px 1px 1px #fff;
         }
+
+    .dropdown-feature {
+            position: absolute;
+            display: inline-block;
+        } 
+    
+    .scrollable-menu {
+        height: auto;
+        max-height: 180px;
+        overflow-x: hidden;
+    }
+    
+    .scrollable-menu::-webkit-scrollbar {
+        -webkit-appearance: none;
+        width: 4px;        
+    }    
+    .scrollable-menu::-webkit-scrollbar-thumb {
+        border-radius: 3px;
+        background-color: lightgray;
+        -webkit-box-shadow: 0 0 1px rgba(255,255,255,.75);        
+    }
+    
+    .scrollable-menu > li a {
+        display: block;
+        text-align: left;
+        text-decoration: none !important;
+        padding: 0px 0px 0px 0px;   
+        overflow: hidden;
+    }
+        
+        .scrollable-menu > li{
+          list-style:none;
+    }
     </style>
+    """)
+
+
+def print_javascript_misc():
+    print_html("""
+    <script>
+    function showBlock(groupId, blockId) {
+      var elms = document.querySelectorAll('*[id^="univariate-div"]');
+      for (i=0;i<elms.length;i++) {
+        elms[i].style.display = "none";
+      }
+      var x = document.getElementById(blockId);
+      if (x.style.display === "none") {
+        x.style.display = "block";
+      } else {
+        x.style.display = "none";
+      }
+    }
+    </script>
     """)
 
 
@@ -65,13 +118,13 @@ def convert_fig_to_html(fig):
     return '<img align="left" src="data:image/png;base64,%s">' % s
 
 
-def print_df_and_image(df: pd.DataFrame, fig):
-    print_html(f"""
-    <div class="row-fluid">
+def html_str_df_and_image(df: pd.DataFrame, fig: plt.Figure) -> str:
+    return f"""
+    <div class="row-fluid" style="margin-top:5px;">
       <div class="col-sm-6">{df.to_html(classes="greyGridTable")}</div>
       <div class="col-sm-6">{convert_fig_to_html(fig)}</div>
     </div>
-    """)
+    """
 
 
 def print_figure(fig):

@@ -1,0 +1,28 @@
+<div id="container">
+<div class="row" style="height:30px;">
+    <div class="dropdown dropdown-feature">
+        <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Feature
+            <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1">
+              {% for col in features %}
+                <li><a href="javascript:showBlock('univariate-div', 'univariate-div-{{ col['name'] }}')">{{ col['name'] }}</a></li>
+              {% endfor %}
+          </ul>
+    </div>
+</div>
+{% for col in features %}
+    <div class="row" id="univariate-div-{{ col['name'] }}" style="display:none; margin-left:5px;">
+        <h4>{{ col['name'] }} - {{ col['type'] }}</h4>
+        {% if col['name'] != col['description'] %}
+            <blockquote class="panel-content">{{ col['description'] }}</blockquote>
+        {% else %}
+        {% endif %}
+        <div class="row-fluid" style="margin-top:5px;">
+          <div class="col-sm-6">{{ col['table'] }}</div>
+          <div class="col-sm-6">{{ col['image'] }}</div>
+        </div>
+    </div>
+{% endfor %}
+</div>
