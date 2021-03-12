@@ -160,13 +160,6 @@ class ProjectReport:
         print_md("#### Numerical vs Numerical")
         fig = generate_correlation_matrix_fig(df_train_test=self.df_train_test)
         print_figure(fig=fig)
-        print_md(" ")
-        if len(self.df_train_test.select_dtypes(include=np.number).columns.to_list()) < 8:
-            fig = generate_scatter_plot_fig(df_train_test=self.df_train_test)
-            print_figure(fig=fig)
-        else:
-            fig = generate_scatter_plot_fig(df_train_test=self.df_train_test[self.col_names[:10] + ['data_train_test']])
-            print_figure(fig=fig)
 
     def _stats_to_table(self, test_stats: dict, train_stats: Optional[dict] = None) -> pd.DataFrame:
         if self.x_train_pre is not None:
