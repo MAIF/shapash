@@ -141,7 +141,7 @@ class ProjectReport:
             univariate_template = Template(file_.read())
 
         univariate_features_desc = list()
-        for col in self.col_names[:5]:
+        for col in self.col_names:
             fig = generate_fig_univariate(df_train_test=self.df_train_test, col=col)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
