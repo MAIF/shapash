@@ -14,6 +14,7 @@ from shapash.manipulation.summarize import compute_features_import
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
 
+
 class SmartPlotter:
     """
     SmartPlotter is a Bridge pattern decoupling plotting functions from SmartExplainer.
@@ -211,7 +212,7 @@ class SmartPlotter:
         """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self.dict_title)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
         dict_yaxis = copy.deepcopy(self.dict_yaxis)
@@ -234,9 +235,9 @@ class SmartPlotter:
 
         elif fig.data[0].type != 'violin':
             if self.explainer._case == 'classification' and pred is not None:
-                fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda \
-                                                                         x: self.dict_ycolors[1] if x == col_modality else
-                self.dict_ycolors[0])
+                fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda
+                                                                  x: self.dict_ycolors[1] if x == col_modality else
+                                                                  self.dict_ycolors[0])
             else:
                 fig.data[-1].marker.color = self.default_color
 
@@ -539,7 +540,7 @@ class SmartPlotter:
         title = "Features Importance"
         topmargin = 80
         if subtitle or addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             topmargin = topmargin + 15
         dict_t.update(text=title)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
@@ -646,7 +647,7 @@ class SmartPlotter:
         else:
             title = f"Local Explanation - Id: <b>{index_value[0]}</b>"
             if subtitle:
-                title = title + f"<span style='font-size: 12px;'><br />{subtitle}</span>"
+                title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
                 topmargin += 15
             dict_t['text'] = title
         dict_xaxis['text'] = 'Contribution'
@@ -675,7 +676,7 @@ class SmartPlotter:
                 ylabel = '<i>{}</i>'.format(expl[0])
                 hoverlabel = '<b>{}</b>'.format(expl[0])
             else:
-                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120), \
+                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
                                                           add_line_break(expl[1], 40, maxlen=160))
                 if len(contrib) <= yaxis_max_label:
                     ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
@@ -937,7 +938,7 @@ class SmartPlotter:
                 if label is None:
                     label = -1
 
-                label_num, label_code, label_value = self.explainer.check_label_name(label)
+                label_num, _, label_value = self.explainer.check_label_name(label)
 
                 contrib = self.explainer.data['contrib_sorted'][label_num]
                 x_val = self.explainer.data['x_sorted'][label_num]
@@ -970,15 +971,14 @@ class SmartPlotter:
             # use label of each column
             var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
-                var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib,
-                                                                           label=label_num)
+                var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib, label=label_num)
 
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
             if hasattr(self.explainer, 'mask_params'):
-                if self.explainer.mask_params['positive'] == True:
+                if self.explainer.mask_params['positive'] is True:
                     exclusion = np.where(np.array(contrib) < 0)[0].tolist()
-                elif self.explainer.mask_params['positive'] == False:
+                elif self.explainer.mask_params['positive'] is False:
                     exclusion = np.where(np.array(contrib) > 0)[0].tolist()
             exclusion.sort(reverse=True)
             for expl in exclusion:
@@ -1055,7 +1055,7 @@ class SmartPlotter:
         """
 
         if self.explainer._case == "classification":
-            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            label_num, _, label_value = self.explainer.check_label_name(label)
 
         if not isinstance(col, (str, int)):
             raise ValueError('parameter col must be string or int.')
@@ -1216,7 +1216,7 @@ class SmartPlotter:
 
         # classification
         if self.explainer._case == "classification":
-            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            label_num, _, label_value = self.explainer.check_label_name(label)
             global_feat_imp = self.explainer.features_imp[label_num].tail(max_features)
             if selection is not None:
                 subset = self.explainer.contributions[label_num].loc[selection]
@@ -1243,11 +1243,11 @@ class SmartPlotter:
             total_len = self.explainer.x_pred.shape[0]
             addnote = add_text([addnote,
                                 f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],
-                                sep=" - ")
+                               sep=" - ")
         if self.explainer.x_pred.shape[1] >= max_features:
             addnote = add_text([addnote,
                                 f"Total number of features: {int(self.explainer.x_pred.shape[1])}"],
-                                sep=" - ")
+                               sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, addnote,
@@ -1321,7 +1321,7 @@ class SmartPlotter:
         if subtitle is not None:
             topmargin += 15 * height / 275
             dict_t['text'] = truncate_str(dict_t['text'], 120) \
-                             + f"<span style='font-size: 12px;'><br />{truncate_str(subtitle, 200)}</span>"
+                + f"<span style='font-size: 12px;'><br />{truncate_str(subtitle, 200)}</span>"
 
         layout = go.Layout(
             template='none',
@@ -1458,7 +1458,7 @@ class SmartPlotter:
             if label is None:
                 label = -1
 
-            label_num, label_code, label_value = self.explainer.check_label_name(label)
+            label_num, _, label_value = self.explainer.check_label_name(label)
             contrib = self.explainer.contributions[label_num]
 
             if show_predict:
@@ -1475,7 +1475,7 @@ class SmartPlotter:
             if show_predict:
                 preds = [self.local_pred(line) for line in line_reference]
                 subtitle = "Predictions: " + ' ; '.join([str(id) + ': <b>' + str(round(pred, 2)) + '</b>'
-                                                          for id, pred in zip(line_reference, preds)])
+                                                         for id, pred in zip(line_reference, preds)])
 
         new_contrib = list()
         for ident in line_reference:
@@ -1659,7 +1659,7 @@ class SmartPlotter:
 
         title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
         if addnote:
-            title = title + f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+            title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self.dict_title)
         dict_t['text'] = title
 
@@ -1939,7 +1939,7 @@ class SmartPlotter:
         def generate_title_dict(col_name1, col_name2, addnote):
             title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
             if addnote:
-                title = title + f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+                title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
             dict_t = copy.deepcopy(self.dict_title)
             dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
             return dict_t
