@@ -5,7 +5,6 @@ import os
 from datetime import date
 from IPython.display import HTML, display
 from jinja2 import Template
-import numpy as np
 import pandas as pd
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
@@ -73,6 +72,15 @@ class ProjectReport:
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
         self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
+
+        if 'title_story' in config.keys():
+            self.title_story = config['title_story']
+        elif self.explainer.title_story != '':
+            self.title_story = self.explainer.title_story
+        else:
+            self.title_story = 'Shapash report'
+        self.title_description = config['title_description'] if 'title_description' in config.keys() else ''
+
         print_css_style()
         print_javascript_misc()
 
@@ -86,6 +94,11 @@ class ProjectReport:
             raise ValueError('"data_train_test" column must be renamed as it is used in ProjectReport')
         return pd.concat([x_pred.assign(data_train_test="test"),
                           x_train_pre.assign(data_train_test="train") if x_train_pre is not None else None])
+
+    def display_title_description(self):
+        print_html(f"""<h1 style="text-align:center">{self.title_story}</p> """)
+        if self.title_description != '':
+            print_html(f'<blockquote class="panel-warning text_cell_render">{self.title_description} </blockquote>')
 
     def display_general_information(self):
         for k, v in self.metadata['general'].items():
