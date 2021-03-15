@@ -2,8 +2,22 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 from shapash.report.common import numeric_is_continuous, series_dtype, VarType
+
+# Color scale derivated from SmartPlotter init_color_scale attribute
+col_scale = [(0.204, 0.216, 0.212),
+             (0.29, 0.388, 0.541),
+             (0.455, 0.6, 0.839),
+             (0.635, 0.737, 0.835),
+             (1, 1, 1),
+             (0.957, 0.753, 0.0),
+             (1.0, 0.651, 0.067),
+             (1.0, 0.482, 0.149),
+             (1.0, 0.302, 0.027)]
+
+dict_color_palette = {'train': col_scale[0], 'test': col_scale[-1]}
 
 
 def generate_fig_univariate(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
@@ -27,7 +41,8 @@ def generate_fig_univariate(df_train_test: pd.DataFrame, col: str) -> plt.Figure
 
 
 def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
-    g = sns.displot(df_train_test, x=col, hue="data_train_test", kind="kde", fill=True, common_norm=False)
+    g = sns.displot(df_train_test, x=col, hue="data_train_test", kind="kde", fill=True, common_norm=False,
+                    palette=dict_color_palette)
     g.set_xticklabels(rotation=30)
 
     return g.fig
@@ -35,7 +50,7 @@ def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str) ->
 
 def generate_fig_univariate_categorical(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
     g = sns.displot(data=df_train_test, x=col, hue='data_train_test', kind='hist', stat='probability',
-                    common_norm=False, multiple="dodge", shrink=.8, alpha=0.3)
+                    common_norm=False, multiple="dodge", shrink=.8, palette=dict_color_palette)
     g.set_xticklabels(rotation=30)
     return g.fig
 
@@ -46,7 +61,9 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
         sns.set_theme(style="white")
         corr = df.corr()
         mask = np.triu(np.ones_like(corr, dtype=bool))
-        cmap = sns.diverging_palette(230, 20, as_cmap=True)
+        cmap = LinearSegmentedColormap.from_list('col_corr',
+                                                 col_scale,
+                                                 N=100)
         sns.heatmap(corr, mask=mask, cmap=cmap, center=0, ax=ax,
                     square=True, linewidths=.5, cbar_kws={"shrink": .5})
 
