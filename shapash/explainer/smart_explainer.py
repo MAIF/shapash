@@ -711,7 +711,7 @@ class SmartExplainer:
         dict_to_save = {}
         for att in self.__dict__.keys():
             if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
-                    or att == "model" or att == 'preprocessing' or att == 'postprocessing':
+                    or att in ["model", 'preprocessing', 'postprocessing']:
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
 
