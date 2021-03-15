@@ -21,17 +21,32 @@ nav[data-toggle="toc"] {
     display: none;
   }
 }
+#shapash_title {
+    color: #f4c000;
+    margin: 0
+    text-align: left;
+}
 </style>
 {%- endblock header -%}
 
 {% block body_header %}
-<body data-spy="scroll" data-target="#toc">
+<body>
     <div class="container-fluid">
         <div class="row">
-            <div class="col-sm-2">
-              <nav id="toc" data-spy="affix" data-toggle="toc"></nav>
+            <div class="col-sm-2 no-gutters">
+                <div class="row" style="position: fixed; background-color: rgb(52, 55, 54); margin-top: 1.5em; width: 16.6%; height:45px;">
+                <a href="https://github.com/MAIF/shapash" target="_blank">
+                    <div class="col-sm-3">
+                        <img height="40px" style="text-align: center;" src="https://github.com/MAIF/shapash/blob/master/shapash/webapp/assets/shapash-fond-fonce.png?raw=true">
+                    </div>
+                    <div class="col-sm-9">
+                        <h4 id="shapash_title">Shapash Report</h4>
+                    </div>
+                </a>
+                </div>
+                <nav id="toc" data-spy="affix" data-toggle="toc" style="margin-top: 3em;"></nav>
             </div>
-            <div class="col-sm-10">
+            <div data-spy="scroll" data-target="#toc" class="col-sm-10">
                 <div tabindex="-1" id="notebook" class="border-box-sizing">
                     <div id="notebook-container">
 {% endblock body_header %}
