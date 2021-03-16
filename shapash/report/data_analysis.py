@@ -2,7 +2,7 @@ from typing import Optional
 
 import pandas as pd
 
-from shapash.report.common import VarType, series_dtype
+from shapash.report.common import VarType, series_dtype, numeric_is_continuous
 
 
 def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
@@ -24,7 +24,8 @@ def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
         return dict()
     d = df.describe().to_dict()
     for col in df.columns:
-        if series_dtype(df[col]) == VarType.TYPE_CAT:
+        if series_dtype(df[col]) == VarType.TYPE_CAT \
+                or (series_dtype(df[col]) == VarType.TYPE_NUM and not numeric_is_continuous(df[col])):
             d[col] = {
                 'distinct values': df[col].nunique(),
                 'missing values': df[col].isna().sum()
