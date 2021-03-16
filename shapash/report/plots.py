@@ -17,7 +17,7 @@ col_scale = [(0.204, 0.216, 0.212),
              (1.0, 0.482, 0.149),
              (1.0, 0.302, 0.027)]
 
-dict_color_palette = {'train': col_scale[0], 'test': col_scale[-1]}
+dict_color_palette = {'train': col_scale[1], 'test': col_scale[-2]}
 
 
 def generate_fig_univariate(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
@@ -48,11 +48,44 @@ def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str) ->
     return g.fig
 
 
-def generate_fig_univariate_categorical(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
-    g = sns.displot(data=df_train_test, x=col, hue='data_train_test', kind='hist', stat='probability',
-                    common_norm=False, multiple="dodge", shrink=.8, palette=dict_color_palette)
-    g.set_xticklabels(rotation=30)
-    return g.fig
+def generate_fig_univariate_categorical(
+        df_train_test: pd.DataFrame,
+        col: str,
+        nb_cat_max: int = 7
+) -> plt.Figure:
+    df_cat = df_train_test.groupby([col, 'data_train_test']).agg({col: 'count'})\
+                          .rename(columns={col: "count"}).reset_index()
+    df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby('data_train_test')['count'].transform('sum')
+
+    if pd.api.types.is_numeric_dtype(df_cat[col].dtype):
+        df_cat = df_cat.sort_values(col, ascending=True)
+        df_cat[col] = df_cat[col].astype(str)
+
+    if df_cat.loc[df_cat.data_train_test == 'test'].shape[0] > nb_cat_max:
+        df_cat = _merge_small_categories(df_cat=df_cat, col=col, nb_cat_max=nb_cat_max)
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+
+    sns.barplot(data=df_cat, x='Percent', y=col, hue="data_train_test",
+                palette=dict_color_palette, ax=ax)
+
+    for p in ax.patches:
+        ax.annotate("{:.1f}%".format(np.nan_to_num(p.get_width(), nan=0)),
+                    xy=(p.get_width(), p.get_y() + p.get_height() / 2),
+                    xytext=(5, 0), textcoords='offset points', ha="left", va="center")
+    return fig
+
+
+def _merge_small_categories(df_cat: pd.DataFrame, col: str,  nb_cat_max: int) -> pd.DataFrame:
+    nth_max_value = df_cat.loc[df_cat.data_train_test == 'test'] \
+        .sort_values("count", ascending=False) \
+        .iloc[nb_cat_max - 1]["count"]
+    list_cat_to_merge = df_cat.loc[(df_cat.data_train_test == 'test') & (df_cat["count"] <= nth_max_value)][col] \
+        .unique()
+    df_cat_other = df_cat.loc[df_cat[col].isin(list_cat_to_merge)] \
+        .groupby("data_train_test", as_index=False)[["count", "Percent"]].sum()
+    df_cat_other[col] = "other"
+    return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
 
 def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
