@@ -4,6 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
+from shapash.utils.utils import truncate_str
 from shapash.report.common import numeric_is_continuous, series_dtype, VarType
 
 # Color scale derivated from SmartPlotter init_color_scale attribute
@@ -29,13 +30,9 @@ def generate_fig_univariate(df_train_test: pd.DataFrame, col: str) -> plt.Figure
         else:
             fig = generate_fig_univariate_categorical(df_train_test, col)
     elif s_dtype == VarType.TYPE_CAT:
-        df_train_test.loc[:, col] = df_train_test.loc[:, col].apply(lambda x: x[:13] + '..' if len(x) > 15 else x)
         fig = generate_fig_univariate_categorical(df_train_test, col)
     else:
         fig = plt.Figure()
-
-    fig.set_figwidth(5)
-    fig.set_figheight(4)
 
     return fig
 
@@ -45,7 +42,12 @@ def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str) ->
                     palette=dict_color_palette)
     g.set_xticklabels(rotation=30)
 
-    return g.fig
+    fig = g.fig
+
+    fig.set_figwidth(7)
+    fig.set_figheight(4)
+
+    return fig
 
 
 def generate_fig_univariate_categorical(
@@ -64,7 +66,7 @@ def generate_fig_univariate_categorical(
     if df_cat.loc[df_cat.data_train_test == 'test'].shape[0] > nb_cat_max:
         df_cat = _merge_small_categories(df_cat=df_cat, col=col, nb_cat_max=nb_cat_max)
 
-    fig, ax = plt.subplots(figsize=(5, 4))
+    fig, ax = plt.subplots(figsize=(7, 4))
 
     sns.barplot(data=df_cat, x='Percent', y=col, hue="data_train_test",
                 palette=dict_color_palette, ax=ax)
@@ -73,6 +75,21 @@ def generate_fig_univariate_categorical(
         ax.annotate("{:.1f}%".format(np.nan_to_num(p.get_width(), nan=0)),
                     xy=(p.get_width(), p.get_y() + p.get_height() / 2),
                     xytext=(5, 0), textcoords='offset points', ha="left", va="center")
+
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    # Removes plot borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    new_labels = [truncate_str(i.get_text(), maxlen=15) for i in ax.yaxis.get_ticklabels()]
+    ax.yaxis.set_ticklabels(new_labels)
+
     return fig
 
 
@@ -84,7 +101,7 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str,  nb_cat_max: int) ->
         .unique()
     df_cat_other = df_cat.loc[df_cat[col].isin(list_cat_to_merge)] \
         .groupby("data_train_test", as_index=False)[["count", "Percent"]].sum()
-    df_cat_other[col] = "other"
+    df_cat_other[col] = "Other"
     return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
 

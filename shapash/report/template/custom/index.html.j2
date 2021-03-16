@@ -30,7 +30,7 @@ nav[data-toggle="toc"] {
 {%- endblock header -%}
 
 {% block body_header %}
-<body>
+<body data-spy="scroll" data-target="#toc" >
     <div class="container-fluid">
         <div class="row">
             <div class="col-sm-2 no-gutters">
@@ -46,7 +46,7 @@ nav[data-toggle="toc"] {
                 </div>
                 <nav id="toc" data-spy="affix" data-toggle="toc" style="margin-top: 3em;"></nav>
             </div>
-            <div data-spy="scroll" data-target="#toc" class="col-sm-10">
+            <div class="col-sm-10">
                 <div tabindex="-1" id="notebook" class="border-box-sizing">
                     <div id="notebook-container">
 {% endblock body_header %}
