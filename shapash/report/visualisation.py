@@ -1,4 +1,3 @@
-from typing import Optional
 from IPython.display import display, Markdown, Latex, HTML
 import matplotlib.pyplot as plt
 
@@ -92,7 +91,7 @@ def print_javascript_misc():
     print_html("""
     <script>
     function showBlock(groupId, blockId) {
-      var elms = document.querySelectorAll('*[id^="univariate-div"]');
+      var elms = document.querySelectorAll('*[id^="' + groupId + '"]');
       for (i=0;i<elms.length;i++) {
         elms[i].style.display = "none";
       }
