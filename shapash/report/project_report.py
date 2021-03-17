@@ -194,9 +194,9 @@ class ProjectReport:
         with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'explainability_contrib.html')) as file_:
             explainability_contrib_template = Template(file_.read())
 
-        print_md("### Sorted features contribution plots")
+        print_md("### Features contribution plots")
         explain_contrib_data = list()
-        for feature in self.explainer.features_imp.index[::-1]:
+        for feature in self.col_names:
             fig = self.explainer.plot.contribution_plot(feature)
             explain_contrib_data.append({
                 'feature_index': int(self.explainer.inv_columns_dict[feature]),
