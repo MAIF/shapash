@@ -6,6 +6,7 @@ from datetime import date
 from IPython.display import HTML, display
 from jinja2 import Template
 import pandas as pd
+import plotly
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.explainer.smart_explainer import SmartExplainer
@@ -188,12 +189,22 @@ class ProjectReport:
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         print_md("### Global feature importance plot")
         fig = self.explainer.plot.features_importance()
-        fig.show()
+        display(HTML(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)))
 
-        print_md("### Top 5 features contribution plot")
-        for feature in self.explainer.features_imp.index[::-1][:5]:
+        with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'explainability_contrib.html')) as file_:
+            explainability_contrib_template = Template(file_.read())
+
+        print_md("### Sorted features contribution plots")
+        explain_contrib_data = list()
+        for feature in self.explainer.features_imp.index[::-1]:
             fig = self.explainer.plot.contribution_plot(feature)
-            fig.show()
+            explain_contrib_data.append({
+                'feature_index': int(self.explainer.inv_columns_dict[feature]),
+                'name': feature,
+                'description': self.explainer.features_dict[feature],
+                'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
+            })
+        display(HTML(explainability_contrib_template.render(features=explain_contrib_data)))
 
     def display_model_performance(self):
         if self.y_test is None:
