@@ -18,7 +18,7 @@ col_scale = [(0.204, 0.216, 0.212),
              (1.0, 0.482, 0.149),
              (1.0, 0.302, 0.027)]
 
-dict_color_palette = {'train': col_scale[1], 'test': col_scale[-2]}
+dict_color_palette = {'train': (52/255, 55/255, 54/255, 0.7), 'test': (244/255, 192/255, 0)}
 
 
 def generate_fig_univariate(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
