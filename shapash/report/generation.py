@@ -16,7 +16,8 @@ def execute_report(
         metadata_file: str,
         x_train: Optional[pd.DataFrame] = None,
         y_test: Optional[Union[pd.Series, pd.DataFrame]] = None,
-        config: Optional[dict] = None
+        config: Optional[dict] = None,
+        notebook_path: Optional[str] = None,
 ):
     """
     Executes the base_report.ipynb notebook and saves the results in working_dir.
@@ -35,6 +36,9 @@ def execute_report(
         Series of labels in the test set.
     config : dict, optional
         Report configuration options.
+    notebook_path : str, optional
+        Path to the notebook used to generate the report. If None, the Shapash base report
+        notebook will be used.
     """
     explainer.save(path=os.path.join(working_dir, 'smart_explainer.pickle'))
     if x_train is not None:
@@ -42,9 +46,11 @@ def execute_report(
     if y_test is not None:
         y_test.to_csv(os.path.join(working_dir, 'y_test.csv'))
     root_path = get_project_root()
+    if notebook_path is None or notebook_path == '':
+        notebook_path = os.path.join(root_path, 'shapash', 'report', 'base_report.ipynb')
 
     pm.execute_notebook(
-        os.path.join(root_path, 'shapash', 'report', 'base_report.ipynb'),
+        notebook_path,
         os.path.join(working_dir, 'base_report.ipynb'),
         parameters=dict(
             dir_path=working_dir,
