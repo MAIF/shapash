@@ -177,7 +177,7 @@ class ProjectReport:
         univariate_template = template_env.get_template("univariate.html")
         univariate_features_desc = list()
         for col in df.drop(col_splitter, axis=1).columns:
-            fig = generate_fig_univariate(df_train_test=df, col=col, hue=col_splitter)
+            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,

@@ -22,24 +22,23 @@ dict_color_palette = {'train': (74/255, 99/255, 138/255, 0.7), 'test': (244/255,
                       'true': (74/255, 99/255, 138/255, 0.7), 'pred': (244/255, 192/255, 0)}
 
 
-def generate_fig_univariate(df_train_test: pd.DataFrame, col: str, hue: str) -> plt.Figure:
-    df_train_test = df_train_test.copy()
-    s_dtype = series_dtype(df_train_test[col])
+def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+    s_dtype = series_dtype(df_all[col])
     if s_dtype == VarType.TYPE_NUM:
-        if numeric_is_continuous(df_train_test[col]):
-            fig = generate_fig_univariate_continuous(df_train_test, col, hue=hue)
+        if numeric_is_continuous(df_all[col]):
+            fig = generate_fig_univariate_continuous(df_all, col, hue=hue)
         else:
-            fig = generate_fig_univariate_categorical(df_train_test, col, hue=hue)
+            fig = generate_fig_univariate_categorical(df_all, col, hue=hue)
     elif s_dtype == VarType.TYPE_CAT:
-        fig = generate_fig_univariate_categorical(df_train_test, col, hue=hue)
+        fig = generate_fig_univariate_categorical(df_all, col, hue=hue)
     else:
         fig = plt.Figure()
 
     return fig
 
 
-def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str, hue: str) -> plt.Figure:
-    g = sns.displot(df_train_test, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
+def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+    g = sns.displot(df_all, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
                     palette=dict_color_palette)
     g.set_xticklabels(rotation=30)
 
@@ -52,13 +51,13 @@ def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str, hu
 
 
 def generate_fig_univariate_categorical(
-        df_train_test: pd.DataFrame,
+        df_all: pd.DataFrame,
         col: str,
         hue: str,
         nb_cat_max: int = 7,
 ) -> plt.Figure:
-    df_cat = df_train_test.groupby([col, hue]).agg({col: 'count'})\
-                          .rename(columns={col: "count"}).reset_index()
+    df_cat = df_all.groupby([col, hue]).agg({col: 'count'})\
+                   .rename(columns={col: "count"}).reset_index()
     df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby(hue)['count'].transform('sum')
 
     if pd.api.types.is_numeric_dtype(df_cat[col].dtype):
