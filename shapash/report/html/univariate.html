@@ -7,7 +7,13 @@
           </button>
           <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1">
               {% for col in features %}
-                <li><a href="javascript:showBlock('univariate-div', 'univariate-div-{{ col['name'] }}')">{{ col['name'] }}</a></li>
+                <li><a href="javascript:showBlock('univariate-div', 'univariate-div-{{ col['name'] }}')">
+                    {% if col['name'] != col['description'] and col['description']|length %}
+                        {{ col['description'] }}
+                    {% else %}
+                        {{ col['name'] }}
+                    {% endif %}
+                </a></li>
               {% endfor %}
           </ul>
     </div>
