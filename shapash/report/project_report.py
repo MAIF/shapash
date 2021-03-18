@@ -156,27 +156,38 @@ class ProjectReport:
 
     def _display_dataset_analysis_global(self):
         df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
-                                               train_stats=perform_global_dataframe_analysis(self.x_train_pre))
+                                               train_stats=perform_global_dataframe_analysis(self.x_train_pre),
+                                               names=["Prediction dataset", "Training dataset"])
         print_html(df_stats_global.to_html(classes="greyGridTable"))
 
     def _display_dataset_analysis_univariate(self):
-        test_stats_univariate = perform_univariate_dataframe_analysis(self.x_pred)
-        train_stats_univariate = perform_univariate_dataframe_analysis(self.x_train_pre)
+        self._perform_and_display_analysis_univariate(
+            df=self.df_train_test,
+            col_splitter="data_train_test",
+            split_values=["test", "train"],
+            names=["Prediction dataset", "Training dataset"]
+        )
+
+    def _perform_and_display_analysis_univariate(self, df: pd.DataFrame, col_splitter: str, split_values: list, names: list):
+        n_splits = df[col_splitter].nunique()
+        test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]])
+        if n_splits > 1:
+            train_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[1]])
 
         univariate_template = template_env.get_template("univariate.html")
-
         univariate_features_desc = list()
-        for col in self.col_names:
-            fig = generate_fig_univariate(df_train_test=self.df_train_test, col=col)
+        for col in df.drop(col_splitter, axis=1).columns:
+            fig = generate_fig_univariate(df_train_test=df, col=col, hue=col_splitter)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
-                train_stats=train_stats_univariate[col] if self.x_train_pre is not None else {}
+                train_stats=train_stats_univariate[col] if n_splits > 1 else None,
+                names=names
             )
             univariate_features_desc.append({
-                'feature_index': int(self.explainer.inv_columns_dict[col]),
+                'feature_index': int(self.explainer.inv_columns_dict.get(col, 0)),
                 'name': col,
-                'type': str(series_dtype(self.df_train_test[col])),
-                'description': self.explainer.features_dict[col],
+                'type': str(series_dtype(df[col])),
+                'description': self.explainer.features_dict.get(col, ''),
                 'table': df_col_stats.to_html(classes="greyGridTable"),
                 'image': convert_fig_to_html(fig)
             })
@@ -187,14 +198,18 @@ class ProjectReport:
         fig = generate_correlation_matrix_fig(df_train_test=self.df_train_test)
         print_figure(fig=fig)
 
-    def _stats_to_table(self, test_stats: dict, train_stats: Optional[dict] = None) -> pd.DataFrame:
-        if self.x_train_pre is not None:
+    @staticmethod
+    def _stats_to_table(test_stats: dict,
+                        names: list,
+                        train_stats: Optional[dict] = None,
+                        ) -> pd.DataFrame:
+        if train_stats is not None:
             return pd.DataFrame({
-                    'Training dataset': pd.Series(train_stats),
-                    'Prediction dataset': pd.Series(test_stats)
+                    names[1]: pd.Series(train_stats),
+                    names[0]: pd.Series(test_stats)
                 })
         else:
-            return pd.DataFrame({'Prediction dataset': pd.Series(test_stats)})
+            return pd.DataFrame({names[0]: pd.Series(test_stats)})
 
     def display_model_explainability(self):
         print_md("*Note : the explainability graphs were generated using the test set only.*")
@@ -220,12 +235,32 @@ class ProjectReport:
         if self.y_test is None:
             logging.info("No labels given for test set. Skipping model performance part")
             return
+
+        print_md("### Univariate analysis of target variable")
+        y_pred = self.explainer.model.predict(self.explainer.x_init)
+        if isinstance(self.y_test, pd.DataFrame):
+            col_name = self.y_test.columns[0]
+            y_true = self.y_test.values[:, 0]
+        elif isinstance(self.y_test, pd.Series):
+            col_name = self.y_test.name
+            y_true = self.y_test.values
+        else:
+            col_name = "target"
+            y_true = self.y_test
+        df = pd.concat([pd.DataFrame({col_name: y_pred}).assign(_dataset="pred"),
+                        pd.DataFrame({col_name: y_true}).assign(_dataset="true") if y_true is not None else None])
+        self._perform_and_display_analysis_univariate(
+            df=df,
+            col_splitter="_dataset",
+            split_values=["pred", "true"],
+            names=["Prediction values", "True values"]
+        )
+
         if 'metrics' not in self.config.keys():
             logging.info("No 'metrics' key found in report config dict. Skipping model performance part.")
             return
+        print_md("### Metrics")
 
-        y_pred = self.explainer.model.predict(self.explainer.x_init)
-        y_true = self.y_test
         for metric_name, metric_path in self.config['metrics'].items():
             metric_fn = get_callable(path=metric_path)
             print_md(f"**{metric_name} :** {round(metric_fn(y_true, y_pred), 2)}")

@@ -18,27 +18,28 @@ col_scale = [(0.204, 0.216, 0.212),
              (1.0, 0.482, 0.149),
              (1.0, 0.302, 0.027)]
 
-dict_color_palette = {'train': (52/255, 55/255, 54/255, 0.7), 'test': (244/255, 192/255, 0)}
+dict_color_palette = {'train': (52/255, 55/255, 54/255, 0.7), 'test': (244/255, 192/255, 0),
+                      'true': (52/255, 55/255, 54/255, 0.7), 'pred': (244/255, 192/255, 0)}
 
 
-def generate_fig_univariate(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
+def generate_fig_univariate(df_train_test: pd.DataFrame, col: str, hue: str) -> plt.Figure:
     df_train_test = df_train_test.copy()
     s_dtype = series_dtype(df_train_test[col])
     if s_dtype == VarType.TYPE_NUM:
         if numeric_is_continuous(df_train_test[col]):
-            fig = generate_fig_univariate_continuous(df_train_test, col)
+            fig = generate_fig_univariate_continuous(df_train_test, col, hue=hue)
         else:
-            fig = generate_fig_univariate_categorical(df_train_test, col)
+            fig = generate_fig_univariate_categorical(df_train_test, col, hue=hue)
     elif s_dtype == VarType.TYPE_CAT:
-        fig = generate_fig_univariate_categorical(df_train_test, col)
+        fig = generate_fig_univariate_categorical(df_train_test, col, hue=hue)
     else:
         fig = plt.Figure()
 
     return fig
 
 
-def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str) -> plt.Figure:
-    g = sns.displot(df_train_test, x=col, hue="data_train_test", kind="kde", fill=True, common_norm=False,
+def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+    g = sns.displot(df_train_test, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
                     palette=dict_color_palette)
     g.set_xticklabels(rotation=30)
 
@@ -53,22 +54,23 @@ def generate_fig_univariate_continuous(df_train_test: pd.DataFrame, col: str) ->
 def generate_fig_univariate_categorical(
         df_train_test: pd.DataFrame,
         col: str,
-        nb_cat_max: int = 7
+        hue: str,
+        nb_cat_max: int = 7,
 ) -> plt.Figure:
-    df_cat = df_train_test.groupby([col, 'data_train_test']).agg({col: 'count'})\
+    df_cat = df_train_test.groupby([col, hue]).agg({col: 'count'})\
                           .rename(columns={col: "count"}).reset_index()
-    df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby('data_train_test')['count'].transform('sum')
+    df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby(hue)['count'].transform('sum')
 
     if pd.api.types.is_numeric_dtype(df_cat[col].dtype):
         df_cat = df_cat.sort_values(col, ascending=True)
         df_cat[col] = df_cat[col].astype(str)
 
-    if df_cat.loc[df_cat.data_train_test == 'test'].shape[0] > nb_cat_max:
-        df_cat = _merge_small_categories(df_cat=df_cat, col=col, nb_cat_max=nb_cat_max)
+    if df_cat.loc[df_cat[hue] == df_cat[hue].unique()[0]].shape[0] > nb_cat_max:
+        df_cat = _merge_small_categories(df_cat=df_cat, col=col, hue=hue, nb_cat_max=nb_cat_max)
 
     fig, ax = plt.subplots(figsize=(7, 4))
 
-    sns.barplot(data=df_cat, x='Percent', y=col, hue="data_train_test",
+    sns.barplot(data=df_cat, x='Percent', y=col, hue=hue,
                 palette=dict_color_palette, ax=ax)
 
     for p in ax.patches:
@@ -93,14 +95,15 @@ def generate_fig_univariate_categorical(
     return fig
 
 
-def _merge_small_categories(df_cat: pd.DataFrame, col: str,  nb_cat_max: int) -> pd.DataFrame:
-    nth_max_value = df_cat.loc[df_cat.data_train_test == 'test'] \
+def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_max: int) -> pd.DataFrame:
+    hue_name = df_cat[hue].unique()[0]
+    nth_max_value = df_cat.loc[df_cat[hue] == hue_name] \
         .sort_values("count", ascending=False) \
         .iloc[nb_cat_max - 1]["count"]
-    list_cat_to_merge = df_cat.loc[(df_cat.data_train_test == 'test') & (df_cat["count"] <= nth_max_value)][col] \
+    list_cat_to_merge = df_cat.loc[(df_cat[hue] == hue_name) & (df_cat["count"] <= nth_max_value)][col] \
         .unique()
     df_cat_other = df_cat.loc[df_cat[col].isin(list_cat_to_merge)] \
-        .groupby("data_train_test", as_index=False)[["count", "Percent"]].sum()
+        .groupby(hue, as_index=False)[["count", "Percent"]].sum()
     df_cat_other[col] = "Other"
     return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
