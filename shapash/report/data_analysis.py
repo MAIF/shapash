@@ -22,7 +22,7 @@ def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
 def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
     if df is None:
         return dict()
-    d = df.describe().to_dict()
+    d = df.describe().round(2).to_dict()
     for col in df.columns:
         if series_dtype(df[col]) == VarType.TYPE_CAT \
                 or (series_dtype(df[col]) == VarType.TYPE_NUM and not numeric_is_continuous(df[col])):
