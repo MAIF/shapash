@@ -3,22 +3,24 @@ import logging
 import sys
 import os
 from datetime import date
-from IPython.display import HTML, display
-from jinja2 import Template
+import jinja2
 import pandas as pd
 import plotly
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.utils.io import load_yml
-from shapash.utils.utils import get_project_root
+from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, print_figure, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, generate_scatter_plot_fig
+from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig
 from shapash.report.common import series_dtype, get_callable
 
 logging.basicConfig(level=logging.INFO)
+
+template_loader = jinja2.FileSystemLoader(searchpath=os.path.join(get_project_root(), 'shapash', 'report', 'html'))
+template_env = jinja2.Environment(loader=template_loader)
 
 
 class ProjectReport:
@@ -113,16 +115,26 @@ class ProjectReport:
             print_md(f"**{k.title()}** : {v}")
 
     def display_model_information(self):
-        print_md(f"**Model used :** : {self.explainer.model.__class__.__name__}")
+        print_md(f"**Model used :** {self.explainer.model.__class__.__name__}")
 
-        print_md(f"**Library :** : {self.explainer.model.__class__.__module__}")
+        print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
 
         for name, module in sorted(sys.modules.items()):
             if hasattr(module, '__version__') \
                     and self.explainer.model.__class__.__module__.split('.')[0] in module.__name__:
-                print_md(f"**Library version :** : {module.__version__}")
+                print_md(f"**Library version :** {module.__version__}")
 
-        print_md(f"**Model parameters :** {self.explainer.model.__dict__}")
+        print_md("**Model parameters :** ")
+        model_params = self.explainer.model.__dict__
+        table_template = template_env.get_template("double_table.html")
+        print_html(table_template.render(
+            columns1=["Parameter key", "Parameter value"],
+            rows1=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
+                   for k, v in list(model_params.items())[:len(model_params)//2:]],  # Getting half of the parameters
+            columns2=["Model key", "Model value"],
+            rows2=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
+                   for k, v in list(model_params.items())[len(model_params)//2:]]  # Getting 2nd half of the parameters
+        ))
 
     def display_dataset_analysis(
             self,
@@ -151,8 +163,7 @@ class ProjectReport:
         test_stats_univariate = perform_univariate_dataframe_analysis(self.x_pred)
         train_stats_univariate = perform_univariate_dataframe_analysis(self.x_train_pre)
 
-        with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'univariate.html')) as file_:
-            univariate_template = Template(file_.read())
+        univariate_template = template_env.get_template("univariate.html")
 
         univariate_features_desc = list()
         for col in self.col_names:
@@ -169,7 +180,7 @@ class ProjectReport:
                 'table': df_col_stats.to_html(classes="greyGridTable"),
                 'image': convert_fig_to_html(fig)
             })
-        display(HTML(univariate_template.render(features=univariate_features_desc)))
+        print_html(univariate_template.render(features=univariate_features_desc))
 
     def _display_dataset_analysis_multivariate(self):
         print_md("#### Numerical vs Numerical")
@@ -189,10 +200,9 @@ class ProjectReport:
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         print_md("### Global feature importance plot")
         fig = self.explainer.plot.features_importance()
-        display(HTML(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)))
+        print_html(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False))
 
-        with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'explainability_contrib.html')) as file_:
-            explainability_contrib_template = Template(file_.read())
+        explainability_contrib_template = template_env.get_template("explainability_contrib.html")
 
         print_md("### Features contribution plots")
         explain_contrib_data = list()
@@ -204,7 +214,7 @@ class ProjectReport:
                 'description': self.explainer.features_dict[feature],
                 'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
             })
-        display(HTML(explainability_contrib_template.render(features=explain_contrib_data)))
+        print_html(explainability_contrib_template.render(features=explain_contrib_data))
 
     def display_model_performance(self):
         if self.y_test is None:

@@ -1,0 +1,12 @@
+<div class="row" style="margin-right: 5px;">
+  <div class="col-sm-6" style="padding: 1em">
+      {% with columns=columns1, rows=rows1 %}
+        {% include "table_two_columns.html" %}
+      {% endwith %}
+  </div>
+  <div class="col-sm-6" style="padding: 1em">
+      {% with columns=columns2, rows=rows2 %}
+        {% include "table_two_columns.html" %}
+      {% endwith %}
+  </div>
+</div>
