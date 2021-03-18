@@ -18,8 +18,8 @@ col_scale = [(0.204, 0.216, 0.212),
              (1.0, 0.482, 0.149),
              (1.0, 0.302, 0.027)]
 
-dict_color_palette = {'train': (52/255, 55/255, 54/255, 0.7), 'test': (244/255, 192/255, 0),
-                      'true': (52/255, 55/255, 54/255, 0.7), 'pred': (244/255, 192/255, 0)}
+dict_color_palette = {'train': (74/255, 99/255, 138/255, 0.7), 'test': (244/255, 192/255, 0),
+                      'true': (74/255, 99/255, 138/255, 0.7), 'pred': (244/255, 192/255, 0)}
 
 
 def generate_fig_univariate(df_train_test: pd.DataFrame, col: str, hue: str) -> plt.Figure:
@@ -65,7 +65,9 @@ def generate_fig_univariate_categorical(
         df_cat = df_cat.sort_values(col, ascending=True)
         df_cat[col] = df_cat[col].astype(str)
 
-    if df_cat.loc[df_cat[hue] == df_cat[hue].unique()[0]].shape[0] > nb_cat_max:
+    nb_cat = max([df_cat.loc[df_cat[hue] == df_cat[hue].unique()[i]].shape[0] for i in range(df_cat[hue].nunique())])
+
+    if nb_cat > nb_cat_max:
         df_cat = _merge_small_categories(df_cat=df_cat, col=col, hue=hue, nb_cat_max=nb_cat_max)
 
     fig, ax = plt.subplots(figsize=(7, 4))
@@ -96,7 +98,9 @@ def generate_fig_univariate_categorical(
 
 
 def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_max: int) -> pd.DataFrame:
-    hue_name = df_cat[hue].unique()[0]
+    list_nb_cat = [df_cat.loc[df_cat[hue] == df_cat[hue].unique()[i]].shape[0] for i in range(df_cat[hue].nunique())]
+    id_max_cat = list_nb_cat.index(max(list_nb_cat))
+    hue_name = df_cat[hue].unique()[id_max_cat]
     nth_max_value = df_cat.loc[df_cat[hue] == hue_name] \
         .sort_values("count", ascending=False) \
         .iloc[nb_cat_max - 1]["count"]
