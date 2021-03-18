@@ -228,5 +228,5 @@ class ProjectReport:
         y_true = self.y_test
         for metric_name, metric_path in self.config['metrics'].items():
             metric_fn = get_callable(path=metric_path)
-            print_md(f"**{metric_name} :** {metric_fn(y_true, y_pred)}")
+            print_md(f"**{metric_name} :** {round(metric_fn(y_true, y_pred), 2)}")
 
