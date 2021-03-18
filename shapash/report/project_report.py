@@ -131,7 +131,7 @@ class ProjectReport:
             columns1=["Parameter key", "Parameter value"],
             rows1=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
                    for k, v in list(model_params.items())[:len(model_params)//2:]],  # Getting half of the parameters
-            columns2=["Model key", "Model value"],
+            columns2=["Parameter key", "Parameter value"],
             rows2=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
                    for k, v in list(model_params.items())[len(model_params)//2:]]  # Getting 2nd half of the parameters
         ))
