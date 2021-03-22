@@ -49,7 +49,7 @@ class ProjectReport:
         DataFrame used for training the model.
     y_test : pd.Series or pd.DataFrame
         Series of labels in the test set.
-    config : dict
+    config : dict, optional
         Configuration options for the report.
 
     """
@@ -76,13 +76,13 @@ class ProjectReport:
         self.col_names = list(self.explainer.columns_dict.values())
         self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
 
-        if 'title_story' in config.keys():
+        if 'title_story' in self.config.keys():
             self.title_story = config['title_story']
         elif self.explainer.title_story != '':
             self.title_story = self.explainer.title_story
         else:
             self.title_story = 'Shapash report'
-        self.title_description = config['title_description'] if 'title_description' in config.keys() else ''
+        self.title_description = self.config['title_description'] if 'title_description' in self.config.keys() else ''
 
         print_css_style()
         print_javascript_misc()
