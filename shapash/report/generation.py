@@ -40,6 +40,8 @@ def execute_report(
         Path to the notebook used to generate the report. If None, the Shapash base report
         notebook will be used.
     """
+    if config is None:
+        config = {}
     explainer.save(path=os.path.join(working_dir, 'smart_explainer.pickle'))
     if x_train is not None:
         x_train.to_csv(os.path.join(working_dir, 'x_train.csv'))
