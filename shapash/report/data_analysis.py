@@ -13,7 +13,7 @@ def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
         'number of features': len(df.columns),
         'number of observations': df.shape[0],
         'missing values': missing_values,
-        '% missing values': missing_values / df.shape[0],
+        '% missing values': missing_values / (df.shape[0] * df.shape[1]),
     }
 
     return global_d
