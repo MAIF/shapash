@@ -1301,3 +1301,21 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.run_app()
 
         assert xpl.y_pred is not None
+
+    @patch('shapash.explainer.smart_explainer.export_and_save_report')
+    @patch('shapash.explainer.smart_explainer.execute_report')
+    def test_generate_report(self, mock_execute_report, mock_export_and_save_report):
+        """
+        Test generate report method
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        xpl = SmartExplainer()
+        xpl.compile(model=clf, x=df[['x1', 'x2']])
+        xpl.generate_report(output_file='test', metadata_file='test')
+        mock_execute_report.assert_called_once()
+        mock_export_and_save_report.assert_called_once()
