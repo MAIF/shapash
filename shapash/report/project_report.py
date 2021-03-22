@@ -104,6 +104,9 @@ class ProjectReport:
             print_html(f'<blockquote class="panel-warning text_cell_render">{self.title_description} </blockquote>')
 
     def display_general_information(self):
+        if 'general' not in self.metadata.keys():
+            logging.info("No general information given. Please complete the metadata file with 'general' key.")
+            return
         for k, v in self.metadata['general'].items():
             if k.lower() == 'date' and v.lower() == 'auto':
                 print_md(f"**{k.title()}** : {date.today()}")
@@ -111,6 +114,9 @@ class ProjectReport:
                 print_md(f"**{k.title()}** : {v}")
 
     def display_dataset_information(self):
+        if 'dataset' not in self.metadata.keys():
+            logging.info("No dataset information given. Please complete the metadata file with 'dataset' key.")
+            return
         for k, v in self.metadata['dataset'].items():
             print_md(f"**{k.title()}** : {v}")
 
