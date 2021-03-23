@@ -154,3 +154,61 @@ class TestGeneration(unittest.TestCase):
         )
         report.display_model_information()
         self.assertTrue(mock_print_md.called)
+
+    def test_display_dataset_analysis_1(self):
+        report = ProjectReport(
+            explainer=self.xpl,
+            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            x_train=self.df[['x1', 'x2']],
+        )
+        report.display_dataset_analysis()
+
+    def test_display_dataset_analysis_2(self):
+        report = ProjectReport(
+            explainer=self.xpl,
+            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+        )
+        report.display_dataset_analysis()
+
+    def test_display_model_explainability(self):
+        report = ProjectReport(
+            explainer=self.xpl,
+            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+        )
+        report.display_model_explainability()
+
+    @patch('shapash.report.project_report.logging')
+    def test_display_model_performance_1(self, mock_logging):
+        """
+        No y_test given
+        """
+        report = ProjectReport(
+            explainer=self.xpl,
+            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+        )
+        report.display_model_performance()
+        mock_logging.info.assert_called_once()
+
+    @patch('shapash.report.project_report.logging')
+    def test_display_model_performance_2(self, mock_logging):
+        report = ProjectReport(
+            explainer=self.xpl,
+            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            y_test=self.df['y'],
+            config=dict(metrics={'mse': 'sklearn.metrics.mean_squared_error'})
+        )
+        report.display_model_performance()
+        self.assertEqual(mock_logging.call_count, 0)
+
+    @patch('shapash.report.project_report.logging')
+    def test_display_model_performance_3(self, mock_logging):
+        """
+        No metrics given in ProjectReport
+        """
+        report = ProjectReport(
+            explainer=self.xpl,
+            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            y_test=self.df['y'],
+        )
+        report.display_model_performance()
+        mock_logging.info.assert_called_once()
