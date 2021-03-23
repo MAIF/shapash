@@ -64,7 +64,7 @@ def generate_fig_univariate_categorical(
         df_cat = df_cat.sort_values(col, ascending=True)
         df_cat[col] = df_cat[col].astype(str)
 
-    nb_cat = max([df_cat.loc[df_cat[hue] == df_cat[hue].unique()[i]].shape[0] for i in range(df_cat[hue].nunique())])
+    nb_cat = df_cat.groupby([col]).agg({'count': 'sum'}).reset_index()[col].nunique()
 
     if nb_cat > nb_cat_max:
         df_cat = _merge_small_categories(df_cat=df_cat, col=col, hue=hue, nb_cat_max=nb_cat_max)
@@ -97,14 +97,8 @@ def generate_fig_univariate_categorical(
 
 
 def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_max: int) -> pd.DataFrame:
-    list_nb_cat = [df_cat.loc[df_cat[hue] == df_cat[hue].unique()[i]].shape[0] for i in range(df_cat[hue].nunique())]
-    id_max_cat = list_nb_cat.index(max(list_nb_cat))
-    hue_name = df_cat[hue].unique()[id_max_cat]
-    nth_max_value = df_cat.loc[df_cat[hue] == hue_name] \
-        .sort_values("count", ascending=False) \
-        .iloc[nb_cat_max - 1]["count"]
-    list_cat_to_merge = df_cat.loc[(df_cat[hue] == hue_name) & (df_cat["count"] <= nth_max_value)][col] \
-        .unique()
+    df_cat_sum_hue = df_cat.groupby([col]).agg({'count': 'sum'}).reset_index()
+    list_cat_to_merge = df_cat_sum_hue.sort_values('count', ascending=False)[col].to_list()[nb_cat_max - 1:]
     df_cat_other = df_cat.loc[df_cat[col].isin(list_cat_to_merge)] \
         .groupby(hue, as_index=False)[["count", "Percent"]].sum()
     df_cat_other[col] = "Other"
