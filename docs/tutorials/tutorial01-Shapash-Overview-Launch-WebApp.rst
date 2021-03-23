@@ -105,10 +105,6 @@ Model Fitting
 
     regressor = LGBMRegressor(n_estimators=200).fit(Xtrain,ytrain)
 
-.. code:: ipython
-
-    y_pred = pd.DataFrame(regressor.predict(Xtest),columns=['pred'],index=Xtest.index)
-
 Understanding my model with shapash
 -----------------------------------
 
@@ -128,8 +124,7 @@ Declare and Compile SmartExplainer
     xpl.compile(
         x=Xtest,
         model=regressor,
-        preprocessing=encoder, # Optional: compile step can use inverse_transform method
-        y_pred=y_pred # Optional
+        preprocessing=encoder # Optional: compile step can use inverse_transform method
     )
 
 
@@ -143,7 +138,7 @@ Start WebApp
 
 .. code:: ipython
 
-    app = xpl.run_app()
+    app = xpl.run_app(title_story='House Prices')
 
 Link to App: `shapash-monitor
 link <https://shapash-demo.ossbymaif.fr/>`__

@@ -1,7 +1,7 @@
 """
 Report generation helper module.
 """
-from typing import Optional
+from typing import Optional, Union
 import os
 import pandas as pd
 from nbconvert import HTMLExporter
@@ -15,6 +15,7 @@ def execute_report(
         explainer: object,
         metadata_file: str,
         x_train: Optional[pd.DataFrame] = None,
+        y_test: Optional[Union[pd.Series, pd.DataFrame]] = None,
         config: Optional[dict] = None
 ):
     """
@@ -30,11 +31,16 @@ def execute_report(
         Path to the metadata file used o display some information about the project in the report.
     x_train : pd.DataFrame
         DataFrame used for training the model.
+    y_test : pd.Series or pd.DataFrame
+        Series of labels in the test set.
     config : dict, optional
         Report configuration options.
     """
     explainer.save(path=os.path.join(working_dir, 'smart_explainer.pickle'))
-    x_train.to_csv(os.path.join(working_dir, 'x_train.csv'))
+    if x_train is not None:
+        x_train.to_csv(os.path.join(working_dir, 'x_train.csv'))
+    if y_test is not None:
+        y_test.to_csv(os.path.join(working_dir, 'y_test.csv'))
     root_path = get_project_root()
 
     pm.execute_notebook(

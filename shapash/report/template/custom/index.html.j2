@@ -1,8 +1,8 @@
 {%- extends 'classic/index.html.j2' -%}
 
 {%- block header -%}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 {{ super() }}
-
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdn.rawgit.com/afeld/bootstrap-toc/2f761d4/dist/bootstrap-toc.min.css">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" integrity="sha512-K1qjQ+NcF2TYO/eI3M6v8EiNYZfA95pQumfvcVrTHtwQVDG+aHRqLi/ETn2uB+1JqwYqVG3LIvdm9lj6imS/pQ==" crossorigin="anonymous"></script>
@@ -21,15 +21,30 @@ nav[data-toggle="toc"] {
     display: none;
   }
 }
+#shapash_title {
+    color: #f4c000;
+    margin: 0
+    text-align: left;
+}
 </style>
 {%- endblock header -%}
 
 {% block body_header %}
-<body data-spy="scroll" data-target="#toc">
+<body data-spy="scroll" data-target="#toc" >
     <div class="container-fluid">
         <div class="row">
-            <div class="col-sm-2">
-              <nav id="toc" data-spy="affix" data-toggle="toc"></nav>
+            <div class="col-sm-2 no-gutters">
+                <div class="row" style="position: fixed; background-color: rgb(52, 55, 54); margin-top: 1.5em; width: 16.6%; height:45px;">
+                <a href="https://github.com/MAIF/shapash" target="_blank">
+                    <div class="col-sm-3">
+                        <img height="40px" style="text-align: center;" src="https://github.com/MAIF/shapash/blob/master/shapash/webapp/assets/shapash-fond-fonce.png?raw=true">
+                    </div>
+                    <div class="col-sm-9">
+                        <h4 id="shapash_title">Shapash Report</h4>
+                    </div>
+                </a>
+                </div>
+                <nav id="toc" data-spy="affix" data-toggle="toc" style="margin-top: 3em;"></nav>
             </div>
             <div class="col-sm-10">
                 <div tabindex="-1" id="notebook" class="border-box-sizing">

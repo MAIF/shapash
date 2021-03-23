@@ -6,7 +6,6 @@ import copy
 import tempfile
 import shutil
 import pandas as pd
-import numpy as np
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
@@ -16,7 +15,7 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
-                                check_postprocessing, check_features_name
+    check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.report.generation import execute_report, export_and_save_report
 from .smart_state import SmartState
@@ -105,14 +104,14 @@ class SmartExplainer:
     label_dict specify the labels of target (classification).
     """
 
-    def __init__(self, features_dict={}, label_dict=None):
-        if isinstance(features_dict, dict) == False:
+    def __init__(self, features_dict={}, label_dict=None, title_story: str = None):
+        if isinstance(features_dict, dict) is False:
             raise ValueError(
                 """
                 features_dict must be a dict
                 """
             )
-        if label_dict is not None and isinstance(label_dict, dict) == False:
+        if label_dict is not None and isinstance(label_dict, dict) is False:
             raise ValueError(
                 """
                 label_dict must be a dict
@@ -121,9 +120,13 @@ class SmartExplainer:
         self.features_dict = features_dict
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
+        if title_story is not None:
+            self.title_story = title_story
+        else:
+            self.title_story = ''
 
-
-    def compile(self, x, model, explainer=None, contributions=None, y_pred=None, preprocessing=None, postprocessing=None):
+    def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
+                preprocessing=None, postprocessing=None, title_story: str = None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -178,6 +181,9 @@ class SmartExplainer:
             }
 
             Only one transformation by features is possible.
+        title_story: str (default: None)
+            The default title is empty. You can specify a custom title
+            which can be used the webapp, or other methods
 
         Example
         --------
@@ -221,8 +227,10 @@ class SmartExplainer:
         )
         self.features_imp = None
         self.features_desc = self.check_features_desc()
+        if title_story is not None:
+            self.title_story = title_story
 
-    def add(self, y_pred=None, label_dict=None, features_dict=None):
+    def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
         add method allows the user to add a label_dict, features_dict
         or y_pred without compiling again (and it can last a few moments).
@@ -239,29 +247,34 @@ class SmartExplainer:
             Dictionary mapping integer labels to domain names.
         features_dict: dict, optional (default: None)
             Dictionary mapping technical feature names to domain names.
+        title_story: str (default: None)
+            The default title is empty. You can specify a custom title
+            which can be used the webapp, or other methods
         """
         if y_pred is not None:
             self.y_pred = self.check_y_pred(y_pred)
         if label_dict is not None:
-            if isinstance(label_dict, dict) == False:
+            if isinstance(label_dict, dict) is False:
                 raise ValueError(
                     """
-                    label_dict must be a dict  
+                    label_dict must be a dict
                     """
                 )
             self.label_dict = label_dict
             self.check_label_dict()
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
         if features_dict is not None:
-            if isinstance(features_dict, dict) == False:
+            if isinstance(features_dict, dict) is False:
                 raise ValueError(
                     """
-                    features_dict must be a dict  
+                    features_dict must be a dict
                     """
                 )
             self.features_dict = features_dict
             self.check_features_dict()
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
+        if title_story is not None:
+            self.title_story = title_story
 
     def choose_state(self, contributions):
         """
@@ -394,7 +407,7 @@ class SmartExplainer:
             for key in postprocessing.keys():
                 dict_postprocess = postprocessing[key]
                 if dict_postprocess['type'] in {'prefix', 'suffix'} \
-                    and pd.api.types.is_numeric_dtype(self.x_pred[key]):
+                        and pd.api.types.is_numeric_dtype(self.x_pred[key]):
                     modif = True
         return modif
 
@@ -623,7 +636,6 @@ class SmartExplainer:
             positive=None,
             max_contrib=None
     ):
-
         """
         The filter method is an important method which allows to summarize the local explainability
         by using the user defined parameters which correspond to its use case.
@@ -699,7 +711,7 @@ class SmartExplainer:
         dict_to_save = {}
         for att in self.__dict__.keys():
             if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
-                    or att == "model" or att == 'preprocessing' or att == 'postprocessing':
+                    or att in ["model", 'preprocessing', 'postprocessing']:
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
 
@@ -789,7 +801,7 @@ class SmartExplainer:
         --------
         >>> summary_df = xpl.to_pandas(max_contrib=2,proba=True)
         >>> summary_df
-        	pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
+            pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
         0	0	    0.756416	Sex	        1.0	        0.322308	    Pclass	    3.0	        0.155069
         1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
         2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
@@ -828,10 +840,10 @@ class SmartExplainer:
             proba_values = None
 
         y_pred, summary = keep_right_contributions(self.y_pred, self.data['summary'],
-                                                           self._case, self._classes,
-                                                           self.label_dict, proba_values)
+                                                   self._case, self._classes,
+                                                   self.label_dict, proba_values)
 
-        return pd.concat([y_pred,summary], axis=1)
+        return pd.concat([y_pred, summary], axis=1)
 
     def compute_features_import(self, force=False):
         """
@@ -861,7 +873,7 @@ class SmartExplainer:
         """
         self.smartapp = SmartApp(self)
 
-    def run_app(self, port: int = None, host: str = None) -> CustomThread:
+    def run_app(self, port: int = None, host: str = None, title_story: str = None) -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
         run_app method can be used directly in a Jupyter notebook
@@ -877,7 +889,10 @@ class SmartExplainer:
             for your webapp.
         host: str (default: None)
             The default host is '0.0.0.0'. You can specify a custom
-            ip address for your app
+            ip address for your webapp
+        title_story: str (default: None)
+            The default title is empty. You can specify a custom title
+            for your webapp (can be reused in other methods like in a report, ...)
 
         Returns
         -------
@@ -889,6 +904,9 @@ class SmartExplainer:
         >>> app = xpl.run_app()
         >>> app.kill()
         """
+
+        if title_story is not None:
+            self.title_story = title_story
         if self.y_pred is None:
             self.predict()
         if hasattr(self, '_case'):
@@ -944,14 +962,14 @@ class SmartExplainer:
             raise ValueError("""SmartPredictor need an explainer, please compile without contributions or specify  the
                                         explainer used. Make change in compile() step""")
 
-        self.features_types = {features : str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
+        self.features_types = {features: str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
         listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
-                            "label_dict", "preprocessing", "postprocessing"]
+                          "label_dict", "preprocessing", "postprocessing"]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
-        if not hasattr(self,"mask_params"):
+        if not hasattr(self, "mask_params"):
             self.mask_params = {
                 "features_to_hide": None,
                 "threshold": None,
@@ -999,7 +1017,7 @@ class SmartExplainer:
         """
         return check_explainer(explainer)
 
-    def generate_report(self, output_file, metadata_file, x_train=None, config=None):
+    def generate_report(self, output_file, metadata_file, x_train=None, y_test=None, config=None):
         """
         This method will generate an HTML report containing different information about the project.
 
@@ -1016,6 +1034,8 @@ class SmartExplainer:
             Path to the metadata file used o display some information about the project in the report.
         x_train : pd.DataFrame
             DataFrame used for training the model.
+        y_test : pd.Series or pd.DataFrame
+            Series of labels in the test set.
         config : dict, optional
             Report configuration options.
         """
@@ -1023,7 +1043,7 @@ class SmartExplainer:
         tmp_dir_path = tempfile.mkdtemp()
 
         execute_report(working_dir=tmp_dir_path, explainer=self, metadata_file=metadata_file,
-                       x_train=x_train, config=config)
+                       x_train=x_train, y_test=y_test, config=config)
         export_and_save_report(working_dir=tmp_dir_path, output_file=output_file)
 
         shutil.rmtree(tmp_dir_path)
