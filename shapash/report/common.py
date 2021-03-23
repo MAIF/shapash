@@ -7,6 +7,9 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype, i
 
 
 class VarType(Enum):
+    """
+    Helper class to indicate the type of a variable.
+    """
     TYPE_CAT = "Categorical"
     TYPE_NUM = "Numeric"
     TYPE_UNSUPPORTED = "Unsupported"
@@ -16,6 +19,18 @@ class VarType(Enum):
 
 
 def series_dtype(s: pd.Series) -> VarType:
+    """
+    Computes the type of a pandas series.
+
+    Parameters
+    ----------
+    s : pd.Series
+        The series for which we wish to determine the type.
+
+    Returns
+    -------
+    VarType
+    """
     if is_bool_dtype(s):
         return VarType.TYPE_CAT
     elif is_string_dtype(s):
@@ -29,6 +44,17 @@ def series_dtype(s: pd.Series) -> VarType:
 
 
 def numeric_is_continuous(s: pd.Series):
+    """
+    Function that returns True if a numeric pandas series is continuous and False if it is categorical.
+
+    Parameters
+    ----------
+    s : pd.Series
+
+    Returns
+    -------
+    bool
+    """
     # This test could probably be improved
     n_unique = s.nunique()
     return True if n_unique > 5 else False
@@ -82,6 +108,18 @@ def get_callable(path: str):
 
 
 def load_saved_df(path: str) -> Union[pd.DataFrame, None]:
+    """
+    Loads a pandas DataFrame that was saved using pd.to_csv method.
+
+    Parameters
+    ----------
+    path : str
+        Path to the dataframe object
+
+    Returns
+    -------
+    pd.DataFrame or None
+    """
     if os.path.exists(path):
         return pd.read_csv(path, index_col=0)
 

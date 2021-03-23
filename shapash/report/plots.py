@@ -23,6 +23,30 @@ dict_color_palette = {'train': (74/255, 99/255, 138/255, 0.7), 'test': (244/255,
 
 
 def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+    """
+    Returns a matplotlib figure containing the distribution of any kind of feature
+    (continuous, categorical).
+
+    If the feature is categorical and contains too many categories, the smallest
+    categories are grouped into a new 'Other' category so that the graph remains
+    readable.
+
+    The input dataframe should contain the column of interest and a column that is used
+    to distinguish two types of values (ex. 'train' and 'test')
+
+    Parameters
+    ----------
+    df_all : pd.DataFrame
+        The input dataframe that contains the column of interest
+    col : str
+        The column of interest
+    hue : str
+        The column used to distinguish the values (ex. 'train' and 'test')
+
+    Returns
+    -------
+    matplotlib.pyplot.Figure
+    """
     s_dtype = series_dtype(df_all[col])
     if s_dtype == VarType.TYPE_NUM:
         if numeric_is_continuous(df_all[col]):
@@ -38,6 +62,22 @@ def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str) -> plt.Fig
 
 
 def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+    """
+    Returns a matplotlib figure containing the distribution of a continuous feature.
+
+    Parameters
+    ----------
+    df_all : pd.DataFrame
+        The input dataframe that contains the column of interest
+    col : str
+        The column of interest
+    hue : str
+        The column used to distinguish the values (ex. 'train' and 'test')
+
+    Returns
+    -------
+    matplotlib.pyplot.Figure
+    """
     g = sns.displot(df_all, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
                     palette=dict_color_palette)
     g.set_xticklabels(rotation=30)
@@ -56,6 +96,30 @@ def generate_fig_univariate_categorical(
         hue: str,
         nb_cat_max: int = 7,
 ) -> plt.Figure:
+    """
+    Returns a matplotlib figure containing the distribution of a categorical feature.
+
+    If the feature is categorical and contains too many categories, the smallest
+    categories are grouped into a new 'Other' category so that the graph remains
+    readable.
+
+    Parameters
+    ----------
+    df_all : pd.DataFrame
+        The input dataframe that contains the column of interest
+    col : str
+        The column of interest
+    hue : str
+        The column used to distinguish the values (ex. 'train' and 'test')
+    nb_cat_max : int
+        The number max of categories to be displayed. If the number of categories
+        is greater than nb_cat_max then groups smallest categories into a new
+        'Other' category
+
+    Returns
+    -------
+    matplotlib.pyplot.Figure
+    """
     df_cat = df_all.groupby([col, hue]).agg({col: 'count'})\
                    .rename(columns={col: "count"}).reset_index()
     df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby(hue)['count'].transform('sum')
@@ -97,6 +161,10 @@ def generate_fig_univariate_categorical(
 
 
 def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_max: int) -> pd.DataFrame:
+    """
+    Merges categories of column 'col' of df_cat into 'Other' category so that
+    the number of categories is less than nb_cat_max.
+    """
     df_cat_sum_hue = df_cat.groupby([col]).agg({'count': 'sum'}).reset_index()
     list_cat_to_merge = df_cat_sum_hue.sort_values('count', ascending=False)[col].to_list()[nb_cat_max - 1:]
     df_cat_other = df_cat.loc[df_cat[col].isin(list_cat_to_merge)] \
@@ -106,6 +174,21 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_ma
 
 
 def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
+    """
+    Returns a matplotlib figure containing one or two correlation matrix.
+
+    The 'df_train_test' column is used to split the values and the function
+    generates as much correlation matrices as the number of values in this
+    column.
+
+    Parameters
+    ----------
+    df_train_test : pd.DataFrame
+
+    Returns
+    -------
+    matplotlib.pyplot.Figure
+    """
 
     def generate_unique_corr_fig(df: pd.DataFrame, ax: plt.Axes):
         sns.set_theme(style="white")
@@ -137,15 +220,4 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
         )
         ax.set_title("Test")
     fig.suptitle('Correlation matrix', fontsize=20, x=0.45)
-    return fig
-
-
-def generate_scatter_plot_fig(df_train_test: pd.DataFrame):
-    sns.set_theme(style="ticks")
-
-    g = sns.pairplot(df_train_test, hue="data_train_test")
-    fig = g.fig
-    fig.suptitle('Scatter plot matrix', fontsize=20, x=0.45)
-    plt.tight_layout()
-
     return fig

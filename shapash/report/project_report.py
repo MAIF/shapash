@@ -99,11 +99,17 @@ class ProjectReport:
                           x_train_pre.assign(data_train_test="train") if x_train_pre is not None else None])
 
     def display_title_description(self):
+        """
+        Displays title of the report and its description if defined.
+        """
         print_html(f"""<h1 style="text-align:center">{self.title_story}</p> """)
         if self.title_description != '':
             print_html(f'<blockquote class="panel-warning text_cell_render">{self.title_description} </blockquote>')
 
     def display_general_information(self):
+        """
+        Displays general information about the project as defined in the metdata file.
+        """
         if 'general' not in self.metadata.keys():
             logging.info("No general information given. Please complete the metadata file with 'general' key.")
             return
@@ -114,6 +120,9 @@ class ProjectReport:
                 print_md(f"**{k.title()}** : {v}")
 
     def display_dataset_information(self):
+        """
+        Displays information about the dataset used as defined in the metdata file.
+        """
         if 'dataset' not in self.metadata.keys():
             logging.info("No dataset information given. Please complete the metadata file with 'dataset' key.")
             return
@@ -121,6 +130,10 @@ class ProjectReport:
             print_md(f"**{k.title()}** : {v}")
 
     def display_model_information(self):
+        """
+        Displays information about the model used : class name, library name, library version,
+        model parameters, ...
+        """
         print_md(f"**Model used :** {self.explainer.model.__class__.__name__}")
 
         print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
@@ -148,6 +161,22 @@ class ProjectReport:
             univariate_analysis: Optional[bool] = True,
             multivariate_analysis: Optional[bool] = True
     ):
+        """
+        This method performs and displays an exploration of the data given.
+        It allows to compare train and test values for each part of the analysis.
+
+        The parameters of the method allow to filter which part to display or not.
+
+        Parameters
+        ----------
+        global_analysis : bool
+            Whether or not to display the global analysis part.
+        univariate_analysis : bool
+            Whether or not to display the univariate analysis part.
+        multivariate_analysis : bool
+            Whether or not to display the multivariate analysis part.
+
+        """
         if global_analysis:
             print_md("### Global analysis")
             self._display_dataset_analysis_global()
@@ -174,7 +203,13 @@ class ProjectReport:
             names=["Prediction dataset", "Training dataset"]
         )
 
-    def _perform_and_display_analysis_univariate(self, df: pd.DataFrame, col_splitter: str, split_values: list, names: list):
+    def _perform_and_display_analysis_univariate(
+            self,
+            df: pd.DataFrame,
+            col_splitter: str,
+            split_values: list,
+            names: list
+    ):
         n_splits = df[col_splitter].nunique()
         test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]])
         if n_splits > 1:
@@ -218,6 +253,9 @@ class ProjectReport:
             return pd.DataFrame({names[0]: pd.Series(test_stats)})
 
     def display_model_explainability(self):
+        """
+        Displays explainability of the model as computed in SmartPlotter object
+        """
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         print_md("### Global feature importance plot")
         fig = self.explainer.plot.features_importance()
@@ -238,6 +276,13 @@ class ProjectReport:
         print_html(explainability_contrib_template.render(features=explain_contrib_data))
 
     def display_model_performance(self):
+        """
+        Displays the performance of the model. The metrics are computed using the config dict.
+        Metrics should be given as a dict of key, value where the key is the name of the metric
+        and the value is the path (string) to a metric.
+
+        For example : config['metrics'] = {'Mean absolute error': 'sklearn.metrics.mean_absolute_error'}
+        """
         if self.y_test is None:
             logging.info("No labels given for test set. Skipping model performance part")
             return
