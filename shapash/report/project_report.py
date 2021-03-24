@@ -200,7 +200,8 @@ class ProjectReport:
             df=self.df_train_test,
             col_splitter="data_train_test",
             split_values=["test", "train"],
-            names=["Prediction dataset", "Training dataset"]
+            names=["Prediction dataset", "Training dataset"],
+            group_id='univariate'
         )
 
     def _perform_and_display_analysis_univariate(
@@ -208,7 +209,8 @@ class ProjectReport:
             df: pd.DataFrame,
             col_splitter: str,
             split_values: list,
-            names: list
+            names: list,
+            group_id: str
     ):
         n_splits = df[col_splitter].nunique()
         test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]])
@@ -232,7 +234,7 @@ class ProjectReport:
                 'table': df_col_stats.to_html(classes="greyGridTable"),
                 'image': convert_fig_to_html(fig)
             })
-        print_html(univariate_template.render(features=univariate_features_desc))
+        print_html(univariate_template.render(features=univariate_features_desc, groupId=group_id))
 
     def _display_dataset_analysis_multivariate(self):
         print_md("#### Numerical vs Numerical")
@@ -304,7 +306,8 @@ class ProjectReport:
             df=df,
             col_splitter="_dataset",
             split_values=["pred", "true"],
-            names=["Prediction values", "True values"]
+            names=["Prediction values", "True values"],
+            group_id='target-distribution'
         )
 
         if 'metrics' not in self.config.keys():
