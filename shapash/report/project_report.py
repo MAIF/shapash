@@ -2,9 +2,11 @@ from typing import Optional
 import logging
 import sys
 import os
+from numbers import Number
 from datetime import date
 import jinja2
 import pandas as pd
+import numpy as np
 import plotly
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
@@ -14,7 +16,8 @@ from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, print_figure, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig
+from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, \
+    generate_confusion_matrix_plot
 from shapash.report.common import series_dtype, get_callable
 
 logging.basicConfig(level=logging.INFO)
@@ -316,6 +319,25 @@ class ProjectReport:
         print_md("### Metrics")
 
         for metric_name, metric_path in self.config['metrics'].items():
-            metric_fn = get_callable(path=metric_path)
-            print_md(f"**{metric_name} :** {round(metric_fn(y_true, y_pred), 2)}")
-
+            if metric_path in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
+                    metric_name == 'confusion_matrix':
+                print_md(f"**{metric_name} :**")
+                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=y_true, y_pred=y_pred)))
+            else:
+                try:
+                    metric_fn = get_callable(path=metric_path)
+                    res = metric_fn(y_true, y_pred)
+                except Exception as e:
+                    logging.info(f"Could not compute following metric : {metric_path}. \n{e}")
+                    continue
+                if isinstance(res, Number):
+                    print_md(f"**{metric_name} :** {round(res, 2)}")
+                elif isinstance(res, (list, tuple, np.ndarray)):
+                    print_md(f"**{metric_name} :**")
+                    print_html(pd.DataFrame(res).to_html(classes="greyGridTable"))
+                elif isinstance(res, str):
+                    print_md(f"**{metric_name} :**")
+                    print_html(f"<pre>{res}</pre>")
+                else:
+                    logging.info(f"Could not compute following metric : {metric_path}. \n"
+                                 f"Result of type {res} cannot be displayed")

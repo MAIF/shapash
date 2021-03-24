@@ -1,3 +1,4 @@
+from typing import Union
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -17,6 +18,10 @@ col_scale = [(0.204, 0.216, 0.212),
              (1.0, 0.651, 0.067),
              (1.0, 0.482, 0.149),
              (1.0, 0.302, 0.027)]
+
+cmap_diverging = LinearSegmentedColormap.from_list('col_corr', col_scale, N=100)
+
+cmap_gradient = LinearSegmentedColormap.from_list('col_corr', col_scale[4:6], N=100)
 
 dict_color_palette = {'train': (74/255, 99/255, 138/255, 0.7), 'test': (244/255, 192/255, 0),
                       'true': (74/255, 99/255, 138/255, 0.7), 'pred': (244/255, 192/255, 0)}
@@ -194,10 +199,7 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
         sns.set_theme(style="white")
         corr = df.corr()
         mask = np.triu(np.ones_like(corr, dtype=bool))
-        cmap = LinearSegmentedColormap.from_list('col_corr',
-                                                 col_scale,
-                                                 N=100)
-        sns.heatmap(corr, mask=mask, cmap=cmap, center=0, ax=ax,
+        sns.heatmap(corr, mask=mask, cmap=cmap_diverging, center=0, ax=ax,
                     square=True, linewidths=.5, cbar_kws={"shrink": .5})
 
     if df_train_test['data_train_test'].nunique() > 1:
@@ -220,4 +222,27 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
         )
         ax.set_title("Test")
     fig.suptitle('Correlation matrix', fontsize=20, x=0.45)
+    return fig
+
+
+def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[np.array, list]) -> plt.Figure:
+    """
+    Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
+    y_pred parameters.
+
+
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth (correct) target values.
+    y_pred : array-like
+        Estimated targets as returned by a classifier.
+
+    Returns
+    -------
+    matplotlib.pyplot.Figure
+    """
+    df_cm = pd.crosstab(y_true, y_pred, rownames=['Actual'], colnames=['Predicted'])
+    fig, ax = plt.subplots(figsize=(7, 4))
+    sns.heatmap(df_cm, ax=ax, annot=True, cmap=cmap_gradient)
     return fig
