@@ -154,7 +154,7 @@ def generate_fig_univariate_categorical(
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
-    new_labels = [truncate_str(i.get_text(), maxlen=15) for i in ax.yaxis.get_ticklabels()]
+    new_labels = [truncate_str(i.get_text(), maxlen=45) for i in ax.yaxis.get_ticklabels()]
     ax.yaxis.set_ticklabels(new_labels)
 
     return fig
