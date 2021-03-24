@@ -188,10 +188,6 @@ class ProjectReport:
             print_md("### Univariate analysis")
             self._display_dataset_analysis_univariate()
 
-        if multivariate_analysis:
-            print_md("### Multivariate analysis")
-            self._display_dataset_analysis_multivariate()
-
     def _display_dataset_analysis_global(self):
         df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
                                                train_stats=perform_global_dataframe_analysis(self.x_train_pre),
@@ -238,11 +234,6 @@ class ProjectReport:
                 'image': convert_fig_to_html(fig)
             })
         print_html(univariate_template.render(features=univariate_features_desc, groupId=group_id))
-
-    def _display_dataset_analysis_multivariate(self):
-        print_md("#### Numerical vs Numerical")
-        fig = generate_correlation_matrix_fig(df_train_test=self.df_train_test)
-        print_figure(fig=fig)
 
     @staticmethod
     def _stats_to_table(test_stats: dict,
