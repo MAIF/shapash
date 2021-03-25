@@ -59,7 +59,7 @@ class TestGeneration(unittest.TestCase):
         """
         Test int and continuous series
         """
-        s = pd.Series([10, 20, 30, 40, 50, 0])
+        s = pd.Series(list(range(50)))
 
         assert numeric_is_continuous(s) is True
 
@@ -67,7 +67,7 @@ class TestGeneration(unittest.TestCase):
         """
         Test float and continuous series
         """
-        s = pd.Series([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+        s = pd.Series(np.linspace(0, 1, 100))
 
         assert numeric_is_continuous(s) is True
 

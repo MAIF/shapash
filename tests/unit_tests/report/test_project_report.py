@@ -115,39 +115,8 @@ class TestGeneration(unittest.TestCase):
             explainer=self.xpl,
             metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
-        report.display_general_information()
+        report.display_metadata_information()
         self.assertTrue(mock_print_html.called)
-
-    @patch('shapash.report.project_report.logging')
-    def test_display_general_information_2(self, mock_logging):
-        report = ProjectReport(
-            explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
-        )
-        del report.metadata['general']
-
-        report.display_general_information()
-        mock_logging.info.assert_called_once()
-
-    @patch('shapash.report.project_report.print_md')
-    def test_display_dataset_information_1(self, mock_print_md):
-        report = ProjectReport(
-            explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
-        )
-        report.display_dataset_information()
-        self.assertTrue(mock_print_md.called)
-
-    @patch('shapash.report.project_report.logging')
-    def test_display_dataset_information_2(self, mock_logging):
-        report = ProjectReport(
-            explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
-        )
-        del report.metadata['dataset']
-
-        report.display_dataset_information()
-        mock_logging.info.assert_called_once()
 
     @patch('shapash.report.project_report.print_md')
     def test_display_model_information_1(self, mock_print_md):

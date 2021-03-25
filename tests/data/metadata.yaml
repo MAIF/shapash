@@ -1,14 +1,26 @@
-
-
-general:
-  authors: Benjamin Dupont, Bertand Martin
+General information:
+  version: 0.7
+  name: House Prices Prediction Project
+  purpose: Predicting the sale price of houses
   date: auto
-  informations: This project is a tutorial. The goal is to illustrate what information can be stored in this example report. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-  additional: This field is just a test for additional info output. You can add as many field as you want.
+  contributors: Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre
+  description: This work is a data science project that tries to predict the sale of houses based on 79 explanatory variables. It was designed inside the data science team at X. and improved since the beggining of the project in 20019. The model was put into production since February 2021.
+  source code: https://github.com/MAIF/shapash/tree/master/tutorial
 
-dataset:
-  path: ./home/Data
-  perimeter: All clients that do not have any saving account
-  depth: 3 years
-  target variable: fraud
-  target description: The target variable allows to identify fraudulent credit card transactions. `'fraud=1'` means the transaction was fraudulent. Otherwise it was not.
+Dataset information:
+  path: https://www.kaggle.com/c/house-prices-advanced-regression-techniques/
+  origin: The Assessor’s Office
+  description: the sale of individual residential property in Ames, Iowa
+  depth: from 2006 to 2010
+  perimeter: only residential sales
+  target variable: SalePrice
+  target description: The property's sale price in dollars
+
+Data preparation:
+  variable filetring: All variables that required special knowledge or previous calculations for their use were removed
+  individual filtering: only the most recent sales data on any property were kept (for houses that were sold multiple times during this period)
+  missing values: were replaced by 0
+
+Features engineering:
+  Created variables: No feature was created. All features are directly taken from the kaggle dataset
+  Transformed variables: Categorical features were transformed using an ordinal encoder

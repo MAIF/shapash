@@ -26,8 +26,8 @@ class TestGeneration(unittest.TestCase):
     @patch('shapash.report.plots.generate_fig_univariate_categorical')
     def test_generate_fig_univariate_2(self, mock_plot_cat, mock_plot_cont):
         df = pd.DataFrame({
-            "int_data": [10, 20, 30, 40, 50, 0],
-            "data_train_test": ['train', 'train', 'train', 'train', 'test', 'test']
+            "int_data": list(range(50)),
+            "data_train_test": ['train', 'train', 'train', 'train', 'test']*10
         })
 
         generate_fig_univariate(df, 'int_data', 'data_train_test')

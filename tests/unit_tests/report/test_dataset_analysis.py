@@ -31,34 +31,34 @@ class TestGeneration(unittest.TestCase):
 
     def test_perform_univariate_dataframe_analysis_1(self):
         df = pd.DataFrame({
-            "string_data": ["a", "b", "c", "d", "e", np.nan],
-            "bool_data": [True, True, False, False, False, np.nan],
-            "int_continuous_data": [10, 20, 30, 40, 50, 0],
-            "float_continuous_data": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-            "int_cat_data": [1, 1, 1, 2, 2, 2],
-            "float_cat_data": [0.2, 0.2, 0.2, 0.6, 0.6, 0.6]
+            "string_data": ["a", "b", "c", "d", "e", np.nan]*10,
+            "bool_data": [True, True, False, False, False, np.nan]*10,
+            "int_continuous_data": list(range(60)),
+            "float_continuous_data": np.linspace(0, 2, 60),
+            "int_cat_data": [1, 1, 1, 2, 2, 2]*10,
+            "float_cat_data": [0.2, 0.2, 0.2, 0.6, 0.6, 0.6]*10
         })
         d = perform_univariate_dataframe_analysis(df)
         expected_d = {
             'int_continuous_data': {
-                'count': 6,
-                'mean': 25,
-                'std': 18.71,
+                'count': 60,
+                'mean': 29.5,
+                'std': 17.46,
                 'min': 0,
-                '25%': 12.5,
-                '50%': 25.0,
-                '75%': 37.5,
-                'max': 50
+                '25%': 14.75,
+                '50%': 29.50,
+                '75%': 44.25,
+                'max': 59
             },
             'float_continuous_data': {
-                'count': 6,
-                'mean': 0.35,
-                'std': 0.19,
-                'min': 0.1,
-                '25%': 0.23,
-                '50%': 0.35,
-                '75%': 0.48,
-                'max': 0.6
+                'count': 60,
+                'mean': 1,
+                'std': 0.59,
+                'min': 0,
+                '25%': 0.5,
+                '50%': 1,
+                '75%': 1.5,
+                'max': 2
             },
             'int_cat_data': {
                 'distinct values': 2,
@@ -70,11 +70,11 @@ class TestGeneration(unittest.TestCase):
             },
             'string_data': {
                 'distinct values': 5,
-                'missing values': 1
+                'missing values': 10
             },
             'bool_data': {
                 'distinct values': 2,
-                'missing values': 1
+                'missing values': 10
             }
         }
         TestCase().assertDictEqual(d, expected_d)
