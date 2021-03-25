@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+import os
 import numpy as np
 import pandas as pd
 import catboost as cb
@@ -9,6 +10,8 @@ from shapash.report.project_report import ProjectReport
 
 expected_attrs = ['explainer', 'metadata', 'x_train_init', 'y_test', 'x_pred', 'config',
                   'col_names', 'df_train_test', 'title_story', 'title_description']
+
+current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class TestGeneration(unittest.TestCase):
@@ -24,18 +27,18 @@ class TestGeneration(unittest.TestCase):
         self.xpl.compile(model=self.clf, x=self.df[['x1', 'x2']])
         self.report1 = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
         )
         self.report2 = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
         )
 
     def test_init_1(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
         )
         for attr in expected_attrs:
             assert hasattr(report, attr)
@@ -43,7 +46,7 @@ class TestGeneration(unittest.TestCase):
     def test_init_2(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
         )
         for attr in expected_attrs:
@@ -52,7 +55,7 @@ class TestGeneration(unittest.TestCase):
     def test_init_3(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             y_test=self.df['y']
         )
@@ -62,7 +65,7 @@ class TestGeneration(unittest.TestCase):
     def test_init_4(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             y_test=self.df['y'],
             config={}
@@ -73,7 +76,7 @@ class TestGeneration(unittest.TestCase):
     def test_init_5(self):
         ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             y_test=self.df['y'],
             config={'metrics': {'mse': 'sklearn.metrics.mean_squared_error'}}
@@ -82,7 +85,7 @@ class TestGeneration(unittest.TestCase):
     def test_init_6(self):
         self.assertRaises(ValueError, ProjectReport,
             self.xpl,
-            '/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            os.path.join(current_path, '../../data/metadata.yaml'),
             self.df[['x1', 'x2']],
             self.df['y'],
             {'metrics': ['sklearn.metrics.mean_squared_error']}
@@ -97,7 +100,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_title_description_2(self, mock_print_html):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             y_test=self.df['y'],
             config={'title_story': "My project report",
@@ -110,7 +113,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_general_information_1(self, mock_print_html):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml'
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
         report.display_general_information()
         self.assertTrue(mock_print_html.called)
@@ -119,7 +122,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_general_information_2(self, mock_logging):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml'
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
         del report.metadata['general']
 
@@ -130,7 +133,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_dataset_information_1(self, mock_print_md):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml'
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
         report.display_dataset_information()
         self.assertTrue(mock_print_md.called)
@@ -139,7 +142,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_dataset_information_2(self, mock_logging):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml'
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
         del report.metadata['dataset']
 
@@ -150,7 +153,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_model_information_1(self, mock_print_md):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml'
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
         report.display_model_information()
         self.assertTrue(mock_print_md.called)
@@ -158,7 +161,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_dataset_analysis_1(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
         )
         report.display_dataset_analysis()
@@ -166,14 +169,14 @@ class TestGeneration(unittest.TestCase):
     def test_display_dataset_analysis_2(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
         )
         report.display_dataset_analysis()
 
     def test_display_model_explainability(self):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
         )
         report.display_model_explainability()
 
@@ -184,7 +187,7 @@ class TestGeneration(unittest.TestCase):
         """
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
         )
         report.display_model_performance()
         mock_logging.info.assert_called_once()
@@ -193,7 +196,7 @@ class TestGeneration(unittest.TestCase):
     def test_display_model_performance_2(self, mock_logging):
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             y_test=self.df['y'],
             config=dict(metrics={'mse': 'sklearn.metrics.mean_squared_error'})
         )
@@ -207,7 +210,7 @@ class TestGeneration(unittest.TestCase):
         """
         report = ProjectReport(
             explainer=self.xpl,
-            metadata_file='/Users/thibaud/Documents/missions/shapash/shapash/tests/data/metadata.yaml',
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
             y_test=self.df['y'],
         )
         report.display_model_performance()
