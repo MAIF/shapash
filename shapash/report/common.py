@@ -57,7 +57,7 @@ def numeric_is_continuous(s: pd.Series):
     """
     # This test could probably be improved
     n_unique = s.nunique()
-    return True if n_unique > 5 else False
+    return True if n_unique > 15 else False
 
 
 def get_callable(path: str):
