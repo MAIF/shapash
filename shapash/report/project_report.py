@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Tuple
 import logging
 import sys
 import os
@@ -51,6 +51,8 @@ class ProjectReport:
     x_train : pd.DataFrame
         DataFrame used for training the model.
     y_test : pd.Series or pd.DataFrame
+        Series of labels in the train set.
+    y_test : pd.Series or pd.DataFrame
         Series of labels in the test set.
     config : dict, optional
         Configuration options for the report.
@@ -61,6 +63,7 @@ class ProjectReport:
             explainer: SmartExplainer,
             metadata_file: str,
             x_train: Optional[pd.DataFrame] = None,
+            y_train: Optional[pd.DataFrame] = None,
             y_test: Optional[pd.DataFrame] = None,
             config: Optional[dict] = None
     ):
@@ -73,11 +76,14 @@ class ProjectReport:
                 self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
         else:
             self.x_train_pre = None
-        self.y_test = y_test
         self.x_pred = self.explainer.x_pred
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
-        self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
+        self.df_train_test = self._create_train_test_df(test=self.x_pred, train=self.x_train_pre)
+        self.y_pred = self.explainer.model.predict(self.explainer.x_init)
+        self.y_test, target_name_test = self._get_values_and_name(y_test, 'target')
+        self.y_train, target_name_train = self._get_values_and_name(y_train, 'target')
+        self.target_name = target_name_train or target_name_test
 
         if 'title_story' in self.config.keys():
             self.title_story = config['title_story']
@@ -95,11 +101,35 @@ class ProjectReport:
                              f"but an object of type {type(self.config['metrics'])} was found")
 
     @staticmethod
-    def _create_train_test_df(x_pred: pd.DataFrame, x_train_pre: Optional[pd.DataFrame]) -> pd.DataFrame:
-        if 'data_train_test' in x_pred.columns:
+    def _get_values_and_name(
+            y: Optional[Union[pd.DataFrame, pd.Series, list]],
+            default_name: str
+    ) -> Union[Tuple[list, str], Tuple[None, None]]:
+        if y is None:
+            return None, None
+        elif isinstance(y, pd.DataFrame):
+            assert len(y.columns) == 1, "Number of columns found is greater than 1"
+            name = y.columns[0]
+            values = y.values[:, 0]
+        elif isinstance(y, pd.Series):
+            name = y.name
+            values = y.values
+        elif isinstance(y, list):
+            name = default_name
+            values = y
+        else:
+            raise ValueError(f"Cannot process following type : {type(y)}")
+        return values, name
+
+    @staticmethod
+    def _create_train_test_df(test: Optional[pd.DataFrame], train: Optional[pd.DataFrame]) -> Union[pd.DataFrame, None]:
+        if (test is not None and 'data_train_test' in test.columns) or \
+                (train is not None and 'data_train_test' in train.columns):
             raise ValueError('"data_train_test" column must be renamed as it is used in ProjectReport')
-        return pd.concat([x_pred.assign(data_train_test="test"),
-                          x_train_pre.assign(data_train_test="train") if x_train_pre is not None else None])
+        if test is None and train is None:
+            return None
+        return pd.concat([test.assign(data_train_test="test") if test is not None else None,
+                          train.assign(data_train_test="train") if train is not None else None])
 
     def display_title_description(self):
         """
@@ -162,7 +192,7 @@ class ProjectReport:
             self,
             global_analysis: Optional[bool] = True,
             univariate_analysis: Optional[bool] = True,
-            multivariate_analysis: Optional[bool] = True
+            target_analysis: Optional[bool] = True
     ):
         """
         This method performs and displays an exploration of the data given.
@@ -176,8 +206,9 @@ class ProjectReport:
             Whether or not to display the global analysis part.
         univariate_analysis : bool
             Whether or not to display the univariate analysis part.
-        multivariate_analysis : bool
-            Whether or not to display the multivariate analysis part.
+        target_analysis : bool
+            Whether or not to display the target analysis part that plots
+            the distribution of the target variable.
 
         """
         if global_analysis:
@@ -186,22 +217,36 @@ class ProjectReport:
 
         if univariate_analysis:
             print_md("### Univariate analysis")
-            self._display_dataset_analysis_univariate()
+            self._perform_and_display_analysis_univariate(
+                df=self.df_train_test,
+                col_splitter="data_train_test",
+                split_values=["test", "train"],
+                names=["Prediction dataset", "Training dataset"],
+                group_id='univariate'
+            )
+
+        df_target = self._create_train_test_df(
+            test=pd.DataFrame({self.target_name: self.y_test},
+                              index=range(len(self.y_test))) if self.y_test is not None else None,
+            train=pd.DataFrame({self.target_name: self.y_train},
+                               index=range(len(self.y_train))) if self.y_train is not None else None
+        )
+        if df_target is not None:
+            if target_analysis:
+                print_md("### Target analysis")
+                self._perform_and_display_analysis_univariate(
+                    df=df_target,
+                    col_splitter="data_train_test",
+                    split_values=["test", "train"],
+                    names=["Prediction dataset", "Training dataset"],
+                    group_id='target'
+                )
 
     def _display_dataset_analysis_global(self):
         df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
                                                train_stats=perform_global_dataframe_analysis(self.x_train_pre),
                                                names=["Prediction dataset", "Training dataset"])
         print_html(df_stats_global.to_html(classes="greyGridTable"))
-
-    def _display_dataset_analysis_univariate(self):
-        self._perform_and_display_analysis_univariate(
-            df=self.df_train_test,
-            col_splitter="data_train_test",
-            split_values=["test", "train"],
-            names=["Prediction dataset", "Training dataset"],
-            group_id='univariate'
-        )
 
     def _perform_and_display_analysis_univariate(
             self,
@@ -284,18 +329,9 @@ class ProjectReport:
             return
 
         print_md("### Univariate analysis of target variable")
-        y_pred = self.explainer.model.predict(self.explainer.x_init)
-        if isinstance(self.y_test, pd.DataFrame):
-            col_name = self.y_test.columns[0]
-            y_true = self.y_test.values[:, 0]
-        elif isinstance(self.y_test, pd.Series):
-            col_name = self.y_test.name
-            y_true = self.y_test.values
-        else:
-            col_name = "target"
-            y_true = self.y_test
-        df = pd.concat([pd.DataFrame({col_name: y_pred}).assign(_dataset="pred"),
-                        pd.DataFrame({col_name: y_true}).assign(_dataset="true") if y_true is not None else None])
+        df = pd.concat([pd.DataFrame({self.target_name: self.y_pred}).assign(_dataset="pred"),
+                        pd.DataFrame({self.target_name: self.y_test}).assign(_dataset="true")
+                        if self.y_test is not None else None])
         self._perform_and_display_analysis_univariate(
             df=df,
             col_splitter="_dataset",
@@ -313,11 +349,11 @@ class ProjectReport:
             if metric_path in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
                     metric_name == 'confusion_matrix':
                 print_md(f"**{metric_name} :**")
-                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=y_true, y_pred=y_pred)))
+                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=self.y_test, y_pred=self.y_pred)))
             else:
                 try:
                     metric_fn = get_callable(path=metric_path)
-                    res = metric_fn(y_true, y_pred)
+                    res = metric_fn(self.y_test, self.y_pred)
                 except Exception as e:
                     logging.info(f"Could not compute following metric : {metric_path}. \n{e}")
                     continue
