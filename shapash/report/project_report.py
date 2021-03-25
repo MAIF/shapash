@@ -150,6 +150,7 @@ class ProjectReport:
                     print_md(f"**{k.title()}** : {date.today()}")
                 else:
                     print_md(f"**{k.title()}** : {v}")
+            print_md('---')
 
     def display_model_information(self):
         """
@@ -176,6 +177,7 @@ class ProjectReport:
             rows2=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
                    for k, v in list(model_params.items())[len(model_params)//2:]]  # Getting 2nd half of the parameters
         ))
+        print_md('---')
 
     def display_dataset_analysis(
             self,
@@ -230,6 +232,7 @@ class ProjectReport:
                     names=["Prediction dataset", "Training dataset"],
                     group_id='target'
                 )
+        print_md('---')
 
     def _display_dataset_analysis_global(self):
         df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
@@ -304,6 +307,7 @@ class ProjectReport:
                 'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
             })
         print_html(explainability_contrib_template.render(features=explain_contrib_data))
+        print_md('---')
 
     def display_model_performance(self):
         """
@@ -357,3 +361,4 @@ class ProjectReport:
                 else:
                     logging.info(f"Could not compute following metric : {metric_path}. \n"
                                  f"Result of type {res} cannot be displayed")
+        print_md('---')
