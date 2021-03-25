@@ -230,7 +230,6 @@ def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[
     Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
     y_pred parameters.
 
-
     Parameters
     ----------
     y_true : array-like
@@ -244,5 +243,5 @@ def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[
     """
     df_cm = pd.crosstab(y_true, y_pred, rownames=['Actual'], colnames=['Predicted'])
     fig, ax = plt.subplots(figsize=(7, 4))
-    sns.heatmap(df_cm, ax=ax, annot=True, cmap=cmap_gradient)
+    sns.heatmap(df_cm, ax=ax, annot=True, cmap=cmap_gradient, fmt='g')
     return fig
