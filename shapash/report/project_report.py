@@ -173,7 +173,7 @@ class ProjectReport:
 
         for name, module in sorted(sys.modules.items()):
             if hasattr(module, '__version__') \
-                    and self.explainer.model.__class__.__module__.split('.')[0] in module.__name__:
+                    and self.explainer.model.__class__.__module__.split('.')[0] == module.__name__:
                 print_md(f"**Library version :** {module.__version__}")
 
         print_md("**Model parameters :** ")
