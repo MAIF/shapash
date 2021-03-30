@@ -105,6 +105,24 @@ class ProjectReport:
             y: Optional[Union[pd.DataFrame, pd.Series, list]],
             default_name: str
     ) -> Union[Tuple[list, str], Tuple[None, None]]:
+        """
+        Extracts vales and column name from a Pandas Series, DataFrame, or assign a default
+        name if y is a list of values.
+
+        Parameters
+        ----------
+        y : list or pd.Series or pd.DataFrame
+            Column we want to extract the name and values
+        default_name :
+            Name assigned if no name was found for y
+
+        Returns
+        -------
+        values : list
+            list of values of y
+        name : str
+            name of y
+        """
         if y is None:
             return None, None
         elif isinstance(y, pd.DataFrame):
@@ -123,6 +141,23 @@ class ProjectReport:
 
     @staticmethod
     def _create_train_test_df(test: Optional[pd.DataFrame], train: Optional[pd.DataFrame]) -> Union[pd.DataFrame, None]:
+        """
+        Creates a DataFrame that contains train and test dataset with the column 'data_train_test'
+        allowing to distinguish the values.
+
+        Parameters
+        ----------
+        test : pd.DataFrame, optional
+            test dataframe
+        train : pd.DataFrame, optional
+            train dataframe
+
+        Returns
+        -------
+        pd.DataFrame
+            The concatenation of train and test as a dataframe containing train and test values with
+            a new 'data_train_test' column allowing to distinguish the values.
+        """
         if (test is not None and 'data_train_test' in test.columns) or \
                 (train is not None and 'data_train_test' in train.columns):
             raise ValueError('"data_train_test" column must be renamed as it is used in ProjectReport')
