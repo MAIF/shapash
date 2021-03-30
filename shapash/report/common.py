@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 from enum import Enum
 
 import pandas as pd
@@ -38,7 +38,10 @@ def series_dtype(s: pd.Series) -> VarType:
     elif is_categorical_dtype(s):
         return VarType.TYPE_CAT
     elif is_numeric_dtype(s):
-        return VarType.TYPE_NUM
+        if numeric_is_continuous(s):
+            return VarType.TYPE_NUM
+        else:
+            return VarType.TYPE_CAT
     else:
         return VarType.TYPE_UNSUPPORTED
 
@@ -58,6 +61,24 @@ def numeric_is_continuous(s: pd.Series):
     # This test could probably be improved
     n_unique = s.nunique()
     return True if n_unique > 15 else False
+
+
+def compute_col_types(df_all: Optional[pd.DataFrame]) -> Optional[dict]:
+    """
+    Computes the type of each column and stores the result in a dict.
+
+    Parameters
+    ----------
+    df_all : pd.DataFrame, optional
+
+    Returns
+    -------
+    col_types : dict
+        The types of each column
+    """
+    if df_all is None:
+        return {}
+    return {col: series_dtype(df_all[col]) for col in df_all.columns}
 
 
 def get_callable(path: str):

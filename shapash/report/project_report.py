@@ -18,7 +18,7 @@ from shapash.report.visualisation import print_md, print_html, print_css_style, 
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, \
     generate_confusion_matrix_plot
-from shapash.report.common import series_dtype, get_callable
+from shapash.report.common import series_dtype, get_callable, compute_col_types
 
 logging.basicConfig(level=logging.INFO)
 
@@ -283,15 +283,18 @@ class ProjectReport:
             names: list,
             group_id: str
     ):
+        col_types = compute_col_types(df)
         n_splits = df[col_splitter].nunique()
-        test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]])
+        test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]],
+                                                                      col_types=col_types)
         if n_splits > 1:
-            train_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[1]])
+            train_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[1]],
+                                                                           col_types=col_types)
 
         univariate_template = template_env.get_template("univariate.html")
         univariate_features_desc = list()
         for col in df.drop(col_splitter, axis=1).columns:
-            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter)
+            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col])
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,

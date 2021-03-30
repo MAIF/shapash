@@ -27,7 +27,7 @@ dict_color_palette = {'train': (74/255, 99/255, 138/255, 0.7), 'test': (244/255,
                       'true': (74/255, 99/255, 138/255, 0.7), 'pred': (244/255, 192/255, 0)}
 
 
-def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str, type: VarType) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of any kind of feature
     (continuous, categorical).
@@ -47,22 +47,19 @@ def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str) -> plt.Fig
         The column of interest
     hue : str
         The column used to distinguish the values (ex. 'train' and 'test')
+    type: str
+        The type of the series ('continous' or 'categorical')
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
-    s_dtype = series_dtype(df_all[col])
-    if s_dtype == VarType.TYPE_NUM:
-        if numeric_is_continuous(df_all[col]):
-            fig = generate_fig_univariate_continuous(df_all, col, hue=hue)
-        else:
-            fig = generate_fig_univariate_categorical(df_all, col, hue=hue)
-    elif s_dtype == VarType.TYPE_CAT:
+    if type == VarType.TYPE_NUM:
+        fig = generate_fig_univariate_continuous(df_all, col, hue=hue)
+    elif type == VarType.TYPE_CAT:
         fig = generate_fig_univariate_categorical(df_all, col, hue=hue)
     else:
-        fig = plt.Figure()
-
+        raise NotImplemented("Series dtype not supported")
     return fig
 
 

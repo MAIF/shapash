@@ -27,7 +27,7 @@ class TestCommon(unittest.TestCase):
         """
         Test int and continuous series
         """
-        s = pd.Series([10, 20, 30, 40, 50, 0])
+        s = pd.Series(list(range(50)))
 
         assert series_dtype(s) == VarType.TYPE_NUM
 
@@ -35,7 +35,7 @@ class TestCommon(unittest.TestCase):
         """
         Test float and continuous series
         """
-        s = pd.Series([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+        s = pd.Series(np.linspace(0, 3, 50))
 
         assert series_dtype(s) == VarType.TYPE_NUM
 
@@ -45,7 +45,7 @@ class TestCommon(unittest.TestCase):
         """
         s = pd.Series([1, 1, 1, 2, 2, 2])
 
-        assert series_dtype(s) == VarType.TYPE_NUM
+        assert series_dtype(s) == VarType.TYPE_CAT
 
     def test_series_dtype_int_6(self):
         """
@@ -53,7 +53,7 @@ class TestCommon(unittest.TestCase):
         """
         s = pd.Series([0.2, 0.2, 0.2, 0.6, 0.6, 0.6])
 
-        assert series_dtype(s) == VarType.TYPE_NUM
+        assert series_dtype(s) == VarType.TYPE_CAT
 
     def test_numeric_is_continuous_1(self):
         """

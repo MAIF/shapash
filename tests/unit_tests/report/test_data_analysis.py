@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
+from shapash.report.common import compute_col_types
 
 
 class TestDataAnalysis(unittest.TestCase):
@@ -38,7 +39,7 @@ class TestDataAnalysis(unittest.TestCase):
             "int_cat_data": [1, 1, 1, 2, 2, 2]*10,
             "float_cat_data": [0.2, 0.2, 0.2, 0.6, 0.6, 0.6]*10
         })
-        d = perform_univariate_dataframe_analysis(df)
+        d = perform_univariate_dataframe_analysis(df, col_types=compute_col_types(df))
         expected_d = {
             'int_continuous_data': {
                 'count': 60,
@@ -81,5 +82,5 @@ class TestDataAnalysis(unittest.TestCase):
 
     def test_perform_univariate_dataframe_analysis_2(self):
         df = None
-        d = perform_univariate_dataframe_analysis(df)
+        d = perform_univariate_dataframe_analysis(df, col_types=compute_col_types(df))
         assert d == {}

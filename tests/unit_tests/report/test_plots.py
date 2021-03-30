@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from shapash.report.plots import generate_fig_univariate, generate_fig_univariate_continuous, \
     generate_fig_univariate_categorical
+from shapash.report.common import VarType
 
 
 class TestPlots(unittest.TestCase):
@@ -18,7 +19,7 @@ class TestPlots(unittest.TestCase):
             "data_train_test": ['train', 'train', 'train', 'train', 'test', 'test']
         })
 
-        generate_fig_univariate(df, 'string_data', 'data_train_test')
+        generate_fig_univariate(df, 'string_data', 'data_train_test', type=VarType.TYPE_CAT)
         mock_plot_cat.assert_called_once()
         self.assertEqual(mock_plot_cont.call_count, 0)
 
@@ -30,7 +31,7 @@ class TestPlots(unittest.TestCase):
             "data_train_test": ['train', 'train', 'train', 'train', 'test']*10
         })
 
-        generate_fig_univariate(df, 'int_data', 'data_train_test')
+        generate_fig_univariate(df, 'int_data', 'data_train_test', type=VarType.TYPE_NUM)
         mock_plot_cont.assert_called_once()
         self.assertEqual(mock_plot_cat.call_count, 0)
 
@@ -42,7 +43,7 @@ class TestPlots(unittest.TestCase):
             "data_train_test": ['train', 'train', 'train', 'train', 'test', 'test']
         })
 
-        generate_fig_univariate(df, 'int_cat_data', 'data_train_test')
+        generate_fig_univariate(df, 'int_cat_data', 'data_train_test', type=VarType.TYPE_CAT)
         mock_plot_cat.assert_called_once()
         self.assertEqual(mock_plot_cont.call_count, 0)
 

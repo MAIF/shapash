@@ -40,7 +40,7 @@ def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
     return global_d
 
 
-def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
+def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame], col_types: dict) -> dict:
     """
     Returns a python dict containing information about each column of a pandas DataFrame.
     The computed information depends on the type of the column.
@@ -49,6 +49,8 @@ def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
     ----------
     df : pd.DataFrame
         The dataframe on which the analysis will be performed
+    col_types : dict
+        Dict of types for each column
 
     Returns
     -------
@@ -59,8 +61,7 @@ def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
         return dict()
     d = df.describe().to_dict()
     for col in df.columns:
-        if series_dtype(df[col]) == VarType.TYPE_CAT \
-                or (series_dtype(df[col]) == VarType.TYPE_NUM and not numeric_is_continuous(df[col])):
+        if col_types[col] == VarType.TYPE_CAT:
             d[col] = {
                 'distinct values': df[col].nunique(),
                 'missing values': df[col].isna().sum()
