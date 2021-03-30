@@ -1054,8 +1054,9 @@ class SmartExplainer:
 
         tmp_dir_path = tempfile.mkdtemp()
 
-        assert hasattr(self, 'model'), "Explainer object was not compiled. Please compile the explainer " \
-                                       "object using .compile(...) method before generating the report."
+        if not hasattr(self, 'model'):
+            raise AssertionError("Explainer object was not compiled. Please compile the explainer "
+                                 "object using .compile(...) method before generating the report.")
 
         execute_report(working_dir=tmp_dir_path, explainer=self, metadata_file=metadata_file,
                        x_train=x_train, y_train=y_train, y_test=y_test, config=config, notebook_path=notebook_path)
