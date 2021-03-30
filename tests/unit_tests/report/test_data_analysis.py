@@ -20,7 +20,7 @@ class TestDataAnalysis(unittest.TestCase):
             'number of features': 3,
             'number of observations': 6,
             'missing values': 2,
-            '% missing values': 1 / 9,
+            '% missing values': 0.111,
         }
         TestCase().assertDictEqual(d, expected_d)
 
@@ -43,17 +43,17 @@ class TestDataAnalysis(unittest.TestCase):
             'int_continuous_data': {
                 'count': 60,
                 'mean': 29.5,
-                'std': 17.46,
+                'std': 17.5,
                 'min': 0,
-                '25%': 14.75,
-                '50%': 29.50,
-                '75%': 44.25,
+                '25%': 14.8,
+                '50%': 29.5,
+                '75%': 44.2,
                 'max': 59
             },
             'float_continuous_data': {
                 'count': 60,
                 'mean': 1,
-                'std': 0.59,
+                'std': 0.592,
                 'min': 0,
                 '25%': 0.5,
                 '50%': 1,

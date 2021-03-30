@@ -3,6 +3,7 @@ from typing import Optional
 import pandas as pd
 
 from shapash.report.common import VarType, series_dtype, numeric_is_continuous
+from shapash.webapp.utils.utils import round_to_k
 
 
 def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
@@ -30,6 +31,12 @@ def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
         '% missing values': missing_values / (df.shape[0] * df.shape[1]),
     }
 
+    for stat in global_d.keys():
+        if stat == 'number of observations':
+            global_d[stat] = int(global_d[stat])  # Keeping the exact number
+        elif isinstance(global_d[stat], float):
+            global_d[stat] = round_to_k(global_d[stat], 3)
+
     return global_d
 
 
@@ -50,7 +57,7 @@ def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
     """
     if df is None:
         return dict()
-    d = df.describe().round(2).to_dict()
+    d = df.describe().to_dict()
     for col in df.columns:
         if series_dtype(df[col]) == VarType.TYPE_CAT \
                 or (series_dtype(df[col]) == VarType.TYPE_NUM and not numeric_is_continuous(df[col])):
@@ -58,6 +65,13 @@ def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
                 'distinct values': df[col].nunique(),
                 'missing values': df[col].isna().sum()
             }
+
+    for col in d.keys():
+        for stat in d[col].keys():
+            if stat in ['count', 'distinct values']:
+                d[col][stat] = int(d[col][stat])  # Keeping the exact number here
+            elif isinstance(d[col][stat], float):
+                d[col][stat] = round_to_k(d[col][stat], 3)  # Rounding to 3 important figures
 
     return d
 
