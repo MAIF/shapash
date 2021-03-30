@@ -16,7 +16,7 @@ import random
 import numpy as np
 import re
 from math import log10
-from shapash.webapp.utils.utils import apply_filter, check_row, round_to_1
+from shapash.webapp.utils.utils import apply_filter, check_row, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
 
@@ -77,12 +77,12 @@ class SmartApp:
         if self.explainer._case == 'classification':
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, 'num')[1]
             self.selected_feature = self.explainer.features_imp[-1].idxmax()
-            self.max_threshold = int(max([x.applymap(lambda x: round_to_1(x)).max().max()
+            self.max_threshold = int(max([x.applymap(lambda x: round_to_k(x, k=1)).max().max()
                                           for x in self.explainer.contributions]))
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_1(x)).max().max())
+            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_k(x, k=1)).max().max())
         self.list_index = []
         self.subset = None
 
