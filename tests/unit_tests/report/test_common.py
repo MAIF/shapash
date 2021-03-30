@@ -5,7 +5,7 @@ import pandas as pd
 from shapash.report.common import VarType, series_dtype, numeric_is_continuous, get_callable
 
 
-class TestGeneration(unittest.TestCase):
+class TestCommon(unittest.TestCase):
 
     def test_series_dtype_1(self):
         """

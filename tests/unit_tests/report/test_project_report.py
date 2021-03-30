@@ -14,7 +14,7 @@ expected_attrs = ['explainer', 'metadata', 'x_train_init', 'y_test', 'x_pred', '
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class TestGeneration(unittest.TestCase):
+class TestProjectReport(unittest.TestCase):
 
     def setUp(self):
         self.df = pd.DataFrame(range(0, 21), columns=['id'])

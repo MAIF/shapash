@@ -31,7 +31,7 @@ class TestGeneration(unittest.TestCase):
         execute_report(
             working_dir=tmp_dir_path,
             explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            metadata_file=os.path.join(current_path, '../data/metadata.yaml'),
             config=None,
             notebook_path=None
         )
@@ -46,7 +46,7 @@ class TestGeneration(unittest.TestCase):
         execute_report(
             working_dir=tmp_dir_path,
             explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            metadata_file=os.path.join(current_path, '../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             config=None,
             notebook_path=None
@@ -63,7 +63,7 @@ class TestGeneration(unittest.TestCase):
         execute_report(
             working_dir=tmp_dir_path,
             explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            metadata_file=os.path.join(current_path, '../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             y_test=self.df['y'],
             config=None,
@@ -82,7 +82,7 @@ class TestGeneration(unittest.TestCase):
         execute_report(
             working_dir=tmp_dir_path,
             explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            metadata_file=os.path.join(current_path, '../data/metadata.yaml'),
             x_train=self.df[['x1', 'x2']],
             y_train=self.df['y'],
             y_test=self.df['y'],
@@ -103,7 +103,7 @@ class TestGeneration(unittest.TestCase):
         execute_report(
             working_dir=tmp_dir_path,
             explainer=self.xpl,
-            metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            metadata_file=os.path.join(current_path, '../data/metadata.yaml'),
         )
 
         outfile = os.path.join(tmp_dir_path, 'report.html')

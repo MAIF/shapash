@@ -6,7 +6,7 @@ import numpy as np
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 
 
-class TestGeneration(unittest.TestCase):
+class TestDataAnalysis(unittest.TestCase):
 
     def test_perform_global_dataframe_analysis_1(self):
         df = pd.DataFrame({

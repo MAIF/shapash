@@ -8,7 +8,7 @@ from shapash.report.plots import generate_fig_univariate, generate_fig_univariat
     generate_fig_univariate_categorical
 
 
-class TestGeneration(unittest.TestCase):
+class TestPlots(unittest.TestCase):
 
     @patch('shapash.report.plots.generate_fig_univariate_continuous')
     @patch('shapash.report.plots.generate_fig_univariate_categorical')
