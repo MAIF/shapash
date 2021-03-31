@@ -31,3 +31,4 @@ nbconvert==6.0.7
 papermill==2.3.2
 matplotlib==3.3.4
 seaborn==0.11.1
+jupyter==1.0.0
