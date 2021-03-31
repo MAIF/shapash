@@ -1017,7 +1017,14 @@ class SmartExplainer:
         """
         return check_explainer(explainer)
 
-    def generate_report(self, output_file, metadata_file, x_train=None, y_test=None, config=None):
+    def generate_report(self,
+                        output_file,
+                        metadata_file,
+                        x_train=None,
+                        y_train=None,
+                        y_test=None,
+                        config=None,
+                        notebook_path=None):
         """
         This method will generate an HTML report containing different information about the project.
 
@@ -1032,18 +1039,27 @@ class SmartExplainer:
             Path to the HTML file to write.
         metadata_file : str
             Path to the metadata file used o display some information about the project in the report.
-        x_train : pd.DataFrame
+        x_train : pd.DataFrame, optional
             DataFrame used for training the model.
-        y_test : pd.Series or pd.DataFrame
+        y_train: pd.Series or pd.DataFrame, optional
+            Series of labels in the training set.
+        y_test : pd.Series or pd.DataFrame, optional
             Series of labels in the test set.
         config : dict, optional
             Report configuration options.
+        notebook_path : str, optional
+            Path to the notebook used to generate the report. If None, the Shapash base report
+            notebook will be used.
         """
 
         tmp_dir_path = tempfile.mkdtemp()
 
+        if not hasattr(self, 'model'):
+            raise AssertionError("Explainer object was not compiled. Please compile the explainer "
+                                 "object using .compile(...) method before generating the report.")
+
         execute_report(working_dir=tmp_dir_path, explainer=self, metadata_file=metadata_file,
-                       x_train=x_train, y_test=y_test, config=config)
+                       x_train=x_train, y_train=y_train, y_test=y_test, config=config, notebook_path=notebook_path)
         export_and_save_report(working_dir=tmp_dir_path, output_file=output_file)
 
         shutil.rmtree(tmp_dir_path)

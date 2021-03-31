@@ -15,8 +15,10 @@ def execute_report(
         explainer: object,
         metadata_file: str,
         x_train: Optional[pd.DataFrame] = None,
+        y_train: Optional[pd.DataFrame] = None,
         y_test: Optional[Union[pd.Series, pd.DataFrame]] = None,
-        config: Optional[dict] = None
+        config: Optional[dict] = None,
+        notebook_path: Optional[str] = None,
 ):
     """
     Executes the base_report.ipynb notebook and saves the results in working_dir.
@@ -31,20 +33,31 @@ def execute_report(
         Path to the metadata file used o display some information about the project in the report.
     x_train : pd.DataFrame
         DataFrame used for training the model.
+    y_train : pd.Series or pd.DataFrame
+        Series of labels in the training set.
     y_test : pd.Series or pd.DataFrame
         Series of labels in the test set.
     config : dict, optional
         Report configuration options.
+    notebook_path : str, optional
+        Path to the notebook used to generate the report. If None, the Shapash base report
+        notebook will be used.
     """
+    if config is None:
+        config = {}
     explainer.save(path=os.path.join(working_dir, 'smart_explainer.pickle'))
     if x_train is not None:
         x_train.to_csv(os.path.join(working_dir, 'x_train.csv'))
+    if y_train is not None:
+        y_train.to_csv(os.path.join(working_dir, 'y_train.csv'))
     if y_test is not None:
         y_test.to_csv(os.path.join(working_dir, 'y_test.csv'))
     root_path = get_project_root()
+    if notebook_path is None or notebook_path == '':
+        notebook_path = os.path.join(root_path, 'shapash', 'report', 'base_report.ipynb')
 
     pm.execute_notebook(
-        os.path.join(root_path, 'shapash', 'report', 'base_report.ipynb'),
+        notebook_path,
         os.path.join(working_dir, 'base_report.ipynb'),
         parameters=dict(
             dir_path=working_dir,

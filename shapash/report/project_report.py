@@ -1,24 +1,29 @@
-from typing import Optional
+from typing import Optional, Union, Tuple
 import logging
 import sys
 import os
+from numbers import Number
 from datetime import date
-from IPython.display import HTML, display
-from jinja2 import Template
+import jinja2
 import pandas as pd
+import numpy as np
 import plotly
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.utils.io import load_yml
-from shapash.utils.utils import get_project_root
+from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, print_figure, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, generate_scatter_plot_fig
-from shapash.report.common import series_dtype, get_callable
+from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, \
+    generate_confusion_matrix_plot
+from shapash.report.common import series_dtype, get_callable, compute_col_types
 
 logging.basicConfig(level=logging.INFO)
+
+template_loader = jinja2.FileSystemLoader(searchpath=os.path.join(get_project_root(), 'shapash', 'report', 'html'))
+template_env = jinja2.Environment(loader=template_loader)
 
 
 class ProjectReport:
@@ -46,8 +51,10 @@ class ProjectReport:
     x_train : pd.DataFrame
         DataFrame used for training the model.
     y_test : pd.Series or pd.DataFrame
+        Series of labels in the train set.
+    y_test : pd.Series or pd.DataFrame
         Series of labels in the test set.
-    config : dict
+    config : dict, optional
         Configuration options for the report.
 
     """
@@ -56,6 +63,7 @@ class ProjectReport:
             explainer: SmartExplainer,
             metadata_file: str,
             x_train: Optional[pd.DataFrame] = None,
+            y_train: Optional[pd.DataFrame] = None,
             y_test: Optional[pd.DataFrame] = None,
             config: Optional[dict] = None
     ):
@@ -68,19 +76,22 @@ class ProjectReport:
                 self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
         else:
             self.x_train_pre = None
-        self.y_test = y_test
         self.x_pred = self.explainer.x_pred
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
-        self.df_train_test = self._create_train_test_df(x_pred=self.x_pred, x_train_pre=self.x_train_pre)
+        self.df_train_test = self._create_train_test_df(test=self.x_pred, train=self.x_train_pre)
+        self.y_pred = self.explainer.model.predict(self.explainer.x_init)
+        self.y_test, target_name_test = self._get_values_and_name(y_test, 'target')
+        self.y_train, target_name_train = self._get_values_and_name(y_train, 'target')
+        self.target_name = target_name_train or target_name_test
 
-        if 'title_story' in config.keys():
+        if 'title_story' in self.config.keys():
             self.title_story = config['title_story']
         elif self.explainer.title_story != '':
             self.title_story = self.explainer.title_story
         else:
             self.title_story = 'Shapash report'
-        self.title_description = config['title_description'] if 'title_description' in config.keys() else ''
+        self.title_description = self.config['title_description'] if 'title_description' in self.config.keys() else ''
 
         print_css_style()
         print_javascript_misc()
@@ -90,113 +101,242 @@ class ProjectReport:
                              f"but an object of type {type(self.config['metrics'])} was found")
 
     @staticmethod
-    def _create_train_test_df(x_pred: pd.DataFrame, x_train_pre: Optional[pd.DataFrame]) -> pd.DataFrame:
-        if 'data_train_test' in x_pred.columns:
+    def _get_values_and_name(
+            y: Optional[Union[pd.DataFrame, pd.Series, list]],
+            default_name: str
+    ) -> Union[Tuple[list, str], Tuple[None, None]]:
+        """
+        Extracts vales and column name from a Pandas Series, DataFrame, or assign a default
+        name if y is a list of values.
+
+        Parameters
+        ----------
+        y : list or pd.Series or pd.DataFrame
+            Column we want to extract the name and values
+        default_name :
+            Name assigned if no name was found for y
+
+        Returns
+        -------
+        values : list
+            list of values of y
+        name : str
+            name of y
+        """
+        if y is None:
+            return None, None
+        elif isinstance(y, pd.DataFrame):
+            assert len(y.columns) == 1, "Number of columns found is greater than 1"
+            name = y.columns[0]
+            values = y.values[:, 0]
+        elif isinstance(y, pd.Series):
+            name = y.name
+            values = y.values
+        elif isinstance(y, list):
+            name = default_name
+            values = y
+        else:
+            raise ValueError(f"Cannot process following type : {type(y)}")
+        return values, name
+
+    @staticmethod
+    def _create_train_test_df(test: Optional[pd.DataFrame], train: Optional[pd.DataFrame]) -> Union[pd.DataFrame, None]:
+        """
+        Creates a DataFrame that contains train and test dataset with the column 'data_train_test'
+        allowing to distinguish the values.
+
+        Parameters
+        ----------
+        test : pd.DataFrame, optional
+            test dataframe
+        train : pd.DataFrame, optional
+            train dataframe
+
+        Returns
+        -------
+        pd.DataFrame
+            The concatenation of train and test as a dataframe containing train and test values with
+            a new 'data_train_test' column allowing to distinguish the values.
+        """
+        if (test is not None and 'data_train_test' in test.columns) or \
+                (train is not None and 'data_train_test' in train.columns):
             raise ValueError('"data_train_test" column must be renamed as it is used in ProjectReport')
-        return pd.concat([x_pred.assign(data_train_test="test"),
-                          x_train_pre.assign(data_train_test="train") if x_train_pre is not None else None])
+        if test is None and train is None:
+            return None
+        return pd.concat([test.assign(data_train_test="test") if test is not None else None,
+                          train.assign(data_train_test="train") if train is not None else None])
 
     def display_title_description(self):
+        """
+        Displays title of the report and its description if defined.
+        """
         print_html(f"""<h1 style="text-align:center">{self.title_story}</p> """)
         if self.title_description != '':
             print_html(f'<blockquote class="panel-warning text_cell_render">{self.title_description} </blockquote>')
 
-    def display_general_information(self):
-        for k, v in self.metadata['general'].items():
-            if k.lower() == 'date' and v.lower() == 'auto':
-                print_md(f"**{k.title()}** : {date.today()}")
-            else:
-                print_md(f"**{k.title()}** : {v}")
-
-    def display_dataset_information(self):
-        for k, v in self.metadata['dataset'].items():
-            print_md(f"**{k.title()}** : {v}")
+    def display_metadata_information(self):
+        """
+        Displays general information about the project as defined in the metdata file.
+        """
+        for section in self.metadata.keys():
+            print_md(f"## {section.title()}")
+            for k, v in self.metadata[section].items():
+                if k.lower() == 'date' and v.lower() == 'auto':
+                    print_md(f"**{k.title()}** : {date.today()}")
+                else:
+                    print_md(f"**{k.title()}** : {v}")
+            print_md('---')
 
     def display_model_information(self):
-        print_md(f"**Model used :** : {self.explainer.model.__class__.__name__}")
+        """
+        Displays information about the model used : class name, library name, library version,
+        model parameters, ...
+        """
+        print_md(f"**Model used :** {self.explainer.model.__class__.__name__}")
 
-        print_md(f"**Library :** : {self.explainer.model.__class__.__module__}")
+        print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
 
         for name, module in sorted(sys.modules.items()):
             if hasattr(module, '__version__') \
-                    and self.explainer.model.__class__.__module__.split('.')[0] in module.__name__:
-                print_md(f"**Library version :** : {module.__version__}")
+                    and self.explainer.model.__class__.__module__.split('.')[0] == module.__name__:
+                print_md(f"**Library version :** {module.__version__}")
 
-        print_md(f"**Model parameters :** {self.explainer.model.__dict__}")
+        print_md("**Model parameters :** ")
+        model_params = self.explainer.model.__dict__
+        table_template = template_env.get_template("double_table.html")
+        print_html(table_template.render(
+            columns1=["Parameter key", "Parameter value"],
+            rows1=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
+                   for k, v in list(model_params.items())[:len(model_params)//2:]],  # Getting half of the parameters
+            columns2=["Parameter key", "Parameter value"],
+            rows2=[{"name": truncate_str(str(k), 50), "value": truncate_str(str(v), 300)}
+                   for k, v in list(model_params.items())[len(model_params)//2:]]  # Getting 2nd half of the parameters
+        ))
+        print_md('---')
 
     def display_dataset_analysis(
             self,
             global_analysis: Optional[bool] = True,
             univariate_analysis: Optional[bool] = True,
-            multivariate_analysis: Optional[bool] = True
+            target_analysis: Optional[bool] = True
     ):
+        """
+        This method performs and displays an exploration of the data given.
+        It allows to compare train and test values for each part of the analysis.
+
+        The parameters of the method allow to filter which part to display or not.
+
+        Parameters
+        ----------
+        global_analysis : bool
+            Whether or not to display the global analysis part.
+        univariate_analysis : bool
+            Whether or not to display the univariate analysis part.
+        target_analysis : bool
+            Whether or not to display the target analysis part that plots
+            the distribution of the target variable.
+
+        """
         if global_analysis:
             print_md("### Global analysis")
             self._display_dataset_analysis_global()
 
         if univariate_analysis:
             print_md("### Univariate analysis")
-            self._display_dataset_analysis_univariate()
+            self._perform_and_display_analysis_univariate(
+                df=self.df_train_test,
+                col_splitter="data_train_test",
+                split_values=["test", "train"],
+                names=["Prediction dataset", "Training dataset"],
+                group_id='univariate'
+            )
 
-        if multivariate_analysis:
-            print_md("### Multivariate analysis")
-            self._display_dataset_analysis_multivariate()
+        df_target = self._create_train_test_df(
+            test=pd.DataFrame({self.target_name: self.y_test},
+                              index=range(len(self.y_test))) if self.y_test is not None else None,
+            train=pd.DataFrame({self.target_name: self.y_train},
+                               index=range(len(self.y_train))) if self.y_train is not None else None
+        )
+        if df_target is not None:
+            if target_analysis:
+                print_md("### Target analysis")
+                self._perform_and_display_analysis_univariate(
+                    df=df_target,
+                    col_splitter="data_train_test",
+                    split_values=["test", "train"],
+                    names=["Prediction dataset", "Training dataset"],
+                    group_id='target'
+                )
+        print_md('---')
 
     def _display_dataset_analysis_global(self):
         df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
-                                               train_stats=perform_global_dataframe_analysis(self.x_train_pre))
+                                               train_stats=perform_global_dataframe_analysis(self.x_train_pre),
+                                               names=["Prediction dataset", "Training dataset"])
         print_html(df_stats_global.to_html(classes="greyGridTable"))
 
-    def _display_dataset_analysis_univariate(self):
-        test_stats_univariate = perform_univariate_dataframe_analysis(self.x_pred)
-        train_stats_univariate = perform_univariate_dataframe_analysis(self.x_train_pre)
+    def _perform_and_display_analysis_univariate(
+            self,
+            df: pd.DataFrame,
+            col_splitter: str,
+            split_values: list,
+            names: list,
+            group_id: str
+    ):
+        col_types = compute_col_types(df)
+        n_splits = df[col_splitter].nunique()
+        test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]],
+                                                                      col_types=col_types)
+        if n_splits > 1:
+            train_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[1]],
+                                                                           col_types=col_types)
 
-        with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'univariate.html')) as file_:
-            univariate_template = Template(file_.read())
-
+        univariate_template = template_env.get_template("univariate.html")
         univariate_features_desc = list()
-        for col in self.col_names:
-            fig = generate_fig_univariate(df_train_test=self.df_train_test, col=col)
+        for col in df.drop(col_splitter, axis=1).columns:
+            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col])
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
-                train_stats=train_stats_univariate[col] if self.x_train_pre is not None else {}
+                train_stats=train_stats_univariate[col] if n_splits > 1 else None,
+                names=names
             )
             univariate_features_desc.append({
-                'feature_index': int(self.explainer.inv_columns_dict[col]),
+                'feature_index': int(self.explainer.inv_columns_dict.get(col, 0)),
                 'name': col,
-                'type': str(series_dtype(self.df_train_test[col])),
-                'description': self.explainer.features_dict[col],
+                'type': str(series_dtype(df[col])),
+                'description': self.explainer.features_dict.get(col, ''),
                 'table': df_col_stats.to_html(classes="greyGridTable"),
                 'image': convert_fig_to_html(fig)
             })
-        display(HTML(univariate_template.render(features=univariate_features_desc)))
+        print_html(univariate_template.render(features=univariate_features_desc, groupId=group_id))
 
-    def _display_dataset_analysis_multivariate(self):
-        print_md("#### Numerical vs Numerical")
-        fig = generate_correlation_matrix_fig(df_train_test=self.df_train_test)
-        print_figure(fig=fig)
-
-    def _stats_to_table(self, test_stats: dict, train_stats: Optional[dict] = None) -> pd.DataFrame:
-        if self.x_train_pre is not None:
+    @staticmethod
+    def _stats_to_table(test_stats: dict,
+                        names: list,
+                        train_stats: Optional[dict] = None,
+                        ) -> pd.DataFrame:
+        if train_stats is not None:
             return pd.DataFrame({
-                    'Training dataset': pd.Series(train_stats),
-                    'Prediction dataset': pd.Series(test_stats)
+                    names[1]: pd.Series(train_stats),
+                    names[0]: pd.Series(test_stats)
                 })
         else:
-            return pd.DataFrame({'Prediction dataset': pd.Series(test_stats)})
+            return pd.DataFrame({names[0]: pd.Series(test_stats)})
 
     def display_model_explainability(self):
+        """
+        Displays explainability of the model as computed in SmartPlotter object
+        """
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         print_md("### Global feature importance plot")
         fig = self.explainer.plot.features_importance()
-        display(HTML(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)))
+        print_html(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False))
 
-        with open(os.path.join(get_project_root(), 'shapash', 'report', 'html', 'explainability_contrib.html')) as file_:
-            explainability_contrib_template = Template(file_.read())
+        explainability_contrib_template = template_env.get_template("explainability_contrib.html")
 
-        print_md("### Sorted features contribution plots")
+        print_md("### Features contribution plots")
         explain_contrib_data = list()
-        for feature in self.explainer.features_imp.index[::-1]:
+        for feature in self.col_names:
             fig = self.explainer.plot.contribution_plot(feature)
             explain_contrib_data.append({
                 'feature_index': int(self.explainer.inv_columns_dict[feature]),
@@ -204,19 +344,59 @@ class ProjectReport:
                 'description': self.explainer.features_dict[feature],
                 'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
             })
-        display(HTML(explainability_contrib_template.render(features=explain_contrib_data)))
+        print_html(explainability_contrib_template.render(features=explain_contrib_data))
+        print_md('---')
 
     def display_model_performance(self):
+        """
+        Displays the performance of the model. The metrics are computed using the config dict.
+        Metrics should be given as a dict of key, value where the key is the name of the metric
+        and the value is the path (string) to a metric.
+
+        For example : config['metrics'] = {'Mean absolute error': 'sklearn.metrics.mean_absolute_error'}
+        """
         if self.y_test is None:
             logging.info("No labels given for test set. Skipping model performance part")
             return
+
+        print_md("### Univariate analysis of target variable")
+        df = pd.concat([pd.DataFrame({self.target_name: self.y_pred}).assign(_dataset="pred"),
+                        pd.DataFrame({self.target_name: self.y_test}).assign(_dataset="true")
+                        if self.y_test is not None else None])
+        self._perform_and_display_analysis_univariate(
+            df=df,
+            col_splitter="_dataset",
+            split_values=["pred", "true"],
+            names=["Prediction values", "True values"],
+            group_id='target-distribution'
+        )
+
         if 'metrics' not in self.config.keys():
             logging.info("No 'metrics' key found in report config dict. Skipping model performance part.")
             return
+        print_md("### Metrics")
 
-        y_pred = self.explainer.model.predict(self.explainer.x_init)
-        y_true = self.y_test
         for metric_name, metric_path in self.config['metrics'].items():
-            metric_fn = get_callable(path=metric_path)
-            print_md(f"**{metric_name} :** {metric_fn(y_true, y_pred)}")
-
+            if metric_path in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
+                    metric_name == 'confusion_matrix':
+                print_md(f"**{metric_name} :**")
+                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=self.y_test, y_pred=self.y_pred)))
+            else:
+                try:
+                    metric_fn = get_callable(path=metric_path)
+                    res = metric_fn(self.y_test, self.y_pred)
+                except Exception as e:
+                    logging.info(f"Could not compute following metric : {metric_path}. \n{e}")
+                    continue
+                if isinstance(res, Number):
+                    print_md(f"**{metric_name} :** {round(res, 2)}")
+                elif isinstance(res, (list, tuple, np.ndarray)):
+                    print_md(f"**{metric_name} :**")
+                    print_html(pd.DataFrame(res).to_html(classes="greyGridTable"))
+                elif isinstance(res, str):
+                    print_md(f"**{metric_name} :**")
+                    print_html(f"<pre>{res}</pre>")
+                else:
+                    logging.info(f"Could not compute following metric : {metric_path}. \n"
+                                 f"Result of type {res} cannot be displayed")
+        print_md('---')

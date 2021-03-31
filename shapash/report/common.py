@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 from enum import Enum
 
 import pandas as pd
@@ -7,6 +7,9 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype, i
 
 
 class VarType(Enum):
+    """
+    Helper class to indicate the type of a variable.
+    """
     TYPE_CAT = "Categorical"
     TYPE_NUM = "Numeric"
     TYPE_UNSUPPORTED = "Unsupported"
@@ -16,6 +19,18 @@ class VarType(Enum):
 
 
 def series_dtype(s: pd.Series) -> VarType:
+    """
+    Computes the type of a pandas series.
+
+    Parameters
+    ----------
+    s : pd.Series
+        The series for which we wish to determine the type.
+
+    Returns
+    -------
+    VarType
+    """
     if is_bool_dtype(s):
         return VarType.TYPE_CAT
     elif is_string_dtype(s):
@@ -23,15 +38,47 @@ def series_dtype(s: pd.Series) -> VarType:
     elif is_categorical_dtype(s):
         return VarType.TYPE_CAT
     elif is_numeric_dtype(s):
-        return VarType.TYPE_NUM
+        if numeric_is_continuous(s):
+            return VarType.TYPE_NUM
+        else:
+            return VarType.TYPE_CAT
     else:
         return VarType.TYPE_UNSUPPORTED
 
 
 def numeric_is_continuous(s: pd.Series):
+    """
+    Function that returns True if a numeric pandas series is continuous and False if it is categorical.
+
+    Parameters
+    ----------
+    s : pd.Series
+
+    Returns
+    -------
+    bool
+    """
     # This test could probably be improved
     n_unique = s.nunique()
-    return True if n_unique > 5 else False
+    return True if n_unique > 15 else False
+
+
+def compute_col_types(df_all: Optional[pd.DataFrame]) -> Optional[dict]:
+    """
+    Computes the type of each column and stores the result in a dict.
+
+    Parameters
+    ----------
+    df_all : pd.DataFrame, optional
+
+    Returns
+    -------
+    col_types : dict
+        The types of each column
+    """
+    if df_all is None:
+        return {}
+    return {col: series_dtype(df_all[col]) for col in df_all.columns}
 
 
 def get_callable(path: str):
@@ -82,6 +129,18 @@ def get_callable(path: str):
 
 
 def load_saved_df(path: str) -> Union[pd.DataFrame, None]:
+    """
+    Loads a pandas DataFrame that was saved using pd.to_csv method.
+
+    Parameters
+    ----------
+    path : str
+        Path to the dataframe object
+
+    Returns
+    -------
+    pd.DataFrame or None
+    """
     if os.path.exists(path):
         return pd.read_csv(path, index_col=0)
 

@@ -1,3 +1,4 @@
+{% if features|length > 1 %}
 <div class="row" style="height:30px; margin-right:5px; margin-left:5px;">
     <div class="dropdown dropdown-feature">
         <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -6,15 +7,22 @@
           </button>
           <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1">
               {% for col in features %}
-                <li><a href="javascript:showBlock('univariate-div', 'univariate-div-{{ col['name'] }}')">{{ col['name'] }}</a></li>
+                <li><a href="javascript:showBlock('{{ groupId }}-div', '{{ groupId }}-div-{{ col['name'] }}')">
+                    {% if col['name'] != col['description'] and col['description']|length %}
+                        {{ col['description'] }}
+                    {% else %}
+                        {{ col['name'] }}
+                    {% endif %}
+                </a></li>
               {% endfor %}
           </ul>
     </div>
 </div>
+{% endif %}
 {% for col in features %}
-    <div class="row" id="univariate-div-{{ col['name'] }}" style="{% if col['feature_index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px;">
+    <div class="row" id="{{ groupId }}-div-{{ col['name'] }}" style="{% if col['feature_index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px;">
         <h4>{{ col['name'] }} - {{ col['type'] }}</h4>
-        {% if col['name'] != col['description'] %}
+        {% if col['name'] != col['description'] and col['description']|length %}
             <blockquote class="panel-content">{{ col['description'] }}</blockquote>
         {% else %}
         {% endif %}

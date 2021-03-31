@@ -1,0 +1,19 @@
+<table class="table greyGridTable" style="table-layout: fixed;">
+  <thead>
+    {% if columns %}
+    <tr>
+        {% for col in columns %}
+        <th scope="col" style="text-align:center">{{ col }}</th>
+        {% endfor %}
+    </tr>
+  {% endif %}
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+        <th scope="row" style="text-align:center">{{ row['name'] }}</th>
+        <td style="text-align:center">{{ row['value'] }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
