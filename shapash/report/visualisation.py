@@ -101,6 +101,14 @@ def print_javascript_misc():
       } else {
         x.style.display = "none";
       }
+
+    var x = document.getElementById(blockId + '-2');
+    if (x != null) {
+      if (x.style.display === "none") {
+        x.style.display = "block";
+      } else {
+        x.style.display = "none";
+      }}
     }
     </script>
     """)
