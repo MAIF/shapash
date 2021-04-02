@@ -142,10 +142,29 @@ class TestProjectReport(unittest.TestCase):
         )
         report.display_dataset_analysis()
 
-    def test_display_model_explainability(self):
+    def test_display_model_explainability_1(self):
         report = ProjectReport(
             explainer=self.xpl,
             metadata_file=os.path.join(current_path, '../../data/metadata.yaml'),
+        )
+        report.display_model_explainability()
+
+    def test_display_model_explainability_2(self):
+        """
+        Tests multiclass case
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(
+            lambda x: 0 if x < 5 else 1 if (5 <= x < 10) else 2 if (10 <= x < 15) else 3)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        xpl = SmartExplainer()
+        xpl.compile(model=clf, x=df[['x1', 'x2']])
+        report = ProjectReport(
+            explainer=xpl,
+            metadata_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
         report.display_model_explainability()
 
