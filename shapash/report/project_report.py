@@ -328,23 +328,31 @@ class ProjectReport:
         Displays explainability of the model as computed in SmartPlotter object
         """
         print_md("*Note : the explainability graphs were generated using the test set only.*")
-        print_md("### Global feature importance plot")
-        fig = self.explainer.plot.features_importance()
-        print_html(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False))
+        explainability_template = template_env.get_template("explainability.html")
+        explain_data = list()
+        multiclass = True if (self.explainer._classes and len(self.explainer._classes) > 2) else False
+        c_list = self.explainer._classes if multiclass else [0]  # list just used for multiclass
+        for index_label, label in enumerate(c_list):  # Iterating over all labels in multiclass case
+            label_value = self.explainer.check_label_name(label)[2] if multiclass else ''
+            fig_features_importance = self.explainer.plot.features_importance(label=label)
 
-        explainability_contrib_template = template_env.get_template("explainability_contrib.html")
-
-        print_md("### Features contribution plots")
-        explain_contrib_data = list()
-        for feature in self.col_names:
-            fig = self.explainer.plot.contribution_plot(feature)
-            explain_contrib_data.append({
-                'feature_index': int(self.explainer.inv_columns_dict[feature]),
-                'name': feature,
-                'description': self.explainer.features_dict[feature],
-                'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
+            explain_contrib_data = list()
+            for feature in self.col_names:
+                fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
+                explain_contrib_data.append({
+                    'feature_index': int(self.explainer.inv_columns_dict[feature]),
+                    'name': feature,
+                    'description': self.explainer.features_dict[feature],
+                    'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
+                })
+            explain_data.append({
+                'index': index_label,
+                'name': label_value,
+                'feature_importance_plot': plotly.io.to_html(fig_features_importance, include_plotlyjs=False,
+                                                             full_html=False),
+                'features': explain_contrib_data
             })
-        print_html(explainability_contrib_template.render(features=explain_contrib_data))
+        print_html(explainability_template.render(labels=explain_data))
         print_md('---')
 
     def display_model_performance(self):
