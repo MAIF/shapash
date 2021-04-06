@@ -1023,7 +1023,10 @@ class SmartExplainer:
                         x_train=None,
                         y_train=None,
                         y_test=None,
-                        config=None,
+                        title_story=None,
+                        title_description=None,
+                        metrics=None,
+                        working_dir=None,
                         notebook_path=None):
         """
         This method will generate an HTML report containing different information about the project.
@@ -1045,21 +1048,64 @@ class SmartExplainer:
             Series of labels in the training set.
         y_test : pd.Series or pd.DataFrame, optional
             Series of labels in the test set.
-        config : dict, optional
-            Report configuration options.
+        title_story : str, optional
+            Report title.
+        title_description : str, optional
+            Report title description (as written just below the title).
+        metrics : dict, optional
+            Metrics used in the model performance section. The metrics parameter should be a
+            dict ok key, value pairs where the key is the name of the metric and the value is the
+            path to the metric function that will be used. For example,
+            `metrics={'Mean absolute error': 'sklearn.metrics.mean_absolute_error'}`.
+        working_dir : str, optional
+            Working directory in which will be generated the notebook used to create the report
+            and where the objects used to execute it will be saved. This parameter can be usefull
+            if one wants to create its own custom report and debug the notebook used to generate
+            the html report. If None, a temporary directory will be used.
         notebook_path : str, optional
             Path to the notebook used to generate the report. If None, the Shapash base report
             notebook will be used.
-        """
 
-        tmp_dir_path = tempfile.mkdtemp()
+        Examples
+        --------
+        >>> xpl.generate_report(
+                output_file='report.html',
+                metadata_file='utils/metadata.yml',
+                x_train=x_train,
+                y_train=y_train,
+                y_test=ytest,
+                title_story="House prices project report",
+                title_description="This document is a data science report of the kaggle house prices " \
+                                  "tutorial project. It was generated using the Shapash library.",
+                metrics={'Mean absolute error': 'sklearn.metrics.mean_absolute_error',
+                         'Mean squared error': 'sklearn.metrics.mean_squared_error'}
+            )
+        """
+        rm_working_dir = False
+        if not working_dir:
+            working_dir = tempfile.mkdtemp()
+            rm_working_dir = True
 
         if not hasattr(self, 'model'):
             raise AssertionError("Explainer object was not compiled. Please compile the explainer "
                                  "object using .compile(...) method before generating the report.")
 
-        execute_report(working_dir=tmp_dir_path, explainer=self, metadata_file=metadata_file,
-                       x_train=x_train, y_train=y_train, y_test=y_test, config=config, notebook_path=notebook_path)
-        export_and_save_report(working_dir=tmp_dir_path, output_file=output_file)
+        execute_report(
+            working_dir=working_dir,
+            explainer=self,
+            metadata_file=metadata_file,
+            x_train=x_train,
+            y_train=y_train,
+            y_test=y_test,
+            config=dict(
+                title_story=title_story,
+                title_description=title_description,
+                metrics=metrics
+            ),
+            notebook_path=notebook_path
+        )
+        export_and_save_report(working_dir=working_dir, output_file=output_file)
 
-        shutil.rmtree(tmp_dir_path)
+        if rm_working_dir:
+            shutil.rmtree(working_dir)
+
