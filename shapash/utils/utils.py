@@ -151,8 +151,12 @@ def compute_digit_number(value):
     int
         number of digits
     """
-    first_nz = int(math.log10(abs(value)))
-    digit = abs(min(3,first_nz) - 3)
+    # fix for 0 value
+    if(value == 0):
+        first_nz = 1
+    else:
+        first_nz = int(math.log10(abs(value)))
+    digit = abs(min(3, first_nz) - 3)
     return digit
 
 def add_text(text_list,sep):
