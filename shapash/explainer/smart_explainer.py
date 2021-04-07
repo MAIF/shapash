@@ -1075,8 +1075,7 @@ class SmartExplainer:
                 y_train=y_train,
                 y_test=ytest,
                 title_story="House prices project report",
-                title_description="This document is a data science report of the kaggle house prices " \
-                                  "tutorial project. It was generated using the Shapash library.",
+                title_description="This document is a data science report of the kaggle house prices project."
                 metrics={'Mean absolute error': 'sklearn.metrics.mean_absolute_error',
                          'Mean squared error': 'sklearn.metrics.mean_squared_error'}
             )
