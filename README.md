@@ -171,5 +171,5 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
 
 ### Generate the Shapash Report
-- [Generate a standalone HTML report of your porject with generate_report](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
+- [Generate a standalone HTML report of your project with generate_report](tutorial/report/tuto-shapash-report01.ipynb)
 
