@@ -36,7 +36,7 @@ class ProjectReport:
     ----------
     explainer : shapash.explainer.smart_explainer.SmartExplainer
         A shapash SmartExplainer object that has already be compiled.
-    metadata_file : str
+    project_info_file : str
         Path to the yml file containing information about the project (author, description, ...).
     config : dict, optional
         Contains configuration options for the report.
@@ -60,14 +60,14 @@ class ProjectReport:
     def __init__(
             self,
             explainer: SmartExplainer,
-            metadata_file: str,
+            project_info_file: str,
             x_train: Optional[pd.DataFrame] = None,
             y_train: Optional[pd.DataFrame] = None,
             y_test: Optional[pd.DataFrame] = None,
             config: Optional[dict] = None
     ):
         self.explainer = explainer
-        self.metadata = load_yml(path=metadata_file)
+        self.metadata = load_yml(path=project_info_file)
         self.x_train_init = x_train
         if x_train is not None:
             self.x_train_pre = inverse_transform(x_train, self.explainer.preprocessing)

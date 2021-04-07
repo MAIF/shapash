@@ -1019,7 +1019,7 @@ class SmartExplainer:
 
     def generate_report(self,
                         output_file,
-                        metadata_file,
+                        project_info_file,
                         x_train=None,
                         y_train=None,
                         y_test=None,
@@ -1034,14 +1034,14 @@ class SmartExplainer:
         It analyzes the data and the model used in order to provide interesting
         insights that can be shared using the HTML format.
 
-        It requires a metadata file on which can figure different information about the project.
+        It requires a project info yml file on which can figure different information about the project.
 
         Parameters
         ----------
         output_file : str
             Path to the HTML file to write.
-        metadata_file : str
-            Path to the metadata file used o display some information about the project in the report.
+        project_info_file : str
+            Path to the file used to display some information about the project in the report.
         x_train : pd.DataFrame, optional
             DataFrame used for training the model.
         y_train: pd.Series or pd.DataFrame, optional
@@ -1070,7 +1070,7 @@ class SmartExplainer:
         --------
         >>> xpl.generate_report(
                 output_file='report.html',
-                metadata_file='utils/metadata.yml',
+                project_info_file='utils/project_info.yml',
                 x_train=x_train,
                 y_train=y_train,
                 y_test=ytest,
@@ -1093,7 +1093,7 @@ class SmartExplainer:
         execute_report(
             working_dir=working_dir,
             explainer=self,
-            metadata_file=metadata_file,
+            project_info_file=project_info_file,
             x_train=x_train,
             y_train=y_train,
             y_test=y_test,
