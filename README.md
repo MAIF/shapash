@@ -1,39 +1,61 @@
-# Shapash
+<p align="center">
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
+</p>
 
-![Actions Status](https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg)
-![PyPI](https://img.shields.io/pypi/v/shapash)
-![Python Version](https://img.shields.io/pypi/pyversions/shapash)
-![PyPI - License](https://img.shields.io/pypi/l/shapash)
-[![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
 
-<img align="right" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
+<p align="center">
+  <!-- Tests -->
+  <a href="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg">
+    <img src="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg" alt="tests">
+  </a>
+  <!-- PyPi -->
+  <a href="https://img.shields.io/pypi/v/shapash">
+    <img src="https://img.shields.io/pypi/v/shapash" alt="pypi">
+  </a>
+  <!-- Python Version -->
+  <a href="https://img.shields.io/pypi/pyversions/shapash">
+    <img src="https://img.shields.io/pypi/pyversions/shapash" alt="pyversion">
+  </a>
+  <!-- License -->
+  <a href="https://img.shields.io/pypi/l/shapash">
+    <img src="https://img.shields.io/pypi/l/shapash" alt="license">
+  </a>
+  <!-- Doc -->
+  <a href="https://readthedocs.org/projects/shapash/badge/?version=latest">
+    <img src="https://readthedocs.org/projects/shapash/badge/?version=latest" alt="doc">
+  </a>
+</p>
 
-<br/>
-<br/>
+
+🎉 **We just released Shapash 1.1.3 that includes the generation of a standalone HTML report of any project.** 🎉  
+
+## 🔍 Overview
 
 **Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone.
 It provides several types of visualization that display explicit labels that everyone can understand. 
 
-<br/>
-
-Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+Data Scientists can understand their models easily and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
 - Medium: [Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
-- Presentation video for french speakers:
+- [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
+
+**Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
+to compute contributions.
+**Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
+
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=r1R_A9B9apk" target="_blank"><img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webinar_screenshot.png" width="550" alt="French Webinar"/></a>
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="600" title="diagram">
 </p>
 
-<br/> <br/>
+## 🔥  Features
 
-**The objectives of shapash:**
-- To display clear and understandable results: Plots and outputs use **explicit labels** for each feature and its values:
+- Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-contribution_plot-example.png" width="700" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-contribution_plot-example.png" width="500" title="contrib">
 </p>
 
-- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
+- Allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
 <a href="https://shapash-demo.ossbymaif.fr/">
   <p align="center">
@@ -41,58 +63,40 @@ Data Scientists can more easily understand their models and share their results.
   </p>
 </a>
 
-- To **Summarize and export** the local explanation:
+- **Summarize and export** the local explanation
+> **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
 <p align="center">
   <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-to_pandas-example.png" width="700" title="contrib">
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-local_plot-example.png" width="700" title="contrib">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-local_plot-example.png" width="600" title="contrib">
 </p>
 
-  > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to an summarized and explicit explanation
   
 
-- To discuss results: **Shapash** allows Data Scientists to easily share and discuss their results with non-Data users
+- Easily share and discuss results with non-Data users
 
-- Use Shapash to deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
+- Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
-**How does shapash work?** <br />
-
-**Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
-to compute contributions.
-**Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="900" title="diagram">
-</p>
+- Generate a standalone HTML reports of your projects 
+> The **Shapash report** contains information about your data science project that can be shared to anyone and only require an internet connexion to work. It includes :
+> - Information about the project (general information, dataset desciption, feature enginering choices...)
+> - Model library, parameters, and other specifications
+> - Dataset exploration with a comparison between train and test sets
+> - Global explainability of the model
+> - Model performance
 
 
-# User Manual
+## 🛠 Installation
 
-**Shapash** works for Regression, Binary Classification or Multiclass problem. <br />
-It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*. <br />
-Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary. <br />
-- Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
-- Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer*, *PowerTransformer*
-
-
-You can use Shap or Lime, compute your own local contributions and use **Shapash** to display plot or summarize it. <br />
-
-Using **Shapash** is simple and requires only a few lines of code. <br />
-Most parameters are optional, you can displays plots effortlessly. <br />
-
-But you can also tune plots and outputs, specifying labels dict, features dict, encoders, predictions, ... : 
-The more you specify parameters, options, dictionaries and more the outputs will be understandable
-
-
-## Installation
+Shapash is intended to work with Python 3.6 or above. Installation can be done with pip:
 
 ```
 pip install shapash
 ```
 
-## Getting Started: 3 minutes to Shapash
+## 🕐 Quickstart
 
 The 4 steps to display results:
 
@@ -137,8 +141,7 @@ predictor = xpl.to_smartpredictor()
 ```
 See the tutorial part to know how to use the SmartPredictor object
 
-
-## Tutorials
+## 📖  Tutorials
 This github repository offers a lot of tutorials to allow you to start more concretely in the use of Shapash.
 
 ### More Precise Overview
@@ -166,3 +169,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 
 ### Deploy local explainability in production
 - [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
+
+### Generate the Shapash Report
+- [Generate a standalone HTML report of your porject with generate_report](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
+
