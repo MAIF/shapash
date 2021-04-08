@@ -128,7 +128,26 @@ app = xpl.run_app()
 
 [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
-- Step 4: From training to deployment : SmartPredictor Object
+- Step 4: Generate the Shapash Report
+  > This step allows to generate a standalone html report of your project using the different splits
+  of your dataset when training your model and the metrics used:
+
+```
+xpl.generate_report(
+    output_file='path/to/output/report.html',
+    project_info_file='path/to/project_info.yml',
+    x_train=Xtrain,
+    y_train=ytrain,
+    y_test=ytest,
+    title_story="House prices report",
+    title_description="""This document is a data science report of the kaggle house prices tutorial project.
+        It was generated using the Shapash library.""",
+    metrics={'Mean absolute error': 'sklearn.metrics.mean_absolute_error',
+             'Mean squared error': 'sklearn.metrics.mean_squared_error'}
+)
+```
+
+- Step 5: From training to deployment : SmartPredictor Object
   > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
   It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.
   SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local 
