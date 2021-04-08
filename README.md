@@ -46,13 +46,13 @@ Data Scientists can understand their models easily and share their results. End 
 - Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
 
 <p align="center">
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot03-features-importance_files/tuto-plot03-features-importance_21_0.png?raw=true" width="286"/>
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot02-contribution_plot_files/tuto-plot02-contribution_plot_21_0.png?raw=true" width="300" /> 
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot03-features-importance_files/tuto-plot03-features-importance_21_0.png?raw=true" width="383"/>
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot02-contribution_plot_files/tuto-plot02-contribution_plot_21_0.png?raw=true" width="400" /> 
 </p>
 
 <p align="center">
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-expl01-Shapash-Viz-using-Shap-contributions_files/tuto-expl01-Shapash-Viz-using-Shap-contributions_19_0.png?raw=true" width="300" />
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot04-compare_plot_files/tuto-plot04-compare_plot_20_0.png?raw=true" width="300" /> 
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-expl01-Shapash-Viz-using-Shap-contributions_files/tuto-expl01-Shapash-Viz-using-Shap-contributions_19_0.png?raw=true" width="400" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot04-compare_plot_files/tuto-plot04-compare_plot_20_0.png?raw=true" width="400" /> 
 </p>
 
 
