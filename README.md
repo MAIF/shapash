@@ -12,6 +12,10 @@
   <a href="https://img.shields.io/pypi/v/shapash">
     <img src="https://img.shields.io/pypi/v/shapash" alt="pypi">
   </a>
+  <!-- Downloads -->
+    <a href="https://img.shields.io/pypi/dm/shapash.svg">
+    <img src="https://img.shields.io/pypi/dm/shapash.svg" alt="downloads">
+  </a>
   <!-- Python Version -->
   <a href="https://img.shields.io/pypi/pyversions/shapash">
     <img src="https://img.shields.io/pypi/pyversions/shapash" alt="pyversion">
@@ -27,7 +31,7 @@
 </p>
 
 
-🎉 **We just released Shapash 1.1.3 that includes the generation of a standalone HTML report of any project.** 🎉  
+🎉 **We just released Shapash 1.1.3 that includes the generation of a standalone HTML report that constitutes a basis of an audit document.** 🎉  
 
 ## 🔍 Overview
 
@@ -35,6 +39,8 @@
 It provides several types of visualization that display explicit labels that everyone can understand. 
 
 Data Scientists can understand their models easily and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+
+Shapash also contributes to data science auditing by displaying usefull information about any model and data in a unique report. 
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
 - Medium: [Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
@@ -74,7 +80,9 @@ Data Scientists can understand their models easily and share their results. End 
 - Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
 - Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects 
-> Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. This document can be easily shared across teams and does not require anything else than a working internet connexion.
+>We hope that this report will bring a valuable support to auditing the models and data related to a better AI governance. 
+Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. 
+This document can be easily shared across teams (internal audit, DPO, risk, compliance...).
 
 ## ⚙️ How Shapash works 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
@@ -82,7 +90,7 @@ to compute contributions.
 **Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="500" title="diagram">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="700" title="diagram">
 </p>
 
 
