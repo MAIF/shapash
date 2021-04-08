@@ -40,20 +40,22 @@ Data Scientists can understand their models easily and share their results. End 
 - Medium: [Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
 - [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
 
-**Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
-to compute contributions.
-**Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="600" title="diagram">
-</p>
 
 ## 🔥  Features
 
 - Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-contribution_plot-example.png" width="500" title="contrib">
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot03-features-importance_files/tuto-plot03-features-importance_21_0.png?raw=true" width="286"/>
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot02-contribution_plot_files/tuto-plot02-contribution_plot_21_0.png?raw=true" width="300" /> 
 </p>
+
+<p align="center">
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-expl01-Shapash-Viz-using-Shap-contributions_files/tuto-expl01-Shapash-Viz-using-Shap-contributions_19_0.png?raw=true" width="300" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot04-compare_plot_files/tuto-plot04-compare_plot_20_0.png?raw=true" width="300" /> 
+</p>
+
+
 
 - Allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
@@ -65,27 +67,23 @@ to compute contributions.
 
 - **Summarize and export** the local explanation
 > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
-<p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-to_pandas-example.png" width="700" title="contrib">
-</p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-local_plot-example.png" width="600" title="contrib">
-</p>
-
   
 
 - Easily share and discuss results with non-Data users
 
 - Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
-- Generate a standalone HTML reports of your projects 
-> The **Shapash report** contains information about your data science project that can be shared to anyone and only require an internet connexion to work. It includes :
-> - Information about the project (general information, dataset desciption, feature enginering choices...)
-> - Model library, parameters, and other specifications
-> - Dataset exploration with a comparison between train and test sets
-> - Global explainability of the model
-> - Model performance
+- Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects 
+> Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. This document can be easily shared across teams and does not require anything else than a working internet connexion.
+
+## ⚙️ How Shapash works 
+**Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
+to compute contributions.
+**Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="500" title="diagram">
+</p>
 
 
 ## 🛠 Installation
