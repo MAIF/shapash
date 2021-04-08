@@ -95,9 +95,16 @@ class ProjectReport:
         print_css_style()
         print_javascript_misc()
 
-        if 'metrics' in self.config.keys() and not isinstance(self.config['metrics'], dict):
-            raise ValueError(f"The report config dict includes a 'metrics' key but this key expects a dict, "
-                             f"but an object of type {type(self.config['metrics'])} was found")
+        if 'metrics' in self.config.keys():
+            if not isinstance(self.config['metrics'], list) or not isinstance(self.config['metrics'][0], dict):
+                raise ValueError("The metrics parameter expects a list of dict.")
+            for metric in self.config['metrics']:
+                for key in metric:
+                    if key not in ['path', 'name', 'use_proba_values']:
+                        raise ValueError(f"Unknown key : {key}. Key should be in ['path', 'name', 'use_proba_values']")
+                    if key == 'use_proba_values' and not isinstance(metric['use_proba_values'], bool):
+                        raise ValueError('"use_proba_values" metric key expects a boolean value.')
+
 
     @staticmethod
     def _get_values_and_name(
@@ -357,10 +364,26 @@ class ProjectReport:
     def display_model_performance(self):
         """
         Displays the performance of the model. The metrics are computed using the config dict.
-        Metrics should be given as a dict of key, value where the key is the name of the metric
-        and the value is the path (string) to a metric.
 
-        For example : config['metrics'] = {'Mean absolute error': 'sklearn.metrics.mean_absolute_error'}
+        Metrics should be given as a list of dict. Each dict contains they following keys :
+        'path' (path to the metric function, ex: 'sklearn.metrics.mean_absolute_error'),
+        'name' (optional, name of the metric as displayed in the report),
+        and 'use_proba_values' (optional, possible values are False (default) or True
+        if the metric uses proba values instead of predicted values).
+
+        For example :
+        config['metrics'] = [
+                {
+                    'path': 'sklearn.metrics.mean_squared_error',
+                    'name': 'Mean absolute error',  # Optional : name that will be displayed next to the metric
+                    'y_pred': 'predicted_values'  # Optional
+                },
+                {
+                    'path': 'Scoring_AP.utils.lift10',  # Custom function path
+                    'name': 'Lift10',
+                    'y_pred': 'proba_values'  # Use proba values instead of predicted values
+                }
+            ]
         """
         if self.y_test is None:
             logging.info("No labels given for test set. Skipping model performance part")
@@ -383,27 +406,35 @@ class ProjectReport:
             return
         print_md("### Metrics")
 
-        for metric_name, metric_path in self.config['metrics'].items():
-            if metric_path in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
-                    metric_name == 'confusion_matrix':
-                print_md(f"**{metric_name} :**")
+        for metric in self.config['metrics']:
+            if 'name' not in metric.keys():
+                metric['name'] = metric['path']
+
+            if metric['path'] in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
+                    metric['name'] == 'confusion_matrix':
+                print_md(f"**{metric['name']} :**")
                 print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=self.y_test, y_pred=self.y_pred)))
             else:
                 try:
-                    metric_fn = get_callable(path=metric_path)
-                    res = metric_fn(self.y_test, self.y_pred)
+                    metric_fn = get_callable(path=metric['path'])
+                    #  Look if we should use proba values instead of predicted values
+                    if 'use_proba_values' in metric.keys() and metric['use_proba_values'] is True:
+                            y_pred = self.explainer.proba_values
+                    else:
+                        y_pred = self.y_pred
+                    res = metric_fn(self.y_test, y_pred)
                 except Exception as e:
-                    logging.info(f"Could not compute following metric : {metric_path}. \n{e}")
+                    logging.info(f"Could not compute following metric : {metric['path']}. \n{e}")
                     continue
                 if isinstance(res, Number):
-                    print_md(f"**{metric_name} :** {round(res, 2)}")
+                    print_md(f"**{metric['name']} :** {round(res, 2)}")
                 elif isinstance(res, (list, tuple, np.ndarray)):
-                    print_md(f"**{metric_name} :**")
+                    print_md(f"**{metric['name']} :**")
                     print_html(pd.DataFrame(res).to_html(classes="greyGridTable"))
                 elif isinstance(res, str):
-                    print_md(f"**{metric_name} :**")
+                    print_md(f"**{metric['name']} :**")
                     print_html(f"<pre>{res}</pre>")
                 else:
-                    logging.info(f"Could not compute following metric : {metric_path}. \n"
+                    logging.info(f"Could not compute following metric : {metric['path']}. \n"
                                  f"Result of type {res} cannot be displayed")
         print_md('---')
