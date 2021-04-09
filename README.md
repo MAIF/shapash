@@ -13,8 +13,8 @@
     <img src="https://img.shields.io/pypi/v/shapash" alt="pypi">
   </a>
   <!-- Downloads -->
-    <a href="https://img.shields.io/pypi/dm/shapash.svg">
-    <img src="https://img.shields.io/pypi/dm/shapash.svg" alt="downloads">
+    <a href="https://static.pepy.tech/badge/shapash">
+    <img src="https://static.pepy.tech/badge/shapash" alt="downloads">
   </a>
   <!-- Python Version -->
   <a href="https://img.shields.io/pypi/pyversions/shapash">
