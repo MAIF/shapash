@@ -52,13 +52,21 @@ Shapash also contributes to data science auditing by displaying usefull informat
 - Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
 
 <p align="center">
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot03-features-importance_files/tuto-plot03-features-importance_21_0.png?raw=true" width="44%"/>
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot02-contribution_plot_files/tuto-plot02-contribution_plot_21_0.png?raw=true" width="46%" /> 
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-02.png?raw=true" width="30%"/>
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-03.png?raw=true" width="30%" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-04.png?raw=true" width="29%" /> 
 </p>
 
 <p align="center">
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-expl01-Shapash-Viz-using-Shap-contributions_files/tuto-expl01-Shapash-Viz-using-Shap-contributions_19_0.png?raw=true" width="45%" />
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/tutorials/tuto-plot04-compare_plot_files/tuto-plot04-compare_plot_20_0.png?raw=true" width="45%" /> 
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-07.png?raw=true" width="30%" style="margin-right:5%;" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-resize.png?raw=true" width="18%" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-01.png?raw=true" width="30%" style="margin-left:5%;" /> 
+</p>
+
+<p align="center">
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-05.png?raw=true" width="30%" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-06.png?raw=true" width="30%" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-08.png?raw=true" width="31%" /> 
 </p>
 
 
@@ -80,9 +88,15 @@ Shapash also contributes to data science auditing by displaying usefull informat
 - Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
 - Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects 
->We hope that this report will bring a valuable support to auditing the models and data related to a better AI governance. 
+>We hope that this report will bring a valuable support to auditing models and data related to a better AI governance. 
 Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. 
 This document can be easily shared across teams (internal audit, DPO, risk, compliance...).
+
+<a href="https://shapash-demo.ossbymaif.fr/">
+  <p align="center">
+    <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800" title="report-demo">
+  </p>
+</a>
 
 ## ⚙️ How Shapash works 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
