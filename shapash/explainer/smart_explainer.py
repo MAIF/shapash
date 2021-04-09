@@ -1053,10 +1053,13 @@ class SmartExplainer:
         title_description : str, optional
             Report title description (as written just below the title).
         metrics : dict, optional
-            Metrics used in the model performance section. The metrics parameter should be a
-            dict ok key, value pairs where the key is the name of the metric and the value is the
-            path to the metric function that will be used. For example,
-            `metrics={'Mean absolute error': 'sklearn.metrics.mean_absolute_error'}`.
+            Metrics used in the model performance section. The metrics parameter should be a list
+            of dict. Each dict contains they following keys :
+            'path' (path to the metric function, ex: 'sklearn.metrics.mean_absolute_error'),
+            'name' (optional, name of the metric as displayed in the report),
+            and 'use_proba_values' (optional, possible values are False (default) or True
+            if the metric uses proba values instead of predicted values).
+            For example, metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]
         working_dir : str, optional
             Working directory in which will be generated the notebook used to create the report
             and where the objects used to execute it will be saved. This parameter can be usefull
@@ -1076,8 +1079,16 @@ class SmartExplainer:
                 y_test=ytest,
                 title_story="House prices project report",
                 title_description="This document is a data science report of the kaggle house prices project."
-                metrics={'Mean absolute error': 'sklearn.metrics.mean_absolute_error',
-                         'Mean squared error': 'sklearn.metrics.mean_squared_error'}
+                metrics=[
+                    {
+                        'path': 'sklearn.metrics.mean_squared_error',
+                        'name': 'Mean squared error',  # Optional : name that will be displayed next to the metric
+                    },
+                    {
+                        'path': 'sklearn.metrics.mean_absolute_error',
+                        'name': 'Mean absolute error',
+                    }
+                ]
             )
         """
         rm_working_dir = False
