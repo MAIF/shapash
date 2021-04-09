@@ -1316,6 +1316,6 @@ class TestSmartExplainer(unittest.TestCase):
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         xpl = SmartExplainer()
         xpl.compile(model=clf, x=df[['x1', 'x2']])
-        xpl.generate_report(output_file='test', metadata_file='test')
+        xpl.generate_report(output_file='test', project_info_file='test')
         mock_execute_report.assert_called_once()
         mock_export_and_save_report.assert_called_once()

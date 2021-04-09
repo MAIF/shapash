@@ -13,11 +13,10 @@ from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.utils.io import load_yml
 from shapash.utils.utils import get_project_root, truncate_str
-from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, print_figure, \
+from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_correlation_matrix_fig, \
-    generate_confusion_matrix_plot
+from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot
 from shapash.report.common import series_dtype, get_callable, compute_col_types
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +36,7 @@ class ProjectReport:
     ----------
     explainer : shapash.explainer.smart_explainer.SmartExplainer
         A shapash SmartExplainer object that has already be compiled.
-    metadata_file : str
+    project_info_file : str
         Path to the yml file containing information about the project (author, description, ...).
     config : dict, optional
         Contains configuration options for the report.
@@ -61,14 +60,14 @@ class ProjectReport:
     def __init__(
             self,
             explainer: SmartExplainer,
-            metadata_file: str,
+            project_info_file: str,
             x_train: Optional[pd.DataFrame] = None,
             y_train: Optional[pd.DataFrame] = None,
             y_test: Optional[pd.DataFrame] = None,
             config: Optional[dict] = None
     ):
         self.explainer = explainer
-        self.metadata = load_yml(path=metadata_file)
+        self.metadata = load_yml(path=project_info_file)
         self.x_train_init = x_train
         if x_train is not None:
             self.x_train_pre = inverse_transform(x_train, self.explainer.preprocessing)

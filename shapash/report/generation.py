@@ -13,7 +13,7 @@ from shapash.utils.utils import get_project_root
 def execute_report(
         working_dir: str,
         explainer: object,
-        metadata_file: str,
+        project_info_file: str,
         x_train: Optional[pd.DataFrame] = None,
         y_train: Optional[pd.DataFrame] = None,
         y_test: Optional[Union[pd.Series, pd.DataFrame]] = None,
@@ -29,8 +29,8 @@ def execute_report(
         Directory in which will be saved the executed notebook.
     explainer : shapash.explainer.smart_explainer.SmartExplainer object
         Compiled shapash explainer.
-    metadata_file : str
-        Path to the metadata file used o display some information about the project in the report.
+    project_info_file : str
+        Path to the file used to display some information about the project in the report.
     x_train : pd.DataFrame
         DataFrame used for training the model.
     y_train : pd.Series or pd.DataFrame
@@ -61,7 +61,7 @@ def execute_report(
         os.path.join(working_dir, 'base_report.ipynb'),
         parameters=dict(
             dir_path=working_dir,
-            metadata_file=metadata_file,
+            project_info_file=project_info_file,
             config=config
         )
     )
