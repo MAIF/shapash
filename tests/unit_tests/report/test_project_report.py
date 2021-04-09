@@ -203,3 +203,17 @@ class TestProjectReport(unittest.TestCase):
         )
         report.display_model_performance()
         mock_logging.info.assert_called_once()
+
+    @patch('shapash.report.project_report.logging')
+    def test_display_model_performance_4(self, mock_logging):
+        """
+        Test use of proba values.
+        """
+        report = ProjectReport(
+            explainer=self.xpl,
+            project_info_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            y_test=self.df['y'],
+            config=dict(metrics=[{'path': 'sklearn.metrics.log_loss', 'use_proba_values': True}])
+        )
+        report.display_model_performance()
+        self.assertEqual(mock_logging.call_count, 0)
