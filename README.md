@@ -31,7 +31,7 @@
 </p>
 
 
-🎉 **We just released Shapash 1.1.3 that includes the generation of a standalone HTML report that constitutes a basis of an audit document.** 🎉  
+🎉 **We just released Shapash 1.3.0 that includes the generation of a standalone HTML report that constitutes a basis of an audit document.** 🎉  
 
 ## 🔍 Overview
 
