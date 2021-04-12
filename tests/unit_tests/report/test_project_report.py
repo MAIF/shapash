@@ -115,7 +115,7 @@ class TestProjectReport(unittest.TestCase):
             explainer=self.xpl,
             project_info_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
-        report.display_metadata_information()
+        report.display_project_information()
         self.assertTrue(mock_print_html.called)
 
     @patch('shapash.report.project_report.print_md')
@@ -124,7 +124,7 @@ class TestProjectReport(unittest.TestCase):
             explainer=self.xpl,
             project_info_file=os.path.join(current_path, '../../data/metadata.yaml')
         )
-        report.display_model_information()
+        report.display_model_analysis()
         self.assertTrue(mock_print_md.called)
 
     def test_display_dataset_analysis_1(self):
