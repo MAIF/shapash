@@ -52,23 +52,22 @@ Shapash also contributes to data science auditing by displaying usefull informat
 - Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
 
 <p align="center">
-  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-02.png?raw=true" width="30%"/>
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-03.png?raw=true" width="30%" />
+  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-02.png?raw=true" width="29%"/>
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-03.png?raw=true" width="29%" />
   <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-04.png?raw=true" width="29%" /> 
 </p>
 
 <p align="center">
-  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-07.png?raw=true" width="30%" />
+  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-07.png?raw=true" width="29%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-resize.png?raw=true" width="20%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-01.png?raw=true" width="30%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-01.png?raw=true" width="29%" /> 
 </p>
 
 <p align="center">
-  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-05.png?raw=true" width="30%" />
-  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-06.png?raw=true" width="30%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-08.png?raw=true" width="30.5%" /> 
+  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-05.png?raw=true" width="29%" />
+  <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-06.png?raw=true" width="29%" />
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-08.png?raw=true" width="29.5%" /> 
 </p>
-
 
 
 - Allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
