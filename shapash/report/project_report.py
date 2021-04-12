@@ -16,7 +16,8 @@ from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot
+from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot, \
+    generate_correlation_matrix_fig
 from shapash.report.common import series_dtype, get_callable, compute_col_types
 
 logging.basicConfig(level=logging.INFO)
@@ -180,7 +181,7 @@ class ProjectReport:
         if self.title_description != '':
             print_html(f'<blockquote class="panel-warning text_cell_render">{self.title_description} </blockquote>')
 
-    def display_metadata_information(self):
+    def display_project_information(self):
         """
         Displays general information about the project as defined in the metdata file.
         """
@@ -193,7 +194,7 @@ class ProjectReport:
                     print_md(f"**{k.title()}** : {v}")
             print_md('---')
 
-    def display_model_information(self):
+    def display_model_analysis(self):
         """
         Displays information about the model used : class name, library name, library version,
         model parameters, ...
@@ -222,9 +223,10 @@ class ProjectReport:
 
     def display_dataset_analysis(
             self,
-            global_analysis: Optional[bool] = True,
-            univariate_analysis: Optional[bool] = True,
-            target_analysis: Optional[bool] = True
+            global_analysis: bool = True,
+            univariate_analysis: bool = True,
+            target_analysis: bool = True,
+            multivariate_analysis: bool = True
     ):
         """
         This method performs and displays an exploration of the data given.
@@ -241,7 +243,8 @@ class ProjectReport:
         target_analysis : bool
             Whether or not to display the target analysis part that plots
             the distribution of the target variable.
-
+        multivariate_analysis : bool
+            Whether or not to display the multivariate analysis part
         """
         if global_analysis:
             print_md("### Global analysis")
@@ -256,23 +259,27 @@ class ProjectReport:
                 names=["Prediction dataset", "Training dataset"],
                 group_id='univariate'
             )
-
-        df_target = self._create_train_test_df(
-            test=pd.DataFrame({self.target_name: self.y_test},
-                              index=range(len(self.y_test))) if self.y_test is not None else None,
-            train=pd.DataFrame({self.target_name: self.y_train},
-                               index=range(len(self.y_train))) if self.y_train is not None else None
-        )
-        if df_target is not None:
-            if target_analysis:
-                print_md("### Target analysis")
-                self._perform_and_display_analysis_univariate(
-                    df=df_target,
-                    col_splitter="data_train_test",
-                    split_values=["test", "train"],
-                    names=["Prediction dataset", "Training dataset"],
-                    group_id='target'
-                )
+        if target_analysis:
+            df_target = self._create_train_test_df(
+                test=pd.DataFrame({self.target_name: self.y_test},
+                                  index=range(len(self.y_test))) if self.y_test is not None else None,
+                train=pd.DataFrame({self.target_name: self.y_train},
+                                   index=range(len(self.y_train))) if self.y_train is not None else None
+            )
+            if df_target is not None:
+                if target_analysis:
+                    print_md("### Target analysis")
+                    self._perform_and_display_analysis_univariate(
+                        df=df_target,
+                        col_splitter="data_train_test",
+                        split_values=["test", "train"],
+                        names=["Prediction dataset", "Training dataset"],
+                        group_id='target'
+                    )
+        if multivariate_analysis:
+            print_md("### Mutlivariate analysis")
+            fig_corr = generate_correlation_matrix_fig(self.df_train_test, max_features=20)
+            print_html(convert_fig_to_html(fig=fig_corr))
         print_md('---')
 
     def _display_dataset_analysis_global(self):
