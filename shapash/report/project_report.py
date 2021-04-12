@@ -243,7 +243,8 @@ class ProjectReport:
         target_analysis : bool
             Whether or not to display the target analysis part that plots
             the distribution of the target variable.
-
+        multivariate_analysis : bool
+            Whether or not to display the multivariate analysis part
         """
         if global_analysis:
             print_md("### Global analysis")
