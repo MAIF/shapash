@@ -175,7 +175,25 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_ma
     return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
 
-def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
+def generate_unique_corr_fig(df: pd.DataFrame, ax: plt.Axes):
+    """
+    Generates a correlation figure on an ax (plt.Axes).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame on which will be computed correlations.
+    ax : plt.Axes
+        The used plt.Axes on which will be plot the correlation matrix.
+    """
+    sns.set_theme(style="white")
+    corr = df.corr()
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+    sns.heatmap(corr, mask=mask, cmap=cmap_diverging, center=0, ax=ax,
+                square=True, linewidths=.5, cbar_kws={"shrink": .5})
+
+
+def generate_correlation_matrix_fig(df_train_test: pd.DataFrame, max_features: int = 20) -> plt.Figure:
     """
     Returns a matplotlib figure containing one or two correlation matrix.
 
@@ -186,27 +204,27 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
     Parameters
     ----------
     df_train_test : pd.DataFrame
+        The DataFrame that contains train and test dataset with the column 'data_train_test'
+        allowing to distinguish the values.
+    max_features : int
+        Max number of features to display on the correlation matrix.
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
-
-    def generate_unique_corr_fig(df: pd.DataFrame, ax: plt.Axes):
-        sns.set_theme(style="white")
-        corr = df.corr()
-        mask = np.triu(np.ones_like(corr, dtype=bool))
-        sns.heatmap(corr, mask=mask, cmap=cmap_diverging, center=0, ax=ax,
-                    square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    corr_tot = df_train_test.corr().sum(axis=0)
+    list_features = corr_tot.sort_values(ascending=False)[:max_features].index.to_list()
+    sub_text = f'Top {len(list_features)} features' if len(list_features) < len(corr_tot) - 1 else ''
 
     if df_train_test['data_train_test'].nunique() > 1:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 9))
         generate_unique_corr_fig(
-            df=df_train_test.loc[df_train_test.data_train_test == 'train'].drop('data_train_test', axis=1),
+            df=df_train_test.loc[df_train_test.data_train_test == 'train', list_features],
             ax=ax1
         )
         generate_unique_corr_fig(
-            df=df_train_test.loc[df_train_test.data_train_test == 'test'].drop('data_train_test', axis=1),
+            df=df_train_test.loc[df_train_test.data_train_test == 'test', list_features],
             ax=ax2
         )
         ax1.set_title("Train")
@@ -214,11 +232,13 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame):
     else:
         fig, ax = plt.subplots(figsize=(11, 9))
         generate_unique_corr_fig(
-            df=df_train_test.drop('data_train_test', axis=1),
+            df=df_train_test.loc[:, list_features],
             ax=ax
         )
         ax.set_title("Test")
-    fig.suptitle('Correlation matrix', fontsize=20, x=0.45)
+    plt.text(x=0.45, y=0.94, s='Correlation matrix', weight='bold', fontsize=20, ha="center", transform=fig.transFigure)
+    plt.text(x=0.45, y=0.9, s=sub_text, fontsize=12, ha="center", transform=fig.transFigure)
+    plt.subplots_adjust(top=0.88)
     return fig
 
 
