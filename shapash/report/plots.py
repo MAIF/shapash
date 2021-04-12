@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 from shapash.utils.utils import truncate_str
-from shapash.report.common import numeric_is_continuous, series_dtype, VarType
+from shapash.report.common import VarType, compute_top_correlations_features
 
 # Color scale derivated from SmartPlotter init_color_scale attribute
 col_scale = [(0.204, 0.216, 0.212),
@@ -213,9 +213,9 @@ def generate_correlation_matrix_fig(df_train_test: pd.DataFrame, max_features: i
     -------
     matplotlib.pyplot.Figure
     """
-    corr_tot = df_train_test.corr().sum(axis=0)
-    list_features = corr_tot.sort_values(ascending=False)[:max_features].index.to_list()
-    sub_text = f'Top {len(list_features)} features' if len(list_features) < len(corr_tot) - 1 else ''
+    corr = df_train_test.corr()
+    list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+    sub_text = f'Top {len(list_features)} features' if len(list_features) < len(corr) else ''
 
     if df_train_test['data_train_test'].nunique() > 1:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 9))

@@ -2,7 +2,8 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from shapash.report.common import VarType, series_dtype, numeric_is_continuous, get_callable
+from shapash.report.common import VarType, series_dtype, numeric_is_continuous, get_callable, \
+    compute_top_correlations_features
 
 
 class TestCommon(unittest.TestCase):
@@ -95,3 +96,26 @@ class TestCommon(unittest.TestCase):
         y_pred = [1, 1, 1, 0, 0]
 
         assert accuracy_score(y_true, y_pred) == fn(y_true, y_pred)
+
+    def test_compute_top_correlations_features_1(self):
+        """
+        Test function with small number of features
+        """
+        df = pd.DataFrame(np.random.rand(10, 2))
+
+        corr = df.corr()
+
+        list_features = compute_top_correlations_features(corr=corr, max_features=20)
+        assert len(list_features) == 2
+
+    def test_compute_top_correlations_features_2(self):
+        """
+        Test function with high number of features
+        """
+        df = pd.DataFrame(np.random.rand(10, 30))
+
+        corr = df.corr()
+
+        list_features = compute_top_correlations_features(corr=corr, max_features=5)
+
+        assert len(list_features) == 5
