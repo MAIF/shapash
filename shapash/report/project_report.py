@@ -181,7 +181,7 @@ class ProjectReport:
         if self.title_description != '':
             print_html(f'<blockquote class="panel-warning text_cell_render">{self.title_description} </blockquote>')
 
-    def display_metadata_information(self):
+    def display_project_information(self):
         """
         Displays general information about the project as defined in the metdata file.
         """
@@ -194,7 +194,7 @@ class ProjectReport:
                     print_md(f"**{k.title()}** : {v}")
             print_md('---')
 
-    def display_model_information(self):
+    def display_model_analysis(self):
         """
         Displays information about the model used : class name, library name, library version,
         model parameters, ...
