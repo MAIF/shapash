@@ -31,7 +31,7 @@
 </p>
 
 
-🎉 **We just released Shapash 1.3.0 that includes the generation of a standalone HTML report that constitutes a basis of an audit document. [See an example here](https://shapash.readthedocs.io/en/latest/report.html) that was generated [using this tutorial.](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)** 🎉  
+🎉 **We just released Shapash 1.3.1 that includes the generation of a standalone HTML report that constitutes a basis of an audit document. [See an example here](https://shapash.readthedocs.io/en/latest/report.html) that was generated [using this tutorial.](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)** 🎉  
 
 ## 🔍 Overview
 
