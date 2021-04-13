@@ -31,7 +31,7 @@
 </p>
 
 
-🎉 **We just released Shapash 1.3.0 that includes the generation of a standalone HTML report that constitutes a basis of an audit document.** 🎉  
+🎉 **We just released Shapash 1.3.0 that includes the generation of a standalone HTML report that constitutes a basis of an audit document. [See an example here](https://shapash.readthedocs.io/en/latest/report.html) that was generated [using this tutorial.](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)** 🎉  
 
 ## 🔍 Overview
 
@@ -86,12 +86,12 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
-- Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects 
+- Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects. [Report Example](https://shapash.readthedocs.io/en/latest/report.html) 
 >We hope that this report will bring a valuable support to auditing models and data related to a better AI governance. 
 Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. 
 This document can be easily shared across teams (internal audit, DPO, risk, compliance...).
 
-<a href="https://shapash-demo.ossbymaif.fr/">
+<a href="https://shapash.readthedocs.io/en/latest/report.html">
   <p align="center">
     <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800" title="report-demo">
   </p>
@@ -166,6 +166,8 @@ xpl.generate_report(
     metrics=[{‘name’: ‘MSE’, ‘path’: ‘sklearn.metrics.mean_squared_error’}]
 )
 ```
+
+[Report Example](https://shapash.readthedocs.io/en/latest/report.html)
 
 - Step 5: From training to deployment : SmartPredictor Object
   > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
