@@ -80,6 +80,7 @@ The project was developed by **MAIF** Data Scientists.
 - Usable for Regression, Binary Classification or Multiclass
 - Compatible with most of sklearn, lightgbm, catboost, xgboost models
 - Relevant for exploration and **also** deployment (through an API or in Batch mode) for operational use
+- Freeze different aspects of a data science project as a basis of an audit report
 
 
 **Shapash** is easy to install and use:
