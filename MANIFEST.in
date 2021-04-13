@@ -1,4 +1,7 @@
 recursive-include shapash/webapp/assets *
+recursive-include shapash/report/html *
+recursive-include shapash/report/template *
 
 include LICENSE
 include README.md
+include shapash/report/base_report.ipynb
