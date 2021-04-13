@@ -1,0 +1,19 @@
+<div class="row" style="height:30px; margin-right:5px; margin-left:5px;">
+    <div class="dropdown dropdown-feature">
+        <button class="btn btn-default dropdown-toggle" type="button" id="{{ menuId }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            {{ menuText }}
+            <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu scrollable-menu" aria-labelledby="{{ menuId }}">
+              {% for col in values %}
+                <li><a href="javascript:showBlock('{{ menuDivVisible }}-div', '{{ menuDivVisible }}-div-{{ col['name'] }}')">
+                    {% if col['name'] != col['description'] and col['description']|length %}
+                        {{ col['description'] }}
+                    {% else %}
+                        {{ col['name'] }}
+                    {% endif %}
+                </a></li>
+              {% endfor %}
+          </ul>
+    </div>
+</div>

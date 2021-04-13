@@ -1,0 +1,26 @@
+General information:
+  version: 0.7
+  name: House Prices Prediction Project
+  purpose: Predicting the sale price of houses
+  date: auto
+  contributors: Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre
+  description: This work is a data science project that tries to predict the sale of houses based on 79 explanatory variables. It was designed inside the data science team at X. and improved since the beggining of the project in 20019. The model was put into production since February 2021.
+  source code: https://github.com/MAIF/shapash/tree/master/tutorial
+
+Dataset information:
+  path: https://www.kaggle.com/c/house-prices-advanced-regression-techniques/
+  origin: The Assessor’s Office
+  description: the sale of individual residential property in Ames, Iowa
+  depth: from 2006 to 2010
+  perimeter: only residential sales
+  target variable: SalePrice
+  target description: The property's sale price in dollars
+
+Data preparation:
+  variable filetring: All variables that required special knowledge or previous calculations for their use were removed
+  individual filtering: only the most recent sales data on any property were kept (for houses that were sold multiple times during this period)
+  missing values: were replaced by 0
+
+Features engineering:
+  Created variables: No feature was created. All features are directly taken from the kaggle dataset
+  Transformed variables: Categorical features were transformed using an ordinal encoder

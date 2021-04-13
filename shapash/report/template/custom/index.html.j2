@@ -1,0 +1,65 @@
+{%- extends 'classic/index.html.j2' -%}
+
+{%- block header -%}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{{ super() }}
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.rawgit.com/afeld/bootstrap-toc/2f761d4/dist/bootstrap-toc.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" integrity="sha512-K1qjQ+NcF2TYO/eI3M6v8EiNYZfA95pQumfvcVrTHtwQVDG+aHRqLi/ETn2uB+1JqwYqVG3LIvdm9lj6imS/pQ==" crossorigin="anonymous"></script>
+<script src="https://cdn.rawgit.com/afeld/bootstrap-toc/2f761d4/dist/bootstrap-toc.min.js"></script>
+
+<style type="text/css">
+nav[data-toggle="toc"] {
+  top: 1.8em;
+  margin-left: 0.5em;
+}
+@media (max-width: 768px) {
+  nav[data-toggle="toc"] {
+    margin-bottom: 42px;
+    position: static;
+  }
+  nav[data-toggle="toc"] .nav .active .nav {
+    display: none;
+  }
+}
+#shapash_title {
+    color: #f4c000;
+    margin: 0
+    text-align: left;
+}
+</style>
+{%- endblock header -%}
+
+{% block body_header %}
+<body data-spy="scroll" data-target="#toc" >
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-2 no-gutters">
+                <div class="row" style="position: fixed; margin-top: 0.5em; margin-left: 0.5em; width: 15.5%; height:45px; border-bottom: 1px solid rgba(0,0,0,.125);">
+                <a href="https://github.com/MAIF/shapash" target="_blank">
+                    <div class="col-sm-3">
+                        <img height="40px" style="text-align: center;" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png">
+                    </div>
+                    <div class="col-sm-9 center-block" style="margin-top: 0.2em;">
+                        <h4 id="shapash_title">Shapash Report</h4>
+                    </div>
+                </a>
+                </div>
+                <nav id="toc" data-spy="affix" data-toggle="toc" style="margin-top: 3em;"></nav>
+            </div>
+            <div class="col-sm-10">
+                <div tabindex="-1" id="notebook" class="border-box-sizing">
+                    <div id="notebook-container">
+{% endblock body_header %}
+
+{% block input_group -%}
+{% endblock input_group %}
+
+{% block body_footer %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+{% endblock body_footer %}

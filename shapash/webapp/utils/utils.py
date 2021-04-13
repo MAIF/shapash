@@ -1,25 +1,28 @@
 import pandas as pd
 import numpy as np
-from math import log10, floor
 
 
-def round_to_1(x):
+def round_to_k(x, k):
     """
-    round float to 1 significant figure
+    round float to k significant figure
     Parameters
     ----------
     x : float
         number to round
+    k : int
+        the number of significant figures
 
     Returns
     -------
-    int
+    float or int
 
     """
-    if x == 0:
-        return 0
+    x = float(x)
+    new_x = float('%s' % float(f'%.{k}g' % x))  # Rounding to k important figures
+    if new_x % 1 == 0:
+        return int(new_x)  # Avoid the '.0' that can mislead the user that it may be a round number
     else:
-        return round(x, -int(floor(log10(abs(x)))))
+        return new_x
 
 
 def check_row(data, index):

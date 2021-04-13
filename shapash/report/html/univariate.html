@@ -1,0 +1,18 @@
+{% if features|length > 1 %}
+{% with menuId='dropdownMenu1', menuText='Feature', values=features, menuDivVisible=groupId %}
+    {% include "dropdown.html" %}
+{% endwith %}
+{% endif %}
+{% for col in features %}
+    <div class="row" id="{{ groupId }}-div-{{ col['name'] }}" style="{% if col['feature_index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px;">
+        <h4>{{ col['name'] }} - {{ col['type'] }}</h4>
+        {% if col['name'] != col['description'] and col['description']|length %}
+            <blockquote class="panel-content">{{ col['description'] }}</blockquote>
+        {% else %}
+        {% endif %}
+        <div class="row-fluid" style="margin-top:5px;">
+          <div class="col-sm-5">{{ col['table'] }}</div>
+          <div class="col-sm-7">{{ col['image'] }}</div>
+        </div>
+    </div>
+{% endfor %}
