@@ -22,6 +22,10 @@ requirements = [
         'dash-table==4.11.0',
         'nbformat>4.2.0',
         'numba==0.51.2',
+        'nbconvert==6.0.7',
+        'papermill==2.3.2',
+        'matplotlib>=3.0',
+        'seaborn==0.11.1'
     ]
 
 setup_requirements = ['pytest-runner', ]
@@ -55,13 +59,15 @@ setup(
         'shapash.decomposition': 'shapash/decomposition',
         'shapash.explainer': 'shapash/explainer',
         'shapash.manipulation': 'shapash/manipulation',
+        'shapash.report': 'shapash/report',
         'shapash.utils': 'shapash/utils',
         'shapash.webapp': 'shapash/webapp',
         'shapash.webapp.utils': 'shapash/webapp/utils',
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
-              'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils'],
+              'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils',
+              'shapash.report'],
     data_files=[('data', ['shapash/data/house_prices_dataset.csv']),
                 ('data', ['shapash/data/house_prices_labels.json']),
                 ('data', ['shapash/data/titanicdata.csv']),

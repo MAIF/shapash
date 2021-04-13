@@ -3,6 +3,8 @@ Smart explainer module
 """
 import logging
 import copy
+import tempfile
+import shutil
 import pandas as pd
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
@@ -15,6 +17,7 @@ from shapash.utils.shap_backend import shap_contributions, check_explainer, get_
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.report.generation import execute_report, export_and_save_report
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -707,7 +710,8 @@ class SmartExplainer:
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
-            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) or att == "model":
+            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
+                    or att in ["model", 'preprocessing', 'postprocessing']:
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
 
@@ -1012,3 +1016,106 @@ class SmartExplainer:
         Check if explainer class correspond to a shap explainer object
         """
         return check_explainer(explainer)
+
+    def generate_report(self,
+                        output_file,
+                        project_info_file,
+                        x_train=None,
+                        y_train=None,
+                        y_test=None,
+                        title_story=None,
+                        title_description=None,
+                        metrics=None,
+                        working_dir=None,
+                        notebook_path=None):
+        """
+        This method will generate an HTML report containing different information about the project.
+
+        It analyzes the data and the model used in order to provide interesting
+        insights that can be shared using the HTML format.
+
+        It requires a project info yml file on which can figure different information about the project.
+
+        Parameters
+        ----------
+        output_file : str
+            Path to the HTML file to write.
+        project_info_file : str
+            Path to the file used to display some information about the project in the report.
+        x_train : pd.DataFrame, optional
+            DataFrame used for training the model.
+        y_train: pd.Series or pd.DataFrame, optional
+            Series of labels in the training set.
+        y_test : pd.Series or pd.DataFrame, optional
+            Series of labels in the test set.
+        title_story : str, optional
+            Report title.
+        title_description : str, optional
+            Report title description (as written just below the title).
+        metrics : dict, optional
+            Metrics used in the model performance section. The metrics parameter should be a list
+            of dict. Each dict contains they following keys :
+            'path' (path to the metric function, ex: 'sklearn.metrics.mean_absolute_error'),
+            'name' (optional, name of the metric as displayed in the report),
+            and 'use_proba_values' (optional, possible values are False (default) or True
+            if the metric uses proba values instead of predicted values).
+            For example, metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]
+        working_dir : str, optional
+            Working directory in which will be generated the notebook used to create the report
+            and where the objects used to execute it will be saved. This parameter can be usefull
+            if one wants to create its own custom report and debug the notebook used to generate
+            the html report. If None, a temporary directory will be used.
+        notebook_path : str, optional
+            Path to the notebook used to generate the report. If None, the Shapash base report
+            notebook will be used.
+
+        Examples
+        --------
+        >>> xpl.generate_report(
+                output_file='report.html',
+                project_info_file='utils/project_info.yml',
+                x_train=x_train,
+                y_train=y_train,
+                y_test=ytest,
+                title_story="House prices project report",
+                title_description="This document is a data science report of the kaggle house prices project."
+                metrics=[
+                    {
+                        'path': 'sklearn.metrics.mean_squared_error',
+                        'name': 'Mean squared error',  # Optional : name that will be displayed next to the metric
+                    },
+                    {
+                        'path': 'sklearn.metrics.mean_absolute_error',
+                        'name': 'Mean absolute error',
+                    }
+                ]
+            )
+        """
+        rm_working_dir = False
+        if not working_dir:
+            working_dir = tempfile.mkdtemp()
+            rm_working_dir = True
+
+        if not hasattr(self, 'model'):
+            raise AssertionError("Explainer object was not compiled. Please compile the explainer "
+                                 "object using .compile(...) method before generating the report.")
+
+        execute_report(
+            working_dir=working_dir,
+            explainer=self,
+            project_info_file=project_info_file,
+            x_train=x_train,
+            y_train=y_train,
+            y_test=y_test,
+            config=dict(
+                title_story=title_story,
+                title_description=title_description,
+                metrics=metrics
+            ),
+            notebook_path=notebook_path
+        )
+        export_and_save_report(working_dir=working_dir, output_file=output_file)
+
+        if rm_working_dir:
+            shutil.rmtree(working_dir)
+

@@ -1,0 +1,30 @@
+{% if labels|length > 1 %}
+    {% with menuId='dropdownMenuLabel', menuText='Response', values=labels, menuDivVisible='explain-all' %}
+        {% include "dropdown.html" %}
+    {% endwith %}
+{% else %}
+{% endif %}
+<h3 data-toc-skip>Global feature importance plot</h3>
+{% for label in labels %}
+    <div class="row" id="explain-all-div-{{ label['name'] }}" style="{% if label['index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px; margin-top:5px;">
+        {{ label['feature_importance_plot'] }}
+        {% with menuId='dropdownMenu2', menuText='Feature', values=label['features'], menuDivVisible='explain-contrib-'~label['index'] %}
+            {% include "dropdown.html" %}
+        {% endwith %}
+    </div>
+{% endfor %}
+<h3>Features contribution plots</h3>
+{% for label in labels %}
+    <div class="row" id="explain-all-div-{{ label['name'] }}-2" style="{% if label['index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px; margin-top:5px;">
+        {% for col in label['features'] %}
+            <div class="row" id="explain-contrib-{{ label['index'] }}-div-{{ col['name'] }}" style="{% if col['feature_index'] != 0 %}display:none;{% endif %} margin-right:5px; margin-left:5px;">
+                <h4>{{ col['name'] }} - {{ col['type'] }}</h4>
+                {% if col['name'] != col['description'] %}
+                    <blockquote class="panel-content">{{ col['description'] }}</blockquote>
+                {% else %}
+                {% endif %}
+                {{ col['plot'] }}
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
