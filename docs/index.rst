@@ -63,6 +63,13 @@ The project was developed by **MAIF** Data Scientists.
     |Cheap               |0.8524|Ground living area square feet|   1188|        0.9421|Remodel date                  |          1959|        0.4234|Overall material and finish of the house|      5|        0.3785|Full bathrooms above grade|      1|        0.3738|Number of fireplaces                      |            0|        0.1687|Rating of basement finished area        |Average Rec Room|        0.1302|Wood deck area in square feet|                         0|        0.1225|
     +--------------------+------+------------------------------+-------+--------------+------------------------------+--------------+--------------+----------------------------------------+-------+--------------+--------------------------+-------+--------------+------------------------------------------+-------------+--------------+----------------------------------------+----------------+--------------+-----------------------------+--------------------------+--------------+
 
+- To freeze different aspects of a data science project as a basis of an audit report
+
+.. image:: ./_static/shapash-report-demo.gif
+   :width: 700px
+   :align: center
+   :target: https://shapash.readthedocs.io/en/latest/report.html
+
 - To discuss results: **Shapash** allows Data Scientists to easily share and discuss their results with non-Data users
 
 **Shapash** features:
