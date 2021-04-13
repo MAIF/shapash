@@ -34,7 +34,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash", # Replace with your own username
-    version="1.3.0",
+    version="1.3.1",
     python_requires='>3.5, < 3.9',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
