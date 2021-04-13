@@ -25,7 +25,7 @@
     <img src="https://img.shields.io/pypi/l/shapash" alt="license">
   </a>
   <!-- Doc -->
-  <a href="https://readthedocs.org/projects/shapash/badge/?version=latest">
+  <a href="https://shapash.readthedocs.io/en/latest/">
     <img src="https://readthedocs.org/projects/shapash/badge/?version=latest" alt="doc">
   </a>
 </p>
