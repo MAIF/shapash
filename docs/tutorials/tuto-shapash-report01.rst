@@ -194,6 +194,9 @@ parameters.
         ]
     )
 
+Note: Sometimes the jupyter kernel used when generating the report is not the right one.
+If this happen you should consider using the ``kernel_name`` parameter to indicate what kernel to use.
+
 Customize your own report
 -------------------------
 
