@@ -1027,7 +1027,8 @@ class SmartExplainer:
                         title_description=None,
                         metrics=None,
                         working_dir=None,
-                        notebook_path=None):
+                        notebook_path=None,
+                        kernel_name=None):
         """
         This method will generate an HTML report containing different information about the project.
 
@@ -1068,6 +1069,10 @@ class SmartExplainer:
         notebook_path : str, optional
             Path to the notebook used to generate the report. If None, the Shapash base report
             notebook will be used.
+        kernel_name : str, optional
+            Name of the kernel used to generate the report. This parameter can be usefull if
+            you have multiple jupyter kernels and that the method does not use the right kernel
+            by default.
 
         Examples
         --------
@@ -1112,7 +1117,8 @@ class SmartExplainer:
                 title_description=title_description,
                 metrics=metrics
             ),
-            notebook_path=notebook_path
+            notebook_path=notebook_path,
+            kernel_name=kernel_name
         )
         export_and_save_report(working_dir=working_dir, output_file=output_file)
 
