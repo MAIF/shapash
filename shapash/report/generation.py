@@ -19,6 +19,7 @@ def execute_report(
         y_test: Optional[Union[pd.Series, pd.DataFrame]] = None,
         config: Optional[dict] = None,
         notebook_path: Optional[str] = None,
+        kernel_name: Optional[str] = None
 ):
     """
     Executes the base_report.ipynb notebook and saves the results in working_dir.
@@ -42,6 +43,10 @@ def execute_report(
     notebook_path : str, optional
         Path to the notebook used to generate the report. If None, the Shapash base report
         notebook will be used.
+    kernel_name : str, optional
+        Name of the kernel used to generate the report. This parameter can be usefull if
+        you have multiple jupyter kernels and that the method does not use the right kernel
+        by default.
     """
     if config is None:
         config = {}
@@ -63,7 +68,8 @@ def execute_report(
             dir_path=working_dir,
             project_info_file=project_info_file,
             config=config
-        )
+        ),
+        kernel_name=kernel_name
     )
 
 

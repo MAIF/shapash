@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import catboost as cb
+from category_encoders import OrdinalEncoder
 
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.report.project_report import ProjectReport
@@ -141,6 +142,34 @@ class TestProjectReport(unittest.TestCase):
             project_info_file=os.path.join(current_path, '../../data/metadata.yaml'),
         )
         report.display_dataset_analysis()
+
+    @patch('shapash.report.project_report.generate_correlation_matrix_fig')
+    def test_display_dataset_analysis_3(self, mock_correlation_matrix):
+        """
+        Test we don't have a problem when only categorical features
+        """
+        df = self.df.copy()
+        df['x1'] = 'a'
+        df['x2'] = df['x2'].astype(str)
+        encoder = OrdinalEncoder(
+            cols=['x1', 'x2'],
+            handle_unknown='ignore',
+            return_df=True).fit(df)
+
+        df = encoder.transform(df)
+
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        xpl = SmartExplainer()
+        xpl.compile(model=clf, x=df[['x1', 'x2']])
+        report = ProjectReport(
+            explainer=xpl,
+            project_info_file=os.path.join(current_path, '../../data/metadata.yaml'),
+            x_train=df[['x1', 'x2']],
+        )
+
+        report.display_dataset_analysis()
+
+        self.assertEqual(mock_correlation_matrix.call_count, 0)
 
     def test_display_model_explainability_1(self):
         report = ProjectReport(

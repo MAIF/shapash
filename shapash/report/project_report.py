@@ -18,7 +18,7 @@ from shapash.report.visualisation import print_md, print_html, print_css_style, 
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot, \
     generate_correlation_matrix_fig
-from shapash.report.common import series_dtype, get_callable, compute_col_types
+from shapash.report.common import series_dtype, get_callable, compute_col_types, VarType
 
 logging.basicConfig(level=logging.INFO)
 
@@ -277,9 +277,11 @@ class ProjectReport:
                         group_id='target'
                     )
         if multivariate_analysis:
-            print_md("### Mutlivariate analysis")
-            fig_corr = generate_correlation_matrix_fig(self.df_train_test, max_features=20)
-            print_html(convert_fig_to_html(fig=fig_corr))
+            # Need at least two numerical features
+            if len([v for v in compute_col_types(self.df_train_test).values() if v == VarType.TYPE_NUM]) > 1:
+                print_md("### Mutlivariate analysis")
+                fig_corr = generate_correlation_matrix_fig(self.df_train_test, max_features=20)
+                print_html(convert_fig_to_html(fig=fig_corr))
         print_md('---')
 
     def _display_dataset_analysis_global(self):

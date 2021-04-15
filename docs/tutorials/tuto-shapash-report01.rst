@@ -194,6 +194,9 @@ parameters.
         ]
     )
 
+Note: You might want to specify the jupyter kernel used when generating the report.
+You should consider using the ``kernel_name`` parameter to indicate what kernel to use.
+
 Customize your own report
 -------------------------
 
