@@ -193,6 +193,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Contribution plot to understand how one feature affects a prediction](tutorial/plot/tuto-plot02-contribution_plot.ipynb)
 - [Summarize, display and export local contribution using filter and local_plot method](tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb)
 - [Contributions Comparing plot to understand why predictions on several individuals are different](tutorial/plot/tuto-plot04-compare_plot.ipynb)
+- [Visualize interactions between couple of variables](tutorial/plot/tuto-plot05-interactions-plot.ipynb)
 
 ### The different ways to use Encoders and Dictionaries
 - [Use Category_Encoder & inverse transformation](tutorial/encoder/tuto-encoder01-using-category_encoder.ipynb)
