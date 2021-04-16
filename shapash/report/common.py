@@ -1,5 +1,6 @@
 from typing import Union, Optional
 from enum import Enum
+from numbers import Number
 
 import pandas as pd
 import os
@@ -172,3 +173,51 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
                 set_features.add(sorted_corr.index[i][1])
         i += 1
     return list(set_features)
+
+
+def display_value(value: float, thousands_separator: str = ',', decimal_separator: str = '.') -> str:
+    """
+    Display a value as a string with specific format.
+
+    Parameters
+    ----------
+    value : float
+        Value to display.
+    thousands_separator : str
+        The separator used to separate thousands.
+    decimal_separator : str
+        The separator used to separate decimal values.
+
+    Returns
+    -------
+    str
+
+    Examples
+    --------
+    >>> display_value(1255000, thousands_separator=',')
+    '1,255,000'
+
+    """
+    value_str = '{:,}'.format(value).replace(',', '/thousands/').replace('.', '/decimal/')
+    return value_str.replace('/thousands/', thousands_separator).replace('/decimal/', decimal_separator)
+
+
+def replace_dict_values(obj: dict, replace_fn: callable, *args) -> dict:
+    """
+    Recursively iterates over all values of obj and changes its values using the replace_fn
+
+    Parameters
+    ----------
+    obj : dict
+    replace_fn : callable
+
+    Returns
+    -------
+    dict
+    """
+    for k, v in obj.items():
+        if isinstance(v, dict):
+            obj[k] = replace_dict_values(v, replace_fn)
+        elif isinstance(v, Number):
+            obj[k] = replace_fn(v, *args)
+    return obj
