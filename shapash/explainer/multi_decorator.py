@@ -238,3 +238,20 @@ class MultiDecorator:
             list of features importance pandas.series
         """
         return self.delegate('compute_features_import', contributions)
+
+    def compute_grouped_contributions(self, contributions, features_groups):
+        """
+        Regroup contributions according to features_groups parameter.
+
+        Parameters
+        ----------
+        contributions : list
+            List of contributions of each unique feature.
+        features_groups : dict
+            Python dict that inform which features to regroup.
+
+        Returns
+        -------
+        pd.DataFrame
+        """
+        return self.delegate('compute_grouped_contributions', contributions, features_groups)
