@@ -185,8 +185,12 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             which can be used the webapp, or other methods
+        features_groups : dict, optional (default: None)
+            Dictionnary containing features that should be grouped together. This option allows
+            to compute and display the contributions and importance of this group of features.
+            Features that are grouped together will still be displayed in the webapp when clicking
+            on a group.
 
-        features_groups : dict
             >>> {
             ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
             ‘feature_group_2’ : ['feature1', 'feature12'],
