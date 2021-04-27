@@ -115,11 +115,13 @@ def group_contributions(contributions, features_groups):
     contributions : pd.DataFrame
         Contributions with grouped features.
     """
-
+    new_contributions = contributions.copy()
+    # Computing features groups that are the sum of their corresponding features contributions
     for group_name in features_groups.keys():
-        contributions[group_name] = contributions[features_groups[group_name]].sum(axis=1)
+        new_contributions[group_name] = new_contributions[features_groups[group_name]].sum(axis=1)
 
+    # Dropping features that are part of the group of features
     for features_grouped in features_groups.values():
-        contributions = contributions.drop(features_grouped, axis=1)
+        new_contributions = new_contributions.drop(features_grouped, axis=1)
 
-    return contributions
+    return new_contributions
