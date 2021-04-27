@@ -3,8 +3,9 @@ Unit test of summarize
 """
 import unittest
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import numpy as np
-from shapash.manipulation.summarize import summarize_el, compute_features_import
+from shapash.manipulation.summarize import summarize_el, compute_features_import, group_contributions
 
 
 class TestSummarize(unittest.TestCase):
@@ -141,3 +142,53 @@ class TestSummarize(unittest.TestCase):
         expected = expected / expected.sum()
         expected = expected.sort_values(ascending=True)
         assert output.equals(expected)
+
+    def test_group_contributions_1(self):
+        """
+        Test compute contributions groups
+        """
+        column_name = ['col1', 'col2', 'col3']
+        index_list = ['A', 'B', 'C']
+        xmatr = pd.DataFrame(
+            [[0.1, 0.4, -0.02],
+             [-0.1, 0.2, -0.03],
+             [0.2, -0.8, 0.4]],
+            columns=column_name,
+            index=index_list
+        )
+
+        features_groups = {'group1': ['col1', 'col2']}
+        output = group_contributions(xmatr, features_groups)
+        expected = pd.DataFrame(
+            [[-0.02, 0.5],
+             [-0.03, 0.1],
+             [0.40, -0.6]],
+            columns=['col3', 'group1'],
+            index=index_list
+        )
+        assert_frame_equal(output, expected)
+
+    def test_group_contributions_2(self):
+        """
+        Test compute contributions groups
+        """
+        column_name = ['col1', 'col2', 'col3']
+        index_list = ['A', 'B', 'C']
+        xmatr = pd.DataFrame(
+            [[0.1, 0.4, -0.02],
+             [-0.1, 0.2, -0.03],
+             [0.2, -0.8, 0.4]],
+            columns=column_name,
+            index=index_list
+        )
+
+        features_groups = {'group1': ['col1', 'col2'], 'group2': ['col3']}
+        output = group_contributions(xmatr, features_groups)
+        expected = pd.DataFrame(
+            [[0.5, -0.02],
+             [0.1, -0.03],
+             [-0.6, 0.4]],
+            columns=['group1', 'group2'],
+            index=index_list
+        )
+        assert_frame_equal(output, expected)

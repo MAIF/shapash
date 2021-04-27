@@ -319,3 +319,16 @@ class TestSmartState(unittest.TestCase):
         state = SmartState()
         state.compute_features_import(Mock())
         mock_compute_features_import.assert_called()
+
+    @patch('shapash.explainer.smart_state.group_contributions')
+    def test_compute_grouped_contributions(self, mock_group_contributions):
+        """
+        Unit test compute features import
+        Parameters
+        ----------
+        mock_compute_features_import : [type]
+            [description]
+        """
+        state = SmartState()
+        state.compute_grouped_contributions(Mock(), {})
+        mock_group_contributions.assert_called()
