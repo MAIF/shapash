@@ -735,6 +735,7 @@ class SmartApp:
         @app.callback(
             [
                 Output('dataset', 'data'),
+                Output('dataset', 'tooltip_data'),
                 Output('dataset', 'columns'),
                 Output('dataset', 'active_cell'),
             ],
@@ -784,8 +785,19 @@ class SmartApp:
                     inplace=False
                 )
             self.components['table']['dataset'].data = df.to_dict('records')
+            self.components['table']['dataset'].tooltip_data = [
+                {
+                    column: {'value': str(value), 'type': 'text'}
+                    for column, value in row.items()
+                } for row in df.to_dict('rows')
+            ]
 
-            return self.components['table']['dataset'].data, columns, active_cell
+            return (
+                self.components['table']['dataset'].data,
+                self.components['table']['dataset'].tooltip_data,
+                columns,
+                active_cell,
+            )
 
         @app.callback(
             [
