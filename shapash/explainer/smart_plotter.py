@@ -839,7 +839,7 @@ class SmartPlotter:
             else:
                 value = None
         elif self.explainer._case == "regression":
-            value = self.explainer.model.predict(self.explainer.x_init.loc[index].to_frame().T)[0]
+            value = self.explainer.model.predict(self.explainer.x_init.loc[[index]])[0]
 
         return value
 
