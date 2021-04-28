@@ -1226,10 +1226,15 @@ class SmartPlotter:
                 if group_name not in self.explainer.features_groups.keys():
                     raise ValueError(f"group_name parameter : {group_name} is not in features_groups keys. "
                                      f"Possible values are : {list(self.explainer.features_groups.keys())}")
-
-                features_importance = self.explainer.features_imp.loc[
-                    self.explainer.features_imp.index.isin(self.explainer.features_groups[group_name])
-                ]
+                if isinstance(self.explainer.features_imp, list):
+                    features_importance = [
+                        label_feat_imp.loc[label_feat_imp.index.isin(self.explainer.features_groups[group_name])]
+                        for label_feat_imp in self.explainer.features_imp
+                    ]
+                else:
+                    features_importance = self.explainer.features_imp.loc[
+                        self.explainer.features_imp.index.isin(self.explainer.features_groups[group_name])
+                    ]
             else:
                 features_importance = self.explainer.features_imp_groups
         else:
