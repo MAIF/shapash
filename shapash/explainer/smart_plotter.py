@@ -1162,6 +1162,7 @@ class SmartPlotter:
                             max_features=20,
                             selection=None,
                             label=-1,
+                            group_name=None,
                             force=False,
                             width=900,
                             height=500,
@@ -1191,6 +1192,12 @@ class SmartPlotter:
         label: integer or string (default -1)
             If the label is of string type, check if it can be changed to integer to select the
             good dataframe object.
+        group_name : str (optional, default None)
+            Allows to display the features importance of the variables that are grouped together
+            inside a group of features.
+            This parameter is only available if the SmartExplainer object has been compiled using
+            the features_groups optional parameter and should correspond to a key of
+            features_groups dictionary.
         force: bool (optional, default False)
             force == True, force the compute features importance if it's already done
         width : Int (default: 900)
@@ -1214,10 +1221,24 @@ class SmartPlotter:
         self.explainer.compute_features_import(force=force)
         subtitle = None
 
+        if self.explainer.features_groups:  # Case where we have groups of features
+            if group_name:  # Case where we have groups of features and we want to display only features inside a group
+                if group_name not in self.explainer.features_groups.keys():
+                    raise ValueError(f"group_name parameter : {group_name} is not in features_groups keys. "
+                                     f"Possible values are : {list(self.explainer.features_groups.keys())}")
+
+                features_importance = self.explainer.features_imp.loc[
+                    self.explainer.features_imp.index.isin(self.explainer.features_groups[group_name])
+                ]
+            else:
+                features_importance = self.explainer.features_imp_groups
+        else:
+            features_importance = self.explainer.features_imp
+
         # classification
         if self.explainer._case == "classification":
             label_num, _, label_value = self.explainer.check_label_name(label)
-            global_feat_imp = self.explainer.features_imp[label_num].tail(max_features)
+            global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
                 subset = self.explainer.contributions[label_num].loc[selection]
                 subset_feat_imp = compute_features_import(subset)
@@ -1227,7 +1248,7 @@ class SmartPlotter:
             subtitle = f"Response: <b>{label_value}</b>"
         # regression
         elif self.explainer._case == "regression":
-            global_feat_imp = self.explainer.features_imp.tail(max_features)
+            global_feat_imp = features_importance.tail(max_features)
             if selection is not None:
                 subset = self.explainer.contributions.loc[selection]
                 subset_feat_imp = compute_features_import(subset)
