@@ -124,6 +124,7 @@ class SmartExplainer:
             self.title_story = title_story
         else:
             self.title_story = ''
+        self.features_groups = None
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
