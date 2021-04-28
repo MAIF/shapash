@@ -1084,6 +1084,108 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[1].name == expected_output.data[1].name
         assert output.data[1].orientation == expected_output.data[1].orientation
 
+    def test_features_importance_3(self):
+        """
+        Unit test features importance for groups of features
+        """
+        x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34, 1],
+                 ['Master', 27, 0]]),
+            columns=['X1', 'X2', 'X3'],
+            index=['person_A', 'person_B']
+        )
+
+        contrib = pd.DataFrame(
+            data=np.array(
+                [[-3.4, 0.78, 1.2],
+                 [1.2, 3.6, -0.3]]),
+            columns=['X1', 'X2', 'X3'],
+            index=['person_A', 'person_B']
+        )
+
+        smart_explainer = SmartExplainer()
+        smart_explainer.x_init = x_pred
+        smart_explainer.x_pred = x_pred
+        smart_explainer.postprocessing_modifications = False
+        smart_explainer.features_imp_groups = None
+        smart_explainer.features_imp = None
+        smart_explainer.features_groups = {'group0': ['X1', 'X2']}
+        smart_explainer.contributions = [contrib, -contrib]
+        smart_explainer.features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
+        smart_explainer.model = self.smart_explainer.model
+        smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
+        smart_explainer.state = smart_explainer.choose_state(smart_explainer.contributions)
+        smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
+            smart_explainer.contributions, smart_explainer.features_groups)
+        smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups)
+
+        output = smart_explainer.plot.features_importance()
+
+        data1 = go.Bar(
+            x=np.array([0.1682, 0.8318]),
+            y=np.array(['X3', 'group0']),
+            name='Global',
+            orientation='h')
+        expected_output = go.Figure(data=[data1])
+
+        assert np.array_equal(output.data[0].x, expected_output.data[0].x)
+        assert np.array_equal(output.data[0].y, expected_output.data[0].y)
+        assert output.data[0].name == expected_output.data[0].name
+        assert output.data[0].orientation == expected_output.data[0].orientation
+
+    def test_features_importance_4(self):
+        """
+        Unit test features importance for groups of features when displaying a group
+        """
+        x_pred = pd.DataFrame(
+            data=np.array(
+                [['PhD', 34, 1],
+                 ['Master', 27, 0]]),
+            columns=['X1', 'X2', 'X3'],
+            index=['person_A', 'person_B']
+        )
+
+        contrib = pd.DataFrame(
+            data=np.array(
+                [[-3.4, 0.78, 1.2],
+                 [1.2, 3.6, -0.3]]),
+            columns=['X1', 'X2', 'X3'],
+            index=['person_A', 'person_B']
+        )
+
+        smart_explainer = SmartExplainer()
+        smart_explainer.x_init = x_pred
+        smart_explainer.x_pred = x_pred
+        smart_explainer.postprocessing_modifications = False
+        smart_explainer.features_imp_groups = None
+        smart_explainer.features_imp = None
+        smart_explainer.features_groups = {'group0': ['X1', 'X2']}
+        smart_explainer.contributions = [contrib, -contrib]
+        smart_explainer.features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
+        smart_explainer.model = self.smart_explainer.model
+        smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
+        smart_explainer.state = smart_explainer.choose_state(smart_explainer.contributions)
+        smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
+            smart_explainer.contributions, smart_explainer.features_groups)
+        smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups)
+
+        output = smart_explainer.plot.features_importance(group_name='group0')
+
+        data1 = go.Bar(
+            x=np.array([0.4179, 0.4389]),
+            y=np.array(['X2', 'X1']),
+            name='Global',
+            orientation='h')
+        expected_output = go.Figure(data=[data1])
+
+        assert np.array_equal(output.data[0].x, expected_output.data[0].x)
+        assert np.array_equal(output.data[0].y, expected_output.data[0].y)
+        assert output.data[0].name == expected_output.data[0].name
+        assert output.data[0].orientation == expected_output.data[0].orientation
+
     def test_local_pred_1(self):
         xpl = self.smart_explainer
         output = xpl.plot.local_pred('person_A',label=0)
