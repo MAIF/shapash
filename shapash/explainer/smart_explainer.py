@@ -126,7 +126,8 @@ class SmartExplainer:
             self.title_story = ''
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
-                preprocessing=None, postprocessing=None, title_story: str = None):
+                preprocessing=None, postprocessing=None, title_story: str = None,
+                features_groups=None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -184,6 +185,16 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             which can be used the webapp, or other methods
+        features_groups : dict, optional (default: None)
+            Dictionnary containing features that should be grouped together. This option allows
+            to compute and display the contributions and importance of this group of features.
+            Features that are grouped together will still be displayed in the webapp when clicking
+            on a group.
+
+            >>> {
+            ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
+            ‘feature_group_2’ : ['feature1', 'feature12'],
+            }
 
         Example
         --------
@@ -229,6 +240,9 @@ class SmartExplainer:
         self.features_desc = self.check_features_desc()
         if title_story is not None:
             self.title_story = title_story
+        self.features_groups = features_groups
+        if features_groups:
+            self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """

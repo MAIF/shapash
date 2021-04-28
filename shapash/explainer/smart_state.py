@@ -12,8 +12,7 @@ from shapash.manipulation.filters import cutoff_contributions
 from shapash.manipulation.filters import combine_masks
 from shapash.manipulation.mask import compute_masked_contributions
 from shapash.manipulation.mask import init_mask
-from shapash.manipulation.summarize import summarize
-from shapash.manipulation.summarize import compute_features_import
+from shapash.manipulation.summarize import summarize, compute_features_import, group_contributions
 
 
 class SmartState:
@@ -318,3 +317,20 @@ class SmartState:
             index of the serie = contributions.columns
         """
         return compute_features_import(contributions)
+
+    def compute_grouped_contributions(self, contributions, features_groups):
+        """
+        Regroup contributions according to features_groups parameter.
+
+        Parameters
+        ----------
+        contributions : pd.DataFrame
+            Contributions of each unique feature.
+        features_groups : dict
+            Python dict that inform which features to regroup.
+
+        Returns
+        -------
+        pd.DataFrame
+        """
+        return group_contributions(contributions, features_groups)

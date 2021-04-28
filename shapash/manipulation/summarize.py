@@ -97,3 +97,31 @@ def summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
     ordered_columns = list(flatten(zip(var_dict_sum.columns, x_sorted_sum.columns, contrib_sum.columns)))
     summary = summary[ordered_columns]
     return summary
+
+
+def group_contributions(contributions, features_groups):
+    """
+    Regroup contributions according to features_groups parameter
+
+    Parameters
+    ----------
+    contributions : pd.DataFrame
+        Contributions of each unique feature.
+    features_groups : dict
+        Python dict that inform which features to regroup.
+
+    Returns
+    -------
+    contributions : pd.DataFrame
+        Contributions with grouped features.
+    """
+    new_contributions = contributions.copy()
+    # Computing features groups that are the sum of their corresponding features contributions
+    for group_name in features_groups.keys():
+        new_contributions[group_name] = new_contributions[features_groups[group_name]].sum(axis=1)
+
+    # Dropping features that are part of the group of features
+    for features_grouped in features_groups.values():
+        new_contributions = new_contributions.drop(features_grouped, axis=1)
+
+    return new_contributions
