@@ -1235,17 +1235,20 @@ class SmartPlotter:
                     features_importance = self.explainer.features_imp.loc[
                         self.explainer.features_imp.index.isin(self.explainer.features_groups[group_name])
                     ]
+                contributions = self.explainer.contributions
             else:
                 features_importance = self.explainer.features_imp_groups
+                contributions = self.explainer.contributions_groups
         else:
             features_importance = self.explainer.features_imp
+            contributions = self.explainer.contributions
 
         # classification
         if self.explainer._case == "classification":
             label_num, _, label_value = self.explainer.check_label_name(label)
             global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
-                subset = self.explainer.contributions[label_num].loc[selection]
+                subset = contributions[label_num].loc[selection]
                 subset_feat_imp = compute_features_import(subset)
                 subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             else:
@@ -1255,7 +1258,7 @@ class SmartPlotter:
         elif self.explainer._case == "regression":
             global_feat_imp = features_importance.tail(max_features)
             if selection is not None:
-                subset = self.explainer.contributions.loc[selection]
+                subset = contributions.loc[selection]
                 subset_feat_imp = compute_features_import(subset)
                 subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             else:
