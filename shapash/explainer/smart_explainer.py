@@ -124,6 +124,7 @@ class SmartExplainer:
             self.title_story = title_story
         else:
             self.title_story = ''
+        self.features_groups = None
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
@@ -243,6 +244,8 @@ class SmartExplainer:
         self.features_groups = features_groups
         if features_groups:
             self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
+            self.features_imp_groups = None
+            self._update_features_dict_with_groups(features_groups=features_groups)
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -530,6 +533,16 @@ class SmartExplainer:
         """
         for feature in (set(list(self.columns_dict.values())) - set(list(self.features_dict))):
             self.features_dict[feature] = feature
+
+    def _update_features_dict_with_groups(self, features_groups):
+        """
+        Add groups into features dict and inv_features_dict if not present.
+        """
+        for group_name in features_groups.keys():
+            if group_name not in self.features_dict.keys():
+                self.features_dict[group_name] = group_name
+                self.inv_features_dict[group_name] = group_name
+
 
     def check_contributions(self):
         """
@@ -878,6 +891,8 @@ class SmartExplainer:
             Each Serie: feature importance, One row by feature,
             index of the serie = contributions.columns
         """
+        if self.features_groups is not None and self.features_imp_groups is None:
+            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
         if self.features_imp is None or force:
             self.features_imp = self.state.compute_features_import(self.contributions)
 
