@@ -6,6 +6,7 @@ import random
 import copy
 import numpy as np
 import pandas as pd
+from sklearn.manifold import TSNE
 from plotly import graph_objs as go
 import plotly.express as px
 from plotly.offline import plot
@@ -272,6 +273,7 @@ class SmartPlotter:
                      proba_values=None,
                      col_modality=None,
                      col_scale=None,
+                     metadata=None,
                      addnote=None,
                      subtitle=None,
                      width=900,
@@ -322,15 +324,30 @@ class SmartPlotter:
         else:
             hv_text = [f"Id: {x}<br />" for x in feature_values.index]
 
+        if metadata:
+            customdata = np.array([col_values for col_values in metadata.values()])
+            customdata = np.swapaxes(customdata, 0, 1)
+            customdata_keys = list(metadata.keys())
+            hovertemplate = '<b>%{hovertext}</b><br />' + \
+                            'Contribution: %{y:.4f} <br />' + \
+                            '<br />'.join([
+                                '{}:%{{customdata[{}]:.3f}}'.format(customdata_keys[i], i)
+                                for i in range(len(customdata_keys))
+                            ]) + \
+                            '<extra></extra>'
+        else:
+            hovertemplate = '<b>%{hovertext}</b><br />' +\
+                            f'{feature_name} : ' +\
+                            '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
+            customdata = None
+
         fig.add_scatter(
             x=feature_values.values.flatten(),
             y=contributions.values.flatten(),
             mode='markers',
             hovertext=hv_text,
-            hovertemplate='<b>%{hovertext}</b><br />' +
-                          f'{feature_name} : ' +
-                          '%{x}<br />Contribution: %{y:.4f}<extra></extra>',
-            customdata=contributions.index.values
+            hovertemplate=hovertemplate,
+            customdata=customdata
         )
 
         self._update_contributions_fig(fig=fig,
@@ -1060,15 +1077,24 @@ class SmartPlotter:
         if not isinstance(col, (str, int)):
             raise ValueError('parameter col must be string or int.')
 
-        col_id = self.explainer.check_features_name([col])[0]
-        col_name = self.explainer.columns_dict[col_id]
+        col_is_group = self.explainer.features_groups and col in self.explainer.features_groups.keys()
 
-        col_value_count = self.explainer.features_desc[col_name]
-
-        if self.explainer.features_dict:
-            col_label = self.explainer.features_dict[col_name]
+        # Case where col is a group of features
+        if col_is_group:
+            contributions = self.explainer.contributions_groups
+            col_label = self.explainer.features_dict[col]
+            col_name = self.explainer.features_groups[col]  # Here col_name is actually a list of features
+            col_value_count = self.explainer.features_desc[col]
         else:
-            col_label = col_name
+            contributions = self.explainer.contributions
+            col_id = self.explainer.check_features_name([col])[0]
+            col_name = self.explainer.columns_dict[col_id]
+            col_value_count = self.explainer.features_desc[col_name]
+
+            if self.explainer.features_dict:
+                col_label = self.explainer.features_dict[col_name]
+            else:
+                col_label = col_name
 
         # Sampling
         if selection is None:
@@ -1100,7 +1126,7 @@ class SmartPlotter:
 
         # Classification Case
         if self.explainer._case == "classification":
-            subcontrib = self.explainer.contributions[label_num]
+            subcontrib = contributions[label_num]
             if self.explainer.y_pred is not None:
                 col_value = self.explainer._classes[label_num]
             subtitle = f"Response: <b>{label_value}</b>"
@@ -1119,7 +1145,7 @@ class SmartPlotter:
 
         # Regression Case - color scale
         elif self.explainer._case == "regression":
-            subcontrib = self.explainer.contributions
+            subcontrib = contributions
             if self.explainer.y_pred is not None:
                 if not hasattr(self, "pred_colorscale"):
                     self.pred_colorscale = self.tuning_colorscale(self.explainer.y_pred)
@@ -1127,10 +1153,25 @@ class SmartPlotter:
 
         # Subset
         if self.explainer.postprocessing_modifications:
-            feature_values = self.explainer.x_contrib_plot.loc[list_ind, col_name].to_frame()
+            feature_values = self.explainer.x_contrib_plot.loc[list_ind, col_name]
         else:
-            feature_values = self.explainer.x_pred.loc[list_ind, col_name].to_frame()
-        contrib = subcontrib.loc[list_ind, col_name].to_frame()
+            feature_values = self.explainer.x_pred.loc[list_ind, col_name]
+
+        if col_is_group:
+            # Project in 1D the feature values
+            feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
+            feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
+            contrib = subcontrib.loc[list_ind, col].to_frame()
+            top_features_of_group = self.explainer.features_imp.loc[self.explainer.features_groups[col]]\
+                                        .sort_values(ascending=False)[:4].index  # Displaying only top 4 features
+            metadata = {
+                self.explainer.features_dict[f_name]: self.explainer.x_pred[f_name]
+                for f_name in top_features_of_group
+            }
+        else:
+            contrib = subcontrib.loc[list_ind, col_name].to_frame()
+            metadata = None
+        feature_values = feature_values.to_frame()
 
         if self.explainer.y_pred is not None:
             y_pred = self.explainer.y_pred.loc[list_ind]
@@ -1149,7 +1190,7 @@ class SmartPlotter:
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
             fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
-                                    addnote,
+                                    metadata, addnote,
                                     subtitle, width, height, file_name, auto_open)
         else:
             fig = self.plot_violin(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
