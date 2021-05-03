@@ -2,6 +2,7 @@
 Smart plotter module
 """
 import warnings
+from numbers import Number
 import random
 import copy
 import numpy as np
@@ -14,6 +15,8 @@ from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_features_import
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
+from shapash.utils.transform import get_features_transform_mapping
+from shapash.webapp.utils.utils import round_to_k
 
 
 class SmartPlotter:
@@ -322,19 +325,20 @@ class SmartPlotter:
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
-            hv_text = [f"Id: {x}<br />" for x in feature_values.index]
+            hv_text = [f"Id: {x}" for x in feature_values.index]
 
         if metadata:
+            metadata = {k: [round_to_k(x, 3) if isinstance(x, Number) else x for x in v]
+                        for k, v in metadata.items()}
             customdata = np.array([col_values for col_values in metadata.values()])
             customdata = np.swapaxes(customdata, 0, 1)
             customdata_keys = list(metadata.keys())
             hovertemplate = '<b>%{hovertext}</b><br />' + \
                             'Contribution: %{y:.4f} <br />' + \
                             '<br />'.join([
-                                '{}:%{{customdata[{}]:.3f}}'.format(customdata_keys[i], i)
+                                '{}: %{{customdata[{}]}}'.format(customdata_keys[i], i)
                                 for i in range(len(customdata_keys))
-                            ]) + \
-                            '<extra></extra>'
+                            ]) + '<extra></extra>'
         else:
             hovertemplate = '<b>%{hovertext}</b><br />' +\
                             f'{feature_name} : ' +\
@@ -1158,12 +1162,23 @@ class SmartPlotter:
             feature_values = self.explainer.x_pred.loc[list_ind, col_name]
 
         if col_is_group:
+            # Getting mapping of variables to transform categorical features with corresponding encoded variables
+            encoding_mapping = get_features_transform_mapping(self.explainer.preprocessing, self.explainer.x_init)
+            if encoding_mapping is not None:
+                col_names_in_xinit = list()
+                for c in feature_values.columns:
+                    col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
+                feature_values = self.explainer.x_init.loc[feature_values.index, col_names_in_xinit]
             # Project in 1D the feature values
             feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
             feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
             contrib = subcontrib.loc[list_ind, col].to_frame()
-            top_features_of_group = self.explainer.features_imp.loc[self.explainer.features_groups[col]]\
-                                        .sort_values(ascending=False)[:4].index  # Displaying only top 4 features
+            if self.explainer.features_imp is None:
+                self.explainer.compute_features_import()
+            features_imp = self.explainer.features_imp if isinstance(self.explainer.features_imp, pd.Series) \
+                else self.explainer.features_imp[0]
+            top_features_of_group = features_imp.loc[self.explainer.features_groups[col]] \
+                                                .sort_values(ascending=False)[:4].index  # Displaying top 4 features
             metadata = {
                 self.explainer.features_dict[f_name]: self.explainer.x_pred[f_name]
                 for f_name in top_features_of_group

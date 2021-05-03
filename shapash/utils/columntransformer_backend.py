@@ -9,9 +9,9 @@ from shapash.utils.category_encoder_backend import inv_transform_ce
 from shapash.utils.category_encoder_backend import supported_category_encoder
 from shapash.utils.category_encoder_backend import dummies_category_encoder
 from shapash.utils.category_encoder_backend import category_encoder_binary
-from shapash.utils.category_encoder_backend import transform_ordinal
-from shapash.utils.model_synoptic import simple_tree_model_sklearn,catboost_model,\
-    linear_model,svm_model, xgboost_model, lightgbm_model, dict_model_feature
+from shapash.utils.category_encoder_backend import transform_ordinal, get_col_mapping_ce
+from shapash.utils.model_synoptic import simple_tree_model_sklearn, catboost_model,\
+    linear_model, svm_model, xgboost_model, lightgbm_model, dict_model_feature
 from shapash.utils.model import extract_features_model
 
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
@@ -391,3 +391,62 @@ def get_list_features_names(list_preprocessing, columns_dict):
 
     return feature_expected
 
+
+def get_feature_out(estimator, feature_in):
+    if hasattr(estimator, 'get_feature_names'):
+        return estimator.get_feature_names(feature_in), estimator.categories_
+    else:
+        return feature_in, []
+
+
+def get_col_mapping_ct(list_encoding, x_init):
+    """
+    Get the columns mapping of a column transformer encoder.
+
+    Parameters
+    ----------
+    list_encoding : list
+        A list containing one column transformer.
+    x_init : pd.DataFrame
+        Pandas dataframe after encoder transformations
+
+    Returns
+    -------
+    dict_col_mapping : dict
+        Dict of mapping between dataframe columns before and after encoding.
+    """
+    ct = list_encoding[0]
+    dict_col_mapping = dict()
+    idx_init = 0
+    for name, estimator, features in ct.transformers_:
+        if name != 'remainder':
+            features_out, categories_out = get_feature_out(estimator, features)
+
+            if str(type(estimator)) in dummies_sklearn:
+                for i, f_name in enumerate(features):
+                    dict_col_mapping[name + '_' + f_name] = list()
+                    for _ in categories_out[i]:
+                        dict_col_mapping[name + '_' + f_name].append(x_init.columns.to_list()[idx_init])
+                        idx_init += 1
+
+            elif str(type(estimator)) in no_dummies_sklearn:
+                for f_name in features_out:
+                    dict_col_mapping[name + '_' + f_name] = [x_init.columns.to_list()[idx_init]]
+                    idx_init += 1
+
+            elif str(type(estimator)) in supported_category_encoder:
+                dict_mapping_ce = get_col_mapping_ce([estimator])
+                for k, v in dict_mapping_ce.items():
+                    dict_col_mapping[k] = [v]
+                    idx_init += 1
+
+            else:
+                raise NotImplementedError(f'Estimator not supported : {estimator}')
+
+        elif estimator == 'passthrough':
+            features_out = ct._feature_names_in[features]
+            for f_name in features_out:
+                dict_col_mapping[f_name] = [f_name]
+                idx_init += 1
+
+    return dict_col_mapping

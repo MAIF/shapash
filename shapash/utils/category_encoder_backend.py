@@ -265,3 +265,33 @@ def transform_ordinal(x_in, encoding):
         transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
         x_in[col_name] = x_in[col_name].map(transform).astype(switch.get('mapping').values.dtype)
     return x_in
+
+
+def get_col_mapping_ce(list_encoding):
+    """
+    Get the columns mapping of a category encoder list.
+    Parameters
+    ----------
+    list_encoding : list
+        A list containing all encoders.
+
+    Returns
+    -------
+    dict_col_mapping : dict
+        Dict of mapping between dataframe columns before and after encoding.
+    """
+    dict_col_mapping = dict()
+    for enc in list_encoding:
+        enc = enc.mapping
+        if isinstance(enc, dict):
+            for col in enc.keys():
+                dict_col_mapping[col] = [col]
+        elif isinstance(enc, list):
+            for col_enc in enc:
+                if isinstance(col_enc.get('mapping'), pd.DataFrame):
+                    dict_col_mapping[col_enc.get('col')] = col_enc.get('mapping').columns.to_list()
+                else:
+                    dict_col_mapping[col_enc.get('col')] = [col_enc.get('col')]
+        else:
+            raise NotImplementedError
+    return dict_col_mapping

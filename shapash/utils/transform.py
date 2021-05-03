@@ -1,13 +1,19 @@
 """
 Transform Module
 """
-from shapash.utils.category_encoder_backend import inv_transform_ce
-from shapash.utils.columntransformer_backend import inv_transform_ct
-from shapash.utils.category_encoder_backend import supported_category_encoder
-from shapash.utils.columntransformer_backend import columntransformer
-from shapash.utils.columntransformer_backend import supported_sklearn
-from shapash.utils.columntransformer_backend import transform_ct
-from shapash.utils.category_encoder_backend import transform_ce
+from shapash.utils.columntransformer_backend import (
+    columntransformer,
+    inv_transform_ct,
+    supported_sklearn,
+    transform_ct,
+    get_col_mapping_ct
+)
+from shapash.utils.category_encoder_backend import (
+    transform_ce,
+    inv_transform_ce,
+    supported_category_encoder,
+    get_col_mapping_ce
+)
 import re
 import numpy as np
 import pandas as pd
@@ -283,3 +289,38 @@ def adapt_contributions(case,contributions):
     else:
         return contributions
 
+
+def get_features_transform_mapping(preprocessing=None, x_init=None):
+    """
+    Get the columns mapping from preprocessing.
+
+    Parameters
+    ----------
+    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
+        The processing apply to the original data
+    x_init : pd.DataFrame
+        Pandas dataframe after encoder transformations
+
+    Returns
+    -------
+    dict
+        the mapping between columns names before and after preprocessing.
+    """
+    if preprocessing is None:
+        return None
+
+    # Transform preprocessing into a list
+    list_encoding = preprocessing_tolist(preprocessing)
+
+    # Check encoding are supported
+    use_ct, use_ce = check_transformers(list_encoding)
+
+    if use_ct:
+        return get_col_mapping_ct(list_encoding, x_init)
+    elif use_ce:
+        return get_col_mapping_ce(list_encoding)
+    else:
+        if isinstance(list_encoding[0], list):
+            return {enc['col']: [enc['col']] for enc_list in list_encoding for enc in enc_list}
+        elif isinstance(list_encoding[0], dict):
+            return {enc['col']: [enc['col']] for enc in list_encoding}
