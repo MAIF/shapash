@@ -7,15 +7,13 @@ import random
 import copy
 import numpy as np
 import pandas as pd
-from sklearn.manifold import TSNE
 from plotly import graph_objs as go
 import plotly.express as px
 from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
-from shapash.manipulation.summarize import compute_features_import
+from shapash.manipulation.summarize import compute_features_import, project_feature_values_1d
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
-from shapash.utils.transform import get_features_transform_mapping
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -1162,16 +1160,8 @@ class SmartPlotter:
             feature_values = self.explainer.x_pred.loc[list_ind, col_name]
 
         if col_is_group:
-            # Getting mapping of variables to transform categorical features with corresponding encoded variables
-            encoding_mapping = get_features_transform_mapping(self.explainer.preprocessing, self.explainer.x_init)
-            if encoding_mapping is not None:
-                col_names_in_xinit = list()
-                for c in feature_values.columns:
-                    col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
-                feature_values = self.explainer.x_init.loc[feature_values.index, col_names_in_xinit]
-            # Project in 1D the feature values
-            feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
-            feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
+            feature_values = project_feature_values_1d(feature_values, col, self.explainer.preprocessing,
+                                                       self.explainer.x_init)
             contrib = subcontrib.loc[list_ind, col].to_frame()
             if self.explainer.features_imp is None:
                 self.explainer.compute_features_import()

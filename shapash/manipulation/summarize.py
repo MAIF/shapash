@@ -4,6 +4,8 @@ Summarize Module
 import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
+from sklearn.manifold import TSNE
+from shapash.utils.transform import get_features_transform_mapping
 
 
 def summarize_el(dataframe, mask, prefix):
@@ -125,3 +127,38 @@ def group_contributions(contributions, features_groups):
         new_contributions = new_contributions.drop(features_grouped, axis=1)
 
     return new_contributions
+
+
+def project_feature_values_1d(feature_values, col, preprocessing, x_init):
+    """
+    Project feature values of a group of features in 1 dimension.
+    If feature_values contains categorical features, use preprocessing to get
+    the corresponding encoded variables.
+
+    Parameters
+    ----------
+    feature_values : pd.DataFrame
+        DataFrame that contains the feature values
+    col : str
+        Name of the group of features.
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional
+        Preprocessing used to encode categorical variables.
+    x_init : pd.DataFrame
+        Values of variables after encoding.
+
+    Returns
+    -------
+    feature_values : pd.Series
+        Series containing the projected feature values.
+    """
+    # Getting mapping of variables to transform categorical features with corresponding encoded variables
+    encoding_mapping = get_features_transform_mapping(preprocessing, x_init)
+    if encoding_mapping is not None:
+        col_names_in_xinit = list()
+        for c in feature_values.columns:
+            col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
+        feature_values = x_init.loc[feature_values.index, col_names_in_xinit]
+    # Project in 1D the feature values
+    feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
+    feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
+    return feature_values
