@@ -544,7 +544,6 @@ class SmartExplainer:
                 self.inv_features_dict[group_name] = group_name
                 self.features_desc[group_name] = 1000
 
-
     def check_contributions(self):
         """
         Check if contributions and prediction set match in terms of shape and index.
