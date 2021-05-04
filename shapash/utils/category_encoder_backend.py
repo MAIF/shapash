@@ -267,13 +267,14 @@ def transform_ordinal(x_in, encoding):
     return x_in
 
 
-def get_col_mapping_ce(list_encoding):
+def get_col_mapping_ce(encoder):
     """
     Get the columns mapping of a category encoder list.
+
     Parameters
     ----------
-    list_encoding : list
-        A list containing all encoders.
+    encoder : category_encoders
+        The encoder used.
 
     Returns
     -------
@@ -281,17 +282,16 @@ def get_col_mapping_ce(list_encoding):
         Dict of mapping between dataframe columns before and after encoding.
     """
     dict_col_mapping = dict()
-    for enc in list_encoding:
-        enc = enc.mapping
-        if isinstance(enc, dict):
-            for col in enc.keys():
-                dict_col_mapping[col] = [col]
-        elif isinstance(enc, list):
-            for col_enc in enc:
-                if isinstance(col_enc.get('mapping'), pd.DataFrame):
-                    dict_col_mapping[col_enc.get('col')] = col_enc.get('mapping').columns.to_list()
-                else:
-                    dict_col_mapping[col_enc.get('col')] = [col_enc.get('col')]
-        else:
-            raise NotImplementedError
+    encoder_mapping = encoder.mapping
+    if isinstance(encoder_mapping, dict):
+        for col in encoder_mapping.keys():
+            dict_col_mapping[col] = [col]
+    elif isinstance(encoder_mapping, list):
+        for col_enc in encoder_mapping:
+            if isinstance(col_enc.get('mapping'), pd.DataFrame):
+                dict_col_mapping[col_enc.get('col')] = col_enc.get('mapping').columns.to_list()
+            else:
+                dict_col_mapping[col_enc.get('col')] = [col_enc.get('col')]
+    else:
+        raise NotImplementedError
     return dict_col_mapping

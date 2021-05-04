@@ -309,18 +309,30 @@ def get_features_transform_mapping(preprocessing=None, x_init=None):
     if preprocessing is None:
         return None
 
+    # To avoid recursion error as dict are converted to list of dict when using preprocessing_tolist function
+    if isinstance(preprocessing, dict):
+        return {preprocessing['col']: [preprocessing['col']]}
+
     # Transform preprocessing into a list
     list_encoding = preprocessing_tolist(preprocessing)
 
     # Check encoding are supported
-    use_ct, use_ce = check_transformers(list_encoding)
+    check_transformers(list_encoding)
 
-    if use_ct:
-        return get_col_mapping_ct(list_encoding, x_init)
-    elif use_ce:
-        return get_col_mapping_ce(list_encoding)
-    else:
-        if isinstance(list_encoding[0], list):
-            return {enc['col']: [enc['col']] for enc_list in list_encoding for enc in enc_list}
-        elif isinstance(list_encoding[0], dict):
-            return {enc['col']: [enc['col']] for enc in list_encoding}
+    dict_col_mapping = dict()
+    for enc in list_encoding:
+        if str(type(enc)) == columntransformer:
+            dict_col_mapping.update(get_col_mapping_ct(enc, x_init))
+
+        elif str(type(enc)) in supported_category_encoder:
+            dict_col_mapping.update(get_col_mapping_ce(enc))
+
+        elif isinstance(enc, dict):
+            dict_col_mapping.update({enc['col']: [enc['col']]})
+
+        elif isinstance(enc, list):
+            for sub_enc in enc:
+                # Recursive call
+                dict_col_mapping.update(get_features_transform_mapping(preprocessing=sub_enc, x_init=x_init))
+
+    return dict_col_mapping
