@@ -281,8 +281,15 @@ def get_col_mapping_ce(encoder):
     dict_col_mapping : dict
         Dict of mapping between dataframe columns before and after encoding.
     """
+    if str(type(encoder)) in [category_encoder_ordinal, category_encoder_onehot, category_encoder_basen,
+                              category_encoder_targetencoder]:
+        encoder_mapping = encoder.mapping
+    elif str(type(encoder)) == category_encoder_binary:
+        encoder_mapping = encoder.base_n_encoder.mapping
+    else:
+        raise NotImplementedError(f"{encoder} not supported.")
+
     dict_col_mapping = dict()
-    encoder_mapping = encoder.mapping
     if isinstance(encoder_mapping, dict):
         for col in encoder_mapping.keys():
             dict_col_mapping[col] = [col]

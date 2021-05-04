@@ -129,7 +129,7 @@ def group_contributions(contributions, features_groups):
     return new_contributions
 
 
-def project_feature_values_1d(feature_values, col, preprocessing, x_init):
+def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing):
     """
     Project feature values of a group of features in 1 dimension.
     If feature_values contains categorical features, use preprocessing to get
@@ -143,8 +143,12 @@ def project_feature_values_1d(feature_values, col, preprocessing, x_init):
         Name of the group of features.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional
         Preprocessing used to encode categorical variables.
+    x_pred : pd.DataFrame
+        Pandas dataframe before preprocessing transformations
     x_init : pd.DataFrame
-        Values of variables after encoding.
+        Pandas dataframe after preprocessing transformations
+    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
+        The processing apply to the original data
 
     Returns
     -------
@@ -152,7 +156,7 @@ def project_feature_values_1d(feature_values, col, preprocessing, x_init):
         Series containing the projected feature values.
     """
     # Getting mapping of variables to transform categorical features with corresponding encoded variables
-    encoding_mapping = get_features_transform_mapping(preprocessing, x_init)
+    encoding_mapping = get_features_transform_mapping(x_pred, x_init, preprocessing)
     if encoding_mapping is not None:
         col_names_in_xinit = list()
         for c in feature_values.columns:

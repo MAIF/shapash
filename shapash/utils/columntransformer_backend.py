@@ -438,11 +438,11 @@ def get_col_mapping_ct(encoder, x_init):
                     idx_init += 1
 
             elif str(type(estimator)) in supported_category_encoder:
-                dict_mapping_ce = get_col_mapping_ce([estimator])
-                for k in dict_mapping_ce.keys():
-                    dict_col_mapping[k] = list()
-                    for _ in dict_mapping_ce[k]:
-                        dict_col_mapping[k].append(x_init.columns.to_list()[idx_init])
+                dict_mapping_ce = get_col_mapping_ce(estimator)
+                for f_name in dict_mapping_ce.keys():
+                    dict_col_mapping[name + '_' + f_name] = list()
+                    for _ in dict_mapping_ce[f_name]:
+                        dict_col_mapping[name + '_' + f_name].append(x_init.columns.to_list()[idx_init])
                         idx_init += 1
 
             else:
@@ -451,7 +451,7 @@ def get_col_mapping_ct(encoder, x_init):
         elif estimator == 'passthrough':
             features_out = encoder._feature_names_in[features]
             for f_name in features_out:
-                dict_col_mapping[f_name] = [f_name]
+                dict_col_mapping[f_name] = [x_init.columns.to_list()[idx_init]]
                 idx_init += 1
 
     return dict_col_mapping

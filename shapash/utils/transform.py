@@ -290,16 +290,16 @@ def adapt_contributions(case,contributions):
         return contributions
 
 
-def get_features_transform_mapping(preprocessing=None, x_init=None):
+def _get_preprocessing_mapping(x_init, preprocessing=None):
     """
     Get the columns mapping from preprocessing.
 
     Parameters
     ----------
-    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
-        The processing apply to the original data
     x_init : pd.DataFrame
         Pandas dataframe after encoder transformations
+    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
+        The processing apply to the original data
 
     Returns
     -------
@@ -307,11 +307,11 @@ def get_features_transform_mapping(preprocessing=None, x_init=None):
         the mapping between columns names before and after preprocessing.
     """
     if preprocessing is None:
-        return None
+        return {}
 
     # To avoid recursion error as dict are converted to list of dict when using preprocessing_tolist function
     if isinstance(preprocessing, dict):
-        return {preprocessing['col']: [preprocessing['col']]}
+        return {}  # The names of the columns are not changing when using dict
 
     # Transform preprocessing into a list
     list_encoding = preprocessing_tolist(preprocessing)
@@ -328,11 +328,39 @@ def get_features_transform_mapping(preprocessing=None, x_init=None):
             dict_col_mapping.update(get_col_mapping_ce(enc))
 
         elif isinstance(enc, dict):
-            dict_col_mapping.update({enc['col']: [enc['col']]})
+            pass  # The names of the columns are not changing when using dict
 
         elif isinstance(enc, list):
             for sub_enc in enc:
                 # Recursive call
-                dict_col_mapping.update(get_features_transform_mapping(preprocessing=sub_enc, x_init=x_init))
+                dict_col_mapping.update(_get_preprocessing_mapping(preprocessing=sub_enc, x_init=x_init))
 
     return dict_col_mapping
+
+
+def get_features_transform_mapping(x_pred, x_init, preprocessing=None):
+    """
+    Get the columns mapping from preprocessing and add missing columns that are not used or changed in preprocessing.
+
+    Parameters
+    ----------
+    x_pred : pd.DataFrame
+        Pandas dataframe before preprocessing transformations
+    x_init : pd.DataFrame
+        Pandas dataframe after preprocessing transformations
+    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
+        The processing apply to the original data
+
+    Returns
+    -------
+    dict
+        the mapping between columns names before and after preprocessing.
+    """
+    dict_all_cols_mapping = dict()
+    dict_all_cols_mapping.update(_get_preprocessing_mapping(x_init=x_init, preprocessing=preprocessing))
+    # Adding columns which name was not changed during preprocessing
+    for col_name in x_pred.columns:
+        if col_name not in dict_all_cols_mapping.keys():
+            dict_all_cols_mapping[col_name] = [col_name]
+    return dict_all_cols_mapping
+

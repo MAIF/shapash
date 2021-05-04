@@ -9,7 +9,7 @@ import catboost as cb
 import sklearn
 import lightgbm
 import xgboost
-from shapash.utils.transform import inverse_transform, apply_preprocessing
+from shapash.utils.transform import inverse_transform, apply_preprocessing, get_col_mapping_ce
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
@@ -656,3 +656,89 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         assert result.shape == expected.shape
         assert [column in clf.get_booster().feature_names for column in result.columns]
         assert all(expected.index == result.index)
+
+    def test_get_col_mapping_ce_1(self):
+        """
+        Test test_get_col_mapping_ce with target encoding
+        """
+        test = pd.DataFrame({'city': ['chicago', 'paris', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', np.nan, np.nan]})
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+
+        enc = ce.TargetEncoder(cols=['city', 'state'])
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ce(enc)
+        expected_mapping = {'city': ['city'], 'state': ['state']}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ce_2(self):
+        """
+        Test test_get_col_mapping_ce with target OrdinalEncoder
+        """
+        test = pd.DataFrame({'city': ['chicago', 'paris', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', np.nan, np.nan]})
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+
+        enc = ce.OrdinalEncoder(handle_missing='value', handle_unknown='value')
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ce(enc)
+        expected_mapping = {'city': ['city'], 'state': ['state'], 'other': ['other']}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ce_3(self):
+        """
+        Test test_get_col_mapping_ce with target BinaryEncoder
+        """
+        test = pd.DataFrame({'city': ['chicago', 'paris', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', np.nan, np.nan]})
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+
+        enc = ce.BinaryEncoder(cols=['city', 'state'])
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ce(enc)
+        expected_mapping = {'city': ['city_0', 'city_1'], 'state': ['state_0', 'state_1']}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ce_4(self):
+        """
+        Test test_get_col_mapping_ce with target BaseNEncoder
+        """
+        test = pd.DataFrame({'city': ['chicago', 'paris', 'new york'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', np.nan, np.nan]})
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+
+        enc = ce.BaseNEncoder(base=2)
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ce(enc)
+        expected_mapping = {'city': ['city_0', 'city_1', 'city_2'], 'state': ['state_0', 'state_1'],
+                            'other': ['other_0', 'other_1']}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ce_5(self):
+        """
+        Test test_get_col_mapping_ce with target BaseNEncoder
+        """
+        test = pd.DataFrame({'city': ['chicago', 'paris', 'chicago'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', np.nan, np.nan]})
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+
+        enc = ce.OneHotEncoder(cols=['city', 'state'], use_cat_names=True)
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ce(enc)
+        expected_mapping = {'city': ['city_chicago', 'city_paris'], 'state': ['state_US', 'state_FR']}
+
+        self.assertDictEqual(mapping, expected_mapping)

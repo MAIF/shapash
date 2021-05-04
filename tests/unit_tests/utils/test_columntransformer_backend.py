@@ -11,8 +11,10 @@ import catboost as cb
 import sklearn
 import lightgbm
 import xgboost
-from shapash.utils.transform import inverse_transform, apply_preprocessing
-from shapash.utils.columntransformer_backend import get_feature_names, get_names, get_list_features_names
+from shapash.utils.transform import inverse_transform
+from shapash.utils.transform import apply_preprocessing
+from shapash.utils.columntransformer_backend import get_feature_names, get_names, get_list_features_names, \
+        get_col_mapping_ct
 
 
 # TODO
@@ -1104,3 +1106,220 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert len(list_4) == 5
         assert len(list_5) == 5
 
+    def test_get_col_mapping_ct_1(self):
+        """
+        Test ColumnTransformer col mapping with drop option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('onehot_ce', ce.OneHotEncoder(), ['city', 'state']),
+                ('onehot_skp', skp.OneHotEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test))
+
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'onehot_ce_city': [0, 1], 'onehot_ce_state': [2, 3], 'onehot_skp_city': [4, 5], 'onehot_skp_state': [6, 7]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_2(self):
+        """
+        Test ColumnTransformer col mapping with onehotencoder and passthrough option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('onehot_ce', ce.OneHotEncoder(), ['city', 'state']),
+                ('onehot_skp', skp.OneHotEncoder(), ['city', 'state'])
+            ],
+            remainder='passthrough')
+
+        test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test))
+
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'onehot_ce_city': [0, 1], 'onehot_ce_state': [2, 3], 'onehot_skp_city': [4, 5],
+                            'onehot_skp_state': [6, 7], 'other': [8]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_3(self):
+        """
+        Test ColumnTransformer col mapping with target encoder
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('target', ce.TargetEncoder(), ['city', 'state'])
+            ],
+            remainder='passthrough')
+
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'other': [2], 'target_city': [0], 'target_state': [1]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_4(self):
+        """
+        Test ColumnTransformer col mapping with Ordinal Category Encoder and drop option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('ordinal', ce.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'ordinal_city': [0], 'ordinal_state': [1]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_5(self):
+        """
+        test get_col_mapping_ct with Binary encoder and drop option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('binary', ce.BinaryEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'binary_city': [0, 1], 'binary_state': [2, 3]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_6(self):
+        """
+        test get_col_mapping_ct with BaseN Encoder and drop option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('basen', ce.BaseNEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        test = pd.DataFrame({'city': ['chicago', 'new york', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'basen_city': [0, 1, 2], 'basen_state': [3, 4]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_7(self):
+        """
+        test get_col_mapping_ct with ordinal Encoder sklearn and drop option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('ordinal', skp.OrdinalEncoder(), ['city', 'state'])
+            ],
+            remainder='drop')
+
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        test = pd.DataFrame({'city': ['chicago', 'new york', 'paris'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'ordinal_city': [0], 'ordinal_state': [1]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_8(self):
+        """
+        test get_col_mapping_ct with Standardscaler Encoder Sklearn and passthrough option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('std', skp.StandardScaler(), ['num1', 'num2'])
+            ],
+            remainder='passthrough')
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 3],
+                             'other': ['A', 'B', 'C']})
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test))
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'std_num1': [0], 'std_num2': [1], 'other': [2]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_9(self):
+        """
+        test get_col_mapping_ct with QuantileTransformer Encoder Sklearn and passthrough option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])
+            ],
+            remainder='passthrough')
+
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 3],
+                             'other': ['A', 'B', 'C']})
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test))
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'quantile_num1': [0], 'quantile_num2': [1], 'other': [2]}
+
+        self.assertDictEqual(mapping, expected_mapping)
+
+    def test_get_col_mapping_ct_10(self):
+        """
+        test get_col_mapping_ct with PowerTransformer Encoder Sklearn and passthrough option
+        """
+        enc = ColumnTransformer(
+            transformers=[
+                ('power', skp.PowerTransformer(), ['num1', 'num2'])
+            ],
+            remainder='passthrough')
+
+        test = pd.DataFrame({'num1': [0, 1, 1],
+                             'num2': [0, 2, 3],
+                             'other': ['A', 'B', 'C']})
+
+        test_encoded = pd.DataFrame(enc.fit_transform(test))
+        mapping = get_col_mapping_ct(enc, test_encoded)
+        expected_mapping = {'power_num1': [0], 'power_num2': [1], 'other': [2]}
+
+        self.assertDictEqual(mapping, expected_mapping)
