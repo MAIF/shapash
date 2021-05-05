@@ -1172,7 +1172,7 @@ class SmartPlotter:
                 self.explainer.features_dict[f_name]: self.explainer.x_pred[f_name]
                 for f_name in top_features_of_group
             }
-            text_group = "Feature values were projected on the x axis using t-SNE"
+            text_group = "Features values were projected on the x axis using t-SNE"
             if addnote is not None:
                 addnote = add_text([addnote, text_group], sep=' - ')
             else:
