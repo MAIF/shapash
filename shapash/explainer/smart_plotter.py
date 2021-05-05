@@ -323,7 +323,7 @@ class SmartPlotter:
         if pred is not None:
             hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
         else:
-            hv_text = [f"Id: {x}<br />" for x in feature_values.index]
+            hv_text = [f"Id: {x}" for x in feature_values.index]
 
         if metadata:
             metadata = {k: [round_to_k(x, 3) if isinstance(x, Number) else x for x in v]

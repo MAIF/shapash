@@ -734,7 +734,7 @@ class TestSmartPlotter(unittest.TestCase):
         expected_output = go.Scatter(x=xpl.x_pred[col],
                                      y=xpl.contributions[col],
                                      mode='markers',
-                                     hovertext=[f"Id: {x}<br />" for x in xpl.x_pred.index])
+                                     hovertext=[f"Id: {x}" for x in xpl.x_pred.index])
 
         assert np.array_equal(output.data[0].x, expected_output.x)
         assert np.array_equal(output.data[0].y, expected_output.y)
