@@ -1114,8 +1114,7 @@ class SmartPlotter:
                 list_ind = random.sample(selection, max_points)
                 addnote = "Length of random Subset : "
         else:
-            ValueError('parameter selection must be a list')
-
+            raise ValueError('parameter selection must be a list')
         if addnote is not None:
             addnote = add_text([addnote,
                                 f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
@@ -1173,6 +1172,11 @@ class SmartPlotter:
                 self.explainer.features_dict[f_name]: self.explainer.x_pred[f_name]
                 for f_name in top_features_of_group
             }
+            text_group = "Feature values were projected on the x axis using t-SNE"
+            if addnote is not None:
+                addnote = add_text([addnote, text_group], sep=' - ')
+            else:
+                addnote = text_group
         else:
             contrib = subcontrib.loc[list_ind, col_name].to_frame()
             metadata = None
