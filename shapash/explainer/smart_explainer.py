@@ -1082,7 +1082,7 @@ class SmartExplainer:
             Report title.
         title_description : str, optional
             Report title description (as written just below the title).
-        metrics : dict, optional
+        metrics : list, optional
             Metrics used in the model performance section. The metrics parameter should be a list
             of dict. Each dict contains they following keys :
             'path' (path to the metric function, ex: 'sklearn.metrics.mean_absolute_error'),
