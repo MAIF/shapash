@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from shapash.report.common import VarType, series_dtype, numeric_is_continuous, get_callable, \
-    compute_top_correlations_features
+    compute_top_correlations_features, display_value, replace_dict_values
 
 
 class TestCommon(unittest.TestCase):
@@ -119,3 +119,25 @@ class TestCommon(unittest.TestCase):
         list_features = compute_top_correlations_features(corr=corr, max_features=5)
 
         assert len(list_features) == 5
+
+    def test_display_value_1(self):
+        value = 123456.789
+        expected_str = '123,456.789'
+        assert display_value(value, ',', '.') == expected_str
+
+    def test_display_value_2(self):
+        value = 123456.789
+        expected_str = '123 456,789'
+        assert display_value(value, ' ', ',') == expected_str
+
+    def test_display_value_3(self):
+        value = 123456.789
+        expected_str = '123.456,789'
+        assert display_value(value, '.', ',') == expected_str
+
+    def test_replace_dict_values_1(self):
+        d = {'a': 1234, 'b': 0.1234, 'c': {'d': 123.456, 'e': 1234, 'f': {'g': 1234}}}
+        expected_d = {'a': '1,234', 'b': '0.1234', 'c': {'d': '123.456', 'e': '1,234', 'f': {'g': '1,234'}}}
+        res_d = replace_dict_values(d, display_value, ',', '.')
+        assert d == expected_d
+        assert res_d == expected_d  # The replace_dict_values function modify inplace but also returns the result dict

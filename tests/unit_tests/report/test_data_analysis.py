@@ -18,10 +18,10 @@ class TestDataAnalysis(unittest.TestCase):
 
         d = perform_global_dataframe_analysis(df)
         expected_d = {
-            'number of features': 3,
-            'number of observations': 6,
-            'missing values': 2,
-            '% missing values': 0.111,
+            'number of features': '3',
+            'number of observations': '6',
+            'missing values': '2',
+            '% missing values': '0.111',
         }
         TestCase().assertDictEqual(d, expected_d)
 
@@ -42,40 +42,40 @@ class TestDataAnalysis(unittest.TestCase):
         d = perform_univariate_dataframe_analysis(df, col_types=compute_col_types(df))
         expected_d = {
             'int_continuous_data': {
-                'count': 60,
-                'mean': 29.5,
-                'std': 17.5,
-                'min': 0,
-                '25%': 14.8,
-                '50%': 29.5,
-                '75%': 44.2,
-                'max': 59
+                'count': '60',
+                'mean': '29.5',
+                'std': '17.5',
+                'min': '0',
+                '25%': '14.8',
+                '50%': '29.5',
+                '75%': '44.2',
+                'max': '59'
             },
             'float_continuous_data': {
-                'count': 60,
-                'mean': 1,
-                'std': 0.592,
-                'min': 0,
-                '25%': 0.5,
-                '50%': 1,
-                '75%': 1.5,
-                'max': 2
+                'count': '60',
+                'mean': '1',
+                'std': '0.592',
+                'min': '0',
+                '25%': '0.5',
+                '50%': '1',
+                '75%': '1.5',
+                'max': '2'
             },
             'int_cat_data': {
-                'distinct values': 2,
-                'missing values': 0
+                'distinct values': '2',
+                'missing values': '0'
             },
             'float_cat_data': {
-                'distinct values': 2,
-                'missing values': 0
+                'distinct values': '2',
+                'missing values': '0'
             },
             'string_data': {
-                'distinct values': 5,
-                'missing values': 10
+                'distinct values': '5',
+                'missing values': '10'
             },
             'bool_data': {
-                'distinct values': 2,
-                'missing values': 10
+                'distinct values': '2',
+                'missing values': '10'
             }
         }
         TestCase().assertDictEqual(d, expected_d)
