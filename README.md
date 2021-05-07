@@ -44,10 +44,16 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
 - [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
-- Medium: <br/>
-     - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
-     [<img src="https://www.kdnuggets.com/images/tkb-2104-g.png" width=35 alt="Gold Blog" align="right"></a>](https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html)
-     - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
+- Medium:    
+<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
+  <p align="center">
+    <img align="left" src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="6%" />
+  </p>
+</a> 
+
+
+- [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
+- [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
 
 ## 🔥  Features
 
