@@ -1330,6 +1330,11 @@ class SmartPlotter:
                                sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
+        if self.explainer.features_groups:
+            # Bold font for groups of features
+            global_feat_imp.index = ['<b>' + str(f) + '</b>'
+                                     if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
+                                     else str(f) for f in global_feat_imp.index]
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, addnote,
                                         subtitle, width, height, file_name, auto_open)
         return fig

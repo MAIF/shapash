@@ -822,7 +822,9 @@ class SmartApp:
             update feature importance plot according to selected label and dataset state.
             """
             ctx = dash.callback_context
-            selected_feature = self.explainer.inv_features_dict.get(clickData['points'][0]['label']) if clickData else None
+            selected_feature = self.explainer.inv_features_dict.get(
+                clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
+            ) if clickData else None
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
@@ -901,7 +903,8 @@ class SmartApp:
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
                 if feature is not None:
-                    self.selected_feature = feature['points'][0]['label']
+                    # Removing bold
+                    self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     if feature['points'][0]['curveNumber'] == 0 and \
                             len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
                         self.subset = self.list_index
