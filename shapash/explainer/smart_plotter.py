@@ -328,20 +328,20 @@ class SmartPlotter:
         if metadata:
             metadata = {k: [round_to_k(x, 3) if isinstance(x, Number) else x for x in v]
                         for k, v in metadata.items()}
-            customdata = np.array([col_values for col_values in metadata.values()])
-            customdata = np.swapaxes(customdata, 0, 1)
-            customdata_keys = list(metadata.keys())
+            text_groups_features = np.swap = np.array([col_values for col_values in metadata.values()])
+            text_groups_features = np.swapaxes(text_groups_features, 0, 1)
+            text_groups_features_keys = list(metadata.keys())
             hovertemplate = '<b>%{hovertext}</b><br />' + \
                             'Contribution: %{y:.4f} <br />' + \
                             '<br />'.join([
-                                '{}: %{{customdata[{}]}}'.format(customdata_keys[i], i)
-                                for i in range(len(customdata_keys))
+                                '{}: %{{text[{}]}}'.format(text_groups_features_keys[i], i)
+                                for i in range(len(text_groups_features_keys))
                             ]) + '<extra></extra>'
         else:
             hovertemplate = '<b>%{hovertext}</b><br />' +\
                             f'{feature_name} : ' +\
                             '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
-            customdata = None
+            text_groups_features = None
 
         fig.add_scatter(
             x=feature_values.values.flatten(),
@@ -349,7 +349,8 @@ class SmartPlotter:
             mode='markers',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
-            customdata=customdata
+            customdata=feature_values.index.values,
+            text=text_groups_features
         )
 
         self._update_contributions_fig(fig=fig,
