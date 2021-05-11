@@ -265,3 +265,40 @@ def transform_ordinal(x_in, encoding):
         transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
         x_in[col_name] = x_in[col_name].map(transform).astype(switch.get('mapping').values.dtype)
     return x_in
+
+
+def get_col_mapping_ce(encoder):
+    """
+    Get the columns mapping of a category encoder list.
+
+    Parameters
+    ----------
+    encoder : category_encoders
+        The encoder used.
+
+    Returns
+    -------
+    dict_col_mapping : dict
+        Dict of mapping between dataframe columns before and after encoding.
+    """
+    if str(type(encoder)) in [category_encoder_ordinal, category_encoder_onehot, category_encoder_basen,
+                              category_encoder_targetencoder]:
+        encoder_mapping = encoder.mapping
+    elif str(type(encoder)) == category_encoder_binary:
+        encoder_mapping = encoder.base_n_encoder.mapping
+    else:
+        raise NotImplementedError(f"{encoder} not supported.")
+
+    dict_col_mapping = dict()
+    if isinstance(encoder_mapping, dict):
+        for col in encoder_mapping.keys():
+            dict_col_mapping[col] = [col]
+    elif isinstance(encoder_mapping, list):
+        for col_enc in encoder_mapping:
+            if isinstance(col_enc.get('mapping'), pd.DataFrame):
+                dict_col_mapping[col_enc.get('col')] = col_enc.get('mapping').columns.to_list()
+            else:
+                dict_col_mapping[col_enc.get('col')] = [col_enc.get('col')]
+    else:
+        raise NotImplementedError
+    return dict_col_mapping

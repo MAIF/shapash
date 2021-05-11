@@ -1,13 +1,19 @@
 """
 Transform Module
 """
-from shapash.utils.category_encoder_backend import inv_transform_ce
-from shapash.utils.columntransformer_backend import inv_transform_ct
-from shapash.utils.category_encoder_backend import supported_category_encoder
-from shapash.utils.columntransformer_backend import columntransformer
-from shapash.utils.columntransformer_backend import supported_sklearn
-from shapash.utils.columntransformer_backend import transform_ct
-from shapash.utils.category_encoder_backend import transform_ce
+from shapash.utils.columntransformer_backend import (
+    columntransformer,
+    inv_transform_ct,
+    supported_sklearn,
+    transform_ct,
+    get_col_mapping_ct
+)
+from shapash.utils.category_encoder_backend import (
+    transform_ce,
+    inv_transform_ce,
+    supported_category_encoder,
+    get_col_mapping_ce
+)
 import re
 import numpy as np
 import pandas as pd
@@ -282,4 +288,79 @@ def adapt_contributions(case,contributions):
         return [contributions * -1, contributions]
     else:
         return contributions
+
+
+def _get_preprocessing_mapping(x_init, preprocessing=None):
+    """
+    Get the columns mapping from preprocessing.
+
+    Parameters
+    ----------
+    x_init : pd.DataFrame
+        Pandas dataframe after encoder transformations
+    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
+        The processing apply to the original data
+
+    Returns
+    -------
+    dict
+        the mapping between columns names before and after preprocessing.
+    """
+    if preprocessing is None:
+        return {}
+
+    # To avoid recursion error as dict are converted to list of dict when using preprocessing_tolist function
+    if isinstance(preprocessing, dict):
+        return {}  # The names of the columns are not changing when using dict
+
+    # Transform preprocessing into a list
+    list_encoding = preprocessing_tolist(preprocessing)
+
+    # Check encoding are supported
+    check_transformers(list_encoding)
+
+    dict_col_mapping = dict()
+    for enc in list_encoding:
+        if str(type(enc)) == columntransformer:
+            dict_col_mapping.update(get_col_mapping_ct(enc, x_init))
+
+        elif str(type(enc)) in supported_category_encoder:
+            dict_col_mapping.update(get_col_mapping_ce(enc))
+
+        elif isinstance(enc, dict):
+            pass  # The names of the columns are not changing when using dict
+
+        elif isinstance(enc, list):
+            for sub_enc in enc:
+                # Recursive call
+                dict_col_mapping.update(_get_preprocessing_mapping(preprocessing=sub_enc, x_init=x_init))
+
+    return dict_col_mapping
+
+
+def get_features_transform_mapping(x_pred, x_init, preprocessing=None):
+    """
+    Get the columns mapping from preprocessing and add missing columns that are not used or changed in preprocessing.
+
+    Parameters
+    ----------
+    x_pred : pd.DataFrame
+        Pandas dataframe before preprocessing transformations
+    x_init : pd.DataFrame
+        Pandas dataframe after preprocessing transformations
+    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
+        The processing apply to the original data
+
+    Returns
+    -------
+    dict
+        the mapping between columns names before and after preprocessing.
+    """
+    dict_all_cols_mapping = dict()
+    dict_all_cols_mapping.update(_get_preprocessing_mapping(x_init=x_init, preprocessing=preprocessing))
+    # Adding columns which name was not changed during preprocessing
+    for col_name in x_pred.columns:
+        if col_name not in dict_all_cols_mapping.keys():
+            dict_all_cols_mapping[col_name] = [col_name]
+    return dict_all_cols_mapping
 

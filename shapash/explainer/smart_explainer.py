@@ -542,7 +542,7 @@ class SmartExplainer:
             if group_name not in self.features_dict.keys():
                 self.features_dict[group_name] = group_name
                 self.inv_features_dict[group_name] = group_name
-
+                self.features_desc[group_name] = 1000
 
     def check_contributions(self):
         """

@@ -734,7 +734,7 @@ class TestSmartPlotter(unittest.TestCase):
         expected_output = go.Scatter(x=xpl.x_pred[col],
                                      y=xpl.contributions[col],
                                      mode='markers',
-                                     hovertext=[f"Id: {x}<br />" for x in xpl.x_pred.index])
+                                     hovertext=[f"Id: {x}" for x in xpl.x_pred.index])
 
         assert np.array_equal(output.data[0].x, expected_output.x)
         assert np.array_equal(output.data[0].y, expected_output.y)
@@ -960,17 +960,155 @@ class TestSmartPlotter(unittest.TestCase):
         classification with proba
         """
         col = 'X1'
-        xpl =self.smart_explainer
+        xpl = self.smart_explainer
         xpl.proba_values = pd.DataFrame(
-            data = np.array(
+            data=np.array(
                 [[0.4, 0.6],
                 [0.3, 0.7]]),
-            columns = ['class_1','class_2'],
-            index = xpl.x_init.index.values)
+            columns=['class_1', 'class_2'],
+            index=xpl.x_init.index.values)
         output = self.smart_explainer.plot.contribution_plot(col)
         assert str(type(output.data[-1])) == "<class 'plotly.graph_objs._scatter.Scatter'>"
         self.assertListEqual(list(output.data[-1]['marker']['color']), [0.6, 0.7])
         self.assertListEqual(list(output.data[-1]['y']), [-0.3, 4.7])
+
+    def test_contribution_plot_12(self):
+        """
+        contribution plot with groups of features for classification case
+        """
+        x_init = pd.DataFrame(
+            data=np.array(
+                [[0, 34],
+                 [1, 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        xpl = self.smart_explainer
+        xpl.inv_features_dict = {}
+        col = 'group1'
+        xpl.x_init = x_init
+        xpl.contributions[0] = pd.concat([xpl.contributions[0]] * 10, ignore_index=True)
+        xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 10, ignore_index=True)
+        xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
+        xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
+        xpl.postprocessing_modifications = False
+        xpl.preprocessing = None
+        # Creates a group of features named group1
+        xpl.features_groups = {'group1': ['X1', 'X2']}
+        xpl.contributions_groups = xpl.state.compute_grouped_contributions(xpl.contributions, xpl.features_groups)
+        xpl.features_imp_groups = None
+        xpl._update_features_dict_with_groups(features_groups=xpl.features_groups)
+
+        output = xpl.plot.contribution_plot(col, proba=False)
+
+        assert len(output.data) == 1
+        assert output.data[0].type == 'scatter'
+        self.setUp()
+
+    def test_contribution_plot_13(self):
+        """
+        contribution plot with groups of features for regression case
+        """
+        x_init = pd.DataFrame(
+            data=np.array(
+                [[0, 34],
+                 [1, 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        xpl = self.smart_explainer
+        xpl.inv_features_dict = {}
+        col = 'group1'
+        xpl.x_init = x_init
+        xpl.contributions = pd.concat([self.contrib1] * 10, ignore_index=True)
+        xpl._case = "regression"
+        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
+        xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
+        xpl.postprocessing_modifications = False
+        xpl.preprocessing = None
+        # Creates a group of features named group1
+        xpl.features_groups = {'group1': ['X1', 'X2']}
+        xpl.contributions_groups = xpl.state.compute_grouped_contributions(xpl.contributions, xpl.features_groups)
+        xpl.features_imp_groups = None
+        xpl._update_features_dict_with_groups(features_groups=xpl.features_groups)
+
+        output = xpl.plot.contribution_plot(col, proba=False)
+
+        assert len(output.data) == 1
+        assert output.data[0].type == 'scatter'
+        self.setUp()
+
+    def test_contribution_plot_14(self):
+        """
+        contribution plot with groups of features for classification case and subset
+        """
+        x_init = pd.DataFrame(
+            data=np.array(
+                [[0, 34],
+                 [1, 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        xpl = self.smart_explainer
+        xpl.inv_features_dict = {}
+        col = 'group1'
+        xpl.x_init = x_init
+        xpl.contributions[0] = pd.concat([xpl.contributions[0]] * 10, ignore_index=True)
+        xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 10, ignore_index=True)
+        xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
+        xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
+        xpl.postprocessing_modifications = False
+        xpl.preprocessing = None
+        # Creates a group of features named group1
+        xpl.features_groups = {'group1': ['X1', 'X2']}
+        xpl.contributions_groups = xpl.state.compute_grouped_contributions(xpl.contributions, xpl.features_groups)
+        xpl.features_imp_groups = None
+        xpl._update_features_dict_with_groups(features_groups=xpl.features_groups)
+
+        subset = list(range(10))
+        output = xpl.plot.contribution_plot(col, proba=False, selection=subset)
+
+        assert len(output.data) == 1
+        assert output.data[0].type == 'scatter'
+        assert len(output.data[0].x) == 10
+        self.setUp()
+
+    def test_contribution_plot_15(self):
+        """
+        contribution plot with groups of features for regression case with subset
+        """
+        x_init = pd.DataFrame(
+            data=np.array(
+                [[0, 34],
+                 [1, 27]]),
+            columns=['X1', 'X2'],
+            index=['person_A', 'person_B']
+        )
+        xpl = self.smart_explainer
+        xpl.inv_features_dict = {}
+        col = 'group1'
+        xpl.x_init = x_init
+        xpl.contributions = pd.concat([self.contrib1] * 10, ignore_index=True)
+        xpl._case = "regression"
+        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
+        xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
+        xpl.postprocessing_modifications = False
+        xpl.preprocessing = None
+        # Creates a group of features named group1
+        xpl.features_groups = {'group1': ['X1', 'X2']}
+        xpl.contributions_groups = xpl.state.compute_grouped_contributions(xpl.contributions, xpl.features_groups)
+        xpl.features_imp_groups = None
+        xpl._update_features_dict_with_groups(features_groups=xpl.features_groups)
+
+        subset = list(range(10))
+        output = xpl.plot.contribution_plot(col, proba=False, selection=subset)
+
+        assert len(output.data) == 1
+        assert output.data[0].type == 'scatter'
+        assert len(output.data[0].x) == 10
+        self.setUp()
 
     def test_plot_features_import_1(self):
         """
