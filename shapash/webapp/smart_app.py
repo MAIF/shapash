@@ -3,6 +3,7 @@ Main class of Web application Shapash
 """
 import dash
 import dash_table
+import dash_daq as daq
 from dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -563,6 +564,27 @@ class SmartApp:
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
+        if component_id == 'global_feature_importance':
+            component.append(
+                html.Div(
+                    daq.BooleanSwitch(
+                        id='bool_groups',
+                        on=True,
+                        style={'display': 'none'} if self.explainer.features_groups is None else {},
+                        color='rgba(244, 192, 0, 1.0)',
+                        label={
+                            'label': 'Groups',
+                            'style': {
+                                'fontSize': 15,
+                                'margin-left': '-15px'
+                            },
+                        },
+                        labelPosition="right"
+                    ),
+                    className="groups",
+                    style={'display': 'none'} if self.explainer.features_groups is None else {},
+                )
+            )
         component.append(
             html.A(
                 html.I("fullscreen",
@@ -809,7 +831,8 @@ class SmartApp:
                 Input('select_label', 'value'),
                 Input('dataset', 'data'),
                 Input('modal', 'is_open'),
-                Input('card_global_feature_importance', 'n_clicks')
+                Input('card_global_feature_importance', 'n_clicks'),
+                Input('bool_groups', 'on')
             ],
             [
                 State('global_feature_importance', 'clickData'),
@@ -817,7 +840,7 @@ class SmartApp:
                 State('features', 'value')
             ]
         )
-        def update_feature_importance(label, data, is_open, n_clicks, clickData, filter_query, features):
+        def update_feature_importance(label, data, is_open, n_clicks, bool_group, clickData, filter_query, features):
             """
             update feature importance plot according to selected label and dataset state.
             """
@@ -847,17 +870,22 @@ class SmartApp:
                     raise PreventUpdate
                 else:
                     pass
+            elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
+                clickData = None  # We reset the graph and clicks if we toggle the button
             else:
                 self.last_click_data = clickData
                 raise PreventUpdate
 
+            group_name = selected_feature if (self.explainer.features_groups is not None
+                                              and selected_feature in self.explainer.features_groups.keys()) else None
             selection = self.list_index if filter_query else None
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
                     max_features=features,
                     selection=selection,
                     label=self.label,
-                    group_name=selected_feature if selected_feature in self.explainer.features_groups.keys() else None
+                    group_name=group_name,
+                    display_groups=bool_group
                 )
             self.components['graph']['global_feature_importance'].adjust_graph()
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
