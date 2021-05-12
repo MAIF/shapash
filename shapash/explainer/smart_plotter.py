@@ -528,6 +528,7 @@ class SmartPlotter:
     def plot_features_import(self,
                              feature_imp1,
                              feature_imp2=None,
+                             title='Features Importance',
                              addnote=None,
                              subtitle=None,
                              width=900,
@@ -543,6 +544,8 @@ class SmartPlotter:
             Feature importance computed with every rows
         feature_imp2 : pd.Series, optional (default: None)
             The contributions associate
+        title : str
+            Title of the plot, default set to 'Features Importance'
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -557,7 +560,6 @@ class SmartPlotter:
             open automatically the plot
         """
         dict_t = copy.deepcopy(self.dict_title)
-        title = "Features Importance"
         topmargin = 80
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
@@ -1079,7 +1081,8 @@ class SmartPlotter:
 
         if not isinstance(col, (str, int)):
             raise ValueError('parameter col must be string or int.')
-
+        if hasattr(self.explainer, 'inv_features_dict'):
+            col = self.explainer.inv_features_dict.get(col, col)
         col_is_group = self.explainer.features_groups and col in self.explainer.features_groups.keys()
 
         # Case where col is a group of features
@@ -1214,6 +1217,7 @@ class SmartPlotter:
                             selection=None,
                             label=-1,
                             group_name=None,
+                            display_groups=True,
                             force=False,
                             width=900,
                             height=500,
@@ -1249,6 +1253,9 @@ class SmartPlotter:
             This parameter is only available if the SmartExplainer object has been compiled using
             the features_groups optional parameter and should correspond to a key of
             features_groups dictionary.
+        display_groups : bool (default True)
+            If groups of features are declared in SmartExplainer object, this parameter allows to
+            specify whether or not to display them.
         force: bool (optional, default False)
             force == True, force the compute features importance if it's already done
         width : Int (default: 900)
@@ -1271,12 +1278,15 @@ class SmartPlotter:
 
         self.explainer.compute_features_import(force=force)
         subtitle = None
+        title = 'Features Importance'
+        display_groups = self.explainer.features_groups is not None and display_groups
 
-        if self.explainer.features_groups:  # Case where we have groups of features
+        if display_groups:
             if group_name:  # Case where we have groups of features and we want to display only features inside a group
                 if group_name not in self.explainer.features_groups.keys():
                     raise ValueError(f"group_name parameter : {group_name} is not in features_groups keys. "
                                      f"Possible values are : {list(self.explainer.features_groups.keys())}")
+                title += f' - {truncate_str(self.explainer.features_dict.get(group_name), 20)}'
                 if isinstance(self.explainer.features_imp, list):
                     features_importance = [
                         label_feat_imp.loc[label_feat_imp.index.isin(self.explainer.features_groups[group_name])]
@@ -1330,13 +1340,14 @@ class SmartPlotter:
                                sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
-        if self.explainer.features_groups:
+        if display_groups:
             # Bold font for groups of features
             global_feat_imp.index = [
                 '<b>' + str(f) + '</b>'
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
+
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
                     '<b>' + str(f) + '</b>'
@@ -1344,8 +1355,18 @@ class SmartPlotter:
                     else str(f) for f in subset_feat_imp.index
                 ]
 
-        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, addnote,
+        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, title, addnote,
                                         subtitle, width, height, file_name, auto_open)
+
+        if display_groups:
+            # get a bigger line width for groups
+            line_width = [
+                self.dict_featimp_colors[1]['line']['width'] * 3
+                if self.explainer.inv_features_dict.get(f.replace('<b>', '').replace('</b>', ''))
+                in self.explainer.features_groups.keys()
+                else self.dict_featimp_colors[1]['line']['width'] for f in fig.data[0].y
+            ]
+            fig.update_traces(marker_line_width=line_width)
         return fig
 
     def plot_line_comparison(self,
