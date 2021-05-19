@@ -43,9 +43,17 @@ Data Scientists can understand their models easily and share their results. End 
 Shapash also contributes to data science auditing by displaying usefull information about any model and data in a unique report. 
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
-- Medium: [Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
 - [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
+- Medium:    
+<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
+  <p align="center">
+    <img align="left" src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="6%" />
+  </p>
+</a> 
 
+
+- [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
+- [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
 
 ## 🔥  Features
 

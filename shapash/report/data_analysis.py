@@ -2,7 +2,7 @@ from typing import Optional
 
 import pandas as pd
 
-from shapash.report.common import VarType, series_dtype, numeric_is_continuous
+from shapash.report.common import VarType, display_value, replace_dict_values
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -36,6 +36,8 @@ def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
             global_d[stat] = int(global_d[stat])  # Keeping the exact number
         elif isinstance(global_d[stat], float):
             global_d[stat] = round_to_k(global_d[stat], 3)
+
+    replace_dict_values(global_d, display_value, ',', '.')
 
     return global_d
 
@@ -73,6 +75,8 @@ def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame], col_types:
                 d[col][stat] = int(d[col][stat])  # Keeping the exact number here
             elif isinstance(d[col][stat], float):
                 d[col][stat] = round_to_k(d[col][stat], 3)  # Rounding to 3 important figures
+
+    replace_dict_values(d, display_value, ',', '.')
 
     return d
 

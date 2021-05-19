@@ -95,4 +95,6 @@ html_static_path = ['_static']
 todo_include_todos = True
 
 # -- Additional html pages  -------------------------------------------------
+import subprocess
+subprocess.call(['python', '../tutorial/report/shapash_report_example.py'])
 html_extra_path = ['../tutorial/report/output/report.html']

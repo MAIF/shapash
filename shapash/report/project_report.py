@@ -18,7 +18,8 @@ from shapash.report.visualisation import print_md, print_html, print_css_style, 
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot, \
     generate_correlation_matrix_fig
-from shapash.report.common import series_dtype, get_callable, compute_col_types, VarType
+from shapash.report.common import series_dtype, get_callable, compute_col_types, VarType, display_value
+from shapash.webapp.utils.utils import round_to_k
 
 logging.basicConfig(level=logging.INFO)
 
@@ -436,7 +437,8 @@ class ProjectReport:
                     logging.info(f"Could not compute following metric : {metric['path']}. \n{e}")
                     continue
                 if isinstance(res, Number):
-                    print_md(f"**{metric['name']} :** {round(res, 2)}")
+                    res = display_value(round_to_k(res, 3))
+                    print_md(f"**{metric['name']} :** {res}")
                 elif isinstance(res, (list, tuple, np.ndarray)):
                     print_md(f"**{metric['name']} :**")
                     print_html(pd.DataFrame(res).to_html(classes="greyGridTable"))
