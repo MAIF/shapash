@@ -573,6 +573,18 @@ class SmartPlotter:
         dict_style_bar2 = self.dict_featimp_colors[2]
         dict_yaxis['text'] = None
 
+        # Change bar color for groups of features
+        marker_color = [
+            self.dict_local_plot_colors[-1]["color"]
+            if (
+                    self.explainer.features_groups is not None
+                    and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
+                    in self.explainer.features_groups.keys()
+            )
+            else dict_style_bar1["color"]
+            for f in feature_imp1.index
+        ]
+
         layout = go.Layout(
             barmode='group',
             template='none',
@@ -595,7 +607,8 @@ class SmartPlotter:
             y=feature_imp1.index,
             orientation='h',
             name='Global',
-            marker=dict_style_bar1
+            marker=dict_style_bar1,
+            marker_color=marker_color
         )
         if feature_imp2 is not None:
             bar2 = go.Bar(
@@ -1357,16 +1370,6 @@ class SmartPlotter:
 
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, title, addnote,
                                         subtitle, width, height, file_name, auto_open)
-
-        if display_groups:
-            # get a bigger line width for groups
-            line_width = [
-                self.dict_featimp_colors[1]['line']['width'] * 3
-                if self.explainer.inv_features_dict.get(f.replace('<b>', '').replace('</b>', ''))
-                in self.explainer.features_groups.keys()
-                else self.dict_featimp_colors[1]['line']['width'] for f in fig.data[0].y
-            ]
-            fig.update_traces(marker_line_width=line_width)
         return fig
 
     def plot_line_comparison(self,
