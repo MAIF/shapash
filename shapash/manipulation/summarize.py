@@ -165,3 +165,31 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
     feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
     feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
     return feature_values
+
+
+def create_grouped_features_values(
+        x_pred,
+        x_init,
+        preprocessing,
+        features_groups,
+        how='tsne'
+) -> pd.DataFrame:
+    df = x_pred.copy()
+    if how != 'tsne':
+        raise NotImplementedError('Projecting features in 1D only supports t-sne for now.')
+    for group in features_groups.keys():
+        if not isinstance(features_groups[group], list):
+            raise ValueError(f'features_groups[{group}] should be a list of features')
+        features_values = x_pred[features_groups[group]]
+        df[group] = project_feature_values_1d(
+            features_values,
+            col=group,
+            x_pred=x_pred,
+            x_init=x_init,
+            preprocessing=preprocessing
+        )
+        for f in features_groups[group]:
+            if f in df.columns:
+                df.drop(f, axis=1, inplace=True)
+
+    return df
