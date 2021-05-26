@@ -3,6 +3,7 @@ Main class of Web application Shapash
 """
 import dash
 import dash_table
+import dash_daq as daq
 from dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -85,6 +86,7 @@ class SmartApp:
             self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_k(x, k=1)).max().max())
         self.list_index = []
         self.subset = None
+        self.last_click_data = None
 
         # DATA
         self.dataframe = pd.DataFrame()
@@ -562,6 +564,27 @@ class SmartApp:
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
+        if component_id == 'global_feature_importance':
+            component.append(
+                html.Div(
+                    daq.BooleanSwitch(
+                        id='bool_groups',
+                        on=True,
+                        style={'display': 'none'} if self.explainer.features_groups is None else {},
+                        color='rgba(244, 192, 0, 1.0)',
+                        label={
+                            'label': 'Groups',
+                            'style': {
+                                'fontSize': 15,
+                                'margin-left': '-15px'
+                            },
+                        },
+                        labelPosition="right"
+                    ),
+                    className="groups",
+                    style={'display': 'none'} if self.explainer.features_groups is None else {},
+                )
+            )
         component.append(
             html.A(
                 html.I("fullscreen",
@@ -807,42 +830,67 @@ class SmartApp:
             [
                 Input('select_label', 'value'),
                 Input('dataset', 'data'),
-                Input('modal', 'is_open')
+                Input('modal', 'is_open'),
+                Input('card_global_feature_importance', 'n_clicks'),
+                Input('bool_groups', 'on')
             ],
-            [State('global_feature_importance', 'clickData'),
-             State('dataset', "filter_query"),
-             State('features', 'value')]
+            [
+                State('global_feature_importance', 'clickData'),
+                State('dataset', "filter_query"),
+                State('features', 'value')
+            ]
         )
-        def update_feature_importance(label, data, is_open, clickData, filter_query, features):
+        def update_feature_importance(label, data, is_open, n_clicks, bool_group, clickData, filter_query, features):
             """
             update feature importance plot according to selected label and dataset state.
             """
             ctx = dash.callback_context
+            selected_feature = self.explainer.inv_features_dict.get(
+                clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
+            ) if clickData else None
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-
                 if is_open:
                     raise PreventUpdate
                 else:
-
                     self.settings['features'] = features
                     self.settings_ini['features'] = self.settings['features']
-
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
                 self.list_index = [d['_index_'] for d in data]
+            elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
+                  and self.explainer.features_groups):
+                # When we click twice on the same bar this will reset the graph
+                if self.last_click_data == clickData:
+                    selected_feature = None
+                list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                     for f in group_features]
+                if selected_feature in list_sub_features:
+                    self.last_click_data = clickData
+                    raise PreventUpdate
+                else:
+                    pass
+            elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
+                clickData = None  # We reset the graph and clicks if we toggle the button
             else:
+                self.last_click_data = clickData
                 raise PreventUpdate
 
+            group_name = selected_feature if (self.explainer.features_groups is not None
+                                              and selected_feature in self.explainer.features_groups.keys()) else None
             selection = self.list_index if filter_query else None
             self.components['graph']['global_feature_importance'].figure = \
-                self.explainer.plot.features_importance(max_features=features,
-                                                        selection=selection,
-                                                        label=self.label
-                                                        )
+                self.explainer.plot.features_importance(
+                    max_features=features,
+                    selection=selection,
+                    label=self.label,
+                    group_name=group_name,
+                    display_groups=bool_group
+                )
             self.components['graph']['global_feature_importance'].adjust_graph()
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
-            self.select_point('global_feature_importance', clickData)
+            if selected_feature and selected_feature not in self.explainer.features_groups.keys():
+                self.select_point('global_feature_importance', clickData)
 
             # font size can be adapted to screen size
             nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
@@ -850,7 +898,7 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
-
+            self.last_click_data = clickData
             return self.components['graph']['global_feature_importance'].figure, clickData
 
         @app.callback(
@@ -883,7 +931,8 @@ class SmartApp:
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
                 if feature is not None:
-                    self.selected_feature = feature['points'][0]['label']
+                    # Removing bold
+                    self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     if feature['points'][0]['curveNumber'] == 0 and \
                             len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
                         self.subset = self.list_index

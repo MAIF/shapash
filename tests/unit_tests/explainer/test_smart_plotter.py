@@ -1251,6 +1251,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.features_groups = {'group0': ['X1', 'X2']}
         smart_explainer.contributions = [contrib, -contrib]
         smart_explainer.features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
+        smart_explainer.inv_features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.model = self.smart_explainer.model
         smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
         smart_explainer.state = smart_explainer.choose_state(smart_explainer.contributions)
@@ -1263,7 +1264,7 @@ class TestSmartPlotter(unittest.TestCase):
 
         data1 = go.Bar(
             x=np.array([0.1682, 0.8318]),
-            y=np.array(['X3', 'group0']),
+            y=np.array(['X3', '<b>group0</b>']),
             name='Global',
             orientation='h')
         expected_output = go.Figure(data=[data1])
@@ -1302,6 +1303,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.features_groups = {'group0': ['X1', 'X2']}
         smart_explainer.contributions = [contrib, -contrib]
         smart_explainer.features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
+        smart_explainer.inv_features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.model = self.smart_explainer.model
         smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
         smart_explainer.state = smart_explainer.choose_state(smart_explainer.contributions)
