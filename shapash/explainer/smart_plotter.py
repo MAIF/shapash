@@ -575,7 +575,7 @@ class SmartPlotter:
 
         # Change bar color for groups of features
         marker_color = [
-            self.dict_local_plot_colors[-1]["color"]
+            self.init_colorscale[-3]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -707,11 +707,13 @@ class SmartPlotter:
         )
         bars = []
         for num, expl in enumerate(list(zip(var_dict, x_val, contrib))):
+            group_name = None
             if expl[1] == '':
                 ylabel = '<i>{}</i>'.format(expl[0])
                 hoverlabel = '<b>{}</b>'.format(expl[0])
             else:
                 # If bar is a group of features, hovertext includes the values of the features of the group
+                # And color changes
                 if (self.explainer.features_groups is not None
                         and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
                         and len(index_value) > 0):
@@ -737,12 +739,19 @@ class SmartPlotter:
             else:
                 color = -1 if expl[1] != '' else -2
 
+            # If the bar is a group of features we modify the color
+            if group_name is not None:
+                bar_color = self.init_colorscale[-3] if color == 1 else self.init_colorscale[2]
+            else:
+                bar_color = dict_local_plot_colors[color]['color']
+
             barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
                 customdata=[hoverlabel],
                 orientation='h',
                 marker=dict_local_plot_colors[color],
+                marker_color=bar_color,
                 showlegend=False,
                 hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
             )
