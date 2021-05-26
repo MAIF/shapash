@@ -976,8 +976,14 @@ class SmartPlotter:
 
         else:
             # apply filter if the method have not yet been asked in order to limit the number of feature to display
-            if not hasattr(self.explainer, 'mask_params') \
-                    or len(self.explainer.data['contrib_sorted'].columns) != len(self.explainer.mask.columns):
+            if (
+                not hasattr(self.explainer, "mask_params")  # If the filter method has not been called yet
+                # Or if the already computed mask was not updated with current display_groups parameter
+                or (isinstance(data["contrib_sorted"], pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) != len(self.explainer.mask.columns))
+                or (isinstance(data["contrib_sorted"], list)
+                    and len(data["contrib_sorted"][0].columns) != len(self.explainer.mask[0].columns))
+            ):
                 self.explainer.filter(max_contrib=20, display_groups=display_groups)
 
             if self.explainer._case == "classification":
