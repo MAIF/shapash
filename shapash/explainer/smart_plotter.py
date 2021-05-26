@@ -696,13 +696,25 @@ class SmartPlotter:
                 ylabel = '<i>{}</i>'.format(expl[0])
                 hoverlabel = '<b>{}</b>'.format(expl[0])
             else:
-                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
-                                                          add_line_break(expl[1], 40, maxlen=160))
+                # If bar is a group of features, hovertext includes the values of the features of the group
+                if (self.explainer.features_groups is not None
+                        and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
+                        and len(index_value) > 0):
+                    group_name = self.explainer.inv_features_dict.get(expl[0])
+                    feat_groups_values = self.explainer.x_pred[self.explainer.features_groups[group_name]]\
+                                                       .loc[index_value[0]]
+                    hoverlabel = '<br />'.join([
+                        '<b>{} :</b>{}'.format(add_line_break(f_name, 40, maxlen=120),
+                                               add_line_break(f_value, 40, maxlen=160))
+                        for f_name, f_value in feat_groups_values.to_dict().items()
+                    ])
+                else:
+                    hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
+                                                              add_line_break(expl[1], 40, maxlen=160))
                 if len(contrib) <= yaxis_max_label:
                     ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
-
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
