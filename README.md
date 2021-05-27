@@ -123,6 +123,12 @@ Shapash is intended to work with Python versions 3.6 to 3.8. Installation can be
 pip install shapash
 ```
 
+In order to generate the Shapash Report some extra requirements are needed.
+You can install these using the following command :  
+```
+pip install shapash[report]
+```
+
 ## 🕐 Quickstart
 
 The 4 steps to display results:
