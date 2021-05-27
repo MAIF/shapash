@@ -218,6 +218,30 @@ class SmartApp:
             [
                 dbc.Col(
                     [
+                        html.Div(
+                            daq.BooleanSwitch(
+                                id='bool_groups',
+                                on=True,
+                                style={'display': 'none'} if self.explainer.features_groups is None else {},
+                                color='rgba(244, 192, 0, 1.0)',
+                                label={
+                                    'label': 'Groups',
+                                    'style': {
+                                        'fontSize': 18,
+                                        'color': 'rgb(244, 192, 0)',
+                                        'fontWeight': 'bold',
+                                        "margin-left": "5px"
+                                    },
+                                },
+                                labelPosition="right"
+                            ),
+                            style={"margin-right": "35px"}
+                        )
+                    ],
+                    width="auto", align="center",
+                ),
+                dbc.Col(
+                    [
                         html.H4(
                             [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}),
                              dbc.Badge("Classification", id='classification_badge')
@@ -564,27 +588,6 @@ class SmartApp:
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
-        if component_id == 'global_feature_importance':
-            component.append(
-                html.Div(
-                    daq.BooleanSwitch(
-                        id='bool_groups',
-                        on=True,
-                        style={'display': 'none'} if self.explainer.features_groups is None else {},
-                        color='rgba(244, 192, 0, 1.0)',
-                        label={
-                            'label': 'Groups',
-                            'style': {
-                                'fontSize': 15,
-                                'margin-left': '-15px'
-                            },
-                        },
-                        labelPosition="right"
-                    ),
-                    className="groups",
-                    style={'display': 'none'} if self.explainer.features_groups is None else {},
-                )
-            )
         component.append(
             html.A(
                 html.I("fullscreen",
@@ -1057,6 +1060,7 @@ class SmartApp:
                 Input('select_label', 'value'),
                 Input('dataset', 'active_cell'),
                 Input('feature_selector', 'clickData'),
+                Input('bool_groups', 'on')
             ],
             [
                 State('index_id', 'value'),
@@ -1064,7 +1068,7 @@ class SmartApp:
             ]
         )
         def update_detail_feature(threshold, max_contrib, positive, negative, masked, label, cell,
-                                  click_data, index, data):
+                                  click_data, bool_group, index, data):
             """
             update local explanation plot according to app changes.
             """
@@ -1098,10 +1102,13 @@ class SmartApp:
                                   max_contrib=max_contrib)
             if np.issubdtype(type(self.explainer.x_pred.index[0]), np.dtype(int).type):
                 selected = int(selected)
-            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=selected,
-                                                                                               label=label,
-                                                                                               show_masked=True,
-                                                                                               yaxis_max_label=0)
+            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
+                index=selected,
+                label=label,
+                show_masked=True,
+                yaxis_max_label=0,
+                display_groups=bool_group
+            )
             self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
             # font size can be adapted to screen size
             nb_car = max([len(self.components['graph']['detail_feature'].figure.data[i].y[0]) for i in
