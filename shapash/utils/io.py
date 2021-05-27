@@ -2,7 +2,12 @@
 IO module
 """
 import pickle
-import yaml
+try:
+    import yaml
+    _is_yaml_available = True
+except (ImportError, ModuleNotFoundError):
+    _is_yaml_available = False
+
 
 def save_pickle(obj, path, protocol=pickle.HIGHEST_PROTOCOL):
     """
@@ -72,6 +77,9 @@ def load_yml(path):
     d : dict
         Python dict containing the parsed yml file.
     """
+    if _is_yaml_available is False:
+        raise ModuleNotFoundError('Please install PyYAML using "pip install pyyaml" command.')
+
     if not isinstance(path, str):
         raise ValueError(
             """
