@@ -1302,8 +1302,8 @@ class TestSmartExplainer(unittest.TestCase):
 
         assert xpl.y_pred is not None
 
-    @patch('shapash.explainer.smart_explainer.export_and_save_report')
-    @patch('shapash.explainer.smart_explainer.execute_report')
+    @patch('shapash.report.generation.export_and_save_report')
+    @patch('shapash.report.generation.execute_report')
     def test_generate_report(self, mock_execute_report, mock_export_and_save_report):
         """
         Test generate report method

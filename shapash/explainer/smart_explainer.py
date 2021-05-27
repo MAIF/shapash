@@ -17,7 +17,7 @@ from shapash.utils.shap_backend import shap_contributions, check_explainer, get_
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
-from shapash.report.generation import execute_report, export_and_save_report
+from shapash.report import check_report_requirements
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -1125,6 +1125,10 @@ class SmartExplainer:
                 ]
             )
         """
+        check_report_requirements()
+        # Avoid Import Errors with requirements specific to the Shapash Report
+        from shapash.report.generation import execute_report, export_and_save_report
+
         rm_working_dir = False
         if not working_dir:
             working_dir = tempfile.mkdtemp()
