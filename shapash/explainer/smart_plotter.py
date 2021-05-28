@@ -134,6 +134,11 @@ class SmartPlotter:
             'rgba(116, 1, 179, 0.9)',
         ]
 
+        self.groups_colors = [
+            px.colors.qualitative.T10[1],
+            px.colors.qualitative.G10[9]
+        ]
+
         self.round_digit = None
 
         self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
@@ -575,7 +580,7 @@ class SmartPlotter:
 
         # Change bar color for groups of features
         marker_color = [
-            self.init_colorscale[-3]
+            self.groups_colors[0]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -741,7 +746,7 @@ class SmartPlotter:
 
             # If the bar is a group of features we modify the color
             if group_name is not None:
-                bar_color = self.init_colorscale[-3] if color == 1 else self.init_colorscale[2]
+                bar_color = self.groups_colors[0] if color == 1 else self.groups_colors[1]
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
