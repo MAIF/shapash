@@ -255,12 +255,12 @@ class SmartApp:
                     dbc.Collapse(
                         dbc.FormGroup(
                             [
-                                dbc.Label("Class to analyse", style={'color': 'white', 'margin': '0px 5px'}),
+                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
                                     clearable=False, searchable=False,
-                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '200px'}
+                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
                             row=True, style={"margin": "0px 0px 0px 5px", "align-items": "center"}
