@@ -726,7 +726,8 @@ class SmartPlotter:
                     feat_groups_values = self.explainer.x_pred[self.explainer.features_groups[group_name]]\
                                                        .loc[index_value[0]]
                     hoverlabel = '<br />'.join([
-                        '<b>{} :</b>{}'.format(add_line_break(f_name, 40, maxlen=120),
+                        '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
+                                                              40, maxlen=120),
                                                add_line_break(f_value, 40, maxlen=160))
                         for f_name, f_value in feat_groups_values.to_dict().items()
                     ])
