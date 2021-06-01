@@ -148,7 +148,7 @@ class SmartApp:
                 std = self.dataframe[col].std()
                 if std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
-                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format)
+                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format).astype(float)
 
     def init_components(self):
         """
