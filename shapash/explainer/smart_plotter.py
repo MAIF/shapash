@@ -734,8 +734,17 @@ class SmartPlotter:
                 else:
                     hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
                                                               add_line_break(expl[1], 40, maxlen=160))
-                if len(contrib) <= yaxis_max_label:
-                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+                if len(contrib) <= yaxis_max_label and (
+                        self.explainer.features_groups is None
+                        # We don't want to display label values for t-sne projected values of groups of features.
+                        or (
+                                self.explainer.features_groups is not None
+                                and self.explainer.inv_features_dict.get(expl[0])
+                                not in self.explainer.features_groups.keys()
+                        )
+                ):
+                        ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
             contrib_value = expl[2]
