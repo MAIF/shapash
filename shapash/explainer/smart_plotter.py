@@ -879,6 +879,9 @@ class SmartPlotter:
             else:
                 value = self.explainer.model.predict(self.explainer.x_init.loc[[index]])[0]
 
+        if isinstance(value, pd.Series):
+            value = value.values[0]
+
         return value
 
     def local_plot(self,
