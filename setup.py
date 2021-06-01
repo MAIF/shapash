@@ -21,7 +21,7 @@ requirements = [
         'dash-renderer==1.8.3',
         'dash-table==4.11.0',
         'nbformat>4.2.0',
-        'numba==0.51.2',
+        'numba==0.53.1',
         'scikit-learn'
     ]
 
