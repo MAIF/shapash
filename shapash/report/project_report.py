@@ -278,10 +278,9 @@ class ProjectReport:
                     )
         if multivariate_analysis:
             # Need at least two numerical features
-            if len([v for v in compute_col_types(self.df_train_test).values() if v == VarType.TYPE_NUM]) > 1:
-                print_md("### Mutlivariate analysis")
-                fig_corr = generate_correlation_matrix_fig(self.df_train_test, max_features=20)
-                print_html(convert_fig_to_html(fig=fig_corr))
+            print_md("### Mutlivariate analysis")
+            fig_corr = self.explainer.plot.correlations(self.df_train_test, facet_col='data_train_test')
+            print_html(plotly.io.to_html(fig_corr))
         print_md('---')
 
     def _display_dataset_analysis_global(self):

@@ -165,3 +165,11 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
     feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
     feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
     return feature_values
+
+
+def compute_corr(df, compute_method):
+    if compute_method == 'phik':
+        from phik import phik_matrix
+        return phik_matrix(df, verbose=False)
+    else:
+        return df.corr()
