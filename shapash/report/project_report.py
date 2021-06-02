@@ -107,7 +107,6 @@ class ProjectReport:
                     if key == 'use_proba_values' and not isinstance(metric['use_proba_values'], bool):
                         raise ValueError('"use_proba_values" metric key expects a boolean value.')
 
-
     @staticmethod
     def _get_values_and_name(
             y: Optional[Union[pd.DataFrame, pd.Series, list]],
@@ -309,7 +308,10 @@ class ProjectReport:
 
         univariate_template = template_env.get_template("univariate.html")
         univariate_features_desc = list()
-        for col in df.drop(col_splitter, axis=1).columns:
+        list_cols_labels = [self.explainer.features_dict.get(col, col)
+                            for col in df.drop(col_splitter, axis=1).columns.to_list()]
+        for col_label in sorted(list_cols_labels):
+            col = self.explainer.inv_features_dict.get(col_label, col_label)
             fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col])
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
@@ -320,7 +322,7 @@ class ProjectReport:
                 'feature_index': int(self.explainer.inv_columns_dict.get(col, 0)),
                 'name': col,
                 'type': str(series_dtype(df[col])),
-                'description': self.explainer.features_dict.get(col, ''),
+                'description': col_label,
                 'table': df_col_stats.to_html(classes="greyGridTable"),
                 'image': convert_fig_to_html(fig)
             })
@@ -353,7 +355,10 @@ class ProjectReport:
             fig_features_importance = self.explainer.plot.features_importance(label=label)
 
             explain_contrib_data = list()
-            for feature in self.col_names:
+            list_cols_labels = [self.explainer.features_dict.get(col, col)
+                                for col in self.col_names]
+            for feature_label in sorted(list_cols_labels):
+                feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
                 fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
                 explain_contrib_data.append({
                     'feature_index': int(self.explainer.inv_columns_dict[feature]),

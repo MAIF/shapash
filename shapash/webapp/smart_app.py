@@ -148,7 +148,7 @@ class SmartApp:
                 std = self.dataframe[col].std()
                 if std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
-                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format)
+                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format).astype(float)
 
     def init_components(self):
         """
@@ -1107,13 +1107,16 @@ class SmartApp:
                 index=selected,
                 label=label,
                 show_masked=True,
-                yaxis_max_label=0,
+                yaxis_max_label=8,
                 display_groups=bool_group
             )
             self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
             # font size can be adapted to screen size
-            nb_car = max([len(self.components['graph']['detail_feature'].figure.data[i].y[0]) for i in
-                          range(len(self.components['graph']['detail_feature'].figure.data))])
+            list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
+                          range(len(self.components['graph']['detail_feature'].figure.data))]
+            # exclude new line with labels of y axis
+            list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
+            nb_car = max([len(x) for x in list_yaxis])
             self.components['graph']['detail_feature'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
