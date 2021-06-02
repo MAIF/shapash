@@ -174,6 +174,26 @@ def create_grouped_features_values(
         features_groups,
         how='tsne'
 ) -> pd.DataFrame:
+    """
+    Compute projections of groups of features using t-sne.
+
+    Parameters
+    ----------
+    x_pred : pd.DataFrame
+        x_init dataset with inverse transformation with eventual postprocessing modifications.
+    x_init : pd.DataFrame
+        preprocessed dataset used by the model to perform the prediction.
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional
+        Preprocessing used to encode categorical variables.
+    features_groups : dict
+        Groups names and corresponding list of features
+    how : str
+        Method used to project groups of features in 1D (only t-sne available for now).
+
+    Returns
+    -------
+
+    """
     df = x_pred.copy()
     if how != 'tsne':
         raise NotImplementedError('Projecting features in 1D only supports t-sne for now.')

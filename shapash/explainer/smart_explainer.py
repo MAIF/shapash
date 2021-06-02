@@ -250,13 +250,17 @@ class SmartExplainer:
         """
         Performs required computations for groups of features.
         """
+        # Compute contributions for groups of features
         self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
         self.features_imp_groups = None
+        # Update features dict with groups names
         self._update_features_dict_with_groups(features_groups=features_groups)
+        # Compute t-sne projections for groups of features
         self.x_pred_groups = create_grouped_features_values(x_pred=self.x_pred, x_init=self.x_init,
                                                             preprocessing=self.preprocessing,
                                                             features_groups=self.features_groups,
                                                             how='tsne')
+        # Compute data attribute for groups of features
         self.data_groups = self.state.assign_contributions(
             self.state.rank_contributions(
                 self.contributions_groups,
