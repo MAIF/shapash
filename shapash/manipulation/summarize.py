@@ -192,7 +192,8 @@ def create_grouped_features_values(
 
     Returns
     -------
-
+    df : pd.DataFrame
+        features values with projection used for groups of features
     """
     df = x_pred.copy()
     if how != 'tsne':
