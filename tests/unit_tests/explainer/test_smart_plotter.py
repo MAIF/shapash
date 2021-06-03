@@ -1827,3 +1827,56 @@ class TestSmartPlotter(unittest.TestCase):
             assert True in output.layout.updatemenus[0].buttons[0].args[0]['visible']
 
             self.setUp()
+
+    def test_correlations_1(self):
+        """
+        Test correlations plot
+        """
+        smart_explainer = self.smart_explainer
+
+        output = smart_explainer.plot.correlations(max_features=2)
+
+        assert len(output.data) == 1
+        assert len(output.data[0].x) == 2
+        assert len(output.data[0].y) == 2
+        assert output.data[0].z.shape == (2, 2)
+
+    def test_correlations_2(self):
+        """
+        Test correlations plot 2
+        """
+        smart_explainer = self.smart_explainer
+
+        df = pd.DataFrame({
+            "A": [8, 90, 10, 110],
+            "B": [4.3, 7.4, 10.2, 15.7],
+            "C": ["C8", "C8", "C9", "C9"],
+            "D": [1, -3, -5, -10]
+        }, index=[8, 9, 10, 11])
+
+        output = smart_explainer.plot.correlations(df, max_features=3)
+
+        assert len(output.data) == 1
+        assert len(output.data[0].x) == 3
+        assert len(output.data[0].y) == 3
+        assert output.data[0].z.shape == (3, 3)
+
+    def test_correlations_3(self):
+        """
+        Test correlations plot 3
+        """
+        smart_explainer = self.smart_explainer
+
+        df = pd.DataFrame({
+            "A": [8, 90, 10, 110],
+            "B": [4.3, 7.4, 10.2, 15.7],
+            "C": ["C8", "C8", "C9", "C9"],
+            "D": [1, -3, -5, -10]
+        }, index=[8, 9, 10, 11])
+
+        output = smart_explainer.plot.correlations(df, max_features=3, facet_col='C')
+
+        assert len(output.data) == 2
+        assert len(output.data[0].x) == 3
+        assert len(output.data[0].y) == 3
+        assert output.data[0].z.shape == (3, 3)
