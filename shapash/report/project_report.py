@@ -276,7 +276,6 @@ class ProjectReport:
                         group_id='target'
                     )
         if multivariate_analysis:
-            # Need at least two numerical features
             print_md("### Mutlivariate analysis")
             fig_corr = self.explainer.plot.correlations(self.df_train_test, facet_col='data_train_test')
             print_html(plotly.io.to_html(fig_corr))
