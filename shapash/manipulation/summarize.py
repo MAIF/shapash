@@ -1,6 +1,7 @@
 """
 Summarize Module
 """
+import warnings
 import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
@@ -168,8 +169,12 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
 
 
 def compute_corr(df, compute_method):
+    # Remove user warnings (when not enough values to compute correlation).
+    warnings.filterwarnings("ignore")
     if compute_method == 'phik':
         from phik import phik_matrix
         return phik_matrix(df, verbose=False)
-    else:
+    elif compute_method == 'pearson':
         return df.corr()
+    else:
+        raise NotImplementedError(f'Not implemented correlation method : {compute_method}')

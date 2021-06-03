@@ -2135,7 +2135,8 @@ class SmartPlotter:
             df=None,
             max_features=10,
             features_to_hide=None,
-            facet_col=None
+            facet_col=None,
+            how='phik'
     ) -> go.Figure:
 
         if features_to_hide is None:
@@ -2148,12 +2149,16 @@ class SmartPlotter:
         if facet_col:
             features_to_hide += [facet_col]
 
-        try:
-            from phik import phik_matrix
-            compute_method = 'phik'
-        except (ImportError, ModuleNotFoundError):
-            warnings.warn('Cannot compute phik correlations. Install phik using "pip install phik".', UserWarning)
-            compute_method = "Pearson's r"
+        # We use phik by default as it is a convenient method for numeric and categorical data
+        if how == 'phik':
+            try:
+                from phik import phik_matrix
+                compute_method = 'phik'
+            except (ImportError, ModuleNotFoundError):
+                warnings.warn('Cannot compute phik correlations. Install phik using "pip install phik".', UserWarning)
+                compute_method = "pearson"
+        else:
+            compute_method = how
 
         list_features = []
         if facet_col:
@@ -2191,7 +2196,7 @@ class SmartPlotter:
                     ))
 
         dict_t = copy.deepcopy(self.dict_title)
-        dict_t['text'] = f'{compute_method} correlation'
+        dict_t['text'] = f'correlation ({compute_method})'
 
         fig.update_layout(
             coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),

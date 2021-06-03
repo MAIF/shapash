@@ -16,8 +16,7 @@ from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot, \
-    generate_correlation_matrix_fig
+from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot
 from shapash.report.common import series_dtype, get_callable, compute_col_types, VarType, display_value
 from shapash.webapp.utils.utils import round_to_k
 

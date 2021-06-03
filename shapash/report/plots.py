@@ -175,24 +175,6 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_ma
     return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
 
-def generate_unique_corr_fig(df: pd.DataFrame, ax: plt.Axes):
-    """
-    Generates a correlation figure on an ax (plt.Axes).
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame on which will be computed correlations.
-    ax : plt.Axes
-        The used plt.Axes on which will be plot the correlation matrix.
-    """
-    sns.set_theme(style="white")
-    corr = df.corr()
-    mask = np.triu(np.ones_like(corr, dtype=bool))
-    sns.heatmap(corr, mask=mask, cmap=cmap_diverging, center=0, ax=ax,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5})
-
-
 def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[np.array, list]) -> plt.Figure:
     """
     Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
