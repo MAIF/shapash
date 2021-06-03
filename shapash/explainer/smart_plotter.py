@@ -2141,7 +2141,42 @@ class SmartPlotter:
             height=500,
             file_name=None,
             auto_open=False
-    ) -> go.Figure:
+    ):
+        """
+        Correlations matrix heatmap plot.
+        The method can use phik or pearson correlations.
+        The correlations computed can be changed using the parameter 'how'.
+
+        Parameters
+        ----------
+        df : pd.DataFrame, optional
+            DataFrame for which we want to compute correlations. Will use x_pred by default.
+        max_features : int (default: 10)
+            Max number of features to show on the matrix.
+        features_to_hide : list (optional)
+            List of features that will not appear on the graph
+        facet_col : str (optional)
+            Name of the column used to split the graph in two (or more) plots. One correlation
+            subplot will be computed for each value of this column.
+        how : str (default: 'phik')
+            Correlation method used. 'phik' or 'pearson' are possible values. 'phik' is used by default.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+
+        Example
+        --------
+        >>> xpl.plot.correlations()
+        """
 
         if features_to_hide is None:
             features_to_hide = []

@@ -169,6 +169,20 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
 
 
 def compute_corr(df, compute_method):
+    """
+    Compute correlations between features of given dataframe.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame used to compute correlations.
+    compute_method : str
+        Method used to compute correlations ('phik' or 'pearson').
+
+    Returns
+    -------
+    pd.DataFrame
+    """
     # Remove user warnings (when not enough values to compute correlation).
     warnings.filterwarnings("ignore")
     if compute_method == 'phik':
