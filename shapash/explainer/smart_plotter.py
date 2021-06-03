@@ -2211,7 +2211,7 @@ class SmartPlotter:
                     ))
 
         dict_t = copy.deepcopy(self.dict_title)
-        dict_t['text'] = f'correlation ({compute_method})'
+        dict_t['text'] = f'Correlation ({compute_method})'
 
         fig.update_layout(
             coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
