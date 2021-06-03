@@ -1830,20 +1830,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_correlations_1(self):
         """
-        Test correlations plot
-        """
-        smart_explainer = self.smart_explainer
-
-        output = smart_explainer.plot.correlations(max_features=2)
-
-        assert len(output.data) == 1
-        assert len(output.data[0].x) == 2
-        assert len(output.data[0].y) == 2
-        assert output.data[0].z.shape == (2, 2)
-
-    def test_correlations_2(self):
-        """
-        Test correlations plot 2
+        Test correlations plot 1
         """
         smart_explainer = self.smart_explainer
 
@@ -1861,9 +1848,9 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(output.data[0].y) == 3
         assert output.data[0].z.shape == (3, 3)
 
-    def test_correlations_3(self):
+    def test_correlations_2(self):
         """
-        Test correlations plot 3
+        Test correlations plot 2
         """
         smart_explainer = self.smart_explainer
 
