@@ -2136,7 +2136,11 @@ class SmartPlotter:
             max_features=10,
             features_to_hide=None,
             facet_col=None,
-            how='phik'
+            how='phik',
+            width=900,
+            height=500,
+            file_name=None,
+            auto_open=False
     ) -> go.Figure:
 
         if features_to_hide is None:
@@ -2160,13 +2164,16 @@ class SmartPlotter:
         else:
             compute_method = how
 
+        hovertemplate = '<b>%{text}<br />Correlation: %{z}</b><extra></extra>'
+
         list_features = []
         if facet_col:
             facet_col_values = sorted(df[facet_col].unique(), reverse=True)
             fig = make_subplots(
                 rows=1,
                 cols=df[facet_col].nunique(),
-                subplot_titles=[t + " correlation" for t in facet_col_values]
+                subplot_titles=[t + " correlation" for t in facet_col_values],
+                horizontal_spacing=0.15
             )
             # Used for the Shapash report to get train then test set
             for i, col_v in enumerate(facet_col_values):
@@ -2182,6 +2189,10 @@ class SmartPlotter:
                         x=list_features,
                         y=list_features,
                         coloraxis='coloraxis',
+                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                              for y in list_features],
+                        hovertemplate=hovertemplate,
                     ), row=1, col=i+1)
 
         else:
@@ -2193,6 +2204,10 @@ class SmartPlotter:
                         x=list_features,
                         y=list_features,
                         coloraxis='coloraxis',
+                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                              for y in list_features],
+                        hovertemplate=hovertemplate,
                     ))
 
         dict_t = copy.deepcopy(self.dict_title)
@@ -2201,7 +2216,15 @@ class SmartPlotter:
         fig.update_layout(
             coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
             showlegend=True,
-            title=dict_t
+            title=dict_t,
+            width=width,
+            height=height
         )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig
