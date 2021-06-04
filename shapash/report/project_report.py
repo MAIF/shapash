@@ -276,8 +276,14 @@ class ProjectReport:
                         group_id='target'
                     )
         if multivariate_analysis:
-            print_md("### Mutlivariate analysis")
-            fig_corr = self.explainer.plot.correlations(self.df_train_test, facet_col='data_train_test')
+            print_md("### Multivariate analysis")
+            fig_corr = self.explainer.plot.correlations(
+                self.df_train_test,
+                facet_col='data_train_test',
+                max_features=20,
+                width=900,
+                height=500,
+            )
             print_html(plotly.io.to_html(fig_corr))
         print_md('---')
 
