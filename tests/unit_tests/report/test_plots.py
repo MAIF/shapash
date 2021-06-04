@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from shapash.report.plots import generate_fig_univariate, generate_fig_univariate_continuous, \
-    generate_fig_univariate_categorical, generate_correlation_matrix_fig
+    generate_fig_univariate_categorical
 from shapash.report.common import VarType
 
 
@@ -130,47 +130,3 @@ class TestPlots(unittest.TestCase):
 
         # Number of bars (multiplied by two as we have train + test for each cat)
         assert len(fig.axes[0].patches) == 7*2
-
-    def test_generate_correlation_matrix_fig_1(self):
-        """
-        Test correlation matrix figure with train and test
-        """
-        df = pd.DataFrame({
-            "float_data": np.linspace(0, 5, 45),
-            "int_data": [k for k in range(10) for _ in range(k)],
-            "data_train_test": ['train'] * 10 + ['test'] * 10 + ['train'] * 25
-        })
-
-        fig = generate_correlation_matrix_fig(df)
-
-        # Assert we generate one plot for train + one plot for test
-        # Number of plots x 2 (because each plot generate one correlation plot + one title as axes)
-        assert len(fig.axes) == 4
-
-    def test_generate_correlation_matrix_fig_2(self):
-        """
-        Test correlation matrix figure with test only
-        """
-        df = pd.DataFrame({
-            "float_data": np.linspace(0, 5, 45),
-            "int_data": [k for k in range(10) for _ in range(k)],
-            "data_train_test": ['test'] * 45
-        })
-
-        fig = generate_correlation_matrix_fig(df)
-
-        # Assert we generate one plot for test
-        # Number of plots x 2 (because each plot generate one correlation plot + one title as axes)
-        assert len(fig.axes) == 2
-
-    def test_generate_correlation_matrix_fig_3(self):
-        """
-        Test correlation matrix figure max_features parameter that filters the number of features displayed
-        """
-        df = pd.DataFrame(np.random.rand(20, 40))
-        df['data_train_test'] = ['train'] * 10 + ['test'] * 10
-
-        fig = generate_correlation_matrix_fig(df, max_features=8)
-
-        assert len(fig.axes[0].get_xticklabels()) == 8
-

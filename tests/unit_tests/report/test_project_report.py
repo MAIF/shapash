@@ -143,8 +143,7 @@ class TestProjectReport(unittest.TestCase):
         )
         report.display_dataset_analysis()
 
-    @patch('shapash.report.project_report.generate_correlation_matrix_fig')
-    def test_display_dataset_analysis_3(self, mock_correlation_matrix):
+    def test_display_dataset_analysis_3(self):
         """
         Test we don't have a problem when only categorical features
         """
@@ -168,8 +167,6 @@ class TestProjectReport(unittest.TestCase):
         )
 
         report.display_dataset_analysis()
-
-        self.assertEqual(mock_correlation_matrix.call_count, 0)
 
     def test_display_model_explainability_1(self):
         report = ProjectReport(

@@ -1,8 +1,9 @@
 import unittest
 import numpy as np
+import pandas as pd
 from shapash.utils.utils import inclusion, within_dict, is_nested_list,\
     compute_digit_number, truncate_str, add_line_break, maximum_difference_sort_value, \
-    compute_sorted_variables_interactions_list_indices
+    compute_sorted_variables_interactions_list_indices, compute_top_correlations_features
 
 
 class TestUtils(unittest.TestCase):
@@ -109,3 +110,26 @@ class TestUtils(unittest.TestCase):
         output = compute_sorted_variables_interactions_list_indices(interaction_values)
 
         assert np.array_equal(expected_output, output)
+
+    def test_compute_top_correlations_features_1(self):
+        """
+        Test function with small number of features
+        """
+        df = pd.DataFrame(np.random.rand(10, 2))
+
+        corr = df.corr()
+
+        list_features = compute_top_correlations_features(corr=corr, max_features=20)
+        assert len(list_features) == 2
+
+    def test_compute_top_correlations_features_2(self):
+        """
+        Test function with high number of features
+        """
+        df = pd.DataFrame(np.random.rand(10, 30))
+
+        corr = df.corr()
+
+        list_features = compute_top_correlations_features(corr=corr, max_features=5)
+
+        assert len(list_features) == 5
