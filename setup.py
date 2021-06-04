@@ -34,7 +34,8 @@ extras['report'] = [
     'matplotlib',
     'seaborn',
     'notebook',
-    'Jinja2'
+    'Jinja2',
+    'phik'
 ]
 
 extras['xgboost'] = ['xgboost>=1.0.0']
