@@ -2133,7 +2133,7 @@ class SmartPlotter:
     def correlations(
             self,
             df=None,
-            max_features=10,
+            max_features=20,
             features_to_hide=None,
             facet_col=None,
             how='phik',
@@ -2245,8 +2245,12 @@ class SmartPlotter:
                         hovertemplate=hovertemplate,
                     ))
 
+        title = f'Correlation ({compute_method})'
+        if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
+            subtitle = f"Top {len(list_features)} correlations"
+            title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
         dict_t = copy.deepcopy(self.dict_title)
-        dict_t['text'] = f'Correlation ({compute_method})'
+        dict_t['text'] = title
 
         fig.update_layout(
             coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
