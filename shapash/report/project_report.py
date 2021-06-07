@@ -16,8 +16,7 @@ from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, \
     print_javascript_misc
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot, \
-    generate_correlation_matrix_fig
+from shapash.report.plots import generate_fig_univariate, generate_confusion_matrix_plot
 from shapash.report.common import series_dtype, get_callable, compute_col_types, VarType, display_value
 from shapash.webapp.utils.utils import round_to_k
 
@@ -277,11 +276,15 @@ class ProjectReport:
                         group_id='target'
                     )
         if multivariate_analysis:
-            # Need at least two numerical features
-            if len([v for v in compute_col_types(self.df_train_test).values() if v == VarType.TYPE_NUM]) > 1:
-                print_md("### Mutlivariate analysis")
-                fig_corr = generate_correlation_matrix_fig(self.df_train_test, max_features=20)
-                print_html(convert_fig_to_html(fig=fig_corr))
+            print_md("### Multivariate analysis")
+            fig_corr = self.explainer.plot.correlations(
+                self.df_train_test,
+                facet_col='data_train_test',
+                max_features=20,
+                width=900,
+                height=500,
+            )
+            print_html(plotly.io.to_html(fig_corr))
         print_md('---')
 
     def _display_dataset_analysis_global(self):

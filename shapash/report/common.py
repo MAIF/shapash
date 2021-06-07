@@ -149,32 +149,6 @@ def load_saved_df(path: str) -> Union[pd.DataFrame, None]:
         return None
 
 
-def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> list:
-    """
-    Returns the max_features features having top correlations.
-
-    Parameters
-    ----------
-    corr: pd.DataFrame
-    max_features : int
-
-    Returns
-    -------
-    list
-    """
-    sorted_corr = corr.abs().unstack().sort_values(kind="quicksort")[::-1]
-    set_features = set()
-    i = 0
-    while len(set_features) < max_features and i < len(sorted_corr):
-        if sorted_corr.index[i][0] != sorted_corr.index[i][1]:
-            set_features.add(sorted_corr.index[i][0])
-            # Last iteration can add one more feature otherwise
-            if len(set_features) != max_features:
-                set_features.add(sorted_corr.index[i][1])
-        i += 1
-    return list(set_features)
-
-
 def display_value(value: float, thousands_separator: str = ',', decimal_separator: str = '.') -> str:
     """
     Display a value as a string with specific format.

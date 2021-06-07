@@ -9,11 +9,13 @@ import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
-from shapash.manipulation.summarize import compute_features_import, project_feature_values_1d
+from shapash.manipulation.summarize import compute_features_import, project_feature_values_1d, compute_corr
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
-    maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
+    maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
+    compute_top_correlations_features
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -2177,6 +2179,144 @@ class SmartPlotter:
                 'xanchor': 'center',
                 'yanchor': 'top'}
         )
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+        return fig
+
+    def correlations(
+            self,
+            df=None,
+            max_features=20,
+            features_to_hide=None,
+            facet_col=None,
+            how='phik',
+            width=900,
+            height=500,
+            file_name=None,
+            auto_open=False
+    ):
+        """
+        Correlations matrix heatmap plot.
+        The method can use phik or pearson correlations.
+        The correlations computed can be changed using the parameter 'how'.
+
+        Parameters
+        ----------
+        df : pd.DataFrame, optional
+            DataFrame for which we want to compute correlations. Will use x_pred by default.
+        max_features : int (default: 10)
+            Max number of features to show on the matrix.
+        features_to_hide : list (optional)
+            List of features that will not appear on the graph
+        facet_col : str (optional)
+            Name of the column used to split the graph in two (or more) plots. One correlation
+            subplot will be computed for each value of this column.
+        how : str (default: 'phik')
+            Correlation method used. 'phik' or 'pearson' are possible values. 'phik' is used by default.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+
+        Example
+        --------
+        >>> xpl.plot.correlations()
+        """
+
+        if features_to_hide is None:
+            features_to_hide = []
+
+        if df is None:
+            # Use x_pred by default
+            df = self.explainer.x_pred
+
+        if facet_col:
+            features_to_hide += [facet_col]
+
+        # We use phik by default as it is a convenient method for numeric and categorical data
+        if how == 'phik':
+            try:
+                from phik import phik_matrix
+                compute_method = 'phik'
+            except (ImportError, ModuleNotFoundError):
+                warnings.warn('Cannot compute phik correlations. Install phik using "pip install phik".', UserWarning)
+                compute_method = "pearson"
+        else:
+            compute_method = how
+
+        hovertemplate = '<b>%{text}<br />Correlation: %{z}</b><extra></extra>'
+
+        list_features = []
+        if facet_col:
+            facet_col_values = sorted(df[facet_col].unique(), reverse=True)
+            fig = make_subplots(
+                rows=1,
+                cols=df[facet_col].nunique(),
+                subplot_titles=[t + " correlation" for t in facet_col_values],
+                horizontal_spacing=0.15
+            )
+            # Used for the Shapash report to get train then test set
+            for i, col_v in enumerate(facet_col_values):
+                corr = compute_corr(df.loc[df[facet_col] == col_v].drop(features_to_hide, axis=1), compute_method)
+
+                # Keep the same list of features for each subplot
+                if len(list_features) == 0:
+                    list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+
+                fig.add_trace(
+                    go.Heatmap(
+                        z=corr.loc[list_features, list_features].round(2).values,
+                        x=list_features,
+                        y=list_features,
+                        coloraxis='coloraxis',
+                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                              for y in list_features],
+                        hovertemplate=hovertemplate,
+                    ), row=1, col=i+1)
+
+        else:
+            corr = compute_corr(df.drop(features_to_hide, axis=1), compute_method)
+            list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+
+            fig = go.Figure(go.Heatmap(
+                        z=corr.loc[list_features, list_features].round(2).values,
+                        x=list_features,
+                        y=list_features,
+                        coloraxis='coloraxis',
+                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                              for y in list_features],
+                        hovertemplate=hovertemplate,
+                    ))
+
+        title = f'Correlation ({compute_method})'
+        if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
+            subtitle = f"Top {len(list_features)} correlations"
+            title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
+        dict_t = copy.deepcopy(self.dict_title)
+        dict_t['text'] = title
+
+        fig.update_layout(
+            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
+            showlegend=True,
+            title=dict_t,
+            width=width,
+            height=height
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)

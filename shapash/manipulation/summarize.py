@@ -1,6 +1,7 @@
 """
 Summarize Module
 """
+import warnings
 import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
@@ -165,6 +166,32 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
     feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
     feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
     return feature_values
+
+
+def compute_corr(df, compute_method):
+    """
+    Compute correlations between features of given dataframe.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame used to compute correlations.
+    compute_method : str
+        Method used to compute correlations ('phik' or 'pearson').
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    # Remove user warnings (when not enough values to compute correlation).
+    warnings.filterwarnings("ignore")
+    if compute_method == 'phik':
+        from phik import phik_matrix
+        return phik_matrix(df, verbose=False)
+    elif compute_method == 'pearson':
+        return df.corr()
+    else:
+        raise NotImplementedError(f'Not implemented correlation method : {compute_method}')
 
 
 def create_grouped_features_values(
