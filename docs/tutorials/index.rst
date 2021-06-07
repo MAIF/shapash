@@ -11,6 +11,7 @@ This part offers a series of tutorials and allows users to gradually discover th
 
 
     overview
+    common
     plot
     encoder
     postprocess
