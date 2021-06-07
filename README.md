@@ -129,6 +129,8 @@ You can install these using the following command :
 pip install shapash[report]
 ```
 
+If you encounter **compatibility issues** you may check the corresponding section in the Shapash documentation [here](https://shapash.readthedocs.io/en/latest/installation-instructions/index.html).
+
 ## 🕐 Quickstart
 
 The 4 steps to display results:
