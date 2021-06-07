@@ -136,6 +136,11 @@ class SmartPlotter:
             'rgba(116, 1, 179, 0.9)',
         ]
 
+        self.groups_colors = [
+            px.colors.qualitative.T10[1],
+            px.colors.qualitative.G10[9]
+        ]
+
         self.round_digit = None
 
         self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
@@ -577,7 +582,7 @@ class SmartPlotter:
 
         # Change bar color for groups of features
         marker_color = [
-            self.dict_local_plot_colors[-1]["color"]
+            self.groups_colors[0]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -709,17 +714,41 @@ class SmartPlotter:
         )
         bars = []
         for num, expl in enumerate(list(zip(var_dict, x_val, contrib))):
+            group_name = None
             if expl[1] == '':
                 ylabel = '<i>{}</i>'.format(expl[0])
                 hoverlabel = '<b>{}</b>'.format(expl[0])
             else:
-                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
-                                                          add_line_break(expl[1], 40, maxlen=160))
-                if len(contrib) <= yaxis_max_label:
-                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+                # If bar is a group of features, hovertext includes the values of the features of the group
+                # And color changes
+                if (self.explainer.features_groups is not None
+                        and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
+                        and len(index_value) > 0):
+                    group_name = self.explainer.inv_features_dict.get(expl[0])
+                    feat_groups_values = self.explainer.x_pred[self.explainer.features_groups[group_name]]\
+                                                       .loc[index_value[0]]
+                    hoverlabel = '<br />'.join([
+                        '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
+                                                              40, maxlen=120),
+                                               add_line_break(f_value, 40, maxlen=160))
+                        for f_name, f_value in feat_groups_values.to_dict().items()
+                    ])
+                else:
+                    hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
+                                                              add_line_break(expl[1], 40, maxlen=160))
+                if len(contrib) <= yaxis_max_label and (
+                        self.explainer.features_groups is None
+                        # We don't want to display label values for t-sne projected values of groups of features.
+                        or (
+                                self.explainer.features_groups is not None
+                                and self.explainer.inv_features_dict.get(expl[0])
+                                not in self.explainer.features_groups.keys()
+                        )
+                ):
+                        ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
-
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
@@ -727,12 +756,19 @@ class SmartPlotter:
             else:
                 color = -1 if expl[1] != '' else -2
 
+            # If the bar is a group of features we modify the color
+            if group_name is not None:
+                bar_color = self.groups_colors[0] if color == 1 else self.groups_colors[1]
+            else:
+                bar_color = dict_local_plot_colors[color]['color']
+
             barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
                 customdata=[hoverlabel],
                 orientation='h',
                 marker=dict_local_plot_colors[color],
+                marker_color=bar_color,
                 showlegend=False,
                 hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
             )
@@ -893,6 +929,7 @@ class SmartPlotter:
                    label=None,
                    show_masked=True,
                    show_predict=True,
+                   display_groups=None,
                    yaxis_max_label=12,
                    width=900,
                    height=550,
@@ -929,6 +966,10 @@ class SmartPlotter:
             show predict or predict proba value
         yaxis_max_label: int
             Maximum number of variables to display labels on the y axis
+        display_groups : bool (default: None)
+            Whether or not to display groups of features. This option is
+            only useful if groups of features are declared when compiling
+            SmartExplainer object.
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 550)
@@ -947,6 +988,11 @@ class SmartPlotter:
         --------
         >>> xpl.plot.local_plot(row_num=0)
         """
+        display_groups = True if (display_groups is not False and self.explainer.features_groups is not None) else False
+        if display_groups:
+            data = self.explainer.data_groups
+        else:
+            data = self.explainer.data
         # checking args
         if sum(arg is not None for arg in [query, row_num, index]) != 1:
             raise ValueError(
@@ -974,8 +1020,15 @@ class SmartPlotter:
 
         else:
             # apply filter if the method have not yet been asked in order to limit the number of feature to display
-            if not hasattr(self.explainer, 'mask_params'):
-                self.explainer.filter(max_contrib=20)
+            if (
+                not hasattr(self.explainer, "mask_params")  # If the filter method has not been called yet
+                # Or if the already computed mask was not updated with current display_groups parameter
+                or (isinstance(data["contrib_sorted"], pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) != len(self.explainer.mask.columns))
+                or (isinstance(data["contrib_sorted"], list)
+                    and len(data["contrib_sorted"][0].columns) != len(self.explainer.mask[0].columns))
+            ):
+                self.explainer.filter(max_contrib=20, display_groups=display_groups)
 
             if self.explainer._case == "classification":
                 if label is None:
@@ -983,9 +1036,9 @@ class SmartPlotter:
 
                 label_num, _, label_value = self.explainer.check_label_name(label)
 
-                contrib = self.explainer.data['contrib_sorted'][label_num]
-                x_val = self.explainer.data['x_sorted'][label_num]
-                var_dict = self.explainer.data['var_dict'][label_num]
+                contrib = data['contrib_sorted'][label_num]
+                x_val = data['x_sorted'][label_num]
+                var_dict = data['var_dict'][label_num]
 
                 if show_predict is True:
                     pred = self.local_pred(line[0], label_num)
@@ -995,9 +1048,9 @@ class SmartPlotter:
                         subtitle = f"Response: <b>{label_value}</b> - Proba: <b>{pred:.4f}</b>"
 
             elif self.explainer._case == "regression":
-                contrib = self.explainer.data['contrib_sorted']
-                x_val = self.explainer.data['x_sorted']
-                var_dict = self.explainer.data['var_dict']
+                contrib = data['contrib_sorted']
+                x_val = data['x_sorted']
+                var_dict = data['var_dict']
                 label_num = None
                 if show_predict is True:
                     pred_value = self.local_pred(line[0])
@@ -1012,10 +1065,12 @@ class SmartPlotter:
             var_dict, x_val, contrib = self.get_selection(line, var_dict, x_val, contrib)
             var_dict, x_val, contrib = self.apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
             # use label of each column
-            var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
+            if display_groups:
+                var_dict = [self.explainer.features_dict[self.explainer.x_pred_groups.columns[x]] for x in var_dict]
+            else:
+                var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
                 var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib, label=label_num)
-
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
             if hasattr(self.explainer, 'mask_params'):

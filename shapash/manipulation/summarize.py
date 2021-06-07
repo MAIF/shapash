@@ -192,3 +192,52 @@ def compute_corr(df, compute_method):
         return df.corr()
     else:
         raise NotImplementedError(f'Not implemented correlation method : {compute_method}')
+
+
+def create_grouped_features_values(
+        x_pred,
+        x_init,
+        preprocessing,
+        features_groups,
+        how='tsne'
+) -> pd.DataFrame:
+    """
+    Compute projections of groups of features using t-sne.
+
+    Parameters
+    ----------
+    x_pred : pd.DataFrame
+        x_init dataset with inverse transformation with eventual postprocessing modifications.
+    x_init : pd.DataFrame
+        preprocessed dataset used by the model to perform the prediction.
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional
+        Preprocessing used to encode categorical variables.
+    features_groups : dict
+        Groups names and corresponding list of features
+    how : str
+        Method used to project groups of features in 1D (only t-sne available for now).
+
+    Returns
+    -------
+    df : pd.DataFrame
+        features values with projection used for groups of features
+    """
+    df = x_pred.copy()
+    if how != 'tsne':
+        raise NotImplementedError('Projecting features in 1D only supports t-sne for now.')
+    for group in features_groups.keys():
+        if not isinstance(features_groups[group], list):
+            raise ValueError(f'features_groups[{group}] should be a list of features')
+        features_values = x_pred[features_groups[group]]
+        df[group] = project_feature_values_1d(
+            features_values,
+            col=group,
+            x_pred=x_pred,
+            x_init=x_init,
+            preprocessing=preprocessing
+        )
+        for f in features_groups[group]:
+            if f in df.columns:
+                df.drop(f, axis=1, inplace=True)
+
+    return df

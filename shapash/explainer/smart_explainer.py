@@ -17,6 +17,7 @@ from shapash.utils.shap_backend import shap_contributions, check_explainer, get_
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.manipulation.summarize import create_grouped_features_values
 from shapash.report.generation import execute_report, export_and_save_report
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
@@ -243,9 +244,29 @@ class SmartExplainer:
             self.title_story = title_story
         self.features_groups = features_groups
         if features_groups:
-            self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
-            self.features_imp_groups = None
-            self._update_features_dict_with_groups(features_groups=features_groups)
+            self._compile_features_groups(features_groups)
+
+    def _compile_features_groups(self, features_groups):
+        """
+        Performs required computations for groups of features.
+        """
+        # Compute contributions for groups of features
+        self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
+        self.features_imp_groups = None
+        # Update features dict with groups names
+        self._update_features_dict_with_groups(features_groups=features_groups)
+        # Compute t-sne projections for groups of features
+        self.x_pred_groups = create_grouped_features_values(x_pred=self.x_pred, x_init=self.x_init,
+                                                            preprocessing=self.preprocessing,
+                                                            features_groups=self.features_groups,
+                                                            how='tsne')
+        # Compute data attribute for groups of features
+        self.data_groups = self.state.assign_contributions(
+            self.state.rank_contributions(
+                self.contributions_groups,
+                self.x_pred_groups
+            )
+        )
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -661,7 +682,8 @@ class SmartExplainer:
             features_to_hide=None,
             threshold=None,
             positive=None,
-            max_contrib=None
+            max_contrib=None,
+            display_groups=None
     ):
         """
         The filter method is an important method which allows to summarize the local explainability
@@ -682,26 +704,35 @@ class SmartExplainer:
             If None, hide nothing.
         max_contrib : int, optional (default: None)
             Maximum number of contributions to show.
+        display_groups : bool (default: None)
+            Whether or not to display groups of features. This option is
+            only useful if groups of features are declared when compiling
+            SmartExplainer object.
         """
-        mask = [self.state.init_mask(self.data['contrib_sorted'], True)]
+        display_groups = True if (display_groups is not False and self.features_groups is not None) else False
+        if display_groups:
+            data = self.data_groups
+        else:
+            data = self.data
+        mask = [self.state.init_mask(data['contrib_sorted'], True)]
         if features_to_hide:
             mask.append(
                 self.state.hide_contributions(
-                    self.data['var_dict'],
+                    data['var_dict'],
                     features_list=self.check_features_name(features_to_hide)
                 )
             )
         if threshold:
             mask.append(
                 self.state.cap_contributions(
-                    self.data['contrib_sorted'],
+                    data['contrib_sorted'],
                     threshold=threshold
                 )
             )
         if positive is not None:
             mask.append(
                 self.state.sign_contributions(
-                    self.data['contrib_sorted'],
+                    data['contrib_sorted'],
                     positive=positive
                 )
             )
@@ -709,7 +740,7 @@ class SmartExplainer:
         if max_contrib:
             self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
         self.masked_contributions = self.state.compute_masked_contributions(
-            self.data['contrib_sorted'],
+            data['contrib_sorted'],
             self.mask
         )
         self.mask_params = {
