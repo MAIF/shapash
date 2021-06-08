@@ -31,7 +31,7 @@
 </p>
 
 
-🎉 **We just released Shapash 1.3.2 that includes the generation of a standalone HTML report that constitutes a basis of an audit document. [See an example here](https://shapash.readthedocs.io/en/latest/report.html) that was generated [using this tutorial.](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)** 🎉  
+🎉 **We just released Shapash 1.4.0 that includes the option to group features that share common properties together [See the tutorial here](https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html).** 🎉  
 
 ## 🔍 Overview
 
@@ -203,6 +203,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
 - [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
+- [Use groups of features](https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html)
 
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
