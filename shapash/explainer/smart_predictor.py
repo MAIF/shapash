@@ -100,6 +100,7 @@ class SmartPredictor :
                  columns_dict, explainer, features_types,
                  label_dict=None, preprocessing=None,
                  postprocessing=None,
+                 features_groups=None,
                  mask_params = {"features_to_hide": None,
                                 "threshold": None,
                                 "positive": None,
@@ -130,10 +131,11 @@ class SmartPredictor :
         self.mask_params = mask_params
         self.check_mask_params()
         self.postprocessing = postprocessing
+        self.features_groups = features_groups
         list_preprocessing = preprocessing_tolist(self.preprocessing)
         check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
                                          self.features_types, self.mask_params, self.preprocessing,
-                                         self.postprocessing, list_preprocessing)
+                                         self.postprocessing, list_preprocessing, self.features_groups)
         check_consistency_model_label(self.columns_dict, self.label_dict)
         self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing, list_preprocessing)
 

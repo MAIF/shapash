@@ -1025,7 +1025,7 @@ class SmartExplainer:
         self.features_types = {features: str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
         listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
-                          "label_dict", "preprocessing", "postprocessing"]
+                          "label_dict", "preprocessing", "postprocessing", "features_groups"]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
