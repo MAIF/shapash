@@ -163,8 +163,12 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
         col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
     feature_values = x_init.loc[feature_values.index, col_names_in_xinit]
     # Project in 1D the feature values
-    feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
-    feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
+    try:
+        feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
+        feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
+    except Exception as e:
+        warnings.warn(f'Could not project group features values : {e}', UserWarning)
+        feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
     return feature_values
 
 
