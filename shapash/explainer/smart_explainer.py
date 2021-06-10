@@ -818,7 +818,8 @@ class SmartExplainer:
             threshold=None,
             positive=None,
             max_contrib=None,
-            proba=False
+            proba=False,
+            use_groups=None
     ):
         """
         The to_pandas method allows to export the summary of local explainability.
@@ -848,6 +849,9 @@ class SmartExplainer:
             Number of contributions to show in the pandas df
         proba : bool, optional (default: False)
             adding proba in output df
+        use_groups : bool (optional)
+            Whether or not to use groups of features contributions (only available if features_groups
+            parameter was not empty when calling compile method).
 
         Returns
         -------
@@ -864,6 +868,11 @@ class SmartExplainer:
         1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
         2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
         """
+        use_groups = True if (use_groups is not False and self.features_groups is not None) else False
+        if use_groups:
+            data = self.data_groups
+        else:
+            data = self.data
 
         # Classification: y_pred is needed
         if self.y_pred is None:
@@ -873,21 +882,34 @@ class SmartExplainer:
 
         # Apply filter method if necessary
         if all(var is None for var in [features_to_hide, threshold, positive, max_contrib]) \
-                and hasattr(self, 'mask_params'):
+                and hasattr(self, 'mask_params') \
+                and (
+                # if the already computed mask does not have the right shape (this can happen when
+                # we use groups of features once and then use method without groups)
+                (isinstance(data['contrib_sorted'], pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) == len(self.mask.columns))
+                or
+                (isinstance(data['contrib_sorted'], list)
+                    and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns))
+                ):
             print('to_pandas params: ' + str(self.mask_params))
         else:
             self.filter(features_to_hide=features_to_hide,
                         threshold=threshold,
                         positive=positive,
-                        max_contrib=max_contrib)
-
+                        max_contrib=max_contrib,
+                        display_groups=use_groups)
+        if use_groups:
+            columns_dict = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
+        else:
+            columns_dict = self.columns_dict
         # Summarize information
-        self.data['summary'] = self.state.summarize(
-            self.data['contrib_sorted'],
-            self.data['var_dict'],
-            self.data['x_sorted'],
+        data['summary'] = self.state.summarize(
+            data['contrib_sorted'],
+            data['var_dict'],
+            data['x_sorted'],
             self.mask,
-            self.columns_dict,
+            columns_dict,
             self.features_dict
         )
         # Matching with y_pred
@@ -897,7 +919,7 @@ class SmartExplainer:
         else:
             proba_values = None
 
-        y_pred, summary = keep_right_contributions(self.y_pred, self.data['summary'],
+        y_pred, summary = keep_right_contributions(self.y_pred, data['summary'],
                                                    self._case, self._classes,
                                                    self.label_dict, proba_values)
 
