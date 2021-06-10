@@ -642,12 +642,15 @@ class SmartPredictor :
             - the right probabilities from predict_proba associated to the right predicted values
             - the right contributions ranked and filtered as specify with modify_mask method
 
+        Parameters
+        ----------
+        use_groups : bool (optional)
+            Whether or not to compute groups of features contributions.
+
         Returns
         -------
         pandas.DataFrame
             - selected explanation of each row for classification case
-        use_groups : bool (optional)
-            Whether or not to compute groups of features contributions.
 
         Examples
         --------
