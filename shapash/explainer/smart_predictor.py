@@ -240,7 +240,7 @@ class SmartPredictor :
                                                                              x_init=self.data["x_preprocessed"],
                                                                              preprocessing=self.preprocessing,
                                                                              features_groups=self.features_groups,
-                                                                             how='tsne')
+                                                                             how='dict_of_values')
         self.data_groups['ypred'] = self.data["ypred"]
         self.data_groups['contributions'] = group_contributions(
             contributions=self.data['contributions'],

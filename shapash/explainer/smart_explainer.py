@@ -259,7 +259,7 @@ class SmartExplainer:
         self.x_pred_groups = create_grouped_features_values(x_pred=self.x_pred, x_init=self.x_init,
                                                             preprocessing=self.preprocessing,
                                                             features_groups=self.features_groups,
-                                                            how='tsne')
+                                                            how='dict_of_values')
         # Compute data attribute for groups of features
         self.data_groups = self.state.assign_contributions(
             self.state.rank_contributions(

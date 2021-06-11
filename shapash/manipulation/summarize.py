@@ -130,7 +130,7 @@ def group_contributions(contributions, features_groups):
     return new_contributions
 
 
-def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing):
+def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing, how='tsne'):
     """
     Project feature values of a group of features in 1 dimension.
     If feature_values contains categorical features, use preprocessing to get
@@ -150,6 +150,8 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
         Pandas dataframe after preprocessing transformations
     preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
         The processing apply to the original data
+    how : str
+        Method used to compute groups of features values in one column.
 
     Returns
     -------
@@ -163,12 +165,18 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
         col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
     feature_values = x_init.loc[feature_values.index, col_names_in_xinit]
     # Project in 1D the feature values
-    try:
-        feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
-        feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
-    except Exception as e:
-        warnings.warn(f'Could not project group features values : {e}', UserWarning)
-        feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
+    if how == 'tsne':
+        try:
+            feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
+            feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
+        except Exception as e:
+            warnings.warn(f'Could not project group features values : {e}', UserWarning)
+            feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
+    elif how == 'dict_of_values':
+        feature_values = pd.Series(feature_values.apply(lambda x: x.to_dict(), axis=1), name=col,
+                                   index=feature_values.index)
+    else:
+        raise NotImplementedError(f'Unknown method : {how}')
     return feature_values
 
 
@@ -219,7 +227,7 @@ def create_grouped_features_values(
     features_groups : dict
         Groups names and corresponding list of features
     how : str
-        Method used to project groups of features in 1D (only t-sne available for now).
+        Method used to compute groups of features values in one column.
 
     Returns
     -------
@@ -227,8 +235,6 @@ def create_grouped_features_values(
         features values with projection used for groups of features
     """
     df = x_pred.copy()
-    if how != 'tsne':
-        raise NotImplementedError('Projecting features in 1D only supports t-sne for now.')
     for group in features_groups.keys():
         if not isinstance(features_groups[group], list):
             raise ValueError(f'features_groups[{group}] should be a list of features')
@@ -238,7 +244,8 @@ def create_grouped_features_values(
             col=group,
             x_pred=x_pred,
             x_init=x_init,
-            preprocessing=preprocessing
+            preprocessing=preprocessing,
+            how=how
         )
         for f in features_groups[group]:
             if f in df.columns:
