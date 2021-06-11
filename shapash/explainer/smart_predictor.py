@@ -229,7 +229,6 @@ class SmartPredictor :
         if self.features_groups is not None:
             self._add_groups_input()
 
-
     def _add_groups_input(self):
         """
         Compute groups of features values, contributions the same way as add_input method
@@ -240,6 +239,7 @@ class SmartPredictor :
                                                                              x_init=self.data["x_preprocessed"],
                                                                              preprocessing=self.preprocessing,
                                                                              features_groups=self.features_groups,
+                                                                             features_dict=self.features_dict,
                                                                              how='dict_of_values')
         self.data_groups['ypred'] = self.data["ypred"]
         self.data_groups['contributions'] = group_contributions(
