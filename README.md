@@ -31,7 +31,7 @@
 </p>
 
 
-🎉 **We just released Shapash 1.4.0 that includes the option to group features that share common properties together [See the tutorial here](https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html).** 🎉  
+🎉 **We just released Shapash 1.4.0 that includes the option to group features that share common properties together. This option can be useful if your model has a lot of features. [See the tutorial here](https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html).** 🎉 
 
 ## 🔍 Overview
 
