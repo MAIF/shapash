@@ -1,7 +1,7 @@
 """
 Check Module
 """
-
+import copy
 import numpy as np
 import pandas as pd
 from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder,\
@@ -186,7 +186,7 @@ def check_contribution_object(case, classes, contributions):
 
 def check_consistency_model_features(features_dict, model, columns_dict, features_types,
                                      mask_params=None, preprocessing=None, postprocessing=None,
-                                     list_preprocessing=None):
+                                     list_preprocessing=None, features_groups=None):
     """
     Check the matching between attributes, features names are same, or include
 
@@ -208,7 +208,17 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         Dictionnary of postprocessing that need to be checked.
     list_preprocessing: list (optional)
          list containing all preprocessing.
+    features_groups: list (optional)
+         list containing all groups of features.
     """
+    # Features dict can include additional entries for groups of features.
+    # We don't want to check them here as they may not be in other dict
+    features_dict = copy.deepcopy(features_dict)
+    if features_groups is not None:
+        for feat in features_groups.keys():
+            if feat in features_dict.keys():
+                features_dict.pop(feat)
+
     if features_dict is not None:
         if not all(feat in features_types for feat in features_dict):
             raise ValueError("All features of features_dict must be in features_types")
