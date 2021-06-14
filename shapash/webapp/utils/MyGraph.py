@@ -44,7 +44,7 @@ class MyGraph(dcc.Graph):
             width=None,
             height=None,
             title={
-                'y': 1,
+                'y': 0.98,
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top',
@@ -67,9 +67,10 @@ def update_title(title):
     -------
     str
     """
-    patt = re.compile('^(.+)<span.+?( - Proba: .*)?</span>$')
+    patt = re.compile('^(.+)<span.+?(Predict: .*|Proba: .*)?</span>$')
     try:
-        updated = ''.join(map(str, patt.findall(title)[0]))
+        list_non_empty_str_matches = [x for x in patt.findall(title)[0] if x != '']
+        updated = ' - '.join(map(str, list_non_empty_str_matches))
     except:
         updated = title
     return updated

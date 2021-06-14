@@ -21,7 +21,7 @@ from shapash.manipulation.filters import cutoff_contributions
 from shapash.manipulation.filters import combine_masks
 from shapash.manipulation.mask import init_mask
 from shapash.manipulation.mask import compute_masked_contributions
-from shapash.manipulation.summarize import summarize
+from shapash.manipulation.summarize import summarize, create_grouped_features_values, group_contributions
 from shapash.decomposition.contributions import rank_contributions, assign_contributions
 from shapash.utils.columntransformer_backend import columntransformer
 import copy
@@ -100,6 +100,7 @@ class SmartPredictor :
                  columns_dict, explainer, features_types,
                  label_dict=None, preprocessing=None,
                  postprocessing=None,
+                 features_groups=None,
                  mask_params = {"features_to_hide": None,
                                 "threshold": None,
                                 "positive": None,
@@ -130,10 +131,11 @@ class SmartPredictor :
         self.mask_params = mask_params
         self.check_mask_params()
         self.postprocessing = postprocessing
+        self.features_groups = features_groups
         list_preprocessing = preprocessing_tolist(self.preprocessing)
         check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
                                          self.features_types, self.mask_params, self.preprocessing,
-                                         self.postprocessing, list_preprocessing)
+                                         self.postprocessing, list_preprocessing, self.features_groups)
         check_consistency_model_label(self.columns_dict, self.label_dict)
         self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing, list_preprocessing)
 
@@ -217,9 +219,34 @@ class SmartPredictor :
             self.data["ypred_init"] = self.check_ypred(ypred)
 
         if contributions is not None:
-            self.data["ypred"], self.data["contributions"] = self.compute_contributions(contributions=contributions)
+            self.data["ypred"], self.data["contributions"] = self.compute_contributions(
+                contributions=contributions,
+                use_groups=False
+            )
         else:
-            self.data["ypred"], self.data["contributions"]  = self.compute_contributions()
+            self.data["ypred"], self.data["contributions"]  = self.compute_contributions(use_groups=False)
+
+        if self.features_groups is not None:
+            self._add_groups_input()
+
+    def _add_groups_input(self):
+        """
+        Compute groups of features values, contributions the same way as add_input method
+        and stores it in data_groups attribute
+        """
+        self.data_groups = dict()
+        self.data_groups['x_postprocessed'] = create_grouped_features_values(x_pred=self.data["x_postprocessed"],
+                                                                             x_init=self.data["x_preprocessed"],
+                                                                             preprocessing=self.preprocessing,
+                                                                             features_groups=self.features_groups,
+                                                                             features_dict=self.features_dict,
+                                                                             how='dict_of_values')
+        self.data_groups['ypred'] = self.data["ypred"]
+        self.data_groups['contributions'] = group_contributions(
+            contributions=self.data['contributions'],
+            features_groups=self.features_groups
+        )
+
 
     def check_dataset_type(self, x=None):
         """
@@ -431,7 +458,7 @@ class SmartPredictor :
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
-    def compute_contributions(self, contributions=None):
+    def compute_contributions(self, contributions=None, use_groups=None):
         """
         The compute_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
@@ -440,6 +467,8 @@ class SmartPredictor :
         -------
         contributions : object (optional)
             Local contributions, or list of local contributions.
+        use_groups : bool (optional)
+            Whether or not to compute groups of features contributions.
 
         Returns
         -------
@@ -449,6 +478,8 @@ class SmartPredictor :
             ypred data with right probabilities associated.
 
         """
+        use_groups = True if (use_groups is not False and self.features_groups is not None) else False
+
         if not hasattr(self, "data"):
             raise ValueError("add_input method must be called at least once.")
         if self.data["x"] is None:
@@ -475,9 +506,12 @@ class SmartPredictor :
         y_pred, match_contrib = keep_right_contributions(self.data["ypred_init"], contributions,
                                  self._case, self._classes,
                                  self.label_dict, proba_values)
+        if use_groups:
+            match_contrib = group_contributions(match_contrib, features_groups=self.features_groups)
+
         return y_pred, match_contrib
 
-    def detail_contributions(self, contributions=None):
+    def detail_contributions(self, contributions=None, use_groups=None):
         """
         The detail_contributions method associates the right contributions with the right data predicted.
         (with ypred specified in add_input or computed automatically)
@@ -486,6 +520,8 @@ class SmartPredictor :
         -------
         contributions : object (optional)
             Local contributions, or list of local contributions.
+        use_groups : bool (optional)
+            Whether or not to compute groups of features contributions.
 
         Returns
         -------
@@ -499,7 +535,7 @@ class SmartPredictor :
         >>> predictor.detail_contributions()
 
         """
-        y_pred, detail_contrib = self.compute_contributions(contributions=contributions)
+        y_pred, detail_contrib = self.compute_contributions(contributions=contributions, use_groups=use_groups)
         return pd.concat([y_pred, detail_contrib], axis=1)
 
     def apply_preprocessing_for_contributions(self, contributions, preprocessing=None):
@@ -593,7 +629,7 @@ class SmartPredictor :
             self.mask
         )
 
-    def summarize(self):
+    def summarize(self, use_groups=None):
         """
         The summarize method allows to display the summary of local explainability.
         This method can be configured with modify_mask method to summarize the explainability to suit needs.
@@ -605,6 +641,11 @@ class SmartPredictor :
             - the predicted values specified by the user or automatically computed (with add_input method)
             - the right probabilities from predict_proba associated to the right predicted values
             - the right contributions ranked and filtered as specify with modify_mask method
+
+        Parameters
+        ----------
+        use_groups : bool (optional)
+            Whether or not to compute groups of features contributions.
 
         Returns
         -------
@@ -629,23 +670,31 @@ class SmartPredictor :
         2	0	    0.543308	Sex	        2.0	        -0.486667
         """
         # data is needed : add_input() method must be called at least once
+        use_groups = True if (use_groups is not False and self.features_groups is not None) else False
 
         if not hasattr(self, "data"):
             raise ValueError("You have to specify dataset x and y_pred arguments. Please use add_input() method.")
 
-        if self._drop_option is not None:
-            x_preprocessed = self.data["x_postprocessed"][self._drop_option["columns_dict_op"].values()]
-            columns_dict =self._drop_option["columns_dict_op"]
-            features_dict = self._drop_option["features_dict_op"]
+        if use_groups is True:
+            data = self.data_groups
         else:
-            x_preprocessed = self.data["x_postprocessed"]
-            columns_dict = self.columns_dict
-            features_dict = self.features_dict
+            data = self.data
 
+        if self._drop_option is not None:
+            columns_to_keep = [x for x in self._drop_option["columns_dict_op"].values()
+                               if x in data["x_postprocessed"].columns]
+            if use_groups:
+                columns_to_keep += list(self.features_groups.keys())
+            x_preprocessed = data["x_postprocessed"][columns_to_keep]
+        else:
+            x_preprocessed = data["x_postprocessed"]
+
+        columns_dict = {i: col for i, col in enumerate(x_preprocessed.columns)}
+        features_dict = {k: v for k, v in self.features_dict.items() if k in x_preprocessed.columns}
 
         self.summary = assign_contributions(
             rank_contributions(
-                self.data["contributions"],
+                data["contributions"],
                 x_preprocessed
             )
         )
@@ -653,7 +702,7 @@ class SmartPredictor :
         self.filter()
 
         # Summarize information
-        self.data['summary'] = summarize(self.summary['contrib_sorted'],
+        data['summary'] = summarize(self.summary['contrib_sorted'],
                                          self.summary['var_dict'],
                                          self.summary['x_sorted'],
                                          self.mask,
@@ -661,7 +710,7 @@ class SmartPredictor :
                                          features_dict)
 
         # Matching with y_pred
-        return pd.concat([self.data["ypred"], self.data['summary']], axis=1)
+        return pd.concat([data["ypred"], data['summary']], axis=1)
 
     def modify_mask(
             self,
@@ -804,5 +853,6 @@ class SmartPredictor :
                     explainer=self.explainer,
                     y_pred=copy.deepcopy(self.data["ypred_init"]),
                     preprocessing=self.preprocessing,
-                    postprocessing=self.postprocessing)
+                    postprocessing=self.postprocessing,
+                    features_groups=self.features_groups)
         return xpl

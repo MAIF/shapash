@@ -18,6 +18,7 @@ from shapash.utils.check import check_model, check_label_dict, check_ypred, chec
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.report import check_report_requirements
+from shapash.manipulation.summarize import create_grouped_features_values
 from .smart_state import SmartState
 from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
@@ -243,9 +244,30 @@ class SmartExplainer:
             self.title_story = title_story
         self.features_groups = features_groups
         if features_groups:
-            self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
-            self.features_imp_groups = None
-            self._update_features_dict_with_groups(features_groups=features_groups)
+            self._compile_features_groups(features_groups)
+
+    def _compile_features_groups(self, features_groups):
+        """
+        Performs required computations for groups of features.
+        """
+        # Compute contributions for groups of features
+        self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
+        self.features_imp_groups = None
+        # Update features dict with groups names
+        self._update_features_dict_with_groups(features_groups=features_groups)
+        # Compute t-sne projections for groups of features
+        self.x_pred_groups = create_grouped_features_values(x_pred=self.x_pred, x_init=self.x_init,
+                                                            preprocessing=self.preprocessing,
+                                                            features_groups=self.features_groups,
+                                                            features_dict=self.features_dict,
+                                                            how='dict_of_values')
+        # Compute data attribute for groups of features
+        self.data_groups = self.state.assign_contributions(
+            self.state.rank_contributions(
+                self.contributions_groups,
+                self.x_pred_groups
+            )
+        )
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -661,7 +683,8 @@ class SmartExplainer:
             features_to_hide=None,
             threshold=None,
             positive=None,
-            max_contrib=None
+            max_contrib=None,
+            display_groups=None
     ):
         """
         The filter method is an important method which allows to summarize the local explainability
@@ -682,26 +705,35 @@ class SmartExplainer:
             If None, hide nothing.
         max_contrib : int, optional (default: None)
             Maximum number of contributions to show.
+        display_groups : bool (default: None)
+            Whether or not to display groups of features. This option is
+            only useful if groups of features are declared when compiling
+            SmartExplainer object.
         """
-        mask = [self.state.init_mask(self.data['contrib_sorted'], True)]
+        display_groups = True if (display_groups is not False and self.features_groups is not None) else False
+        if display_groups:
+            data = self.data_groups
+        else:
+            data = self.data
+        mask = [self.state.init_mask(data['contrib_sorted'], True)]
         if features_to_hide:
             mask.append(
                 self.state.hide_contributions(
-                    self.data['var_dict'],
+                    data['var_dict'],
                     features_list=self.check_features_name(features_to_hide)
                 )
             )
         if threshold:
             mask.append(
                 self.state.cap_contributions(
-                    self.data['contrib_sorted'],
+                    data['contrib_sorted'],
                     threshold=threshold
                 )
             )
         if positive is not None:
             mask.append(
                 self.state.sign_contributions(
-                    self.data['contrib_sorted'],
+                    data['contrib_sorted'],
                     positive=positive
                 )
             )
@@ -709,7 +741,7 @@ class SmartExplainer:
         if max_contrib:
             self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
         self.masked_contributions = self.state.compute_masked_contributions(
-            self.data['contrib_sorted'],
+            data['contrib_sorted'],
             self.mask
         )
         self.mask_params = {
@@ -787,7 +819,8 @@ class SmartExplainer:
             threshold=None,
             positive=None,
             max_contrib=None,
-            proba=False
+            proba=False,
+            use_groups=None
     ):
         """
         The to_pandas method allows to export the summary of local explainability.
@@ -817,6 +850,9 @@ class SmartExplainer:
             Number of contributions to show in the pandas df
         proba : bool, optional (default: False)
             adding proba in output df
+        use_groups : bool (optional)
+            Whether or not to use groups of features contributions (only available if features_groups
+            parameter was not empty when calling compile method).
 
         Returns
         -------
@@ -833,6 +869,11 @@ class SmartExplainer:
         1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
         2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
         """
+        use_groups = True if (use_groups is not False and self.features_groups is not None) else False
+        if use_groups:
+            data = self.data_groups
+        else:
+            data = self.data
 
         # Classification: y_pred is needed
         if self.y_pred is None:
@@ -842,21 +883,34 @@ class SmartExplainer:
 
         # Apply filter method if necessary
         if all(var is None for var in [features_to_hide, threshold, positive, max_contrib]) \
-                and hasattr(self, 'mask_params'):
+                and hasattr(self, 'mask_params') \
+                and (
+                # if the already computed mask does not have the right shape (this can happen when
+                # we use groups of features once and then use method without groups)
+                (isinstance(data['contrib_sorted'], pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) == len(self.mask.columns))
+                or
+                (isinstance(data['contrib_sorted'], list)
+                    and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns))
+                ):
             print('to_pandas params: ' + str(self.mask_params))
         else:
             self.filter(features_to_hide=features_to_hide,
                         threshold=threshold,
                         positive=positive,
-                        max_contrib=max_contrib)
-
+                        max_contrib=max_contrib,
+                        display_groups=use_groups)
+        if use_groups:
+            columns_dict = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
+        else:
+            columns_dict = self.columns_dict
         # Summarize information
-        self.data['summary'] = self.state.summarize(
-            self.data['contrib_sorted'],
-            self.data['var_dict'],
-            self.data['x_sorted'],
+        data['summary'] = self.state.summarize(
+            data['contrib_sorted'],
+            data['var_dict'],
+            data['x_sorted'],
             self.mask,
-            self.columns_dict,
+            columns_dict,
             self.features_dict
         )
         # Matching with y_pred
@@ -866,7 +920,7 @@ class SmartExplainer:
         else:
             proba_values = None
 
-        y_pred, summary = keep_right_contributions(self.y_pred, self.data['summary'],
+        y_pred, summary = keep_right_contributions(self.y_pred, data['summary'],
                                                    self._case, self._classes,
                                                    self.label_dict, proba_values)
 
@@ -994,7 +1048,7 @@ class SmartExplainer:
         self.features_types = {features: str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
         listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
-                          "label_dict", "preprocessing", "postprocessing"]
+                          "label_dict", "preprocessing", "postprocessing", "features_groups"]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 

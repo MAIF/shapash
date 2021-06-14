@@ -9,11 +9,13 @@ import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 from plotly.offline import plot
 from shapash.manipulation.select_lines import select_lines
-from shapash.manipulation.summarize import compute_features_import, project_feature_values_1d
+from shapash.manipulation.summarize import compute_features_import, project_feature_values_1d, compute_corr
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
-    maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices
+    maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
+    compute_top_correlations_features
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -132,6 +134,11 @@ class SmartPlotter:
             "rgba(255, 123, 38, 1.0)",
             'rgba(0, 21, 179, 0.97)',
             'rgba(116, 1, 179, 0.9)',
+        ]
+
+        self.groups_colors = [
+            px.colors.qualitative.T10[1],
+            px.colors.qualitative.G10[9]
         ]
 
         self.round_digit = None
@@ -575,7 +582,7 @@ class SmartPlotter:
 
         # Change bar color for groups of features
         marker_color = [
-            self.dict_local_plot_colors[-1]["color"]
+            self.groups_colors[0]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -707,17 +714,41 @@ class SmartPlotter:
         )
         bars = []
         for num, expl in enumerate(list(zip(var_dict, x_val, contrib))):
+            group_name = None
             if expl[1] == '':
                 ylabel = '<i>{}</i>'.format(expl[0])
                 hoverlabel = '<b>{}</b>'.format(expl[0])
             else:
-                hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
-                                                          add_line_break(expl[1], 40, maxlen=160))
-                if len(contrib) <= yaxis_max_label:
-                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+                # If bar is a group of features, hovertext includes the values of the features of the group
+                # And color changes
+                if (self.explainer.features_groups is not None
+                        and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
+                        and len(index_value) > 0):
+                    group_name = self.explainer.inv_features_dict.get(expl[0])
+                    feat_groups_values = self.explainer.x_pred[self.explainer.features_groups[group_name]]\
+                                                       .loc[index_value[0]]
+                    hoverlabel = '<br />'.join([
+                        '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
+                                                              40, maxlen=120),
+                                               add_line_break(f_value, 40, maxlen=160))
+                        for f_name, f_value in feat_groups_values.to_dict().items()
+                    ])
+                else:
+                    hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
+                                                              add_line_break(expl[1], 40, maxlen=160))
+                if len(contrib) <= yaxis_max_label and (
+                        self.explainer.features_groups is None
+                        # We don't want to display label values for t-sne projected values of groups of features.
+                        or (
+                                self.explainer.features_groups is not None
+                                and self.explainer.inv_features_dict.get(expl[0])
+                                not in self.explainer.features_groups.keys()
+                        )
+                ):
+                        ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
-
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
@@ -725,12 +756,19 @@ class SmartPlotter:
             else:
                 color = -1 if expl[1] != '' else -2
 
+            # If the bar is a group of features we modify the color
+            if group_name is not None:
+                bar_color = self.groups_colors[0] if color == 1 else self.groups_colors[1]
+            else:
+                bar_color = dict_local_plot_colors[color]['color']
+
             barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
                 customdata=[hoverlabel],
                 orientation='h',
                 marker=dict_local_plot_colors[color],
+                marker_color=bar_color,
                 showlegend=False,
                 hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
             )
@@ -879,6 +917,9 @@ class SmartPlotter:
             else:
                 value = self.explainer.model.predict(self.explainer.x_init.loc[[index]])[0]
 
+        if isinstance(value, pd.Series):
+            value = value.values[0]
+
         return value
 
     def local_plot(self,
@@ -888,6 +929,7 @@ class SmartPlotter:
                    label=None,
                    show_masked=True,
                    show_predict=True,
+                   display_groups=None,
                    yaxis_max_label=12,
                    width=900,
                    height=550,
@@ -924,6 +966,10 @@ class SmartPlotter:
             show predict or predict proba value
         yaxis_max_label: int
             Maximum number of variables to display labels on the y axis
+        display_groups : bool (default: None)
+            Whether or not to display groups of features. This option is
+            only useful if groups of features are declared when compiling
+            SmartExplainer object.
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 550)
@@ -942,6 +988,11 @@ class SmartPlotter:
         --------
         >>> xpl.plot.local_plot(row_num=0)
         """
+        display_groups = True if (display_groups is not False and self.explainer.features_groups is not None) else False
+        if display_groups:
+            data = self.explainer.data_groups
+        else:
+            data = self.explainer.data
         # checking args
         if sum(arg is not None for arg in [query, row_num, index]) != 1:
             raise ValueError(
@@ -969,8 +1020,15 @@ class SmartPlotter:
 
         else:
             # apply filter if the method have not yet been asked in order to limit the number of feature to display
-            if not hasattr(self.explainer, 'mask_params'):
-                self.explainer.filter(max_contrib=20)
+            if (
+                not hasattr(self.explainer, "mask_params")  # If the filter method has not been called yet
+                # Or if the already computed mask was not updated with current display_groups parameter
+                or (isinstance(data["contrib_sorted"], pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) != len(self.explainer.mask.columns))
+                or (isinstance(data["contrib_sorted"], list)
+                    and len(data["contrib_sorted"][0].columns) != len(self.explainer.mask[0].columns))
+            ):
+                self.explainer.filter(max_contrib=20, display_groups=display_groups)
 
             if self.explainer._case == "classification":
                 if label is None:
@@ -978,9 +1036,9 @@ class SmartPlotter:
 
                 label_num, _, label_value = self.explainer.check_label_name(label)
 
-                contrib = self.explainer.data['contrib_sorted'][label_num]
-                x_val = self.explainer.data['x_sorted'][label_num]
-                var_dict = self.explainer.data['var_dict'][label_num]
+                contrib = data['contrib_sorted'][label_num]
+                x_val = data['x_sorted'][label_num]
+                var_dict = data['var_dict'][label_num]
 
                 if show_predict is True:
                     pred = self.local_pred(line[0], label_num)
@@ -990,9 +1048,9 @@ class SmartPlotter:
                         subtitle = f"Response: <b>{label_value}</b> - Proba: <b>{pred:.4f}</b>"
 
             elif self.explainer._case == "regression":
-                contrib = self.explainer.data['contrib_sorted']
-                x_val = self.explainer.data['x_sorted']
-                var_dict = self.explainer.data['var_dict']
+                contrib = data['contrib_sorted']
+                x_val = data['x_sorted']
+                var_dict = data['var_dict']
                 label_num = None
                 if show_predict is True:
                     pred_value = self.local_pred(line[0])
@@ -1007,10 +1065,12 @@ class SmartPlotter:
             var_dict, x_val, contrib = self.get_selection(line, var_dict, x_val, contrib)
             var_dict, x_val, contrib = self.apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
             # use label of each column
-            var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
+            if display_groups:
+                var_dict = [self.explainer.features_dict[self.explainer.x_pred_groups.columns[x]] for x in var_dict]
+            else:
+                var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
                 var_dict, x_val, contrib = self.check_masked_contributions(line, var_dict, x_val, contrib, label=label_num)
-
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
             if hasattr(self.explainer, 'mask_params'):
@@ -1180,7 +1240,8 @@ class SmartPlotter:
 
         if col_is_group:
             feature_values = project_feature_values_1d(feature_values, col, self.explainer.x_pred,
-                                                       self.explainer.x_init, self.explainer.preprocessing)
+                                                       self.explainer.x_init, self.explainer.preprocessing,
+                                                       features_dict=self.explainer.features_dict)
             contrib = subcontrib.loc[list_ind, col].to_frame()
             if self.explainer.features_imp is None:
                 self.explainer.compute_features_import()
@@ -2119,6 +2180,144 @@ class SmartPlotter:
                 'xanchor': 'center',
                 'yanchor': 'top'}
         )
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+        return fig
+
+    def correlations(
+            self,
+            df=None,
+            max_features=20,
+            features_to_hide=None,
+            facet_col=None,
+            how='phik',
+            width=900,
+            height=500,
+            file_name=None,
+            auto_open=False
+    ):
+        """
+        Correlations matrix heatmap plot.
+        The method can use phik or pearson correlations.
+        The correlations computed can be changed using the parameter 'how'.
+
+        Parameters
+        ----------
+        df : pd.DataFrame, optional
+            DataFrame for which we want to compute correlations. Will use x_pred by default.
+        max_features : int (default: 10)
+            Max number of features to show on the matrix.
+        features_to_hide : list (optional)
+            List of features that will not appear on the graph
+        facet_col : str (optional)
+            Name of the column used to split the graph in two (or more) plots. One correlation
+            subplot will be computed for each value of this column.
+        how : str (default: 'phik')
+            Correlation method used. 'phik' or 'pearson' are possible values. 'phik' is used by default.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+
+        Example
+        --------
+        >>> xpl.plot.correlations()
+        """
+
+        if features_to_hide is None:
+            features_to_hide = []
+
+        if df is None:
+            # Use x_pred by default
+            df = self.explainer.x_pred
+
+        if facet_col:
+            features_to_hide += [facet_col]
+
+        # We use phik by default as it is a convenient method for numeric and categorical data
+        if how == 'phik':
+            try:
+                from phik import phik_matrix
+                compute_method = 'phik'
+            except (ImportError, ModuleNotFoundError):
+                warnings.warn('Cannot compute phik correlations. Install phik using "pip install phik".', UserWarning)
+                compute_method = "pearson"
+        else:
+            compute_method = how
+
+        hovertemplate = '<b>%{text}<br />Correlation: %{z}</b><extra></extra>'
+
+        list_features = []
+        if facet_col:
+            facet_col_values = sorted(df[facet_col].unique(), reverse=True)
+            fig = make_subplots(
+                rows=1,
+                cols=df[facet_col].nunique(),
+                subplot_titles=[t + " correlation" for t in facet_col_values],
+                horizontal_spacing=0.15
+            )
+            # Used for the Shapash report to get train then test set
+            for i, col_v in enumerate(facet_col_values):
+                corr = compute_corr(df.loc[df[facet_col] == col_v].drop(features_to_hide, axis=1), compute_method)
+
+                # Keep the same list of features for each subplot
+                if len(list_features) == 0:
+                    list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+
+                fig.add_trace(
+                    go.Heatmap(
+                        z=corr.loc[list_features, list_features].round(2).values,
+                        x=list_features,
+                        y=list_features,
+                        coloraxis='coloraxis',
+                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                              for y in list_features],
+                        hovertemplate=hovertemplate,
+                    ), row=1, col=i+1)
+
+        else:
+            corr = compute_corr(df.drop(features_to_hide, axis=1), compute_method)
+            list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+
+            fig = go.Figure(go.Heatmap(
+                        z=corr.loc[list_features, list_features].round(2).values,
+                        x=list_features,
+                        y=list_features,
+                        coloraxis='coloraxis',
+                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                              for y in list_features],
+                        hovertemplate=hovertemplate,
+                    ))
+
+        title = f'Correlation ({compute_method})'
+        if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
+            subtitle = f"Top {len(list_features)} correlations"
+            title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
+        dict_t = copy.deepcopy(self.dict_title)
+        dict_t['text'] = title
+
+        fig.update_layout(
+            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
+            showlegend=True,
+            title=dict_t,
+            width=width,
+            height=height
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)

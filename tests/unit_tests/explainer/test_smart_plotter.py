@@ -480,6 +480,163 @@ class TestSmartPlotter(unittest.TestCase):
     @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
     @patch('shapash.explainer.smart_plotter.select_lines')
     @patch('shapash.explainer.smart_plotter.SmartPlotter.local_pred')
+    def test_local_plot_groups_features(self, local_pred, select_lines, filter):
+        """
+        Unit test local plot 6 for groups of features
+        """
+        local_pred.return_value = 0.58
+        select_lines.return_value = [10]
+        filter.return_value = None
+        index = [3, 10]
+        x_pred = pd.DataFrame({
+            'X1': {3: 1, 10: 5},
+            'X2': {3: 42, 10: 4},
+            'X3': {3: 9, 10: 1},
+            'X4': {3: 2008, 10: 2008}
+        })
+        x_pred_groups = pd.DataFrame({
+            'X2': {3: 42, 10: 4},
+            'X4': {3: 2008, 10: 2008},
+            'group1': {3: -2361.80078125, 10: 2361.80078125}
+        })
+        contrib_sorted1 = pd.DataFrame({
+            'contribution_0': {3: 0.15, 10: 0.22},
+            'contribution_1': {3: -0.13, 10: -0.12},
+            'contribution_2': {3: -0.03, 10: 0.02},
+            'contribution_3': {3: 0.0, 10: 0.01}
+        })
+        contrib_sorted2 = pd.DataFrame({
+            'contribution_0': {3: -0.15, 10: -0.22},
+            'contribution_1': {3: 0.13, 10: 0.12},
+            'contribution_2': {3: 0.03, 10: -0.02},
+            'contribution_3': {3: -0.0, 10: -0.01}
+        })
+        x_sorted1 = pd.DataFrame({
+            'feature_0': {3: 9, 10: 5},
+            'feature_1': {3: 1, 10: 1},
+            'feature_2': {3: 2008, 10: 2008},
+            'feature_3': {3: 42, 10: 4}
+        })
+        x_sorted2 = pd.DataFrame({
+            'feature_0': {3: 9, 10: 5},
+            'feature_1': {3: 1, 10: 1},
+            'feature_2': {3: 2008, 10: 2008},
+            'feature_3': {3: 42, 10: 4}
+        })
+        var_dict1 = pd.DataFrame({
+            'feature_0': {3: 2, 10: 0},
+            'feature_1': {3: 0, 10: 2},
+            'feature_2': {3: 3, 10: 3},
+            'feature_3': {3: 1, 10: 1}
+        })
+        var_dict2 = pd.DataFrame({
+            'feature_0': {3: 2, 10: 0},
+            'feature_1': {3: 0, 10: 2},
+            'feature_2': {3: 3, 10: 3},
+            'feature_3': {3: 1, 10: 1}
+        })
+
+        contrib_groups_sorted1 = pd.DataFrame({
+            'contribution_0': {3: 0.03, 10: 0.09},
+            'contribution_1': {3: -0.03, 10: 0.02},
+            'contribution_2': {3: 0.0, 10: 0.01}
+        })
+        contrib_groups_sorted2 = pd.DataFrame({
+            'contribution_0': {3: -0.03, 10: -0.09},
+            'contribution_1': {3: 0.03, 10: -0.02},
+            'contribution_2': {3: -0.0, 10: -0.01}
+        })
+        x_groups_sorted1 = pd.DataFrame({
+            'feature_0': {3: -2361.8, 10: 2361.8},
+            'feature_1': {3: 2008.0, 10: 2008.0},
+            'feature_2': {3: 42.0, 10: 4.0}
+        })
+        x_groups_sorted2 = pd.DataFrame({
+            'feature_0': {3: -2361.8, 10: 2361.8},
+            'feature_1': {3: 2008.0, 10: 2008.0},
+            'feature_2': {3: 42.0, 10: 4.0}
+        })
+        groups_var_dict1 = pd.DataFrame({
+            'feature_0': {3: 2, 10: 2},
+            'feature_1': {3: 1, 10: 1},
+            'feature_2': {3: 0, 10: 0}
+        })
+        groups_var_dict2 = pd.DataFrame({
+            'feature_0': {3: 2, 10: 2},
+            'feature_1': {3: 1, 10: 1},
+            'feature_2': {3: 0, 10: 0}
+        })
+
+        mask1 = pd.DataFrame(
+            data=np.array(
+                [[True, True, False],
+                 [True, True, False]]
+            ),
+            columns=['contrib_0', 'contrib_1', 'contrib_2'],
+            index=index)
+        mask2 = pd.DataFrame(
+            data=np.array(
+                [[True, True, False],
+                 [True, True, False]]
+            ),
+            columns=['contrib_0', 'contrib_1', 'contrib_2'],
+            index=index)
+
+        mask_contrib1 = pd.DataFrame(
+            data=np.array(
+                [[-0.002, 0.0],
+                 [-0.024, 0.0]]
+            ),
+            columns=['masked_neg', 'masked_pos'],
+            index=index)
+
+        mask_contrib2 = pd.DataFrame(
+            data=np.array(
+                [[0.0, 0.002],
+                 [0.0, 0.024]]
+            ),
+            columns=['masked_neg', 'masked_pos'],
+            index=index)
+
+        feature_dictionary = {'X1': 'X1_label', 'X2': 'X2_label', 'X3': 'X3_label', 'X4': 'X4_label',
+                              'group1': 'group1_label'}
+        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi.features_groups = {'group1': ['X1', 'X3']}
+        smart_explainer_mi.inv_features_dict = {'X1_label': 'X1', 'X2_label': 'X2', 'X3_label': 'X3',
+                                                'X4_label': 'X4', 'group1_label': 'group1'}
+        smart_explainer_mi.data = dict()
+        smart_explainer_mi.contributions = [contrib_sorted1, contrib_sorted2]
+        smart_explainer_mi.data['contrib_sorted'] = [contrib_sorted1, contrib_sorted2]
+        smart_explainer_mi.data['x_sorted'] = [x_sorted1, x_sorted2]
+        smart_explainer_mi.data['var_dict'] = [var_dict1, var_dict2]
+
+        smart_explainer_mi.data_groups = dict()
+        smart_explainer_mi.data_groups['contrib_sorted'] = [contrib_groups_sorted1, contrib_groups_sorted2]
+        smart_explainer_mi.data_groups['x_sorted'] = [x_groups_sorted1, x_groups_sorted2]
+        smart_explainer_mi.data_groups['var_dict'] = [groups_var_dict1, groups_var_dict2]
+
+        smart_explainer_mi.x_pred = x_pred
+        smart_explainer_mi.x_pred_groups = x_pred_groups
+
+        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_pred.columns)}
+        smart_explainer_mi.mask = [mask1, mask2]
+        smart_explainer_mi.masked_contributions = [mask_contrib1, mask_contrib2]
+        smart_explainer_mi.mask_params = {'features_to_hide': None,
+                                          'threshold': None,
+                                          'positive': None,
+                                          'max_contrib': 2}
+        smart_explainer_mi._case = "classification"
+        smart_explainer_mi._classes = [0, 1]
+
+        smart_explainer_mi.state = smart_explainer_mi.choose_state(smart_explainer_mi.contributions)
+
+        output_fig = smart_explainer_mi.plot.local_plot(row_num=1)
+
+        assert len(output_fig.data) == 3
+
+    @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
+    @patch('shapash.explainer.smart_plotter.select_lines')
+    @patch('shapash.explainer.smart_plotter.SmartPlotter.local_pred')
     def test_local_plot_multi_index(self, local_pred, select_lines, filter):
         """
         Unit test local plot multi index
@@ -1827,3 +1984,43 @@ class TestSmartPlotter(unittest.TestCase):
             assert True in output.layout.updatemenus[0].buttons[0].args[0]['visible']
 
             self.setUp()
+
+    def test_correlations_1(self):
+        """
+        Test correlations plot 1
+        """
+        smart_explainer = self.smart_explainer
+
+        df = pd.DataFrame({
+            "A": [8, 90, 10, 110],
+            "B": [4.3, 7.4, 10.2, 15.7],
+            "C": ["C8", "C8", "C9", "C9"],
+            "D": [1, -3, -5, -10]
+        }, index=[8, 9, 10, 11])
+
+        output = smart_explainer.plot.correlations(df, max_features=3)
+
+        assert len(output.data) == 1
+        assert len(output.data[0].x) == 3
+        assert len(output.data[0].y) == 3
+        assert output.data[0].z.shape == (3, 3)
+
+    def test_correlations_2(self):
+        """
+        Test correlations plot 2
+        """
+        smart_explainer = self.smart_explainer
+
+        df = pd.DataFrame({
+            "A": [8, 90, 10, 110],
+            "B": [4.3, 7.4, 10.2, 15.7],
+            "C": ["C8", "C8", "C9", "C9"],
+            "D": [1, -3, -5, -10]
+        }, index=[8, 9, 10, 11])
+
+        output = smart_explainer.plot.correlations(df, max_features=3, facet_col='C')
+
+        assert len(output.data) == 2
+        assert len(output.data[0].x) == 3
+        assert len(output.data[0].y) == 3
+        assert output.data[0].z.shape == (3, 3)

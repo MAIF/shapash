@@ -66,7 +66,7 @@ class TestSmartPredictor(unittest.TestCase):
 
         features_types = {features: str(df[features].dtypes) for features in df[['x1', 'x2']]}
 
-        self.df_1 = df
+        self.df_1 = df.copy()
         self.preprocessing_1 = encoder_fitted
         self.df_encoded_1 = df_encoded
         self.clf_1 = clf
@@ -81,6 +81,12 @@ class TestSmartPredictor(unittest.TestCase):
                                      columns_dict, clf_explainer, features_types, label_dict,
                                      encoder_fitted, postprocessing)
 
+        self.features_groups = {'group1': ['x1', 'x2']}
+        self.features_dict_w_groups = {"x1": "age", "x2": "weight", "group1": "group1"}
+        self.predictor_1_w_groups = SmartPredictor(self.features_dict_w_groups, clf,
+                                                   columns_dict, clf_explainer, features_types, label_dict,
+                                                   encoder_fitted, postprocessing, self.features_groups)
+
         df['x2'] = np.random.randint(1, 100, df.shape[0])
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
         encoder_fitted = encoder.fit(df[["x1", "x2"]])
@@ -91,7 +97,7 @@ class TestSmartPredictor(unittest.TestCase):
         features_dict = {"x1": "age", "x2": "weight"}
         features_types = {features: str(df[features].dtypes) for features in df[["x1", "x2"]].columns}
 
-        self.df_2 = df
+        self.df_2 = df.copy()
         self.preprocessing_2 = encoder_fitted
         self.df_encoded_2 = df_encoded
         self.clf_2 = clf
@@ -118,7 +124,7 @@ class TestSmartPredictor(unittest.TestCase):
         clf = cb.CatBoostRegressor(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
         clf_explainer = shap.TreeExplainer(clf)
 
-        self.df_3 = df
+        self.df_3 = df.copy()
         self.preprocessing_3 = None
         self.df_encoded_3 = df
         self.clf_3 = clf
@@ -177,6 +183,7 @@ class TestSmartPredictor(unittest.TestCase):
         assert hasattr(predictor_1, 'preprocessing')
         assert hasattr(predictor_1, 'postprocessing')
         assert hasattr(predictor_1, 'mask_params')
+        assert hasattr(predictor_1, 'features_groups')
 
         assert predictor_1.model == self.clf_1
         assert predictor_1.explainer == self.clf_explainer_1
@@ -196,7 +203,53 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.mask_params = mask_params
         assert predictor_1.mask_params == mask_params
 
-    def add_input_1(self):
+    def test_init_2(self):
+        """
+        Test init smart predictor with groups of features
+        """
+        predictor_1 = SmartPredictor(self.features_dict_w_groups,
+                                     self.clf_1,
+                                     self.columns_dict_1,
+                                     self.clf_explainer_1,
+                                     self.features_types_1,
+                                     self.label_dict_1,
+                                     self.preprocessing_1,
+                                     self.postprocessing_1,
+                                     self.features_groups)
+
+        assert hasattr(predictor_1, 'model')
+        assert hasattr(predictor_1, 'explainer')
+        assert hasattr(predictor_1, 'features_dict')
+        assert hasattr(predictor_1, 'label_dict')
+        assert hasattr(predictor_1, '_case')
+        assert hasattr(predictor_1, '_classes')
+        assert hasattr(predictor_1, 'columns_dict')
+        assert hasattr(predictor_1, 'features_types')
+        assert hasattr(predictor_1, 'preprocessing')
+        assert hasattr(predictor_1, 'postprocessing')
+        assert hasattr(predictor_1, 'mask_params')
+        assert hasattr(predictor_1, 'features_groups')
+
+        assert predictor_1.model == self.clf_1
+        assert predictor_1.explainer == self.clf_explainer_1
+        assert predictor_1.features_dict == self.features_dict_w_groups
+        assert predictor_1.label_dict == self.label_dict_1
+        assert predictor_1._case == "classification"
+        assert predictor_1._classes == [0, 1]
+        assert predictor_1.columns_dict == self.columns_dict_1
+        assert predictor_1.preprocessing == self.preprocessing_1
+        assert predictor_1.postprocessing == self.postprocessing_1
+
+        mask_params = {
+            'features_to_hide': None,
+            'threshold': None,
+            'positive': True,
+            'max_contrib': 1
+        }
+        predictor_1.mask_params = mask_params
+        assert predictor_1.mask_params == mask_params
+
+    def test_add_input_1(self):
         """
         Test add_input method from smart predictor
         """
@@ -219,6 +272,42 @@ class TestSmartPredictor(unittest.TestCase):
         assert "ypred" in predictor_1.data.keys()
         assert predictor_1.data["ypred"].shape[0] == predictor_1.data["x"].shape[0]
         assert all(predictor_1.data["ypred"].index == predictor_1.data["x"].index)
+
+    def test_add_input_2(self):
+        """
+        Test add_input method from smart predictor with groups of features
+        """
+        ypred = self.df_1['y']
+        shap_values = self.clf_1.get_feature_importance(Pool(self.df_encoded_1), type="ShapValues")
+
+        predictor_1 = self.predictor_1_w_groups
+        predictor_1.add_input(x=self.df_1[["x1", "x2"]], contributions=shap_values[:, :-1])
+        predictor_1_contrib = predictor_1.data["contributions"]
+
+        assert all(attribute in predictor_1.data.keys()
+                   for attribute in ["x", "x_preprocessed", "x_postprocessed", "contributions", "ypred"])
+
+        assert hasattr(predictor_1, 'data_groups')
+        assert all(attribute in predictor_1.data_groups.keys()
+                   for attribute in ["x_postprocessed", "contributions", "ypred"])
+
+        assert predictor_1.data["x"].shape == predictor_1.data["x_preprocessed"].shape
+        assert all(feature in predictor_1.data["x"].columns
+                   for feature in predictor_1.data["x_preprocessed"].columns)
+        assert predictor_1_contrib.shape == predictor_1.data["x"].shape
+
+        predictor_1.add_input(ypred=ypred)
+
+        assert "ypred" in predictor_1.data.keys()
+        assert predictor_1.data["ypred"].shape[0] == predictor_1.data["x"].shape[0]
+        assert all(predictor_1.data["ypred"].index == predictor_1.data["x"].index)
+
+        print(predictor_1.data["contributions"].sum(axis=1).values)
+
+        print(predictor_1.data_groups['contributions'])
+
+        assert all(predictor_1.data_groups['contributions']['group1'].values == predictor_1.data["contributions"].sum(axis=1))
+
 
     @patch('shapash.explainer.smart_predictor.SmartState')
     def test_choose_state_1(self, mock_smart_state):
@@ -974,6 +1063,78 @@ class TestSmartPredictor(unittest.TestCase):
                                     "positive": None,
                                     "max_contrib": None}
 
+    def test_summarize_4(self):
+        """
+        Unit test 4 summarize method : with groups of features
+        """
+        predictor_1 = self.predictor_1_w_groups
+        predictor_1._case = "classification"
+        predictor_1._classes = [0, 1]
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(self.df_3[['x1', 'x2']], self.df_3['y'])
+        clf_explainer = shap.TreeExplainer(clf)
+        predictor_1.model = clf
+        predictor_1.explainer = clf_explainer
+
+        with self.assertRaises(ValueError):
+            predictor_1.summarize()
+
+        predictor_1.data = {
+            "x": None,
+            "x_preprocessed": None,
+            "x_postprocessed": None,
+            "ypred": None,
+            "contributions": None
+        }
+
+        predictor_1.data_groups = {
+            "x_postprocessed": None,
+            "ypred": None,
+            "contributions": None
+        }
+
+        predictor_1.data["x"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["x_preprocessed"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["x_postprocessed"] = self.df_3[["x1", "x2"]]
+        predictor_1.data["ypred"] = pd.DataFrame(
+                                        {"y": ["Yes", "Yes", "No", "No", "No"],
+                                         "proba": [0.519221, 0.468791, 0.531209, 0.531209, 0.531209]}
+                                    )
+        predictor_1.data_groups["x_postprocessed"] = self.df_3[["x1"]].rename(columns={'x1': 'group1'})
+        predictor_1.data_groups["ypred"] = predictor_1.data["ypred"]
+
+        predictor_1.data["contributions"] = pd.DataFrame(
+                                                {"x1": [0, 0, -0, -0, -0],
+                                                 "x2": [0.161538, -0.0403846, 0.0403846, 0.0403846, 0.0403846]}
+                                            )
+        predictor_1.data_groups["contributions"] = pd.DataFrame(
+            {"group1": [0.161538, -0.0403846, 0.0403846, 0.0403846, 0.0403846]}
+        )
+        output = predictor_1.summarize()
+
+        expected_output = pd.DataFrame({
+            "y": ["Yes", "Yes", "No", "No", "No"],
+            "proba": [0.519221, 0.468791, 0.531209, 0.531209, 0.531209],
+            "feature_1": ["weight", "weight", "weight", "weight", "weight"],
+            "value_1": ["90", "78", "84", "85", "53"],
+            "contribution_1": ["0.161538", "-0.0403846", "0.0403846", "0.0403846", "0.0403846"]
+        }, dtype=object)
+        expected_output["proba"] = expected_output["proba"].astype(float)
+
+        feature_expected = [column for column in expected_output.columns if column.startswith("feature_")]
+        feature_output = [column for column in output.columns if column.startswith("feature_")]
+
+        value_expected = [column for column in expected_output.columns if column.startswith("value_")]
+        value_output = [column for column in output.columns if column.startswith("value_")]
+
+        contribution_expected = [column for column in expected_output.columns if column.startswith("contribution_")]
+        contribution_output = [column for column in output.columns if column.startswith("contribution_")]
+
+        assert expected_output.shape == output.shape
+        assert len(feature_expected) == len(feature_output)
+        assert len(value_expected) == len(value_output)
+        assert len(contribution_expected) == len(contribution_output)
+        assert all(output.columns == expected_output.columns)
+
     def test_modfiy_mask(self):
         """
         Unit test modify_mask method
@@ -1126,18 +1287,3 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.preprocessing = ct
         with self.assertRaises(ValueError):
             predictor_1.to_smartexplainer()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
