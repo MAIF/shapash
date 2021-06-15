@@ -34,8 +34,8 @@
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
-| 1.4.x         |  Groups of features <br> [demo]()                                                     | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://github.com/MAIF/shapash/blob/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
-| 1.3.x         |  Shapash Report <br> [demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://github.com/MAIF/shapash/blob/master/docs/_static/report-icon.png" width="8%" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)    | 
+| 1.4.x         |  Groups of features <br> [demo]()                                                     | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
+| 1.3.x         |  Shapash Report <br> [demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="8%" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)    | 
 
 
 ## 🔍 Overview
@@ -49,18 +49,22 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
 - [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
-- Medium:    
+- Medium:
+  - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
+  - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
+
+## 🏆 Awards
+
+<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
+  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="130" />
+</a>
+
 <a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
-  <p align="center">
-    <img align="left" src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="6%" />
-  </p>
-</a> 
+  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="50" />
+</a>  
 
 
-- [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
-- [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
-
-## 🔥  Features
+## 🔥 Features
 
 - Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
 
