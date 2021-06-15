@@ -12,7 +12,7 @@ requirements = [
         'plotly==4.12.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
-        'shap==0.37.0',
+        'shap>=0.36.0',
         'dash==1.17.0',
         'dash-bootstrap-components==0.9.1',
         'dash-core-components==1.13.0',
@@ -21,21 +21,37 @@ requirements = [
         'dash-renderer==1.8.3',
         'dash-table==4.11.0',
         'nbformat>4.2.0',
-        'numba==0.51.2',
-        'nbconvert==6.0.7',
-        'papermill==2.3.2',
-        'matplotlib>=3.0',
-        'seaborn==0.11.1'
+        'numba==0.53.1',
+        'scikit-learn'
     ]
+
+extras = dict()
+
+# This list should be identical to the list in shapash/report/__init__.py
+extras['report'] = [
+    'nbconvert==6.0.7',
+    'papermill',
+    'matplotlib',
+    'seaborn',
+    'notebook',
+    'Jinja2',
+    'phik'
+]
+
+extras['xgboost'] = ['xgboost>=1.0.0']
+extras['lightgbm'] = ['lightgbm>=2.3.0']
+extras['catboost'] = ['catboost>=0.21']
+extras['scikit-learn'] = ['scikit-learn>=0.23.0']
+extras['category_encoders'] = ['category_encoders==2.2.2']
 
 setup_requirements = ['pytest-runner', ]
 
 test_requirements = ['pytest', ]
 
 setup(
-    name="shapash", # Replace with your own username
+    name="shapash",
     version="1.3.2",
-    python_requires='>3.5, < 3.9',
+    python_requires='>3.5, <=3.9',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -51,6 +67,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=requirements,
+    extras_require=extras,
     license="Apache Software License 2.0",
     keywords='shapash',
     package_dir={

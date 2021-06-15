@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import catboost as cb
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
@@ -1364,12 +1365,12 @@ class TestSmartExplainer(unittest.TestCase):
 
     def test_get_interaction_values_1(self):
         df = pd.DataFrame({
-            "y": np.random.randint(2, size=50),
-            "a": np.random.rand(50),
-            "b": np.random.rand(50),
+            "y": np.random.randint(2, size=10),
+            "a": np.random.rand(10)*10,
+            "b": np.random.rand(10),
         })
 
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['a', 'b']], df['y'])
+        clf = RandomForestClassifier(n_estimators=5).fit(df[['a', 'b']], df['y'])
 
         xpl = SmartExplainer()
         xpl.compile(x=df.drop('y', axis=1), model=clf)
@@ -1400,8 +1401,8 @@ class TestSmartExplainer(unittest.TestCase):
 
         assert xpl.y_pred is not None
 
-    @patch('shapash.explainer.smart_explainer.export_and_save_report')
-    @patch('shapash.explainer.smart_explainer.execute_report')
+    @patch('shapash.report.generation.export_and_save_report')
+    @patch('shapash.report.generation.execute_report')
     def test_generate_report(self, mock_execute_report, mock_export_and_save_report):
         """
         Test generate report method

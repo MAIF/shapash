@@ -4,11 +4,19 @@ Installation instructions
 Installing
 ----------
 
-Users can install **Shapash** with pip:
+**Shapash** is intended to work with Python versions 3.6 to 3.9. Installation can be done with pip:
 
 .. code:: bash
 
     pip install shapash
+
+
+In order to generate the **Shapash Report** you may need to install specific libraries.
+You can install these using the following command :
+
+.. code:: bash
+
+    pip install shapash[report]
 
 Jupyter
 -------
@@ -212,4 +220,25 @@ To test if plotly works:
     fig.show("jupyterlab")
 
 .. image:: plotly.png
+
+
+Compatibility issues
+--------------------
+
+When using Shapash, you may encounter some compatibility issues related to your environment and the libraries' versions used.
+The extras requirements of Shapash allow you to update your requirements to a compatible version.
+
+For example, if you get an error related to the *xgboost* library, you can use the following command to update it to a working version :
+
+.. code:: bash
+
+    pip install shapash[xgboost]
+
+The full list of extras requirements is listed below (replace xgboost with the corresponding library on the command above) :
+
+* xgboost
+* lightgbm
+* catboost
+* scikit-learn
+* category_encoders
 
