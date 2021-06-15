@@ -30,13 +30,13 @@
   </a>
 </p>
 
+## 🎉 What's new ?
 
-🎉
-**We just released Shapash 1.4.0 that includes the option to group features that share common properties together.
-This option can be useful if your model has a lot of features. [See the tutorial here](https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html).** 
-<a href="https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html">
-    <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">
-</a>
+| Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
+|:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
+| 1.4.x         |  Groups of features <br> [demo]()                                                     | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="/Users/thibaud/Documents/missions/shapash/shapash/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
+| 1.3.x         |  Shapash Report <br> [demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="/Users/thibaud/Documents/missions/shapash/shapash/docs/_static/report-icon.png" width="8%" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)    | 
+
 
 ## 🔍 Overview
 
@@ -208,7 +208,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
 - [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
-- [Use groups of features](https://shapash.readthedocs.io/en/latest/tutorials/tuto-common01-groups_of_features.html)
+- [Use groups of features](tutorial/common/tuto-common01-groups_of_features.ipynb)
 
 ### More details about charts and plots
 - [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
