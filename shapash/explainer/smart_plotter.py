@@ -1240,7 +1240,8 @@ class SmartPlotter:
 
         if col_is_group:
             feature_values = project_feature_values_1d(feature_values, col, self.explainer.x_pred,
-                                                       self.explainer.x_init, self.explainer.preprocessing)
+                                                       self.explainer.x_init, self.explainer.preprocessing,
+                                                       features_dict=self.explainer.features_dict)
             contrib = subcontrib.loc[list_ind, col].to_frame()
             if self.explainer.features_imp is None:
                 self.explainer.compute_features_import()

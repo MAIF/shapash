@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import catboost as cb
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
@@ -1106,7 +1107,105 @@ class TestSmartExplainer(unittest.TestCase):
         )
         expected['pred'] = expected['pred'].astype(int)
         expected['proba'] = expected['proba'].astype(float)
-        assert not pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_frame_equal(expected, output)
+
+    def test_to_pandas_3(self):
+        """
+        Unit test to pandas 3 with groups of features
+        """
+        xpl = SmartExplainer()
+        xpl.state = SmartState()
+        data = {}
+        data['contrib_sorted'] = pd.DataFrame(
+            [[0.32230754, 0.1550689, 0.10183475, 0.05471339],
+             [-0.58547512, -0.37050409, -0.07249285, 0.00171975],
+             [-0.48666675, 0.25507156, -0.16968889, 0.0757443]],
+            columns=['contribution_0', 'contribution_1', 'contribution_2', 'contribution_3'],
+            index=[0, 1, 2]
+        )
+        data['var_dict'] = pd.DataFrame(
+            [[1, 0, 2, 3],
+             [1, 0, 3, 2],
+             [1, 0, 2, 3]],
+            columns=['feature_0', 'feature_1', 'feature_2', 'feature_3'],
+            index=[0, 1, 2]
+        )
+        data['x_sorted'] = pd.DataFrame(
+            [[1., 3., 22., 1.],
+             [2., 1., 2., 38.],
+             [2., 3., 26., 1.]],
+            columns=['feature_0', 'feature_1', 'feature_2', 'feature_3'],
+            index=[0, 1, 2]
+        )
+
+        data_groups = dict()
+        data_groups['contrib_sorted'] = pd.DataFrame(
+            [[0.32230754, 0.10183475, 0.05471339],
+             [-0.58547512, -0.07249285, 0.00171975],
+             [-0.48666675, -0.16968889, 0.0757443]],
+            columns=['contribution_0', 'contribution_1', 'contribution_2'],
+            index=[0, 1, 2]
+        )
+        data_groups['var_dict'] = pd.DataFrame(
+            [[0, 1, 2],
+             [0, 2, 1],
+             [0, 1, 2]],
+            columns=['feature_0', 'feature_1', 'feature_2'],
+            index=[0, 1, 2]
+        )
+        data_groups['x_sorted'] = pd.DataFrame(
+            [[1., 22., 1.],
+             [2., 2., 38.],
+             [2., 26., 1.]],
+            columns=['feature_0', 'feature_1', 'feature_2'],
+            index=[0, 1, 2]
+        )
+
+        xpl.data = data
+        xpl.data_groups = data_groups
+        xpl.columns_dict = {0: 'Pclass', 1: 'Sex', 2: 'Age', 3: 'Embarked'}
+        xpl.features_dict = {'Pclass': 'Pclass', 'Sex': 'Sex', 'Age': 'Age', 'Embarked': 'Embarked', 'group1': 'group1'}
+        xpl.features_groups = {'group1': ['Pclass', 'Sex']}
+        xpl.x = pd.DataFrame(
+            [[3., 1., 22., 1.],
+             [1., 2., 38., 2.],
+             [3., 2., 26., 1.]],
+            columns=['Pclass', 'Sex', 'Age', 'Embarked'],
+            index=[0, 1, 2]
+        )
+        xpl.x_pred_groups = pd.DataFrame(
+            [[3., 22., 1.],
+             [1., 38., 2.],
+             [3., 26., 1.]],
+            columns=['group1', 'Age', 'Embarked'],
+            index=[0, 1, 2]
+        )
+        xpl.x_pred = xpl.x
+        xpl.contributions = data['contrib_sorted']
+        xpl.y_pred = pd.DataFrame([1, 2, 3], columns=['pred'], index=[0, 1, 2])
+        model = lambda: None
+        model.predict = types.MethodType(self.predict, model)
+        xpl.model = model
+        xpl._case, xpl._classes = xpl.check_model()
+        xpl.state = xpl.choose_state(xpl.contributions)
+        output = xpl.to_pandas(max_contrib=2, use_groups=True)
+
+        expected = pd.DataFrame(
+            [[1, 'group1', 1.0, 0.322308, 'Age', 22.0, 0.101835],
+             [2, 'group1', 2.0, -0.585475, 'Embarked', 2.0, -0.072493],
+             [3, 'group1', 2.0, -0.486667, 'Age', 26.0, -0.169689]],
+            columns=['pred',
+                     'feature_1',
+                     'value_1',
+                     'contribution_1',
+                     'feature_2',
+                     'value_2',
+                     'contribution_2'],
+            index=[0, 1, 2],
+            dtype=object
+        )
+        expected['pred'] = expected['pred'].astype(int)
+        pd.testing.assert_frame_equal(expected, output)
 
     def test_compute_features_import_1(self):
         """
@@ -1266,12 +1365,12 @@ class TestSmartExplainer(unittest.TestCase):
 
     def test_get_interaction_values_1(self):
         df = pd.DataFrame({
-            "y": np.random.randint(2, size=50),
-            "a": np.random.rand(50),
-            "b": np.random.rand(50),
+            "y": np.random.randint(2, size=10),
+            "a": np.random.rand(10)*10,
+            "b": np.random.rand(10),
         })
 
-        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['a', 'b']], df['y'])
+        clf = RandomForestClassifier(n_estimators=5).fit(df[['a', 'b']], df['y'])
 
         xpl = SmartExplainer()
         xpl.compile(x=df.drop('y', axis=1), model=clf)
@@ -1302,8 +1401,8 @@ class TestSmartExplainer(unittest.TestCase):
 
         assert xpl.y_pred is not None
 
-    @patch('shapash.explainer.smart_explainer.export_and_save_report')
-    @patch('shapash.explainer.smart_explainer.execute_report')
+    @patch('shapash.report.generation.export_and_save_report')
+    @patch('shapash.report.generation.execute_report')
     def test_generate_report(self, mock_execute_report, mock_export_and_save_report):
         """
         Test generate report method
