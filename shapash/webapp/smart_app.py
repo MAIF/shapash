@@ -1060,6 +1060,7 @@ class SmartApp:
                 Input('select_label', 'value'),
                 Input('dataset', 'active_cell'),
                 Input('feature_selector', 'clickData'),
+                Input("validation", "n_clicks"),
                 Input('bool_groups', 'on')
             ],
             [
@@ -1068,7 +1069,7 @@ class SmartApp:
             ]
         )
         def update_detail_feature(threshold, max_contrib, positive, negative, masked, label, cell,
-                                  click_data, bool_group, index, data):
+                                  click_data, validation_click, bool_group, index, data):
             """
             update local explanation plot according to app changes.
             """
@@ -1076,7 +1077,7 @@ class SmartApp:
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                 selected = click_data['points'][0]['customdata']
-            elif ctx.triggered[0]['prop_id'] == 'threshold_id.value':
+            elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
                 selected = index
             elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
                 if cell:
@@ -1085,10 +1086,7 @@ class SmartApp:
                     raise PreventUpdate
 
             if selected is None:
-                if cell is not None:
-                    selected = data[cell['row']]['_index_']
-                else:
-                    selected = index
+                selected = index
 
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
