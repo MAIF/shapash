@@ -268,6 +268,7 @@ class SmartExplainer:
                 self.x_pred_groups
             )
         )
+        self.columns_dict_groups = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -628,7 +629,7 @@ class SmartExplainer:
 
         return label_num, label_code, label_value
 
-    def check_features_name(self, features):
+    def check_features_name(self, features, use_groups=False):
         """
         Convert a list of feature names (string) or features ids into features ids.
         Features names can be part of columns_dict or features_dict.
@@ -637,13 +638,16 @@ class SmartExplainer:
         ----------
         features : List
             List of ints (columns ids) or of strings (business names)
+        use_groups : bool
+            Whether or not features parameter includes groups of features
 
         Returns
         -------
         list of ints
             Columns ids compatible with var_dict
         """
-        return check_features_name(self.columns_dict, self.features_dict, features)
+        columns_dict = self.columns_dict if use_groups is False else self.columns_dict_groups
+        return check_features_name(columns_dict, self.features_dict, features)
 
     def check_features_desc(self):
         """
@@ -720,7 +724,7 @@ class SmartExplainer:
             mask.append(
                 self.state.hide_contributions(
                     data['var_dict'],
-                    features_list=self.check_features_name(features_to_hide)
+                    features_list=self.check_features_name(features_to_hide, use_groups=display_groups)
                 )
             )
         if threshold:
