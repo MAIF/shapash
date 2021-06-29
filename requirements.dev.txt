@@ -1,5 +1,5 @@
 pip==20.2.4
-dash==1.17.0
+dash[testing]==1.17.0
 catboost>=0.22
 category-encoders==2.1.0
 dash-bootstrap-components==0.9.1
@@ -21,7 +21,7 @@ sphinxcontrib-htmlhelp==1.0.3
 sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
-pytest==5.2.3
+pytest==6.0.1
 pytest-cov==2.8.1
 scikit-learn>=0.23.2
 xgboost==1.0.0
@@ -34,5 +34,4 @@ seaborn
 notebook
 Jinja2
 phik
-dash[testing]
 
