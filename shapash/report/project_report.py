@@ -80,7 +80,10 @@ class ProjectReport:
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
         self.df_train_test = self._create_train_test_df(test=self.x_pred, train=self.x_train_pre)
-        self.y_pred = self.explainer.model.predict(self.explainer.x_init)
+        if self.explainer.y_pred is not None:
+            self.y_pred = np.array(self.explainer.y_pred.T)[0]
+        else:
+            self.y_pred = self.explainer.model.predict(self.explainer.x_init)
         self.y_test, target_name_test = self._get_values_and_name(y_test, 'target')
         self.y_train, target_name_train = self._get_values_and_name(y_train, 'target')
         self.target_name = target_name_train or target_name_test
@@ -352,7 +355,7 @@ class ProjectReport:
         explainability_template = template_env.get_template("explainability.html")
         explain_data = list()
         multiclass = True if (self.explainer._classes and len(self.explainer._classes) > 2) else False
-        c_list = self.explainer._classes if multiclass else [0]  # list just used for multiclass
+        c_list = self.explainer._classes if multiclass else [1]  # list just used for multiclass
         for index_label, label in enumerate(c_list):  # Iterating over all labels in multiclass case
             label_value = self.explainer.check_label_name(label)[2] if multiclass else ''
             fig_features_importance = self.explainer.plot.features_importance(label=label)
