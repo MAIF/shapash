@@ -7,6 +7,7 @@ This guide aims to help you contributing to Shapash. If you have found any probl
     - [Fork to code in your personal Shapash repo](#fork-to-code-in-your-personal-shapash-repo)
     - [Clone your forked repository](#clone-your-forked-repository)
     - [Make sure that your repository is up to date](#make-sure-that-your-repository-is-up-to-date)
+    - [Creating a development environment](#creating-a-development-environment)   
     - [Start your contribution code](#start-your-contribution-code)
     - [Commit your changes](#commit-your-changes)
     - [Create a pull request](#create-a-pull-request)
@@ -44,13 +45,25 @@ git clone https://github.com/YOUR_GITHUB_PROFILE/shapash.git
 
 ## Make sure that your repository is up to date
 
-To insure that your local forked repository is synced, you have to update your repo with the master branch of Shapash (MAIF). So, go to your repository and as follow :
+To ensure that your local forked repository is synced, you have to update your repo with the master branch of Shapash (MAIF). So, go to your repository and as follow :
 
 ```
 cd shapash
 git remote add upstream https://github.com/MAIF/shapash.git
 git pull upstream master
 ```
+
+## Creating a development environment
+Install the development dependencies :
+```
+pip install requirements.dev.txt
+```
+The webapp tests also require to install a WebDriver that is used by the Selenium package.
+More info [can be found here](https://dash.plotly.com/testing).  
+In order to install the WebDriver please [follow the steps listed here (Chrome Driver)](https://chromedriver.chromium.org/getting-started).
+
+As explained in the link, you should include the folder that contains the webdriver in your PATH environment variable.  
+One other simple way to do this is to add the WebDriver in the `/usr/local/bin` or `/usr/bin` folder that should already be in your PATH variable.  
 
 ## Start your contribution code
 
