@@ -96,7 +96,7 @@ Shapash also contributes to data science auditing by displaying usefull informat
 </a>
 
 - **Summarize and export** the local explanation
-> **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
+> **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data background, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
   
 
 - Easily share and discuss results with non-Data users
