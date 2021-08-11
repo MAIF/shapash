@@ -26,7 +26,7 @@ class TestShapBackend(unittest.TestCase):
     def setUp(self):
         self.modellist = [
             lgb.LGBMRegressor(n_estimators=1), lgb.LGBMClassifier(n_estimators=1),
-            xgb.XGBRegressor(n_estimators=1), xgb.XGBRegressor(n_estimators=1),
+            xgb.XGBRegressor(n_estimators=1), xgb.XGBClassifier(n_estimators=1),
             svm.SVR(kernel='linear'), svm.SVC(kernel='linear'),
             cb.CatBoostRegressor(n_estimators=1), cb.CatBoostClassifier(n_estimators=1),
             ske.GradientBoostingRegressor(n_estimators=1), ske.GradientBoostingClassifier(n_estimators=1),
