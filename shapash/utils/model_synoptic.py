@@ -17,7 +17,8 @@ xgboost_model = (
 
 lightgbm_model = (
     "<class 'lightgbm.sklearn.LGBMClassifier'>",
-    "<class 'lightgbm.sklearn.LGBMRegressor'>"
+    "<class 'lightgbm.sklearn.LGBMRegressor'>",
+    "<class 'lightgbm.basic.Booster'>"
 )
 
 catboost_model = (
@@ -46,6 +47,7 @@ dict_model_feature = {"<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>":
               "<class 'sklearn.svm._classes.SVR'>": ['length'],
               "<class 'lightgbm.sklearn.LGBMClassifier'>": ["booster_","feature_name"],
               "<class 'lightgbm.sklearn.LGBMRegressor'>": ["booster_","feature_name"],
+              "<class 'lightgbm.basic.Booster'>": ["feature_names"],
               "<class 'xgboost.sklearn.XGBClassifier'>": ["get_booster","feature_names"],
               "<class 'xgboost.sklearn.XGBRegressor'>": ["get_booster","feature_names"],
               "<class 'xgboost.core.Booster'>": ["feature_names"],
