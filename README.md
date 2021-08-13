@@ -52,6 +52,7 @@ Shapash also contributes to data science auditing by displaying usefull informat
 - Medium:
   - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
   - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
+  - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
 
 ## 🏆 Awards
 
@@ -227,7 +228,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use Simple Python Dictionnaries](tutorial/encoder/tuto-encoder03-using-dict.ipynb)
 
 ### Better displaying data with postprocessing
-- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess.ipynb)
+- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess01.ipynb)
 
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
