@@ -228,7 +228,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use Simple Python Dictionnaries](tutorial/encoder/tuto-encoder03-using-dict.ipynb)
 
 ### Better displaying data with postprocessing
-- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess.ipynb)
+- [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess01.ipynb)
 
 ### How to use shapash with Shap or Lime compute
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
