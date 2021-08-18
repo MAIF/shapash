@@ -954,13 +954,13 @@ class SmartExplainer:
         if self.features_imp is None or force:
             self.features_imp = self.state.compute_features_import(self.contributions)
 
-    def init_app(self, settings: dict = {}):
+    def init_app(self, settings: dict = None):
         """
         Simple init of SmartApp in case of host smartapp by another way
         
         Parameters
         ----------
-        settings : Dict
+        settings : dict (default: None)
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
@@ -987,7 +987,7 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             for your webapp (can be reused in other methods like in a report, ...)
-        settings : dict (default: {})
+        settings : dict (default: None)
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
