@@ -5,7 +5,9 @@ import logging
 import copy
 import tempfile
 import shutil
+import numpy as np
 import pandas as pd
+from tqdm.notebook import tqdm
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
@@ -24,6 +26,7 @@ from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
+from shapash.utils.stability import find_neighbors, shap_neighbors
 
 logging.basicConfig(level=logging.INFO)
 
@@ -89,6 +92,8 @@ class SmartExplainer:
         Dictionary that references the numbers of feature values ​​in the x_pred
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
+    features_stability: dict
+        Dictionary of arrays to be displayed on the stability plot. The keys are "amplitude" (average SHAP values for selected instances), "stability" (stability metric across neighborhood) and "norm_shap" (normalized SHAP values of instance and neighbors)
     preprocessing : category_encoders, ColumnTransformer, list or dict
         The processing apply to the original data.
     postprocessing : dict
@@ -953,6 +958,48 @@ class SmartExplainer:
             self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
         if self.features_imp is None or force:
             self.features_imp = self.state.compute_features_import(self.contributions)
+
+    def compute_features_stability(self, selection):
+        """
+        Compute a relative features importance, sum of absolute values
+        of the contributions for each.
+        Features importance compute in base 100
+
+        Parameters
+        ----------
+        selection: array
+            Indices of rows to be displayed on the stability plot
+
+        Returns
+        -------
+        Dictionary
+            Values that will be displayed on the graph. Keys are "amplitude", "variability" and "norm_shap"
+        """
+        dataset = self.x_init
+        contributions = self.contributions
+        model = self.model
+        mode = self._case
+        
+        all_neighbors = find_neighbors(selection, dataset, model, mode)
+
+        norm_shap = None
+        variability = None
+        amplitude = None
+        
+        # Check if entry is a single instance or not
+        if len(selection) == 1:
+            # Compute explanations for instance and neighbors
+            norm_shap, _, _ = shap_neighbors(all_neighbors[0], dataset, contributions)
+        else:
+            numb_expl = len(selection)
+            amplitude = np.zeros((numb_expl, dataset.shape[1]))
+            variability = np.zeros((numb_expl, dataset.shape[1]))
+            # For each instance (+ neighbors), compute explanation
+            for i in tqdm(range(numb_expl)):
+                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], dataset, contributions)
+        
+        self.features_stability = {"norm_shap":norm_shap, "variability":variability, "amplitude":amplitude}
+
 
     def init_app(self):
         """
