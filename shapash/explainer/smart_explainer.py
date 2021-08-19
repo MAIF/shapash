@@ -93,7 +93,9 @@ class SmartExplainer:
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
     features_stability: dict
-        Dictionary of arrays to be displayed on the stability plot. The keys are "amplitude" (average SHAP values for selected instances), "stability" (stability metric across neighborhood) and "norm_shap" (normalized SHAP values of instance and neighbors)
+        Dictionary of arrays to be displayed on the stability plot.
+        The keys are "amplitude" (average SHAP values for selected instances),
+        "stability" (stability metric across neighborhood) and "norm_shap (normalized SHAP values of instance and neighbors)
     preprocessing : category_encoders, ColumnTransformer, list or dict
         The processing apply to the original data.
     postprocessing : dict
@@ -979,13 +981,13 @@ class SmartExplainer:
         contributions = self.contributions
         model = self.model
         mode = self._case
-        
+
         all_neighbors = find_neighbors(selection, dataset, model, mode)
 
         norm_shap = None
         variability = None
         amplitude = None
-        
+
         # Check if entry is a single instance or not
         if len(selection) == 1:
             # Compute explanations for instance and neighbors
@@ -997,9 +999,8 @@ class SmartExplainer:
             # For each instance (+ neighbors), compute explanation
             for i in tqdm(range(numb_expl)):
                 (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], dataset, contributions)
-        
-        self.features_stability = {"norm_shap":norm_shap, "variability":variability, "amplitude":amplitude}
 
+        self.features_stability = {"norm_shap": norm_shap, "variability": variability, "amplitude": amplitude}
 
     def init_app(self):
         """

@@ -271,9 +271,9 @@ def get_color_rgb(colorscale_name, loc):
     # first parameter: Name of the property being validated
     # second parameter: a string, doesn't really matter in our use case
     cv = ColorscaleValidator("colorscale", "")
-    # colorscale will be a list of lists: [[loc1, "rgb1"], [loc2, "rgb2"], ...] 
+    # colorscale will be a list of lists: [[loc1, "rgb1"], [loc2, "rgb2"], ...]
     colorscale = cv.validate_coerce(colorscale_name)
-    
+
     if hasattr(loc, "__iter__"):
         return [get_continuous_color(colorscale, x) for x in loc]
     return get_continuous_color(colorscale, loc)
