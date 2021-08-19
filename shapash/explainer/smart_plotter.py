@@ -2326,7 +2326,7 @@ class SmartPlotter:
 
         return fig
 
-    def stability_plot(self, selection, distribution=False):
+    def stability_plot(self, selection, max_features=10, distribution=False):
         """Plot local stability graphs for either one or multiple instances.
 
           - Look at `shap_neighbors` method for more info about the metrics used
@@ -2346,8 +2346,8 @@ class SmartPlotter:
         If multiple instances :
             - if distribution == False : Mean amplitude of each feature vs. mean variability across neighbors
             - if distribution == True : Distribution of variability of each instance across neighbors
-
         """
+
         if (self.explainer._case == "classification") and (len(self.explainer._classes) > 2):
             raise AssertionError("Multi-class classification is not supported")
 
@@ -2375,6 +2375,9 @@ class SmartPlotter:
                     }
                 )
 
+            # Keep only max_features
+            if max_features is not None: g_df = g_df[:max_features]
+
             fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
                             y=g_df.iloc[::-1, ::-1].index.tolist(),
                             x=g_df.iloc[::-1, ::-1].iloc[:, i],
@@ -2387,6 +2390,7 @@ class SmartPlotter:
                               bargap=0.5,
                               height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100
                               else 10*g_df.shape[0]*g_df.shape[1],
+                              width=900,
                               legend={"traceorder": "reversed"},
                               xaxis={"side": "top"},
                               margin=dict(t=185))
@@ -2394,21 +2398,32 @@ class SmartPlotter:
             fig.show()
 
         else:
-            variability, amplitude = self.explainer.features_stability["variability"],
-            self.explainer.features_stability["amplitude"]
+            variability = self.explainer.features_stability["variability"]
+            amplitude = self.explainer.features_stability["amplitude"]
 
             mean_variability = variability.mean(axis=0)
             mean_amplitude = amplitude.mean(axis=0)
+
+            # If set, only keep features with the highest mean amplitude
+            if max_features is not None:
+                keep = mean_amplitude.argsort()[::-1][:max_features]
+                keep = np.sort(keep)
+
+                variability = variability[:, keep]
+                mean_variability = mean_variability[keep]
+                amplitude = amplitude[:, keep]
+                mean_amplitude = mean_amplitude[keep]
+                dataset = dataset.iloc[:, keep]
 
             # Plot 1 : only show average variability on y-axis
             if not distribution:
                 fig = px.scatter(
                     x=mean_variability,
                     y=mean_amplitude,
-                    hover_name=self.explainer.x_init.columns,
+                    hover_name=dataset.columns,
                     # text=self.columns,
                     height=500,
-                    width=1000,
+                    width=900,
                 )
 
                 fig.add_trace(
@@ -2443,11 +2458,11 @@ class SmartPlotter:
             # Plot 2 : Show distribution of variability
             else:
                 # Store distribution of variability in a DataFrame
-                var_df = pd.DataFrame(variability, columns=self.explainer.x_init.columns)
+                var_df = pd.DataFrame(variability, columns=dataset.columns)
                 mean_amplitude_normalized = pd.Series(mean_amplitude, index=dataset.columns) / mean_amplitude.max()
 
                 # And sort columns by mean amplitude
-                var_df = var_df[self.explainer.x_init.columns[mean_amplitude.argsort()].values]
+                var_df = var_df[dataset.columns[mean_amplitude.argsort()].values]
 
                 # Plot the distribution
                 if dataset.shape[1] < 500:
@@ -2491,7 +2506,7 @@ class SmartPlotter:
                     fig.add_trace(
                         go.Scatter(
                             x=[0.15] * len(mean_amplitude),
-                            y=self.explainer.x_init.columns,
+                            y=dataset.columns,
                             mode="lines",
                             line=dict(color="green", dash="dot"),
                             name="<-- More stable",
@@ -2501,7 +2516,7 @@ class SmartPlotter:
                     fig.add_trace(
                         go.Scatter(
                             x=[0.3] * len(mean_amplitude),
-                            y=self.explainer.x_init.columns,
+                            y=dataset.columns,
                             mode="lines",
                             line=dict(color="red", dash="dot"),
                             name="--> More unstable",
@@ -2509,8 +2524,8 @@ class SmartPlotter:
                     )
 
                     fig.update_layout(
-                        height=40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1],
-                        width=1000,
+                        height=max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]),
+                        width=900,
                         title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
                         yaxis_title="Average SHAP value",
                         xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
