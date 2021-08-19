@@ -1008,8 +1008,6 @@ class SmartExplainer:
         if self.y_pred is None:
             self.predict()
         if hasattr(self, '_case'):
-            if settings is None:
-                a=1
             self.smartapp = SmartApp(self, settings)
             if host is None:
                 host = "0.0.0.0"
