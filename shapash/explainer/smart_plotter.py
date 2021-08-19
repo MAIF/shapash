@@ -5,6 +5,9 @@ import warnings
 from numbers import Number
 import random
 import copy
+import matplotlib.pyplot as plt
+from matplotlib.colors import rgb2hex
+import math
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -16,6 +19,8 @@ from shapash.manipulation.summarize import compute_features_import, project_feat
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
     compute_top_correlations_features
+from shapash.utils.stability import find_neighbors, shap_neighbors, get_color_hex
+from tqdm.notebook import tqdm
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -2323,3 +2328,195 @@ class SmartPlotter:
             plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig
+
+
+    def test(self):
+        return self.explainer.x_init, self.explainer.x_pred, self.explainer.contributions
+
+    
+    def stability_plot(self, selection, distribution=False):
+        """Plot local stability graphs for either one or multiple instances. 
+        
+          - Look at `shap_neighbors` method for more info about the metrics used
+          - Look at `find_neighbors` method for definition of neighbors
+
+        Parameters
+        ----------
+        selection: array
+            Indices of rows to be displayed on the stability plot
+        distribution : bool, optional
+            Add distribution of variability for each feature, by default False
+
+        Returns
+        -------
+        If single instance :
+            - plot -- Normalized SHAP values of instance and neighbors     
+        If multiple instances :
+            - if distribution == False : Mean amplitude of each feature vs. mean variability across neighbors
+            - if distribution == True : Distribution of variability of each instance across neighbors
+                     
+        """
+        if (self.explainer._case == "classification") and (len(self.explainer._classes) > 2):
+            raise AssertionError("Multi-class classification is not supported")
+
+        self.explainer.compute_features_stability(selection)
+
+        dataset = self.explainer.x_init
+
+        ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])
+
+        # Check if entry is a single instance or not
+        if len(selection) == 1:
+            # Compute explanations for instance and neighbors
+            g = self.explainer.features_stability["norm_shap"]
+
+            # Reorder indices based on absolute values of the 1st row (i.e. the instance) in descending order
+            inds = np.flip(np.abs(g[0, :]).argsort())
+            g = g[:, inds]
+            columns = [dataset.columns[i] for i in inds]
+
+            # Plot
+            g_df = pd.DataFrame(g, columns=columns).T.rename(
+                    columns={
+                        **{0: "instance", 1: "closest neighbor"},
+                        **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
+                    }
+                )
+            
+            fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i], 
+                        y=g_df.iloc[::-1, ::-1].index.tolist(), 
+                        x=g_df.iloc[::-1, ::-1].iloc[:,i], 
+                        orientation='h') 
+                    for i in range(g_df.shape[1])])
+
+            fig.update_layout(title={'text':"Explanation of local stability: How similar are explanations for closeby neighbours?"},
+                                xaxis_title="Normalized SHAP value",
+                                barmode="group", 
+                                bargap=0.5, 
+                                height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100 else 10*g_df.shape[0]*g_df.shape[1], 
+                                legend={"traceorder":"reversed"}, 
+                                xaxis={"side": "top"},
+                                margin=dict(t=185))
+
+            fig.show()
+
+        else:
+            variability, amplitude = self.explainer.features_stability["variability"], self.explainer.features_stability["amplitude"]
+
+            mean_variability = variability.mean(axis=0)
+            mean_amplitude = amplitude.mean(axis=0)
+
+            # Plot 1 : only show average variability on y-axis
+            if not distribution:
+                fig = px.scatter(
+                    x=mean_variability,
+                    y=mean_amplitude,
+                    hover_name=self.explainer.x_init.columns,
+                    # text=self.columns,
+                    height=500,
+                    width=1000,
+                )
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=[0.15] * len(mean_amplitude),
+                        y=[0, mean_amplitude.max()],
+                        mode="lines",
+                        line=dict(color="green", dash="dot"),
+                        name="<-- More stable",
+                    )
+                )
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=[0.3] * len(mean_amplitude),
+                        y=[0, mean_amplitude.max()],
+                        mode="lines",
+                        line=dict(color="red", dash="dot"),
+                        name="--> More unstable",
+                    )
+                )
+
+                fig.update_layout(
+                    title="Explanation local stability: How similar are explanations for closeby neighbours?",
+                    yaxis_title="Average SHAP value",
+                    xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
+                    xaxis=dict(range=[0, mean_variability.max() + 0.1]),
+                )
+
+                fig.show()
+
+            # Plot 2 : Show distribution of variability
+            else:
+                # Store distribution of variability in a DataFrame
+                var_df = pd.DataFrame(variability, columns=self.explainer.x_init.columns)
+                mean_amplitude_normalized = pd.Series(mean_amplitude, index=dataset.columns) / mean_amplitude.max()
+                
+                # And sort columns by mean amplitude
+                var_df = var_df[self.explainer.x_init.columns[mean_amplitude.argsort()].values]
+
+                # Plot the distribution
+                if dataset.shape[1] < 500:
+
+                    cmap = plt.get_cmap("plasma")
+                    fig = go.Figure(
+                        data=[
+                            go.Box(
+                                x=var_df[c],
+                                marker_color=get_color_hex("thermal", np.clip(mean_amplitude_normalized[c], 0.0001, 0.9999)),
+                                #marker_color=rgb2hex(cmap(mean_amplitude_normalized[c])),
+                                name=c,
+                                showlegend=False,
+                            )
+                            for c in var_df
+                        ],
+                    )
+
+                    # Dummy invisible plot to add the color scale
+                    colorbar_trace = go.Scatter(
+                        x=[None],
+                        y=[None],
+                        mode="markers",
+                        marker=dict(
+                            size=1,
+                            color=[mean_amplitude.min(), mean_amplitude.max()],
+                            colorscale="plasma",
+                            colorbar=dict(thickness=20, lenmode="pixels", len=300, yanchor="top", y=1, ypad=60, title="Average<br>SHAP value"),
+                            showscale=True,
+                        ),
+                        hoverinfo="none",
+                        showlegend=False,
+                    )
+
+                    fig.add_trace(colorbar_trace)
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[0.15] * len(mean_amplitude),
+                            y=self.explainer.x_init.columns,
+                            mode="lines",
+                            line=dict(color="green", dash="dot"),
+                            name="<-- More stable",
+                        )
+                    )
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[0.3] * len(mean_amplitude),
+                            y=self.explainer.x_init.columns,
+                            mode="lines",
+                            line=dict(color="red", dash="dot"),
+                            name="--> More unstable",
+                        )
+                    )
+
+                    fig.update_layout(
+                    height=40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1], 
+                    width=1000,
+                    title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
+                    yaxis_title="Average SHAP value",
+                    xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
+                    xaxis=dict(range=[0, mean_variability.max() + 0.1], side="top"),
+                    margin=dict(t=185)
+                )
+                    fig.show()
