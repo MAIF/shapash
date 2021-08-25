@@ -2326,7 +2326,7 @@ class SmartPlotter:
 
         return fig
 
-    def stability_plot(self, selection, max_features=10, distribution=False):
+    def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution=False):
         """Plot local stability graphs for either one or multiple instances.
 
           - Look at `shap_neighbors` method for more info about the metrics used
@@ -2351,14 +2351,30 @@ class SmartPlotter:
         if (self.explainer._case == "classification") and (len(self.explainer._classes) > 2):
             raise AssertionError("Multi-class classification is not supported")
 
-        self.explainer.compute_features_stability(selection)
+        # Sampling
+        if selection is None:
+            if self.explainer.x_pred.shape[0] <= max_points:
+                list_ind = self.explainer.x_pred.index.tolist()
+            else:
+                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+            # By default, don't compute calculation if it has already be done
+            if (self.explainer.features_stability is None) or force:
+                self.explainer.compute_features_stability(list_ind) 
+        elif isinstance(selection, list):
+            if len(selection) <= max_points:
+                list_ind = selection
+            else:
+                list_ind = random.sample(selection, max_points)
+            self.explainer.compute_features_stability(list_ind)
+        else:
+            raise ValueError('Parameter selection must be a list')
 
         dataset = self.explainer.x_init
 
         ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Check if entry is a single instance or not
-        if len(selection) == 1:
+        if False:
             # Compute explanations for instance and neighbors
             g = self.explainer.features_stability["norm_shap"]
 

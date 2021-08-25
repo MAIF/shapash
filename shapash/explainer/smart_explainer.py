@@ -7,7 +7,6 @@ import tempfile
 import shutil
 import numpy as np
 import pandas as pd
-from tqdm.notebook import tqdm
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
@@ -252,6 +251,7 @@ class SmartExplainer:
         self.features_groups = features_groups
         if features_groups:
             self._compile_features_groups(features_groups)
+        self.features_stability = None
 
     def _compile_features_groups(self, features_groups):
         """
@@ -997,7 +997,7 @@ class SmartExplainer:
             amplitude = np.zeros((numb_expl, dataset.shape[1]))
             variability = np.zeros((numb_expl, dataset.shape[1]))
             # For each instance (+ neighbors), compute explanation
-            for i in tqdm(range(numb_expl)):
+            for i in range(numb_expl):
                 (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], dataset, contributions)
 
         self.features_stability = {"norm_shap": norm_shap, "variability": variability, "amplitude": amplitude}
