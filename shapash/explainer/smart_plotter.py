@@ -2326,6 +2326,176 @@ class SmartPlotter:
 
         return fig
 
+    def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names):
+        fig = px.scatter(
+                x=mean_variability,
+                y=mean_amplitude,
+                hover_name=column_names,
+                height=500,
+                width=900,
+            )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0.15] * len(mean_amplitude),
+                y=[0, mean_amplitude.max()],
+                mode="lines",
+                line=dict(color="green", dash="dot"),
+                name="<-- More stable",
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0.3] * len(mean_amplitude),
+                y=[0, mean_amplitude.max()],
+                mode="lines",
+                line=dict(color="red", dash="dot"),
+                name="--> More unstable",
+            )
+        )
+
+        fig.update_layout(
+            title="Explanation local stability: How similar are explanations for closeby neighbours?",
+            yaxis_title="Average SHAP value",
+            xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
+            xaxis=dict(range=[0, mean_variability.max() + 0.1]),
+        )
+
+        fig.show()
+
+    def plot_stability(
+            self,
+            variability,
+            mean_amplitude,
+            dataset,
+            column_names):
+        # Store distribution of variability in a DataFrame
+        var_df = pd.DataFrame(variability, columns=column_names)
+        mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
+
+        # And sort columns by mean amplitude
+        var_df = var_df[column_names[mean_amplitude.argsort()]]
+
+        # Add colorscale
+        boxplot_colors = self.tuning_colorscale(pd.DataFrame([12, 17, 34, 35, 123, 454, 545, 769, 4535, 9999, 435345]))
+
+        # Plot the distribution
+        if dataset.shape[1] < 500:
+
+            fig = go.Figure(
+                data=[
+                    go.Box(
+                        x=var_df[c],
+                        marker_color=get_color_hex("thermal", np.clip(mean_amplitude_normalized[c], 0.0001, 0.9999)),
+                        name=c,
+                        showlegend=False,
+                    )
+                    for i, c in enumerate(var_df)
+                ],
+            )
+
+            # Dummy invisible plot to add the color scale
+            colorbar_trace = go.Scatter(
+                x=[None],
+                y=[None],
+                mode="markers",
+                marker=dict(
+                    size=1,
+                    color=[mean_amplitude.min(), mean_amplitude.max()],
+                    colorscale=self.init_colorscale,
+                    colorbar=dict(thickness=20,
+                                    lenmode="pixels",
+                                    len=300,
+                                    yanchor="top",
+                                    y=1,
+                                    ypad=60,
+                                    title="Average<br>SHAP value"),
+                    showscale=True,
+                ),
+                hoverinfo="none",
+                showlegend=False,
+            )
+
+            fig.add_trace(colorbar_trace)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[0.15] * len(mean_amplitude),
+                    y=column_names,
+                    mode="lines",
+                    line=dict(color="green", dash="dot"),
+                    name="<-- More stable",
+                )
+            )
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[0.3] * len(mean_amplitude),
+                    y=column_names,
+                    mode="lines",
+                    line=dict(color="red", dash="dot"),
+                    name="--> More unstable",
+                )
+            )
+
+            fig.update_layout(
+                height=max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]),
+                width=900,
+                title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
+                yaxis_title="Importance (Average Shap Value)",
+                xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
+                xaxis=dict(range=[-0.01, variability.max() + 0.1], side="top"),
+                margin=dict(t=185)
+                            )
+            fig.show()
+
+    def local_neighbors_plot(self, index, max_features=10):
+        assert isinstance(index, int), "index must be an integer"
+        
+        self.explainer.compute_features_stability([index])
+
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+        ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
+
+        # Compute explanations for instance and neighbors
+        g = self.explainer.features_stability["norm_shap"]
+
+        # Reorder indices based on absolute values of the 1st row (i.e. the instance) in descending order
+        inds = np.flip(np.abs(g[0, :]).argsort())
+        g = g[:, inds]
+        columns = [column_names[i] for i in inds]
+
+        # Plot
+        g_df = pd.DataFrame(g, columns=columns).T.rename(
+                columns={
+                    **{0: "instance", 1: "closest neighbor"},
+                    **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
+                }
+            )
+
+        # Keep only max_features
+        if max_features is not None: g_df = g_df[:max_features]
+
+        fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
+                        y=g_df.iloc[::-1, ::-1].index.tolist(),
+                        x=g_df.iloc[::-1, ::-1].iloc[:, i],
+                        orientation='h') for i in range(g_df.shape[1])])
+
+        fig.update_layout(title={'text': "Explanation of local stability:\
+                How similar are explanations for closeby neighbours?"},
+                            xaxis_title="Normalized SHAP value",
+                            barmode="group",
+                            bargap=0.5,
+                            height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100
+                            else 10*g_df.shape[0]*g_df.shape[1],
+                            width=900,
+                            legend={"traceorder": "reversed"},
+                            xaxis={"side": "top"},
+                            margin=dict(t=185))
+
+        fig.show()
+
     def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution=False):
         """Plot local stability graphs for either one or multiple instances.
 
@@ -2366,183 +2536,31 @@ class SmartPlotter:
         else:
             raise ValueError('Parameter selection must be a list')
 
-        dataset = self.explainer.x_pred
         column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
-        ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
-        # Check if entry is a single instance or not
-        if False:
-            # Compute explanations for instance and neighbors
-            g = self.explainer.features_stability["norm_shap"]
+        variability = self.explainer.features_stability["variability"]
+        amplitude = self.explainer.features_stability["amplitude"]
 
-            # Reorder indices based on absolute values of the 1st row (i.e. the instance) in descending order
-            inds = np.flip(np.abs(g[0, :]).argsort())
-            g = g[:, inds]
-            columns = [column_names[i] for i in inds]
+        mean_variability = variability.mean(axis=0)
+        mean_amplitude = amplitude.mean(axis=0)
 
-            # Plot
-            g_df = pd.DataFrame(g, columns=column_names).T.rename(
-                    columns={
-                        **{0: "instance", 1: "closest neighbor"},
-                        **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
-                    }
-                )
+        # Plot 1 : only show average variability on y-axis
+        if not distribution:
+            self.plot_amplitude_vs_stability(mean_variability, mean_amplitude, column_names)
 
-            # Keep only max_features
-            if max_features is not None: g_df = g_df[:max_features]
-
-            fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
-                            y=g_df.iloc[::-1, ::-1].index.tolist(),
-                            x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                            orientation='h') for i in range(g_df.shape[1])])
-
-            fig.update_layout(title={'text': "Explanation of local stability:\
-                 How similar are explanations for closeby neighbours?"},
-                              xaxis_title="Normalized SHAP value",
-                              barmode="group",
-                              bargap=0.5,
-                              height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100
-                              else 10*g_df.shape[0]*g_df.shape[1],
-                              width=900,
-                              legend={"traceorder": "reversed"},
-                              xaxis={"side": "top"},
-                              margin=dict(t=185))
-
-            fig.show()
-
+        # Plot 2 : Show distribution of variability
         else:
-            variability = self.explainer.features_stability["variability"]
-            amplitude = self.explainer.features_stability["amplitude"]
+            dataset = self.explainer.x_pred.copy()
+            
+            # If set, only keep features with the highest mean amplitude
+            if max_features is not None:
+                keep = mean_amplitude.argsort()[::-1][:max_features]
+                keep = np.sort(keep)
 
-            mean_variability = variability.mean(axis=0)
-            mean_amplitude = amplitude.mean(axis=0)
+                variability = variability[:, keep]
+                mean_variability = mean_variability[keep]
+                mean_amplitude = mean_amplitude[keep]
+                dataset = dataset.iloc[:, keep]
+                column_names = column_names[keep]
 
-            # Plot 1 : only show average variability on y-axis
-            if not distribution:
-                fig = px.scatter(
-                    x=mean_variability,
-                    y=mean_amplitude,
-                    hover_name=column_names,
-                    height=500,
-                    width=900,
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=[0.15] * len(mean_amplitude),
-                        y=[0, mean_amplitude.max()],
-                        mode="lines",
-                        line=dict(color="green", dash="dot"),
-                        name="<-- More stable",
-                    )
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=[0.3] * len(mean_amplitude),
-                        y=[0, mean_amplitude.max()],
-                        mode="lines",
-                        line=dict(color="red", dash="dot"),
-                        name="--> More unstable",
-                    )
-                )
-
-                fig.update_layout(
-                    title="Explanation local stability: How similar are explanations for closeby neighbours?",
-                    yaxis_title="Average SHAP value",
-                    xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
-                    xaxis=dict(range=[0, mean_variability.max() + 0.1]),
-                )
-
-                fig.show()
-
-            # Plot 2 : Show distribution of variability
-            else:
-                # If set, only keep features with the highest mean amplitude
-                if max_features is not None:
-                    keep = mean_amplitude.argsort()[::-1][:max_features]
-                    keep = np.sort(keep)
-
-                    variability = variability[:, keep]
-                    mean_variability = mean_variability[keep]
-                    amplitude = amplitude[:, keep]
-                    mean_amplitude = mean_amplitude[keep]
-                    dataset = dataset.iloc[:, keep]
-                    column_names = column_names[keep]
-
-                # Store distribution of variability in a DataFrame
-                var_df = pd.DataFrame(variability, columns=column_names)
-                mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
-
-                # And sort columns by mean amplitude
-                var_df = var_df[column_names[mean_amplitude.argsort()]]
-
-                # Plot the distribution
-                if dataset.shape[1] < 500:
-
-                    fig = go.Figure(
-                        data=[
-                            go.Box(
-                                x=var_df[c],
-                                marker_color=get_color_hex("thermal", np.clip(mean_amplitude_normalized[c], 0.0001, 0.9999)),
-                                name=c,
-                                showlegend=False,
-                            )
-                            for c in var_df
-                        ],
-                    )
-
-                    # Dummy invisible plot to add the color scale
-                    colorbar_trace = go.Scatter(
-                        x=[None],
-                        y=[None],
-                        mode="markers",
-                        marker=dict(
-                            size=1,
-                            color=[mean_amplitude.min(), mean_amplitude.max()],
-                            colorscale="plasma",
-                            colorbar=dict(thickness=20,
-                                          lenmode="pixels",
-                                          len=300,
-                                          yanchor="top",
-                                          y=1,
-                                          ypad=60,
-                                          title="Average<br>SHAP value"),
-                            showscale=True,
-                        ),
-                        hoverinfo="none",
-                        showlegend=False,
-                    )
-
-                    fig.add_trace(colorbar_trace)
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[0.15] * len(mean_amplitude),
-                            y=column_names,
-                            mode="lines",
-                            line=dict(color="green", dash="dot"),
-                            name="<-- More stable",
-                        )
-                    )
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[0.3] * len(mean_amplitude),
-                            y=column_names,
-                            mode="lines",
-                            line=dict(color="red", dash="dot"),
-                            name="--> More unstable",
-                        )
-                    )
-
-                    fig.update_layout(
-                        height=max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]),
-                        width=900,
-                        title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
-                        yaxis_title="Importance (Average Shap Value)",
-                        xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
-                        xaxis=dict(range=[0, mean_variability.max() + 0.1], side="top"),
-                        margin=dict(t=185)
-                                    )
-                    fig.show()
+            self.plot_stability(variability, mean_amplitude, dataset, column_names)
