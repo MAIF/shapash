@@ -977,12 +977,11 @@ class SmartExplainer:
         Dictionary
             Values that will be displayed on the graph. Keys are "amplitude", "variability" and "norm_shap"
         """
-        dataset = self.x_init
-        contributions = self.contributions
-        model = self.model
-        mode = self._case
 
-        all_neighbors = find_neighbors(selection, dataset, model, mode)
+        if (self._case == "classification") and (len(self._classes) > 2):
+            raise AssertionError("Multi-class classification is not supported")
+
+        all_neighbors = find_neighbors(selection, self.x_init, self.model, self._case)
 
         norm_shap = None
         variability = None
@@ -991,14 +990,14 @@ class SmartExplainer:
         # Check if entry is a single instance or not
         if len(selection) == 1:
             # Compute explanations for instance and neighbors
-            norm_shap, _, _ = shap_neighbors(all_neighbors[0], dataset, contributions)
+            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_init, self.contributions)
         else:
             numb_expl = len(selection)
-            amplitude = np.zeros((numb_expl, dataset.shape[1]))
-            variability = np.zeros((numb_expl, dataset.shape[1]))
+            amplitude = np.zeros((numb_expl, self.x_pred.shape[1]))
+            variability = np.zeros((numb_expl, self.x_pred.shape[1]))
             # For each instance (+ neighbors), compute explanation
             for i in range(numb_expl):
-                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], dataset, contributions)
+                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions)
 
         self.features_stability = {"norm_shap": norm_shap, "variability": variability, "amplitude": amplitude}
 

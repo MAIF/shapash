@@ -138,17 +138,16 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
         Wrap all instances with corresponding neighbors in a list with length (#instances).
         Each array has shape (#neighbors, #features) where #neighbors includes the instance itself.
     """
-    instances = _df_to_array(dataset.loc[selection])
-    dataset = _df_to_array(dataset)
+    instances = dataset.loc[selection].values
 
     all_neighbors = np.empty((0, instances.shape[1] + 1), float)
     """Filter 1 : Pick top N closest neighbors"""
     for instance in instances:
-        c = _compute_similarities(instance, dataset)
+        c = _compute_similarities(instance, dataset.values)
         # Pick indices of the closest neighbors (and include instance itself)
         neighbors_indices = np.argsort(c)[: n_neighbors + 1]
         # Return instance with its neighbors
-        neighbors = dataset[neighbors_indices]
+        neighbors = dataset.values[neighbors_indices]
         # Add distance column
         neighbors = np.append(neighbors, c[neighbors_indices].reshape(n_neighbors + 1, 1), axis=1)
         all_neighbors = np.append(all_neighbors, neighbors, axis=0)
@@ -177,7 +176,7 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
 
     """Filter 3 : neighbors below a distance threshold"""
     # Remove points if distance is bigger than radius
-    radius = _get_radius(dataset, n_neighbors)
+    radius = _get_radius(dataset.values, n_neighbors)
 
     for i, neighbors in enumerate(all_neighbors):
         # -2 indicates the distance column
@@ -185,7 +184,7 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
     return all_neighbors
 
 
-def shap_neighbors(instance, dataset, contributions):
+def shap_neighbors(instance, x_init, contributions):
     """For an instance and corresponding neighbors, calculate various
     metrics (described below) that are useful to evaluate local stability
 
@@ -193,7 +192,7 @@ def shap_neighbors(instance, dataset, contributions):
     ----------
     instance : 2D array
         Instance + neighbours with corresponding features
-    dataset : DataFrame
+    x_init : DataFrame
         Entire dataset used to identify neighbors
     contributions : DataFrame
         Calculated SHAP values for the dataset
@@ -209,15 +208,15 @@ def shap_neighbors(instance, dataset, contributions):
     """
     # Extract SHAP values for instance and neighbors
     # :-2 indicates that two columns are disregarded : distance to instance and model output
-    ind = pd.merge(dataset.reset_index(), pd.DataFrame(instance[:, :-2], columns=dataset.columns), how='inner')\
-        .set_index(dataset.index.name if dataset.index.name is not None else 'index').index
+    ind = pd.merge(x_init.reset_index(), pd.DataFrame(instance[:, :-2], columns=x_init.columns), how='inner')\
+        .set_index(x_init.index.name if x_init.index.name is not None else 'index').index
     shap_values = contributions.loc[ind]
     # For neighbors comparison, the sign of SHAP values is taken into account
     norm_shap_values = normalize(shap_values, axis=1, norm="l1")
     # But not for the average impact of the features across the dataset
     norm_abs_shap_values = normalize(np.abs(shap_values), axis=1, norm="l1")
     # Compute the average difference between the instance and its neighbors
-    average_diff = norm_shap_values.std(axis=0) / norm_abs_shap_values.mean(axis=0)
+    average_diff = np.divide(norm_shap_values.std(axis=0), norm_abs_shap_values.mean(axis=0))
     # Replace NaN with 0
     average_diff = np.nan_to_num(average_diff)
 

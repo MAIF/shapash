@@ -2334,8 +2334,8 @@ class SmartPlotter:
 
         Parameters
         ----------
-        selection: array
-            Indices of rows to be displayed on the stability plot
+        selection: list
+            Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
         distribution : bool, optional
             Add distribution of variability for each feature, by default False
 
@@ -2347,9 +2347,6 @@ class SmartPlotter:
             - if distribution == False : Mean amplitude of each feature vs. mean variability across neighbors
             - if distribution == True : Distribution of variability of each instance across neighbors
         """
-
-        if (self.explainer._case == "classification") and (len(self.explainer._classes) > 2):
-            raise AssertionError("Multi-class classification is not supported")
 
         # Sampling
         if selection is None:
@@ -2369,8 +2366,8 @@ class SmartPlotter:
         else:
             raise ValueError('Parameter selection must be a list')
 
-        dataset = self.explainer.x_init
-
+        dataset = self.explainer.x_pred
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
         ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Check if entry is a single instance or not
@@ -2381,10 +2378,10 @@ class SmartPlotter:
             # Reorder indices based on absolute values of the 1st row (i.e. the instance) in descending order
             inds = np.flip(np.abs(g[0, :]).argsort())
             g = g[:, inds]
-            columns = [dataset.columns[i] for i in inds]
+            columns = [column_names[i] for i in inds]
 
             # Plot
-            g_df = pd.DataFrame(g, columns=columns).T.rename(
+            g_df = pd.DataFrame(g, columns=column_names).T.rename(
                     columns={
                         **{0: "instance", 1: "closest neighbor"},
                         **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
@@ -2420,24 +2417,12 @@ class SmartPlotter:
             mean_variability = variability.mean(axis=0)
             mean_amplitude = amplitude.mean(axis=0)
 
-            # If set, only keep features with the highest mean amplitude
-            if max_features is not None:
-                keep = mean_amplitude.argsort()[::-1][:max_features]
-                keep = np.sort(keep)
-
-                variability = variability[:, keep]
-                mean_variability = mean_variability[keep]
-                amplitude = amplitude[:, keep]
-                mean_amplitude = mean_amplitude[keep]
-                dataset = dataset.iloc[:, keep]
-
             # Plot 1 : only show average variability on y-axis
             if not distribution:
                 fig = px.scatter(
                     x=mean_variability,
                     y=mean_amplitude,
-                    hover_name=dataset.columns,
-                    # text=self.columns,
+                    hover_name=column_names,
                     height=500,
                     width=900,
                 )
@@ -2473,12 +2458,24 @@ class SmartPlotter:
 
             # Plot 2 : Show distribution of variability
             else:
+                # If set, only keep features with the highest mean amplitude
+                if max_features is not None:
+                    keep = mean_amplitude.argsort()[::-1][:max_features]
+                    keep = np.sort(keep)
+
+                    variability = variability[:, keep]
+                    mean_variability = mean_variability[keep]
+                    amplitude = amplitude[:, keep]
+                    mean_amplitude = mean_amplitude[keep]
+                    dataset = dataset.iloc[:, keep]
+                    column_names = column_names[keep]
+
                 # Store distribution of variability in a DataFrame
-                var_df = pd.DataFrame(variability, columns=dataset.columns)
-                mean_amplitude_normalized = pd.Series(mean_amplitude, index=dataset.columns) / mean_amplitude.max()
+                var_df = pd.DataFrame(variability, columns=column_names)
+                mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
 
                 # And sort columns by mean amplitude
-                var_df = var_df[dataset.columns[mean_amplitude.argsort()].values]
+                var_df = var_df[column_names[mean_amplitude.argsort()]]
 
                 # Plot the distribution
                 if dataset.shape[1] < 500:
@@ -2522,7 +2519,7 @@ class SmartPlotter:
                     fig.add_trace(
                         go.Scatter(
                             x=[0.15] * len(mean_amplitude),
-                            y=dataset.columns,
+                            y=column_names,
                             mode="lines",
                             line=dict(color="green", dash="dot"),
                             name="<-- More stable",
@@ -2532,7 +2529,7 @@ class SmartPlotter:
                     fig.add_trace(
                         go.Scatter(
                             x=[0.3] * len(mean_amplitude),
-                            y=dataset.columns,
+                            y=column_names,
                             mode="lines",
                             line=dict(color="red", dash="dot"),
                             name="--> More unstable",
@@ -2543,7 +2540,7 @@ class SmartPlotter:
                         height=max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]),
                         width=900,
                         title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
-                        yaxis_title="Average SHAP value",
+                        yaxis_title="Importance (Average Shap Value)",
                         xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
                         xaxis=dict(range=[0, mean_variability.max() + 0.1], side="top"),
                         margin=dict(t=185)
