@@ -2331,6 +2331,8 @@ class SmartPlotter:
                 x=mean_variability,
                 y=mean_amplitude,
                 hover_name=column_names,
+                color=mean_amplitude,
+                color_continuous_scale=self.init_colorscale,
                 height=500,
                 width=900,
             )
@@ -2360,6 +2362,7 @@ class SmartPlotter:
             yaxis_title="Average SHAP value",
             xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
             xaxis=dict(range=[0, mean_variability.max() + 0.1]),
+            coloraxis_showscale=False,
         )
 
         fig.show()
@@ -2377,8 +2380,8 @@ class SmartPlotter:
         # And sort columns by mean amplitude
         var_df = var_df[column_names[mean_amplitude.argsort()]]
 
-        # Add colorscale
-        boxplot_colors = self.tuning_colorscale(pd.DataFrame([12, 17, 34, 35, 123, 454, 545, 769, 4535, 9999, 435345]))
+        # Add colorscale (à revoir)
+        # boxplot_colors = self.tuning_colorscale(pd.DataFrame([12, 17, 34, 35, 123, 454, 545, 769, 4535, 9999, 435345]))
 
         # Plot the distribution
         if dataset.shape[1] < 500:
@@ -2405,12 +2408,12 @@ class SmartPlotter:
                     color=[mean_amplitude.min(), mean_amplitude.max()],
                     colorscale=self.init_colorscale,
                     colorbar=dict(thickness=20,
-                                    lenmode="pixels",
-                                    len=300,
-                                    yanchor="top",
-                                    y=1,
-                                    ypad=60,
-                                    title="Average<br>SHAP value"),
+                                  lenmode="pixels",
+                                  len=300,
+                                  yanchor="top",
+                                  y=1,
+                                  ypad=60,
+                                  title="Average<br>SHAP value"),
                     showscale=True,
                 ),
                 hoverinfo="none",
@@ -2445,21 +2448,21 @@ class SmartPlotter:
                 title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
                 yaxis_title="Importance (Average Shap Value)",
                 xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
-                xaxis=dict(range=[-0.01, variability.max() + 0.1], side="top"),
+                xaxis=dict(range=[-0.05, variability.max() + 0.05], side="top"),
                 margin=dict(t=185)
                             )
             fig.show()
 
     def local_neighbors_plot(self, index, max_features=10):
         assert isinstance(index, int), "index must be an integer"
-        
+
         self.explainer.compute_features_stability([index])
 
         column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
         ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Compute explanations for instance and neighbors
-        g = self.explainer.features_stability["norm_shap"]
+        g = self.explainer.local_neighbors["norm_shap"]
 
         # Reorder indices based on absolute values of the 1st row (i.e. the instance) in descending order
         inds = np.flip(np.abs(g[0, :]).argsort())
@@ -2480,19 +2483,19 @@ class SmartPlotter:
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
                         y=g_df.iloc[::-1, ::-1].index.tolist(),
                         x=g_df.iloc[::-1, ::-1].iloc[:, i],
+                        marker_color=["red", "blue"],
                         orientation='h') for i in range(g_df.shape[1])])
 
         fig.update_layout(title={'text': "Explanation of local stability:\
                 How similar are explanations for closeby neighbours?"},
-                            xaxis_title="Normalized SHAP value",
-                            barmode="group",
-                            bargap=0.5,
-                            height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100
-                            else 10*g_df.shape[0]*g_df.shape[1],
-                            width=900,
-                            legend={"traceorder": "reversed"},
-                            xaxis={"side": "top"},
-                            margin=dict(t=185))
+                          xaxis_title="Normalized SHAP value",
+                          barmode="group",
+                          bargap=0.5,
+                          height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100 else 10*g_df.shape[0]*g_df.shape[1],
+                          width=900,
+                          legend={"traceorder": "reversed"},
+                          xaxis={"side": "top"},
+                          margin=dict(t=185))
 
         fig.show()
 
@@ -2526,7 +2529,7 @@ class SmartPlotter:
                 list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
             # By default, don't compute calculation if it has already be done
             if (self.explainer.features_stability is None) or force:
-                self.explainer.compute_features_stability(list_ind) 
+                self.explainer.compute_features_stability(list_ind)
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
@@ -2551,7 +2554,7 @@ class SmartPlotter:
         # Plot 2 : Show distribution of variability
         else:
             dataset = self.explainer.x_pred.copy()
-            
+
             # If set, only keep features with the highest mean amplitude
             if max_features is not None:
                 keep = mean_amplitude.argsort()[::-1][:max_features]

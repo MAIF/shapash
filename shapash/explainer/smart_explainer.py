@@ -91,10 +91,13 @@ class SmartExplainer:
         Dictionary that references the numbers of feature values ​​in the x_pred
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
+    local_neighbors: dict
+        Dictionary of values to be displayed on the local_neighbors plot.
+        The key is "norm_shap (normalized SHAP values of instance and neighbors)
     features_stability: dict
         Dictionary of arrays to be displayed on the stability plot.
-        The keys are "amplitude" (average SHAP values for selected instances),
-        "stability" (stability metric across neighborhood) and "norm_shap (normalized SHAP values of instance and neighbors)
+        The keys are "amplitude" (average SHAP values for selected instances) and
+        "stability" (stability metric across neighborhood)
     preprocessing : category_encoders, ColumnTransformer, list or dict
         The processing apply to the original data.
     postprocessing : dict
@@ -251,6 +254,7 @@ class SmartExplainer:
         self.features_groups = features_groups
         if features_groups:
             self._compile_features_groups(features_groups)
+        self.local_neighbors = None
         self.features_stability = None
 
     def _compile_features_groups(self, features_groups):
@@ -991,6 +995,7 @@ class SmartExplainer:
         if len(selection) == 1:
             # Compute explanations for instance and neighbors
             norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_init, self.contributions)
+            self.local_neighbors = {"norm_shap": norm_shap}
         else:
             numb_expl = len(selection)
             amplitude = np.zeros((numb_expl, self.x_pred.shape[1]))
@@ -998,8 +1003,7 @@ class SmartExplainer:
             # For each instance (+ neighbors), compute explanation
             for i in range(numb_expl):
                 (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions)
-
-        self.features_stability = {"norm_shap": norm_shap, "variability": variability, "amplitude": amplitude}
+            self.features_stability = {"variability": variability, "amplitude": amplitude}
 
     def init_app(self):
         """
@@ -1262,4 +1266,3 @@ class SmartExplainer:
 
         if rm_working_dir:
             shutil.rmtree(working_dir)
-
