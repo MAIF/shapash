@@ -32,7 +32,7 @@ extras['report'] = [
     'nbconvert==6.0.7',
     'papermill',
     'matplotlib',
-    'seaborn',
+    'seaborn<=0.11.1',
     'notebook',
     'Jinja2',
     'phik'
