@@ -143,11 +143,18 @@ class SmartPlotter:
             px.colors.qualitative.G10[9]
         ]
 
+        self.dict_stability_bar_colors = {
+            1: "rgba(255, 166, 17, 0.9)",
+            0: "rgba(117, 152, 189, 0.9)"
+        }
+
         self.round_digit = None
 
         self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
 
         self.interactions_discrete_colors = px.colors.qualitative.Antique
+
+        self.is_selection = False
 
     def tuning_colorscale(self, values):
         """
@@ -2326,53 +2333,55 @@ class SmartPlotter:
 
         return fig
 
-    def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names):
-        fig = px.scatter(
-                x=mean_variability,
-                y=mean_amplitude,
-                hover_name=column_names,
-                color=mean_amplitude,
-                color_continuous_scale=self.init_colorscale,
-                height=500,
-                width=900,
-            )
+    def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names, file_name, auto_open):
 
-        fig.add_trace(
-            go.Scatter(
-                x=[0.15] * len(mean_amplitude),
-                y=[0, mean_amplitude.max()],
-                mode="lines",
-                line=dict(color="green", dash="dot"),
-                name="<-- More stable",
-            )
+        xaxis_title = "Variability of the Normalized Local Contribution Values" \
+                             + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
+        yaxis_title = "Importance<span style='font-size: 12px;'><br />(Average contributions)</span>"
+        col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
+        hv_text = [f"<b>Feature: {col}</b><br />Importance: {y}<br />Variability: {x}"
+                   for col, x, y in zip(column_names, mean_variability, mean_amplitude)]
+        hovertemplate = "%{hovertext}"+ '<extra></extra>'
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=mean_variability,
+            y=mean_amplitude,
+            showlegend=False,
+            mode='markers',
+            marker={
+                'color': mean_amplitude,
+                'size': 10,
+                'opacity': 0.8,
+                'line': {'width': 0.8, 'color': 'white'},
+                'colorscale': col_scale
+            },
+            hovertext=hv_text,
+            hovertemplate=hovertemplate
         )
 
-        fig.add_trace(
-            go.Scatter(
-                x=[0.3] * len(mean_amplitude),
-                y=[0, mean_amplitude.max()],
-                mode="lines",
-                line=dict(color="red", dash="dot"),
-                name="--> More unstable",
-            )
-        )
+        fig.update_xaxes(range=[np.min(np.append(mean_variability, [0.15])) - 0.03,
+                                np.max(mean_variability) + 0.03])
 
-        fig.update_layout(
-            title="Explanation local stability: How similar are explanations for closeby neighbours?",
-            yaxis_title="Average SHAP value",
-            xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
-            xaxis=dict(range=[0, mean_variability.max() + 0.1]),
-            coloraxis_showscale=False,
-        )
-
-        fig.show()
+        self._update_stability_fig(fig=fig,
+                                   x_barlen=len(mean_amplitude),
+                                   y_bar=[0,mean_amplitude.max()],
+                                   xaxis_title=xaxis_title,
+                                   yaxis_title=yaxis_title,
+                                   file_name=file_name,
+                                   auto_open=auto_open)
+        return fig
 
     def plot_stability(
             self,
             variability,
+            plot_type,
             mean_amplitude,
             dataset,
-            column_names):
+            column_names,
+            file_name,
+            auto_open
+    ):
         # Store distribution of variability in a DataFrame
         var_df = pd.DataFrame(variability, columns=column_names)
         mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
@@ -2380,23 +2389,38 @@ class SmartPlotter:
         # And sort columns by mean amplitude
         var_df = var_df[column_names[mean_amplitude.argsort()]]
 
-        # Add colorscale (à revoir)
-        # boxplot_colors = self.tuning_colorscale(pd.DataFrame([12, 17, 34, 35, 123, 454, 545, 769, 4535, 9999, 435345]))
+        # Add colorscale
+        col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
+        color_list = mean_amplitude.tolist()
+        color_list.sort()
+        color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
+        height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
+
+        xaxis_title = "Normalized local SHAP value variability"
+        yaxis_title = ""
 
         # Plot the distribution
         if dataset.shape[1] < 500:
-
-            fig = go.Figure(
-                data=[
-                    go.Box(
-                        x=var_df[c],
-                        marker_color=get_color_hex("thermal", np.clip(mean_amplitude_normalized[c], 0.0001, 0.9999)),
-                        name=c,
-                        showlegend=False,
+            fig = go.Figure()
+            for i, c in enumerate(var_df):
+                if plot_type == "boxplot":
+                    fig.add_trace(
+                        go.Box(
+                            x=var_df[c],
+                            marker_color=color_list[i],
+                            name=c,
+                            showlegend=False,
+                        )
                     )
-                    for i, c in enumerate(var_df)
-                ],
-            )
+                elif plot_type == "violin":
+                    fig.add_trace(
+                        go.Violin(
+                            x=var_df[c],
+                            line_color=color_list[i],
+                            name=c,
+                            showlegend=False,
+                        )
+                    )
 
             # Dummy invisible plot to add the color scale
             colorbar_trace = go.Scatter(
@@ -2406,14 +2430,14 @@ class SmartPlotter:
                 marker=dict(
                     size=1,
                     color=[mean_amplitude.min(), mean_amplitude.max()],
-                    colorscale=self.init_colorscale,
+                    colorscale=col_scale,
                     colorbar=dict(thickness=20,
                                   lenmode="pixels",
                                   len=300,
                                   yanchor="top",
                                   y=1,
                                   ypad=60,
-                                  title="Average<br>SHAP value"),
+                                  title="Importance<br />(Average contributions)"),
                     showscale=True,
                 ),
                 hoverinfo="none",
@@ -2422,39 +2446,94 @@ class SmartPlotter:
 
             fig.add_trace(colorbar_trace)
 
-            fig.add_trace(
-                go.Scatter(
-                    x=[0.15] * len(mean_amplitude),
-                    y=column_names,
-                    mode="lines",
-                    line=dict(color="green", dash="dot"),
-                    name="<-- More stable",
-                )
-            )
-
-            fig.add_trace(
-                go.Scatter(
-                    x=[0.3] * len(mean_amplitude),
-                    y=column_names,
-                    mode="lines",
-                    line=dict(color="red", dash="dot"),
-                    name="--> More unstable",
-                )
-            )
-
             fig.update_layout(
-                height=max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]),
-                width=900,
-                title=dict(text="Explanation local stability: How similar are explanations for closeby neighbours?"),
-                yaxis_title="Importance (Average Shap Value)",
-                xaxis_title="Normalized local SHAP value variability<br>(stddev / mean)",
-                xaxis=dict(range=[-0.05, variability.max() + 0.05], side="top"),
-                margin=dict(t=185)
-                            )
-            fig.show()
+                height=height_value,
+            )
 
-    def local_neighbors_plot(self, index, max_features=10):
-        assert isinstance(index, int), "index must be an integer"
+            self._update_stability_fig(fig=fig,
+                                       x_barlen=len(mean_amplitude),
+                                       y_bar=column_names,
+                                       xaxis_title=xaxis_title,
+                                       yaxis_title=yaxis_title,
+                                       file_name=file_name,
+                                       auto_open=auto_open)
+
+            return fig
+
+    def _update_stability_fig(self, fig, x_barlen, y_bar, xaxis_title, yaxis_title, file_name, auto_open):
+        """
+        Function used for the plot_stability and plot_amplitude_vs_stability to update the layout of the plotly figure.
+
+        Parameters
+        ----------
+        fig: plotly.graph_objs._figure.Figure
+            Plotly figure to update
+        x_barlen: int
+            draw a line --> len of x array
+        y_bar: list
+            draw a line --> y values
+        xaxis_title: str
+            Title of xaxis
+        yaxis_title: str
+            Title of yaxis
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+        """
+        title = "Importance & Local Stability of explanation:"
+        title += f"<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+        dict_t = copy.deepcopy(self.dict_title)
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis['text'] = xaxis_title
+        dict_yaxis['text'] = yaxis_title
+        dict_stability_bar_colors = copy.deepcopy(self.dict_stability_bar_colors)
+        dict_t['text'] = title
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0.15] * x_barlen,
+                y=y_bar,
+                mode="lines",
+                hoverinfo="none",
+                line=dict(color=dict_stability_bar_colors[0], dash="dot"),
+                name="<-- More stable",
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0.3] * x_barlen,
+                y=y_bar,
+                mode="lines",
+                hoverinfo="none",
+                line=dict(color=dict_stability_bar_colors[1], dash="dot"),
+                name="--> More unstable",
+            )
+        )
+
+        fig.update_layout(
+            template='none',
+            title=dict_t,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            coloraxis_showscale=False,
+            hovermode='closest'
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
+        assert index in self.explainer.x_pred.index, "index must exist in pandas dataframe"
 
         self.explainer.compute_features_stability([index])
 
@@ -2483,7 +2562,7 @@ class SmartPlotter:
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
                         y=g_df.iloc[::-1, ::-1].index.tolist(),
                         x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                        marker_color=["red", "blue"],
+                        marker=dict(color=self.dict_compare_colors[:-1]),
                         orientation='h') for i in range(g_df.shape[1])])
 
         fig.update_layout(title={'text': "Explanation of local stability:\
@@ -2497,9 +2576,13 @@ class SmartPlotter:
                           xaxis={"side": "top"},
                           margin=dict(t=185))
 
-        fig.show()
+        if file_name is not None:
+            plot(fig, filename=file_name, auto_open=auto_open)
 
-    def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution=False):
+        return fig
+
+    def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution='none',
+                       file_name=None, auto_open=False):
         """Plot local stability graphs for either one or multiple instances.
 
           - Look at `shap_neighbors` method for more info about the metrics used
@@ -2509,8 +2592,13 @@ class SmartPlotter:
         ----------
         selection: list
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
-        distribution : bool, optional
-            Add distribution of variability for each feature, by default False
+        distribution : str, optional
+            Add distribution of variability for each feature, by default 'none'.
+            the other values are 'boxplot' or 'violin' that specify the type of plot
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
 
         Returns
         -------
@@ -2528,14 +2616,18 @@ class SmartPlotter:
             else:
                 list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
             # By default, don't compute calculation if it has already be done
-            if (self.explainer.features_stability is None) or force:
+            if (self.explainer.features_stability is None) or self.is_selection or force:
                 self.explainer.compute_features_stability(list_ind)
+            self.is_selection = False
         elif isinstance(selection, list):
+            if len(selection) == 1:
+                raise ValueError('Selection must include multiple points')
             if len(selection) <= max_points:
                 list_ind = selection
             else:
                 list_ind = random.sample(selection, max_points)
             self.explainer.compute_features_stability(list_ind)
+            self.is_selection = True
         else:
             raise ValueError('Parameter selection must be a list')
 
@@ -2548,8 +2640,8 @@ class SmartPlotter:
         mean_amplitude = amplitude.mean(axis=0)
 
         # Plot 1 : only show average variability on y-axis
-        if not distribution:
-            self.plot_amplitude_vs_stability(mean_variability, mean_amplitude, column_names)
+        if distribution not in ['boxplot','violin']:
+            fig = self.plot_amplitude_vs_stability(mean_variability, mean_amplitude, column_names, file_name, auto_open)
 
         # Plot 2 : Show distribution of variability
         else:
@@ -2566,4 +2658,7 @@ class SmartPlotter:
                 dataset = dataset.iloc[:, keep]
                 column_names = column_names[keep]
 
-            self.plot_stability(variability, mean_amplitude, dataset, column_names)
+            fig = self.plot_stability(variability, distribution, mean_amplitude,
+                                      dataset, column_names, file_name, auto_open)
+
+        return fig

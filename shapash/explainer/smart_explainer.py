@@ -965,6 +965,18 @@ class SmartExplainer:
         if self.features_imp is None or force:
             self.features_imp = self.state.compute_features_import(self.contributions)
 
+    def store_features_stability(self, selection):
+        """Store values for stability plot in a new attribute. Used when a sampling
+        of the data is done to avoid re compute the calculations if already done once
+
+        Parameters
+        ----------
+        selection : list
+            Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
+        """
+
+        self.features_stability = self.compute_features_stability(selection)
+
     def compute_features_stability(self, selection):
         """
         Compute a relative features importance, sum of absolute values
@@ -973,7 +985,7 @@ class SmartExplainer:
 
         Parameters
         ----------
-        selection: array
+        selection: list
             Indices of rows to be displayed on the stability plot
 
         Returns
@@ -986,10 +998,6 @@ class SmartExplainer:
             raise AssertionError("Multi-class classification is not supported")
 
         all_neighbors = find_neighbors(selection, self.x_init, self.model, self._case)
-
-        norm_shap = None
-        variability = None
-        amplitude = None
 
         # Check if entry is a single instance or not
         if len(selection) == 1:
