@@ -2334,6 +2334,25 @@ class SmartPlotter:
         return fig
 
     def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names, file_name, auto_open):
+        """Intermediate function used to display the stability plot when plot_type is "none"
+
+        Parameters
+        ----------
+        mean_variability : array
+            Local stability expressed as a mean value for all instances (one value per feature). Displayed on the X-axis on the plot.
+        mean_amplitude : array
+            Average of the normalized SHAP values in the neighborhood. Displayed on the Y-axis on the plot.
+        column_names : list
+            Columns names that are displayed on the plot
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved
+        auto_open: bool
+            open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+        """        
 
         xaxis_title = "Variability of the Normalized Local Contribution Values" \
                              + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
@@ -2382,6 +2401,29 @@ class SmartPlotter:
             file_name,
             auto_open
     ):
+        """Intermediate function used to display the stability plot when plot_type is "boxplot" or "violin"
+
+        Parameters
+        ----------
+        variability : array
+            Local stability expressed as a distribution across all instances (one distribution per feature). Displayed on the X-axis on the plot
+        plot_type : string
+            Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
+        mean_amplitude : array
+            Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
+        dataset : DataFrame
+            x_pred dataset
+        column_names : list
+            Columns names that are displayed on the plot
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved
+        auto_open: bool
+            open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+        """    
         # Store distribution of variability in a DataFrame
         var_df = pd.DataFrame(variability, columns=column_names)
         mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
@@ -2533,6 +2575,44 @@ class SmartPlotter:
             plot(fig, filename=file_name, auto_open=auto_open)
 
     def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
+        """This plot analyzes the local neighborhood of a selected instance. It compares the SHAP values of the instance itself with its neighbors. Those neighbors are selected as follows :
+
+        - We select top N neighbors for each instance (using L1 norm + variance normalization)
+        - We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        - We discard additional neighbors if their distance to the instance is bigger than a predefined value (to remove outliers)
+
+        In this neighborhood, we would expect instances to have similar SHAP values. If not, one might need to be cautious when interpreting SHAP values.
+
+        The **difference** between outputs is measured with the following distance definition : 
+
+        - For regression : 
+
+        .. math::
+        
+            distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+        - For classification : 
+
+        .. math::
+        
+            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+        Parameters
+        ----------
+        index : int
+            Contains index row of the input DataFrame that we use to display SHAP values in the neighborhood
+        max_features : int, optional
+            Maximum number of displayed features, by default 10
+        file_name: string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved, by default None
+        auto_open: bool, optional
+            open automatically the plot, by default False
+
+        Returns
+        -------
+        fig
+            The figure that will be displayed
+        """        
         assert index in self.explainer.x_pred.index, "index must exist in pandas dataframe"
 
         self.explainer.compute_features_stability([index])
@@ -2581,12 +2661,33 @@ class SmartPlotter:
 
         return fig
 
-    def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution='none',
-                       file_name=None, auto_open=False):
-        """Plot local stability graphs for either one or multiple instances.
+    def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution='none', file_name=None, auto_open=False):
+        """The idea behind local stability is the following : if instances are very similar, then one would expect the explanations to be similar as well.
+        Locally stable methods can increase confidence and are an important factor to determine if we can trust an explanation.
 
-          - Look at `shap_neighbors` method for more info about the metrics used
-          - Look at `find_neighbors` method for definition of neighbors
+        The generated graphs can take multiple forms, but they all analyze the same two aspects : for each feature we look at Amplitude vs. Variability; in order terms, how important the feature is on average vs. how the feature impact changes in the instance neighborhood.
+
+        - The average importance of the feature is the average SHAP value of the feature acros all considered instances
+
+        - The neighborhood is defined as follows :
+
+        - We select top N neighbors for each instance (using L1 norm + variance normalization)
+        - We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        - We discard additional neighbors if their distance to the instance is bigger than a predefined value (to remove outliers)
+
+        The **difference** between outputs is measured with the following distance definition : 
+
+        - For regression : 
+
+        .. math::
+        
+            distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+        - For classification : 
+
+        .. math::
+        
+            distance = |output_{allFeatures} - output_{currentFeatures}|
 
         Parameters
         ----------
@@ -2622,11 +2723,9 @@ class SmartPlotter:
         elif isinstance(selection, list):
             if len(selection) == 1:
                 raise ValueError('Selection must include multiple points')
-            if len(selection) <= max_points:
-                list_ind = selection
-            else:
-                list_ind = random.sample(selection, max_points)
-            self.explainer.compute_features_stability(list_ind)
+            if len(selection) > max_points:
+                print(f"Size of selection is bigger than max_points (default: {max_points}). Computation time might be affected")
+            self.explainer.compute_features_stability(selection)
             self.is_selection = True
         else:
             raise ValueError('Parameter selection must be a list')
@@ -2645,7 +2744,6 @@ class SmartPlotter:
 
         # Plot 2 : Show distribution of variability
         else:
-            dataset = self.explainer.x_pred.copy()
 
             # If set, only keep features with the highest mean amplitude
             if max_features is not None:
@@ -2653,9 +2751,8 @@ class SmartPlotter:
                 keep = np.sort(keep)
 
                 variability = variability[:, keep]
-                mean_variability = mean_variability[keep]
                 mean_amplitude = mean_amplitude[keep]
-                dataset = dataset.iloc[:, keep]
+                dataset = self.explainer.x_pred.iloc[:, keep]
                 column_names = column_names[keep]
 
             fig = self.plot_stability(variability, distribution, mean_amplitude,
