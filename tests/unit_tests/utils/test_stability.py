@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from shapash.utils.stability import _df_to_array, _compute_distance,\
     _compute_similarities, _get_radius, find_neighbors, shap_neighbors,\
     get_color_rgb, get_color_hex
+from shapash.explainer.smart_explainer import SmartExplainer
 
 
 class TestStability(unittest.TestCase):
@@ -18,7 +19,7 @@ class TestStability(unittest.TestCase):
     def test_compute_distance(self):
         x1 = np.array([1, 0, 1])
         x2 = np.array([0, 0, 1])
-        mean_vector = 2
+        mean_vector = np.array([2, 1, 3])
         epsilon = 0
         expected = 0.5
         t = _compute_distance(x1, x2, mean_vector, epsilon)
@@ -59,13 +60,3 @@ class TestStability(unittest.TestCase):
         assert t[0].shape == instance[:, :-2].shape
         assert t[1].shape == (len(df.columns),)
         assert t[2].shape == (len(df.columns),)
-
-    def test_get_color_rgb(self):
-        t = get_color_rgb("thermal", 0.1)
-        assert type(t) == str
-        assert "rgb" in t
-
-    def test_get_color_hex(self):
-        expected = '#11306a'
-        t = get_color_hex("thermal", 0.1)
-        assert t == expected
