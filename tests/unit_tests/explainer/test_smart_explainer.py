@@ -1440,8 +1440,7 @@ class TestSmartExplainer(unittest.TestCase):
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
-                    model=model,
-                    y_pred=y
+                    model=model
                     )
 
         xpl.compute_features_stability(selection)
@@ -1459,8 +1458,7 @@ class TestSmartExplainer(unittest.TestCase):
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
-                    model=model,
-                    y_pred=y
+                    model=model
                     )
 
         xpl.compute_features_stability(selection)

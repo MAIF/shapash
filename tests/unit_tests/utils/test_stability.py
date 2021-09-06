@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from shapash.utils.stability import _df_to_array, _compute_distance,\
-    _compute_similarities, _get_radius, find_neighbors, shap_neighbors,\
-    get_color_rgb, get_color_hex
+    _compute_similarities, _get_radius, find_neighbors, shap_neighbors
 from shapash.explainer.smart_explainer import SmartExplainer
 
 
