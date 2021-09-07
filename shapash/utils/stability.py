@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-import plotly.colors
-import re
 from sklearn.preprocessing import normalize
 
 
@@ -216,8 +214,9 @@ def shap_neighbors(instance, x_init, contributions):
     # But not for the average impact of the features across the dataset
     norm_abs_shap_values = normalize(np.abs(shap_values), axis=1, norm="l1")
     # Compute the average difference between the instance and its neighbors
-    average_diff = np.divide(norm_shap_values.std(axis=0), norm_abs_shap_values.mean(axis=0))
-    # Replace NaN with 0
-    average_diff = np.nan_to_num(average_diff)
+    # And replace NaN with 0
+    average_diff = np.divide(norm_shap_values.std(axis=0), norm_abs_shap_values.mean(axis=0),
+                             out=np.zeros(norm_abs_shap_values.shape[1]),
+                             where=norm_abs_shap_values.mean(axis=0) != 0)
 
     return norm_shap_values, average_diff, norm_abs_shap_values[0, :]

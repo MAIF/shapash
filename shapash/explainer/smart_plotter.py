@@ -2591,8 +2591,12 @@ class SmartPlotter:
 
     def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
         """
-        This plot analyzes the local neighborhood of a selected instance.
-        It compares the SHAP values of the instance itself with its neighbors.
+        The Local_neighbors_plot has the main objective of increasing confidence
+        in interpreting the contribution values of a selected instance.
+        This plot analyzes the local neighborhood of the instance,
+        and compares its SHAP values with those of its neighbors.
+        Intuitively, for similar instances, we would expect similar contributions.
+        
         Those neighbors are selected as follows :
 
         - We select top N neighbors for each instance (using L1 norm + variance normalization)
@@ -2703,9 +2707,12 @@ class SmartPlotter:
                        file_name=None,
                        auto_open=False):
         """
+        The Stability_plot has the main objective of increasing confidence in contribution values,
+        and helping determine if we can trust an explanation.
         The idea behind local stability is the following : if instances are very similar,
         then one would expect the explanations to be similar as well.
-        Locally stable methods can increase confidence and are an important factor to determine if we can trust an explanation.
+        Therefore, locally stable explanations are an important factor that help
+        build trust around a particular explanation method.
 
         The generated graphs can take multiple forms, but they all analyze
         the same two aspects: for each feature we look at Amplitude vs. Variability;
