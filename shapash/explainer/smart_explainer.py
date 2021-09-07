@@ -965,23 +965,14 @@ class SmartExplainer:
         if self.features_imp is None or force:
             self.features_imp = self.state.compute_features_import(self.contributions)
 
-    def store_features_stability(self, selection):
-        """Store values for stability plot in a new attribute. Used when a sampling
-        of the data is done to avoid re compute the calculations if already done once
-
-        Parameters
-        ----------
-        selection : list
-            Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
-        """
-
-        self.features_stability = self.compute_features_stability(selection)
-
     def compute_features_stability(self, selection):
         """
-        Compute a relative features importance, sum of absolute values
-        of the contributions for each.
-        Features importance compute in base 100
+        For a selection of instances, compute features stability metrics used in
+        methods `local_neighbors_plot` and `local_stability_plot`.
+        - If selection is a single instance, the method returns the (normalized) SHAP values
+        of instance and corresponding neighbors.
+        - If selection represents multiple instances, the method returns the average (normalized) SHAP values
+        of instances and neighbors (=amplitude), as well as the variability of those values in the neighborhood (=variability)
 
         Parameters
         ----------

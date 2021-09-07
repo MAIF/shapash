@@ -17,7 +17,6 @@ from shapash.manipulation.summarize import compute_features_import, project_feat
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
     compute_top_correlations_features
-from shapash.utils.stability import get_color_hex
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -47,6 +46,17 @@ class SmartPlotter:
             'yanchor': "middle",
             'x': 0.5,
             'y': 0.9,
+            'font': {
+                'size': 24,
+                'family': "Arial",
+                'color': "rgb(50, 50, 50)"
+            }
+        }
+        self.dict_title_stability = {
+            'xanchor': "center",
+            'x': 0.5,
+            "yanchor": "bottom",
+            "pad": dict(b=50),
             'font': {
                 'size': 24,
                 'family': "Arial",
@@ -2334,12 +2344,14 @@ class SmartPlotter:
         return fig
 
     def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names, file_name, auto_open):
-        """Intermediate function used to display the stability plot when plot_type is "none"
+        """
+        Intermediate function used to display the stability plot when plot_type is "none"
 
         Parameters
         ----------
         mean_variability : array
-            Local stability expressed as a mean value for all instances (one value per feature). Displayed on the X-axis on the plot.
+            Local stability expressed as a mean value for all instances (one value per feature).
+            Displayed on the X-axis on the plot.
         mean_amplitude : array
             Average of the normalized SHAP values in the neighborhood. Displayed on the Y-axis on the plot.
         column_names : list
@@ -2352,15 +2364,15 @@ class SmartPlotter:
         Returns
         -------
         go.Figure
-        """        
+        """
 
         xaxis_title = "Variability of the Normalized Local Contribution Values" \
-                             + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
+                      + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
         yaxis_title = "Importance<span style='font-size: 12px;'><br />(Average contributions)</span>"
         col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
         hv_text = [f"<b>Feature: {col}</b><br />Importance: {y}<br />Variability: {x}"
                    for col, x, y in zip(column_names, mean_variability, mean_amplitude)]
-        hovertemplate = "%{hovertext}"+ '<extra></extra>'
+        hovertemplate = "%{hovertext}" + '<extra></extra>'
 
         fig = go.Figure()
         fig.add_scatter(
@@ -2384,14 +2396,14 @@ class SmartPlotter:
 
         self._update_stability_fig(fig=fig,
                                    x_barlen=len(mean_amplitude),
-                                   y_bar=[0,mean_amplitude.max()],
+                                   y_bar=[0, mean_amplitude.max()],
                                    xaxis_title=xaxis_title,
                                    yaxis_title=yaxis_title,
                                    file_name=file_name,
                                    auto_open=auto_open)
         return fig
 
-    def plot_stability(
+    def plot_stability_distribution(
             self,
             variability,
             plot_type,
@@ -2401,12 +2413,14 @@ class SmartPlotter:
             file_name,
             auto_open
     ):
-        """Intermediate function used to display the stability plot when plot_type is "boxplot" or "violin"
+        """
+        Intermediate function used to display the stability plot when plot_type is "boxplot" or "violin"
 
         Parameters
         ----------
         variability : array
-            Local stability expressed as a distribution across all instances (one distribution per feature). Displayed on the X-axis on the plot
+            Local stability expressed as a distribution across all instances (one distribution per feature).
+            Displayed on the X-axis on the plot
         plot_type : string
             Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
         mean_amplitude : array
@@ -2423,7 +2437,7 @@ class SmartPlotter:
         Returns
         -------
         go.Figure
-        """    
+        """
         # Store distribution of variability in a DataFrame
         var_df = pd.DataFrame(variability, columns=column_names)
         mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
@@ -2433,9 +2447,10 @@ class SmartPlotter:
 
         # Add colorscale
         col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
-        color_list = mean_amplitude.tolist()
+        color_list = mean_amplitude_normalized.tolist()
         color_list.sort()
         color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
+        # height_value = 10 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]
         height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
 
         xaxis_title = "Normalized local SHAP value variability"
@@ -2504,7 +2519,8 @@ class SmartPlotter:
 
     def _update_stability_fig(self, fig, x_barlen, y_bar, xaxis_title, yaxis_title, file_name, auto_open):
         """
-        Function used for the plot_stability and plot_amplitude_vs_stability to update the layout of the plotly figure.
+        Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
+        to update the layout of the plotly figure.
 
         Parameters
         ----------
@@ -2528,8 +2544,8 @@ class SmartPlotter:
         go.Figure
         """
         title = "Importance & Local Stability of explanation:"
-        title += f"<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = copy.deepcopy(self.dict_title)
+        title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+        dict_t = copy.deepcopy(self.dict_title_stability)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
         dict_yaxis = copy.deepcopy(self.dict_yaxis)
         dict_xaxis['text'] = xaxis_title
@@ -2575,26 +2591,31 @@ class SmartPlotter:
             plot(fig, filename=file_name, auto_open=auto_open)
 
     def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
-        """This plot analyzes the local neighborhood of a selected instance. It compares the SHAP values of the instance itself with its neighbors. Those neighbors are selected as follows :
+        """
+        This plot analyzes the local neighborhood of a selected instance.
+        It compares the SHAP values of the instance itself with its neighbors.
+        Those neighbors are selected as follows :
 
         - We select top N neighbors for each instance (using L1 norm + variance normalization)
         - We discard neighbors whose model output is too **different** (see equations below) from the instance output
-        - We discard additional neighbors if their distance to the instance is bigger than a predefined value (to remove outliers)
+        - We discard additional neighbors if their distance to the instance
+        is bigger than a predefined value (to remove outliers)
 
-        In this neighborhood, we would expect instances to have similar SHAP values. If not, one might need to be cautious when interpreting SHAP values.
+        In this neighborhood, we would expect instances to have similar SHAP values.
+        If not, one might need to be cautious when interpreting SHAP values.
 
-        The **difference** between outputs is measured with the following distance definition : 
+        The **difference** between outputs is measured with the following distance definition :
 
-        - For regression : 
+        - For regression :
 
         .. math::
-        
+
             distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification : 
+        - For classification :
 
         .. math::
-        
+
             distance = |output_{allFeatures} - output_{currentFeatures}|
 
         Parameters
@@ -2612,7 +2633,7 @@ class SmartPlotter:
         -------
         fig
             The figure that will be displayed
-        """        
+        """
         assert index in self.explainer.x_pred.index, "index must exist in pandas dataframe"
 
         self.explainer.compute_features_stability([index])
@@ -2642,30 +2663,55 @@ class SmartPlotter:
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
                         y=g_df.iloc[::-1, ::-1].index.tolist(),
                         x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                        marker=dict(color=self.dict_compare_colors[:-1]),
-                        orientation='h') for i in range(g_df.shape[1])])
+                        marker_color=self.dict_stability_bar_colors[1] if i == g_df.shape[1]-1
+                        else self.dict_stability_bar_colors[0],
+                        orientation='h',
+                        opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)) for i in range(g_df.shape[1])])
 
-        fig.update_layout(title={'text': "Explanation of local stability:\
-                How similar are explanations for closeby neighbours?"},
-                          xaxis_title="Normalized SHAP value",
+        title = "Comparing explanations in a neighborhood:"
+        title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+        dict_t = copy.deepcopy(self.dict_title_stability)
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis['text'] = "Normalized SHAP value"
+        dict_yaxis['text'] = ""
+        dict_t['text'] = title
+
+        fig.update_layout(template="none",
+                          title=dict_t,
+                          xaxis_title=dict_xaxis,
+                          yaxis_title=dict_yaxis,
+                          hovermode='closest',
                           barmode="group",
-                          bargap=0.5,
-                          height=30*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100 else 10*g_df.shape[0]*g_df.shape[1],
-                          width=900,
+                          height=10*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100 else 10*g_df.shape[0]*g_df.shape[1],
                           legend={"traceorder": "reversed"},
-                          xaxis={"side": "top"},
-                          margin=dict(t=185))
+                          xaxis={"side": "bottom"})
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
 
         if file_name is not None:
             plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig
 
-    def stability_plot(self, selection=None, max_points=500, force=False, max_features=10, distribution='none', file_name=None, auto_open=False):
-        """The idea behind local stability is the following : if instances are very similar, then one would expect the explanations to be similar as well.
+    def stability_plot(self,
+                       selection=None,
+                       max_points=500,
+                       force=False,
+                       max_features=10,
+                       distribution='none',
+                       file_name=None,
+                       auto_open=False):
+        """
+        The idea behind local stability is the following : if instances are very similar,
+        then one would expect the explanations to be similar as well.
         Locally stable methods can increase confidence and are an important factor to determine if we can trust an explanation.
 
-        The generated graphs can take multiple forms, but they all analyze the same two aspects : for each feature we look at Amplitude vs. Variability; in order terms, how important the feature is on average vs. how the feature impact changes in the instance neighborhood.
+        The generated graphs can take multiple forms, but they all analyze
+        the same two aspects: for each feature we look at Amplitude vs. Variability;
+        in order terms, how important the feature is on average vs. how the feature impact
+        changes in the instance neighborhood.
 
         - The average importance of the feature is the average SHAP value of the feature acros all considered instances
 
@@ -2673,20 +2719,21 @@ class SmartPlotter:
 
         - We select top N neighbors for each instance (using L1 norm + variance normalization)
         - We discard neighbors whose model output is too **different** (see equations below) from the instance output
-        - We discard additional neighbors if their distance to the instance is bigger than a predefined value (to remove outliers)
+        - We discard additional neighbors if their distance to the instance
+        is bigger than a predefined value (to remove outliers)
 
-        The **difference** between outputs is measured with the following distance definition : 
+        The **difference** between outputs is measured with the following distance definition :
 
-        - For regression : 
+        - For regression :
 
         .. math::
-        
+
             distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification : 
+        - For classification :
 
         .. math::
-        
+
             distance = |output_{allFeatures} - output_{currentFeatures}|
 
         Parameters
@@ -2724,7 +2771,8 @@ class SmartPlotter:
             if len(selection) == 1:
                 raise ValueError('Selection must include multiple points')
             if len(selection) > max_points:
-                print(f"Size of selection is bigger than max_points (default: {max_points}). Computation time might be affected")
+                print(f"Size of selection is bigger than max_points (default: {max_points}).\
+                      Computation time might be affected")
             self.explainer.compute_features_stability(selection)
             self.is_selection = True
         else:
@@ -2739,7 +2787,7 @@ class SmartPlotter:
         mean_amplitude = amplitude.mean(axis=0)
 
         # Plot 1 : only show average variability on y-axis
-        if distribution not in ['boxplot','violin']:
+        if distribution not in ['boxplot', 'violin']:
             fig = self.plot_amplitude_vs_stability(mean_variability, mean_amplitude, column_names, file_name, auto_open)
 
         # Plot 2 : Show distribution of variability
@@ -2755,7 +2803,7 @@ class SmartPlotter:
                 dataset = self.explainer.x_pred.iloc[:, keep]
                 column_names = column_names[keep]
 
-            fig = self.plot_stability(variability, distribution, mean_amplitude,
-                                      dataset, column_names, file_name, auto_open)
+            fig = self.plot_stability_distribution(variability, distribution, mean_amplitude, dataset,
+                                                   column_names, file_name, auto_open)
 
         return fig
