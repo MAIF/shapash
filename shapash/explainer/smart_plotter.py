@@ -2591,20 +2591,20 @@ class SmartPlotter:
 
     def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
         """
-        The Local_neighbors_plot has the main objective of increasing confidence
+        The Local_neighbors_plot has the main objective of increasing confidence \
         in interpreting the contribution values of a selected instance.
-        This plot analyzes the local neighborhood of the instance,
+        This plot analyzes the local neighborhood of the instance, \
         and compares its SHAP values with those of its neighbors.
         Intuitively, for similar instances, we would expect similar contributions.
-        
+
         Those neighbors are selected as follows :
 
-        - We select top N neighbors for each instance (using L1 norm + variance normalization)
-        - We discard neighbors whose model output is too **different** (see equations below) from the instance output
-        - We discard additional neighbors if their distance to the instance
+        * We select top N neighbors for each instance (using L1 norm + variance normalization)
+        * We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        * We discard additional neighbors if their distance to the instance \
         is bigger than a predefined value (to remove outliers)
 
-        In this neighborhood, we would expect instances to have similar SHAP values.
+        In this neighborhood, we would expect instances to have similar SHAP values. \
         If not, one might need to be cautious when interpreting SHAP values.
 
         The **difference** between outputs is measured with the following distance definition :
@@ -2613,7 +2613,7 @@ class SmartPlotter:
 
         .. math::
 
-            distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
         - For classification :
 
@@ -2669,9 +2669,10 @@ class SmartPlotter:
                         marker_color=self.dict_stability_bar_colors[1] if i == g_df.shape[1]-1
                         else self.dict_stability_bar_colors[0],
                         orientation='h',
-                        opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)) for i in range(g_df.shape[1])])
+                        opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
+                        if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
 
-        title = "Comparing explanations in a neighborhood:"
+        title = "Comparing local explanations in a neighborhood:"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
         dict_t = copy.deepcopy(self.dict_title_stability)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
@@ -2686,7 +2687,7 @@ class SmartPlotter:
                           yaxis_title=dict_yaxis,
                           hovermode='closest',
                           barmode="group",
-                          height=10*g_df.shape[0]*g_df.shape[1],
+                          height=max(300, 10*g_df.shape[0]*g_df.shape[1]),
                           legend={"traceorder": "reversed"},
                           xaxis={"side": "bottom"})
 
@@ -2707,25 +2708,25 @@ class SmartPlotter:
                        file_name=None,
                        auto_open=False):
         """
-        The Stability_plot has the main objective of increasing confidence in contribution values,
+        The Stability_plot has the main objective of increasing confidence in contribution values, \
         and helping determine if we can trust an explanation.
-        The idea behind local stability is the following : if instances are very similar,
+        The idea behind local stability is the following : if instances are very similar, \
         then one would expect the explanations to be similar as well.
-        Therefore, locally stable explanations are an important factor that help
+        Therefore, locally stable explanations are an important factor that help \
         build trust around a particular explanation method.
 
-        The generated graphs can take multiple forms, but they all analyze
-        the same two aspects: for each feature we look at Amplitude vs. Variability;
-        in order terms, how important the feature is on average vs. how the feature impact
+        The generated graphs can take multiple forms, but they all analyze \
+        the same two aspects: for each feature we look at Amplitude vs. Variability; \
+        in order terms, how important the feature is on average vs. how the feature impact \
         changes in the instance neighborhood.
 
-        - The average importance of the feature is the average SHAP value of the feature acros all considered instances
+        The average importance of the feature is the average SHAP value of the feature acros all considered instances
 
-        - The neighborhood is defined as follows :
+        The neighborhood is defined as follows :
 
-        - We select top N neighbors for each instance (using L1 norm + variance normalization)
-        - We discard neighbors whose model output is too **different** (see equations below) from the instance output
-        - We discard additional neighbors if their distance to the instance
+        * We select top N neighbors for each instance (using L1 norm + variance normalization)
+        * We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        * We discard additional neighbors if their distance to the instance \
         is bigger than a predefined value (to remove outliers)
 
         The **difference** between outputs is measured with the following distance definition :
@@ -2734,7 +2735,7 @@ class SmartPlotter:
 
         .. math::
 
-            distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
         - For classification :
 
@@ -2757,10 +2758,10 @@ class SmartPlotter:
         Returns
         -------
         If single instance :
-            - plot -- Normalized SHAP values of instance and neighbors
+            * plot -- Normalized SHAP values of instance and neighbors
         If multiple instances :
-            - if distribution == False : Mean amplitude of each feature vs. mean variability across neighbors
-            - if distribution == True : Distribution of variability of each instance across neighbors
+            * if distribution == False : Mean amplitude of each feature vs. mean variability across neighbors
+            * if distribution == True : Distribution of variability of each instance across neighbors
         """
 
         # Sampling
