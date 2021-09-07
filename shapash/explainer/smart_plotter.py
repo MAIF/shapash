@@ -2672,7 +2672,7 @@ class SmartPlotter:
                         opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
                         if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
 
-        title = "Comparing local explanations in a neighborhood:"
+        title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
         dict_t = copy.deepcopy(self.dict_title_stability)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
