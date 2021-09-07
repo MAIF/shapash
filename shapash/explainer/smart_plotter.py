@@ -2450,7 +2450,6 @@ class SmartPlotter:
         color_list = mean_amplitude_normalized.tolist()
         color_list.sort()
         color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
-        # height_value = 10 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1]
         height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
 
         xaxis_title = "Normalized local SHAP value variability"
@@ -2683,7 +2682,7 @@ class SmartPlotter:
                           yaxis_title=dict_yaxis,
                           hovermode='closest',
                           barmode="group",
-                          height=10*g_df.shape[0]*g_df.shape[1] if g_df.shape[0] < 100 else 10*g_df.shape[0]*g_df.shape[1],
+                          height=10*g_df.shape[0]*g_df.shape[1],
                           legend={"traceorder": "reversed"},
                           xaxis={"side": "bottom"})
 
