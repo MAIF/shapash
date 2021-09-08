@@ -2452,7 +2452,7 @@ class SmartPlotter:
         color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
         height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
 
-        xaxis_title = "Normalized local SHAP value variability"
+        xaxis_title = "Normalized local contribution value variability"
         yaxis_title = ""
 
         # Plot the distribution
@@ -2594,7 +2594,7 @@ class SmartPlotter:
         The Local_neighbors_plot has the main objective of increasing confidence \
         in interpreting the contribution values of a selected instance.
         This plot analyzes the local neighborhood of the instance, \
-        and compares its SHAP values with those of its neighbors.
+        and compares its contribution values with those of its neighbors.
         Intuitively, for similar instances, we would expect similar contributions.
 
         Those neighbors are selected as follows :
@@ -2624,7 +2624,7 @@ class SmartPlotter:
         Parameters
         ----------
         index : int
-            Contains index row of the input DataFrame that we use to display SHAP values in the neighborhood
+            Contains index row of the input DataFrame that we use to display contribution values in the neighborhood
         max_features : int, optional
             Maximum number of displayed features, by default 10
         file_name: string, optional
@@ -2677,7 +2677,7 @@ class SmartPlotter:
         dict_t = copy.deepcopy(self.dict_title_stability)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
         dict_yaxis = copy.deepcopy(self.dict_yaxis)
-        dict_xaxis['text'] = "Normalized SHAP value"
+        dict_xaxis['text'] = "Normalized contribution values"
         dict_yaxis['text'] = ""
         dict_t['text'] = title
 
@@ -2749,7 +2749,7 @@ class SmartPlotter:
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
         distribution : str, optional
             Add distribution of variability for each feature, by default 'none'.
-            the other values are 'boxplot' or 'violin' that specify the type of plot
+            The other values are 'boxplot' or 'violin' that specify the type of plot
         file_name: string (optional)
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
@@ -2758,10 +2758,13 @@ class SmartPlotter:
         Returns
         -------
         If single instance :
-            * plot -- Normalized SHAP values of instance and neighbors
+            * plot -- Normalized contribution values of instance and neighbors
         If multiple instances :
-            * if distribution == False : Mean amplitude of each feature vs. mean variability across neighbors
-            * if distribution == True : Distribution of variability of each instance across neighbors
+            * if distribution == "none" : Mean amplitude of each feature contribution vs. mean variability across neighbors
+            * if distribution == "boxplot" : Distribution of contributions of each feature in instances neighborhoods.
+            Graph type is box plot
+            * if distribution == "violin" : Distribution of contributions of each feature in instances neighborhoods.
+            Graph type is violin plot
         """
 
         # Sampling
