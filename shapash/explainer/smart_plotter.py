@@ -5,6 +5,7 @@ import warnings
 from numbers import Number
 import random
 import copy
+import math
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -45,6 +46,17 @@ class SmartPlotter:
             'yanchor': "middle",
             'x': 0.5,
             'y': 0.9,
+            'font': {
+                'size': 24,
+                'family': "Arial",
+                'color': "rgb(50, 50, 50)"
+            }
+        }
+        self.dict_title_stability = {
+            'xanchor': "center",
+            'x': 0.5,
+            "yanchor": "bottom",
+            "pad": dict(b=50),
             'font': {
                 'size': 24,
                 'family': "Arial",
@@ -141,11 +153,18 @@ class SmartPlotter:
             px.colors.qualitative.G10[9]
         ]
 
+        self.dict_stability_bar_colors = {
+            1: "rgba(255, 166, 17, 0.9)",
+            0: "rgba(117, 152, 189, 0.9)"
+        }
+
         self.round_digit = None
 
         self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
 
         self.interactions_discrete_colors = px.colors.qualitative.Antique
+
+        self.is_selection = False
 
     def tuning_colorscale(self, values):
         """
@@ -2321,5 +2340,480 @@ class SmartPlotter:
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
+
+        return fig
+
+    def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names, file_name, auto_open):
+        """
+        Intermediate function used to display the stability plot when plot_type is "none"
+
+        Parameters
+        ----------
+        mean_variability : array
+            Local stability expressed as a mean value for all instances (one value per feature).
+            Displayed on the X-axis on the plot.
+        mean_amplitude : array
+            Average of the normalized SHAP values in the neighborhood. Displayed on the Y-axis on the plot.
+        column_names : list
+            Columns names that are displayed on the plot
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved
+        auto_open: bool
+            open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+        """
+
+        xaxis_title = "Variability of the Normalized Local Contribution Values" \
+                      + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
+        yaxis_title = "Importance<span style='font-size: 12px;'><br />(Average contributions)</span>"
+        col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
+        hv_text = [f"<b>Feature: {col}</b><br />Importance: {y}<br />Variability: {x}"
+                   for col, x, y in zip(column_names, mean_variability, mean_amplitude)]
+        hovertemplate = "%{hovertext}" + '<extra></extra>'
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=mean_variability,
+            y=mean_amplitude,
+            showlegend=False,
+            mode='markers',
+            marker={
+                'color': mean_amplitude,
+                'size': 10,
+                'opacity': 0.8,
+                'line': {'width': 0.8, 'color': 'white'},
+                'colorscale': col_scale
+            },
+            hovertext=hv_text,
+            hovertemplate=hovertemplate
+        )
+
+        fig.update_xaxes(range=[np.min(np.append(mean_variability, [0.15])) - 0.03,
+                                np.max(mean_variability) + 0.03])
+
+        self._update_stability_fig(fig=fig,
+                                   x_barlen=len(mean_amplitude),
+                                   y_bar=[0, mean_amplitude.max()],
+                                   xaxis_title=xaxis_title,
+                                   yaxis_title=yaxis_title,
+                                   file_name=file_name,
+                                   auto_open=auto_open)
+        return fig
+
+    def plot_stability_distribution(
+            self,
+            variability,
+            plot_type,
+            mean_amplitude,
+            dataset,
+            column_names,
+            file_name,
+            auto_open
+    ):
+        """
+        Intermediate function used to display the stability plot when plot_type is "boxplot" or "violin"
+
+        Parameters
+        ----------
+        variability : array
+            Local stability expressed as a distribution across all instances (one distribution per feature).
+            Displayed on the X-axis on the plot
+        plot_type : string
+            Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
+        mean_amplitude : array
+            Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
+        dataset : DataFrame
+            x_pred dataset
+        column_names : list
+            Columns names that are displayed on the plot
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved
+        auto_open: bool
+            open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+        """
+        # Store distribution of variability in a DataFrame
+        var_df = pd.DataFrame(variability, columns=column_names)
+        mean_amplitude_normalized = pd.Series(mean_amplitude, index=column_names) / mean_amplitude.max()
+
+        # And sort columns by mean amplitude
+        var_df = var_df[column_names[mean_amplitude.argsort()]]
+
+        # Add colorscale
+        col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
+        color_list = mean_amplitude_normalized.tolist()
+        color_list.sort()
+        color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
+        height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
+
+        xaxis_title = "Normalized local contribution value variability"
+        yaxis_title = ""
+
+        # Plot the distribution
+        if dataset.shape[1] < 500:
+            fig = go.Figure()
+            for i, c in enumerate(var_df):
+                if plot_type == "boxplot":
+                    fig.add_trace(
+                        go.Box(
+                            x=var_df[c],
+                            marker_color=color_list[i],
+                            name=c,
+                            showlegend=False,
+                        )
+                    )
+                elif plot_type == "violin":
+                    fig.add_trace(
+                        go.Violin(
+                            x=var_df[c],
+                            line_color=color_list[i],
+                            name=c,
+                            showlegend=False,
+                        )
+                    )
+
+            # Dummy invisible plot to add the color scale
+            colorbar_trace = go.Scatter(
+                x=[None],
+                y=[None],
+                mode="markers",
+                marker=dict(
+                    size=1,
+                    color=[mean_amplitude.min(), mean_amplitude.max()],
+                    colorscale=col_scale,
+                    colorbar=dict(thickness=20,
+                                  lenmode="pixels",
+                                  len=300,
+                                  yanchor="top",
+                                  y=1,
+                                  ypad=60,
+                                  title="Importance<br />(Average contributions)"),
+                    showscale=True,
+                ),
+                hoverinfo="none",
+                showlegend=False,
+            )
+
+            fig.add_trace(colorbar_trace)
+
+            fig.update_layout(
+                height=height_value,
+            )
+
+            self._update_stability_fig(fig=fig,
+                                       x_barlen=len(mean_amplitude),
+                                       y_bar=column_names,
+                                       xaxis_title=xaxis_title,
+                                       yaxis_title=yaxis_title,
+                                       file_name=file_name,
+                                       auto_open=auto_open)
+
+            return fig
+
+    def _update_stability_fig(self, fig, x_barlen, y_bar, xaxis_title, yaxis_title, file_name, auto_open):
+        """
+        Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
+        to update the layout of the plotly figure.
+
+        Parameters
+        ----------
+        fig: plotly.graph_objs._figure.Figure
+            Plotly figure to update
+        x_barlen: int
+            draw a line --> len of x array
+        y_bar: list
+            draw a line --> y values
+        xaxis_title: str
+            Title of xaxis
+        yaxis_title: str
+            Title of yaxis
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+        """
+        title = "Importance & Local Stability of explanation:"
+        title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+        dict_t = copy.deepcopy(self.dict_title_stability)
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis['text'] = xaxis_title
+        dict_yaxis['text'] = yaxis_title
+        dict_stability_bar_colors = copy.deepcopy(self.dict_stability_bar_colors)
+        dict_t['text'] = title
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0.15] * x_barlen,
+                y=y_bar,
+                mode="lines",
+                hoverinfo="none",
+                line=dict(color=dict_stability_bar_colors[0], dash="dot"),
+                name="<-- More stable",
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0.3] * x_barlen,
+                y=y_bar,
+                mode="lines",
+                hoverinfo="none",
+                line=dict(color=dict_stability_bar_colors[1], dash="dot"),
+                name="--> More unstable",
+            )
+        )
+
+        fig.update_layout(
+            template='none',
+            title=dict_t,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            coloraxis_showscale=False,
+            hovermode='closest'
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
+        """
+        The Local_neighbors_plot has the main objective of increasing confidence \
+        in interpreting the contribution values of a selected instance.
+        This plot analyzes the local neighborhood of the instance, \
+        and compares its contribution values with those of its neighbors.
+        Intuitively, for similar instances, we would expect similar contributions.
+
+        Those neighbors are selected as follows :
+
+        * We select top N neighbors for each instance (using L1 norm + variance normalization)
+        * We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        * We discard additional neighbors if their distance to the instance \
+        is bigger than a predefined value (to remove outliers)
+
+        In this neighborhood, we would expect instances to have similar SHAP values. \
+        If not, one might need to be cautious when interpreting SHAP values.
+
+        The **difference** between outputs is measured with the following distance definition :
+
+        - For regression :
+
+        .. math::
+
+            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+        - For classification :
+
+        .. math::
+
+            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+        Parameters
+        ----------
+        index : int
+            Contains index row of the input DataFrame that we use to display contribution values in the neighborhood
+        max_features : int, optional
+            Maximum number of displayed features, by default 10
+        file_name: string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved, by default None
+        auto_open: bool, optional
+            open automatically the plot, by default False
+
+        Returns
+        -------
+        fig
+            The figure that will be displayed
+        """
+        assert index in self.explainer.x_pred.index, "index must exist in pandas dataframe"
+
+        self.explainer.compute_features_stability([index])
+
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+        ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
+
+        # Compute explanations for instance and neighbors
+        g = self.explainer.local_neighbors["norm_shap"]
+
+        # Reorder indices based on absolute values of the 1st row (i.e. the instance) in descending order
+        inds = np.flip(np.abs(g[0, :]).argsort())
+        g = g[:, inds]
+        columns = [column_names[i] for i in inds]
+
+        # Plot
+        g_df = pd.DataFrame(g, columns=columns).T.rename(
+                columns={
+                    **{0: "instance", 1: "closest neighbor"},
+                    **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
+                }
+            )
+
+        # Keep only max_features
+        if max_features is not None: g_df = g_df[:max_features]
+
+        fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
+                        y=g_df.iloc[::-1, ::-1].index.tolist(),
+                        x=g_df.iloc[::-1, ::-1].iloc[:, i],
+                        marker_color=self.dict_stability_bar_colors[1] if i == g_df.shape[1]-1
+                        else self.dict_stability_bar_colors[0],
+                        orientation='h',
+                        opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
+                        if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
+
+        title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
+        title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+        dict_t = copy.deepcopy(self.dict_title_stability)
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis['text'] = "Normalized contribution values"
+        dict_yaxis['text'] = ""
+        dict_t['text'] = title
+
+        fig.update_layout(template="none",
+                          title=dict_t,
+                          xaxis_title=dict_xaxis,
+                          yaxis_title=dict_yaxis,
+                          hovermode='closest',
+                          barmode="group",
+                          height=max(300, 10*g_df.shape[0]*g_df.shape[1]),
+                          legend={"traceorder": "reversed"},
+                          xaxis={"side": "bottom"})
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name is not None:
+            plot(fig, filename=file_name, auto_open=auto_open)
+
+        return fig
+
+    def stability_plot(self,
+                       selection=None,
+                       max_points=500,
+                       force=False,
+                       max_features=10,
+                       distribution='none',
+                       file_name=None,
+                       auto_open=False):
+        """
+        The Stability_plot has the main objective of increasing confidence in contribution values, \
+        and helping determine if we can trust an explanation.
+        The idea behind local stability is the following : if instances are very similar, \
+        then one would expect the explanations to be similar as well.
+        Therefore, locally stable explanations are an important factor that help \
+        build trust around a particular explanation method.
+
+        The generated graphs can take multiple forms, but they all analyze \
+        the same two aspects: for each feature we look at Amplitude vs. Variability; \
+        in order terms, how important the feature is on average vs. how the feature impact \
+        changes in the instance neighborhood.
+
+        The average importance of the feature is the average SHAP value of the feature acros all considered instances
+
+        The neighborhood is defined as follows :
+
+        * We select top N neighbors for each instance (using L1 norm + variance normalization)
+        * We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        * We discard additional neighbors if their distance to the instance \
+        is bigger than a predefined value (to remove outliers)
+
+        The **difference** between outputs is measured with the following distance definition :
+
+        - For regression :
+
+        .. math::
+
+            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+        - For classification :
+
+        .. math::
+
+            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+        Parameters
+        ----------
+        selection: list
+            Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
+        distribution : str, optional
+            Add distribution of variability for each feature, by default 'none'.
+            The other values are 'boxplot' or 'violin' that specify the type of plot
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
+
+        Returns
+        -------
+        If single instance :
+            * plot -- Normalized contribution values of instance and neighbors
+        If multiple instances :
+            * if distribution == "none" : Mean amplitude of each feature contribution vs. mean variability across neighbors
+            * if distribution == "boxplot" : Distribution of contributions of each feature in instances neighborhoods.
+            Graph type is box plot
+            * if distribution == "violin" : Distribution of contributions of each feature in instances neighborhoods.
+            Graph type is violin plot
+        """
+
+        # Sampling
+        if selection is None:
+            if self.explainer.x_pred.shape[0] <= max_points:
+                list_ind = self.explainer.x_pred.index.tolist()
+            else:
+                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+            # By default, don't compute calculation if it has already be done
+            if (self.explainer.features_stability is None) or self.is_selection or force:
+                self.explainer.compute_features_stability(list_ind)
+            self.is_selection = False
+        elif isinstance(selection, list):
+            if len(selection) == 1:
+                raise ValueError('Selection must include multiple points')
+            if len(selection) > max_points:
+                print(f"Size of selection is bigger than max_points (default: {max_points}).\
+                      Computation time might be affected")
+            self.explainer.compute_features_stability(selection)
+            self.is_selection = True
+        else:
+            raise ValueError('Parameter selection must be a list')
+
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+
+        variability = self.explainer.features_stability["variability"]
+        amplitude = self.explainer.features_stability["amplitude"]
+
+        mean_variability = variability.mean(axis=0)
+        mean_amplitude = amplitude.mean(axis=0)
+
+        # Plot 1 : only show average variability on y-axis
+        if distribution not in ['boxplot', 'violin']:
+            fig = self.plot_amplitude_vs_stability(mean_variability, mean_amplitude, column_names, file_name, auto_open)
+
+        # Plot 2 : Show distribution of variability
+        else:
+
+            # If set, only keep features with the highest mean amplitude
+            if max_features is not None:
+                keep = mean_amplitude.argsort()[::-1][:max_features]
+                keep = np.sort(keep)
+
+                variability = variability[:, keep]
+                mean_amplitude = mean_amplitude[keep]
+                dataset = self.explainer.x_pred.iloc[:, keep]
+                column_names = column_names[keep]
+
+            fig = self.plot_stability_distribution(variability, distribution, mean_amplitude, dataset,
+                                                   column_names, file_name, auto_open)
 
         return fig

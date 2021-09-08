@@ -5,6 +5,7 @@ import logging
 import copy
 import tempfile
 import shutil
+import numpy as np
 import pandas as pd
 from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
@@ -24,6 +25,7 @@ from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
+from shapash.utils.stability import find_neighbors, shap_neighbors
 
 logging.basicConfig(level=logging.INFO)
 
@@ -89,6 +91,13 @@ class SmartExplainer:
         Dictionary that references the numbers of feature values ​​in the x_pred
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
+    local_neighbors: dict
+        Dictionary of values to be displayed on the local_neighbors plot.
+        The key is "norm_shap (normalized SHAP values of instance and neighbors)
+    features_stability: dict
+        Dictionary of arrays to be displayed on the stability plot.
+        The keys are "amplitude" (average SHAP values for selected instances) and
+        "stability" (stability metric across neighborhood)
     preprocessing : category_encoders, ColumnTransformer, list or dict
         The processing apply to the original data.
     postprocessing : dict
@@ -245,6 +254,8 @@ class SmartExplainer:
         self.features_groups = features_groups
         if features_groups:
             self._compile_features_groups(features_groups)
+        self.local_neighbors = None
+        self.features_stability = None
 
     def _compile_features_groups(self, features_groups):
         """
@@ -954,6 +965,45 @@ class SmartExplainer:
         if self.features_imp is None or force:
             self.features_imp = self.state.compute_features_import(self.contributions)
 
+    def compute_features_stability(self, selection):
+        """
+        For a selection of instances, compute features stability metrics used in
+        methods `local_neighbors_plot` and `local_stability_plot`.
+        - If selection is a single instance, the method returns the (normalized) SHAP values
+        of instance and corresponding neighbors.
+        - If selection represents multiple instances, the method returns the average (normalized) SHAP values
+        of instances and neighbors (=amplitude), as well as the variability of those values in the neighborhood (=variability)
+
+        Parameters
+        ----------
+        selection: list
+            Indices of rows to be displayed on the stability plot
+
+        Returns
+        -------
+        Dictionary
+            Values that will be displayed on the graph. Keys are "amplitude", "variability" and "norm_shap"
+        """
+
+        if (self._case == "classification") and (len(self._classes) > 2):
+            raise AssertionError("Multi-class classification is not supported")
+
+        all_neighbors = find_neighbors(selection, self.x_init, self.model, self._case)
+
+        # Check if entry is a single instance or not
+        if len(selection) == 1:
+            # Compute explanations for instance and neighbors
+            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_init, self.contributions)
+            self.local_neighbors = {"norm_shap": norm_shap}
+        else:
+            numb_expl = len(selection)
+            amplitude = np.zeros((numb_expl, self.x_pred.shape[1]))
+            variability = np.zeros((numb_expl, self.x_pred.shape[1]))
+            # For each instance (+ neighbors), compute explanation
+            for i in range(numb_expl):
+                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions)
+            self.features_stability = {"variability": variability, "amplitude": amplitude}
+
     def init_app(self):
         """
         Simple init of SmartApp in case of host smartapp by another way
@@ -1215,4 +1265,3 @@ class SmartExplainer:
 
         if rm_working_dir:
             shutil.rmtree(working_dir)
-

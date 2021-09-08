@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+from sklearn.linear_model import LinearRegression
 from shapash.explainer.smart_explainer import SmartExplainer
 
 class TestSmartPlotter(unittest.TestCase):
@@ -2024,3 +2025,126 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(output.data[0].x) == 3
         assert len(output.data[0].y) == 3
         assert output.data[0].z.shape == (3, 3)
+
+    def test_stability_plot_1(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        output = xpl.plot.stability_plot(distribution="none")
+
+        assert len(output.data[0].x) == X.shape[1]
+        assert len(output.data[0].y) == X.shape[1]
+        assert np.array(list(output.data[0].x)).dtype == "float"
+        assert np.array(list(output.data[0].y)).dtype == "float"
+
+    def test_stability_plot_2(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        selection = list(range(6))
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        for max_features in [2, 5]:
+            output = xpl.plot.stability_plot(selection=selection, distribution="boxplot", max_features=max_features)
+
+            actual_shape = sum([1 if output.data[i].type == "box" else 0 for i in range(len(output.data))])
+            expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
+
+            assert actual_shape == expected_shape
+            assert len(output.data[0].x) == len(selection)
+            assert np.array(list(output.data[0].x)).dtype == "float"
+
+    def test_stability_plot_3(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        for max_features in [2, 5]:
+            output = xpl.plot.stability_plot(distribution="boxplot", max_features=max_features)
+
+            actual_shape = sum([1 if output.data[i].type == "box" else 0 for i in range(len(output.data))])
+            expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
+
+            assert actual_shape == expected_shape
+            assert len(output.data[0].x) == 15
+            assert np.array(list(output.data[0].x)).dtype == "float"
+
+    def test_stability_plot_4(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        selection = list(range(6))
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        for max_features in [2, 5]:
+            output = xpl.plot.stability_plot(selection=selection, distribution="violin", max_features=max_features)
+
+            actual_shape = sum([1 if output.data[i].type == "violin" else 0 for i in range(len(output.data))])
+            expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
+
+            assert actual_shape == expected_shape
+            assert len(output.data[0].x) == len(selection)
+            assert np.array(list(output.data[0].x)).dtype == "float"
+
+    def test_stability_plot_5(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        for max_features in [2, 5]:
+            output = xpl.plot.stability_plot(distribution="violin", max_features=max_features)
+
+            actual_shape = sum([1 if output.data[i].type == "violin" else 0 for i in range(len(output.data))])
+            expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
+
+            assert actual_shape == expected_shape
+            assert len(output.data[0].x) == 15
+            assert np.array(list(output.data[0].x)).dtype == "float"
+
+    def test_local_neighbors_plot(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        for max_features in [2, 5]:
+            output = xpl.plot.local_neighbors_plot(index=1, max_features=max_features)
+            actual_shape = len(output.data[0].x)
+            expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
+
+            assert actual_shape == expected_shape
+            assert np.array(list(output.data[0].x)).dtype == "float"
