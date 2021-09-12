@@ -2621,13 +2621,13 @@ class SmartPlotter:
 
         The **difference** between outputs is measured with the following distance definition :
 
-        - For regression :
+        * For regression :
 
         .. math::
 
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification :
+        * For classification :
 
         .. math::
 
@@ -2743,13 +2743,13 @@ class SmartPlotter:
 
         The **difference** between outputs is measured with the following distance definition:
 
-        - For regression:
+        * For regression:
 
         .. math::
 
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification:
+        * For classification:
 
         .. math::
 
@@ -2759,13 +2759,17 @@ class SmartPlotter:
         ----------
         selection : list
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
+        max_points: int, optional
+            Maximum number to plot in compacity plot, by default 500
+        force: bool, optional
+            force == True, force the compute of stability values, by default False
         distribution : str, optional
             Add distribution of variability for each feature, by default 'none'.
             The other values are 'boxplot' or 'violin' that specify the type of plot
-        file_name : string (optional)
-            Specify the save path of html files. If it is not provided, no file will be saved.
-        auto_open : bool (default=False)
-            open automatically the plot
+        file_name : string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved, by default None
+        auto_open : bool, optional
+            open automatically the plot, by default False
 
         Returns
         -------
@@ -2840,22 +2844,28 @@ class SmartPlotter:
                        file_name=None,
                        auto_open=False):
         """
-        Run the following two experiments and plot the results :
+        The Compacity_plot has the main objective of determining if a small subset of features \
+        can be extracted to provide a simpler explanation of the model; \
+        indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
 
-        * Determine the minimum number of features needed for the prediction of the interpretability method to be \
-        close enough (*see distance definition below*) to the one obtained with all features.
-        * Contraposition : determine how close we get to the output with all features by using only a subset of them \
-        (note : outliers outside the 95th percentile have been previously removed)
+        The following two plots are proposed:
+
+        * We identify the minimum number of required features (based on the top contribution values) \
+        that well approximate the model, and thus, provide accurate explanations.
+        In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*) \
+        to the one obtained with all features.
+
+        * Conversely, we determine how close we get to the output with all features by using only a subset of them.
 
         *Distance definition*
 
-        - For regression:
+        * For regression:
 
         .. math::
 
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification:
+        * For classification:
 
         .. math::
 
@@ -2863,12 +2873,20 @@ class SmartPlotter:
 
         Parameters
         ----------
-        instances : DataFrame
-            Input data
+        selection : list
+            Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
+        max_points: int, optional
+            Maximum number to plot in compacity plot, by default 2000
+        force: bool, optional
+            force == True, force the compute of stability values, by default False
         distance : float, optional
             How close we want to be from model with all features, by default 0.1 (=10%)
         nb_features : int, optional
             Number of features used, by default 10
+        file_name : string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved, by default None
+        auto_open : bool, optional
+            open automatically the plot, by default False
         """
         # Sampling
         if selection is None:
