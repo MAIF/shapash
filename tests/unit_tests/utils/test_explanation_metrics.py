@@ -2,12 +2,9 @@ import unittest
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-import sys
-sys.path.append('/Users/francescomallardmarini/Documents/Data_Analyst_FR/SoGé/Teletravail/MAIF/shapash/')
-from shapash.utils.explanation_metrics import _df_to_array, _compute_distance,\
-    _compute_similarities, _get_radius, find_neighbors, shap_neighbors,\
-    get_min_nb_features, get_distance
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash.utils.explanation_metrics import _df_to_array, \
+    _compute_distance, _compute_similarities, _get_radius, find_neighbors, \
+    shap_neighbors, get_min_nb_features, get_distance
 
 
 class TestExplanationMetrics(unittest.TestCase):
@@ -66,7 +63,7 @@ class TestExplanationMetrics(unittest.TestCase):
     def test_get_min_nb_features(self):
         contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list('ABCD'))
         selection = [1, 3]
-        distance=0.1
+        distance = 0.1
         mode = "regression"
         t = get_min_nb_features(selection, contrib, mode, distance)
         assert type(t) == list
@@ -76,7 +73,7 @@ class TestExplanationMetrics(unittest.TestCase):
     def test_get_distance(self):
         contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list('ABCD'))
         selection = [1, 3]
-        nb_features=2
+        nb_features = 2
         mode = "regression"
         t = get_distance(selection, contrib, mode, nb_features)
         assert type(t) == np.ndarray
