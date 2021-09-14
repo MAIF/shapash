@@ -2362,16 +2362,16 @@ class SmartPlotter:
 
         Parameters
         ----------
-        mean_variability : array
+        mean_variability: array
             Local stability expressed as a mean value for all instances (one value per feature).
             Displayed on the X-axis on the plot.
-        mean_amplitude : array
+        mean_amplitude: array
             Average of the normalized SHAP values in the neighborhood. Displayed on the Y-axis on the plot.
-        column_names : list
+        column_names: list
             Columns names that are displayed on the plot
-        file_name : string
+        file_name: string
             Specify the save path of html files. If it is not provided, no file will be saved
-        auto_open : bool
+        auto_open: bool
             open automatically the plot
 
         Returns
@@ -2430,20 +2430,20 @@ class SmartPlotter:
 
         Parameters
         ----------
-        variability : array
+        variability: array
             Local stability expressed as a distribution across all instances (one distribution per feature).
             Displayed on the X-axis on the plot
-        plot_type : string
+        plot_type: string
             Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
-        mean_amplitude : array
+        mean_amplitude: array
             Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
-        dataset : DataFrame
+        dataset: DataFrame
             x_pred dataset
-        column_names : list
+        column_names: list
             Columns names that are displayed on the plot
-        file_name : string
+        file_name: string
             Specify the save path of html files. If it is not provided, no file will be saved
-        auto_open : bool
+        auto_open: bool
             open automatically the plot
 
         Returns
@@ -2535,19 +2535,19 @@ class SmartPlotter:
 
         Parameters
         ----------
-        fig : plotly.graph_objs._figure.Figure
+        fig: plotly.graph_objs._figure.Figure
             Plotly figure to update
-        x_barlen : int
+        x_barlen: int
             draw a line --> len of x array
-        y_bar : list
+        y_bar: list
             draw a line --> y values
-        xaxis_title : str
+        xaxis_title: str
             Title of xaxis
-        yaxis_title : str
+        yaxis_title: str
             Title of yaxis
-        file_name : string (optional)
+        file_name: string (optional)
             Specify the save path of html files. If it is not provided, no file will be saved.
-        auto_open : bool (default=False)
+        auto_open: bool (default=False)
             open automatically the plot
 
         Returns
@@ -2621,13 +2621,13 @@ class SmartPlotter:
 
         The **difference** between outputs is measured with the following distance definition :
 
-        * For regression :
+        * For regression:
 
         .. math::
 
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        * For classification :
+        * For classification:
 
         .. math::
 
@@ -2635,13 +2635,13 @@ class SmartPlotter:
 
         Parameters
         ----------
-        index : int
+        index: int
             Contains index row of the input DataFrame that we use to display contribution values in the neighborhood
-        max_features : int, optional
+        max_features: int, optional
             Maximum number of displayed features, by default 10
-        file_name : string, optional
+        file_name: string, optional
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
-        auto_open : bool, optional
+        auto_open: bool, optional
             open automatically the plot, by default False
 
         Returns
@@ -2757,18 +2757,18 @@ class SmartPlotter:
 
         Parameters
         ----------
-        selection : list
+        selection: list
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
         max_points: int, optional
             Maximum number to plot in compacity plot, by default 500
         force: bool, optional
             force == True, force the compute of stability values, by default False
-        distribution : str, optional
+        distribution: str, optional
             Add distribution of variability for each feature, by default 'none'.
             The other values are 'boxplot' or 'violin' that specify the type of plot
-        file_name : string, optional
+        file_name: string, optional
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
-        auto_open : bool, optional
+        auto_open: bool, optional
             open automatically the plot, by default False
 
         Returns
@@ -2839,8 +2839,8 @@ class SmartPlotter:
                        selection=None,
                        max_points=2000,
                        force=False,
-                       distance=0.1,
-                       nb_features=10,
+                       approx=0.9,
+                       nb_features=5,
                        file_name=None,
                        auto_open=False):
         """
@@ -2873,19 +2873,19 @@ class SmartPlotter:
 
         Parameters
         ----------
-        selection : list
+        selection: list
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
         max_points: int, optional
             Maximum number to plot in compacity plot, by default 2000
         force: bool, optional
             force == True, force the compute of stability values, by default False
-        distance : float, optional
-            How close we want to be from model with all features, by default 0.1 (=10%)
-        nb_features : int, optional
-            Number of features used, by default 10
-        file_name : string, optional
+        approx: float, optional
+            How close we want to be from model with all features, by default 0.9 (=90%)
+        nb_features: int, optional
+            Number of features used, by default 5
+        file_name: string, optional
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
-        auto_open : bool, optional
+        auto_open: bool, optional
             open automatically the plot, by default False
         """
         # Sampling
@@ -2896,7 +2896,7 @@ class SmartPlotter:
                 list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
             # By default, don't compute calculation if it has already been done
             if (self.explainer.features_compacity is None) or self.last_compacity_selection or force:
-                self.explainer.compute_features_compacity(list_ind, distance, nb_features)
+                self.explainer.compute_features_compacity(list_ind, 1 - approx, nb_features)
             else:
                 print("Computed values from previous call are used")
             self.last_compacity_selection = False
@@ -2904,7 +2904,7 @@ class SmartPlotter:
             if len(selection) > max_points:
                 print(f"Size of selection is bigger than max_points (default: {max_points}).\
                       Computation time might be affected")
-            self.explainer.compute_features_compacity(selection, distance, nb_features)
+            self.explainer.compute_features_compacity(selection, 1 - approx, nb_features)
             self.last_compacity_selection = True
         else:
             raise ValueError('Parameter selection must be a list')
@@ -2918,7 +2918,7 @@ class SmartPlotter:
             cols=2,
             subplot_titles=[
                 "Number of features required<br>to explain "
-                + str(round(100 * (1 - distance)))
+                + str(round(100 * approx))
                 + "% of the model's output",
                 "Percentage of the model output<br>explained by the "
                 + str(nb_features)
@@ -2937,9 +2937,9 @@ class SmartPlotter:
                 histnorm="percent",
                 cumulative={"enabled": True},
                 name="",
-                hovertemplate="Top %{x:.0f} features explain "
-                + str(round(100 * (1 - distance)))
-                + "% of the model<br>for %{y:.1f}% of the instances",
+                hovertemplate="Top %{x:.0f} features explain at least "
+                + str(round(100 * approx))
+                + "%<br>of the model for %{y:.1f}% of the instances",
                 hovertext="none",
                 marker_color=self.dict_compacity_bar_colors[1],
                 ),
@@ -2962,9 +2962,9 @@ class SmartPlotter:
                 histnorm="percent",
                 cumulative={"enabled": True, "direction": "decreasing"},
                 name="",
-                hovertemplate="%{x:.0f}% of the output is explained by top "
-                + str(nb_features)
-                + " features<br>for %{y:.1f}% of the instances",
+                hovertemplate="Top " + str(nb_features) + " features explain at least "
+                + "%{x:.0f}"
+                + "%<br>of the model for %{y:.1f}% of the instances",
                 marker_color=self.dict_compacity_bar_colors[0],
                 ),
             row=1,
