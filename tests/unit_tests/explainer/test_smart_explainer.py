@@ -1465,3 +1465,24 @@ class TestSmartExplainer(unittest.TestCase):
         expected = X.shape[1]
 
         assert xpl.local_neighbors["norm_shap"].shape[1] == expected
+
+    def test_compute_features_compacity(self):
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        selection = [1, 3]
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = LinearRegression().fit(X, y)
+
+        distance = 0.1
+        nb_features = 2
+
+        xpl = SmartExplainer()
+        xpl.compile(x=X,
+                    model=model
+                    )
+
+        xpl.compute_features_compacity(selection, distance, nb_features)
+        expected = len(selection)
+
+        assert len(xpl.features_compacity["features_needed"]) == expected
+        assert len(xpl.features_compacity["distance_reached"]) == expected

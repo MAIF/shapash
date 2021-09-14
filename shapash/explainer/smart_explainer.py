@@ -25,7 +25,7 @@ from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
-from shapash.utils.stability import find_neighbors, shap_neighbors
+from shapash.utils.explanation_metrics import find_neighbors, shap_neighbors, get_min_nb_features, get_distance
 
 logging.basicConfig(level=logging.INFO)
 
@@ -256,6 +256,7 @@ class SmartExplainer:
             self._compile_features_groups(features_groups)
         self.local_neighbors = None
         self.features_stability = None
+        self.features_compacity = None
 
     def _compile_features_groups(self, features_groups):
         """
@@ -984,7 +985,6 @@ class SmartExplainer:
         Dictionary
             Values that will be displayed on the graph. Keys are "amplitude", "variability" and "norm_shap"
         """
-
         if (self._case == "classification") and (len(self._classes) > 2):
             raise AssertionError("Multi-class classification is not supported")
 
@@ -1003,6 +1003,33 @@ class SmartExplainer:
             for i in range(numb_expl):
                 (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions)
             self.features_stability = {"variability": variability, "amplitude": amplitude}
+
+    def compute_features_compacity(self, selection, distance, nb_features):
+        """
+        For a selection of instances, compute features compacity metrics used in method `compacity_plot`.
+
+        The method returns :
+        * the minimum number of features needed for a given approximation level
+        * conversely, the approximation reached with a given number of features
+
+        Parameters
+        ----------
+        selection: list
+            Indices of rows to be displayed on the stability plot
+        distance : float
+            How close we want to be from model with all features
+        nb_features : int
+            Number of features used
+        """
+        if (self._case == "classification") and (len(self._classes) > 2):
+            raise AssertionError("Multi-class classification is not supported")
+
+        features_needed = get_min_nb_features(selection, self.contributions, self._case, distance)
+        distance_reached = get_distance(selection, self.contributions, self._case, nb_features)
+        # We clip large approximations to 100%
+        distance_reached = np.clip(distance_reached, 0, 1)
+
+        self.features_compacity = {"features_needed": features_needed, "distance_reached": distance_reached}
 
     def init_app(self):
         """

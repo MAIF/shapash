@@ -4,7 +4,8 @@ from sklearn.preprocessing import normalize
 
 
 def _df_to_array(instances):
-    """Transform inputs into arrays
+    """
+    Transform inputs into arrays
 
     Parameters
     ----------
@@ -25,7 +26,8 @@ def _df_to_array(instances):
 
 
 def _compute_distance(x1, x2, mean_vector, epsilon=0.0000001):
-    """Compute distances between data points by using L1 on normalized data : sum(abs(x1-x2)/(mean_vector+epsilon))
+    """
+    Compute distances between data points by using L1 on normalized data : sum(abs(x1-x2)/(mean_vector+epsilon))
 
     Parameters
     ----------
@@ -46,7 +48,8 @@ def _compute_distance(x1, x2, mean_vector, epsilon=0.0000001):
 
 
 def _compute_similarities(instance, dataset):
-    """Compute pairwise distances between an instance and all other data points
+    """
+    Compute pairwise distances between an instance and all other data points
 
     Parameters
     ----------
@@ -72,7 +75,8 @@ def _compute_similarities(instance, dataset):
 
 
 def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
-    """Calculate the maximum allowed distance between points to be considered as neighbors
+    """
+    Calculate the maximum allowed distance between points to be considered as neighbors
 
     Parameters
     ----------
@@ -111,7 +115,8 @@ def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
 
 
 def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
-    """For each instance, select neighbors based on 3 criteria:
+    """
+    For each instance, select neighbors based on 3 criteria:
 
     1. First pick top N closest neighbors (L1 Norm + st. dev normalization)
     2. Filter neighbors whose model output is too different from instance (see condition below)
@@ -119,7 +124,7 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
 
     Parameters
     ----------
-    selection: array
+    selection : list
         Indices of rows to be displayed on the stability plot
     dataset : DataFrame
         Entire dataset used to identify neighbors
@@ -181,9 +186,9 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
         all_neighbors[i] = neighbors[neighbors[:, -2] < radius]
     return all_neighbors
 
-
 def shap_neighbors(instance, x_init, contributions):
-    """For an instance and corresponding neighbors, calculate various
+    """
+    For an instance and corresponding neighbors, calculate various
     metrics (described below) that are useful to evaluate local stability
 
     Parameters
@@ -193,7 +198,7 @@ def shap_neighbors(instance, x_init, contributions):
     x_init : DataFrame
         Entire dataset used to identify neighbors
     contributions : DataFrame
-        Calculated SHAP values for the dataset
+        Calculated contribution values for the dataset
 
     Returns
     -------
@@ -220,3 +225,105 @@ def shap_neighbors(instance, x_init, contributions):
                              where=norm_abs_shap_values.mean(axis=0) != 0)
 
     return norm_shap_values, average_diff, norm_abs_shap_values[0, :]
+
+def get_min_nb_features(selection, contributions, mode, distance):
+    """
+    Determine the minimum number of features needed for the prediction \
+    of the interpretability method to be *close enough* \
+    to the one obtained with all features.
+
+    The closeness is defined via the following distances:
+
+    * For regression: 
+
+        .. math::
+        
+            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+    * For classification: 
+
+        .. math::
+
+            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+    Parameters
+    ----------
+    selection : list
+        Indices of rows to be displayed on the stability plot
+    contributions : DataFrame
+        Calculated contribution values for the dataset
+    mode : str
+        "classification" or "regression"
+    distance : float, optional
+        How close we want to be from model with all features, by default 0.1 (10%)
+
+    Returns
+    -------
+    features_needed : list
+        List of minimum number of required features (for each instance) to be close enough to the prediction (ex: [4, 7, 8...])
+    """
+    assert 0 <= distance <= 1
+
+    contributions = contributions.loc[selection].values
+    features_needed = []
+    # For each instance, add features one by one (ordered by SHAP) until we get close enough
+    for i in range(contributions.shape[0]):
+        ids = np.flip(np.argsort(np.abs(contributions[i, :])))
+        output_value = np.sum(contributions[i, :])
+
+        score = 0
+        for j, idx in enumerate(ids):
+            # j : number of features needed
+            # idx : positions of the j top shap values
+            score += contributions[i, idx]
+            # CLOSE_ENOUGH
+            if mode == "regression":
+                if abs(score - output_value) < distance * abs(output_value):
+                    break
+            elif mode == "classification":
+                if abs(score - output_value) < distance:
+                    break
+        features_needed.append(j + 1)
+    return features_needed
+
+
+def get_distance(selection, contributions, mode, nb_features):
+    """
+    Determine how close we get to the output with all features by using only a subset of them
+
+    Parameters
+    ----------
+    selection : list
+        Indices of rows to be displayed on the stability plot
+    contributions : DataFrame
+        Calculated contribution values for the dataset
+    mode : str
+        "classification" or "regression"
+    nb_features : int, optional
+        Number of features used, by default 5
+
+    Returns
+    -------
+    distance : array
+        List of distances for each instance by using top selected features (ex: np.array([0.12, 0.16...])).
+        
+        * For regression:
+            
+            * normalized distance between the output of current model and output of full model
+
+        * For classifciation:
+
+            * distance between probability outputs (absolute value)
+    """
+    assert nb_features <= contributions.shape[1]
+
+    contributions = contributions.loc[selection].values
+    top_features = np.array([sorted(row, key=abs, reverse=True) for row in contributions])[:, :nb_features]
+    output_top_features = np.sum(top_features[:, :], axis=1)
+    output_all_features = np.sum(contributions[:, :], axis=1)
+
+    if mode == "regression":
+        distance = abs(output_top_features - output_all_features) / abs(output_all_features)
+    elif mode == "classification":
+        distance = abs(output_top_features - output_all_features)
+    return distance

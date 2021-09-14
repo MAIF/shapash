@@ -63,6 +63,13 @@ class SmartPlotter:
                 'color': "rgb(50, 50, 50)"
             }
         }
+        self.dict_title_compacity = {
+            'font': {
+                'size': 14,
+                'family': "Arial",
+                'color': "rgb(50, 50, 50)"
+            }
+        }
         self.dict_xaxis = {
             'font': {
                 'size': 16,
@@ -158,13 +165,19 @@ class SmartPlotter:
             0: "rgba(117, 152, 189, 0.9)"
         }
 
+        self.dict_compacity_bar_colors = {
+            1: "rgba(255, 166, 17, 0.9)",
+            0: "rgba(117, 152, 189, 0.9)"
+        }
+
         self.round_digit = None
 
         self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
 
         self.interactions_discrete_colors = px.colors.qualitative.Antique
 
-        self.is_selection = False
+        self.last_stability_selection = False
+        self.last_compacity_selection = False
 
     def tuning_colorscale(self, values):
         """
@@ -2349,12 +2362,12 @@ class SmartPlotter:
 
         Parameters
         ----------
-        mean_variability : array
+        mean_variability: array
             Local stability expressed as a mean value for all instances (one value per feature).
             Displayed on the X-axis on the plot.
-        mean_amplitude : array
+        mean_amplitude: array
             Average of the normalized SHAP values in the neighborhood. Displayed on the Y-axis on the plot.
-        column_names : list
+        column_names: list
             Columns names that are displayed on the plot
         file_name: string
             Specify the save path of html files. If it is not provided, no file will be saved
@@ -2365,7 +2378,6 @@ class SmartPlotter:
         -------
         go.Figure
         """
-
         xaxis_title = "Variability of the Normalized Local Contribution Values" \
                       + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
         yaxis_title = "Importance<span style='font-size: 12px;'><br />(Average contributions)</span>"
@@ -2418,16 +2430,16 @@ class SmartPlotter:
 
         Parameters
         ----------
-        variability : array
+        variability: array
             Local stability expressed as a distribution across all instances (one distribution per feature).
             Displayed on the X-axis on the plot
-        plot_type : string
+        plot_type: string
             Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
-        mean_amplitude : array
+        mean_amplitude: array
             Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
-        dataset : DataFrame
+        dataset: DataFrame
             x_pred dataset
-        column_names : list
+        column_names: list
             Columns names that are displayed on the plot
         file_name: string
             Specify the save path of html files. If it is not provided, no file will be saved
@@ -2542,7 +2554,7 @@ class SmartPlotter:
         -------
         go.Figure
         """
-        title = "Importance & Local Stability of explanation:"
+        title = "Importance & Local Stability of explanations:"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
         dict_t = copy.deepcopy(self.dict_title_stability)
         dict_xaxis = copy.deepcopy(self.dict_xaxis)
@@ -2609,13 +2621,13 @@ class SmartPlotter:
 
         The **difference** between outputs is measured with the following distance definition :
 
-        - For regression :
+        * For regression:
 
         .. math::
 
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification :
+        * For classification:
 
         .. math::
 
@@ -2623,9 +2635,9 @@ class SmartPlotter:
 
         Parameters
         ----------
-        index : int
+        index: int
             Contains index row of the input DataFrame that we use to display contribution values in the neighborhood
-        max_features : int, optional
+        max_features: int, optional
             Maximum number of displayed features, by default 10
         file_name: string, optional
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
@@ -2729,15 +2741,15 @@ class SmartPlotter:
         * We discard additional neighbors if their distance to the instance \
         is bigger than a predefined value (to remove outliers)
 
-        The **difference** between outputs is measured with the following distance definition :
+        The **difference** between outputs is measured with the following distance definition:
 
-        - For regression :
+        * For regression:
 
         .. math::
 
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
-        - For classification :
+        * For classification:
 
         .. math::
 
@@ -2747,36 +2759,41 @@ class SmartPlotter:
         ----------
         selection: list
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
-        distribution : str, optional
+        max_points: int, optional
+            Maximum number to plot in compacity plot, by default 500
+        force: bool, optional
+            force == True, force the compute of stability values, by default False
+        distribution: str, optional
             Add distribution of variability for each feature, by default 'none'.
             The other values are 'boxplot' or 'violin' that specify the type of plot
-        file_name: string (optional)
-            Specify the save path of html files. If it is not provided, no file will be saved.
-        auto_open: bool (default=False)
-            open automatically the plot
+        file_name: string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved, by default None
+        auto_open: bool, optional
+            open automatically the plot, by default False
 
         Returns
         -------
-        If single instance :
+        If single instance:
             * plot -- Normalized contribution values of instance and neighbors
-        If multiple instances :
-            * if distribution == "none" : Mean amplitude of each feature contribution vs. mean variability across neighbors
-            * if distribution == "boxplot" : Distribution of contributions of each feature in instances neighborhoods.
+        If multiple instances:
+            * if distribution == "none": Mean amplitude of each feature contribution vs. mean variability across neighbors
+            * if distribution == "boxplot": Distribution of contributions of each feature in instances neighborhoods.
             Graph type is box plot
-            * if distribution == "violin" : Distribution of contributions of each feature in instances neighborhoods.
+            * if distribution == "violin": Distribution of contributions of each feature in instances neighborhoods.
             Graph type is violin plot
         """
-
         # Sampling
         if selection is None:
             if self.explainer.x_pred.shape[0] <= max_points:
                 list_ind = self.explainer.x_pred.index.tolist()
             else:
                 list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
-            # By default, don't compute calculation if it has already be done
-            if (self.explainer.features_stability is None) or self.is_selection or force:
+            # By default, don't compute calculation if it has already been done
+            if (self.explainer.features_stability is None) or self.last_stability_selection or force:
                 self.explainer.compute_features_stability(list_ind)
-            self.is_selection = False
+            else:
+                print("Computed values from previous call are used")
+            self.last_stability_selection = False
         elif isinstance(selection, list):
             if len(selection) == 1:
                 raise ValueError('Selection must include multiple points')
@@ -2784,7 +2801,7 @@ class SmartPlotter:
                 print(f"Size of selection is bigger than max_points (default: {max_points}).\
                       Computation time might be affected")
             self.explainer.compute_features_stability(selection)
-            self.is_selection = True
+            self.last_stability_selection = True
         else:
             raise ValueError('Parameter selection must be a list')
 
@@ -2815,5 +2832,168 @@ class SmartPlotter:
 
             fig = self.plot_stability_distribution(variability, distribution, mean_amplitude, dataset,
                                                    column_names, file_name, auto_open)
+
+        return fig
+
+    def compacity_plot(self,
+                       selection=None,
+                       max_points=2000,
+                       force=False,
+                       approx=0.9,
+                       nb_features=5,
+                       file_name=None,
+                       auto_open=False):
+        """
+        The Compacity_plot has the main objective of determining if a small subset of features \
+        can be extracted to provide a simpler explanation of the model; \
+        indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
+
+        The following two plots are proposed:
+
+        * We identify the minimum number of required features (based on the top contribution values) \
+        that well approximate the model, and thus, provide accurate explanations.
+        In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*) \
+        to the one obtained with all features.
+
+        * Conversely, we determine how close we get to the output with all features by using only a subset of them.
+
+        *Distance definition*
+
+        * For regression:
+
+        .. math::
+
+            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+        * For classification:
+
+        .. math::
+
+            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+        Parameters
+        ----------
+        selection: list
+            Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
+        max_points: int, optional
+            Maximum number to plot in compacity plot, by default 2000
+        force: bool, optional
+            force == True, force the compute of stability values, by default False
+        approx: float, optional
+            How close we want to be from model with all features, by default 0.9 (=90%)
+        nb_features: int, optional
+            Number of features used, by default 5
+        file_name: string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved, by default None
+        auto_open: bool, optional
+            open automatically the plot, by default False
+        """
+        # Sampling
+        if selection is None:
+            if self.explainer.x_pred.shape[0] <= max_points:
+                list_ind = self.explainer.x_pred.index.tolist()
+            else:
+                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+            # By default, don't compute calculation if it has already been done
+            if (self.explainer.features_compacity is None) or self.last_compacity_selection or force:
+                self.explainer.compute_features_compacity(list_ind, 1 - approx, nb_features)
+            else:
+                print("Computed values from previous call are used")
+            self.last_compacity_selection = False
+        elif isinstance(selection, list):
+            if len(selection) > max_points:
+                print(f"Size of selection is bigger than max_points (default: {max_points}).\
+                      Computation time might be affected")
+            self.explainer.compute_features_compacity(selection, 1 - approx, nb_features)
+            self.last_compacity_selection = True
+        else:
+            raise ValueError('Parameter selection must be a list')
+
+        features_needed = self.explainer.features_compacity["features_needed"]
+        distance_reached = self.explainer.features_compacity["distance_reached"]
+
+        # Make plots
+        fig = make_subplots(
+            rows=1,
+            cols=2,
+            subplot_titles=[
+                "Number of features required<br>to explain "
+                + str(round(100 * approx))
+                + "% of the model's output",
+                "Percentage of the model output<br>explained by the "
+                + str(nb_features)
+                + " most important<br>features per instance",
+            ],
+            horizontal_spacing=0.2
+        )
+
+        # Used as titles in make_subplots are considered annotations
+        fig.update_annotations(font=self.dict_title_compacity["font"])
+
+        # First plot: number of features required for a given approximation
+        fig.add_trace(
+            go.Histogram(
+                x=features_needed,
+                histnorm="percent",
+                cumulative={"enabled": True},
+                name="",
+                hovertemplate="Top %{x:.0f} features explain at least "
+                + str(round(100 * approx))
+                + "%<br>of the model for %{y:.1f}% of the instances",
+                hovertext="none",
+                marker_color=self.dict_compacity_bar_colors[1],
+                ),
+            row=1,
+            col=1,
+        )
+
+        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis['text'] = "Number of selected features"
+        dict_yaxis['text'] = "Cumulative distribution over<br>dataset's instances (%)"
+
+        fig.update_xaxes(title=dict_xaxis, row=1, col=1)
+        fig.update_yaxes(title=dict_yaxis, row=1, col=1)
+
+        # Second plot: approximation reached for a given number of features
+        fig.add_trace(
+            go.Histogram(
+                x=100 * (1 - distance_reached),
+                histnorm="percent",
+                cumulative={"enabled": True, "direction": "decreasing"},
+                name="",
+                hovertemplate="Top " + str(nb_features) + " features explain at least "
+                + "%{x:.0f}"
+                + "%<br>of the model for %{y:.1f}% of the instances",
+                marker_color=self.dict_compacity_bar_colors[0],
+                ),
+            row=1,
+            col=2,
+        )
+
+        dict_xaxis2 = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis2 = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis2['text'] = "Percentage of model output<br>explained (%)"
+        dict_yaxis2['text'] = "Cumulative distribution over<br>dataset's instances (%)"
+
+        fig.update_xaxes(title=dict_xaxis2, row=1, col=2)
+        fig.update_yaxes(title=dict_yaxis2, row=1, col=2)
+
+        title = "Compacity of explanations:"
+        title += "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
+        dict_t = copy.deepcopy(self.dict_title_stability)
+        dict_t['text'] = title
+
+        fig.update_layout(
+            template="none",
+            title=dict_t,
+            title_y=0.8,
+            hovermode='closest',
+            margin={"t": 150},
+            showlegend=False,
+        )
+
+        if file_name is not None:
+            plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig

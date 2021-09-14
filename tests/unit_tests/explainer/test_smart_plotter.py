@@ -95,6 +95,10 @@ class TestSmartPlotter(unittest.TestCase):
             columns=['feature_0', 'feature_1'],
             index=['person_A', 'person_B']
         )
+        self.features_compacity = {
+            "features_needed": [1, 1],
+            "distance_reached": np.array([0.12, 0.16])
+        }
         model = lambda: None
         model._classes = np.array([1, 3])
         model.predict = types.MethodType(self.predict, model)
@@ -120,6 +124,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.state = self.smart_explainer.choose_state(self.smart_explainer.contributions)
         self.smart_explainer.y_pred = None
         self.smart_explainer.features_desc = self.smart_explainer.check_features_desc()
+        self.smart_explainer.features_compacity = self.features_compacity
 
     @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
     @patch('shapash.explainer.smart_plotter.SmartPlotter.local_pred')
@@ -2148,3 +2153,18 @@ class TestSmartPlotter(unittest.TestCase):
 
             assert actual_shape == expected_shape
             assert np.array(list(output.data[0].x)).dtype == "float"
+
+    @patch('shapash.explainer.smart_explainer.SmartExplainer.compute_features_compacity')
+    def test_compacity_plot(self, compute_features_compacity):
+
+        compute_features_compacity.return_value = None
+        selection = ['person_A', 'person_B']
+        approx = 0.9
+        nb_features = 5
+
+        output = self.smart_explainer.plot.compacity_plot(selection=selection, approx=approx, nb_features=nb_features)
+
+        assert len(output.data[0].x) == len(selection)
+        assert len(output.data[1].x) == len(selection)
+        assert f"at least {approx*100:.0f}%" in output.data[0].hovertemplate
+        assert f"Top {nb_features} features" in output.data[1].hovertemplate
