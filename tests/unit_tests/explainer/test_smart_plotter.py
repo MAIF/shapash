@@ -2159,8 +2159,12 @@ class TestSmartPlotter(unittest.TestCase):
 
         compute_features_compacity.return_value = None
         selection = ['person_A', 'person_B']
+        approx = 0.9
+        nb_features = 5
 
-        output = self.smart_explainer.plot.compacity_plot(selection=selection)
+        output = self.smart_explainer.plot.compacity_plot(selection=selection, approx=approx, nb_features=nb_features)
 
         assert len(output.data[0].x) == len(selection)
         assert len(output.data[1].x) == len(selection)
+        assert f"at least {approx*100:.0f}%" in output.data[0].hovertemplate
+        assert f"Top {nb_features} features" in output.data[1].hovertemplate

@@ -2971,13 +2971,13 @@ class SmartPlotter:
             col=2,
         )
 
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
-        dict_xaxis['text'] = "Percentage of model output<br>explained (%)"
-        dict_yaxis['text'] = "Cumulative distribution over<br>dataset's instances (%)"
+        dict_xaxis2 = copy.deepcopy(self.dict_xaxis)
+        dict_yaxis2 = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis2['text'] = "Percentage of model output<br>explained (%)"
+        dict_yaxis2['text'] = "Cumulative distribution over<br>dataset's instances (%)"
 
-        fig.update_xaxes(title=dict_xaxis, row=1, col=2)
-        fig.update_yaxes(title=dict_yaxis, row=1, col=2)
+        fig.update_xaxes(title=dict_xaxis2, row=1, col=2)
+        fig.update_yaxes(title=dict_yaxis2, row=1, col=2)
 
         title = "Compacity of explanations:"
         title += "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
