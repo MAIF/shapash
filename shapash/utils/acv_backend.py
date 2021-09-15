@@ -30,9 +30,15 @@ def active_shapley_values(
     model: model object from sklearn, catboost, xgboost or lightgbm library
         this model is used to choose a shap explainer and to compute
         active shapley values
-    x_init: pd.DataFrame
-    x_pred: pd.DataFrame
-    x_train: pd.DataFrame; Optional
+    x_init  : pd.DataFrame
+        x_init dataset with inverse transformation with eventual postprocessing modifications.
+    x_pred : pd.DataFrame
+        preprocessed dataset used by the model to perform the prediction.
+    x_train : pd.DataFrame, Optional
+        Training dataset used as background.
+    c : list
+        list of coalitions used by acv. If not set, will try to get the list
+        of one hot encoded list of variables using the encoder if they exist.
     explainer : explainer object from shap, optional (default: None)
         this explainer is used to compute shapley values
     preprocessing:
