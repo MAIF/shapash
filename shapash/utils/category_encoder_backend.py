@@ -176,7 +176,7 @@ def reverse_basen(x_in, encoding):
     return x
 
 
-def calc_inv_contrib_ce(x_contrib, encoding):
+def calc_inv_contrib_ce(x_contrib, encoding, agg):
     """
     Reversed contribution when category encoder and/or a dict is used.
     If category encoder create multiple columns, we use the mapping to find which contribution columns to sum.
@@ -188,6 +188,9 @@ def calc_inv_contrib_ce(x_contrib, encoding):
         Contributions set.
     encoding : category_encoders, list, dict
         The processing apply to the original data.
+    agg : str (default: 'sum')
+        Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
+        For ACV we want to take any value.
 
     Returns
     -------
@@ -202,7 +205,10 @@ def calc_inv_contrib_ce(x_contrib, encoding):
             col_in = switch.get('col')
             mod = switch.get('mapping').columns.tolist()
             insert_at = x_contrib.columns.tolist().index(mod[0])
-            x_contrib.insert(insert_at, col_in, x_contrib[mod].sum(axis=1))
+            if agg == 'first':
+                x_contrib.insert(insert_at, col_in, x_contrib[mod[0]])
+            else:
+                x_contrib.insert(insert_at, col_in, x_contrib[mod].sum(axis=1))
             drop_col += mod
         x_contrib.drop(drop_col, axis=1, inplace=True)
         return x_contrib

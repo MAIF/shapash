@@ -14,6 +14,7 @@ from shapash.utils.transform import adapt_contributions
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
+from shapash.utils.acv_backend import active_shapley_values
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -129,7 +130,7 @@ class SmartExplainer:
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
-                features_groups=None):
+                features_groups=None, backend='shap', **kwargs):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -197,6 +198,9 @@ class SmartExplainer:
             ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
             ‘feature_group_2’ : ['feature1', 'feature12'],
             }
+        backend : str (default: 'shap')
+            Select which computation method to use in order to compute contributions
+            and feature importance. Possible values are 'shap' or 'acv'. Default is 'shap'.
 
         Example
         --------
@@ -209,12 +213,31 @@ class SmartExplainer:
         self.model = model
         self._case, self._classes = self.check_model()
         self.check_label_dict()
+        self.backend = backend.lower()
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
         if explainer is not None and contributions is not None:
             raise ValueError("You have to specify just one of these arguments: explainer, contributions")
+
+        # Computing contributions using right backend
         if contributions is None:
-            contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
+            if self.backend == 'shap':
+                contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
+            elif self.backend == 'acv':
+                if 'x_train' in kwargs.keys():
+                    self.x_train = kwargs['x_train']
+                if features_groups is not None:
+                    raise ValueError('ACV does not support groups of features for now.')
+                if self._case == 'classification':
+                    contributions, self.features_imp, explainer, self.sdp, self.sdp_index = active_shapley_values(
+                        model=model, x_init=self.x_init, x_pred=self.x_pred, explainer=explainer,
+                        preprocessing=preprocessing, **kwargs
+                    )
+                else:
+                    raise NotImplementedError('ACV does not support regression case yet.')
+            else:
+                raise ValueError(f'Unknown backend : {backend}. Possible values are "shap" or "acv".')
+
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
@@ -422,7 +445,8 @@ class SmartExplainer:
         if preprocessing:
             return self.state.inverse_transform_contributions(
                 contributions,
-                preprocessing
+                preprocessing,
+                agg='first' if self.backend == 'acv' else 'sum'
             )
         else:
             return contributions

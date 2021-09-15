@@ -95,7 +95,7 @@ def active_shapley_values(
     else:
         contributions = pd.DataFrame(contributions[:, :, 0], columns=x_init.columns, index=x_init.index)
 
-    return contributions, sdp_importance, explainer
+    return contributions, sdp_importance, explainer, sdp, sdp_index
 
 
 def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
@@ -111,3 +111,34 @@ def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
     if ohe_coalitions == list():
         return [[]]
     return ohe_coalitions
+
+
+def compute_features_import_acv():
+    # Using train set as background if available. If not, we will use test set.
+    if x_train is not None:
+        data = np.array(x_train.values, dtype=np.double)
+    else:
+        logging.warning("No train set passed. Errors can occur when computing Active Shapley values."
+                        "Use the x_train parameter to remove this warning.")
+        data = np.array(x_init.values, dtype=np.double)
+
+    if explainer is None:
+        if str(type(model)) in simple_tree_model or str(type(model)) in catboost_model:
+            explainer = ACVTree(model=model, data=data)
+            print("Backend: ACV")
+        else:
+            raise NotImplementedError(
+                """
+                Model not supported for ACV backend.
+                """
+            )
+
+    if c is None:
+        c = _get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
+
+    sdp_importance, sdp_index, size, sdp = explainer.importance_sdp_clf(
+        X=x_init.values,
+        data=data,
+        C=c,
+        global_proba=0.9
+    )

@@ -9,7 +9,7 @@ from shapash.utils.transform import check_transformers
 from shapash.utils.category_encoder_backend import calc_inv_contrib_ce
 from shapash.utils.columntransformer_backend import calc_inv_contrib_ct
 
-def inverse_transform_contributions(contributions, preprocessing=None):
+def inverse_transform_contributions(contributions, preprocessing=None, agg='sum'):
     """
     Reverse contribution giving a preprocessing.
 
@@ -27,6 +27,9 @@ def inverse_transform_contributions(contributions, preprocessing=None):
         Contributions values.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
         The processing apply to the original data.
+    agg : str (default: 'sum')
+        Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
+        For ACV we want to take any value.
 
     Returns
     -------
@@ -51,10 +54,10 @@ def inverse_transform_contributions(contributions, preprocessing=None):
         x_contrib_invers = contributions.copy()
         if use_ct:
             for encoding in list_encoding:
-                x_contrib_invers = calc_inv_contrib_ct(x_contrib_invers, encoding)
+                x_contrib_invers = calc_inv_contrib_ct(x_contrib_invers, encoding, agg)
         else:
             for encoding in list_encoding:
-                x_contrib_invers = calc_inv_contrib_ce(x_contrib_invers, encoding)
+                x_contrib_invers = calc_inv_contrib_ce(x_contrib_invers, encoding, agg)
         return x_contrib_invers
 
 def rank_contributions(s_df, x_df):
