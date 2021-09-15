@@ -437,6 +437,22 @@ class TestSmartExplainer(unittest.TestCase):
         with self.assertRaises(ValueError):
             xpl.compile(model=clf, x=df[['x1', 'x2']], explainer=clf_explainer, contributions=contrib)
 
+    def test_compile_4(self):
+        """
+        Unit test compile 4
+        checking compile method with acv backend
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        xpl = SmartExplainer()
+        xpl.compile(model=clf, x=df[['x1', 'x2']], x_train=df[['x1', 'x2']], backend='acv')
+        assert xpl.backend == 'acv'
+
     def test_filter_0(self):
         """
         Unit test filter 0
