@@ -73,7 +73,7 @@ def active_shapley_values(
             )
 
     if c is None:
-        c = get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
+        c = _get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
 
     sdp_importance, sdp_index, size, sdp = explainer.importance_sdp_clf(
         X=x_init.values,
@@ -98,7 +98,10 @@ def active_shapley_values(
     return contributions, sdp_importance, explainer
 
 
-def get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
+def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
+    """
+    Returns list of list of one hot encoded variables, or empty list of list otherwise.
+    """
     mapping_features = get_features_transform_mapping(x_pred, x_init, preprocessing)
     ohe_coalitions = []
     for col, encoded_col_list in mapping_features.items():
