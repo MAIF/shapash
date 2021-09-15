@@ -6,6 +6,7 @@ except ImportError:
     is_acv_available = False
 
 from typing import Any, Optional, List
+import logging
 
 import pandas as pd
 import numpy as np
@@ -50,6 +51,8 @@ def active_shapley_values(
     if x_train is not None:
         data = np.array(x_train.values, dtype=np.double)
     else:
+        logging.warning("No train set passed. Errors can occur when computing Active Shapley values."
+                        "Use the x_train parameter to remove this warning.")
         data = np.array(x_init.values, dtype=np.double)
 
     if explainer is None:
@@ -67,18 +70,18 @@ def active_shapley_values(
         c = get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
 
     sdp_importance, sdp_index, size, sdp = explainer.importance_sdp_clf(
-        X=x_init,
+        X=x_init.values,
         data=data,
         C=c,
         global_proba=0.9
     )
     s_star, n_star = get_null_coalition(sdp_index, size)
     contributions = explainer.shap_values_acv_adap(
-        X=x_init,
+        X=x_init.values,
         C=c,
+        S_star=s_star,
         N_star=n_star,
-        size=size,
-        S_star=s_star
+        size=size
     )
     if contributions.shape[-1] > 1:
         contributions = [pd.DataFrame(contributions[:, :, i], columns=x_init.columns, index=x_init.index)
