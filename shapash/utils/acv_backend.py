@@ -41,7 +41,7 @@ def active_shapley_values(
         of one hot encoded list of variables using the encoder if they exist.
     explainer : explainer object from shap, optional (default: None)
         this explainer is used to compute shapley values
-    preprocessing:
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
     Returns
     -------
     np.array or list of np.array
