@@ -444,7 +444,7 @@ class SmartExplainer:
             return self.state.inverse_transform_contributions(
                 contributions,
                 preprocessing,
-                agg='first' if self.backend == 'acv' else 'sum'
+                agg='first' if hasattr(self, 'backend') and self.backend == 'acv' else 'sum'
             )
         else:
             return contributions
@@ -971,7 +971,7 @@ class SmartExplainer:
             Each Serie: feature importance, One row by feature,
             index of the serie = contributions.columns
         """
-        if self.backend == 'acv':
+        if hasattr(self, 'backend') and self.backend == 'acv':
             features_mapping = get_features_transform_mapping(self.x_pred, self.x_init, self.preprocessing)
             features_imp = compute_features_import_acv(
                 self.sdp_index, self.sdp, self.x_init.columns, features_mapping

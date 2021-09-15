@@ -1389,7 +1389,7 @@ class SmartPlotter:
             global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
                 subset = contributions[label_num].loc[selection]
-                if self.explainer.backend == 'acv':
+                if hasattr(self.explainer, 'backend') and self.explainer.backend == 'acv':
                     selection_ids = [i for i, x in enumerate(contributions[label_num].index) if x in selection]
                     subset_feat_imp = compute_features_import_acv(
                         sdp_index=np.array(self.explainer.sdp_index)[selection_ids],
