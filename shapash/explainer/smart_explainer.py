@@ -986,13 +986,20 @@ class SmartExplainer:
             if self.features_imp is None or force:
                 self.features_imp = self.state.compute_features_import(self.contributions)
 
-    def init_app(self):
+    def init_app(self, settings: dict = None):
         """
         Simple init of SmartApp in case of host smartapp by another way
+        
+        Parameters
+        ----------
+        settings : dict (default: None)
+            A dict describing the default webapp settings values to be used
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
+            Values should be positive ints
         """
-        self.smartapp = SmartApp(self)
+        self.smartapp = SmartApp(self, settings)
 
-    def run_app(self, port: int = None, host: str = None, title_story: str = None) -> CustomThread:
+    def run_app(self, port: int = None, host: str = None, title_story: str = None, settings: dict = None) -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
         run_app method can be used directly in a Jupyter notebook
@@ -1012,6 +1019,10 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             for your webapp (can be reused in other methods like in a report, ...)
+        settings : dict (default: None)
+            A dict describing the default webapp settings values to be used
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
+            Values should be positive ints
 
         Returns
         -------
@@ -1029,7 +1040,7 @@ class SmartExplainer:
         if self.y_pred is None:
             self.predict()
         if hasattr(self, '_case'):
-            self.smartapp = SmartApp(self)
+            self.smartapp = SmartApp(self, settings)
             if host is None:
                 host = "0.0.0.0"
             if port is None:
