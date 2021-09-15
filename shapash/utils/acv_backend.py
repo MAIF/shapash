@@ -95,7 +95,7 @@ def active_shapley_values(
     else:
         contributions = pd.DataFrame(contributions[:, :, 0], columns=x_init.columns, index=x_init.index)
 
-    return contributions, sdp_importance, explainer, sdp, sdp_index
+    return contributions, explainer, sdp_index, sdp
 
 
 def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
@@ -113,32 +113,16 @@ def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
     return ohe_coalitions
 
 
-def compute_features_import_acv():
-    # Using train set as background if available. If not, we will use test set.
-    if x_train is not None:
-        data = np.array(x_train.values, dtype=np.double)
-    else:
-        logging.warning("No train set passed. Errors can occur when computing Active Shapley values."
-                        "Use the x_train parameter to remove this warning.")
-        data = np.array(x_init.values, dtype=np.double)
+def compute_features_import_acv(sdp_index, sdp, init_columns, features_mapping):
+    count_cols = {i: 0 for i in range(len(sdp_index[0]))}
 
-    if explainer is None:
-        if str(type(model)) in simple_tree_model or str(type(model)) in catboost_model:
-            explainer = ACVTree(model=model, data=data)
-            print("Backend: ACV")
-        else:
-            raise NotImplementedError(
-                """
-                Model not supported for ACV backend.
-                """
-            )
+    for i, list_imp_feat in enumerate(sdp_index):
+        for c in list_imp_feat:
+            if c != -1 and sdp[i] > 0.9:
+                count_cols[c] += 1
 
-    if c is None:
-        c = _get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
+    features_cols = {init_columns[k]: v for k, v in count_cols.items()}
 
-    sdp_importance, sdp_index, size, sdp = explainer.importance_sdp_clf(
-        X=x_init.values,
-        data=data,
-        C=c,
-        global_proba=0.9
-    )
+    features_imp = pd.Series({k: features_cols[v[0]] / len(sdp_index) for k, v in features_mapping.items()})
+
+    return features_imp.sort_values(ascending=True)
