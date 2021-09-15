@@ -34,3 +34,4 @@ seaborn==0.11.1
 notebook
 Jinja2
 phik
+acv-exp
