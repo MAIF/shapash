@@ -213,7 +213,6 @@ class SmartExplainer:
         self.model = model
         self._case, self._classes = self.check_model()
         self.check_label_dict()
-        self.backend = backend.lower()
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
         if explainer is not None and contributions is not None:
@@ -221,9 +220,10 @@ class SmartExplainer:
 
         # Computing contributions using right backend
         if contributions is None:
-            if self.backend == 'shap':
+            if backend.lower() == 'shap':
                 contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
-            elif self.backend == 'acv':
+            elif backend.lower() == 'acv':
+                self.backend = 'acv'
                 if features_groups is not None:
                     raise ValueError('ACV does not support groups of features for now.')
                 if self._case == 'classification':
