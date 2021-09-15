@@ -114,6 +114,9 @@ def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
 
 
 def compute_features_import_acv(sdp_index, sdp, init_columns, features_mapping):
+    """
+    Computes the features importance using acv package and notations.
+    """
     count_cols = {i: 0 for i in range(len(sdp_index[0]))}
 
     for i, list_imp_feat in enumerate(sdp_index):
