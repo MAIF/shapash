@@ -105,8 +105,8 @@ class SmartExplainer:
     label_dict specify the labels of target (classification).
     """
 
-    def __init__(self, features_dict=None, label_dict=None, title_story: str = None):
-        if features_dict is not None and isinstance(features_dict, dict) is False:
+    def __init__(self, features_dict={}, label_dict=None, title_story: str = None):
+        if isinstance(features_dict, dict) is False:
             raise ValueError(
                 """
                 features_dict must be a dict
@@ -118,10 +118,7 @@ class SmartExplainer:
                 label_dict must be a dict
                 """
             )
-        if features_dict is not None:
-            self.features_dict = features_dict
-        else:
-            self.features_dict = {}        
+        self.features_dict = copy.deepcopy(features_dict)
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
         if title_story is not None:
