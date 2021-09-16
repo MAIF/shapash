@@ -118,7 +118,7 @@ class SmartExplainer:
                 label_dict must be a dict
                 """
             )
-        self.features_dict = features_dict
+        self.features_dict = copy.deepcopy(features_dict)
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
         if title_story is not None:
