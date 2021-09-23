@@ -75,6 +75,12 @@ def active_shapley_values(
     if c is None:
         c = _get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
 
+    # Below we have following notations used in ACV (see ACV package for more information) :
+    # S_star : index of variables in the Sufficient Coalition
+    # N_star : index of the remaining variables
+    # sdp_index[i, :size[i]] : index of the variables in $S^\star$
+    # sdp[i] : SDP value of the $S^\star$ of observation i
+    # sdp_importance : global sdp of each variable
     sdp_importance, sdp_index, size, sdp = explainer.importance_sdp_clf(
         X=x_init.values,
         data=data,
