@@ -57,8 +57,8 @@ def active_shapley_values(
     if x_train is not None:
         data = np.array(x_train.values, dtype=np.double)
     else:
-        logging.warning("No train set passed. Errors can occur when computing Active Shapley values."
-                        "Use the x_train parameter to remove this warning.")
+        logging.warning("No train set passed. We recommend to pass the x_train parameter "
+                        "in order to avoid errors.")
         data = np.array(x_init.values, dtype=np.double)
 
     if explainer is None:
