@@ -179,7 +179,7 @@ def inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_enco
     init += nb_col
     return frame, init
 
-def calc_inv_contrib_ct(x_contrib, encoding, agg):
+def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
     """
     Reversed contribution when ColumnTransformer is used.
 
@@ -192,9 +192,12 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg):
         Contributions set.
     encoding : ColumnTransformer, list, dict
         The processing apply to the original data.
-    agg : str (default: 'sum')
+    agg_columns : str (default: 'sum')
         Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
-        For ACV we want to take any value.
+        For ACV we want to take any value as ACV computes contributions of coalition of variables (like
+        one hot encoded variables) differently from Shap and then give the same value to each variable of the
+        coalition. As a result we just need to take the value of one of these variables to get the contribution
+        value of the group.
 
     Returns
     -------
@@ -227,7 +230,7 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg):
                         else:
                             col_origin = ct_encoding.mapping[i_enc].get('mapping').columns.tolist()
                         nb_col = len(col_origin)
-                        if agg == 'first':
+                        if agg_columns == 'first':
                             contrib_inverse = x_contrib.iloc[:, init]
                         else:
                             contrib_inverse = x_contrib.iloc[:, init:init + nb_col].sum(axis=1)
