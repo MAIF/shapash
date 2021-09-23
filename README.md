@@ -241,3 +241,12 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### Deploy local explainability in production
 - [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
 
+## 🤝 Contributors
+
+<a href="https://www.maif.fr/">
+  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_maif.png" width="130" />
+</a>
+<br>
+<a href="https://www.quantmetry.com/">
+  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_quantmetry.png" width="130" />
+</a>
