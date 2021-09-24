@@ -444,7 +444,7 @@ class SmartExplainer:
             return self.state.inverse_transform_contributions(
                 contributions,
                 preprocessing,
-                agg='first' if hasattr(self, 'backend') and self.backend == 'acv' else 'sum'
+                agg_columns='first' if hasattr(self, 'backend') and self.backend == 'acv' else 'sum'
             )
         else:
             return contributions
