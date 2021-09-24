@@ -34,7 +34,7 @@
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
-| 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://github.com/salimamoukou/acv00).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](https://github.com/MAIF/shapash/blob/master/tutorial/backend/tuto-backend01-acv.ipynb)    |
+| 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://github.com/salimamoukou/acv00).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)    |
 | 1.4.x         |  Groups of features <br> [demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
 | 1.3.x         |  Shapash Report <br> [demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)    | 
 
@@ -231,9 +231,10 @@ This github repository offers a lot of tutorials to allow you to start more conc
 ### Better displaying data with postprocessing
 - [Using postprocessing parameter in compile method](tutorial/postprocess/tuto-postprocess01.ipynb)
 
-### How to use shapash with Shap or Lime compute
+### How to use shapash with Shap, Lime or ACV
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
 - [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
+- [Use **ACV backend** to compute Active Shapley Values and SDP global importance](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)
 
 ### Generate the Shapash Report
 - [Generate a standalone HTML report of your project with generate_report](tutorial/report/tuto-shapash-report01.ipynb)
