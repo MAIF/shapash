@@ -804,6 +804,7 @@ class TestSmartExplainer(unittest.TestCase):
         else:
             raise NotImplementedError
         
+        xpl.save(pkl_file)
         xpl2.load(pkl_file)
 
         attrib_xpl = [element for element in xpl.__dict__.keys()]
@@ -811,6 +812,7 @@ class TestSmartExplainer(unittest.TestCase):
 
         assert all(attrib in attrib_xpl2 for attrib in attrib_xpl)
         assert all(attrib2 in attrib_xpl for attrib2 in attrib_xpl2)
+        os.remove(pkl_file)
 
     def test_save_load(self):
         """
