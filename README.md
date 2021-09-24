@@ -244,10 +244,6 @@ This github repository offers a lot of tutorials to allow you to start more conc
 
 ## 🤝 Contributors
 
-<a href="https://www.maif.fr/">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_maif.png" width="130" />
-</a>
+<img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_maif.png" width="130" />
 <br>
-<a href="https://www.quantmetry.com/">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_quantmetry.png" width="130" />
-</a>
+<img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_quantmetry.png" width="130" />
