@@ -23,7 +23,7 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
 pytest==5.2.3
 pytest-cov==2.8.1
-scikit-learn>=0.23.2
+scikit-learn==0.24.2
 xgboost==1.0.0
 nbformat>4.2.0
 numba==0.53.1
@@ -34,3 +34,4 @@ seaborn==0.11.1
 notebook
 Jinja2
 phik
+acv-exp
