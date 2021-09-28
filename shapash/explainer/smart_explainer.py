@@ -1239,23 +1239,29 @@ class SmartExplainer:
             raise AssertionError("Explainer object was not compiled. Please compile the explainer "
                                  "object using .compile(...) method before generating the report.")
 
-        execute_report(
-            working_dir=working_dir,
-            explainer=self,
-            project_info_file=project_info_file,
-            x_train=x_train,
-            y_train=y_train,
-            y_test=y_test,
-            config=dict(
-                title_story=title_story,
-                title_description=title_description,
-                metrics=metrics
-            ),
-            notebook_path=notebook_path,
-            kernel_name=kernel_name
-        )
-        export_and_save_report(working_dir=working_dir, output_file=output_file)
+        try:
+            execute_report(
+                working_dir=working_dir,
+                explainer=self,
+                project_info_file=project_info_file,
+                x_train=x_train,
+                y_train=y_train,
+                y_test=y_test,
+                config=dict(
+                    title_story=title_story,
+                    title_description=title_description,
+                    metrics=metrics
+                ),
+                notebook_path=notebook_path,
+                kernel_name=kernel_name
+            )
+            export_and_save_report(working_dir=working_dir, output_file=output_file)
 
-        if rm_working_dir:
-            shutil.rmtree(working_dir)
+            if rm_working_dir:
+                shutil.rmtree(working_dir)
+        
+        except Exception as e:
+            if rm_working_dir:
+                shutil.rmtree(working_dir)
+            raise e
 
