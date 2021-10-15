@@ -15,6 +15,7 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.acv_backend import active_shapley_values, compute_features_import_acv
+from shapash.utils.lime_backend import lime_contributions, transform_name
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -200,7 +201,7 @@ class SmartExplainer:
             }
         backend : str (default: 'shap')
             Select which computation method to use in order to compute contributions
-            and feature importance. Possible values are 'shap' or 'acv'. Default is 'shap'.
+            and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
 
         Example
         --------
@@ -233,8 +234,25 @@ class SmartExplainer:
                     )
                 else:
                     raise NotImplementedError('ACV does not support regression case yet.')
+            elif backend.lower() =='lime':
+                if self._case == 'classification' and len(self._classes)>2:
+                    contributions = lime_contributions( model=model,
+                                                        x_train=None,
+                                                        x_test=self.x_pred,
+                                                        num_classes=len(self._classes))
+                elif self._case == 'classification' and len(self._classes)<3:
+                    contributions = lime_contributions( model=model,
+                                                        x_train=None,
+                                                        x_test=self.x_pred)
+                else:
+                    contributions = lime_contributions( model=model,
+                                                        x_train=None,
+                                                        x_test=self.x_pred,
+                                                        mode="regression")
+
+                
             else:
-                raise ValueError(f'Unknown backend : {backend}. Possible values are "shap" or "acv".')
+                raise ValueError(f'Unknown backend : {backend}. Possible values are "shap", "acv" or "lime".')
 
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
