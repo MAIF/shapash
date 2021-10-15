@@ -4,37 +4,89 @@ import numpy as np
 import pandas as pd
 import random
 from sklearn.manifold import MDS
-plt.style.use("seaborn")
+from shapash.explainer.smart_explainer import SmartExplainer
 
-def consistency_plot(contributions=None, methods=["shap", "acv"], selection=None):
-    """Consitency plot to compare contributions from multiple methods
+def compute_contributions(x, model, preprocessing=None, methods=["shap", "acv"]):
+    """
+    Compute contributions based on specified methods
+
+    Parameters
+    ----------
+    x : pandas.DataFrame
+        Prediction set.
+        IMPORTANT: this should be the raw prediction set, whose values are seen by the end user.
+        x is a preprocessed dataset: Shapash can apply the model to it
+    model : model object
+        Model used to consistency check. model object can also be used by some method to compute
+        predict and predict_proba values
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+            --> Differents types of preprocessing are available:
+
+            - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+            - A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
+            - A list with multiple category_encoders with optional (dict, list of dict)
+            - A list with a single ColumnTransformer with optional (dict, list of dict)
+            - A dict
+            - A list of dict
+    methods : list, optional
+        When contributions is None, list of methods to use to calculate contributions, by default ["shap", "acv"]
+
+    Returns
+    -------
+    contributions : dict
+        Dict whose keys are method names and values are the corresponding contributions
+    """    
+    contributions = {}
+    xpl = SmartExplainer()
+
+    for backend in methods:
+        xpl.compile(
+            x=x,
+            model=model,
+            preprocessing=preprocessing,
+            backend=backend
+        )
+        contributions[backend] = xpl.contributions
+    return contributions
+
+def check_consistency_contributions(weights):
+    """
+    Assert contributions calculated from different methods are dataframes of same shape with same column names and index names
+
+    Parameters
+    ----------
+    weights : list
+        List of contributions from different methods
+    """    
+    if not all(isinstance(x, pd.DataFrame) for x in weights):
+        raise ValueError('Contributions must be pandas DataFrames')
+    if not all(x.shape == weights[0].shape for x in weights):
+        raise ValueError('Contributions must be of same shape')
+    if not all(x.columns.tolist() == weights[0].columns.tolist() for x in weights):
+        raise ValueError('Columns names are different between contributions')
+    if not all(x.index.tolist() == weights[0].index.tolist() for x in weights):
+        raise ValueError('Index names are different between contributions')
+
+
+def consistency_plot(contributions, selection=None):
+    """
+    Consitency plot to compare contributions from multiple methods
 
     Parameters
     ----------
     contributions : dictionary, optional
         If provided, dictionary where key is method name and value is a DataFrame containing the contributions for a specific method, by default None
-    methods : list, optional
-        When contributions is None, list of methods to use to calculate contributions, by default ["shap", "acv"]
     selection: list
         Contains list of index, subset of the input DataFrame that we use for the compute of consitency statistics, by default None
-
     """    
-    if contributions:
+    methods = list(contributions.keys())
+    weights = list(contributions.values())
 
-        methods = list(contributions.keys())
-        weights = list(contributions.values())
-
-    else: #TODO calculer les contributions définies dans l'argument "methods"
-        pass
-
-    if not all(isinstance(x, pd.DataFrame) for x in weights):
-        raise ValueError('Contributions must be pandas DataFrames')
-    if not all(x.shape == weights[0].shape for x in weights):
-        raise ValueError('Contributions must be of same shape')
+    check_consistency_contributions(weights)
 
     weights = [weight.values for weight in weights]
 
-    # Sampling
+    # Selection
     if selection is None:
         pass
     elif isinstance(selection, list):
@@ -48,11 +100,15 @@ def consistency_plot(contributions=None, methods=["shap", "acv"], selection=None
     all_comparisons, mean_distances = calculate_all_distances(methods, weights)
     method_1, method_2, l2 = find_examples(mean_distances, all_comparisons, weights)
 
-    plot_comparison(mean_distances)
-    plot_examples(method_1, method_2, l2)
+    fig1 = plot_comparison(mean_distances)
+    fig2 = plot_examples(method_1, method_2, l2)
+
+    fig1.show()
+    fig2.show()
 
 def calculate_all_distances(methods, weights):
-    """For each instance, calculate contributions from differents methods and measure a distance. In addition, calculate the mean distance between each pair of method
+    """
+    For each instance, measure a distance between contributions from different methods. In addition, calculate the mean distance between each pair of method
 
     Parameters
     ----------
@@ -75,16 +131,22 @@ def calculate_all_distances(methods, weights):
     all_comparisons = np.array([np.repeat(None, 4)])
 
     for index_i, index_j in itertools.combinations(range(len(methods)), 2):
-        l2_dist, pairwise_comparison = calculate_pairwise_distances(weights, index_i, index_j)
-        calculate_mean_distances(methods, mean_distances, index_i, index_j, l2_dist)
+        l2_dist = calculate_pairwise_distances(weights, index_i, index_j)
+        # Populate the (n choose 2)x4 array
+        pairwise_comparison = np.column_stack(
+            (np.repeat(index_i, len(l2_dist)), np.repeat(index_j, len(l2_dist)), np.arange(len(l2_dist)), l2_dist,)
+        )
         all_comparisons = np.concatenate((all_comparisons, pairwise_comparison), axis=0)
+
+        calculate_mean_distances(methods, mean_distances, index_i, index_j, l2_dist)
 
     all_comparisons = all_comparisons[1:, :]
 
     return all_comparisons, mean_distances
 
 def calculate_pairwise_distances(weights, index_i, index_j):
-    """For a specific pair of methods, calculate the distance between the contributions for all instances. 
+    """
+    For a specific pair of methods, calculate the distance between the contributions for all instances. 
 
     Parameters
     ----------
@@ -99,23 +161,18 @@ def calculate_pairwise_distances(weights, index_i, index_j):
     -------
     l2_dist : array
         Distance between the two selected methods for all instances
-    pairwise_comparison : array
-        Formalisation of the l2_dist used in a later step
     """    
     # Normalize weights using L2 norm
     norm_weights_i = weights[index_i] / np.linalg.norm(weights[index_i], ord=2, axis=1)[:, np.newaxis]
     norm_weights_j = weights[index_j] / np.linalg.norm(weights[index_j], ord=2, axis=1)[:, np.newaxis]
     # And then take the L2 norm of the difference as a metric
     l2_dist = np.linalg.norm(norm_weights_i -  norm_weights_j, ord=2, axis=1)
-    # Populate the (n choose 2)x4 array
-    pairwise_comparison = np.column_stack(
-        (np.repeat(index_i, len(l2_dist)), np.repeat(index_j, len(l2_dist)), np.arange(len(l2_dist)), l2_dist,)
-    )
 
-    return l2_dist, pairwise_comparison
+    return l2_dist
 
 def calculate_mean_distances(methods, mean_distances, index_i, index_j, l2_dist):
-    """Given the contributions of all instances for two selected instances, calculate the distance between them
+    """
+    Given the contributions of all instances for two selected instances, calculate the distance between them
 
     Parameters
     ----------
@@ -135,7 +192,8 @@ def calculate_mean_distances(methods, mean_distances, index_i, index_j, l2_dist)
     mean_distances.loc[methods[index_j], methods[index_i]] = np.mean(l2_dist)
 
 def find_examples(mean_distances, all_comparisons, weights):
-    """To illustrate the meaning of distances between methods, extract 5 real examples from the dataset
+    """
+    To illustrate the meaning of distances between methods, extract 5 real examples from the dataset
 
     Parameters
     ----------
@@ -178,7 +236,8 @@ def find_examples(mean_distances, all_comparisons, weights):
     return method_1, method_2, l2
 
 def calculate_coords(mean_distances):
-    """Calculate 2D coords to position the different methods in the main graph
+    """
+    Calculate 2D coords to position the different methods in the main graph
 
     Parameters
     ----------
@@ -192,32 +251,31 @@ def calculate_coords(mean_distances):
     return MDS(n_components=2, dissimilarity="precomputed", random_state=0).fit_transform(mean_distances)
 
 def plot_comparison(mean_distances):
-    """Plot the main graph displaying distances between methods
+    """
+    Plot the main graph displaying distances between methods
 
     Parameters
     ----------
     mean_distances : DataFrame
         DataFrame storing all pairwise distances between methods
     """    
-    font = {"fontname":"Arial", "fontsize": 18, "color":'#{:02x}{:02x}{:02x}'.format(50, 50 , 50)}
+    font = {"family":"Arial", "color":'#{:02x}{:02x}{:02x}'.format(50, 50 , 50)}
 
-    fig = plt.figure(figsize=(10, 6))
-    plt.suptitle(
-        "Explanation methods consistency:How similar are explanations from different methods?",
-        y=1.05,
-        **font
-    )
+    fig, ax = plt.subplots(ncols=1, figsize=(10, 6))
 
-    plt.title(
-        "Average distances between the explanations provided\nby SHAP, LIME and Tree Interpreter", fontsize=14,
+    ax.text(x=0.5, y=1.04, s="Consistency of explanations:", fontsize=24, ha="center", transform=fig.transFigure, **font)
+    ax.text(x=0.5, y=0.98, s="How similar are explanations from different methods?", fontsize=18, ha="center", transform=fig.transFigure, **font)
+
+    ax.set_title(
+        "Average distances between the explanations", fontsize=14, pad=-60
     )
 
     coords = calculate_coords(mean_distances)
 
-    plt.scatter(coords[:, 0], coords[:, 1], marker="o")
+    ax.scatter(coords[:, 0], coords[:, 1], marker="o")
 
     for i in range(len(mean_distances.columns)):
-        plt.annotate(
+        ax.annotate(
             mean_distances.columns[i],
             xy=coords[i, :],
             xytext=(-5, 5),
@@ -226,28 +284,37 @@ def plot_comparison(mean_distances):
             va="bottom",
         )
         draw_arrow(
+            ax,
             coords[i, :],
             coords[(i + 1) % mean_distances.shape[0], :],
             mean_distances.iloc[i, (i + 1) % mean_distances.shape[0]],
         )
 
+    # set gray background
+    ax.set_facecolor('#F5F5F2')
+    # draw solid white grid lines
+    ax.grid(color='w', linestyle='solid')
+
     lim = (coords.min().min(), coords.max().max())
     margin = 0.1 * (lim[1] - lim[0])
     lim = (lim[0] - margin, lim[1] + margin)
-    plt.axes().set(xlim=lim, ylim=lim)
-    plt.axes().set_aspect("equal", anchor="W")
-    plt.axes().set_xticklabels([])
-    plt.axes().set_yticklabels([])
-    plt.axes().set_xticks(plt.axes().get_yticks())
+    ax.set(xlim=lim, ylim=lim)
+    ax.set_aspect("equal", anchor="C")
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_xticks(ax.get_yticks())
 
-    plt.show()
+    return fig
 
 
-def draw_arrow(a, b, dst):
-    """Add an arrow in the main graph between the methods
+def draw_arrow(ax, a, b, dst):
+    """
+    Add an arrow in the main graph between the methods
 
     Parameters
     ----------
+    ax : ax
+        Input ax used for the plot
     a : array
         Coordinates of method 1
     b : array
@@ -255,7 +322,7 @@ def draw_arrow(a, b, dst):
     dst : float
         Distance between the methods
     """    
-    plt.annotate(
+    ax.annotate(
         s="",
         xy=a - 0.05 * (a - b),
         xycoords="data",
@@ -263,7 +330,7 @@ def draw_arrow(a, b, dst):
         textcoords="data",
         arrowprops=dict(arrowstyle="<->"),
     )
-    plt.annotate(
+    ax.annotate(
         s="%.2f" % dst,
         xy=(0.5 * (a[0] + b[0]), 0.5 * (a[1] + b[1])),
         xycoords="data",
@@ -272,7 +339,8 @@ def draw_arrow(a, b, dst):
     )
 
 def plot_examples(method_1, method_2, l2):
-    """Plot the second graph that explains distances via the use of real exmaples extracted from the dataset
+    """
+    Plot the second graph that explains distances via the use of real exmaples extracted from the dataset
 
     Parameters
     ----------
@@ -282,11 +350,16 @@ def plot_examples(method_1, method_2, l2):
         Contributions of 5 instances selected to display in the second plot for method 2
     l2 : list
         Distance between method_1 and method_2 for the 5 instances
+
+    Returns
+    -------
+    figure
     """    
     y = np.arange(method_1[0].shape[0])
     fig, axes = plt.subplots(ncols=len(l2), figsize=(3*len(l2), 4))
+    fig.subplots_adjust(wspace=.3)
     if len(l2) == 1: axes = np.array([axes])
-    fig.suptitle("Examples of weights comparisons for various distances (L2 norm)")
+    fig.suptitle("Examples of explanations' comparisons for various distances (L2 norm)")
 
     for n, (i, j, k) in enumerate(zip(method_1, method_2, l2)):
         """ # To keep a subset of features, remove the ones where abs(SHAP) according to method_1 is small
@@ -299,12 +372,16 @@ def plot_examples(method_1, method_2, l2):
         idx = np.flip(i.argsort())
         i, j = i[idx], j[idx]
 
-        axes[n].barh(y, i, label='method 1', left=0)
-        axes[n].barh(y, j, label='method 2', left=np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3) # /3 to add space
+        axes[n].barh(y, i, label='method 1', left=0, color='#{:02x}{:02x}{:02x}'.format(255, 166, 17))
+        axes[n].barh(y, j, label='method 2', left=np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3, color='#{:02x}{:02x}{:02x}'.format(117, 152, 189)) # /3 to add space
 
-        axes[n].set(xticks=[])
-        axes[n].set(yticks=[])
+        # set gray background
+        axes[n].set_facecolor('#F5F5F2')
+        # draw solid white grid lines
+        axes[n].grid(color='w', linestyle='solid')
+
         axes[n].set(title="$d_{L2}$ = " + str(round(k, 2)))
-        axes[n].set_xlabel("Shap values")
+        axes[n].set_xlabel("Contributions")
+        axes[n].set_ylabel("Features")
 
-    fig.show()
+    return fig
