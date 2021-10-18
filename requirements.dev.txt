@@ -1,6 +1,6 @@
 pip==20.2.4
 dash==1.17.0
-catboost>=0.22
+catboost==0.26.1
 category-encoders==2.1.0
 dash-bootstrap-components==0.9.1
 dash-core-components==1.13.0
