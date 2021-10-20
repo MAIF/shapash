@@ -237,16 +237,16 @@ class SmartExplainer:
             elif backend.lower() =='lime':
                 if self._case == 'classification' and len(self._classes)>2:
                     contributions = lime_contributions( model=model,
-                                                        x_train=None,
+                                                        x_train=self.x_init,
                                                         x_test=self.x_pred,
                                                         num_classes=len(self._classes))
                 elif self._case == 'classification' and len(self._classes)<3:
                     contributions = lime_contributions( model=model,
-                                                        x_train=None,
+                                                        x_train=self.x_init,
                                                         x_test=self.x_pred)
                 else:
                     contributions = lime_contributions( model=model,
-                                                        x_train=None,
+                                                        x_train=self.x_init,
                                                         x_test=self.x_pred,
                                                         mode="regression")
 

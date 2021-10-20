@@ -452,6 +452,22 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer()
         xpl.compile(model=clf, x=df[['x1', 'x2']], x_train=df[['x1', 'x2']], backend='acv')
         assert xpl.backend == 'acv'
+    
+    def test_compile_5(self):
+        """
+        Unit test compile 5
+        checking compile method with lime backend
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        xpl = SmartExplainer()
+        xpl.compile(model=clf, x=df[['x1', 'x2']], x_train=df[['x1', 'x2']], backend="lime")
+        #assert xpl.backend == 'lime'
 
     def test_filter_0(self):
         """
