@@ -7,6 +7,7 @@ import xgboost as xgb
 from shapash.utils.lime_backend import lime_contributions
 from random import randrange
 
+
 class TestLimeBackend(unittest.TestCase):
     def setUp(self):
         self.modellist_classif = [
@@ -23,9 +24,6 @@ class TestLimeBackend(unittest.TestCase):
             ske.RandomForestRegressor(n_estimators=1)
         ]
 
-
-        
-
     def test_lime_contributions_1(self):
         """
         test lime backend with binary classification
@@ -40,31 +38,31 @@ class TestLimeBackend(unittest.TestCase):
         for model in self.modellist_classif:
             print(type(model))
             model.fit(self.x_df.values, self.y_df.values)
-            lime_contributions(model, self.x_df, self.x_df, self.x_df)
-    
+            lime_contributions(model, self.x_df, self.x_df, self.x_df, num_classes=2)
+
     def test_lime_contributions_2(self):
         """
         test lime backend with multiple classification
         """
         df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 0 if x <= 8 else 1 if x>8 and x<=14 else 2)
+        df['y'] = df['id'].apply(lambda x: 0 if x <= 8 else 1 if x > 8 and x <= 14 else 2)
         df['x1'] = np.random.randint(1, 123, df.shape[0])
         df['x2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
         self.x_df1 = df[['x1', 'x2']]
         self.y_df1 = df['y'].to_frame()
-        
+
         for model in self.modellist_classif:
             print(type(model))
             model.fit(self.x_df1.values, self.y_df1.values)
-            lime_contributions(model, self.x_df1, self.x_df1, self.x_df1,num_classes=3)
+            lime_contributions(model, self.x_df1, self.x_df1, self.x_df1, num_classes=3)
 
     def test_lime_contributions_3(self):
         """
         test lime backend with regression
         """
         df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = np.random.randint(100, 1000, df.shape[0]) 
+        df['y'] = np.random.randint(100, 1000, df.shape[0])
         df['x1'] = np.random.randint(1, 123, df.shape[0])
         df['x2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
@@ -73,4 +71,4 @@ class TestLimeBackend(unittest.TestCase):
         for model in self.modellist_regression:
             print(type(model))
             model.fit(self.x_df2.values, self.y_df2.values)
-            lime_contributions(model, self.x_df2, self.x_df2, self.x_df2,mode="regression")
+            lime_contributions(model, self.x_df2, self.x_df2, self.x_df2, mode="regression")
