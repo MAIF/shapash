@@ -40,7 +40,7 @@ def lime_contributions(model,
     if is_lime_available is False:
         raise ValueError(
             """
-            Active Shapley values requires the LIME package,
+            Install LIME package to compute,
             which can be installed using 'pip install lime'
             """
                     )
@@ -63,7 +63,7 @@ def lime_contributions(model,
         if mode == "classification" and num_classes <= 2:
 
             exp = explainer.explain_instance(x_init.loc[i], model.predict_proba)
-            lime_contrib.append(dict([[transform_name(b[0], x_init), b[1]] for b in exp.as_list()]))
+            lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
 
         elif mode == "classification" and num_classes > 2:
 
@@ -75,7 +75,7 @@ def lime_contributions(model,
                     exp = explainer.explain_instance(
                         x_init.loc[i], model.predict_proba, top_labels=num_classes)
                     list_contrib.append(
-                        dict([[transform_name(b[0], x_init), b[1]] for b in exp.as_list(j)]))
+                        dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list(j)]))
                     df_contrib = pd.DataFrame(list_contrib)
                     df_contrib = df_contrib[list(x_init.columns)]
                 contribution.append(df_contrib.values)
@@ -84,7 +84,7 @@ def lime_contributions(model,
         else:
 
             exp = explainer.explain_instance(x_init.loc[i], model.predict)
-            lime_contrib.append(dict([[transform_name(b[0], x_init), b[1]] for b in exp.as_list()]))
+            lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
 
     contribution = pd.DataFrame(lime_contrib, index=x_init.index)
     contribution = contribution[list(x_init.columns)]
