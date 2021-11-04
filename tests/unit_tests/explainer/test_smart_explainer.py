@@ -467,7 +467,7 @@ class TestSmartExplainer(unittest.TestCase):
 
         xpl = SmartExplainer()
         xpl.compile(model=clf, x=df[['x1', 'x2']], x_train=df[['x1', 'x2']], backend="lime")
-        #assert xpl.backend == 'lime'
+        
 
     def test_filter_0(self):
         """

@@ -236,11 +236,13 @@ class SmartExplainer:
                 else:
                     raise NotImplementedError('ACV does not support regression case yet.')
             elif backend.lower() == 'lime':
-                contributions = lime_contributions(model=model,
+                if features_groups is not None:
+                    raise ValueError('LIME does not support groups of features for now.')
+                else:
+                    contributions = lime_contributions(model=model,
                                                    x_init=self.x_init,
-                                                   x_pred=self.x_pred,
                                                    mode=self._case,
-                                                   num_classes=len(self._classes))
+                                                   num_classes=len(self._classes), **kwargs)
 
             else:
                 raise ValueError(

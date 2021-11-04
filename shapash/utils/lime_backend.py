@@ -1,10 +1,14 @@
+try:
+    from lime import lime_tabular
+    is_lime_available = True
+except ImportError:
+    is_lime_available = False
+
 import pandas as pd
-import lime.lime_tabular
 import logging
 
 
 def lime_contributions(model,
-                       x_pred,
                        x_init,
                        x_train=None,
                        mode="classification",
@@ -22,8 +26,6 @@ def lime_contributions(model,
                 on multiple feature vectors (the vectors randomly perturbed
                 from the data_row).
         x_init  : pd.DataFrame
-            x_init dataset with inverse transformation with eventual postprocessing modifications.
-        x_pred : pd.DataFrame
             preprocessed dataset used by the model to perform the prediction.
         x_train : pd.DataFrame
             Training dataset used as background.
@@ -35,6 +37,13 @@ def lime_contributions(model,
         np.array or list of np.array
 
     """
+    if is_lime_available is False:
+        raise ValueError(
+            """
+            Active Shapley values requires the LIME package,
+            which can be installed using 'pip install lime'
+            """
+                    )
 
     if x_train is not None:
         x_lime_explainer = x_train
@@ -43,9 +52,10 @@ def lime_contributions(model,
                         "in order to avoid errors.")
         x_lime_explainer = x_init
 
-    explainer = lime.lime_tabular.LimeTabularExplainer(x_lime_explainer.values,
+    explainer = lime_tabular.LimeTabularExplainer(x_lime_explainer.values,
                                                        feature_names=x_lime_explainer.columns,
                                                        mode=mode)
+    print("Backend: LIME")
     lime_contrib = []
 
     for i in x_init.index:
@@ -82,7 +92,7 @@ def lime_contributions(model,
     return contribution
 
 
-def transform_name(a, x_df):
+def transform_name(var_name, x_df):
     """Function for transform name of LIME contribution shape to a comprehensive name 
 
     Args:
@@ -93,6 +103,6 @@ def transform_name(a, x_df):
         str: valid name
     """
     for colname in list(x_df.columns):
-        if str(colname) in str(a):
+        if str(colname) in str(var_name):
             col_rename = colname
     return col_rename

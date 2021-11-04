@@ -38,7 +38,7 @@ class TestLimeBackend(unittest.TestCase):
         for model in self.modellist_classif:
             print(type(model))
             model.fit(self.x_df.values, self.y_df.values)
-            lime_contributions(model, self.x_df, self.x_df, self.x_df, num_classes=2)
+            lime_contributions(model, self.x_df, self.x_df, num_classes=2)
 
     def test_lime_contributions_2(self):
         """
@@ -55,7 +55,7 @@ class TestLimeBackend(unittest.TestCase):
         for model in self.modellist_classif:
             print(type(model))
             model.fit(self.x_df1.values, self.y_df1.values)
-            lime_contributions(model, self.x_df1, self.x_df1, self.x_df1, num_classes=3)
+            lime_contributions(model, self.x_df1, self.x_df1, num_classes=3)
 
     def test_lime_contributions_3(self):
         """
@@ -71,4 +71,4 @@ class TestLimeBackend(unittest.TestCase):
         for model in self.modellist_regression:
             print(type(model))
             model.fit(self.x_df2.values, self.y_df2.values)
-            lime_contributions(model, self.x_df2, self.x_df2, self.x_df2, mode="regression")
+            lime_contributions(model, self.x_df2, self.x_df2, mode="regression")
