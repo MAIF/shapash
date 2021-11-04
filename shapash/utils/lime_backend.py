@@ -96,7 +96,7 @@ def transform_name(var_name, x_df):
     """Function for transform name of LIME contribution shape to a comprehensive name 
 
     Args:
-        a (str): variable name to transform
+        var_name (str): variable name to transform
         x_df (pd.DataFrame): dataframe with valid name
 
     Returns:
