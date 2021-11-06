@@ -85,7 +85,7 @@ class Consistency():
                 x=x,
                 model=model,
                 preprocessing=preprocessing,
-                #backend=backend
+                backend=backend
             )
             contributions[backend] = xpl.contributions
 
