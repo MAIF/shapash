@@ -50,7 +50,7 @@ class SmartState:
         else:
             return contributions
 
-    def inverse_transform_contributions(self, contributions, preprocessing):
+    def inverse_transform_contributions(self, contributions, preprocessing, agg_columns='sum'):
         """
         Compute local contributions in the original feature space, despite category encoding.
 
@@ -60,13 +60,19 @@ class SmartState:
             Local contributions of a model on a prediction set.
         preprocessing : object
             Single step of preprocessing, typically a category encoder.
+        agg_columns : str (default: 'sum')
+            Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
+            For ACV we want to take any value as ACV computes contributions of coalition of variables (like
+            one hot encoded variables) differently from Shap and then give the same value to each variable of the
+            coalition. As a result we just need to take the value of one of these variables to get the contribution
+            value of the group.
 
         Returns
         -------
         pandas.DataFrame
             Local contributions on the original feature space (no encoding).
         """
-        return inverse_transform_contributions(contributions, preprocessing)
+        return inverse_transform_contributions(contributions, preprocessing, agg_columns)
 
     def check_contributions(self, contributions, x_pred, features_names=True):
         """
