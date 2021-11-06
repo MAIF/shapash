@@ -11,10 +11,11 @@ from shapash.webapp.smart_app import SmartApp
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
-from shapash.utils.transform import adapt_contributions
+from shapash.utils.transform import adapt_contributions, get_features_transform_mapping
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
+from shapash.utils.acv_backend import active_shapley_values, compute_features_import_acv
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -127,7 +128,7 @@ class SmartExplainer:
                 label_dict must be a dict
                 """
             )
-        self.features_dict = features_dict
+        self.features_dict = copy.deepcopy(features_dict)
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
         if title_story is not None:
@@ -138,7 +139,7 @@ class SmartExplainer:
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
-                features_groups=None):
+                features_groups=None, backend='shap', **kwargs):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -206,6 +207,9 @@ class SmartExplainer:
             ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
             ‘feature_group_2’ : ['feature1', 'feature12'],
             }
+        backend : str (default: 'shap')
+            Select which computation method to use in order to compute contributions
+            and feature importance. Possible values are 'shap' or 'acv'. Default is 'shap'.
 
         Example
         --------
@@ -222,8 +226,25 @@ class SmartExplainer:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
         if explainer is not None and contributions is not None:
             raise ValueError("You have to specify just one of these arguments: explainer, contributions")
+
+        # Computing contributions using right backend
         if contributions is None:
-            contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
+            if backend.lower() == 'shap':
+                contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
+            elif backend.lower() == 'acv':
+                self.backend = 'acv'
+                if features_groups is not None:
+                    raise ValueError('ACV does not support groups of features for now.')
+                if self._case == 'classification':
+                    contributions, explainer, self.sdp_index, self.sdp = active_shapley_values(
+                        model=model, x_init=self.x_init, x_pred=self.x_pred, explainer=explainer,
+                        preprocessing=preprocessing, **kwargs
+                    )
+                else:
+                    raise NotImplementedError('ACV does not support regression case yet.')
+            else:
+                raise ValueError(f'Unknown backend : {backend}. Possible values are "shap" or "acv".')
+
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
         self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
@@ -434,7 +455,8 @@ class SmartExplainer:
         if preprocessing:
             return self.state.inverse_transform_contributions(
                 contributions,
-                preprocessing
+                preprocessing,
+                agg_columns='first' if hasattr(self, 'backend') and self.backend == 'acv' else 'sum'
             )
         else:
             return contributions
@@ -961,10 +983,20 @@ class SmartExplainer:
             Each Serie: feature importance, One row by feature,
             index of the serie = contributions.columns
         """
-        if self.features_groups is not None and self.features_imp_groups is None:
-            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
-        if self.features_imp is None or force:
-            self.features_imp = self.state.compute_features_import(self.contributions)
+        if hasattr(self, 'backend') and self.backend == 'acv':
+            features_mapping = get_features_transform_mapping(self.x_pred, self.x_init, self.preprocessing)
+            features_imp = compute_features_import_acv(
+                self.sdp_index, self.sdp, self.x_init.columns, features_mapping
+            )
+            if isinstance(self.contributions, list):
+                self.features_imp = [features_imp for _ in range(len(self.contributions))]
+            else:
+                self.features_imp = features_imp
+        else:
+            if self.features_groups is not None and self.features_imp_groups is None:
+                self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
+            if self.features_imp is None or force:
+                self.features_imp = self.state.compute_features_import(self.contributions)
 
     def compute_features_stability(self, selection):
         """
@@ -1031,13 +1063,20 @@ class SmartExplainer:
 
         self.features_compacity = {"features_needed": features_needed, "distance_reached": distance_reached}
 
-    def init_app(self):
+    def init_app(self, settings: dict = None):
         """
         Simple init of SmartApp in case of host smartapp by another way
+        
+        Parameters
+        ----------
+        settings : dict (default: None)
+            A dict describing the default webapp settings values to be used
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
+            Values should be positive ints
         """
-        self.smartapp = SmartApp(self)
+        self.smartapp = SmartApp(self, settings)
 
-    def run_app(self, port: int = None, host: str = None, title_story: str = None) -> CustomThread:
+    def run_app(self, port: int = None, host: str = None, title_story: str = None, settings: dict = None) -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
         run_app method can be used directly in a Jupyter notebook
@@ -1057,6 +1096,10 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             for your webapp (can be reused in other methods like in a report, ...)
+        settings : dict (default: None)
+            A dict describing the default webapp settings values to be used
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
+            Values should be positive ints
 
         Returns
         -------
@@ -1074,7 +1117,7 @@ class SmartExplainer:
         if self.y_pred is None:
             self.predict()
         if hasattr(self, '_case'):
-            self.smartapp = SmartApp(self)
+            self.smartapp = SmartApp(self, settings)
             if host is None:
                 host = "0.0.0.0"
             if port is None:
@@ -1273,22 +1316,29 @@ class SmartExplainer:
             raise AssertionError("Explainer object was not compiled. Please compile the explainer "
                                  "object using .compile(...) method before generating the report.")
 
-        execute_report(
-            working_dir=working_dir,
-            explainer=self,
-            project_info_file=project_info_file,
-            x_train=x_train,
-            y_train=y_train,
-            y_test=y_test,
-            config=dict(
-                title_story=title_story,
-                title_description=title_description,
-                metrics=metrics
-            ),
-            notebook_path=notebook_path,
-            kernel_name=kernel_name
-        )
-        export_and_save_report(working_dir=working_dir, output_file=output_file)
+        try:
+            execute_report(
+                working_dir=working_dir,
+                explainer=self,
+                project_info_file=project_info_file,
+                x_train=x_train,
+                y_train=y_train,
+                y_test=y_test,
+                config=dict(
+                    title_story=title_story,
+                    title_description=title_description,
+                    metrics=metrics
+                ),
+                notebook_path=notebook_path,
+                kernel_name=kernel_name
+            )
+            export_and_save_report(working_dir=working_dir, output_file=output_file)
 
-        if rm_working_dir:
-            shutil.rmtree(working_dir)
+            if rm_working_dir:
+                shutil.rmtree(working_dir)
+        
+        except Exception as e:
+            if rm_working_dir:
+                shutil.rmtree(working_dir)
+            raise e
+
