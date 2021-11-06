@@ -41,9 +41,6 @@ class Consistency():
         self.methods = list(contributions.keys())
         self.weights = list(contributions.values())
 
-        if self.weights[0].ndim == 1:
-            raise ValueError('Multiple datapoints are required to compute the metric')
-
         self.check_consistency_contributions(self.weights)
         self.weights = [weight.values for weight in self.weights]
 
@@ -100,6 +97,8 @@ class Consistency():
         weights : list
             List of contributions from different methods
         """
+        if weights[0].ndim == 1:
+            raise ValueError('Multiple datapoints are required to compute the metric')
         if not all(isinstance(x, pd.DataFrame) for x in weights):
             raise ValueError('Contributions must be pandas DataFrames')
         if not all(x.shape == weights[0].shape for x in weights):
@@ -118,6 +117,8 @@ class Consistency():
         ----------
         selection: list
             Contains list of index, subset of the input DataFrame that we use for the compute of consitency statistics, by default None
+        max_features: int, optional
+            Maximum number of displayed features, by default 20
         """
         # Selection
         if selection is None:
