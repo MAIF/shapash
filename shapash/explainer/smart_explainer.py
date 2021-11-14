@@ -1025,7 +1025,7 @@ class SmartExplainer:
         # Check if entry is a single instance or not
         if len(selection) == 1:
             # Compute explanations for instance and neighbors
-            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_init, self.contributions)
+            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_init, self.contributions, self._case)
             self.local_neighbors = {"norm_shap": norm_shap}
         else:
             numb_expl = len(selection)
@@ -1033,7 +1033,7 @@ class SmartExplainer:
             variability = np.zeros((numb_expl, self.x_pred.shape[1]))
             # For each instance (+ neighbors), compute explanation
             for i in range(numb_expl):
-                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions)
+                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions, self._case)
             self.features_stability = {"variability": variability, "amplitude": amplitude}
 
     def compute_features_compacity(self, selection, distance, nb_features):
