@@ -85,7 +85,7 @@ def active_shapley_values(
         X=x_init.values,
         data=data,
         C=c,
-        global_proba=0.9
+        pi_level=0.9
     )
     s_star, n_star = get_null_coalition(sdp_index, size)
     contributions = explainer.shap_values_acv_adap(
