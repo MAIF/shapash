@@ -15,6 +15,7 @@ from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
 from shapash.utils.acv_backend import active_shapley_values, compute_features_import_acv
+from shapash.utils.lime_backend import lime_contributions
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -200,7 +201,7 @@ class SmartExplainer:
             }
         backend : str (default: 'shap')
             Select which computation method to use in order to compute contributions
-            and feature importance. Possible values are 'shap' or 'acv'. Default is 'shap'.
+            and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
 
         Example
         --------
@@ -221,7 +222,8 @@ class SmartExplainer:
         # Computing contributions using right backend
         if contributions is None:
             if backend.lower() == 'shap':
-                contributions, explainer = shap_contributions(model, self.x_init, self.check_explainer(explainer))
+                contributions, explainer = shap_contributions(
+                    model, self.x_init, self.check_explainer(explainer))
             elif backend.lower() == 'acv':
                 self.backend = 'acv'
                 if features_groups is not None:
@@ -233,8 +235,18 @@ class SmartExplainer:
                     )
                 else:
                     raise NotImplementedError('ACV does not support regression case yet.')
+            elif backend.lower() == 'lime':
+                if features_groups is not None:
+                    raise ValueError('LIME does not support groups of features for now.')
+                else:
+                    contributions = lime_contributions(model=model,
+                                                   x_init=self.x_init,
+                                                   mode=self._case,
+                                                   num_classes=len(self._classes), **kwargs)
+
             else:
-                raise ValueError(f'Unknown backend : {backend}. Possible values are "shap" or "acv".')
+                raise ValueError(
+                    f'Unknown backend : {backend}. Possible values are "shap", "acv" or "lime".')
 
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
