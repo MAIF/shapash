@@ -8,8 +8,8 @@ from shapash.explainer.smart_explainer import SmartExplainer
 
 class Consistency():
 
-    def compile(self, x=None, model=None, preprocessing=None, contributions=None, methods=["shap", "acv"]):
-        """If not provided, compute contributions according to provided methods (default are SHAP, ACV). If provided, check whether they respect the correct format : contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}, where each contrib_i is a pandas DataFrame
+    def compile(self, x=None, model=None, preprocessing=None, contributions=None, methods=["shap", "acv", "lime"]):
+        """If not provided, compute contributions according to provided methods (default are shap, acv, lime). If provided, check whether they respect the correct format : contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}, where each contrib_i is a pandas DataFrame
 
         Parameters
         ----------
@@ -29,7 +29,7 @@ class Consistency():
         contributions : dict, optional
             Contributions provided by the user if no compute is required. Format must be {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}, where each contrib_i is a pandas DataFrame. By default None
         methods : list
-            Methods used to compute contributions, by default ["shap", "acv"]
+            Methods used to compute contributions, by default ["shap", "acv", "lime"]
         """
         if contributions is None:
             if (x is None) or (model is None):
@@ -40,8 +40,10 @@ class Consistency():
                 raise ValueError('Contributions must be a dictionary')
         self.methods = list(contributions.keys())
         self.weights = list(contributions.values())
-
+        
         self.check_consistency_contributions(self.weights)
+        self.index = self.weights[0].index
+
         self.weights = [weight.values for weight in self.weights]
 
     def compute_contributions(self, x, model, methods, preprocessing):
@@ -79,12 +81,15 @@ class Consistency():
 
         for backend in methods:
             xpl.compile(
-                x=x,
+                x=x if n==0 else 1.1*x+10 if n==1 else 1.1*x,
                 model=model,
                 preprocessing=preprocessing,
                 backend=backend
             )
-            contributions[backend] = xpl.contributions
+            if xpl._case == "classification" and len(xpl.contributions) == 2:
+                contributions[backend] = xpl.contributions[1]
+            else:
+                contributions[backend] = xpl.contributions
 
         return contributions
 
@@ -130,12 +135,13 @@ class Consistency():
                 weights = [weight[selection] for weight in self.weights]
         else:
             raise ValueError('Parameter selection must be a list')
-
+        
         all_comparisons, mean_distances = self.calculate_all_distances(self.methods, weights)
-        method_1, method_2, l2 = self.find_examples(mean_distances, all_comparisons, weights)
+        
+        method_1, method_2, l2, index, name_1, name_2 = self.find_examples(mean_distances, all_comparisons, weights)
 
         fig1 = self.plot_comparison(mean_distances)
-        fig2 = self.plot_examples(method_1, method_2, l2, max_features)
+        fig2 = self.plot_examples(method_1, method_2, l2, index, name_1, name_2, max_features)
 
     def calculate_all_distances(self, methods, weights):
         """
@@ -243,9 +249,18 @@ class Consistency():
             Contributions of 5 instances selected to display in the second plot for method 2
         l2 : list
             Distance between method_1 and method_2 for the 5 instances
+        index : list
+            Index of the selected example
+        name_1 : list
+            Name of the explainability method displayed on the left
+        name_2 : list
+            Name of the explainability method displayed on the right
         """
         method_1 = []
+        name_1 = []
         method_2 = []
+        name_2 = []
+        index = []
         l2 = []
 
         # Evenly split the scale of L2 distances (from min to max excluding 0)
@@ -257,14 +272,22 @@ class Consistency():
             # Extract corresponding SHAP Values
             contrib_1 = weights[int(row[0, 0])][int(row[0, 2])]
             contrib_2 = weights[int(row[0, 1])][int(row[0, 2])]
+            # Extract method names
+            method_name_1 = self.methods[int(row[0, 0])]
+            method_name_2 = self.methods[int(row[0, 1])]
+            # Extract index of the selected example
+            index_example = self.index[int(row[0, 2])]
             # Prevent from displaying duplicate examples
             if closest_l2 in l2:
                 continue
             method_1.append(contrib_1 / np.linalg.norm(contrib_1, ord=2))
             method_2.append(contrib_2 / np.linalg.norm(contrib_2, ord=2))
             l2.append(closest_l2)
+            index.append(index_example)
+            name_1.append(method_name_1)
+            name_2.append(method_name_2)
 
-        return method_1, method_2, l2
+        return method_1, method_2, l2, index, name_1, name_2
 
     def calculate_coords(self, mean_distances):
         """
@@ -368,7 +391,7 @@ class Consistency():
             ha="center",
         )
 
-    def plot_examples(self, method_1, method_2, l2, max_features):
+    def plot_examples(self, method_1, method_2, l2, index, name_1, name_2, max_features):
         """
         Plot the second graph that explains distances via the use of real exmaples extracted from the dataset
 
@@ -387,11 +410,11 @@ class Consistency():
         """
         y = np.arange(method_1[0].shape[0])
         fig, axes = plt.subplots(ncols=len(l2), figsize=(3*len(l2), 4))
-        fig.subplots_adjust(wspace=.3)
+        fig.subplots_adjust(wspace=.3, top=.8)
         if len(l2) == 1: axes = np.array([axes])
         fig.suptitle("Examples of explanations' comparisons for various distances (L2 norm)")
 
-        for n, (i, j, k) in enumerate(zip(method_1, method_2, l2)):
+        for n, (i, j, k, l, m, o) in enumerate(zip(method_1, method_2, l2, index, name_1, name_2)):
             # Only keep top features according to both methods
             idx = np.flip(np.abs(np.concatenate([i, j])).argsort()) % len(i)
             _, first_occurrence_idx = np.unique(idx, return_index=True)
@@ -409,10 +432,11 @@ class Consistency():
             # draw solid white grid lines
             axes[n].grid(color='w', linestyle='solid')
 
-            axes[n].set(title="$d_{L2}$ = " + str(round(k, 2)))
+            axes[n].set(title="Index: %s" %l + "\n$d_{L2}$ = " + str(round(k, 2)))
             axes[n].set_xlabel("Contributions")
             axes[n].set_ylabel(f"Top {max_features} features")
-            axes[n].set_xticks([])
+            axes[n].set_xticks([0, np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3])
+            axes[n].set_xticklabels([m, o])
             axes[n].set_yticks([])
 
         return fig
