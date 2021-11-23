@@ -12,14 +12,12 @@ from shapash.utils.acv_backend import active_shapley_values, compute_features_im
 class TestAcvBackend(unittest.TestCase):
     def setUp(self):
         self.modellist = [
-            xgb.XGBClassifier(n_estimators=1),
-            ske.GradientBoostingClassifier(n_estimators=1),
-            ske.ExtraTreesClassifier(n_estimators=1),
+            xgb.XGBClassifier(n_estimators=1),            
             ske.RandomForestClassifier(n_estimators=1)
         ]
 
-        df = pd.DataFrame(range(0, 21), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 3 else 0)
         df['x1'] = np.random.randint(1, 123, df.shape[0])
         df['x2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')

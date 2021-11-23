@@ -63,7 +63,7 @@ def lime_contributions(model,
             num_classes = len(classes)
 
             if num_classes <= 2:
-                exp = explainer.explain_instance(x_init.loc[i], model.predict_proba)
+                exp = explainer.explain_instance(x_init.loc[i], model.predict_proba, num_features=x_init.shape[1])
                 lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
 
             elif num_classes > 2:
@@ -73,7 +73,7 @@ def lime_contributions(model,
                     df_contrib = pd.DataFrame()
                     for i in x_init.index:
                         exp = explainer.explain_instance(
-                            x_init.loc[i], model.predict_proba, top_labels=num_classes)
+                            x_init.loc[i], model.predict_proba, top_labels=num_classes, num_features=x_init.shape[1])
                         list_contrib.append(
                             dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list(j)]))
                         df_contrib = pd.DataFrame(list_contrib)
@@ -82,7 +82,7 @@ def lime_contributions(model,
                 return contribution
 
         else:
-            exp = explainer.explain_instance(x_init.loc[i], model.predict)
+            exp = explainer.explain_instance(x_init.loc[i], model.predict, num_features=x_init.shape[1])
             lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
 
     contribution = pd.DataFrame(lime_contrib, index=x_init.index)
