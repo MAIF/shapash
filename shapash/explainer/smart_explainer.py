@@ -95,10 +95,10 @@ class SmartExplainer:
         Features importance values
     local_neighbors: dict
         Dictionary of values to be displayed on the local_neighbors plot.
-        The key is "norm_shap (normalized SHAP values of instance and neighbors)
+        The key is "norm_shap (normalized contributions values of instance and neighbors)
     features_stability: dict
         Dictionary of arrays to be displayed on the stability plot.
-        The keys are "amplitude" (average SHAP values for selected instances) and
+        The keys are "amplitude" (average contributions values for selected instances) and
         "stability" (stability metric across neighborhood)
     preprocessing : category_encoders, ColumnTransformer, list or dict
         The processing apply to the original data.
@@ -1014,9 +1014,9 @@ class SmartExplainer:
         """
         For a selection of instances, compute features stability metrics used in
         methods `local_neighbors_plot` and `local_stability_plot`.
-        - If selection is a single instance, the method returns the (normalized) SHAP values
+        - If selection is a single instance, the method returns the (normalized) contribution values
         of instance and corresponding neighbors.
-        - If selection represents multiple instances, the method returns the average (normalized) SHAP values
+        - If selection represents multiple instances, the method returns the average (normalized) contribution values
         of instances and neighbors (=amplitude), as well as the variability of those values in the neighborhood (=variability)
 
         Parameters

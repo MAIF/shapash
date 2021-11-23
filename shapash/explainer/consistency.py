@@ -81,7 +81,7 @@ class Consistency():
 
         for backend in methods:
             xpl.compile(
-                x=x if n==0 else 1.1*x+10 if n==1 else 1.1*x,
+                x=x,
                 model=model,
                 preprocessing=preprocessing,
                 backend=backend
@@ -116,7 +116,11 @@ class Consistency():
 
     def consistency_plot(self, selection=None, max_features=20):
         """
-        Consitency plot to compare contributions from multiple methods
+        The Consistency_plot has the main objective of comparing explainability methods.
+
+        Because explainability methods are different from each other, they may not give the same explanation to the same instance. Then, which method should be selected?
+        Answering this question is tough. This method compares methods between them and evaluates how close the explanations are from each other.
+        The idea behind this is pretty simple: similar methods may help increase confidence in selecting one of them, as opposed to selecting a method whose explanation consistently differs from the others.
 
         Parameters
         ----------
