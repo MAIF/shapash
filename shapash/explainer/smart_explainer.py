@@ -251,7 +251,7 @@ class SmartExplainer:
                     contributions = lime_contributions(model=model,
                                                    x_init=self.x_init,
                                                    mode=self._case,
-                                                   num_classes=len(self._classes), **kwargs)
+                                                   classes=self._classes, **kwargs)
 
             else:
                 raise ValueError(
