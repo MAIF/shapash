@@ -2584,7 +2584,7 @@ class SmartPlotter:
                 mode="lines",
                 hoverinfo="none",
                 line=dict(color=dict_stability_bar_colors[0], dash="dot"),
-                name="<-- More stable",
+                name="<-- Stable",
             )
         )
 
@@ -2595,7 +2595,7 @@ class SmartPlotter:
                 mode="lines",
                 hoverinfo="none",
                 line=dict(color=dict_stability_bar_colors[1], dash="dot"),
-                name="--> More unstable",
+                name="--> Unstable",
             )
         )
 

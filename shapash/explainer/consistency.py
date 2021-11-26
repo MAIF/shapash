@@ -2,14 +2,17 @@ import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import random
 from sklearn.manifold import MDS
 from shapash.explainer.smart_explainer import SmartExplainer
+
 
 class Consistency():
 
     def compile(self, x=None, model=None, preprocessing=None, contributions=None, methods=["shap", "acv", "lime"]):
-        """If not provided, compute contributions according to provided methods (default are shap, acv, lime). If provided, check whether they respect the correct format : contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}, where each contrib_i is a pandas DataFrame
+        """If not provided, compute contributions according to provided methods (default are shap, acv, lime).
+        If provided, check whether they respect the correct format:
+        contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
+        where each contrib_i is a pandas DataFrame
 
         Parameters
         ----------
@@ -27,7 +30,9 @@ class Consistency():
             - A dict
             - A list of dict
         contributions : dict, optional
-            Contributions provided by the user if no compute is required. Format must be {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}, where each contrib_i is a pandas DataFrame. By default None
+            Contributions provided by the user if no compute is required.
+            Format must be {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
+            where each contrib_i is a pandas DataFrame. By default None
         methods : list
             Methods used to compute contributions, by default ["shap", "acv", "lime"]
         """
@@ -40,7 +45,7 @@ class Consistency():
                 raise ValueError('Contributions must be a dictionary')
         self.methods = list(contributions.keys())
         self.weights = list(contributions.values())
-        
+
         self.check_consistency_contributions(self.weights)
         self.index = self.weights[0].index
 
@@ -95,7 +100,8 @@ class Consistency():
 
     def check_consistency_contributions(self, weights):
         """
-        Assert contributions calculated from different methods are dataframes of same shape with same column names and index names
+        Assert contributions calculated from different methods are dataframes
+        of same shape with same column names and index names
 
         Parameters
         ----------
@@ -113,19 +119,24 @@ class Consistency():
         if not all(x.index.tolist() == weights[0].index.tolist() for x in weights):
             raise ValueError('Index names are different between contributions')
 
-
     def consistency_plot(self, selection=None, max_features=20):
         """
         The Consistency_plot has the main objective of comparing explainability methods.
 
-        Because explainability methods are different from each other, they may not give the same explanation to the same instance. Then, which method should be selected?
-        Answering this question is tough. This method compares methods between them and evaluates how close the explanations are from each other.
-        The idea behind this is pretty simple: similar methods may help increase confidence in selecting one of them, as opposed to selecting a method whose explanation consistently differs from the others.
+        Because explainability methods are different from each other,
+        they may not give the same explanation to the same instance.
+        Then, which method should be selected?
+        Answering this question is tough. This method compares methods between them
+        and evaluates how close the explanations are from each other.
+        The idea behind this is pretty simple: if underlying assumptions lead to similar results,
+        we would be more confident in using those methods.
+        If not, careful conideration should be taken in the interpretation of the explanations
 
         Parameters
         ----------
         selection: list
-            Contains list of index, subset of the input DataFrame that we use for the compute of consitency statistics, by default None
+            Contains list of index, subset of the input DataFrame that we use
+            for the compute of consitency statistics, by default None
         max_features: int, optional
             Maximum number of displayed features, by default 20
         """
@@ -139,17 +150,18 @@ class Consistency():
                 weights = [weight[selection] for weight in self.weights]
         else:
             raise ValueError('Parameter selection must be a list')
-        
+
         all_comparisons, mean_distances = self.calculate_all_distances(self.methods, weights)
-        
+
         method_1, method_2, l2, index, name_1, name_2 = self.find_examples(mean_distances, all_comparisons, weights)
 
-        fig1 = self.plot_comparison(mean_distances)
-        fig2 = self.plot_examples(method_1, method_2, l2, index, name_1, name_2, max_features)
+        self.plot_comparison(mean_distances)
+        self.plot_examples(method_1, method_2, l2, index, name_1, name_2, max_features)
 
     def calculate_all_distances(self, methods, weights):
         """
-        For each instance, measure a distance between contributions from different methods. In addition, calculate the mean distance between each pair of method
+        For each instance, measure a distance between contributions from different methods.
+        In addition, calculate the mean distance between each pair of method
 
         Parameters
         ----------
@@ -187,7 +199,7 @@ class Consistency():
 
     def calculate_pairwise_distances(self, weights, index_i, index_j):
         """
-        For a specific pair of methods, calculate the distance between the contributions for all instances. 
+        For a specific pair of methods, calculate the distance between the contributions for all instances.
 
         Parameters
         ----------
@@ -207,7 +219,7 @@ class Consistency():
         norm_weights_i = weights[index_i] / np.linalg.norm(weights[index_i], ord=2, axis=1)[:, np.newaxis]
         norm_weights_j = weights[index_j] / np.linalg.norm(weights[index_j], ord=2, axis=1)[:, np.newaxis]
         # And then take the L2 norm of the difference as a metric
-        l2_dist = np.linalg.norm(norm_weights_i -  norm_weights_j, ord=2, axis=1)
+        l2_dist = np.linalg.norm(norm_weights_i - norm_weights_j, ord=2, axis=1)
 
         return l2_dist
 
@@ -268,7 +280,7 @@ class Consistency():
         l2 = []
 
         # Evenly split the scale of L2 distances (from min to max excluding 0)
-        for i in np.linspace(start=mean_distances[mean_distances>0].min().min(), stop=mean_distances.max().max(), num=5):
+        for i in np.linspace(start=mean_distances[mean_distances > 0].min().min(), stop=mean_distances.max().max(), num=5):
             # For each split, find the closest existing L2 distance
             closest_l2 = all_comparisons[:, -1][np.abs(all_comparisons[:, -1] - i).argmin()]
             # Return the row that contains this L2 distance
@@ -317,12 +329,13 @@ class Consistency():
         mean_distances : DataFrame
             DataFrame storing all pairwise distances between methods
         """
-        font = {"family":"Arial", "color":'#{:02x}{:02x}{:02x}'.format(50, 50 , 50)}
+        font = {"family": "Arial", "color": '#{:02x}{:02x}{:02x}'.format(50, 50, 50)}
 
         fig, ax = plt.subplots(ncols=1, figsize=(10, 6))
 
         ax.text(x=0.5, y=1.04, s="Consistency of explanations:", fontsize=24, ha="center", transform=fig.transFigure, **font)
-        ax.text(x=0.5, y=0.98, s="How similar are explanations from different methods?", fontsize=18, ha="center", transform=fig.transFigure, **font)
+        ax.text(x=0.5, y=0.98, s="How similar are explanations from different methods?",
+                fontsize=18, ha="center", transform=fig.transFigure, **font)
 
         ax.set_title(
             "Average distances between the explanations", fontsize=14, pad=-60
@@ -415,7 +428,8 @@ class Consistency():
         y = np.arange(method_1[0].shape[0])
         fig, axes = plt.subplots(ncols=len(l2), figsize=(3*len(l2), 4))
         fig.subplots_adjust(wspace=.3, top=.8)
-        if len(l2) == 1: axes = np.array([axes])
+        if len(l2) == 1:
+            axes = np.array([axes])
         fig.suptitle("Examples of explanations' comparisons for various distances (L2 norm)")
 
         for n, (i, j, k, l, m, o) in enumerate(zip(method_1, method_2, l2, index, name_1, name_2)):
@@ -429,14 +443,15 @@ class Consistency():
             i, j = i[idx], j[idx]
 
             axes[n].barh(y, i, label='method 1', left=0, color='#{:02x}{:02x}{:02x}'.format(255, 166, 17))
-            axes[n].barh(y, j, label='method 2', left=np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3, color='#{:02x}{:02x}{:02x}'.format(117, 152, 189)) # /3 to add space
+            axes[n].barh(y, j, label='method 2', left=np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3,
+                         color='#{:02x}{:02x}{:02x}'.format(117, 152, 189))  # /3 to add space
 
             # set gray background
             axes[n].set_facecolor('#F5F5F2')
             # draw solid white grid lines
             axes[n].grid(color='w', linestyle='solid')
 
-            axes[n].set(title="Index: %s" %l + "\n$d_{L2}$ = " + str(round(k, 2)))
+            axes[n].set(title="Index: %s" % l + "\n$d_{L2}$ = " + str(round(k, 2)))
             axes[n].set_xlabel("Contributions")
             axes[n].set_ylabel(f"Top {max_features} features")
             axes[n].set_xticks([0, np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3])
