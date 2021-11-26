@@ -91,8 +91,10 @@ class Consistency():
                 preprocessing=preprocessing,
                 backend=backend
             )
-            if xpl._case == "classification" and len(xpl.contributions) == 2:
+            if xpl._case == "classification" and len(xpl._classes) == 2:
                 contributions[backend] = xpl.contributions[1]
+            elif xpl._case == "classification" and len(xpl._classes) > 2:
+                raise AssertionError("Multi-class classification is not supported")
             else:
                 contributions[backend] = xpl.contributions
 
@@ -153,10 +155,11 @@ class Consistency():
 
         all_comparisons, mean_distances = self.calculate_all_distances(self.methods, weights)
 
-        method_1, method_2, l2, index, name_1, name_2 = self.find_examples(mean_distances, all_comparisons, weights)
+        method_1, method_2, l2, index, backend_name_1, backend_name_2 = \
+            self.find_examples(mean_distances, all_comparisons, weights)
 
         self.plot_comparison(mean_distances)
-        self.plot_examples(method_1, method_2, l2, index, name_1, name_2, max_features)
+        self.plot_examples(method_1, method_2, l2, index, backend_name_1, backend_name_2, max_features)
 
     def calculate_all_distances(self, methods, weights):
         """
@@ -267,15 +270,15 @@ class Consistency():
             Distance between method_1 and method_2 for the 5 instances
         index : list
             Index of the selected example
-        name_1 : list
+        backend_name_1 : list
             Name of the explainability method displayed on the left
-        name_2 : list
+        backend_name_2 : list
             Name of the explainability method displayed on the right
         """
         method_1 = []
-        name_1 = []
+        backend_name_1 = []
         method_2 = []
-        name_2 = []
+        backend_name_2 = []
         index = []
         l2 = []
 
@@ -300,10 +303,10 @@ class Consistency():
             method_2.append(contrib_2 / np.linalg.norm(contrib_2, ord=2))
             l2.append(closest_l2)
             index.append(index_example)
-            name_1.append(method_name_1)
-            name_2.append(method_name_2)
+            backend_name_1.append(method_name_1)
+            backend_name_2.append(method_name_2)
 
-        return method_1, method_2, l2, index, name_1, name_2
+        return method_1, method_2, l2, index, backend_name_1, backend_name_2
 
     def calculate_coords(self, mean_distances):
         """
@@ -408,7 +411,7 @@ class Consistency():
             ha="center",
         )
 
-    def plot_examples(self, method_1, method_2, l2, index, name_1, name_2, max_features):
+    def plot_examples(self, method_1, method_2, l2, index, backend_name_1, backend_name_2, max_features):
         """
         Plot the second graph that explains distances via the use of real exmaples extracted from the dataset
 
@@ -432,7 +435,7 @@ class Consistency():
             axes = np.array([axes])
         fig.suptitle("Examples of explanations' comparisons for various distances (L2 norm)")
 
-        for n, (i, j, k, l, m, o) in enumerate(zip(method_1, method_2, l2, index, name_1, name_2)):
+        for n, (i, j, k, l, m, o) in enumerate(zip(method_1, method_2, l2, index, backend_name_1, backend_name_2)):
             # Only keep top features according to both methods
             idx = np.flip(np.abs(np.concatenate([i, j])).argsort()) % len(i)
             _, first_occurrence_idx = np.unique(idx, return_index=True)
@@ -451,7 +454,7 @@ class Consistency():
             # draw solid white grid lines
             axes[n].grid(color='w', linestyle='solid')
 
-            axes[n].set(title="Index: %s" % l + "\n$d_{L2}$ = " + str(round(k, 2)))
+            axes[n].set(title="%s: %s" % (self.index.name, l) + "\n$d_{L2}$ = " + str(round(k, 2)))
             axes[n].set_xlabel("Contributions")
             axes[n].set_ylabel(f"Top {max_features} features")
             axes[n].set_xticks([0, np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3])
