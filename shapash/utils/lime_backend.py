@@ -102,6 +102,6 @@ def transform_name(var_name, x_df):
         str: valid name
     """
     for colname in list(x_df.columns):
-        if str(colname) in str(var_name):
+        if f' {colname} ' in f' {var_name} ':
             col_rename = colname
     return col_rename
