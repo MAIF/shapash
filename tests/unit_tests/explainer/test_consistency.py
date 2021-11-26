@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 import unittest
 from shapash.explainer.consistency import Consistency
 
@@ -11,32 +11,35 @@ class TestConsistency(unittest.TestCase):
     Unit test consistency
     """
     def setUp(self):
+
         self.df = pd.DataFrame(
-            data=np.array([[2, 30,  9, 0],
-                          [13, 29, 27, 0],
-                          [43, 77, 22, 1],
-                          [3, 79, 59, 1],
-                          [67,  8,  3, 0],
-                          [35, 46, 19, 1],
-                          [82, 81, 40, 0],
-                          [88, 78,  0, 0],
-                          [29, 11, 89, 0],
-                          [36,  8, 91, 1],
-                          [68, 72, 52, 1],
-                          [79, 11, 12, 0],
-                          [99, 18,  1, 1],
-                          [79, 84, 77, 0],
-                          [49, 87, 11, 1]]),
-            columns=['X1', 'X2', 'X3', 'y']
-        )
+            data=np.array([[1, 2, 3, 0],
+                          [2, 4, 6, 1]]),
+            columns=['X1', 'X2', 'X3', 'y'])
         self.X = self.df.iloc[:, :-1]
         self.y = self.df.iloc[:, -1]
-        self.model = RandomForestClassifier().fit(self.X, self.y)
+        self.model = LogisticRegression().fit(self.X, self.y)
 
         self.cns = Consistency()
         self.cns.compile(x=self.X, model=self.model)
 
-    def test_compile(self):
+        self.w1 = pd.DataFrame(np.array([[0.14, 0.04, 0.17],
+                                        [0.02, 0.01, 0.33],
+                                        [0.56, 0.12, 0.29],
+                                        [0.03, 0.01, 0.04]]),
+                               columns=['X1', 'X2', 'X3'])
+        self.w2 = pd.DataFrame(np.array([[0.38, 0.35, 0.01],
+                                        [0.01, 0.30, 0.05],
+                                        [0.45, 0.41, 0.12],
+                                        [0.07, 0.30, 0.21]]),
+                               columns=['X1', 'X2', 'X3'])
+        self.w3 = pd.DataFrame(np.array([[0.49, 0.17, 0.02],
+                                        [0.25, 0.12, 0.25],
+                                        [0.01, 0.06, 0.06],
+                                        [0.19, 0.02, 0.18]]),
+                               columns=['X1', 'X2', 'X3'])
+
+    def test_compile_1(self):
         methods = ["shap", "acv", "lime"]
 
         assert isinstance(self.cns.methods, list)
@@ -44,6 +47,17 @@ class TestConsistency(unittest.TestCase):
         assert isinstance(self.cns.weights, list)
         assert self.cns.weights[0].shape == self.X.shape
         assert all(x.shape == self.cns.weights[0].shape for x in self.cns.weights)
+
+    def test_compile_2(self):
+        contributions = {"shap": self.w1, "acv": self.w2, "lime": self.w3}
+        cns = Consistency()
+        cns.compile(contributions=contributions)
+
+        assert isinstance(cns.methods, list)
+        assert len(cns.methods) == len(contributions)
+        assert isinstance(cns.weights, list)
+        assert cns.weights[0].shape == self.w1.shape
+        assert all(x.shape == cns.weights[0].shape for x in cns.weights)
 
     def test_compute_contributions(self):
         methods = ["shap", "acv", "lime"]
@@ -58,19 +72,7 @@ class TestConsistency(unittest.TestCase):
         assert res["shap"].shape == (len(self.X), self.X.shape[1])
 
     def test_check_consistency_contributions(self):
-        w1 = pd.DataFrame(np.array([[0.14, 0.04, 0.17],
-                                    [0.02, 0.01, 0.33],
-                                    [0.56, 0.12, 0.29],
-                                    [0.03, 0.01, 0.04]]), columns=['X1', 'X2', 'X3'])
-        w2 = pd.DataFrame(np.array([[0.38, 0.35, 0.01],
-                                    [0.01, 0.30, 0.05],
-                                    [0.45, 0.41, 0.12],
-                                    [0.07, 0.30, 0.21]]), columns=['X1', 'X2', 'X3'])
-        w3 = pd.DataFrame(np.array([[0.49, 0.17, 0.02],
-                                    [0.25, 0.12, 0.25],
-                                    [0.01, 0.06, 0.06],
-                                    [0.19, 0.02, 0.18]]), columns=['X1', 'X2', 'X3'])
-        weights = [w1, w2, w3]
+        weights = [self.w1, self.w2, self.w3]
 
         if weights[0].ndim == 1:
             raise ValueError('Multiple datapoints are required to compute the metric')
