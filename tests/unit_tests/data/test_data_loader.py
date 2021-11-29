@@ -15,7 +15,7 @@ class Test_load_data(unittest.TestCase):
         house_df, house_dict = data_loading('house_prices')
         assert isinstance(house_df, pd.DataFrame)
         assert isinstance(house_dict, dict)
-    
+
     def test_load_titanic(self):
         """
         Unit test load_titanic
