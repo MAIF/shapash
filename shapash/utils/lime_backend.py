@@ -12,7 +12,7 @@ def lime_contributions(model,
                        x_init,
                        x_train=None,
                        mode="classification",
-                       num_classes=None):
+                       classes=None):
     """
         Compute local contribution with the Lime library
         Parameters
@@ -30,8 +30,8 @@ def lime_contributions(model,
         x_train : pd.DataFrame
             Training dataset used as background.
         mode : "classification" or "regression"
-        num_classes: int (default :None)
-            Number of classes if len(classes)>2
+        classes: list, None
+            List of labels if the model used is for classification problem, None otherwise.
         Returns
         -------
         np.array or list of np.array
@@ -59,31 +59,30 @@ def lime_contributions(model,
     lime_contrib = []
 
     for i in x_init.index:
+        if mode == "classification":
+            num_classes = len(classes)
 
-        if mode == "classification" and num_classes <= 2:
+            if num_classes <= 2:
+                exp = explainer.explain_instance(x_init.loc[i], model.predict_proba, num_features=x_init.shape[1])
+                lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
 
-            exp = explainer.explain_instance(x_init.loc[i], model.predict_proba)
-            lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
-
-        elif mode == "classification" and num_classes > 2:
-
-            contribution = []
-            for j in range(num_classes):
-                list_contrib = []
-                df_contrib = pd.DataFrame()
-                for i in x_init.index:
-                    exp = explainer.explain_instance(
-                        x_init.loc[i], model.predict_proba, top_labels=num_classes)
-                    list_contrib.append(
-                        dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list(j)]))
-                    df_contrib = pd.DataFrame(list_contrib)
-                    df_contrib = df_contrib[list(x_init.columns)]
-                contribution.append(df_contrib.values)
-            return contribution
+            elif num_classes > 2:
+                contribution = []
+                for j in range(num_classes):
+                    list_contrib = []
+                    df_contrib = pd.DataFrame()
+                    for i in x_init.index:
+                        exp = explainer.explain_instance(
+                            x_init.loc[i], model.predict_proba, top_labels=num_classes, num_features=x_init.shape[1])
+                        list_contrib.append(
+                            dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list(j)]))
+                        df_contrib = pd.DataFrame(list_contrib)
+                        df_contrib = df_contrib[list(x_init.columns)]
+                    contribution.append(df_contrib.values)
+                return contribution
 
         else:
-
-            exp = explainer.explain_instance(x_init.loc[i], model.predict)
+            exp = explainer.explain_instance(x_init.loc[i], model.predict, num_features=x_init.shape[1])
             lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
 
     contribution = pd.DataFrame(lime_contrib, index=x_init.index)
@@ -103,6 +102,6 @@ def transform_name(var_name, x_df):
         str: valid name
     """
     for colname in list(x_df.columns):
-        if str(colname) in str(var_name):
+        if f' {colname} ' in f' {var_name} ':
             col_rename = colname
     return col_rename
