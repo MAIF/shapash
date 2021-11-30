@@ -55,7 +55,8 @@ class TestExplanationMetrics(unittest.TestCase):
         instance = df.values[:2, :]
         extra_cols = np.repeat(np.array([0, 0]), 2).reshape(2, -1)
         instance = np.append(instance, extra_cols, axis=1)
-        t = shap_neighbors(instance, df, contrib)
+        mode = "regression"
+        t = shap_neighbors(instance, df, contrib, mode)
         assert t[0].shape == instance[:, :-2].shape
         assert t[1].shape == (len(df.columns),)
         assert t[2].shape == (len(df.columns),)

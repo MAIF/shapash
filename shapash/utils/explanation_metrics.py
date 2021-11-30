@@ -157,10 +157,10 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
 
     # Calculate predictions for all instances and corresponding neighbors
     if mode == "regression":
-        # For XGB it is necessary to add columns in df, otherwise columns mismatch (Removed)
-        predictions = model.predict(all_neighbors[:, :-1])
+        # For XGB it is necessary to add columns in df, otherwise columns mismatch
+        predictions = model.predict(pd.DataFrame(all_neighbors[:, :-1], columns=dataset.columns))
     elif mode == "classification":
-        predictions = model.predict_proba(all_neighbors[:, :-1])[:, 1]
+        predictions = model.predict_proba(pd.DataFrame(all_neighbors[:, :-1], columns=dataset.columns))[:, 1]
 
     # Add prediction column
     all_neighbors = np.append(all_neighbors, predictions.reshape(all_neighbors.shape[0], 1), axis=1)
@@ -186,7 +186,7 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
         all_neighbors[i] = neighbors[neighbors[:, -2] < radius]
     return all_neighbors
 
-def shap_neighbors(instance, x_init, contributions):
+def shap_neighbors(instance, x_init, contributions, mode):
     """
     For an instance and corresponding neighbors, calculate various
     metrics (described below) that are useful to evaluate local stability
@@ -213,6 +213,9 @@ def shap_neighbors(instance, x_init, contributions):
     # :-2 indicates that two columns are disregarded : distance to instance and model output
     ind = pd.merge(x_init.reset_index(), pd.DataFrame(instance[:, :-2], columns=x_init.columns), how='inner')\
         .set_index(x_init.index.name if x_init.index.name is not None else 'index').index
+    # If classification, select contrbutions of one class only
+    if mode == "classification" and len(contributions) == 2:
+        contributions = contributions[1]
     shap_values = contributions.loc[ind]
     # For neighbors comparison, the sign of SHAP values is taken into account
     norm_shap_values = normalize(shap_values, axis=1, norm="l1")
@@ -264,6 +267,8 @@ def get_min_nb_features(selection, contributions, mode, distance):
     """
     assert 0 <= distance <= 1
 
+    if mode == "classification" and len(contributions) == 2:
+        contributions = contributions[1]
     contributions = contributions.loc[selection].values
     features_needed = []
     # For each instance, add features one by one (ordered by SHAP) until we get close enough
@@ -315,6 +320,8 @@ def get_distance(selection, contributions, mode, nb_features):
 
             * distance between probability outputs (absolute value)
     """
+    if mode == "classification" and len(contributions) == 2:
+        contributions = contributions[1]
     assert nb_features <= contributions.shape[1]
 
     contributions = contributions.loc[selection].values

@@ -17,6 +17,8 @@ from shapash.manipulation.summarize import compute_features_import, project_feat
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
     compute_top_correlations_features
+from shapash.utils.transform import get_features_transform_mapping
+from shapash.utils.acv_backend import compute_features_import_acv
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -1419,8 +1421,19 @@ class SmartPlotter:
             global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
                 subset = contributions[label_num].loc[selection]
-                subset_feat_imp = compute_features_import(subset)
-                subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                if hasattr(self.explainer, 'backend') and self.explainer.backend == 'acv':
+                    selection_ids = [i for i, x in enumerate(contributions[label_num].index) if x in selection]
+                    subset_feat_imp = compute_features_import_acv(
+                        sdp_index=np.array(self.explainer.sdp_index)[selection_ids],
+                        sdp=np.array(self.explainer.sdp)[selection_ids],
+                        init_columns=self.explainer.x_init.columns,
+                        features_mapping=get_features_transform_mapping(
+                            self.explainer.x_pred, self.explainer.x_init, self.explainer.preprocessing
+                        )
+                    )
+                else:
+                    subset_feat_imp = compute_features_import(subset)
+                    subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             else:
                 subset_feat_imp = None
             subtitle = f"Response: <b>{label_value}</b>"
@@ -2571,7 +2584,7 @@ class SmartPlotter:
                 mode="lines",
                 hoverinfo="none",
                 line=dict(color=dict_stability_bar_colors[0], dash="dot"),
-                name="<-- More stable",
+                name="<-- Stable",
             )
         )
 
@@ -2582,7 +2595,7 @@ class SmartPlotter:
                 mode="lines",
                 hoverinfo="none",
                 line=dict(color=dict_stability_bar_colors[1], dash="dot"),
-                name="--> More unstable",
+                name="--> Unstable",
             )
         )
 
@@ -2699,7 +2712,7 @@ class SmartPlotter:
                           yaxis_title=dict_yaxis,
                           hovermode='closest',
                           barmode="group",
-                          height=max(300, 10*g_df.shape[0]*g_df.shape[1]),
+                          height=max(500, 11*g_df.shape[0]*g_df.shape[1]),
                           legend={"traceorder": "reversed"},
                           xaxis={"side": "bottom"})
 

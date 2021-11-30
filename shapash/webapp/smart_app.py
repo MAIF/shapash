@@ -43,13 +43,17 @@ class SmartApp:
             SmartExplainer instance to point to.
     """
 
-    def __init__(self, explainer):
+    def __init__(self, explainer, settings: dict = None):
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
         explainer : SmartExplainer
             SmartExplainer object
+        settings : dict
+            A dict describing the default webapp settings values to be used
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
+            Values should be positive ints
         """
         # APP
         self.server = Flask(__name__)
@@ -72,7 +76,12 @@ class SmartApp:
             'violin': 10,
             'features': 20,
         }
+        if settings is not None:
+            for k, v in self.settings_ini.items():
+                self.settings_ini[k] = settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
+                
         self.settings = self.settings_ini.copy()
+
         self.predict_col = ['_predict_']
         self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
         if self.explainer._case == 'classification':

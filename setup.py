@@ -10,6 +10,7 @@ with open('README.md', encoding='utf8') as readme_file:
 
 requirements = [
         'plotly==4.12.0',
+        'matplotlib>=3.3.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
         'shap>=0.36.0',
@@ -31,8 +32,7 @@ extras = dict()
 extras['report'] = [
     'nbconvert==6.0.7',
     'papermill',
-    'matplotlib',
-    'seaborn',
+    'seaborn<=0.11.1',
     'notebook',
     'Jinja2',
     'phik'
@@ -43,6 +43,8 @@ extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=0.21']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
 extras['category_encoders'] = ['category_encoders==2.2.2']
+extras['acv'] = ['acv-exp']
+extras['lime'] = ['lime']
 
 setup_requirements = ['pytest-runner', ]
 
@@ -50,7 +52,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash",
-    version="1.4.4",
+    version="1.5.0",
     python_requires='>3.5, <3.10',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
