@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 import unittest
 from shapash.explainer.consistency import Consistency
 
@@ -18,7 +18,7 @@ class TestConsistency(unittest.TestCase):
             columns=['X1', 'X2', 'X3', 'y'])
         self.X = self.df.iloc[:, :-1]
         self.y = self.df.iloc[:, -1]
-        self.model = LogisticRegression().fit(self.X, self.y)
+        self.model = RandomForestClassifier().fit(self.X, self.y)
 
         self.cns = Consistency()
         self.cns.compile(x=self.X, model=self.model)

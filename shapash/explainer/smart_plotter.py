@@ -2712,7 +2712,7 @@ class SmartPlotter:
                           yaxis_title=dict_yaxis,
                           hovermode='closest',
                           barmode="group",
-                          height=max(300, 10*g_df.shape[0]*g_df.shape[1]),
+                          height=max(500, 11*g_df.shape[0]*g_df.shape[1]),
                           legend={"traceorder": "reversed"},
                           xaxis={"side": "bottom"})
 

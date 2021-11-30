@@ -454,7 +454,8 @@ class Consistency():
             # draw solid white grid lines
             axes[n].grid(color='w', linestyle='solid')
 
-            axes[n].set(title="%s: %s" % (self.index.name, l) + "\n$d_{L2}$ = " + str(round(k, 2)))
+            axes[n].set(title="%s: %s" %
+                        (self.index.name if self.index.name is not None else "Id", l) + "\n$d_{L2}$ = " + str(round(k, 2)))
             axes[n].set_xlabel("Contributions")
             axes[n].set_ylabel(f"Top {max_features} features")
             axes[n].set_xticks([0, np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i)/3])
