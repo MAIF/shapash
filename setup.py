@@ -10,6 +10,7 @@ with open('README.md', encoding='utf8') as readme_file:
 
 requirements = [
         'plotly==4.12.0',
+        'matplotlib>=3.3.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
         'shap>=0.36.0',
@@ -31,7 +32,6 @@ extras = dict()
 extras['report'] = [
     'nbconvert==6.0.7',
     'papermill',
-    'matplotlib',
     'seaborn<=0.11.1',
     'notebook',
     'Jinja2',
