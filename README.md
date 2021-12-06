@@ -12,10 +12,6 @@
   <a href="https://img.shields.io/pypi/v/shapash">
     <img src="https://img.shields.io/pypi/v/shapash" alt="pypi">
   </a>
-  <!-- Downloads -->
-    <a href="https://static.pepy.tech/badge/shapash">
-    <img src="https://static.pepy.tech/badge/shapash" alt="downloads">
-  </a>
   <!-- Python Version -->
   <a href="https://img.shields.io/pypi/pyversions/shapash">
     <img src="https://img.shields.io/pypi/pyversions/shapash" alt="pyversion">
@@ -34,7 +30,8 @@
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
-| 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://github.com/salimamoukou/acv00).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)    |
+| 1.6.x         |  Explainability Quality Metrics <br>                                                                     | Evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb)    |
+| 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://towardsdatascience.com/the-right-way-to-compute-your-shapley-values-cfea30509254).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)    |
 | 1.4.x         |  Groups of features <br> [demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
 | 1.3.x         |  Shapash Report <br> [demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)    | 
 
@@ -55,14 +52,26 @@ Shapash also contributes to data science auditing by displaying usefull informat
   - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
   - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
 
+## 🤝 Contributors
+
+<div align="left">
+  <div style="display: flex; align-items: flex-start;">
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%" />
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" /> 
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" /> 
+  </div>
+</div>
+
+
 ## 🏆 Awards
 
 <a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="130" />
+  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" />
 </a>
 
 <a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
-  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="50" />
+  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" />
 </a>  
 
 
@@ -79,13 +88,13 @@ Shapash also contributes to data science auditing by displaying usefull informat
 <p align="center">
   <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-01.png?raw=true" width="28%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-resize.png?raw=true" width="18%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-09.png?raw=true" width="28%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-13.png?raw=true" width="28%" /> 
 </p>
 
 <p align="center">
-  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-05.png?raw=true" width="28%" />
+  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-12.png?raw=true" width="33%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-03.png?raw=true" width="28%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-08.png?raw=true" width="28.5%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-10.png?raw=true" width="25%" /> 
 </p>
 
 
@@ -99,7 +108,9 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - **Summarize and export** the local explanation
 > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data background, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
-  
+
+
+- **Evaluate** the quality of your explainability using different metrics
 
 - Easily share and discuss results with non-Data users
 
@@ -236,14 +247,12 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 - [Use **ACV backend** to compute Active Shapley Values and SDP global importance](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)
 
+### Evaluate the quality of your explainability
+- [Building confidence on explainability methods using **Stability**, **Consistency** and **Compacity** metrics](tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb)
+
 ### Generate the Shapash Report
 - [Generate a standalone HTML report of your project with generate_report](tutorial/report/tuto-shapash-report01.ipynb)
 
 ### Deploy local explainability in production
 - [Deploy local explainability in production_with_SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
 
-## 🤝 Contributors
-
-<img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_maif.png" width="130" />
-<br>
-<img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_quantmetry.png" width="130" />
