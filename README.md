@@ -12,10 +12,6 @@
   <a href="https://img.shields.io/pypi/v/shapash">
     <img src="https://img.shields.io/pypi/v/shapash" alt="pypi">
   </a>
-  <!-- Downloads -->
-    <a href="https://static.pepy.tech/badge/shapash">
-    <img src="https://static.pepy.tech/badge/shapash" alt="downloads">
-  </a>
   <!-- Python Version -->
   <a href="https://img.shields.io/pypi/pyversions/shapash">
     <img src="https://img.shields.io/pypi/pyversions/shapash" alt="pyversion">
@@ -92,13 +88,13 @@ Shapash also contributes to data science auditing by displaying usefull informat
 <p align="center">
   <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-01.png?raw=true" width="28%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-resize.png?raw=true" width="18%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-09.png?raw=true" width="28%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-13.png?raw=true" width="28%" /> 
 </p>
 
 <p align="center">
-  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-05.png?raw=true" width="28%" />
+  <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-12.png?raw=true" width="33%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-03.png?raw=true" width="28%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-08.png?raw=true" width="28.5%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-10.png?raw=true" width="25%" /> 
 </p>
 
 
@@ -112,7 +108,9 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - **Summarize and export** the local explanation
 > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data background, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
-  
+
+
+- **Evaluate** the quality of your explainability using different metrics
 
 - Easily share and discuss results with non-Data users
 
@@ -248,6 +246,9 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
 - [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 - [Use **ACV backend** to compute Active Shapley Values and SDP global importance](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)
+
+### Evaluate the quality of your explainability
+- [Building confidence on explainability methods using **Stability**, **Consistency** and **Compacity** metrics](tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb)
 
 ### Generate the Shapash Report
 - [Generate a standalone HTML report of your project with generate_report](tutorial/report/tuto-shapash-report01.ipynb)
