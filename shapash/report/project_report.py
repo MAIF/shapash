@@ -173,7 +173,7 @@ class ProjectReport:
         if test is None and train is None:
             return None
         return pd.concat([test.assign(data_train_test="test") if test is not None else None,
-                          train.assign(data_train_test="train") if train is not None else None])
+                          train.assign(data_train_test="train") if train is not None else None]).reset_index(drop=True)
 
     def display_title_description(self):
         """
@@ -413,7 +413,7 @@ class ProjectReport:
         print_md("### Univariate analysis of target variable")
         df = pd.concat([pd.DataFrame({self.target_name: self.y_pred}).assign(_dataset="pred"),
                         pd.DataFrame({self.target_name: self.y_test}).assign(_dataset="true")
-                        if self.y_test is not None else None])
+                        if self.y_test is not None else None]).reset_index(drop=True)
         self._perform_and_display_analysis_univariate(
             df=df,
             col_splitter="_dataset",
