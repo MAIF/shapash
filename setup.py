@@ -32,7 +32,7 @@ extras = dict()
 extras['report'] = [
     'nbconvert==6.0.7',
     'papermill',
-    'seaborn<=0.11.1',
+    'seaborn<=0.11.2',
     'notebook',
     'Jinja2',
     'phik'
