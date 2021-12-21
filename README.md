@@ -246,6 +246,7 @@ This github repository offers a lot of tutorials to allow you to start more conc
 - [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
 - [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
 - [Use **ACV backend** to compute Active Shapley Values and SDP global importance](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)
+- [Compile faster Lime and consistency of contributions](tutorial/explainer/tuto-expl04-Shapash-compute-Lime-faster.ipynb)
 
 ### Evaluate the quality of your explainability
 - [Building confidence on explainability methods using **Stability**, **Consistency** and **Compacity** metrics](tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb)
