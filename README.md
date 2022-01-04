@@ -12,6 +12,10 @@
   <a href="https://img.shields.io/pypi/v/shapash">
     <img src="https://img.shields.io/pypi/v/shapash" alt="pypi">
   </a>
+  <!-- Downloads -->
+  <a href="https://static.pepy.tech/personalized-badge/shapash?period=total&units=international_system&left_color=grey&right_color=orange&left_text=Downloads">
+    <img src="https://static.pepy.tech/personalized-badge/shapash?period=total&units=international_system&left_color=grey&right_color=orange&left_text=Downloads" alt="downloads">
+  </a>
   <!-- Python Version -->
   <a href="https://img.shields.io/pypi/pyversions/shapash">
     <img src="https://img.shields.io/pypi/pyversions/shapash" alt="pyversion">
