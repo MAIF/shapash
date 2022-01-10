@@ -20,7 +20,7 @@ from shapash.utils.utils import add_line_break, truncate_str, compute_digit_numb
 from shapash.utils.transform import get_features_transform_mapping
 from shapash.utils.acv_backend import compute_features_import_acv
 from shapash.webapp.utils.utils import round_to_k
-
+from shapash.colors.style_utils import colors_loading, select_palette, define_style
 
 class SmartPlotter:
     """
@@ -43,143 +43,28 @@ class SmartPlotter:
 
     def __init__(self, explainer):
         self.explainer = explainer
-        self.dict_title = {
-            'xanchor': "center",
-            'yanchor': "middle",
-            'x': 0.5,
-            'y': 0.9,
-            'font': {
-                'size': 24,
-                'family': "Arial",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_title_stability = {
-            'xanchor': "center",
-            'x': 0.5,
-            "yanchor": "bottom",
-            "pad": dict(b=50),
-            'font': {
-                'size': 24,
-                'family': "Arial",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_title_compacity = {
-            'font': {
-                'size': 14,
-                'family': "Arial",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_xaxis = {
-            'font': {
-                'size': 16,
-                'family': "Arial Black",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_yaxis = {
-            'font': {
-                'size': 16,
-                'family': "Arial Black",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_ycolors = {
-            1: "rgba(255, 166, 17, 0.9)",
-            0: "rgba(117, 152, 189, 0.9)"
-        }
-        self.init_colorscale = [
-            "rgb(52, 55, 54)",
-            "rgb(74, 99, 138)",
-            "rgb(116, 153, 214)",
-            "rgb(162, 188, 213)",
-            "rgb(212, 234, 242)",
-            "rgb(235, 216, 134)",
-            "rgb(255, 204, 83)",
-            "rgb(244 ,192, 0)",
-            "rgb(255, 166, 17)",
-            "rgb(255, 123, 38)",
-            "rgb(255, 77, 7)"
-        ]
-        self.default_color = 'rgba(117, 152, 189, 0.9)'
-        self.dict_featimp_colors = {
-            1: {
-                'color': 'rgba(244, 192, 0, 1.0)',
-                'line': {
-                    'color': 'rgba(52, 55, 54, 0.8)',
-                    'width': 0.5
-                }
-            },
-            2: {
-                'color': 'rgba(52, 55, 54, 0.7)'
-            }
-        }
-        self.dict_local_plot_colors = {
-            1: {
-                'color': 'rgba(244, 192, 0, 1.0)',
-                'line': {
-                    'color': 'rgba(52, 55, 54, 0.8)',
-                    'width': 0.5
-                }
-            },
-            -1: {
-                'color': 'rgba(74, 99, 138, 0.7)',
-                'line': {
-                    'color': 'rgba(27, 28, 28, 1.0)',
-                    'width': 0.5
-                }
-            },
-            0: {
-                'color': 'rgba(113, 101, 59, 1.0)',
-                'line': {
-                    'color': 'rgba(52, 55, 54, 0.8)',
-                    'width': 0.5
-                }
-            },
-            -2: {
-                'color': 'rgba(52, 55, 54, 0.7)',
-                'line': {
-                    'color': 'rgba(27, 28, 28, 1.0)',
-                    'width': 0.5
-                }
-            }
-        }
-
-        self.dict_compare_colors = [
-            'rgba(244, 192, 0, 1.0)',
-            'rgba(74, 99, 138, 0.7)',
-            'rgba(113, 101, 59, 1.0)',
-            "rgba(183, 58, 56, 0.9)",
-            "rgba(255, 123, 38, 1.0)",
-            'rgba(0, 21, 179, 0.97)',
-            'rgba(116, 1, 179, 0.9)',
-        ]
-
-        self.groups_colors = [
-            px.colors.qualitative.T10[1],
-            px.colors.qualitative.G10[9]
-        ]
-
-        self.dict_stability_bar_colors = {
-            1: "rgba(255, 166, 17, 0.9)",
-            0: "rgba(117, 152, 189, 0.9)"
-        }
-
-        self.dict_compacity_bar_colors = {
-            1: "rgba(255, 166, 17, 0.9)",
-            0: "rgba(117, 152, 189, 0.9)"
-        }
-
+        self.define_style_attributes(list(colors_loading().keys())[0])
         self.round_digit = None
-
-        self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
-
-        self.interactions_discrete_colors = px.colors.qualitative.Antique
-
         self.last_stability_selection = False
         self.last_compacity_selection = False
+
+    def define_style_attributes(self, palette_name):
+        """
+        define_style_attributes allows shapash user to change the color of plot
+
+        Parameters
+        ----------
+        palette: string
+            Name of the palette to use for each plot
+        """
+        palette = select_palette(colors_loading(), palette_name)
+        self._palette_name = palette_name
+        style_dict = define_style(palette)
+        for attrib in style_dict.keys():
+            setattr(self, attrib, style_dict[attrib])
+
+        if hasattr(self, "pred_colorscale"):
+            delattr(self, "pred_colorscale")
 
     def tuning_colorscale(self, values):
         """
@@ -194,7 +79,7 @@ class SmartPlotter:
         min_pred, max_pred = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
                       (max_pred - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self.init_colorscale))))
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self.init_contrib_colorscale))))
         return color_scale
 
     def tuning_round_digit(self):
@@ -279,10 +164,10 @@ class SmartPlotter:
         elif fig.data[0].type != 'violin':
             if self.explainer._case == 'classification' and pred is not None:
                 fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda
-                                                                  x: self.dict_ycolors[1] if x == col_modality else
-                                                                  self.dict_ycolors[0])
+                                                                  x: self.violin_area_classif[1] if x == col_modality else
+                                                                  self.violin_area_classif[0])
             else:
-                fig.data[-1].marker.color = self.default_color
+                fig.data[-1].marker.color = self.violin_default
 
         fig.update_traces(
             marker={
@@ -483,7 +368,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
-                                        line_color=self.dict_ycolors[0],
+                                        line_color=self.violin_area_classif[0],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -500,7 +385,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=0.1,
                                         side='positive',
-                                        line_color=self.dict_ycolors[1],
+                                        line_color=self.violin_area_classif[1],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -515,7 +400,7 @@ class SmartPlotter:
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        line_color=self.default_color,
+                                        line_color=self.violin_default,
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
@@ -616,7 +501,7 @@ class SmartPlotter:
 
         # Change bar color for groups of features
         marker_color = [
-            self.groups_colors[0]
+            self.featureimp_groups[0]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -792,7 +677,7 @@ class SmartPlotter:
 
             # If the bar is a group of features we modify the color
             if group_name is not None:
-                bar_color = self.groups_colors[0] if color == 1 else self.groups_colors[1]
+                bar_color = self.featureimp_groups[0] if color == 1 else self.featureimp_groups[1]
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
@@ -1829,7 +1714,7 @@ class SmartPlotter:
         for i in uniq_l:
             fig.add_trace(go.Violin(x=x_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
                                     y=y_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
-                                    line_color=self.default_color,
+                                    line_color=self.violin_default,
                                     showlegend=False,
                                     meanline_visible=True,
                                     scalemode='count',
@@ -2354,7 +2239,7 @@ class SmartPlotter:
         dict_t['text'] = title
 
         fig.update_layout(
-            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
+            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_contrib_colorscale[5:-1]),
             showlegend=True,
             title=dict_t,
             width=width,
