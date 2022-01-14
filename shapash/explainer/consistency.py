@@ -396,7 +396,7 @@ class Consistency():
             Distance between the methods
         """
         ax.annotate(
-            s="",
+            "",
             xy=a - 0.05 * (a - b),
             xycoords="data",
             xytext=b + 0.05 * (a - b),
@@ -404,7 +404,7 @@ class Consistency():
             arrowprops=dict(arrowstyle="<->"),
         )
         ax.annotate(
-            s="%.2f" % dst,
+            "%.2f" % dst,
             xy=(0.5 * (a[0] + b[0]), 0.5 * (a[1] + b[1])),
             xycoords="data",
             textcoords="data",
