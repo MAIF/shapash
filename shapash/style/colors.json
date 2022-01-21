@@ -7,10 +7,10 @@
             "2": "rgba(52, 55, 54, 0.7)"
         },
         "featureimp_line": "rgba(52, 55, 54, 0.8)",
-        "featureimp_groups": [
-            "rgb(245, 133, 24)",
-            "rgb(49, 99, 149)"
-        ],
+        "featureimp_groups": {
+            "0": "rgb(245, 133, 24)",
+            "1": "rgb(49, 99, 149)"
+        },
         "contrib_colorscale": [
             "rgb(52, 55, 54)",
             "rgb(74, 99, 138)",
@@ -24,10 +24,10 @@
             "rgb(255, 123, 38)",
             "rgb(255, 77, 7)"
         ],
-        "violin_area_classif": [
-            "rgba(117, 152, 189, 0.9)",
-            "rgba(255, 166, 17, 0.9)" 
-        ],
+        "violin_area_classif": {
+            "0": "rgba(117, 152, 189, 0.9)",
+            "1": "rgba(255, 166, 17, 0.9)" 
+        },
         "violin_default": "rgba(117, 152, 189, 0.9)",
         "localplot_bar": {
             "1": "rgba(244, 192, 0, 1.0)",
@@ -75,7 +75,13 @@
         "compacity_bar": {
             "1": "rgba(255, 166, 17, 0.9)",
             "0": "rgba(117, 152, 189, 0.9)"
-        }
+        },
+        "webapp_button": {
+            "0": "rgb(244, 192, 0)",
+            "1": "rgb(113, 101, 59)"
+        },
+        "webapp_bkg": "rgb(52,55,54)",
+        "webapp_title": "rgb(244, 192, 0)"
     },
     "eurybia": {
         "title_color": "rgb(50, 50, 50)",
@@ -85,10 +91,10 @@
             "2": "rgba(223, 103, 0, 0.8)"
         },
         "featureimp_line": "rgba(52, 55, 54, 0.8)",
-        "featureimp_groups": [
-            "rgb(245, 133, 24)",
-            "rgb(49, 99, 149)"
-        ],
+        "featureimp_groups": {
+            "0": "rgb(10, 204, 143)",
+            "1": "rgb(176, 140, 104)"
+        },
         "contrib_colorscale": [
             "rgb(168, 84, 0)",
             "rgb(204, 102, 0)",
@@ -102,10 +108,10 @@
             "rgb(0, 98, 128)",
             "rgb(0, 70, 92)"
         ],
-        "violin_area_classif": [
-            "rgba(223, 103, 0, 0.9)",
-            "rgba(0, 154, 203, 0.9)" 
-        ],
+        "violin_area_classif": {
+            "0": "rgba(223, 103, 0, 0.9)",
+            "1": "rgba(0, 154, 203, 0.9)" 
+        },
         "violin_default": "rgba(0, 98, 128, 0.7)",
         "localplot_bar": {
             "1": "rgba(0, 154, 203, 1)",
@@ -153,6 +159,12 @@
         "compacity_bar": {
             "1": "rgba(0, 154, 203, 0.9)",
             "0": "rgba(230, 111, 0, 0.9)"
-        }
+        },
+        "webapp_button": {
+            "0": "rgb(0, 154, 203)",
+            "1": "rgb(50, 90, 117)"
+        },
+        "webapp_bkg": "rgb(52,55,54)",
+        "webapp_title": "rgb(0, 154, 203)"
     }
 }

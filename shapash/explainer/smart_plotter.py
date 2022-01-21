@@ -20,7 +20,7 @@ from shapash.utils.utils import add_line_break, truncate_str, compute_digit_numb
 from shapash.utils.transform import get_features_transform_mapping
 from shapash.utils.acv_backend import compute_features_import_acv
 from shapash.webapp.utils.utils import round_to_k
-from shapash.colors.style_utils import colors_loading, select_palette, define_style
+from shapash.style.style_utils import colors_loading, select_palette, define_style
 
 class SmartPlotter:
     """
@@ -43,12 +43,13 @@ class SmartPlotter:
 
     def __init__(self, explainer):
         self.explainer = explainer
-        self.define_style_attributes(list(colors_loading().keys())[0])
+        self._palette_name = list(colors_loading().keys())[0]
+        self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
         self.round_digit = None
         self.last_stability_selection = False
         self.last_compacity_selection = False
 
-    def define_style_attributes(self, palette_name):
+    def _define_style_attributes(self, palette_name):
         """
         define_style_attributes allows shapash user to change the color of plot
 
@@ -59,9 +60,7 @@ class SmartPlotter:
         """
         palette = select_palette(colors_loading(), palette_name)
         self._palette_name = palette_name
-        style_dict = define_style(palette)
-        for attrib in style_dict.keys():
-            setattr(self, attrib, style_dict[attrib])
+        self._style_dict = define_style(palette)
 
         if hasattr(self, "pred_colorscale"):
             delattr(self, "pred_colorscale")
@@ -79,7 +78,7 @@ class SmartPlotter:
         min_pred, max_pred = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
                       (max_pred - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self.init_contrib_colorscale))))
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
         return color_scale
 
     def tuning_round_digit(self):
@@ -141,9 +140,9 @@ class SmartPlotter:
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_t['text'] = title
         dict_xaxis['text'] = truncate_str(feature_name, 110)
         dict_yaxis['text'] = 'Contribution'
@@ -164,10 +163,10 @@ class SmartPlotter:
         elif fig.data[0].type != 'violin':
             if self.explainer._case == 'classification' and pred is not None:
                 fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda
-                                                                  x: self.violin_area_classif[1] if x == col_modality else
-                                                                  self.violin_area_classif[0])
+                                                                  x: self._style_dict["violin_area_classif"][1] if x == col_modality else
+                                                                  self._style_dict["violin_area_classif"][0])
             else:
-                fig.data[-1].marker.color = self.violin_default
+                fig.data[-1].marker.color = self._style_dict["violin_default"]
 
         fig.update_traces(
             marker={
@@ -368,7 +367,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
-                                        line_color=self.violin_area_classif[0],
+                                        line_color=self._style_dict["violin_area_classif"][0],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -385,7 +384,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=0.1,
                                         side='positive',
-                                        line_color=self.violin_area_classif[1],
+                                        line_color=self._style_dict["violin_area_classif"][1],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -400,7 +399,7 @@ class SmartPlotter:
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        line_color=self.violin_default,
+                                        line_color=self._style_dict["violin_default"],
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
@@ -485,23 +484,23 @@ class SmartPlotter:
         auto_open: bool (default=False)
             open automatically the plot
         """
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             topmargin = topmargin + 15
         dict_t.update(text=title)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_xaxis.update(text='Contribution')
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_yaxis.update(text=None)
-        dict_style_bar1 = self.dict_featimp_colors[1]
-        dict_style_bar2 = self.dict_featimp_colors[2]
+        dict_style_bar1 = self._style_dict["dict_featimp_colors"][1]
+        dict_style_bar2 = self._style_dict["dict_featimp_colors"][2]
         dict_yaxis['text'] = None
 
         # Change bar color for groups of features
         marker_color = [
-            self.featureimp_groups[0]
+            self._style_dict['featureimp_groups'][0]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -597,11 +596,11 @@ class SmartPlotter:
             A bar plot with selected contributions and
             associated feature values for one observation.
         """
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
-        dict_local_plot_colors = copy.deepcopy(self.dict_local_plot_colors)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+        dict_local_plot_colors = copy.deepcopy(self._style_dict["dict_local_plot_colors"])
         if len(index_value) == 0:
             warnings.warn('Only one line/observation must match the condition', UserWarning)
             dict_t['text'] = "Local Explanation - <b>No Matching Entry</b>"
@@ -677,7 +676,7 @@ class SmartPlotter:
 
             # If the bar is a group of features we modify the color
             if group_name is not None:
-                bar_color = self.featureimp_groups[0] if color == 1 else self.featureimp_groups[1]
+                bar_color = self._style_dict["featureimp_groups"][0] if color == 1 else self._style_dict["featureimp_groups"][1]
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
@@ -1412,10 +1411,10 @@ class SmartPlotter:
             Plot of the contributions of individuals, feature by feature.
         """
 
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
 
         if len(index) == 0:
             warnings.warn('No individuals matched', UserWarning)
@@ -1455,7 +1454,7 @@ class SmartPlotter:
 
         iteration_list = list(zip(contributions, feature_values))
 
-        dic_color = copy.deepcopy(self.dict_compare_colors)
+        dic_color = copy.deepcopy(self._style_dict["dict_compare_colors"])
         lines = list()
 
         for i, id_i in enumerate(index):
@@ -1661,7 +1660,7 @@ class SmartPlotter:
 
         if isinstance(col_values.values.flatten()[0], str):
             fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name,
-                             color_discrete_sequence=self.interactions_discrete_colors)
+                             color_discrete_sequence=self._style_dict["interactions_discrete_colors"])
         else:
             fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name, color_continuous_scale=col_scale)
 
@@ -1714,7 +1713,7 @@ class SmartPlotter:
         for i in uniq_l:
             fig.add_trace(go.Violin(x=x_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
                                     y=y_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
-                                    line_color=self.violin_default,
+                                    line_color=self._style_dict["violin_default"],
                                     showlegend=False,
                                     meanline_visible=True,
                                     scalemode='count',
@@ -1765,19 +1764,19 @@ class SmartPlotter:
         """
 
         if fig.data[-1]['showlegend'] is False:  # Case where col2 is not categorical
-            fig.layout.coloraxis.colorscale = self.interactions_col_scale
+            fig.layout.coloraxis.colorscale = self._style_dict["interactions_col_scale"]
         else:
             fig.update_layout(legend=dict(title=dict(text=col_name2)))
 
         title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
         if addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         dict_t['text'] = title
 
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_xaxis['text'] = truncate_str(col_name1, 110)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_yaxis['text'] = 'Shap interaction value'
 
         fig.update_traces(
@@ -1943,7 +1942,7 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=self.interactions_col_scale
+                col_scale=self._style_dict["interactions_col_scale"]
             )
         else:
             fig = self._plot_interactions_violin(
@@ -1953,7 +1952,7 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=self.interactions_col_scale
+                col_scale=self._style_dict["interactions_col_scale"]
             )
 
         self._update_interactions_fig(
@@ -2052,11 +2051,11 @@ class SmartPlotter:
             title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
             if addnote:
                 title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
-            dict_t = copy.deepcopy(self.dict_title)
+            dict_t = copy.deepcopy(self._style_dict["dict_title"])
             dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
             return dict_t
 
-        fig.layout.coloraxis.colorscale = self.interactions_col_scale
+        fig.layout.coloraxis.colorscale = self._style_dict["interactions_col_scale"]
         fig.update_layout(
             xaxis_title=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
             yaxis_title="Shap interaction value",
@@ -2069,7 +2068,7 @@ class SmartPlotter:
                              args=[{"visible": [True if i == id_trace else False
                                                 for i, x in enumerate(interactions_indices_traces_mapping)
                                                 for _ in range(x)]},
-                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[i]}, **self.dict_xaxis}},
+                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[i]}, **self._style_dict["dict_xaxis"]}},
                                     'legend': {'title': {'text': self.explainer.columns_dict[j]}},
                                     'coloraxis': {'colorbar': {'title': {'text': self.explainer.columns_dict[j]}},
                                                   'colorscale': fig.layout.coloraxis.colorscale},
@@ -2235,11 +2234,11 @@ class SmartPlotter:
         if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
             subtitle = f"Top {len(list_features)} correlations"
             title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         dict_t['text'] = title
 
         fig.update_layout(
-            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_contrib_colorscale[5:-1]),
+            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self._style_dict["init_contrib_colorscale"][5:-1]),
             showlegend=True,
             title=dict_t,
             width=width,
@@ -2454,12 +2453,12 @@ class SmartPlotter:
         """
         title = "Importance & Local Stability of explanations:"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = copy.deepcopy(self.dict_title_stability)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = xaxis_title
         dict_yaxis['text'] = yaxis_title
-        dict_stability_bar_colors = copy.deepcopy(self.dict_stability_bar_colors)
+        dict_stability_bar_colors = copy.deepcopy(self._style_dict["dict_stability_bar_colors"])
         dict_t['text'] = title
 
         fig.add_trace(
@@ -2576,17 +2575,17 @@ class SmartPlotter:
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
                         y=g_df.iloc[::-1, ::-1].index.tolist(),
                         x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                        marker_color=self.dict_stability_bar_colors[1] if i == g_df.shape[1]-1
-                        else self.dict_stability_bar_colors[0],
+                        marker_color=self._style_dict["dict_stability_bar_colors"][1] if i == g_df.shape[1]-1
+                        else self._style_dict["dict_stability_bar_colors"][0],
                         orientation='h',
                         opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
                         if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
 
         title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = copy.deepcopy(self.dict_title_stability)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = "Normalized contribution values"
         dict_yaxis['text'] = ""
         dict_t['text'] = title
@@ -2826,7 +2825,7 @@ class SmartPlotter:
         )
 
         # Used as titles in make_subplots are considered annotations
-        fig.update_annotations(font=self.dict_title_compacity["font"])
+        fig.update_annotations(font=self._style_dict["dict_title_compacity"]["font"])
 
         # First plot: number of features required for a given approximation
         fig.add_trace(
@@ -2839,14 +2838,14 @@ class SmartPlotter:
                 + str(round(100 * approx))
                 + "%<br>of the model for %{y:.1f}% of the instances",
                 hovertext="none",
-                marker_color=self.dict_compacity_bar_colors[1],
+                marker_color=self._style_dict["dict_compacity_bar_colors"][1],
                 ),
             row=1,
             col=1,
         )
 
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = "Number of selected features"
         dict_yaxis['text'] = "Cumulative distribution over<br>dataset's instances (%)"
 
@@ -2863,14 +2862,14 @@ class SmartPlotter:
                 hovertemplate="Top " + str(nb_features) + " features explain at least "
                 + "%{x:.0f}"
                 + "%<br>of the model for %{y:.1f}% of the instances",
-                marker_color=self.dict_compacity_bar_colors[0],
+                marker_color=self._style_dict["dict_compacity_bar_colors"][0],
                 ),
             row=1,
             col=2,
         )
 
-        dict_xaxis2 = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis2 = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis2 = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis2 = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis2['text'] = "Percentage of model output<br>explained (%)"
         dict_yaxis2['text'] = "Cumulative distribution over<br>dataset's instances (%)"
 
@@ -2879,7 +2878,7 @@ class SmartPlotter:
 
         title = "Compacity of explanations:"
         title += "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
-        dict_t = copy.deepcopy(self.dict_title_stability)
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
         dict_t['text'] = title
 
         fig.update_layout(
