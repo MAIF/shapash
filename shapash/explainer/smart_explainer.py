@@ -241,13 +241,18 @@ class SmartExplainer:
         else:
             raise NotImplementedError(f'Unknown backend : {backend}')
 
-        contributions = backend.get_local_contributions(X=self.x_init)
-
-        adapt_contrib = self.adapt_contributions(contributions)
-        self.state = self.choose_state(adapt_contrib)
-        self.contributions = self.apply_preprocessing(self.validate_contributions(adapt_contrib), preprocessing)
+        # Computing contributions using backend
+        if contributions is None:
+            self.contributions = self.backend.get_local_contributions(X=x, preprocessing=preprocessing)
+        else:
+            self.contributions = self.backend.format_and_aggregate_contributions(
+                X=x,
+                contributions=contributions,
+                preprocessing=preprocessing
+            )
+            self.backend.contributions = self.contributions
+        self.state = self.backend._state
         self.check_contributions()
-        self.explainer = explainer
         self.y_pred = self.check_y_pred(y_pred)
         self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
         self.inv_columns_dict = {v: k for k, v in self.columns_dict.items()}
