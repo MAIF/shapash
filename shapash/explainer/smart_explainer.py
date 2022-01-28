@@ -8,6 +8,7 @@ import shutil
 import numpy as np
 import pandas as pd
 from shapash.webapp.smart_app import SmartApp
+from shapash.backend import ShapBackend, AcvBackend, BaseBackend
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
@@ -228,34 +229,19 @@ class SmartExplainer:
         if explainer is not None and contributions is not None:
             raise ValueError("You have to specify just one of these arguments: explainer, contributions")
 
-        # Computing contributions using right backend
-        if contributions is None:
+        if isinstance(backend, str):
             if backend.lower() == 'shap':
-                contributions, explainer = shap_contributions(
-                    model, self.x_init, self.check_explainer(explainer))
+                self.backend = ShapBackend(model=model, **kwargs)
             elif backend.lower() == 'acv':
-                self.backend = 'acv'
-                if features_groups is not None:
-                    raise ValueError('ACV does not support groups of features for now.')
-                if self._case == 'classification':
-                    contributions, explainer, self.sdp_index, self.sdp = active_shapley_values(
-                        model=model, x_init=self.x_init, x_pred=self.x_pred, explainer=explainer,
-                        preprocessing=preprocessing, **kwargs
-                    )
-                else:
-                    raise NotImplementedError('ACV does not support regression case yet.')
-            elif backend.lower() == 'lime':
-                if features_groups is not None:
-                    raise ValueError('LIME does not support groups of features for now.')
-                else:
-                    contributions = lime_contributions(model=model,
-                                                   x_init=self.x_init,
-                                                   mode=self._case,
-                                                   classes=self._classes, **kwargs)
-
+                self.backend = AcvBackend(model=model, **kwargs)
             else:
-                raise ValueError(
-                    f'Unknown backend : {backend}. Possible values are "shap", "acv" or "lime".')
+                raise NotImplementedError(f'Unknown backend: {backend}')
+        elif isinstance(backend, BaseBackend):
+            self.backend = backend
+        else:
+            raise NotImplementedError(f'Unknown backend : {backend}')
+
+        contributions = backend.get_local_contributions(X=self.x_init)
 
         adapt_contrib = self.adapt_contributions(contributions)
         self.state = self.choose_state(adapt_contrib)
