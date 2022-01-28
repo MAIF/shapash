@@ -49,7 +49,7 @@ class SmartPlotter:
         self.last_stability_selection = False
         self.last_compacity_selection = False
 
-    def _define_style_attributes(self, palette_name):
+    def define_style_attributes(self, palette_name):
         """
         define_style_attributes allows shapash user to change the color of plot
 
