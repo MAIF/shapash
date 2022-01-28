@@ -1,0 +1,835 @@
+============================= test session starts ==============================
+platform linux -- Python 3.8.5, pytest-6.1.1, py-1.9.0, pluggy-0.13.1
+rootdir: /home/11258k/shapash, configfile: setup.cfg
+collected 132 items / 81 errors / 51 selected
+
+==================================== ERRORS ====================================
+_ ERROR collecting home/11258k/tests/integration_tests/test_contributions_binary.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/integration_tests/test_contributions_binary.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/integration_tests/test_contributions_binary.py:2: in <module>
+    from xplainable.decomposition.contributions import inverse_transform_contributions
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting home/11258k/tests/integration_tests/test_contributions_multiclass.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/integration_tests/test_contributions_multiclass.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/integration_tests/test_contributions_multiclass.py:2: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_ ERROR collecting home/11258k/tests/unit_tests/decomposition/test_contributions.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/decomposition/test_contributions.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/decomposition/test_contributions.py:5: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting home/11258k/tests/unit_tests/explainer/test_multi_decorator.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/explainer/test_multi_decorator.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/explainer/test_multi_decorator.py:4: in <module>
+    from xplainable.explainer.multi_decorator import MultiDecorator
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting home/11258k/tests/unit_tests/explainer/test_smart_explainer.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/explainer/test_smart_explainer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/explainer/test_smart_explainer.py:5: in <module>
+    from xplainable.explainer.smart_explainer import SmartExplainer
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting home/11258k/tests/unit_tests/explainer/test_smart_plotter.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/explainer/test_smart_plotter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/explainer/test_smart_plotter.py:5: in <module>
+    import plotly.graph_objects as go
+E   ModuleNotFoundError: No module named 'plotly'
+_ ERROR collecting home/11258k/tests/unit_tests/explainer/test_smart_state.py __
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/explainer/test_smart_state.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/explainer/test_smart_state.py:5: in <module>
+    from xplainable.explainer.smart_state import SmartState
+E   ModuleNotFoundError: No module named 'xplainable'
+__ ERROR collecting home/11258k/tests/unit_tests/manipulation/test_filters.py __
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/manipulation/test_filters.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/manipulation/test_filters.py:4: in <module>
+    from xplainable.manipulation.filters import cutoff_contributions, cutoff_contributions_old
+E   ModuleNotFoundError: No module named 'xplainable'
+___ ERROR collecting home/11258k/tests/unit_tests/manipulation/test_mask.py ____
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/manipulation/test_mask.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/manipulation/test_mask.py:3: in <module>
+    from xplainable.manipulation.mask import compute_masked_contributions, init_mask
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting home/11258k/tests/unit_tests/manipulation/test_select_lines.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/manipulation/test_select_lines.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/manipulation/test_select_lines.py:3: in <module>
+    from xplainable.manipulation.select_lines import select_lines
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting home/11258k/tests/unit_tests/manipulation/test_summarize.py _
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/manipulation/test_summarize.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/manipulation/test_summarize.py:3: in <module>
+    from xplainable.manipulation.summarize import summarize_explanation
+E   ModuleNotFoundError: No module named 'xplainable'
+____ ERROR collecting home/11258k/tests/unit_tests/utils/test_translate.py _____
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/utils/test_translate.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/utils/test_translate.py:2: in <module>
+    from xplainable.utils.translate import translate
+E   ModuleNotFoundError: No module named 'xplainable'
+______ ERROR collecting home/11258k/tests/unit_tests/utils/test_utils.py _______
+ImportError while importing test module '/home/11258k/home/11258k/tests/unit_tests/utils/test_utils.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home/11258k/tests/unit_tests/utils/test_utils.py:2: in <module>
+    from xplainable.utils.utils import inclusion, within_dict, is_nested_list
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting home_de_slhdg001/fastText/python/fasttext_module/fasttext/tests/test_configurations.py _
+ImportError while importing test module '/home/11258k/home_de_slhdg001/fastText/python/fasttext_module/fasttext/tests/test_configurations.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home_de_slhdg001/fastText/python/fasttext_module/fasttext/__init__.py:12: in <module>
+    from .FastText import train_supervised
+../home_de_slhdg001/fastText/python/fasttext_module/fasttext/FastText.py:12: in <module>
+    import fasttext_pybind as fasttext
+E   ModuleNotFoundError: No module named 'fasttext_pybind'
+_ ERROR collecting home_de_slhdg001/fastText/python/fasttext_module/fasttext/tests/test_script.py _
+ImportError while importing test module '/home/11258k/home_de_slhdg001/fastText/python/fasttext_module/fasttext/tests/test_script.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../home_de_slhdg001/fastText/python/fasttext_module/fasttext/__init__.py:12: in <module>
+    from .FastText import train_supervised
+../home_de_slhdg001/fastText/python/fasttext_module/fasttext/FastText.py:12: in <module>
+    import fasttext_pybind as fasttext
+E   ModuleNotFoundError: No module named 'fasttext_pybind'
+____ ERROR collecting tests/integration_tests/test_contributions_binary.py _____
+ImportError while importing test module '/home/11258k/shapash/tests/integration_tests/test_contributions_binary.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration_tests/test_contributions_binary.py:8: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+__ ERROR collecting tests/integration_tests/test_contributions_multiclass.py ___
+ImportError while importing test module '/home/11258k/shapash/tests/integration_tests/test_contributions_multiclass.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration_tests/test_contributions_multiclass.py:5: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_ ERROR collecting tests/integration_tests/test_integration_inverse_tranform.py _
+ImportError while importing test module '/home/11258k/shapash/tests/integration_tests/test_integration_inverse_tranform.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration_tests/test_integration_inverse_tranform.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+______ ERROR collecting tests/integration_tests/test_report_generation.py ______
+ImportError while importing test module '/home/11258k/shapash/tests/integration_tests/test_report_generation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration_tests/test_report_generation.py:7: in <module>
+    import catboost as cb
+E   ModuleNotFoundError: No module named 'catboost'
+__________ ERROR collecting tests/unit_tests/data/test_data_loader.py __________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/data/test_data_loader.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/data/test_data_loader.py:5: in <module>
+    from shapash.data.data_loader import data_loading
+E   ModuleNotFoundError: No module named 'shapash'
+_ ERROR collecting tests/unit_tests/decomposition/test_inverse_contribution.py _
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/decomposition/test_inverse_contribution.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/decomposition/test_inverse_contribution.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_______ ERROR collecting tests/unit_tests/explainer/test_consistency.py ________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/explainer/test_consistency.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/explainer/test_consistency.py:6: in <module>
+    from shapash.explainer.consistency import Consistency
+shapash/explainer/consistency.py:6: in <module>
+    from shapash.explainer.smart_explainer import SmartExplainer
+shapash/explainer/smart_explainer.py:10: in <module>
+    from shapash.webapp.smart_app import SmartApp
+shapash/webapp/smart_app.py:4: in <module>
+    import dash
+E   ModuleNotFoundError: No module named 'dash'
+_____ ERROR collecting tests/unit_tests/explainer/test_smart_explainer.py ______
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/explainer/test_smart_explainer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/explainer/test_smart_explainer.py:13: in <module>
+    import catboost as cb
+E   ModuleNotFoundError: No module named 'catboost'
+______ ERROR collecting tests/unit_tests/explainer/test_smart_plotter.py _______
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/explainer/test_smart_plotter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/explainer/test_smart_plotter.py:10: in <module>
+    import plotly.graph_objects as go
+E   ModuleNotFoundError: No module named 'plotly'
+_____ ERROR collecting tests/unit_tests/explainer/test_smart_predictor.py ______
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/explainer/test_smart_predictor.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/explainer/test_smart_predictor.py:6: in <module>
+    from shapash.explainer.smart_predictor import SmartPredictor
+shapash/explainer/smart_predictor.py:12: in <module>
+    from shapash.utils.shap_backend import check_explainer, shap_contributions
+shapash/utils/shap_backend.py:16: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_______ ERROR collecting tests/unit_tests/report/test_project_report.py ________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/report/test_project_report.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/report/test_project_report.py:6: in <module>
+    import catboost as cb
+E   ModuleNotFoundError: No module named 'catboost'
+_________ ERROR collecting tests/unit_tests/utils/test_acv_backend.py __________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_acv_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_acv_backend.py:9: in <module>
+    import xgboost as xgb
+E   ModuleNotFoundError: No module named 'xgboost'
+__ ERROR collecting tests/unit_tests/utils/test_category_encoders_backend.py ___
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_category_encoders_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_category_encoders_backend.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+____________ ERROR collecting tests/unit_tests/utils/test_check.py _____________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_check.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_check.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+__ ERROR collecting tests/unit_tests/utils/test_columntransformer_backend.py ___
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_columntransformer_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_columntransformer_backend.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_________ ERROR collecting tests/unit_tests/utils/test_lime_backend.py _________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_lime_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_lime_backend.py:6: in <module>
+    import xgboost as xgb
+E   ModuleNotFoundError: No module named 'xgboost'
+_____ ERROR collecting tests/unit_tests/utils/test_load_smartpredictor.py ______
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_load_smartpredictor.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_load_smartpredictor.py:8: in <module>
+    from shapash.utils.load_smartpredictor import load_smartpredictor
+shapash/utils/load_smartpredictor.py:4: in <module>
+    from shapash.explainer.smart_predictor import SmartPredictor
+shapash/explainer/smart_predictor.py:12: in <module>
+    from shapash.utils.shap_backend import check_explainer, shap_contributions
+shapash/utils/shap_backend.py:16: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_________ ERROR collecting tests/unit_tests/utils/test_shap_backend.py _________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_shap_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_shap_backend.py:10: in <module>
+    import xgboost as xgb
+E   ModuleNotFoundError: No module named 'xgboost'
+__________ ERROR collecting tests/unit_tests/utils/test_transform.py ___________
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/utils/test_transform.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/utils/test_transform.py:8: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_______ ERROR collecting tests/unit_tests/webapp/test_webapp_settings.py _______
+ImportError while importing test module '/home/11258k/shapash/tests/unit_tests/webapp/test_webapp_settings.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/webapp/test_webapp_settings.py:2: in <module>
+    from shapash.explainer.smart_explainer import SmartExplainer
+shapash/explainer/smart_explainer.py:10: in <module>
+    from shapash.webapp.smart_app import SmartApp
+shapash/webapp/smart_app.py:4: in <module>
+    import dash
+E   ModuleNotFoundError: No module named 'dash'
+_ ERROR collecting temp/shapash/tests/integration_tests/test_contributions_binary.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/integration_tests/test_contributions_binary.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/integration_tests/test_contributions_binary.py:8: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting temp/shapash/tests/integration_tests/test_contributions_multiclass.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/integration_tests/test_contributions_multiclass.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/integration_tests/test_contributions_multiclass.py:5: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_ ERROR collecting temp/shapash/tests/integration_tests/test_integration_inverse_tranform.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/integration_tests/test_integration_inverse_tranform.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/integration_tests/test_integration_inverse_tranform.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting temp/shapash/tests/integration_tests/test_report_generation.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/integration_tests/test_report_generation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/integration_tests/test_report_generation.py:7: in <module>
+    import catboost as cb
+E   ModuleNotFoundError: No module named 'catboost'
+_ ERROR collecting temp/shapash/tests/unit_tests/decomposition/test_contributions.py _
+import file mismatch:
+imported module 'tests.unit_tests.decomposition.test_contributions' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/decomposition/test_contributions.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/decomposition/test_contributions.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/decomposition/test_inverse_contribution.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/decomposition/test_inverse_contribution.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/decomposition/test_inverse_contribution.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting temp/shapash/tests/unit_tests/explainer/test_consistency.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/explainer/test_consistency.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/explainer/test_consistency.py:6: in <module>
+    from shapash.explainer.consistency import Consistency
+shapash/explainer/consistency.py:6: in <module>
+    from shapash.explainer.smart_explainer import SmartExplainer
+shapash/explainer/smart_explainer.py:10: in <module>
+    from shapash.webapp.smart_app import SmartApp
+shapash/webapp/smart_app.py:4: in <module>
+    import dash
+E   ModuleNotFoundError: No module named 'dash'
+_ ERROR collecting temp/shapash/tests/unit_tests/explainer/test_multi_decorator.py _
+import file mismatch:
+imported module 'test_multi_decorator' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/explainer/test_multi_decorator.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/explainer/test_multi_decorator.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/explainer/test_smart_explainer.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/explainer/test_smart_explainer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/explainer/test_smart_explainer.py:13: in <module>
+    import catboost as cb
+E   ModuleNotFoundError: No module named 'catboost'
+_ ERROR collecting temp/shapash/tests/unit_tests/explainer/test_smart_plotter.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/explainer/test_smart_plotter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/explainer/test_smart_plotter.py:10: in <module>
+    import plotly.graph_objects as go
+E   ModuleNotFoundError: No module named 'plotly'
+_ ERROR collecting temp/shapash/tests/unit_tests/explainer/test_smart_predictor.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/explainer/test_smart_predictor.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/explainer/test_smart_predictor.py:6: in <module>
+    from shapash.explainer.smart_predictor import SmartPredictor
+shapash/explainer/smart_predictor.py:12: in <module>
+    from shapash.utils.shap_backend import check_explainer, shap_contributions
+shapash/utils/shap_backend.py:16: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_ ERROR collecting temp/shapash/tests/unit_tests/explainer/test_smart_state.py _
+import file mismatch:
+imported module 'test_smart_state' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/explainer/test_smart_state.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/explainer/test_smart_state.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/manipulation/test_filters.py __
+import file mismatch:
+imported module 'test_filters' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_filters.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/manipulation/test_filters.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+___ ERROR collecting temp/shapash/tests/unit_tests/manipulation/test_mask.py ___
+import file mismatch:
+imported module 'test_mask' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_mask.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/manipulation/test_mask.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/manipulation/test_select_lines.py _
+import file mismatch:
+imported module 'test_select_lines' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_select_lines.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/manipulation/test_select_lines.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/manipulation/test_summarize.py _
+import file mismatch:
+imported module 'test_summarize' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_summarize.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/manipulation/test_summarize.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_____ ERROR collecting temp/shapash/tests/unit_tests/report/test_common.py _____
+import file mismatch:
+imported module 'tests.unit_tests.report.test_common' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/report/test_common.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/report/test_common.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/report/test_data_analysis.py __
+import file mismatch:
+imported module 'tests.unit_tests.report.test_data_analysis' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/report/test_data_analysis.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/report/test_data_analysis.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_____ ERROR collecting temp/shapash/tests/unit_tests/report/test_plots.py ______
+import file mismatch:
+imported module 'tests.unit_tests.report.test_plots' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/report/test_plots.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/report/test_plots.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/report/test_project_report.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/report/test_project_report.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/report/test_project_report.py:6: in <module>
+    import catboost as cb
+E   ModuleNotFoundError: No module named 'catboost'
+___ ERROR collecting temp/shapash/tests/unit_tests/utils/test_acv_backend.py ___
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_acv_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_acv_backend.py:9: in <module>
+    import xgboost as xgb
+E   ModuleNotFoundError: No module named 'xgboost'
+_ ERROR collecting temp/shapash/tests/unit_tests/utils/test_category_encoders_backend.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_category_encoders_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_category_encoders_backend.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+______ ERROR collecting temp/shapash/tests/unit_tests/utils/test_check.py ______
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_check.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_check.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting temp/shapash/tests/unit_tests/utils/test_columntransformer_backend.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_columntransformer_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_columntransformer_backend.py:7: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting temp/shapash/tests/unit_tests/utils/test_explanation_metrics.py _
+import file mismatch:
+imported module 'test_explanation_metrics' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/utils/test_explanation_metrics.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/utils/test_explanation_metrics.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+__ ERROR collecting temp/shapash/tests/unit_tests/utils/test_lime_backend.py ___
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_lime_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_lime_backend.py:6: in <module>
+    import xgboost as xgb
+E   ModuleNotFoundError: No module named 'xgboost'
+_ ERROR collecting temp/shapash/tests/unit_tests/utils/test_load_smartpredictor.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_load_smartpredictor.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_load_smartpredictor.py:8: in <module>
+    from shapash.utils.load_smartpredictor import load_smartpredictor
+shapash/utils/load_smartpredictor.py:4: in <module>
+    from shapash.explainer.smart_predictor import SmartPredictor
+shapash/explainer/smart_predictor.py:12: in <module>
+    from shapash.utils.shap_backend import check_explainer, shap_contributions
+shapash/utils/shap_backend.py:16: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+__ ERROR collecting temp/shapash/tests/unit_tests/utils/test_shap_backend.py ___
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_shap_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_shap_backend.py:10: in <module>
+    import xgboost as xgb
+E   ModuleNotFoundError: No module named 'xgboost'
+____ ERROR collecting temp/shapash/tests/unit_tests/utils/test_transform.py ____
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/utils/test_transform.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../temp/shapash/tests/unit_tests/utils/test_transform.py:8: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+____ ERROR collecting temp/shapash/tests/unit_tests/utils/test_translate.py ____
+import file mismatch:
+imported module 'test_translate' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/utils/test_translate.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/utils/test_translate.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+______ ERROR collecting temp/shapash/tests/unit_tests/utils/test_utils.py ______
+import file mismatch:
+imported module 'test_utils' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/utils/test_utils.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/utils/test_utils.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting temp/shapash/tests/unit_tests/webapp/test_webapp_settings.py _
+ImportError while importing test module '/home/11258k/temp/shapash/tests/unit_tests/webapp/test_webapp_settings.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit_tests/webapp/test_webapp_settings.py:2: in <module>
+    from shapash.explainer.smart_explainer import SmartExplainer
+shapash/explainer/smart_explainer.py:10: in <module>
+    from shapash.webapp.smart_app import SmartApp
+shapash/webapp/smart_app.py:4: in <module>
+    import dash
+E   ModuleNotFoundError: No module named 'dash'
+__ ERROR collecting temp/shapash/tests/unit_tests/webapp/utils/test_utils.py ___
+import file mismatch:
+imported module 'tests.unit_tests.webapp.utils.test_utils' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/webapp/utils/test_utils.py
+which is not the same as the test file we want to collect:
+  /home/11258k/temp/shapash/tests/unit_tests/webapp/utils/test_utils.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/integration_tests/test_contributions_binary.py _
+ImportError while importing test module '/home/11258k/tmp/pycharm_project_95/tests/integration_tests/test_contributions_binary.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../tmp/pycharm_project_95/tests/integration_tests/test_contributions_binary.py:2: in <module>
+    from xplainable.decomposition.contributions import inverse_transform_contributions
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting tmp/pycharm_project_95/tests/integration_tests/test_contributions_multiclass.py _
+ImportError while importing test module '/home/11258k/tmp/pycharm_project_95/tests/integration_tests/test_contributions_multiclass.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../tmp/pycharm_project_95/tests/integration_tests/test_contributions_multiclass.py:2: in <module>
+    import shap
+E   ModuleNotFoundError: No module named 'shap'
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/decomposition/test_contributions.py _
+ImportError while importing test module '/home/11258k/tmp/pycharm_project_95/tests/unit_tests/decomposition/test_contributions.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../tmp/pycharm_project_95/tests/unit_tests/decomposition/test_contributions.py:5: in <module>
+    import category_encoders as ce
+E   ModuleNotFoundError: No module named 'category_encoders'
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/explainer/test_multi_decorator.py _
+import file mismatch:
+imported module 'test_multi_decorator' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/explainer/test_multi_decorator.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/explainer/test_multi_decorator.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_explainer.py _
+ImportError while importing test module '/home/11258k/tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_explainer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_explainer.py:5: in <module>
+    from xplainable.explainer.smart_explainer import SmartExplainer
+E   ModuleNotFoundError: No module named 'xplainable'
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_plotter.py _
+ImportError while importing test module '/home/11258k/tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_plotter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/produit/anaconda/anaconda2020.11/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+../tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_plotter.py:5: in <module>
+    import plotly.graph_objects as go
+E   ModuleNotFoundError: No module named 'plotly'
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_state.py _
+import file mismatch:
+imported module 'test_smart_state' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/explainer/test_smart_state.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_state.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/manipulation/test_filters.py _
+import file mismatch:
+imported module 'test_filters' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_filters.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/manipulation/test_filters.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/manipulation/test_mask.py _
+import file mismatch:
+imported module 'test_mask' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_mask.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/manipulation/test_mask.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/manipulation/test_select_lines.py _
+import file mismatch:
+imported module 'test_select_lines' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_select_lines.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/manipulation/test_select_lines.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/manipulation/test_summarize.py _
+import file mismatch:
+imported module 'test_summarize' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/manipulation/test_summarize.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/manipulation/test_summarize.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/utils/test_translate.py _
+import file mismatch:
+imported module 'test_translate' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/utils/test_translate.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/utils/test_translate.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting tmp/pycharm_project_95/tests/unit_tests/utils/test_utils.py _
+import file mismatch:
+imported module 'test_utils' has this __file__ attribute:
+  /home/11258k/shapash/tests/unit_tests/utils/test_utils.py
+which is not the same as the test file we want to collect:
+  /home/11258k/tmp/pycharm_project_95/tests/unit_tests/utils/test_utils.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+=============================== warnings summary ===============================
+../../../produit/anaconda/anaconda2020.11/lib/python3.8/site-packages/_pytest/config/__init__.py:1230
+  /produit/anaconda/anaconda2020.11/lib/python3.8/site-packages/_pytest/config/__init__.py:1230: PytestConfigWarning: Unknown config option: collect_ignore
+  
+    self._warn_or_fail_if_strict("Unknown config option: {}\n".format(key))
+
+../../../produit/anaconda/anaconda2020.11/lib/python3.8/site-packages/_pytest/config/__init__.py:1230
+  /produit/anaconda/anaconda2020.11/lib/python3.8/site-packages/_pytest/config/__init__.py:1230: PytestConfigWarning: Unknown config option: pep8maxlinelength
+  
+    self._warn_or_fail_if_strict("Unknown config option: {}\n".format(key))
+
+shapash/utils/explanation_metrics.py:29
+  /home/11258k/shapash/shapash/utils/explanation_metrics.py:29: DeprecationWarning: invalid escape sequence \_
+    """
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+=========================== short test summary info ============================
+ERROR home/11258k/tests/integration_tests/test_contributions_binary.py
+ERROR home/11258k/tests/integration_tests/test_contributions_multiclass.py
+ERROR home/11258k/tests/unit_tests/decomposition/test_contributions.py
+ERROR home/11258k/tests/unit_tests/explainer/test_multi_decorator.py
+ERROR home/11258k/tests/unit_tests/explainer/test_smart_explainer.py
+ERROR home/11258k/tests/unit_tests/explainer/test_smart_plotter.py
+ERROR home/11258k/tests/unit_tests/explainer/test_smart_state.py
+ERROR home/11258k/tests/unit_tests/manipulation/test_filters.py
+ERROR home/11258k/tests/unit_tests/manipulation/test_mask.py
+ERROR home/11258k/tests/unit_tests/manipulation/test_select_lines.py
+ERROR home/11258k/tests/unit_tests/manipulation/test_summarize.py
+ERROR home/11258k/tests/unit_tests/utils/test_translate.py
+ERROR home/11258k/tests/unit_tests/utils/test_utils.py
+ERROR home_de_slhdg001/fastText/python/fasttext_module/fasttext/tests/test_configurations.py
+ERROR home_de_slhdg001/fastText/python/fasttext_module/fasttext/tests/test_script.py
+ERROR tests/integration_tests/test_contributions_binary.py
+ERROR tests/integration_tests/test_contributions_multiclass.py
+ERROR tests/integration_tests/test_integration_inverse_tranform.py
+ERROR tests/integration_tests/test_report_generation.py
+ERROR tests/unit_tests/data/test_data_loader.py
+ERROR tests/unit_tests/decomposition/test_inverse_contribution.py
+ERROR tests/unit_tests/explainer/test_consistency.py
+ERROR tests/unit_tests/explainer/test_smart_explainer.py
+ERROR tests/unit_tests/explainer/test_smart_plotter.py
+ERROR tests/unit_tests/explainer/test_smart_predictor.py
+ERROR tests/unit_tests/report/test_project_report.py
+ERROR tests/unit_tests/utils/test_acv_backend.py
+ERROR tests/unit_tests/utils/test_category_encoders_backend.py
+ERROR tests/unit_tests/utils/test_check.py
+ERROR tests/unit_tests/utils/test_columntransformer_backend.py
+ERROR tests/unit_tests/utils/test_lime_backend.py
+ERROR tests/unit_tests/utils/test_load_smartpredictor.py
+ERROR tests/unit_tests/utils/test_shap_backend.py
+ERROR tests/unit_tests/utils/test_transform.py
+ERROR tests/unit_tests/webapp/test_webapp_settings.py
+ERROR temp/shapash/tests/integration_tests/test_contributions_binary.py
+ERROR temp/shapash/tests/integration_tests/test_contributions_multiclass.py
+ERROR temp/shapash/tests/integration_tests/test_integration_inverse_tranform.py
+ERROR temp/shapash/tests/integration_tests/test_report_generation.py
+ERROR temp/shapash/tests/unit_tests/decomposition/test_contributions.py
+ERROR temp/shapash/tests/unit_tests/decomposition/test_inverse_contribution.py
+ERROR temp/shapash/tests/unit_tests/explainer/test_consistency.py
+ERROR temp/shapash/tests/unit_tests/explainer/test_multi_decorator.py
+ERROR temp/shapash/tests/unit_tests/explainer/test_smart_explainer.py
+ERROR temp/shapash/tests/unit_tests/explainer/test_smart_plotter.py
+ERROR temp/shapash/tests/unit_tests/explainer/test_smart_predictor.py
+ERROR temp/shapash/tests/unit_tests/explainer/test_smart_state.py
+ERROR temp/shapash/tests/unit_tests/manipulation/test_filters.py
+ERROR temp/shapash/tests/unit_tests/manipulation/test_mask.py
+ERROR temp/shapash/tests/unit_tests/manipulation/test_select_lines.py
+ERROR temp/shapash/tests/unit_tests/manipulation/test_summarize.py
+ERROR temp/shapash/tests/unit_tests/report/test_common.py
+ERROR temp/shapash/tests/unit_tests/report/test_data_analysis.py
+ERROR temp/shapash/tests/unit_tests/report/test_plots.py
+ERROR temp/shapash/tests/unit_tests/report/test_project_report.py
+ERROR temp/shapash/tests/unit_tests/utils/test_acv_backend.py
+ERROR temp/shapash/tests/unit_tests/utils/test_category_encoders_backend.py
+ERROR temp/shapash/tests/unit_tests/utils/test_check.py
+ERROR temp/shapash/tests/unit_tests/utils/test_columntransformer_backend.py
+ERROR temp/shapash/tests/unit_tests/utils/test_explanation_metrics.py
+ERROR temp/shapash/tests/unit_tests/utils/test_lime_backend.py
+ERROR temp/shapash/tests/unit_tests/utils/test_load_smartpredictor.py
+ERROR temp/shapash/tests/unit_tests/utils/test_shap_backend.py
+ERROR temp/shapash/tests/unit_tests/utils/test_transform.py
+ERROR temp/shapash/tests/unit_tests/utils/test_translate.py
+ERROR temp/shapash/tests/unit_tests/utils/test_utils.py
+ERROR temp/shapash/tests/unit_tests/webapp/test_webapp_settings.py
+ERROR temp/shapash/tests/unit_tests/webapp/utils/test_utils.py
+ERROR tmp/pycharm_project_95/tests/integration_tests/test_contributions_binary.py
+ERROR tmp/pycharm_project_95/tests/integration_tests/test_contributions_multiclass.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/decomposition/test_contributions.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/explainer/test_multi_decorator.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_explainer.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_plotter.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/explainer/test_smart_state.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/manipulation/test_filters.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/manipulation/test_mask.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/manipulation/test_select_lines.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/manipulation/test_summarize.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/utils/test_translate.py
+ERROR tmp/pycharm_project_95/tests/unit_tests/utils/test_utils.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 81 errors during collection !!!!!!!!!!!!!!!!!!!
+======================= 3 warnings, 81 errors in 14.99s ========================
