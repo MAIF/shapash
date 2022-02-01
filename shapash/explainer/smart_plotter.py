@@ -55,7 +55,7 @@ class SmartPlotter:
 
         Parameters
         ----------
-        palette: string
+        palette_name: string
             Name of the palette to use for each plot
         """
         palette = select_palette(colors_loading(), palette_name)
