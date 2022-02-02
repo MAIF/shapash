@@ -1,3 +1,4 @@
+from typing import Any, Optional, List
 import pandas as pd
 
 from shapash.backend.base_backend import BaseBackend
@@ -37,53 +38,59 @@ class AcvBackend(BaseBackend):
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
         self.explainer = ACVTree(model=model, data=data, **self.explainer_args)
-        self.sdp = None
         self.features_mapping = features_mapping
 
-    def _get_local_contributions(self, X):
+    def _run_explainer(self, x: pd.DataFrame) -> Any:
+        explain_data = {}
 
-        # Coalitions used
         c = self.explainer_compute_args.get('c', [[]])
 
         sdp_importance, sdp_index, size, sdp = self.explainer.importance_sdp_clf(
-            X=X.values,
+            X=x.values,
             data=self.data
         )
         s_star, n_star = get_null_coalition(sdp_index, size)
         contributions = self.explainer.shap_values_acv_adap(
-            X=X.values,
+            X=x.values,
             C=c,
             S_star=s_star,
             N_star=n_star,
             size=size
         )
         if contributions.shape[-1] > 1:
-            contributions = [pd.DataFrame(contributions[:, :, i], columns=X.columns, index=X.index)
+            contributions = [pd.DataFrame(contributions[:, :, i], columns=x.columns, index=x.index)
                              for i in range(contributions.shape[-1])]
         else:
-            contributions = pd.DataFrame(contributions[:, :, 0], columns=X.columns, index=X.index)
+            contributions = pd.DataFrame(contributions[:, :, 0], columns=x.columns, index=x.index)
 
-        self.sdp = sdp
-        self.sdp_index = sdp_index
-        self.init_columns = X.columns.to_list()
-        self.contributions = contributions
-        return contributions
+        explain_data['sdp'] = sdp
+        explain_data['sdp_index'] = sdp_index
+        explain_data['init_columns'] = x.columns.to_list()
+        explain_data['contributions'] = contributions
 
-    def _get_global_features_importance(self, subset=None):
-        if self.sdp is None:
-            raise ValueError("Local contributions should be computed first")
-        count_cols = {i: 0 for i in range(len(self.sdp_index[0]))}
+        return explain_data
 
-        for i, list_imp_feat in enumerate(self.sdp_index):
+    def _get_local_contributions(self, explain_data: Any, subset: Optional[List[int]] = None):
+        contributions = explain_data['contributions']
+        if subset is None:
+            return contributions
+        else:
+            return contributions.loc[subset]
+
+    def _get_global_features_importance(self, explain_data: Any, subset: Optional[List[int]] = None):
+
+        count_cols = {i: 0 for i in range(len(explain_data['sdp_index'][0]))}
+
+        for i, list_imp_feat in enumerate(explain_data['sdp_index']):
             for col in list_imp_feat:
                 if col != -1 and self.sdp[i] > 0.9:
                     count_cols[col] += 1
 
-        features_cols = {self.init_columns[k]: v for k, v in count_cols.items()}
+        features_cols = {explain_data['init_columns'][k]: v for k, v in count_cols.items()}
 
         if self.features_mapping:
             features_imp = pd.Series(
-                {k: features_cols[v[0]] / len(self.sdp_index) for k, v in self.features_mapping.items()}
+                {k: features_cols[v[0]] / len(explain_data['sdp_index']) for k, v in self.features_mapping.items()}
             )
         else:
             features_imp = pd.Series(features_cols).sort_values(ascending=True)

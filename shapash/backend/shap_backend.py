@@ -1,3 +1,6 @@
+from typing import Any, Optional, List
+
+import pandas as pd
 import shap
 
 from shapash.backend.base_backend import BaseBackend
@@ -14,16 +17,32 @@ class ShapBackend(BaseBackend):
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
         self.explainer = shap.TreeExplainer(model=model, **self.explainer_args)
 
-    def _get_global_features_importance(self, subset=None):
-        if self.contributions is None:
-            raise AssertionError('Local contributions should be computed first')
+    def _run_explainer(self, x: pd.DataFrame):
+        """
+        Computes and returns local contributions using Shap explainer
 
-        if subset is not None:
-            return self._state.compute_features_import(self.contributions.loc[subset])
+        Parameters
+        ----------
+        x :
+
+        Returns
+        -------
+        explain_data : pd.DataFrame or list of pd.DataFrame
+            local contributions
+        """
+        explain_data = self.explainer(x, **self.explainer_compute_args)
+        return explain_data
+
+    def _get_local_contributions(self, explain_data: Any, subset: Optional[List[int]] = None):
+        contributions = explain_data.values
+        if subset is None:
+            return contributions
         else:
-            return self._state.compute_features_import(self.contributions)
+            return contributions.loc[subset]
 
-    def _get_local_contributions(self, X):
-        contributions = self.explainer(X, **self.explainer_compute_args).values
-
-        return contributions
+    def _get_global_features_importance(self, explain_data: Any, subset: Optional[List[int]] = None):
+        contributions = explain_data.values
+        if subset is not None:
+            return self._state.compute_features_import(contributions.loc[subset])
+        else:
+            return self._state.compute_features_import(contributions)

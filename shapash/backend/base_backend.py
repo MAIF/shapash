@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from typing import Any, List, Optional, Union
+import pandas as pd
 
 from shapash.utils.check import check_model, check_contribution_object
 from shapash.utils.transform import adapt_contributions
@@ -19,44 +21,70 @@ class BaseBackend(ABC):
     # construct the backend from it.
     name = 'base'
 
-    def __init__(self, model):
+    def __init__(self, model: Any):
         self.model = model
+        self.explain_data: Any = None
         self._state = None
-        self.contributions = None
         self._case, self._classes = check_model(model)
+        self._has_run = False
 
-    def get_global_features_importance(self, subset=None):
-        return self._get_global_features_importance(subset)
+    @abstractmethod
+    def _run_explainer(self, x: pd.DataFrame) -> Any:
+        raise NotImplementedError
 
-    def get_local_contributions(self, X, preprocessing=None):
-        # Compute local contributions using inherited backend method
-        contributions = self._get_local_contributions(X)
+    @abstractmethod
+    def _get_global_features_importance(self, explain_data: Any, subset: Optional[List[int]] = None):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _get_local_contributions(self, explain_data: Any, subset: Optional[List[int]] = None):
+        raise NotImplementedError
+
+    def run_explainer(self, x: pd.DataFrame):
+        self.explain_data = self._run_explainer(x=x)
+        self._has_run = True
+
+    def get_local_contributions(
+            self,
+            x: pd.DataFrame,
+            subset: Optional[List[int]] = None,
+            preprocessing: Any = None
+    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+
+        if self._has_run is False:
+            self.run_explainer(x=x)
+
+        # Get local contributions using inherited backend method
+        contributions = self._get_local_contributions(explain_data=self.explain_data, subset=subset)
 
         # Put contributions in the right format and perform aggregations
-        contributions = self.format_and_aggregate_contributions(X, contributions, preprocessing)
+        contributions = self.format_and_aggregate_contributions(x, contributions, preprocessing)
 
-        self.contributions = contributions
         return contributions
 
-    @abstractmethod
-    def _get_global_features_importance(self, subset=None):
-        raise NotImplementedError
+    def get_global_features_importance(
+            self,
+            subset: Optional[List[int]] = None,
+            preprocessing: Any = None
+    ) -> Union[pd.Series, List[pd.Series]]:
+        return self._get_global_features_importance(subset)
 
-    @abstractmethod
-    def _get_local_contributions(self, X):
-        raise NotImplementedError
-
-    def format_and_aggregate_contributions(self, X, contributions, preprocessing):
+    def format_and_aggregate_contributions(
+            self,
+            x: pd.DataFrame,
+            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
+            preprocessing: Any
+    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         contributions = adapt_contributions(self._case, contributions)
         self._state = self.choose_state(contributions)
         check_contribution_object(self._case, self._classes, contributions)
-        contributions = self._state.validate_contributions(contributions, X)
+        contributions = self._state.validate_contributions(contributions, x)
         # TODO : check if we need to do that for all backends. Sometimes the user may want
         #  to apply its custom preprocessing for his case to his contributions
         contributions = self.apply_preprocessing(contributions, preprocessing)
         return contributions
 
-    def choose_state(self, contributions):
+    def choose_state(self, contributions: Union[pd.DataFrame, List[pd.DataFrame]]):
         """
         Select implementation of the smart explainer. Typically check if it is a
         multi-class problem, in which case the implementation should be adapted
@@ -77,7 +105,11 @@ class BaseBackend(ABC):
         else:
             return SmartState()
 
-    def apply_preprocessing(self, contributions, preprocessing=None):
+    def apply_preprocessing(
+            self,
+            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
+            preprocessing: Any = None
+    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         """
         Reconstruct contributions for original features, taken into account a preprocessing.
 
