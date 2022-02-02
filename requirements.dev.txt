@@ -36,4 +36,4 @@ Jinja2
 phik
 acv-exp
 lime
-re              
+regex              
