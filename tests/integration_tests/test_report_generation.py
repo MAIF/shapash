@@ -97,6 +97,27 @@ class TestGeneration(unittest.TestCase):
 
         shutil.rmtree(tmp_dir_path)
 
+    def test_exexcute_report_5(self):
+        tmp_dir_path = tempfile.mkdtemp()
+
+        execute_report(
+            working_dir=tmp_dir_path,
+            explainer=self.xpl,
+            project_info_file=os.path.join(current_path, '../data/metadata.yaml'),
+            x_train=self.df[['x1', 'x2']],
+            y_train=self.df['y'],
+            y_test=self.df['y'],
+            config=dict(palette_name='eurybia'),
+            notebook_path=None
+        )
+        assert os.path.exists(os.path.join(tmp_dir_path, 'x_train.csv'))
+        assert os.path.exists(os.path.join(tmp_dir_path, 'y_test.csv'))
+        assert os.path.exists(os.path.join(tmp_dir_path, 'y_train.csv'))
+        assert os.path.exists(os.path.join(tmp_dir_path, 'smart_explainer.pickle'))
+        assert os.path.exists(os.path.join(tmp_dir_path, 'base_report.ipynb'))
+
+        shutil.rmtree(tmp_dir_path)
+
     def test_export_and_save_report_1(self):
         tmp_dir_path = tempfile.mkdtemp()
 
