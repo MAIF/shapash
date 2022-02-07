@@ -44,6 +44,34 @@ def select_palette(colors_dic, palette_name):
         raise ValueError(f"Palette {palette_name} not found.")
     return colors_dic[palette_name]
 
+
+def convert_str_color_to_plt_format(txt):
+    """
+    Converts an rgb string format to a tuple of float (used by matplotlib format)
+
+    Parameters
+    ----------
+    txt : str
+        a string representation of an rgb color (used by plotly)
+
+    Returns
+    -------
+    A tuple of float used by matplotlib format
+
+    Example
+    --------
+    >>> convert_str_color_to_plt_format(txt="rgba(244, 192, 0, 1)")
+    (0.96, 0.75, 0.0, 1.0)
+
+    """
+    txt = txt.replace('rgba', '').replace('rgb', '').replace('(', '').replace(')', '')
+    list_txt = txt.split(',')
+    if len(list_txt) > 3:
+        return [float(list_txt[i])/255 for i in range(3)] + [float(list_txt[3])]
+    else:
+        return [float(x)/255 for x in list_txt]
+
+
 def define_style(palette):
     """
     the define_style function is a function that uses a palette 
