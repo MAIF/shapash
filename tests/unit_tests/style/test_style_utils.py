@@ -3,13 +3,18 @@ Unit test of style_utils
 """
 import unittest
 import re
-from shapash.style.style_utils import colors_loading, select_palette, define_style
+from shapash.style.style_utils import colors_loading, select_palette, define_style, convert_str_color_to_plt_format
 
 
 class TestStyle_utils(unittest.TestCase):
     """
     Class of Unit test for style_utils
     """
+
+    def test_convert_str_color_to_plt_format(self):
+        res = convert_str_color_to_plt_format(txt="rgba(244, 192, 0, 1)")
+        assert tuple([round(x, 2) for x in res]) == (0.96, 0.75, 0.0, 1.0)
+
     def rgb_string_detector(self, string_val):
         """
         check rgb() or rgba() format of a str variable
