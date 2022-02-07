@@ -99,6 +99,9 @@ class ProjectReport:
         print_css_style()
         print_javascript_misc()
 
+        if 'palette_name' in config.keys():
+            self.explainer.plot.define_style_attributes(palette_name=config['palette_name'])
+
         if 'metrics' in self.config.keys():
             if not isinstance(self.config['metrics'], list) or not isinstance(self.config['metrics'][0], dict):
                 raise ValueError("The metrics parameter expects a list of dict.")
@@ -318,7 +321,8 @@ class ProjectReport:
                             for col in df.drop(col_splitter, axis=1).columns.to_list()]
         for col_label in sorted(list_cols_labels):
             col = self.explainer.inv_features_dict.get(col_label, col_label)
-            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col])
+            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col],
+                                          palette_name=self.config.get('palette_name'))
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,

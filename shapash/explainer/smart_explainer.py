@@ -1244,6 +1244,7 @@ class SmartExplainer:
                         y_test=None,
                         title_story=None,
                         title_description=None,
+                        palette_name=None,
                         metrics=None,
                         working_dir=None,
                         notebook_path=None,
@@ -1272,6 +1273,8 @@ class SmartExplainer:
             Report title.
         title_description : str, optional
             Report title description (as written just below the title).
+        palette_name : str
+            Name of the palette used for the colors of the report (refer to style folder).
         metrics : list, optional
             Metrics used in the model performance section. The metrics parameter should be a list
             of dict. Each dict contains they following keys :
@@ -1339,7 +1342,8 @@ class SmartExplainer:
                 config=dict(
                     title_story=title_story,
                     title_description=title_description,
-                    metrics=metrics
+                    metrics=metrics,
+                    palette_name=palette_name
                 ),
                 notebook_path=notebook_path,
                 kernel_name=kernel_name

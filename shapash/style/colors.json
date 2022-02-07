@@ -81,7 +81,13 @@
             "1": "rgb(113, 101, 59)"
         },
         "webapp_bkg": "rgb(52,55,54)",
-        "webapp_title": "rgb(244, 192, 0)"
+        "webapp_title": "rgb(244, 192, 0)",
+        "report_feature_distribution": {
+            "train": "rgba(74, 99, 128, 0.7)",
+            "test": "rgba(244, 192, 0, 1)",
+            "true": "rgba(74, 99, 138, 0.7)",
+            "pred": "rgba(244, 192, 0, 1)"
+        }
     },
     "eurybia": {
         "title_color": "rgb(50, 50, 50)",
@@ -165,6 +171,12 @@
             "1": "rgb(50, 90, 117)"
         },
         "webapp_bkg": "rgb(52,55,54)",
-        "webapp_title": "rgb(0, 154, 203)"
+        "webapp_title": "rgb(0, 154, 203)",
+        "report_feature_distribution": {
+            "train": "rgba(0, 154, 203, 0.9)",
+            "test": "rgba(230, 111, 0, 0.9)",
+            "true": "rgba(0, 154, 203, 0.9)",
+            "pred": "rgba(230, 111, 0, 0.9)"
+        }
     }
 }
