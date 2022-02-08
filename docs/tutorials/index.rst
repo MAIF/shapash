@@ -16,5 +16,6 @@ This part offers a series of tutorials and allows users to gradually discover th
     encoder
     postprocess
     explainer
+    explainability_quality
     report
     predictor
