@@ -99,7 +99,7 @@ class ProjectReport:
         print_css_style()
         print_javascript_misc()
 
-        if 'palette_name' in config.keys():
+        if 'palette_name' in self.config.keys():
             self.explainer.plot.define_style_attributes(palette_name=config['palette_name'])
 
         if 'metrics' in self.config.keys():
