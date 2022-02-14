@@ -808,15 +808,15 @@ class TestSmartExplainer(unittest.TestCase):
         temp, xpl = init_sme_to_pickle_test()
         xpl2 = SmartExplainer()
 
-        current = Path(path.abspath(__file__)).parent.parent.parent
-        if str(sys.version)[0:3] == '3.6':
-            pkl_file = path.join(current, 'data/xpl_to_load_36.pkl')
-        elif str(sys.version)[0:3] == '3.7':
+        current = Path(path.abspath(__file__)).parent.parent.parent        
+        if str(sys.version)[0:3] == '3.7':
             pkl_file = path.join(current, 'data/xpl_to_load_37.pkl')
         elif str(sys.version)[0:3] == '3.8':
             pkl_file = path.join(current, 'data/xpl_to_load_38.pkl')
         elif str(sys.version)[0:3] == '3.9':
             pkl_file = path.join(current, 'data/xpl_to_load_39.pkl')
+        elif str(sys.version)[0:3] == '3.10':
+            pkl_file = path.join(current, 'data/xpl_to_load_310.pkl')
         else:
             raise NotImplementedError
         

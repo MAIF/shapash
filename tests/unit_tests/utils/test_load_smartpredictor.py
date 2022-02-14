@@ -26,8 +26,8 @@ class Test_load_smartpredictor(unittest.TestCase):
         current = Path(path.abspath(__file__)).parent.parent.parent
         if str(sys.version)[0:3] == '3.7':
             pkl_file = path.join(current, 'data/predictor_to_load_37.pkl')
-        elif str(sys.version)[0:3] == '3.6':
-            pkl_file = path.join(current, 'data/predictor_to_load_36.pkl')
+        elif str(sys.version)[0:3] == '3.10':
+            pkl_file = path.join(current, 'data/predictor_to_load_310.pkl')
         elif str(sys.version)[0:3] == '3.8':
             pkl_file = path.join(current, 'data/predictor_to_load_38.pkl')
         elif str(sys.version)[0:3] == '3.9':

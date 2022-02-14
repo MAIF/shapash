@@ -23,7 +23,7 @@ requirements = [
         'dash-table==4.11.0',
         'nbformat>4.2.0',
         'numba==0.53.1',
-        'scikit-learn'
+        'scikit-learn>=0.21.0'
     ]
 
 extras = dict()
@@ -31,11 +31,11 @@ extras = dict()
 # This list should be identical to the list in shapash/report/__init__.py
 extras['report'] = [
     'nbconvert==6.0.7',
-    'papermill',
+    'papermill>=2.0.0',
     'seaborn<=0.11.2',
-    'notebook',
-    'Jinja2',
-    'phik'
+    'notebook>=6.0.0',
+    'Jinja2>=2.11.0',
+    'phik>=0.12.0'
 ]
 
 extras['xgboost'] = ['xgboost>=1.0.0']
@@ -43,8 +43,8 @@ extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=0.21']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
 extras['category_encoders'] = ['category_encoders==2.2.2']
-extras['acv'] = ['acv-exp']
-extras['lime'] = ['lime']
+extras['acv'] = ['acv-exp==1.2.0']
+extras['lime'] = ['lime>=0.2.0.0']
 
 setup_requirements = ['pytest-runner', ]
 
@@ -53,7 +53,7 @@ test_requirements = ['pytest', ]
 setup(
     name="shapash",
     version="1.6.1",
-    python_requires='>3.5, <3.10',
+    python_requires='>3.6, <3.11',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -61,11 +61,11 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
-        "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.6',
+        "Programming Language :: Python :: 3",        
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
