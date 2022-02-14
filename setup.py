@@ -22,7 +22,7 @@ requirements = [
         'dash-renderer==1.8.3',
         'dash-table==4.11.0',
         'nbformat>4.2.0',
-        'numba==0.53.1',
+        'numba>=0.53.1',
         'scikit-learn>=0.21.0'
     ]
 
@@ -40,7 +40,7 @@ extras['report'] = [
 
 extras['xgboost'] = ['xgboost>=1.0.0']
 extras['lightgbm'] = ['lightgbm>=2.3.0']
-extras['catboost'] = ['catboost>=0.21']
+extras['catboost'] = ['catboost>=1.0.1']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
 extras['category_encoders'] = ['category_encoders==2.2.2']
 extras['acv'] = ['acv-exp==1.2.0']
