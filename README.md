@@ -144,7 +144,7 @@ to compute contributions.
 
 ## 🛠 Installation
 
-Shapash is intended to work with Python versions 3.6 to 3.9. Installation can be done with pip:
+Shapash is intended to work with Python versions 3.7 to 3.10. Installation can be done with pip:
 
 ```
 pip install shapash
