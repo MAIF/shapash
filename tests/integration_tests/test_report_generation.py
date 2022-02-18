@@ -100,6 +100,7 @@ class TestGeneration(unittest.TestCase):
     def test_exexcute_report_5(self):
         tmp_dir_path = tempfile.mkdtemp()
 
+        self.xpl.palette_name = "eurybia"
         execute_report(
             working_dir=tmp_dir_path,
             explainer=self.xpl,
@@ -107,9 +108,9 @@ class TestGeneration(unittest.TestCase):
             x_train=self.df[['x1', 'x2']],
             y_train=self.df['y'],
             y_test=self.df['y'],
-            config=dict(palette_name='eurybia'),
             notebook_path=None
         )
+        self.xpl.palette_name = "default"
         assert os.path.exists(os.path.join(tmp_dir_path, 'x_train.csv'))
         assert os.path.exists(os.path.join(tmp_dir_path, 'y_test.csv'))
         assert os.path.exists(os.path.join(tmp_dir_path, 'y_train.csv'))
