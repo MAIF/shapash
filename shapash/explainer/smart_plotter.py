@@ -2625,7 +2625,7 @@ class SmartPlotter:
         build trust around a particular explanation method.
 
         The generated graphs can take multiple forms, but they all analyze \
-        the same two aspects: for each feature we look at Amplitude vs. Variability; \
+        the same two aspects: for each feature we look at Amplitude vs. Variability. \
         in order terms, how important the feature is on average vs. how the feature impact \
         changes in the instance neighborhood.
 
@@ -2742,7 +2742,7 @@ class SmartPlotter:
                        auto_open=False):
         """
         The Compacity_plot has the main objective of determining if a small subset of features \
-        can be extracted to provide a simpler explanation of the model; \
+        can be extracted to provide a simpler explanation of the model. \
         indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
 
         The following two plots are proposed:
