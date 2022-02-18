@@ -7,29 +7,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from shapash.utils.utils import truncate_str
 from shapash.report.common import VarType
-from shapash.style.style_utils import convert_str_color_to_plt_format, colors_loading, select_palette
-
-
-def _get_palette(palette_name):
-    if palette_name is None:
-        palette_name = list(colors_loading().keys())[0]  # Default palette name
-    return select_palette(colors_loading(), palette_name)
-
-
-def _get_dict_color_palette(palette_name=None):
-    palette = _get_palette(palette_name=palette_name)
-    dict_color_palette = {
-        k: convert_str_color_to_plt_format(v)
-        for k, v in palette["report_feature_distribution"].items()
-    }
-    return dict_color_palette
-
-
-def _get_cmap_gradient(palette_name=None):
-    palette = _get_palette(palette_name=palette_name)
-    col_scale = [convert_str_color_to_plt_format(x) for x in palette["report_colorscale"]]
-    cmap_gradient = LinearSegmentedColormap.from_list('col_corr', col_scale[4:6], N=100)
-    return cmap_gradient
+from shapash.style.style_utils import get_pyplot_color
 
 
 def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str, type: VarType, palette_name=None) -> plt.Figure:
@@ -90,7 +68,7 @@ def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str,
     matplotlib.pyplot.Figure
     """
     g = sns.displot(df_all, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
-                    palette=_get_dict_color_palette(palette_name=palette_name))
+                    palette=get_pyplot_color(palette_name=palette_name, color_name='report_feature_distribution'))
     g.set_xticklabels(rotation=30)
 
     fig = g.fig
@@ -150,7 +128,7 @@ def generate_fig_univariate_categorical(
     fig, ax = plt.subplots(figsize=(7, 4))
 
     sns.barplot(data=df_cat, x='Percent', y=col, hue=hue,
-                palette=_get_dict_color_palette(palette_name=palette_name), ax=ax)
+                palette=get_pyplot_color(palette_name=palette_name, color_name='report_feature_distribution'), ax=ax)
 
     for p in ax.patches:
         ax.annotate("{:.1f}%".format(np.nan_to_num(p.get_width(), nan=0)),

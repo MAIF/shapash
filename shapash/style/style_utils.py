@@ -4,8 +4,8 @@ functions for loading and manipulating colors
 import json
 import os
 
-from numpy.core.numeric import _full_like_dispatcher
 from shapash.utils.utils import convert_string_to_int_keys
+
 
 def colors_loading():
     """
@@ -22,6 +22,7 @@ def colors_loading():
     with open(jsonfile, 'r') as openfile:
         colors_dic = json.load(openfile)
     return colors_dic
+
 
 def select_palette(colors_dic, palette_name):
     """
@@ -191,3 +192,52 @@ def define_style(palette):
     style_dict['webapp_title'] = palette["webapp_title"]
 
     return style_dict
+
+
+def get_palette(palette_name):
+    """
+    Returns a specific palette linked to the input palette_name
+
+    Parameters
+    ----------
+    palette_name : str
+        name of the palette
+
+    Returns
+    -------
+    dict:
+        contains colors of one palette
+    """
+    if palette_name is None:
+        palette_name = list(colors_loading().keys())[0]  # Default palette name
+    return select_palette(colors_loading(), palette_name)
+
+
+def get_pyplot_color(palette_name=None, color_name=''):
+    """
+    Returns the color(s) of the color_name key in the palette in matplotlib format.
+
+    Parameters
+    ----------
+    palette_name :  str
+        Name of the palette of colors used
+    color_name : str
+        Name of the color in the palette
+
+    Returns
+    -------
+    dict or tuple
+        the colors in pyplot format
+    """
+    palette = get_palette(palette_name=palette_name)
+    colors = palette[color_name]
+    if isinstance(colors, str):
+        return convert_str_color_to_plt_format(colors)
+    elif isinstance(colors, dict):
+        dict_color_palette = {
+            k: convert_str_color_to_plt_format(v)
+            for k, v in colors.items()
+        }
+        return dict_color_palette
+    else:
+        raise ValueError(f"Color type not supported for conversion to pyplot : {type(colors)}")
