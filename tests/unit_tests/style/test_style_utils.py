@@ -3,7 +3,13 @@ Unit test of style_utils
 """
 import unittest
 import re
-from shapash.style.style_utils import colors_loading, select_palette, define_style, convert_str_color_to_plt_format
+from shapash.style.style_utils import (
+    colors_loading,
+    select_palette,
+    define_style,
+    convert_str_color_to_plt_format,
+    get_pyplot_color
+)
 
 
 class TestStyle_utils(unittest.TestCase):
@@ -61,3 +67,11 @@ class TestStyle_utils(unittest.TestCase):
             palette = select_palette(available_palettes, palette_name)
             style_dict = define_style(palette)
             assert len(list(style_dict.keys())) > 0
+
+    def test_get_pyplot_color(self):
+        available_palettes = colors_loading()
+        for palette_name in available_palettes.keys():
+            colors = get_pyplot_color(palette_name, 'report_feature_distribution')
+            assert isinstance(colors, dict)
+            color = get_pyplot_color(palette_name, 'title_color')
+            assert isinstance(color, list)
