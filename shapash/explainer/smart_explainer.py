@@ -104,6 +104,8 @@ class SmartExplainer:
         The processing apply to the original data.
     postprocessing : dict
         Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+    palette_name : str
+        Name of the palette used for the colors of the report (refer to style folder).
 
     How to declare a new SmartExplainer object?
 
@@ -116,7 +118,13 @@ class SmartExplainer:
     label_dict specify the labels of target (classification).
     """
 
-    def __init__(self, features_dict={}, label_dict=None, title_story: str = None):
+    def __init__(
+            self,
+            features_dict={},
+            label_dict=None,
+            title_story: str = None,
+            palette_name=None,
+    ):
         if isinstance(features_dict, dict) is False:
             raise ValueError(
                 """
@@ -137,6 +145,9 @@ class SmartExplainer:
         else:
             self.title_story = ''
         self.features_groups = None
+        self.palette_name = palette_name if palette_name else 'default'
+        if palette_name:
+            self.plot.define_style_attributes(palette_name=palette_name)
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
@@ -819,7 +830,7 @@ class SmartExplainer:
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
-            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
+            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool, str)) \
                     or att in ["model", 'preprocessing', 'postprocessing']:
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
@@ -1244,7 +1255,6 @@ class SmartExplainer:
                         y_test=None,
                         title_story=None,
                         title_description=None,
-                        palette_name=None,
                         metrics=None,
                         working_dir=None,
                         notebook_path=None,
@@ -1273,8 +1283,6 @@ class SmartExplainer:
             Report title.
         title_description : str, optional
             Report title description (as written just below the title).
-        palette_name : str
-            Name of the palette used for the colors of the report (refer to style folder).
         metrics : list, optional
             Metrics used in the model performance section. The metrics parameter should be a list
             of dict. Each dict contains they following keys :
@@ -1343,7 +1351,6 @@ class SmartExplainer:
                     title_story=title_story,
                     title_description=title_description,
                     metrics=metrics,
-                    palette_name=palette_name
                 ),
                 notebook_path=notebook_path,
                 kernel_name=kernel_name
