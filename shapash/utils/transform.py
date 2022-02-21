@@ -290,7 +290,7 @@ def adapt_contributions(case,contributions):
         return contributions
 
 
-def _get_preprocessing_mapping(x_init, preprocessing=None):
+def get_preprocessing_mapping(x_init, preprocessing=None):
     """
     Get the columns mapping from preprocessing.
 
@@ -333,7 +333,7 @@ def _get_preprocessing_mapping(x_init, preprocessing=None):
         elif isinstance(enc, list):
             for sub_enc in enc:
                 # Recursive call
-                dict_col_mapping.update(_get_preprocessing_mapping(preprocessing=sub_enc, x_init=x_init))
+                dict_col_mapping.update(get_preprocessing_mapping(preprocessing=sub_enc, x_init=x_init))
 
     return dict_col_mapping
 
@@ -357,7 +357,7 @@ def get_features_transform_mapping(x_pred, x_init, preprocessing=None):
         the mapping between columns names before and after preprocessing.
     """
     dict_all_cols_mapping = dict()
-    dict_all_cols_mapping.update(_get_preprocessing_mapping(x_init=x_init, preprocessing=preprocessing))
+    dict_all_cols_mapping.update(get_preprocessing_mapping(x_init=x_init, preprocessing=preprocessing))
     # Adding columns which name was not changed during preprocessing
     for col_name in x_pred.columns:
         if col_name not in dict_all_cols_mapping.keys():

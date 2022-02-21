@@ -6,13 +6,13 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import category_encoders as ce
-from shapash.utils.transform import _get_preprocessing_mapping, get_features_transform_mapping
+from shapash.utils.transform import get_preprocessing_mapping, get_features_transform_mapping
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
     def test_get_preprocessing_mapping_1(self):
         """
-        test _get_preprocessing_mapping with multiple encoding and dictionary
+        test get_preprocessing_mapping with multiple encoding and dictionary
         """
         enc = ColumnTransformer(
             transformers=[
@@ -46,7 +46,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
 
         test_encoded.columns = ['col1_0', 'col1_1', 'col2_0', 'col2_1', 'col3_0', 'col3_1', 'col4_0', 'col4_1']
 
-        mapping = _get_preprocessing_mapping(test_encoded, [enc, input_dict1, list_dict])
+        mapping = get_preprocessing_mapping(test_encoded, [enc, input_dict1, list_dict])
 
         expected_mapping = {'onehot_ce_city': ['col1_0', 'col1_1'], 'onehot_ce_state': ['col2_0', 'col2_1'],
                             'onehot_skp_city': ['col3_0', 'col3_1'], 'onehot_skp_state': ['col4_0', 'col4_1']}
@@ -54,7 +54,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
 
     def test_get_preprocessing_mapping_2(self):
         """
-        test _get_preprocessing_mapping with multiple encoding and drop option
+        test get_preprocessing_mapping with multiple encoding and drop option
         """
         enc = ColumnTransformer(
             transformers=[
@@ -70,7 +70,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         test_encoded = pd.DataFrame(enc.fit_transform(test))
         test_encoded.columns = ['col1_0', 'col1_1', 'col2_0', 'col2_1', 'col3']
 
-        mapping = _get_preprocessing_mapping(test_encoded, enc)
+        mapping = get_preprocessing_mapping(test_encoded, enc)
 
         expected_mapping = {'onehot_ce_city': ['col1_0', 'col1_1'], 'onehot_ce_state': ['col2_0', 'col2_1'],
                             'ordinal_skp_city': ['col3']}

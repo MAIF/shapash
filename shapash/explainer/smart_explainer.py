@@ -231,26 +231,24 @@ class SmartExplainer:
 
         if isinstance(backend, str):
             if backend.lower() == 'shap':
-                self.backend = ShapBackend(model=model, **kwargs)
+                self.backend = ShapBackend(model=model, preprocessing=preprocessing, **kwargs)
             elif backend.lower() == 'acv':
-                self.backend = AcvBackend(model=model, **kwargs)
+                self.backend = AcvBackend(model=model, preprocessing=preprocessing, **kwargs)
             else:
                 raise NotImplementedError(f'Unknown backend: {backend}')
         elif isinstance(backend, BaseBackend):
             self.backend = backend
         else:
             raise NotImplementedError(f'Unknown backend : {backend}')
-
+        self.explain_data = self.backend.run_explainer(x=x)
         # Computing contributions using backend
         if contributions is None:
-            self.contributions = self.backend.get_local_contributions(X=x, preprocessing=preprocessing)
+            self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
         else:
-            self.contributions = self.backend.format_and_aggregate_contributions(
-                X=x,
+            self.contributions = self.backend.format_and_aggregate_local_contributions(
+                x=x,
                 contributions=contributions,
-                preprocessing=preprocessing
             )
-            self.backend.contributions = self.contributions
         self.state = self.backend._state
         self.check_contributions()
         self.y_pred = self.check_y_pred(y_pred)
@@ -986,20 +984,15 @@ class SmartExplainer:
             Each Serie: feature importance, One row by feature,
             index of the serie = contributions.columns
         """
-        if hasattr(self, 'backend') and self.backend == 'acv':
-            features_mapping = get_features_transform_mapping(self.x_pred, self.x_init, self.preprocessing)
-            features_imp = compute_features_import_acv(
-                self.sdp_index, self.sdp, self.x_init.columns, features_mapping
-            )
-            if isinstance(self.contributions, list):
-                self.features_imp = [features_imp for _ in range(len(self.contributions))]
-            else:
-                self.features_imp = features_imp
-        else:
-            if self.features_groups is not None and self.features_imp_groups is None:
-                self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
-            if self.features_imp is None or force:
-                self.features_imp = self.state.compute_features_import(self.contributions)
+        self.features_imp = self.backend.get_global_features_importance(
+            contributions=self.contributions,
+            explain_data=self.explain_data,
+            subset=None
+        )
+
+        # TODO : groups
+        if self.features_groups is not None and self.features_imp_groups is None:
+            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
 
     def compute_features_stability(self, selection):
         """

@@ -1,4 +1,4 @@
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Union
 
 import pandas as pd
 import shap
@@ -11,8 +11,8 @@ class ShapBackend(BaseBackend):
     # of the features that belong to the group
     column_aggregation = 'sum'
 
-    def __init__(self, model, explainer_args=None, explainer_compute_args=None):
-        super(ShapBackend, self).__init__(model)
+    def __init__(self, model, preprocessing=None, explainer_args=None, explainer_compute_args=None):
+        super(ShapBackend, self).__init__(model, preprocessing)
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
         self.explainer = shap.TreeExplainer(model=model, **self.explainer_args)
@@ -23,7 +23,8 @@ class ShapBackend(BaseBackend):
 
         Parameters
         ----------
-        x :
+        x : pd.DataFrame
+            The observations dataframe used by the model
 
         Returns
         -------
@@ -33,15 +34,24 @@ class ShapBackend(BaseBackend):
         explain_data = self.explainer(x, **self.explainer_compute_args)
         return explain_data
 
-    def _get_local_contributions(self, explain_data: Any, subset: Optional[List[int]] = None):
+    def _get_local_contributions(
+            self,
+            x: pd.DataFrame,
+            explain_data: Any,
+            subset: Optional[List[int]] = None
+    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         contributions = explain_data.values
         if subset is None:
             return contributions
         else:
             return contributions.loc[subset]
 
-    def _get_global_features_importance(self, explain_data: Any, subset: Optional[List[int]] = None):
-        contributions = explain_data.values
+    def _get_global_features_importance(
+            self,
+            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
+            explain_data: Any,
+            subset: Optional[List[int]] = None
+    ) -> Union[pd.Series, List[pd.Series]]:
         if subset is not None:
             return self._state.compute_features_import(contributions.loc[subset])
         else:
