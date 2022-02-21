@@ -43,7 +43,7 @@ extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=0.21']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
 extras['category_encoders'] = ['category_encoders==2.2.2']
-extras['acv'] = ['acv-exp']
+extras['acv'] = ['acv-exp==1.1.2']
 extras['lime'] = ['lime']
 
 setup_requirements = ['pytest-runner', ]
