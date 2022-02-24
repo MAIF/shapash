@@ -246,7 +246,7 @@ class SmartExplainer:
                 x=x,
                 contributions=contributions,
             )
-            backend.explain_data = self.contributions
+            self.backend.explain_data = self.contributions
 
         self.state = self.backend._state
         self.check_contributions()
