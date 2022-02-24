@@ -12,19 +12,15 @@ from shapash.backend import ShapBackend, AcvBackend, BaseBackend
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
-from shapash.utils.transform import adapt_contributions, get_features_transform_mapping
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.shap_backend import shap_contributions, check_explainer, get_shap_interaction_values
-from shapash.utils.acv_backend import active_shapley_values, compute_features_import_acv
-from shapash.utils.lime_backend import lime_contributions
+from shapash.utils.shap_backend import check_explainer, get_shap_interaction_values
+from shapash.utils.utils import choose_state
 from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
     check_postprocessing, check_features_name
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.report import check_report_requirements
 from shapash.manipulation.summarize import create_grouped_features_values
-from .smart_state import SmartState
-from .multi_decorator import MultiDecorator
 from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
@@ -353,62 +349,6 @@ class SmartExplainer:
         if title_story is not None:
             self.title_story = title_story
 
-    def choose_state(self, contributions):
-        """
-        Select implementation of the smart explainer. Typically check if it is a
-        multi-class problem, in which case the implementation should be adapted
-        to lists of contributions.
-
-        Parameters
-        ----------
-        contributions : object
-            Local contributions. Could also be a list of local contributions.
-
-        Returns
-        -------
-        object
-            SmartState or SmartMultiState, depending on the nature of the input.
-        """
-        if isinstance(contributions, list):
-            return MultiDecorator(SmartState())
-        else:
-            return SmartState()
-
-    def adapt_contributions(self, contributions):
-        """
-        If _case is "classification" and contributions a np.array or pd.DataFrame
-        this function transform contributions matrix in a list of 2 contributions
-        matrices: Opposite contributions and contributions matrices.
-
-        Parameters
-        ----------
-        contributions : pandas.DataFrame, np.ndarray or list
-
-        Returns
-        -------
-            pandas.DataFrame, np.ndarray or list
-            contributions object modified
-        """
-        return adapt_contributions(self._case, contributions)
-
-    def validate_contributions(self, contributions):
-        """
-        Check len of list if _case is "classification"
-        Check contributions object type if _case is "regression"
-        Check type of contributions and transform into (list of) pd.Dataframe if necessary
-
-
-        Parameters
-        ----------
-        contributions : pandas.DataFrame, np.ndarray or list
-
-        Returns
-        -------
-            pandas.DataFrame or list
-        """
-        check_contribution_object(self._case, self._classes, contributions)
-        return self.state.validate_contributions(contributions, self.x_init)
-
     def get_interaction_values(self, n_samples_max=None, selection=None):
         """
         Compute shap interaction values for each row of x_init.
@@ -437,33 +377,8 @@ class SmartExplainer:
                 return self.interaction_values
 
         self.x_interaction = x[:n_samples_max]
-        self.interaction_values = get_shap_interaction_values(self.x_interaction, self.explainer)
+        self.interaction_values = get_shap_interaction_values(self.x_interaction, self.backend.explainer)
         return self.interaction_values
-
-    def apply_preprocessing(self, contributions, preprocessing=None):
-        """
-        Reconstruct contributions for original features, taken into account a preprocessing.
-
-        Parameters
-        ----------
-        contributions : object
-            Local contributions, or list of local contributions.
-        preprocessing : object
-            Encoder taken from scikit-learn or category_encoders
-
-        Returns
-        -------
-        object
-            Reconstructed local contributions in the original space. Can be a list.
-        """
-        if preprocessing:
-            return self.state.inverse_transform_contributions(
-                contributions,
-                preprocessing,
-                agg_columns='first' if hasattr(self, 'backend') and self.backend == 'acv' else 'sum'
-            )
-        else:
-            return contributions
 
     def check_postprocessing_modif_strings(self, postprocessing=None):
         """
@@ -837,7 +752,7 @@ class SmartExplainer:
             for elem in dict_to_load.keys():
                 setattr(self, elem, dict_to_load[elem])
             self._case, self._classes = self.check_model()
-            self.state = self.choose_state(self.contributions)
+            self.state = choose_state(self.contributions)
         else:
             raise ValueError(
                 "pickle file must contain dictionary"
