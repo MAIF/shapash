@@ -240,15 +240,18 @@ class SmartExplainer:
             self.backend = backend
         else:
             raise NotImplementedError(f'Unknown backend : {backend}')
-        self.explain_data = self.backend.run_explainer(x=x)
+
         # Computing contributions using backend
         if contributions is None:
+            self.explain_data = self.backend.run_explainer(x=x)
             self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
         else:
             self.contributions = self.backend.format_and_aggregate_local_contributions(
                 x=x,
                 contributions=contributions,
             )
+            backend.explain_data = self.contributions
+
         self.state = self.backend._state
         self.check_contributions()
         self.y_pred = self.check_y_pred(y_pred)
