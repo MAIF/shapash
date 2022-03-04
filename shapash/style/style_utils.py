@@ -235,5 +235,7 @@ def get_pyplot_color(colors):
             for k, v in colors.items()
         }
         return dict_color_palette
+    elif isinstance(colors, list):
+        return [convert_str_color_to_plt_format(v) for v in colors]
     else:
         raise ValueError(f"Color type not supported for conversion to pyplot : {type(colors)}")

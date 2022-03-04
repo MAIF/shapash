@@ -96,7 +96,7 @@ def generate_fig_univariate_categorical(
         col: str,
         hue: str,
         nb_cat_max: int = 7,
-        colors_dict=None
+        colors_dict: Optional[dict] = None
 ) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of a categorical feature.
@@ -178,7 +178,11 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_ma
     return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
 
-def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[np.array, list]) -> plt.Figure:
+def generate_confusion_matrix_plot(
+        y_true: Union[np.array, list],
+        y_pred: Union[np.array, list],
+        colors_dict: Optional[dict] = None
+) -> plt.Figure:
     """
     Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
     y_pred parameters.
@@ -189,23 +193,15 @@ def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[
         Ground truth (correct) target values.
     y_pred : array-like
         Estimated targets as returned by a classifier.
-
+    colors_dict : dict
+        dict of colors used
     Returns
     -------
     matplotlib.pyplot.Figure
     """
-    # Color scale derivated from SmartPlotter init_color_scale attribute
-    col_scale = [(0.204, 0.216, 0.212),
-                 (0.29, 0.388, 0.541),
-                 (0.455, 0.6, 0.839),
-                 (0.635, 0.737, 0.835),
-                 (1, 1, 1),
-                 (0.957, 0.753, 0.0),
-                 (1.0, 0.651, 0.067),
-                 (1.0, 0.482, 0.149),
-                 (1.0, 0.302, 0.027)]
-
-    cmap_gradient = LinearSegmentedColormap.from_list('col_corr', col_scale[4:6], N=100)
+    colors_dict = colors_dict or get_palette('default')
+    col_scale = get_pyplot_color(colors=colors_dict['report_confusion_matrix'])
+    cmap_gradient = LinearSegmentedColormap.from_list('col_corr', col_scale, N=100)
 
     df_cm = pd.crosstab(y_true, y_pred, rownames=['Actual'], colnames=['Predicted'])
     fig, ax = plt.subplots(figsize=(7, 4))

@@ -435,7 +435,11 @@ class ProjectReport:
             if metric['path'] in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
                     metric['name'] == 'confusion_matrix':
                 print_md(f"**{metric['name']} :**")
-                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=self.y_test, y_pred=self.y_pred)))
+                print_html(convert_fig_to_html(generate_confusion_matrix_plot(
+                    y_true=self.y_test,
+                    y_pred=self.y_pred,
+                    colors_dict=self.explainer.colors_dict
+                )))
             else:
                 try:
                     metric_fn = get_callable(path=metric['path'])
