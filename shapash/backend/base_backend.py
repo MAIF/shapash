@@ -8,6 +8,10 @@ from shapash.utils.utils import choose_state
 
 
 class BaseBackend(ABC):
+    """``BaseBackend`` is the base class for all backends.
+    All explainability implementations should extend this abstract class
+    and implement the methods marked as abstract.
+    """
 
     # class properties
     # --------------------
@@ -21,6 +25,15 @@ class BaseBackend(ABC):
     name = 'base'
 
     def __init__(self, model: Any, preprocessing: Optional[Any] = None):
+        """Create a backend instance using a given implementation.
+
+        Parameters
+        ----------
+        model : any
+            Model used.
+        preprocessing: category_encoders, ColumnTransformer, list or dict
+            The processing apply to the original data.
+        """
         self.model = model
         self.preprocessing = preprocessing
         self.explain_data: Any = None
@@ -59,6 +72,22 @@ class BaseBackend(ABC):
         )
 
     def run_explainer(self, x: pd.DataFrame) -> Any:
+        """This method computes all the explainability data that can be computationally
+        intensive in a dictionary.
+
+        The result will then be used in the `get_local_contributions` and
+        `get_global_features_importance` methods.
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            The dataframe of observations used by the model.
+
+        Returns
+        -------
+        explainability_data : dict
+            All the data required to get local and global explainability.
+        """
         return self._run_explainer(x)
 
     def get_local_contributions(
@@ -67,6 +96,29 @@ class BaseBackend(ABC):
             explain_data: Any,
             subset: Optional[List[int]] = None
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        """Get local contributions using the explainer data computed in the `run_explainer`
+        method.
+
+        This method is based on the `_get_local_contributions`. It applies some aggregations
+        and transformations to the result of the `_get_local_contributions` if needed. For
+        example, if there are some one-hot-encoded columns, it automatically checks and applies
+        aggregations depending on the result of `_get_local_contributions` and the `preprocessing`
+        (encoder).
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            The dataframe of observations used by the model.
+        explain_data : dict
+            The data computed in the `run_explainer` method.
+        subset : list
+            list of indices on which to get local contributions.
+
+        Returns
+        -------
+        local_contributions : pd.DataFrame
+            The local contributions computed by the backend.
+        """
         local_contributions = self._get_local_contributions(x, explain_data, subset)
         local_contributions = self.format_and_aggregate_local_contributions(x, local_contributions)
         return local_contributions
@@ -77,6 +129,26 @@ class BaseBackend(ABC):
             explain_data: Any,
             subset: Optional[List[int]] = None
     ) -> Union[pd.Series, List[pd.Series]]:
+        """Get global contributions using the explainer data computed in the `run_explainer`
+        method.
+
+        This method is based on the `_get_global_features_importance`.
+
+        Parameters
+        ----------
+        contributions : pd.DataFrame
+            The dataframe of local contributions formatted and aggregated, result of
+            the `get_local_contributions` method.
+        explain_data : dict
+            The data computed in the `run_explainer` method.
+        subset : list
+            list of indices on which to get local contributions.
+
+        Returns
+        -------
+        pd.DataFrame
+            The global features importance computed by the backend.
+        """
         return self._get_global_features_importance(contributions, explain_data, subset)
 
     def format_and_aggregate_local_contributions(
