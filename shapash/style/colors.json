@@ -89,7 +89,7 @@
             "pred": "rgba(244, 192, 0, 1)"
         }
     },
-    "eurybia": {
+    "blues": {
         "title_color": "rgb(50, 50, 50)",
         "axis_color": "rgb(50, 50, 50)",
         "featureimp_bar": {
