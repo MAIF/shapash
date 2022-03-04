@@ -25,7 +25,7 @@ class TestGeneration(unittest.TestCase):
         self.xpl.compile(model=clf, x=df[['x1', 'x2']])
         self.df = df
 
-    def test_exexcute_report_1(self):
+    def test_execute_report_1(self):
         tmp_dir_path = tempfile.mkdtemp()
 
         execute_report(
@@ -40,7 +40,7 @@ class TestGeneration(unittest.TestCase):
 
         shutil.rmtree(tmp_dir_path)
 
-    def test_exexcute_report_2(self):
+    def test_execute_report_2(self):
         tmp_dir_path = tempfile.mkdtemp()
 
         execute_report(
@@ -57,7 +57,7 @@ class TestGeneration(unittest.TestCase):
 
         shutil.rmtree(tmp_dir_path)
 
-    def test_exexcute_report_3(self):
+    def test_execute_report_3(self):
         tmp_dir_path = tempfile.mkdtemp()
 
         execute_report(
@@ -76,7 +76,7 @@ class TestGeneration(unittest.TestCase):
 
         shutil.rmtree(tmp_dir_path)
 
-    def test_exexcute_report_4(self):
+    def test_execute_report_4(self):
         tmp_dir_path = tempfile.mkdtemp()
 
         execute_report(
@@ -97,7 +97,7 @@ class TestGeneration(unittest.TestCase):
 
         shutil.rmtree(tmp_dir_path)
 
-    def test_exexcute_report_5(self):
+    def test_execute_report_5(self):
         tmp_dir_path = tempfile.mkdtemp()
 
         self.xpl.palette_name = "eurybia"
