@@ -14,10 +14,10 @@ from shapash.backend.base_backend import BaseBackend
 class LimeBackend(BaseBackend):
     column_aggregation = 'sum'
 
-    def __init__(self, model, preprocessing=None, background_data=None):
+    def __init__(self, model, preprocessing=None, data=None):
         super(LimeBackend, self).__init__(model, preprocessing)
         self.explainer = None
-        self.background_data = background_data
+        self.data = data
 
     def _run_explainer(self, x: pd.DataFrame):
         """
@@ -33,7 +33,7 @@ class LimeBackend(BaseBackend):
         explain_data : dict
             dict containing local contributions
         """
-        data = self.background_data or x
+        data = self.data if self.data is not None else x
         explainer = lime_tabular.LimeTabularExplainer(
             data.values,
             feature_names=x.columns,

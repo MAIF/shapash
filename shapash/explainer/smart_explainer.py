@@ -8,7 +8,7 @@ import shutil
 import numpy as np
 import pandas as pd
 from shapash.webapp.smart_app import SmartApp
-from shapash.backend import ShapBackend, AcvBackend, BaseBackend
+from shapash.backend import ShapBackend, AcvBackend, BaseBackend, LimeBackend
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
@@ -230,6 +230,8 @@ class SmartExplainer:
                 self.backend = ShapBackend(model=model, preprocessing=preprocessing, **kwargs)
             elif backend.lower() == 'acv':
                 self.backend = AcvBackend(model=model, preprocessing=preprocessing, **kwargs)
+            elif backend.lower() == 'lime':
+                self.backend = LimeBackend(model=model, preprocessing=preprocessing, **kwargs)
             else:
                 raise NotImplementedError(f'Unknown backend: {backend}')
         elif isinstance(backend, BaseBackend):
