@@ -3,13 +3,24 @@ Unit test of style_utils
 """
 import unittest
 import re
-from shapash.style.style_utils import colors_loading, select_palette, define_style
+from shapash.style.style_utils import (
+    colors_loading,
+    select_palette,
+    define_style,
+    convert_str_color_to_plt_format,
+    get_pyplot_color
+)
 
 
 class TestStyle_utils(unittest.TestCase):
     """
     Class of Unit test for style_utils
     """
+
+    def test_convert_str_color_to_plt_format(self):
+        res = convert_str_color_to_plt_format(txt="rgba(244, 192, 0, 1)")
+        assert tuple([round(x, 2) for x in res]) == (0.96, 0.75, 0.0, 1.0)
+
     def rgb_string_detector(self, string_val):
         """
         check rgb() or rgba() format of a str variable
@@ -56,3 +67,13 @@ class TestStyle_utils(unittest.TestCase):
             palette = select_palette(available_palettes, palette_name)
             style_dict = define_style(palette)
             assert len(list(style_dict.keys())) > 0
+
+    def test_get_pyplot_color(self):
+        available_palettes = colors_loading()
+        for palette_name in available_palettes.keys():
+            palette = colors_loading()[palette_name]['report_feature_distribution']
+            colors = get_pyplot_color(colors=palette)
+            assert isinstance(colors, dict)
+            col1 = colors_loading()[palette_name]['title_color']
+            color = get_pyplot_color(col1)
+            assert isinstance(color, list)

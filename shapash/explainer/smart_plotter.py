@@ -49,18 +49,16 @@ class SmartPlotter:
         self.last_stability_selection = False
         self.last_compacity_selection = False
 
-    def define_style_attributes(self, palette_name):
+    def define_style_attributes(self, colors_dict):
         """
         define_style_attributes allows shapash user to change the color of plot
 
         Parameters
         ----------
-        palette_name: string
-            Name of the palette to use for each plot
+        colors_dict: dict
+            Dict of the colors used in the different plots
         """
-        palette = select_palette(colors_loading(), palette_name)
-        self._palette_name = palette_name
-        self._style_dict = define_style(palette)
+        self._style_dict = define_style(colors_dict)
 
         if hasattr(self, "pred_colorscale"):
             delattr(self, "pred_colorscale")
