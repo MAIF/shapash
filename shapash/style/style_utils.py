@@ -213,24 +213,20 @@ def get_palette(palette_name):
     return select_palette(colors_loading(), palette_name)
 
 
-def get_pyplot_color(palette_name=None, color_name=''):
+def get_pyplot_color(colors):
     """
     Returns the color(s) of the color_name key in the palette in matplotlib format.
 
     Parameters
     ----------
-    palette_name :  str
-        Name of the palette of colors used
-    color_name : str
-        Name of the color in the palette
+    colors :  str or dict
+        Colors used as a dict or string object
 
     Returns
     -------
     dict or tuple
         the colors in pyplot format
     """
-    palette = get_palette(palette_name=palette_name)
-    colors = palette[color_name]
     if isinstance(colors, str):
         return convert_str_color_to_plt_format(colors)
     elif isinstance(colors, dict):

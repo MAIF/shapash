@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -7,10 +7,16 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from shapash.utils.utils import truncate_str
 from shapash.report.common import VarType
-from shapash.style.style_utils import get_pyplot_color
+from shapash.style.style_utils import get_pyplot_color, get_palette
 
 
-def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str, type: VarType, palette_name=None) -> plt.Figure:
+def generate_fig_univariate(
+        df_all: pd.DataFrame,
+        col: str,
+        hue: str,
+        type: VarType,
+        colors_dict: Optional[dict] = None
+) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of any kind of feature
     (continuous, categorical).
@@ -32,23 +38,28 @@ def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str, type: VarT
         The column used to distinguish the values (ex. 'train' and 'test')
     type: str
         The type of the series ('continous' or 'categorical')
-    palette_name : str
-        name of the palette used for the colors
+    colors_dict : dict
+        dict of colors used
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
     if type == VarType.TYPE_NUM:
-        fig = generate_fig_univariate_continuous(df_all, col, hue=hue, palette_name=palette_name)
+        fig = generate_fig_univariate_continuous(df_all, col, hue=hue, colors_dict=colors_dict)
     elif type == VarType.TYPE_CAT:
-        fig = generate_fig_univariate_categorical(df_all, col, hue=hue, palette_name=palette_name)
+        fig = generate_fig_univariate_categorical(df_all, col, hue=hue, colors_dict=colors_dict)
     else:
         raise NotImplemented("Series dtype not supported")
     return fig
 
 
-def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str, palette_name=None) -> plt.Figure:
+def generate_fig_univariate_continuous(
+        df_all: pd.DataFrame,
+        col: str,
+        hue: str,
+        colors_dict: Optional[dict] = None
+) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of a continuous feature.
 
@@ -60,15 +71,16 @@ def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str,
         The column of interest
     hue : str
         The column used to distinguish the values (ex. 'train' and 'test')
-    palette_name : str
-        name of the palette used for the colors
+    colors_dict : dict
+        dict of colors used
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
+    colors_dict = colors_dict or get_palette('default')
     g = sns.displot(df_all, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
-                    palette=get_pyplot_color(palette_name=palette_name, color_name='report_feature_distribution'))
+                    palette=get_pyplot_color(colors=colors_dict['report_feature_distribution']))
     g.set_xticklabels(rotation=30)
 
     fig = g.fig
@@ -84,7 +96,7 @@ def generate_fig_univariate_categorical(
         col: str,
         hue: str,
         nb_cat_max: int = 7,
-        palette_name=None
+        colors_dict=None
 ) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of a categorical feature.
@@ -105,13 +117,14 @@ def generate_fig_univariate_categorical(
         The number max of categories to be displayed. If the number of categories
         is greater than nb_cat_max then groups smallest categories into a new
         'Other' category
-    palette_name : str
-        name of the palette used for the colors
+    colors_dict : dict
+        dict of colors used
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
+    colors_dict = colors_dict or get_palette('default')
     df_cat = df_all.groupby([col, hue]).agg({col: 'count'})\
                    .rename(columns={col: "count"}).reset_index()
     df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby(hue)['count'].transform('sum')
@@ -128,7 +141,7 @@ def generate_fig_univariate_categorical(
     fig, ax = plt.subplots(figsize=(7, 4))
 
     sns.barplot(data=df_cat, x='Percent', y=col, hue=hue,
-                palette=get_pyplot_color(palette_name=palette_name, color_name='report_feature_distribution'), ax=ax)
+                palette=get_pyplot_color(colors=colors_dict['report_feature_distribution']), ax=ax)
 
     for p in ax.patches:
         ax.annotate("{:.1f}%".format(np.nan_to_num(p.get_width(), nan=0)),

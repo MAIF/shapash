@@ -71,7 +71,9 @@ class TestStyle_utils(unittest.TestCase):
     def test_get_pyplot_color(self):
         available_palettes = colors_loading()
         for palette_name in available_palettes.keys():
-            colors = get_pyplot_color(palette_name, 'report_feature_distribution')
+            palette = colors_loading()[palette_name]['report_feature_distribution']
+            colors = get_pyplot_color(colors=palette)
             assert isinstance(colors, dict)
-            color = get_pyplot_color(palette_name, 'title_color')
+            col1 = colors_loading()[palette_name]['title_color']
+            color = get_pyplot_color(col1)
             assert isinstance(color, list)

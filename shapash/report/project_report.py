@@ -68,8 +68,6 @@ class ProjectReport:
             config: Optional[dict] = None
     ):
         self.explainer = explainer
-        if self.explainer.palette_name:
-            self.explainer.plot.define_style_attributes(palette_name=self.explainer.palette_name)
         self.metadata = load_yml(path=project_info_file)
         self.x_train_init = x_train
         if x_train is not None:
@@ -321,7 +319,7 @@ class ProjectReport:
         for col_label in sorted(list_cols_labels):
             col = self.explainer.inv_features_dict.get(col_label, col_label)
             fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col],
-                                          palette_name=self.explainer.palette_name)
+                                          colors_dict=self.explainer.colors_dict)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,

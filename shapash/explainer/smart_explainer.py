@@ -28,6 +28,7 @@ from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
 from shapash.utils.explanation_metrics import find_neighbors, shap_neighbors, get_min_nb_features, get_distance
+from shapash.style.style_utils import colors_loading, select_palette, define_style
 
 logging.basicConfig(level=logging.INFO)
 
@@ -124,6 +125,7 @@ class SmartExplainer:
             label_dict=None,
             title_story: str = None,
             palette_name=None,
+            colors_dict=None,
     ):
         if isinstance(features_dict, dict) is False:
             raise ValueError(
@@ -146,8 +148,10 @@ class SmartExplainer:
             self.title_story = ''
         self.features_groups = None
         self.palette_name = palette_name if palette_name else 'default'
-        if palette_name:
-            self.plot.define_style_attributes(palette_name=palette_name)
+        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
+        if colors_dict is not None:
+            self.colors_dict.update(colors_dict)
+        self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
@@ -325,6 +329,16 @@ class SmartExplainer:
             )
         )
         self.columns_dict_groups = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
+
+    def define_style(self, palette_name=None, colors_dict=None):
+        if palette_name is None and colors_dict is None:
+            raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
+        new_palette_name = palette_name or self.palette_name
+        new_colors_dict = copy.deepcopy(select_palette(colors_loading(), new_palette_name))
+        if colors_dict is not None:
+            new_colors_dict.update(colors_dict)
+        self.colors_dict.update(new_colors_dict)
+        self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -857,6 +871,7 @@ class SmartExplainer:
                 setattr(self, elem, dict_to_load[elem])
             self._case, self._classes = self.check_model()
             self.state = self.choose_state(self.contributions)
+            self.plot.define_style_attributes(colors_dict=self.colors_dict)
         else:
             raise ValueError(
                 "pickle file must contain dictionary"
