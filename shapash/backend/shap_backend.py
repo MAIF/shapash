@@ -15,7 +15,7 @@ class ShapBackend(BaseBackend):
         super(ShapBackend, self).__init__(model, preprocessing)
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
-        self.explainer = shap.TreeExplainer(model=model, **self.explainer_args)
+        self.explainer = shap.Explainer(model=model, **self.explainer_args)
 
     def _run_explainer(self, x: pd.DataFrame):
         """
