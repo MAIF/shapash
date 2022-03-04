@@ -28,6 +28,7 @@ from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
 from shapash.utils.explanation_metrics import find_neighbors, shap_neighbors, get_min_nb_features, get_distance
+from shapash.style.style_utils import colors_loading, select_palette, define_style
 
 logging.basicConfig(level=logging.INFO)
 
@@ -104,6 +105,8 @@ class SmartExplainer:
         The processing apply to the original data.
     postprocessing : dict
         Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+    palette_name : str
+        Name of the palette used for the colors of the report (refer to style folder).
 
     How to declare a new SmartExplainer object?
 
@@ -116,7 +119,14 @@ class SmartExplainer:
     label_dict specify the labels of target (classification).
     """
 
-    def __init__(self, features_dict={}, label_dict=None, title_story: str = None):
+    def __init__(
+            self,
+            features_dict={},
+            label_dict=None,
+            title_story: str = None,
+            palette_name=None,
+            colors_dict=None,
+    ):
         if isinstance(features_dict, dict) is False:
             raise ValueError(
                 """
@@ -137,6 +147,11 @@ class SmartExplainer:
         else:
             self.title_story = ''
         self.features_groups = None
+        self.palette_name = palette_name if palette_name else 'default'
+        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
+        if colors_dict is not None:
+            self.colors_dict.update(colors_dict)
+        self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
     def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
                 preprocessing=None, postprocessing=None, title_story: str = None,
@@ -314,6 +329,16 @@ class SmartExplainer:
             )
         )
         self.columns_dict_groups = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
+
+    def define_style(self, palette_name=None, colors_dict=None):
+        if palette_name is None and colors_dict is None:
+            raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
+        new_palette_name = palette_name or self.palette_name
+        new_colors_dict = copy.deepcopy(select_palette(colors_loading(), new_palette_name))
+        if colors_dict is not None:
+            new_colors_dict.update(colors_dict)
+        self.colors_dict.update(new_colors_dict)
+        self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
     def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
         """
@@ -819,7 +844,7 @@ class SmartExplainer:
         """
         dict_to_save = {}
         for att in self.__dict__.keys():
-            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
+            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool, str)) \
                     or att in ["model", 'preprocessing', 'postprocessing']:
                 dict_to_save.update({att: getattr(self, att)})
         save_pickle(dict_to_save, path)
@@ -846,6 +871,7 @@ class SmartExplainer:
                 setattr(self, elem, dict_to_load[elem])
             self._case, self._classes = self.check_model()
             self.state = self.choose_state(self.contributions)
+            self.plot.define_style_attributes(colors_dict=self.colors_dict)
         else:
             raise ValueError(
                 "pickle file must contain dictionary"
@@ -1339,7 +1365,7 @@ class SmartExplainer:
                 config=dict(
                     title_story=title_story,
                     title_description=title_description,
-                    metrics=metrics
+                    metrics=metrics,
                 ),
                 notebook_path=notebook_path,
                 kernel_name=kernel_name

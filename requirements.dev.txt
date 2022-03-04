@@ -36,3 +36,4 @@ Jinja2
 phik
 acv-exp==1.1.2
 lime                 
+regex              

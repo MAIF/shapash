@@ -11,6 +11,8 @@ import plotly.graph_objects as go
 import plotly.express as px
 from sklearn.linear_model import LinearRegression
 from shapash.explainer.smart_explainer import SmartExplainer
+from shapash.style.style_utils import get_palette
+
 
 class TestSmartPlotter(unittest.TestCase):
     """
@@ -125,6 +127,16 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.y_pred = None
         self.smart_explainer.features_desc = self.smart_explainer.check_features_desc()
         self.smart_explainer.features_compacity = self.features_compacity
+
+    def test_define_style_attributes(self):
+        # clear style attributes
+        del self.smart_explainer.plot._style_dict
+
+        colors_dict = get_palette('default')
+        self.smart_explainer.plot.define_style_attributes(colors_dict=colors_dict)
+
+        assert hasattr(self.smart_explainer.plot, '_style_dict')
+        assert len(list(self.smart_explainer.plot._style_dict.keys())) > 0       
 
     @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
     @patch('shapash.explainer.smart_plotter.SmartPlotter.local_pred')

@@ -269,3 +269,17 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
                 set_features.add(sorted_corr.index[i][1])
         i += 1
     return list(set_features)
+
+def convert_string_to_int_keys(input_dict: dict) -> dict:    
+    """
+    Returns the dict with integer keys instead of string keys
+
+    Parameters
+    ----------
+    input_dict: dict
+
+    Returns
+    -------
+    dict
+    """
+    return {int(k): v for k,v in input_dict.items()}
