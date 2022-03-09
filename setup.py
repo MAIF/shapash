@@ -52,7 +52,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash",
-    version="1.6.2",
+    version="1.7.0",
     python_requires='>3.5, <3.10',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
