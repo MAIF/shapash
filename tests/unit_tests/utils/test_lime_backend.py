@@ -52,10 +52,10 @@ class TestLimeBackend(unittest.TestCase):
         self.x_df1 = df[['x1', 'x2']]
         self.y_df1 = df['y'].to_frame()
 
-        for model in self.modellist_classif:
-            print(type(model))
-            model.fit(self.x_df1.values, self.y_df1.values)
-            lime_contributions(model, self.x_df1, self.x_df1, classes=[0, 1, 2])
+        model = ske.ExtraTreesClassifier(n_estimators=1)       
+        print(type(model))
+        model.fit(self.x_df1.values, self.y_df1.values)
+        lime_contributions(model, self.x_df1, self.x_df1, classes=[0, 1, 2])
 
     def test_lime_contributions_3(self):
         """
