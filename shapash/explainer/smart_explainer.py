@@ -726,12 +726,7 @@ class SmartExplainer:
         --------
         >>> xpl.save('path_to_pkl/xpl.pkl')
         """
-        dict_to_save = {}
-        for att in self.__dict__.keys():
-            if isinstance(getattr(self, att), (list, dict, pd.DataFrame, pd.Series, type(None), bool)) \
-                    or att in ["model", 'preprocessing', 'postprocessing']:
-                dict_to_save.update({att: getattr(self, att)})
-        save_pickle(dict_to_save, path)
+        save_pickle(self, path)
 
     def load(self, path):
         """
@@ -1068,8 +1063,8 @@ class SmartExplainer:
             Dictionnary mapping features with the right types needed.
         model: model object
             model used to check the different values of target estimate predict proba
-        explainer : explainer object
-            explainer must be a shap object
+        backend : backend object
+            backend used to compute contributions
         preprocessing: category_encoders, ColumnTransformer, list or dict
             The processing apply to the original data.
         postprocessing: dict
@@ -1081,13 +1076,18 @@ class SmartExplainer:
         mask_params: dict (optional)
             Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
         """
-        if self.explainer is None:
-            raise ValueError("""SmartPredictor need an explainer, please compile without contributions or specify  the
-                                        explainer used. Make change in compile() step""")
+        if self.backend is None:
+            raise ValueError(
+                """
+                SmartPredictor needs a backend (explainer).
+                Please compile without contributions or specify  the
+                explainer used. Make change in compile() step.
+                """
+            )
 
         self.features_types = {features: str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
 
-        listattributes = ["features_dict", "model", "columns_dict", "explainer", "features_types",
+        listattributes = ["features_dict", "model", "columns_dict", "backend", "features_types",
                           "label_dict", "preprocessing", "postprocessing", "features_groups"]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
