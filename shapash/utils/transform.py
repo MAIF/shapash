@@ -284,7 +284,15 @@ def adapt_contributions(case,contributions):
         pandas.DataFrame, np.ndarray or list
         contributions object modified
     """
-    if isinstance(contributions, (np.ndarray, pd.DataFrame)) and case == 'classification':
+    # For classification with numpy arrays, we first transform the last dimension in lists
+    # So that we have the following format : [contributions_class_0, contributions_class_1, ...]
+    if isinstance(contributions, np.ndarray) and contributions.ndim == 3:
+        contributions = [contributions[:, :, i] for i in range(contributions.shape[-1])]
+
+    if (
+            (isinstance(contributions, pd.DataFrame) and case == 'classification')
+            or (isinstance(contributions, (np.ndarray, list)) and case == 'classification' and len(contributions) == 1)
+    ):
         return [contributions * -1, contributions]
     else:
         return contributions
