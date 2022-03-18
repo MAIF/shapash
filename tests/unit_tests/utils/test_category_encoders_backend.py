@@ -10,6 +10,7 @@ import sklearn
 import lightgbm
 import xgboost
 from shapash.utils.transform import inverse_transform, apply_preprocessing, get_col_mapping_ce
+from sklearn.ensemble import GradientBoostingClassifier
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
@@ -569,7 +570,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train, y)
 
         train_preprocessed = pd.DataFrame(enc.transform(train))
-        clf = sklearn.ensemble._gb.GradientBoostingClassifier().fit(train_preprocessed, y)
+        clf = GradientBoostingClassifier().fit(train_preprocessed, y)
         test = pd.DataFrame({'num1': [0, 1, 1],
                              'num2': [0, 2, 0],
                              'other': [1, 0, 0]})

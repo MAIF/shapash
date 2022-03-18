@@ -4,8 +4,8 @@ functions for loading and manipulating colors
 import json
 import os
 
-from numpy.core.numeric import _full_like_dispatcher
 from shapash.utils.utils import convert_string_to_int_keys
+
 
 def colors_loading():
     """
@@ -22,6 +22,7 @@ def colors_loading():
     with open(jsonfile, 'r') as openfile:
         colors_dic = json.load(openfile)
     return colors_dic
+
 
 def select_palette(colors_dic, palette_name):
     """
@@ -43,6 +44,34 @@ def select_palette(colors_dic, palette_name):
     if palette_name not in colors_dic.keys():
         raise ValueError(f"Palette {palette_name} not found.")
     return colors_dic[palette_name]
+
+
+def convert_str_color_to_plt_format(txt):
+    """
+    Converts an rgb string format to a tuple of float (used by matplotlib format)
+
+    Parameters
+    ----------
+    txt : str
+        a string representation of an rgb color (used by plotly)
+
+    Returns
+    -------
+    A tuple of float used by matplotlib format
+
+    Example
+    --------
+    >>> convert_str_color_to_plt_format(txt="rgba(244, 192, 0, 1)")
+    (0.96, 0.75, 0.0, 1.0)
+
+    """
+    txt = txt.replace('rgba', '').replace('rgb', '').replace('(', '').replace(')', '')
+    list_txt = txt.split(',')
+    if len(list_txt) > 3:
+        return [float(list_txt[i])/255 for i in range(3)] + [float(list_txt[3])]
+    else:
+        return [float(x)/255 for x in list_txt]
+
 
 def define_style(palette):
     """
@@ -163,3 +192,50 @@ def define_style(palette):
     style_dict['webapp_title'] = palette["webapp_title"]
 
     return style_dict
+
+
+def get_palette(palette_name):
+    """
+    Returns a specific palette linked to the input palette_name
+
+    Parameters
+    ----------
+    palette_name : str
+        name of the palette
+
+    Returns
+    -------
+    dict:
+        contains colors of one palette
+    """
+    if palette_name is None:
+        palette_name = list(colors_loading().keys())[0]  # Default palette name
+    return select_palette(colors_loading(), palette_name)
+
+
+def get_pyplot_color(colors):
+    """
+    Returns the color(s) of the color_name key in the palette in matplotlib format.
+
+    Parameters
+    ----------
+    colors :  str or dict
+        Colors used as a dict or string object
+
+    Returns
+    -------
+    dict or tuple
+        the colors in pyplot format
+    """
+    if isinstance(colors, str):
+        return convert_str_color_to_plt_format(colors)
+    elif isinstance(colors, dict):
+        dict_color_palette = {
+            k: convert_str_color_to_plt_format(v)
+            for k, v in colors.items()
+        }
+        return dict_color_palette
+    elif isinstance(colors, list):
+        return [convert_str_color_to_plt_format(v) for v in colors]
+    else:
+        raise ValueError(f"Color type not supported for conversion to pyplot : {type(colors)}")
