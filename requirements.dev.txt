@@ -32,7 +32,7 @@ papermill
 matplotlib
 seaborn==0.11.1
 notebook
-Jinja2
+Jinja2>=2.11.0,<3.1.0
 phik
 acv-exp==1.1.2
 lime                 
