@@ -10,6 +10,7 @@ class ShapBackend(BaseBackend):
     # When grouping features contributions together, Shap uses the sum of the contributions
     # of the features that belong to the group
     column_aggregation = 'sum'
+    name = 'shap'
 
     def __init__(self, model, preprocessing=None, explainer_args=None, explainer_compute_args=None):
         super(ShapBackend, self).__init__(model, preprocessing)

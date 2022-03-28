@@ -149,6 +149,8 @@ class BaseBackend(ABC):
         pd.DataFrame
             The global features importance computed by the backend.
         """
+        if explain_data is None and contributions is None:
+            raise ValueError('At least one of contributions or explain_data parameter must be passed')
         return self._get_global_features_importance(contributions, explain_data, subset)
 
     def format_and_aggregate_local_contributions(
@@ -156,6 +158,24 @@ class BaseBackend(ABC):
             x: pd.DataFrame,
             contributions: Union[pd.DataFrame, List[pd.DataFrame]],
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        """
+        This function allows to format and aggregate contributions in the right format
+        (pd.DataFrame or list of pd.DataFrame).
+
+        If a preprocessing exists, it also uses it to change the contributions if needed.
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            The dataframe of observations used by the model.
+        contributions : pd.DataFrame or list of pd.DataFrame
+            Local contributions, or list of local contributions.
+
+        Returns
+        -------
+        contributions : pd.DataFrame or list of pd.DataFrame
+            Contributions formatted and aggregated
+        """
         contributions = adapt_contributions(self._case, contributions)
         self._state = choose_state(contributions)
         check_contribution_object(self._case, self._classes, contributions)
@@ -196,6 +216,9 @@ class BaseBackend(ABC):
 
 
 def _needs_preprocessing(result_cols, x, preprocessing):
+    """
+    Checks if preprocessing is needed depending on the preprocessing used.
+    """
     mapping = get_preprocessing_mapping(x, preprocessing)
     cols_after_preprocessing = [x for list_c in mapping.values() for x in list_c]
     for col in result_cols:

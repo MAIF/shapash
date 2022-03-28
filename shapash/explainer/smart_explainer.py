@@ -8,7 +8,7 @@ import shutil
 import numpy as np
 import pandas as pd
 from shapash.webapp.smart_app import SmartApp
-from shapash.backend import ShapBackend, AcvBackend, BaseBackend, LimeBackend
+from shapash.backend import ShapBackend, AcvBackend, BaseBackend, LimeBackend, get_backend_cls_from_name
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
@@ -241,14 +241,9 @@ class SmartExplainer:
             raise ValueError("You have to specify just one of these arguments: explainer, contributions")
 
         if isinstance(backend, str):
-            if backend.lower() == 'shap':
-                self.backend = ShapBackend(model=model, preprocessing=preprocessing, **kwargs)
-            elif backend.lower() == 'acv':
-                self.backend = AcvBackend(model=model, preprocessing=preprocessing, **kwargs)
-            elif backend.lower() == 'lime':
-                self.backend = LimeBackend(model=model, preprocessing=preprocessing, **kwargs)
-            else:
-                raise NotImplementedError(f'Unknown backend: {backend}')
+            backend_cls = get_backend_cls_from_name(backend)
+            self.backend = backend_cls(model=self.model, preprocessing=self.preprocessing, **kwargs)
+
         elif isinstance(backend, BaseBackend):
             self.backend = backend
         else:

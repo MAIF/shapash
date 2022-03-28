@@ -13,6 +13,7 @@ from shapash.backend.base_backend import BaseBackend
 
 class LimeBackend(BaseBackend):
     column_aggregation = 'sum'
+    name = 'lime'
 
     def __init__(self, model, preprocessing=None, data=None):
         super(LimeBackend, self).__init__(model, preprocessing)

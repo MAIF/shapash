@@ -17,6 +17,7 @@ except ImportError:
 class AcvBackend(BaseBackend):
     # Coalitions should be grouped using one column value only and not the sum like shap
     column_aggregation = 'first'
+    name = 'acv'
 
     def __init__(
             self,
