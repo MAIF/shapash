@@ -293,3 +293,19 @@ def choose_state(contributions):
         return MultiDecorator(SmartState())
     else:
         return SmartState()
+
+
+def convert_string_to_int_keys(input_dict: dict) -> dict:    
+    """
+    Returns the dict with integer keys instead of string keys
+
+    Parameters
+    ----------
+    input_dict: dict
+
+    Returns
+    -------
+    dict
+    """
+    return {int(k): v for k,v in input_dict.items()}
+

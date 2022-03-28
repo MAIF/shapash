@@ -68,8 +68,9 @@ class SmartApp:
 
         # SETTINGS
         self.logo = self.app.get_asset_url('shapash-fond-fonce.png')
-        self.color = '#f4c000'
-        self.bkg_color = "#343736"
+        self.color = explainer.plot._style_dict["webapp_button"]
+        self.bkg_color = explainer.plot._style_dict["webapp_bkg"]
+        self.title_menu_color = explainer.plot._style_dict["webapp_title"]
         self.settings_ini = {
             'rows': 1000,
             'points': 1000,
@@ -232,12 +233,12 @@ class SmartApp:
                                 id='bool_groups',
                                 on=True,
                                 style={'display': 'none'} if self.explainer.features_groups is None else {},
-                                color='rgba(244, 192, 0, 1.0)',
+                                color=self.color[0],
                                 label={
                                     'label': 'Groups',
                                     'style': {
                                         'fontSize': 18,
-                                        'color': 'rgb(244, 192, 0)',
+                                        'color': self.color[0],
                                         'fontWeight': 'bold',
                                         "margin-left": "5px"
                                     },
@@ -434,7 +435,7 @@ class SmartApp:
                                         html.Img(src=self.logo, height="40px"),
                                         html.H4("Shapash Monitor", id="shapash_title"),
                                     ],
-                                    align="center",
+                                    align="center", style={'color': self.title_menu_color}
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
@@ -556,8 +557,8 @@ class SmartApp:
         """
         Override menu from explainer object depending on classification or regression case.
         """
-        on_style = {'backgroundColor': self.color, 'color': self.bkg_color, 'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': '#71653B', 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        on_style = {'backgroundColor': self.color[0], 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        off_style = {'backgroundColor': self.color[1], 'color': self.bkg_color, 'margin-right': '0.5rem'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -1186,6 +1187,6 @@ class SmartApp:
 
             selected = check_row(data, index)
             if selected is not None:
-                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color}]
+                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional

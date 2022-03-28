@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -7,27 +7,16 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from shapash.utils.utils import truncate_str
 from shapash.report.common import VarType
-
-# Color scale derivated from SmartPlotter init_color_scale attribute
-col_scale = [(0.204, 0.216, 0.212),
-             (0.29, 0.388, 0.541),
-             (0.455, 0.6, 0.839),
-             (0.635, 0.737, 0.835),
-             (1, 1, 1),
-             (0.957, 0.753, 0.0),
-             (1.0, 0.651, 0.067),
-             (1.0, 0.482, 0.149),
-             (1.0, 0.302, 0.027)]
-
-cmap_diverging = LinearSegmentedColormap.from_list('col_corr', col_scale, N=100)
-
-cmap_gradient = LinearSegmentedColormap.from_list('col_corr', col_scale[4:6], N=100)
-
-dict_color_palette = {'train': (74/255, 99/255, 138/255, 0.7), 'test': (244/255, 192/255, 0),
-                      'true': (74/255, 99/255, 138/255, 0.7), 'pred': (244/255, 192/255, 0)}
+from shapash.style.style_utils import get_pyplot_color, get_palette
 
 
-def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str, type: VarType) -> plt.Figure:
+def generate_fig_univariate(
+        df_all: pd.DataFrame,
+        col: str,
+        hue: str,
+        type: VarType,
+        colors_dict: Optional[dict] = None
+) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of any kind of feature
     (continuous, categorical).
@@ -49,21 +38,28 @@ def generate_fig_univariate(df_all: pd.DataFrame, col: str, hue: str, type: VarT
         The column used to distinguish the values (ex. 'train' and 'test')
     type: str
         The type of the series ('continous' or 'categorical')
+    colors_dict : dict
+        dict of colors used
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
     if type == VarType.TYPE_NUM:
-        fig = generate_fig_univariate_continuous(df_all, col, hue=hue)
+        fig = generate_fig_univariate_continuous(df_all, col, hue=hue, colors_dict=colors_dict)
     elif type == VarType.TYPE_CAT:
-        fig = generate_fig_univariate_categorical(df_all, col, hue=hue)
+        fig = generate_fig_univariate_categorical(df_all, col, hue=hue, colors_dict=colors_dict)
     else:
         raise NotImplemented("Series dtype not supported")
     return fig
 
 
-def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str) -> plt.Figure:
+def generate_fig_univariate_continuous(
+        df_all: pd.DataFrame,
+        col: str,
+        hue: str,
+        colors_dict: Optional[dict] = None
+) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of a continuous feature.
 
@@ -75,13 +71,16 @@ def generate_fig_univariate_continuous(df_all: pd.DataFrame, col: str, hue: str)
         The column of interest
     hue : str
         The column used to distinguish the values (ex. 'train' and 'test')
+    colors_dict : dict
+        dict of colors used
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
+    colors_dict = colors_dict or get_palette('default')
     g = sns.displot(df_all, x=col, hue=hue, kind="kde", fill=True, common_norm=False,
-                    palette=dict_color_palette)
+                    palette=get_pyplot_color(colors=colors_dict['report_feature_distribution']))
     g.set_xticklabels(rotation=30)
 
     fig = g.fig
@@ -97,6 +96,7 @@ def generate_fig_univariate_categorical(
         col: str,
         hue: str,
         nb_cat_max: int = 7,
+        colors_dict: Optional[dict] = None
 ) -> plt.Figure:
     """
     Returns a matplotlib figure containing the distribution of a categorical feature.
@@ -117,11 +117,14 @@ def generate_fig_univariate_categorical(
         The number max of categories to be displayed. If the number of categories
         is greater than nb_cat_max then groups smallest categories into a new
         'Other' category
+    colors_dict : dict
+        dict of colors used
 
     Returns
     -------
     matplotlib.pyplot.Figure
     """
+    colors_dict = colors_dict or get_palette('default')
     df_cat = df_all.groupby([col, hue]).agg({col: 'count'})\
                    .rename(columns={col: "count"}).reset_index()
     df_cat['Percent'] = df_cat['count'] * 100 / df_cat.groupby(hue)['count'].transform('sum')
@@ -138,7 +141,7 @@ def generate_fig_univariate_categorical(
     fig, ax = plt.subplots(figsize=(7, 4))
 
     sns.barplot(data=df_cat, x='Percent', y=col, hue=hue,
-                palette=dict_color_palette, ax=ax)
+                palette=get_pyplot_color(colors=colors_dict['report_feature_distribution']), ax=ax)
 
     for p in ax.patches:
         ax.annotate("{:.1f}%".format(np.nan_to_num(p.get_width(), nan=0)),
@@ -175,7 +178,11 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_ma
     return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
 
 
-def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[np.array, list]) -> plt.Figure:
+def generate_confusion_matrix_plot(
+        y_true: Union[np.array, list],
+        y_pred: Union[np.array, list],
+        colors_dict: Optional[dict] = None
+) -> plt.Figure:
     """
     Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
     y_pred parameters.
@@ -186,11 +193,16 @@ def generate_confusion_matrix_plot(y_true: Union[np.array, list], y_pred: Union[
         Ground truth (correct) target values.
     y_pred : array-like
         Estimated targets as returned by a classifier.
-
+    colors_dict : dict
+        dict of colors used
     Returns
     -------
     matplotlib.pyplot.Figure
     """
+    colors_dict = colors_dict or get_palette('default')
+    col_scale = get_pyplot_color(colors=colors_dict['report_confusion_matrix'])
+    cmap_gradient = LinearSegmentedColormap.from_list('col_corr', col_scale, N=100)
+
     df_cm = pd.crosstab(y_true, y_pred, rownames=['Actual'], colnames=['Predicted'])
     fig, ax = plt.subplots(figsize=(7, 4))
     sns.heatmap(df_cm, ax=ax, annot=True, cmap=cmap_gradient, fmt='g')

@@ -318,7 +318,8 @@ class ProjectReport:
                             for col in df.drop(col_splitter, axis=1).columns.to_list()]
         for col_label in sorted(list_cols_labels):
             col = self.explainer.inv_features_dict.get(col_label, col_label)
-            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col])
+            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col],
+                                          colors_dict=self.explainer.colors_dict)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,
@@ -434,7 +435,11 @@ class ProjectReport:
             if metric['path'] in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
                     metric['name'] == 'confusion_matrix':
                 print_md(f"**{metric['name']} :**")
-                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=self.y_test, y_pred=self.y_pred)))
+                print_html(convert_fig_to_html(generate_confusion_matrix_plot(
+                    y_true=self.y_test,
+                    y_pred=self.y_pred,
+                    colors_dict=self.explainer.colors_dict
+                )))
             else:
                 try:
                     metric_fn = get_callable(path=metric['path'])

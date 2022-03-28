@@ -34,5 +34,6 @@ seaborn==0.11.1
 notebook
 Jinja2
 phik
-acv-exp
+acv-exp==1.1.2
 lime                 
+regex              
