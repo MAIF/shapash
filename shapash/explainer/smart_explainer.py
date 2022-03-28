@@ -744,15 +744,12 @@ class SmartExplainer:
         >>> xpl = SmartExplainer()
         >>> xpl.load('path_to_pkl/xpl.pkl')
         """
-        dict_to_load = load_pickle(path)
-        if isinstance(dict_to_load, dict):
-            for elem in dict_to_load.keys():
-                setattr(self, elem, dict_to_load[elem])
-            self._case, self._classes = self.check_model()
-            self.state = choose_state(self.contributions)
+        xpl = load_pickle(path)
+        if isinstance(xpl, SmartExplainer):
+            return xpl
         else:
             raise ValueError(
-                "pickle file must contain dictionary"
+                "File is not a SmartExplainer object"
             )
 
     def predict_proba(self):
