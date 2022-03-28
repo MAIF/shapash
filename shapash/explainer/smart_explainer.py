@@ -746,7 +746,7 @@ class SmartExplainer:
         """
         xpl = load_pickle(path)
         if isinstance(xpl, SmartExplainer):
-            return xpl
+            self.__dict__.update(xpl.__dict__)
         else:
             raise ValueError(
                 "File is not a SmartExplainer object"
