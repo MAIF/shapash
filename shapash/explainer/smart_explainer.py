@@ -244,6 +244,7 @@ class SmartExplainer:
             self.explain_data = self.backend.run_explainer(x=x)
             self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
         else:
+            self.explain_data = contributions
             self.contributions = self.backend.format_and_aggregate_local_contributions(
                 x=x,
                 contributions=contributions,

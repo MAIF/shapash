@@ -449,6 +449,11 @@ class SmartPredictor :
                 explain_data=explain_data,
                 x=self.data["x_preprocessed"]
             )
+        else:
+            contributions = self.backend.format_and_aggregate_local_contributions(
+                x=self.data["x_preprocessed"],
+                contributions=contributions
+            )
         self.check_contributions(contributions)
         proba_values = self.predict_proba() if self._case == "classification" else None
         y_pred, match_contrib = keep_right_contributions(self.data["ypred_init"], contributions,
@@ -769,7 +774,7 @@ class SmartPredictor :
                                                                label_dict=copy.deepcopy(self.label_dict))
         xpl.compile(x=copy.deepcopy(self.data["x_preprocessed"]),
                     model=self.model,
-                    explainer=self.explainer,
+                    backend=self.backend,
                     y_pred=copy.deepcopy(self.data["ypred_init"]),
                     preprocessing=self.preprocessing,
                     postprocessing=self.postprocessing,
