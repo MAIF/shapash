@@ -21,7 +21,7 @@ class AcvBackend(BaseBackend):
     def __init__(
             self,
             model,
-            data,
+            data=None,
             preprocessing=None,
             active_sdp=True,
             explainer_args=None,
@@ -39,9 +39,17 @@ class AcvBackend(BaseBackend):
         self.data = data
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
-        self.explainer = ACVTree(model=model, data=data, **self.explainer_args)
+        if data is not None:
+            self.explainer = ACVTree(model=model, data=data, **self.explainer_args)
+        else:
+            self.explainer = None
 
     def _run_explainer(self, x: pd.DataFrame) -> Any:
+        if self.data is None:
+            # This is used to handle the case where data object was not definied 
+            self.data = x
+            self.explainer = ACVTree(model=self.model, data=self.data, **self.explainer_args)
+
         explain_data = {}
 
         mapping = get_preprocessing_mapping(x, self.preprocessing)
