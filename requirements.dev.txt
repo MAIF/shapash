@@ -35,5 +35,6 @@ notebook
 Jinja2
 phik
 acv-exp==1.1.2
-lime                 
-regex              
+lime
+regex
+Werkzeug==2.0.3
