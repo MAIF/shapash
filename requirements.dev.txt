@@ -36,3 +36,5 @@ Jinja2
 phik
 acv-exp
 lime                 
+Werkzeug==2.0.3
+
