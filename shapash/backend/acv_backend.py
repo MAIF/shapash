@@ -102,7 +102,7 @@ class AcvBackend(BaseBackend):
     def _get_global_features_importance(
             self,
             contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any,
+            explain_data: Any = None,
             subset: Optional[List[int]] = None
     ) -> Union[pd.Series, List[pd.Series]]:
 

@@ -64,7 +64,7 @@ class BaseBackend(ABC):
     def _get_global_features_importance(
             self,
             contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any,
+            explain_data: Any = None,
             subset: Optional[List[int]] = None
     ) -> Union[pd.Series, List[pd.Series]]:
         raise NotImplementedError(
@@ -127,7 +127,7 @@ class BaseBackend(ABC):
     def get_global_features_importance(
             self,
             contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any,
+            explain_data: Any = None,
             subset: Optional[List[int]] = None
     ) -> Union[pd.Series, List[pd.Series]]:
         """Get global contributions using the explainer data computed in the `run_explainer`
@@ -140,7 +140,7 @@ class BaseBackend(ABC):
         contributions : pd.DataFrame
             The dataframe of local contributions formatted and aggregated, result of
             the `get_local_contributions` method.
-        explain_data : dict
+        explain_data : dict, optional
             The data computed in the `run_explainer` method.
         subset : list
             list of indices on which to get local contributions.
