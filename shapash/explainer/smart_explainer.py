@@ -230,6 +230,8 @@ class SmartExplainer:
 
         """
         self.x_init = x
+        if isinstance(backend, BaseBackend) and backend.preprocessing is not None:
+            preprocessing = backend.preprocessing
         self.x_pred = inverse_transform(self.x_init, preprocessing)
         self.preprocessing = preprocessing
         self.model = model
@@ -243,9 +245,9 @@ class SmartExplainer:
         if isinstance(backend, str):
             backend_cls = get_backend_cls_from_name(backend)
             self.backend = backend_cls(model=self.model, preprocessing=self.preprocessing, **kwargs)
-
         elif isinstance(backend, BaseBackend):
             self.backend = backend
+            self.backend.preprocessing = preprocessing
         else:
             raise NotImplementedError(f'Unknown backend : {backend}')
 
