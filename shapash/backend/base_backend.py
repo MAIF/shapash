@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Union
 import pandas as pd
+import numpy as np
 
 from shapash.utils.check import check_model, check_contribution_object
 from shapash.utils.transform import adapt_contributions, get_preprocessing_mapping
@@ -156,7 +157,7 @@ class BaseBackend(ABC):
     def format_and_aggregate_local_contributions(
             self,
             x: pd.DataFrame,
-            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
+            contributions: Union[pd.DataFrame, np.array, List[pd.DataFrame], List[np.array]],
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         """
         This function allows to format and aggregate contributions in the right format
@@ -168,7 +169,7 @@ class BaseBackend(ABC):
         ----------
         x : pd.DataFrame
             The dataframe of observations used by the model.
-        contributions : pd.DataFrame or list of pd.DataFrame
+        contributions : pd.DataFrame or np.array or list of pd.DataFrame or list of np.array
             Local contributions, or list of local contributions.
 
         Returns
