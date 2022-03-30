@@ -34,7 +34,7 @@ extras['report'] = [
     'papermill',
     'seaborn<=0.11.2',
     'notebook',
-    'Jinja2',
+    'Jinja2>=2.11.0,<3.1.0',
     'phik'
 ]
 
