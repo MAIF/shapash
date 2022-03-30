@@ -124,7 +124,7 @@ class SmartExplainer:
             palette_name=None,
             colors_dict=None,
     ):
-        if isinstance(features_dict, dict) is False:
+        if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
                 """
                 features_dict must be a dict
