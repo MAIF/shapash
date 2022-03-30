@@ -303,7 +303,6 @@ class TestSmartExplainer(unittest.TestCase):
         df['x2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        clf_explainer = shap.TreeExplainer(clf)
 
         contrib = pd.DataFrame(
             [[1, 2, 3, 4],
@@ -315,7 +314,7 @@ class TestSmartExplainer(unittest.TestCase):
 
         xpl = SmartExplainer()
         with self.assertRaises(ValueError):
-            xpl.compile(model=clf, x=df[['x1', 'x2']], explainer=clf_explainer, contributions=contrib)
+            xpl.compile(model=clf, x=df[['x1', 'x2']], contributions=contrib)
 
     def test_compile_4(self):
         """
