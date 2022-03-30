@@ -118,7 +118,7 @@ class SmartExplainer:
 
     def __init__(
             self,
-            features_dict={},
+            features_dict=None,
             label_dict=None,
             title_story: str = None,
             palette_name=None,
@@ -136,7 +136,7 @@ class SmartExplainer:
                 label_dict must be a dict
                 """
             )
-        self.features_dict = copy.deepcopy(features_dict)
+        self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
         if title_story is not None:
@@ -150,8 +150,8 @@ class SmartExplainer:
             self.colors_dict.update(colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
-    def compile(self, x, model, explainer=None, contributions=None, y_pred=None,
-                preprocessing=None, postprocessing=None, title_story: str = None,
+    def compile(self, x, model, contributions=None, y_pred=None,
+                preprocessing=None, postprocessing=None, title_story=None,
                 features_groups=None, backend='shap', **kwargs):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
@@ -170,8 +170,6 @@ class SmartExplainer:
         model : model object
             model used to consistency check. model object can also be used by some method to compute
             predict and predict_proba values
-        explainer : explainer object
-            explainer must be a shap object
         contributions : pandas.DataFrame, np.ndarray or list
             single or multiple contributions (multi-class) to handle.
             if pandas.Dataframe, the index and columns should be share with the prediction set.
@@ -239,8 +237,6 @@ class SmartExplainer:
         self.check_label_dict()
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
-        if explainer is not None and contributions is not None:
-            raise ValueError("You have to specify just one of these arguments: explainer, contributions")
 
         if isinstance(backend, str):
             backend_cls = get_backend_cls_from_name(backend)
