@@ -40,6 +40,15 @@ class TestAcvBackend(unittest.TestCase):
             assert hasattr(backend_xpl, 'preprocessing')
             assert isinstance(backend_xpl.preprocessing, ce.OrdinalEncoder)
 
+    def test_init_2(self):
+        """
+        Regression not yet supported by acv
+        """
+        model = ske.RandomForestRegressor()
+        model.fit(self.x_df, self.y_df)
+        with self.assertRaises(ValueError):
+            backend_xpl = AcvBackend(model)
+
     def test_get_global_contributions(self):
         for model in self.model_list:
             print(type(model))
@@ -56,7 +65,7 @@ class TestAcvBackend(unittest.TestCase):
             else:
                 assert len(contributions) == len(self.x_df)
 
-            features_imp = backend_xpl._get_global_features_importance(contributions, explain_data)
+            features_imp = backend_xpl.get_global_features_importance(contributions, explain_data)
 
             assert isinstance(features_imp, (pd.Series, list))
             if isinstance(features_imp, list):

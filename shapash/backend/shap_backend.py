@@ -1,5 +1,3 @@
-from typing import Any, Optional, List, Union
-
 import pandas as pd
 import shap
 
@@ -18,7 +16,7 @@ class ShapBackend(BaseBackend):
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
         self.explainer = shap.Explainer(model=model, **self.explainer_args)
 
-    def _run_explainer(self, x: pd.DataFrame):
+    def run_explainer(self, x: pd.DataFrame) -> dict:
         """
         Computes and returns local contributions using Shap explainer
 
@@ -32,28 +30,6 @@ class ShapBackend(BaseBackend):
         explain_data : pd.DataFrame or list of pd.DataFrame
             local contributions
         """
-        explain_data = self.explainer(x, **self.explainer_compute_args)
+        contributions = self.explainer(x, **self.explainer_compute_args)
+        explain_data = dict(contributions=contributions.values)
         return explain_data
-
-    def _get_local_contributions(
-            self,
-            x: pd.DataFrame,
-            explain_data: Any,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
-        contributions = explain_data.values
-        if subset is None:
-            return contributions
-        else:
-            return contributions.loc[subset]
-
-    def _get_global_features_importance(
-            self,
-            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any = None,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.Series, List[pd.Series]]:
-        if subset is not None:
-            return self._state.compute_features_import(contributions.loc[subset])
-        else:
-            return self._state.compute_features_import(contributions)

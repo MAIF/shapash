@@ -14,13 +14,14 @@ from shapash.backend.base_backend import BaseBackend
 class LimeBackend(BaseBackend):
     column_aggregation = 'sum'
     name = 'lime'
+    support_groups = False
 
     def __init__(self, model, preprocessing=None, data=None):
         super(LimeBackend, self).__init__(model, preprocessing)
         self.explainer = None
         self.data = data
 
-    def _run_explainer(self, x: pd.DataFrame):
+    def run_explainer(self, x: pd.DataFrame):
         """
         Computes local contributions using Lime explainer
 
@@ -79,29 +80,6 @@ class LimeBackend(BaseBackend):
         explain_data = dict(contributions=contributions)
 
         return explain_data
-
-    def _get_local_contributions(
-            self,
-            x: pd.DataFrame,
-            explain_data: Any,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
-        contributions = explain_data['contributions']
-        if subset is None:
-            return contributions
-        else:
-            return contributions.loc[subset]
-
-    def _get_global_features_importance(
-            self,
-            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any = None,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.Series, List[pd.Series]]:
-        if subset is not None:
-            return self._state.compute_features_import(contributions.loc[subset])
-        else:
-            return self._state.compute_features_import(contributions)
 
 
 def _transform_name(var_name, x_df):

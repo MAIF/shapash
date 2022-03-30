@@ -24,6 +24,8 @@ class BaseBackend(ABC):
     # `name` defines the string name of the backend allowing to identify and
     # construct the backend from it.
     name = 'base'
+    support_groups = True
+    supported_cases = ['classification', 'regression']
 
     def __init__(self, model: Any, preprocessing: Optional[Any] = None):
         """Create a backend instance using a given implementation.
@@ -40,56 +42,15 @@ class BaseBackend(ABC):
         self.explain_data: Any = None
         self._state = None
         self._case, self._classes = check_model(model)
+        if self._case not in self.supported_cases:
+            raise ValueError(f'Model not supported by the backend as it does not cover {self._case} case')
 
     @abstractmethod
-    def _run_explainer(self, x: pd.DataFrame) -> Any:
+    def run_explainer(self, x: pd.DataFrame) -> dict:
         raise NotImplementedError(
             f"`{self.__class__.__name__}` is a subclass of BaseBackend and "
             f"must implement the `_run_explainer` method"
         )
-
-    @abstractmethod
-    def _get_local_contributions(
-            self,
-            x: pd.DataFrame,
-            explain_data: Any,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
-        raise NotImplementedError(
-            f"`{self.__class__.__name__}` is a subclass of BaseBackend and "
-            f"must implement the `_get_local_contributions` method"
-        )
-
-    @abstractmethod
-    def _get_global_features_importance(
-            self,
-            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any = None,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.Series, List[pd.Series]]:
-        raise NotImplementedError(
-            f"`{self.__class__.__name__}` is a subclass of BaseBackend and "
-            f"must implement the `_get_global_features_importance` method"
-        )
-
-    def run_explainer(self, x: pd.DataFrame) -> Any:
-        """This method computes all the explainability data that can be computationally
-        intensive in a dictionary.
-
-        The result will then be used in the `get_local_contributions` and
-        `get_global_features_importance` methods.
-
-        Parameters
-        ----------
-        x : pd.DataFrame
-            The dataframe of observations used by the model.
-
-        Returns
-        -------
-        explainability_data : dict
-            All the data required to get local and global explainability.
-        """
-        return self._run_explainer(x)
 
     def get_local_contributions(
             self,
@@ -100,10 +61,9 @@ class BaseBackend(ABC):
         """Get local contributions using the explainer data computed in the `run_explainer`
         method.
 
-        This method is based on the `_get_local_contributions`. It applies some aggregations
-        and transformations to the result of the `_get_local_contributions` if needed. For
-        example, if there are some one-hot-encoded columns, it automatically checks and applies
-        aggregations depending on the result of `_get_local_contributions` and the `preprocessing`
+        It applies some aggregations and transformations to the result of the `run_explainer` method
+        if needed. For example, if there are some one-hot-encoded columns, it automatically checks
+        and applies aggregations depending on the result of `_run_explainer` and the `preprocessing`
         (encoder).
 
         Parameters
@@ -120,26 +80,33 @@ class BaseBackend(ABC):
         local_contributions : pd.DataFrame
             The local contributions computed by the backend.
         """
-        local_contributions = self._get_local_contributions(x, explain_data, subset)
+        assert isinstance(explain_data, dict), "The _run_explainer method should return a dict"
+        if 'contributions' not in explain_data.keys():
+            raise ValueError(
+                'The _run_explainer method should return a dict'
+                ' with at least `contributions` key containing '
+                'the local contributions'
+            )
+
+        local_contributions = explain_data['contributions']
+        if subset is not None:
+            local_contributions = local_contributions.loc[subset]
         local_contributions = self.format_and_aggregate_local_contributions(x, local_contributions)
         return local_contributions
 
     def get_global_features_importance(
             self,
-            contributions: Union[pd.DataFrame, List[pd.DataFrame]],
-            explain_data: Any = None,
+            contributions: pd.DataFrame,
+            explain_data: Optional[dict] = None,
             subset: Optional[List[int]] = None
     ) -> Union[pd.Series, List[pd.Series]]:
         """Get global contributions using the explainer data computed in the `run_explainer`
         method.
 
-        This method is based on the `_get_global_features_importance`.
-
         Parameters
         ----------
-        contributions : pd.DataFrame
-            The dataframe of local contributions formatted and aggregated, result of
-            the `get_local_contributions` method.
+        contributions : pd.DataFrame or list of pd.DataFrame
+            The local contributions computed and aggregated by the backend.
         explain_data : dict, optional
             The data computed in the `run_explainer` method.
         subset : list
@@ -147,12 +114,13 @@ class BaseBackend(ABC):
 
         Returns
         -------
-        pd.DataFrame
+        pd.Series or list of pd.Series
             The global features importance computed by the backend.
         """
-        if explain_data is None and contributions is None:
-            raise ValueError('At least one of contributions or explain_data parameter must be passed')
-        return self._get_global_features_importance(contributions, explain_data, subset)
+        if subset is not None:
+            return self._state.compute_features_import(contributions.loc[subset])
+        else:
+            return self._state.compute_features_import(contributions)
 
     def format_and_aggregate_local_contributions(
             self,
@@ -186,10 +154,10 @@ class BaseBackend(ABC):
             else contributions[0].columns.to_list()
         )
         if _needs_preprocessing(contributions_cols, x, self.preprocessing):
-            contributions = self.apply_preprocessing(contributions)
+            contributions = self._apply_preprocessing(contributions)
         return contributions
 
-    def apply_preprocessing(
+    def _apply_preprocessing(
             self,
             contributions: Union[pd.DataFrame, List[pd.DataFrame]]
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:

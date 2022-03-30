@@ -43,7 +43,7 @@ class TestShapBackend(unittest.TestCase):
             print(type(model))
             model.fit(self.x_df, self.y_df)
             backend_xpl = ShapBackend(model)
-            explain_data = backend_xpl._run_explainer(self.x_df)
+            explain_data = backend_xpl.run_explainer(self.x_df)
             assert explain_data is not None
 
     def test_get_local_contributions(self):
@@ -52,7 +52,7 @@ class TestShapBackend(unittest.TestCase):
             model.fit(self.x_df, self.y_df)
             backend_xpl = ShapBackend(model)
             explain_data = backend_xpl.run_explainer(self.x_df)
-            contributions = backend_xpl._get_local_contributions(self.x_df, explain_data)
+            contributions = backend_xpl.get_local_contributions(self.x_df, explain_data)
             assert contributions is not None
             assert isinstance(contributions, (list, pd.DataFrame, np.ndarray))
             if isinstance(contributions, list):
@@ -68,7 +68,7 @@ class TestShapBackend(unittest.TestCase):
             backend_xpl = ShapBackend(model)
             explain_data = backend_xpl.run_explainer(self.x_df)
             contributions = backend_xpl.get_local_contributions(self.x_df, explain_data)
-            features_imp = backend_xpl._get_global_features_importance(contributions, explain_data)
+            features_imp = backend_xpl.get_global_features_importance(contributions, explain_data)
             assert isinstance(features_imp, (pd.Series, list))
             if isinstance(features_imp, list):
                 # Case classification

@@ -3,28 +3,21 @@ from unittest.mock import patch
 import types
 
 import numpy as np
-import category_encoders as ce
 import pandas as pd
-from pandas.testing import assert_frame_equal
+import category_encoders as ce
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 from shapash.backend.base_backend import BaseBackend, _needs_preprocessing
+from shapash.explainer.smart_state import SmartState
 
 
 class TestBackend(BaseBackend):
     column_aggregation = 'sum'
     name = 'test'
 
-    def _run_explainer(self, x):
+    def run_explainer(self, x):
         return [[0, 1]]
-
-    def _get_local_contributions(self, x, explain_data, subset=None):
-        return [[0, 2]]
-
-    def _get_global_features_importance(self, contributions, explain_data, subset=None):
-        if subset is None:
-            return [[0, 3]]
-        else:
-            return [[0, 4]]
 
 
 class TestBaseBackend(unittest.TestCase):
@@ -55,14 +48,23 @@ class TestBaseBackend(unittest.TestCase):
     @patch('shapash.backend.base_backend.BaseBackend.format_and_aggregate_local_contributions')
     def test_get_local_contributions(self, mock_format_contrib):
         mock_format_contrib.return_value = [0, 4]
-        res = self.test_backend.get_local_contributions(pd.DataFrame([0]), 0)
+        res = self.test_backend.get_local_contributions(pd.DataFrame([0]), dict(contributions=[np.array([0])]))
         assert res == [0, 4]
 
-    def test_get_global_features_importance(self):
-        assert self.test_backend.get_global_features_importance(pd.DataFrame([0]), None) == [[0, 3]]
+    def test_get_local_contributions_2(self):
+        """
+        Explain data should be a dict
+        """
+        explain_data = [np.array([0])]
+        with self.assertRaises(AssertionError):
+            res = self.test_backend.get_local_contributions(pd.DataFrame([0]), explain_data)
 
-    def test_get_global_features_importance_2(self):
-        assert self.test_backend.get_global_features_importance(pd.DataFrame([0]), None, [1]) == [[0, 4]]
+    def test_get_global_features_importance(self):
+        self.test_backend._state = SmartState()
+        res = self.test_backend.get_global_features_importance(
+            pd.DataFrame([[-1, -2, -3, -4], [1, 2, 3, 4]]),
+        )
+        assert_series_equal(res, pd.Series([0.1, 0.2, 0.3, 0.4]))
 
     def test_format_and_aggregate_local_contributions(self):
         self.test_backend._case = 'classification'

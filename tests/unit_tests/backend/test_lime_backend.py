@@ -58,7 +58,7 @@ class TestAcvBackend(unittest.TestCase):
             else:
                 assert len(contributions) == len(self.x_df)
 
-            features_imp = backend_xpl._get_global_features_importance(contributions, explain_data)
+            features_imp = backend_xpl.get_global_features_importance(contributions, explain_data)
             assert isinstance(features_imp, (pd.Series, list))
             if isinstance(features_imp, list):
                 # Case classification

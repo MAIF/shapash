@@ -18,6 +18,7 @@ class AcvBackend(BaseBackend):
     # Coalitions should be grouped using one column value only and not the sum like shap
     column_aggregation = 'first'
     name = 'acv'
+    supported_cases = ['classification']
 
     def __init__(
             self,
@@ -45,7 +46,7 @@ class AcvBackend(BaseBackend):
         else:
             self.explainer = None
 
-    def _run_explainer(self, x: pd.DataFrame) -> Any:
+    def run_explainer(self, x: pd.DataFrame) -> dict:
         if self.data is None:
             # This is used to handle the case where data object was not definied 
             self.data = x
@@ -87,19 +88,7 @@ class AcvBackend(BaseBackend):
 
         return explain_data
 
-    def _get_local_contributions(
-            self,
-            x: pd.DataFrame,
-            explain_data: Any,
-            subset: Optional[List[int]] = None
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
-        contributions = explain_data['contributions']
-        if subset is None:
-            return contributions
-        else:
-            return contributions.loc[subset]
-
-    def _get_global_features_importance(
+    def get_global_features_importance(
             self,
             contributions: Union[pd.DataFrame, List[pd.DataFrame]],
             explain_data: Any = None,
