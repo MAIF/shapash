@@ -298,6 +298,11 @@ class SmartExplainer:
         """
         Performs required computations for groups of features.
         """
+        if self.backend.support_groups is False:
+            raise AssertionError(
+                f'Selected backend ({self.backend.name}) '
+                f'does not support groups of features.'
+            )
         # Compute contributions for groups of features
         self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
         self.features_imp_groups = None
