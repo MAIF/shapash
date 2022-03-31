@@ -712,6 +712,8 @@ class SmartExplainer:
         --------
         >>> xpl.save('path_to_pkl/xpl.pkl')
         """
+        if hasattr(self, 'smartapp'):
+            self.smartapp = None
         save_pickle(self, path)
 
     @classmethod
