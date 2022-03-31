@@ -34,13 +34,12 @@ if __name__ == "__main__":
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-    xpl = SmartExplainer(features_dict=house_dict)
-    xpl.compile(
-        x=Xtest,
+    xpl = SmartExplainer(
         model=regressor,
         preprocessing=encoder,  # Optional: compile step can use inverse_transform method
-        y_pred=y_pred  # Optional
+        features_dict=house_dict
     )
+    xpl.compile(x=Xtest, y_pred=y_pred)
 
     xpl.generate_report(
         output_file=os.path.join(cur_dir, 'output', 'report.html'),
