@@ -22,7 +22,7 @@ class TestSmartState(unittest.TestCase):
             [description]
         """
         state = SmartState()
-        x_pred = Mock()
+        x_init = Mock()
         contributions = pd.DataFrame(
             [[2, 1],
              [8, 4]],
@@ -30,7 +30,7 @@ class TestSmartState(unittest.TestCase):
             index=['Id1', 'Id2']
         )
         expected_output = contributions
-        output = state.validate_contributions(contributions, x_pred)
+        output = state.validate_contributions(contributions, x_init)
         assert not pd.testing.assert_frame_equal(expected_output, output)
 
     def test_validate_contributions_2(self):
@@ -39,7 +39,7 @@ class TestSmartState(unittest.TestCase):
         """
         state = SmartState()
         contributions = np.array([[2, 1], [8, 4]])
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -51,7 +51,7 @@ class TestSmartState(unittest.TestCase):
             columns=['Col1', 'Col2'],
             index=['Id1', 'Id2']
         )
-        output = state.validate_contributions(contributions, x_pred)
+        output = state.validate_contributions(contributions, x_init)
         assert not pd.testing.assert_frame_equal(expected_output, output)
 
     @patch('shapash.explainer.smart_state.inverse_transform_contributions')
@@ -77,11 +77,11 @@ class TestSmartState(unittest.TestCase):
              [0.8, -0.4],
              [0.5, -0.7]],
         )
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
         )
-        assert not state.check_contributions(contributions, x_pred)
+        assert not state.check_contributions(contributions, x_init)
 
     def test_check_contributions_2(self):
         """
@@ -93,11 +93,11 @@ class TestSmartState(unittest.TestCase):
              [0.8, -0.4]],
             index=['row_1', 'row_2']
         )
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]]
         )
-        assert not state.check_contributions(contributions, x_pred)
+        assert not state.check_contributions(contributions, x_init)
 
     def test_check_contributions_3(self):
         """
@@ -109,11 +109,11 @@ class TestSmartState(unittest.TestCase):
              [0.8, -0.4]],
             columns=['col_1', 'col_2'],
         )
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
         )
-        assert not state.check_contributions(contributions, x_pred)
+        assert not state.check_contributions(contributions, x_init)
 
     def test_check_contributions_4(self):
         """
@@ -126,13 +126,13 @@ class TestSmartState(unittest.TestCase):
             columns=['col_1', 'col_2'],
             index=['row_1', 'row_2']
         )
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['col_1', 'col_2'],
             index=['row_1', 'row_2']
         )
-        assert state.check_contributions(contributions, x_pred)
+        assert state.check_contributions(contributions, x_init)
 
     @patch('shapash.explainer.smart_state.rank_contributions')
     def test_rank_contributions(self, mock_rank_contributions):

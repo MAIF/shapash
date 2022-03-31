@@ -76,14 +76,14 @@ class ProjectReport:
                 self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
         else:
             self.x_train_pre = None
-        self.x_pred = self.explainer.x_pred
+        self.x_init = self.explainer.x_init
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
-        self.df_train_test = self._create_train_test_df(test=self.x_pred, train=self.x_train_pre)
+        self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
         if self.explainer.y_pred is not None:
             self.y_pred = np.array(self.explainer.y_pred.T)[0]
         else:
-            self.y_pred = self.explainer.model.predict(self.explainer.x_init)
+            self.y_pred = self.explainer.model.predict(self.explainer.x_encoded)
         self.y_test, target_name_test = self._get_values_and_name(y_test, 'target')
         self.y_train, target_name_train = self._get_values_and_name(y_train, 'target')
         self.target_name = target_name_train or target_name_test
@@ -291,7 +291,7 @@ class ProjectReport:
         print_md('---')
 
     def _display_dataset_analysis_global(self):
-        df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
+        df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_init),
                                                train_stats=perform_global_dataframe_analysis(self.x_train_pre),
                                                names=["Prediction dataset", "Training dataset"])
         print_html(df_stats_global.to_html(classes="greyGridTable"))

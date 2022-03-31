@@ -70,7 +70,7 @@ class TestSmartExplainer(unittest.TestCase):
         Unit test modify postprocessing 1
         """
         xpl = SmartExplainer(self.model)
-        xpl.x_pred = pd.DataFrame(
+        xpl.x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -94,7 +94,7 @@ class TestSmartExplainer(unittest.TestCase):
         Unit test modify postprocessing 2
         """
         xpl = SmartExplainer(self.model)
-        xpl.x_pred = pd.DataFrame(
+        xpl.x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -112,7 +112,7 @@ class TestSmartExplainer(unittest.TestCase):
         Unit test apply_postprocessing 1
         """
         xpl = SmartExplainer(self.model)
-        xpl.x_pred = pd.DataFrame(
+        xpl.x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -121,14 +121,14 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.features_dict = {'Col1': 'Column1', 'Col2': 'Column2'}
         xpl.columns_dict = {0: 'Col1', 1: 'Col2'}
         xpl.inv_features_dict = {'Column1': 'Col1', 'Column2': 'Col2'}
-        assert np.array_equal(xpl.x_pred, xpl.apply_postprocessing())
+        assert np.array_equal(xpl.x_init, xpl.apply_postprocessing())
 
     def test_apply_postprocessing_2(self):
         """
         Unit test apply_postprocessing 2
         """
         xpl = SmartExplainer(self.model)
-        xpl.x_pred = pd.DataFrame(
+        xpl.x_init = pd.DataFrame(
             [[1, 2],
              [3, 4]],
             columns=['Col1', 'Col2'],
@@ -153,17 +153,17 @@ class TestSmartExplainer(unittest.TestCase):
         Unit test check contributions 1
         """
         xpl = SmartExplainer(self.model)
-        xpl.contributions, xpl.x_pred = Mock(), Mock()
+        xpl.contributions, xpl.x_init = Mock(), Mock()
         xpl.state = Mock()
         xpl.check_contributions()
-        xpl.state.check_contributions.assert_called_with(xpl.contributions, xpl.x_pred)
+        xpl.state.check_contributions.assert_called_with(xpl.contributions, xpl.x_init)
 
     def test_check_contributions_2(self):
         """
         Unit test check contributions 2
         """
         xpl = SmartExplainer(self.model)
-        xpl.contributions, xpl.x_pred = Mock(), Mock()
+        xpl.contributions, xpl.x_init = Mock(), Mock()
         mock_state = Mock()
         mock_state.check_contributions.return_value = False
         xpl.state = mock_state
@@ -258,8 +258,8 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(xpl_postprocessing2, "postprocessing")
         assert hasattr(xpl_postprocessing3, "preprocessing")
         assert hasattr(xpl_postprocessing3, "postprocessing")
-        pd.testing.assert_frame_equal(xpl_postprocessing1.x_pred, output)
-        pd.testing.assert_frame_equal(xpl_postprocessing2.x_pred, output)
+        pd.testing.assert_frame_equal(xpl_postprocessing1.x_init, output)
+        pd.testing.assert_frame_equal(xpl_postprocessing2.x_init, output)
         assert xpl_postprocessing1.preprocessing == encoder_fitted
         assert xpl_postprocessing2.preprocessing == encoder_fitted
         assert xpl_postprocessing1.postprocessing == postprocessing_1
@@ -728,7 +728,7 @@ class TestSmartExplainer(unittest.TestCase):
     def test_add_1(self):
         xpl = SmartExplainer(self.model)
         dataframe_yp = pd.Series([1, 3, 1], name='pred', index=[0, 1, 2])
-        xpl.x_pred = dataframe_yp
+        xpl.x_init = dataframe_yp
         xpl.add(y_pred=dataframe_yp)
         expected = SmartExplainer(self.model)
         expected.y_pred = dataframe_yp.to_frame()
@@ -793,7 +793,7 @@ class TestSmartExplainer(unittest.TestCase):
             columns=['Pclass', 'Sex', 'Age', 'Embarked'],
             index=[0, 1, 2]
         )
-        xpl.x_pred = xpl.x
+        xpl.x_init = xpl.x
         xpl.contributions = data['contrib_sorted']
         xpl.y_pred = pd.DataFrame([1, 2, 3], columns=['pred'], index=[0, 1, 2])
         model = lambda : None
@@ -944,14 +944,14 @@ class TestSmartExplainer(unittest.TestCase):
             columns=['Pclass', 'Sex', 'Age', 'Embarked'],
             index=[0, 1, 2]
         )
-        xpl.x_pred_groups = pd.DataFrame(
+        xpl.x_init_groups = pd.DataFrame(
             [[3., 22., 1.],
              [1., 38., 2.],
              [3., 26., 1.]],
             columns=['group1', 'Age', 'Embarked'],
             index=[0, 1, 2]
         )
-        xpl.x_pred = xpl.x
+        xpl.x_init = xpl.x
         xpl.contributions = data['contrib_sorted']
         xpl.y_pred = pd.DataFrame([1, 2, 3], columns=['pred'], index=[0, 1, 2])
         model = lambda: None
@@ -1092,8 +1092,8 @@ class TestSmartExplainer(unittest.TestCase):
         assert predictor_1.columns_dict == xpl.columns_dict
         assert predictor_1.preprocessing == xpl.preprocessing
         assert predictor_1.postprocessing == xpl.postprocessing
-        assert all(predictor_1.features_types[feature] == str(xpl.x_pred[feature].dtypes)
-                   for feature in xpl.x_pred.columns )
+        assert all(predictor_1.features_types[feature] == str(xpl.x_init[feature].dtypes)
+                   for feature in xpl.x_init.columns )
 
         assert predictor_2.mask_params == xpl.mask_params
 

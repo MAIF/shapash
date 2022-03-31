@@ -64,7 +64,7 @@ class SmartPredictor :
     preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
         The processing apply to the original data.
     postprocessing: dict (optional)
-        Dictionary of postprocessing modifications to apply in x_pred dataframe.
+        Dictionary of postprocessing modifications to apply in x_init dataframe.
     _case: string
         String that informs if the model used is for classification or regression problem.
     _classes: list, None
@@ -139,7 +139,7 @@ class SmartPredictor :
     def check_model(self):
         """
         Check if model has a predict_proba method is a one column dataframe of integer or float
-        and if y_pred index matches x_pred index
+        and if y_pred index matches x_init index
 
         Returns
         -------
@@ -232,8 +232,8 @@ class SmartPredictor :
         and stores it in data_groups attribute
         """
         self.data_groups = dict()
-        self.data_groups['x_postprocessed'] = create_grouped_features_values(x_pred=self.data["x_postprocessed"],
-                                                                             x_init=self.data["x_preprocessed"],
+        self.data_groups['x_postprocessed'] = create_grouped_features_values(x_init=self.data["x_postprocessed"],
+                                                                             x_encoded=self.data["x_preprocessed"],
                                                                              preprocessing=self.preprocessing,
                                                                              features_groups=self.features_groups,
                                                                              features_dict=self.features_dict,
@@ -726,7 +726,7 @@ class SmartPredictor :
         Returns
         -------
         pandas.Dataframe
-            Returns x_pred if postprocessing is empty, modified dataframe otherwise.
+            Returns x_init if postprocessing is empty, modified dataframe otherwise.
         """
         if self.postprocessing:
             return apply_postprocessing(self.data["x"], self.postprocessing)

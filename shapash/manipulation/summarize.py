@@ -130,7 +130,7 @@ def group_contributions(contributions, features_groups):
     return new_contributions
 
 
-def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing, features_dict, how='tsne'):
+def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocessing, features_dict, how='tsne'):
     """
     Project feature values of a group of features in 1 dimension.
     If feature_values contains categorical features, use preprocessing to get
@@ -144,9 +144,9 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
         Name of the group of features.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional
         Preprocessing used to encode categorical variables.
-    x_pred : pd.DataFrame
-        Pandas dataframe before preprocessing transformations
     x_init : pd.DataFrame
+        Pandas dataframe before preprocessing transformations
+    x_encoded : pd.DataFrame
         Pandas dataframe after preprocessing transformations
     preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
         The processing apply to the original data
@@ -161,11 +161,11 @@ def project_feature_values_1d(feature_values, col, x_pred, x_init, preprocessing
         Series containing the projected feature values.
     """
     # Getting mapping of variables to transform categorical features with corresponding encoded variables
-    encoding_mapping = get_features_transform_mapping(x_pred, x_init, preprocessing)
+    encoding_mapping = get_features_transform_mapping(x_init, x_encoded, preprocessing)
     col_names_in_xinit = list()
     for c in feature_values.columns:
         col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
-    feature_values = x_init.loc[feature_values.index, col_names_in_xinit]
+    feature_values = x_encoded.loc[feature_values.index, col_names_in_xinit]
     # Project in 1D the feature values
     if how == 'tsne':
         try:
@@ -210,8 +210,8 @@ def compute_corr(df, compute_method):
 
 
 def create_grouped_features_values(
-        x_pred,
         x_init,
+        x_encoded,
         preprocessing,
         features_groups,
         features_dict,
@@ -222,9 +222,9 @@ def create_grouped_features_values(
 
     Parameters
     ----------
-    x_pred : pd.DataFrame
-        x_init dataset with inverse transformation with eventual postprocessing modifications.
     x_init : pd.DataFrame
+        x_encoded dataset with inverse transformation with eventual postprocessing modifications.
+    x_encoded : pd.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional
         Preprocessing used to encode categorical variables.
@@ -240,16 +240,16 @@ def create_grouped_features_values(
     df : pd.DataFrame
         features values with projection used for groups of features
     """
-    df = x_pred.copy()
+    df = x_init.copy()
     for group in features_groups.keys():
         if not isinstance(features_groups[group], list):
             raise ValueError(f'features_groups[{group}] should be a list of features')
-        features_values = x_pred[features_groups[group]]
+        features_values = x_init[features_groups[group]]
         df[group] = project_feature_values_1d(
             features_values,
             col=group,
-            x_pred=x_pred,
             x_init=x_init,
+            x_encoded=x_encoded,
             preprocessing=preprocessing,
             features_dict=features_dict,
             how=how

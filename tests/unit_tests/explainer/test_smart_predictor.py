@@ -1193,7 +1193,7 @@ class TestSmartPredictor(unittest.TestCase):
         xpl = predictor_1.to_smartexplainer()
 
         assert str(type(xpl)) == "<class 'shapash.explainer.smart_explainer.SmartExplainer'>"
-        assert xpl.x_init.equals(predictor_1.data["x_preprocessed"])
+        assert xpl.x_encoded.equals(predictor_1.data["x_preprocessed"])
         assert predictor_1.model == xpl.model
         assert predictor_1.backend == xpl.backend
         assert predictor_1.features_dict == xpl.features_dict

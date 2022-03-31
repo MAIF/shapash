@@ -61,12 +61,12 @@ class SmartExplainer:
             It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
 
-    x_init: pandas.DataFrame
+    x_encoded: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
-    x_pred: pandas.DataFrame
-        x_init dataset with inverse transformation with eventual postprocessing modifications.
+    x_init: pandas.DataFrame
+        x_encoded dataset with inverse transformation with eventual postprocessing modifications.
     x_contrib_plot: pandas.DataFrame
-        x_init dataset with inverse transformation, without postprocessing used for contribution_plot.
+        x_encoded dataset with inverse transformation, without postprocessing used for contribution_plot.
     y_pred: pandas.DataFrame
         User-specified prediction values.
     contributions: pandas.DataFrame (regression) or list (classification)
@@ -86,7 +86,7 @@ class SmartExplainer:
     model: model object
         model used to check the different values of target estimate predict proba
     features_desc: dict
-        Dictionary that references the numbers of feature values ​​in the x_pred
+        Dictionary that references the numbers of feature values ​​in the x_init
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
     local_neighbors: dict
@@ -99,7 +99,7 @@ class SmartExplainer:
     preprocessing : category_encoders, ColumnTransformer, list or dict
         The processing apply to the original data.
     postprocessing : dict
-        Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+        Dictionnary of postprocessing modifications to apply in x_init dataframe.
     palette_name : str
         Name of the palette used for the colors of the report (refer to style folder).
 
@@ -145,7 +145,7 @@ class SmartExplainer:
             - A dict
             - A list of dict
         postprocessing : dict, optional (default: None)
-            Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+            Dictionnary of postprocessing modifications to apply in x_init dataframe.
             Dictionnary with feature names as keys (or number, or well labels referencing to features names),
             which modifies dataset features by features.
 
@@ -248,23 +248,23 @@ class SmartExplainer:
             if np.ndarray, index and columns will be generated according to x dataset
         y_pred : pandas.Series or pandas.DataFrame, optional (default: None)
             Prediction values (1 column only).
-            The index must be identical to the index of x_pred.
+            The index must be identical to the index of x_init.
             This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
             as they may wish to set their own threshold (classification)
 
         Example
         --------
-        >>> xpl.compile(x=xtest_df,model=my_model)
+        >>> xpl.compile(x=x_test)
 
         """
-        self.x_init = x
-        self.x_pred = inverse_transform(self.x_init, self.preprocessing)
-        self.y_pred = check_ypred(self.x_pred, y_pred)
+        self.x_encoded = x
+        self.x_init = inverse_transform(self.x_encoded, self.preprocessing)
+        self.y_pred = check_ypred(self.x_init, y_pred)
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
 
-        self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
+        self.columns_dict = {i: col for i, col in enumerate(self.x_init.columns)}
         self.check_features_dict()
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         self._apply_all_postprocessing_modifications()
@@ -272,10 +272,10 @@ class SmartExplainer:
         self.data = self.state.assign_contributions(
             self.state.rank_contributions(
                 self.contributions,
-                self.x_pred
+                self.x_init
             )
         )
-        self.features_desc = dict(self.x_pred.nunique())
+        self.features_desc = dict(self.x_init.nunique())
         if self.features_groups is not None:
             self._compile_features_groups(self.features_groups)
 
@@ -295,12 +295,12 @@ class SmartExplainer:
 
     def _apply_all_postprocessing_modifications(self):
         postprocessing = self.modify_postprocessing(self.postprocessing)
-        check_postprocessing(self.x_pred, postprocessing)
+        check_postprocessing(self.x_init, postprocessing)
         self.postprocessing_modifications = self.check_postprocessing_modif_strings(postprocessing)
         self.postprocessing = postprocessing
         if self.postprocessing_modifications:
-            self.x_contrib_plot = copy.deepcopy(self.x_pred)
-        self.x_pred = self.apply_postprocessing(postprocessing)
+            self.x_contrib_plot = copy.deepcopy(self.x_init)
+        self.x_init = self.apply_postprocessing(postprocessing)
 
     def _compile_features_groups(self, features_groups):
         """
@@ -317,7 +317,7 @@ class SmartExplainer:
         # Update features dict with groups names
         self._update_features_dict_with_groups(features_groups=features_groups)
         # Compute t-sne projections for groups of features
-        self.x_pred_groups = create_grouped_features_values(x_pred=self.x_pred, x_init=self.x_init,
+        self.x_init_groups = create_grouped_features_values(x_init=self.x_init, x_encoded=self.x_encoded,
                                                             preprocessing=self.preprocessing,
                                                             features_groups=self.features_groups,
                                                             features_dict=self.features_dict,
@@ -326,10 +326,10 @@ class SmartExplainer:
         self.data_groups = self.state.assign_contributions(
             self.state.rank_contributions(
                 self.contributions_groups,
-                self.x_pred_groups
+                self.x_init_groups
             )
         )
-        self.columns_dict_groups = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
+        self.columns_dict_groups = {i: col for i, col in enumerate(self.x_init_groups.columns)}
 
     def define_style(self, palette_name=None, colors_dict=None):
         if palette_name is None and colors_dict is None:
@@ -353,7 +353,7 @@ class SmartExplainer:
         ----------
         y_pred : pandas.Series, optional (default: None)
             Prediction values (1 column only).
-            The index must be identical to the index of x_pred.
+            The index must be identical to the index of x_init.
         label_dict: dict, optional (default: None)
             Dictionary mapping integer labels to domain names.
         features_dict: dict, optional (default: None)
@@ -363,7 +363,7 @@ class SmartExplainer:
             which can be used the webapp, or other methods
         """
         if y_pred is not None:
-            self.y_pred = check_ypred(self.x_pred, y_pred)
+            self.y_pred = check_ypred(self.x_init, y_pred)
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(
@@ -389,7 +389,7 @@ class SmartExplainer:
 
     def get_interaction_values(self, n_samples_max=None, selection=None):
         """
-        Compute shap interaction values for each row of x_init.
+        Compute shap interaction values for each row of x_encoded.
         This function is only available for explainer of type TreeExplainer (used for tree based models).
         Please refer to the official tree shap paper for more information : https://arxiv.org/pdf/1802.03888.pdf
 
@@ -405,7 +405,7 @@ class SmartExplainer:
         np.ndarray
             Shap interaction values for each sample as an array of shape (# samples x # features x # features).
         """
-        x = copy.deepcopy(self.x_init)
+        x = copy.deepcopy(self.x_encoded)
 
         if selection:
             x = x.loc[selection]
@@ -438,7 +438,7 @@ class SmartExplainer:
             for key in postprocessing.keys():
                 dict_postprocess = postprocessing[key]
                 if dict_postprocess['type'] in {'prefix', 'suffix'} \
-                        and pd.api.types.is_numeric_dtype(self.x_pred[key]):
+                        and pd.api.types.is_numeric_dtype(self.x_init[key]):
                     modif = True
         return modif
 
@@ -478,22 +478,22 @@ class SmartExplainer:
 
     def apply_postprocessing(self, postprocessing=None):
         """
-        Modifies x_pred Dataframe according to postprocessing modifications, if exists.
+        Modifies x_init Dataframe according to postprocessing modifications, if exists.
 
         Parameters
         ----------
         postprocessing: Dict
-            Dictionnary of postprocessing modifications to apply in x_pred.
+            Dictionnary of postprocessing modifications to apply in x_init.
 
         Returns
         -------
         pandas.Dataframe
-            Returns x_pred if postprocessing is empty, modified dataframe otherwise.
+            Returns x_init if postprocessing is empty, modified dataframe otherwise.
         """
         if postprocessing:
-            return apply_postprocessing(self.x_pred, postprocessing)
+            return apply_postprocessing(self.x_init, postprocessing)
         else:
-            return self.x_pred
+            return self.x_init
 
     def check_label_dict(self):
         """
@@ -524,7 +524,7 @@ class SmartExplainer:
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
-        if not self.state.check_contributions(self.contributions, self.x_pred):
+        if not self.state.check_contributions(self.contributions, self.x_init):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines
@@ -744,15 +744,15 @@ class SmartExplainer:
 
     def predict_proba(self):
         """
-        The predict_proba compute the proba values for each x_init row
+        The predict_proba compute the proba values for each x_encoded row
         """
-        self.proba_values = predict_proba(self.model, self.x_init, self._classes)
+        self.proba_values = predict_proba(self.model, self.x_encoded, self._classes)
 
     def predict(self):
         """
-        The predict method computes the model output for each x_init row and stores it in y_pred attribute
+        The predict method computes the model output for each x_encoded row and stores it in y_pred attribute
         """
-        self.y_pred = predict(self.model, self.x_init)
+        self.y_pred = predict(self.model, self.x_encoded)
 
     def to_pandas(
             self,
@@ -842,7 +842,7 @@ class SmartExplainer:
                         max_contrib=max_contrib,
                         display_groups=use_groups)
         if use_groups:
-            columns_dict = {i: col for i, col in enumerate(self.x_pred_groups.columns)}
+            columns_dict = {i: col for i, col in enumerate(self.x_init_groups.columns)}
         else:
             columns_dict = self.columns_dict
         # Summarize information
@@ -917,20 +917,20 @@ class SmartExplainer:
         if (self._case == "classification") and (len(self._classes) > 2):
             raise AssertionError("Multi-class classification is not supported")
 
-        all_neighbors = find_neighbors(selection, self.x_init, self.model, self._case)
+        all_neighbors = find_neighbors(selection, self.x_encoded, self.model, self._case)
 
         # Check if entry is a single instance or not
         if len(selection) == 1:
             # Compute explanations for instance and neighbors
-            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_init, self.contributions, self._case)
+            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_encoded, self.contributions, self._case)
             self.local_neighbors = {"norm_shap": norm_shap}
         else:
             numb_expl = len(selection)
-            amplitude = np.zeros((numb_expl, self.x_pred.shape[1]))
-            variability = np.zeros((numb_expl, self.x_pred.shape[1]))
+            amplitude = np.zeros((numb_expl, self.x_init.shape[1]))
+            variability = np.zeros((numb_expl, self.x_init.shape[1]))
             # For each instance (+ neighbors), compute explanation
             for i in range(numb_expl):
-                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_init, self.contributions, self._case)
+                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_encoded, self.contributions, self._case)
             self.features_stability = {"variability": variability, "amplitude": amplitude}
 
     def compute_features_compacity(self, selection, distance, nb_features):
@@ -1054,7 +1054,7 @@ class SmartExplainer:
         preprocessing: category_encoders, ColumnTransformer, list or dict
             The processing apply to the original data.
         postprocessing: dict
-            Dictionnary of postprocessing modifications to apply in x_pred dataframe.
+            Dictionnary of postprocessing modifications to apply in x_init dataframe.
         _case: string
             String that informs if the model used is for classification or regression problem.
         _classes: list, None
@@ -1071,7 +1071,7 @@ class SmartExplainer:
                 """
             )
 
-        self.features_types = {features: str(self.x_pred[features].dtypes) for features in self.x_pred.columns}
+        self.features_types = {features: str(self.x_init[features].dtypes) for features in self.x_init.columns}
 
         listattributes = ["features_dict", "model", "columns_dict", "backend", "features_types",
                           "label_dict", "preprocessing", "postprocessing", "features_groups"]

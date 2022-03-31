@@ -9,7 +9,7 @@ from category_encoders import OrdinalEncoder
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.report.project_report import ProjectReport
 
-expected_attrs = ['explainer', 'metadata', 'x_train_init', 'y_test', 'x_pred', 'config',
+expected_attrs = ['explainer', 'metadata', 'x_train_init', 'y_test', 'x_init', 'config',
                   'col_names', 'df_train_test', 'title_story', 'title_description']
 
 current_path = os.path.dirname(os.path.abspath(__file__))
