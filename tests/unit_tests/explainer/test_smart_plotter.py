@@ -12,6 +12,7 @@ import plotly.express as px
 from sklearn.tree import DecisionTreeRegressor
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.backend import ShapBackend
+from shapash.utils.check import check_model
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 from shapash.style.style_utils import get_palette
@@ -108,9 +109,10 @@ class TestSmartPlotter(unittest.TestCase):
         model._classes = np.array([1, 3])
         model.predict = types.MethodType(self.predict, model)
         model.predict_proba = types.MethodType(self.predict_proba, model)
+        self.model = model
         # Declare explainer object
         self.feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
-        self.smart_explainer = SmartExplainer(features_dict=self.feature_dictionary)
+        self.smart_explainer = SmartExplainer(model, features_dict=self.feature_dictionary)
         self.smart_explainer.data = dict()
         self.smart_explainer.data['contrib_sorted'] = self.contrib_sorted
         self.smart_explainer.data['x_sorted'] = self.x_sorted
@@ -128,10 +130,10 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.contributions = [self.contrib0, self.contrib1]
         self.smart_explainer.features_imp = None
         self.smart_explainer.model = model
-        self.smart_explainer._case, self.smart_explainer._classes = self.smart_explainer.check_model()
+        self.smart_explainer._case, self.smart_explainer._classes = check_model(model)
         self.smart_explainer.state = MultiDecorator(SmartState())
         self.smart_explainer.y_pred = None
-        self.smart_explainer.features_desc = self.smart_explainer.check_features_desc()
+        self.smart_explainer.features_desc = dict(self.x_pred.nunique())
         self.smart_explainer.features_compacity = self.features_compacity
 
     def test_define_style_attributes(self):
@@ -309,7 +311,7 @@ class TestSmartPlotter(unittest.TestCase):
             columns=['feature_0', 'feature_1'],
             index=index)
         feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
-        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
         smart_explainer_mi.data = dict()
         smart_explainer_mi.contributions = [contrib_sorted1, contrib_sorted2]
         smart_explainer_mi.data['contrib_sorted'] = [contrib_sorted1, contrib_sorted2]
@@ -447,7 +449,7 @@ class TestSmartPlotter(unittest.TestCase):
             index=index)
 
         feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
-        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
         smart_explainer_mi.data = dict()
         smart_explainer_mi.contributions = [contrib_sorted1, contrib_sorted2]
         smart_explainer_mi.data['contrib_sorted'] = [contrib_sorted1, contrib_sorted2]
@@ -624,7 +626,7 @@ class TestSmartPlotter(unittest.TestCase):
 
         feature_dictionary = {'X1': 'X1_label', 'X2': 'X2_label', 'X3': 'X3_label', 'X4': 'X4_label',
                               'group1': 'group1_label'}
-        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
         smart_explainer_mi.features_groups = {'group1': ['X1', 'X3']}
         smart_explainer_mi.inv_features_dict = {'X1_label': 'X1', 'X2_label': 'X2', 'X3_label': 'X3',
                                                 'X4_label': 'X4', 'group1_label': 'group1'}
@@ -723,7 +725,7 @@ class TestSmartPlotter(unittest.TestCase):
 
         feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
 
-        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
         smart_explainer_mi.data = dict()
         smart_explainer_mi.contributions = contrib_sorted_multi_index
         smart_explainer_mi.data['contrib_sorted'] = contrib_sorted_multi_index
@@ -1428,7 +1430,7 @@ class TestSmartPlotter(unittest.TestCase):
             index=['person_A', 'person_B']
         )
 
-        smart_explainer = SmartExplainer()
+        smart_explainer = SmartExplainer(model=self.model)
         smart_explainer.x_init = x_pred
         smart_explainer.x_pred = x_pred
         smart_explainer.postprocessing_modifications = False
@@ -1439,7 +1441,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.inv_features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.model = self.smart_explainer.model
-        smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
+        smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
         smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
         smart_explainer.backend._state = MultiDecorator(SmartState())
         smart_explainer.explain_data = None
@@ -1483,7 +1485,7 @@ class TestSmartPlotter(unittest.TestCase):
             index=['person_A', 'person_B']
         )
 
-        smart_explainer = SmartExplainer()
+        smart_explainer = SmartExplainer(model=self.model)
         smart_explainer.x_init = x_pred
         smart_explainer.x_pred = x_pred
         smart_explainer.postprocessing_modifications = False
@@ -1497,7 +1499,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
         smart_explainer.backend._state = MultiDecorator(SmartState())
         smart_explainer.explain_data = None
-        smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
+        smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
         smart_explainer.state = smart_explainer.backend._state
         smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
             smart_explainer.contributions, smart_explainer.features_groups)
@@ -1704,7 +1706,7 @@ class TestSmartPlotter(unittest.TestCase):
             index=index
         )
         feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
-        smart_explainer_mi = SmartExplainer(features_dict=feature_dictionary)
+        smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
         smart_explainer_mi.contributions = [
             pd.DataFrame(
                 data=contributions1,
@@ -1963,7 +1965,7 @@ class TestSmartPlotter(unittest.TestCase):
             index=['person_A', 'person_B']
         ).astype({'X1': str, 'X2': float, 'X3': float, 'X4': float, 'X5': float})
 
-        smart_explainer.features_desc = smart_explainer.check_features_desc()
+        smart_explainer.features_desc = dict(smart_explainer.x_pred.nunique())
         smart_explainer.columns_dict = {i: col for i, col in enumerate(smart_explainer.x_pred.columns)}
 
         interaction_values = np.array([
@@ -1998,7 +2000,7 @@ class TestSmartPlotter(unittest.TestCase):
                 index=['person_A', 'person_B']
             ).astype({'X1': str, 'X2': float, 'X3': float, 'X4': float, 'X5': float})
 
-            smart_explainer.features_desc = smart_explainer.check_features_desc()
+            smart_explainer.features_desc = dict(smart_explainer.x_pred.nunique())
             smart_explainer.columns_dict = {i: col for i, col in enumerate(smart_explainer.x_pred.columns)}
 
             interaction_values = np.array([
@@ -2067,10 +2069,8 @@ class TestSmartPlotter(unittest.TestCase):
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
 
-        xpl = SmartExplainer()
-        xpl.compile(x=X,
-                    model=model
-                    )
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X)
 
         output = xpl.plot.stability_plot(distribution="none")
 
@@ -2087,10 +2087,8 @@ class TestSmartPlotter(unittest.TestCase):
         model = DecisionTreeRegressor().fit(X, y)
 
         selection = list(range(6))
-        xpl = SmartExplainer()
-        xpl.compile(x=X,
-                    model=model
-                    )
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X)
 
         for max_features in [2, 5]:
             output = xpl.plot.stability_plot(selection=selection, distribution="boxplot", max_features=max_features)
@@ -2108,10 +2106,8 @@ class TestSmartPlotter(unittest.TestCase):
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
 
-        xpl = SmartExplainer()
-        xpl.compile(x=X,
-                    model=model
-                    )
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X)
 
         for max_features in [2, 5]:
             output = xpl.plot.stability_plot(distribution="boxplot", max_features=max_features)
@@ -2130,10 +2126,8 @@ class TestSmartPlotter(unittest.TestCase):
         model = DecisionTreeRegressor().fit(X, y)
 
         selection = list(range(6))
-        xpl = SmartExplainer()
-        xpl.compile(x=X,
-                    model=model
-                    )
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X)
 
         for max_features in [2, 5]:
             output = xpl.plot.stability_plot(selection=selection, distribution="violin", max_features=max_features)
@@ -2151,10 +2145,8 @@ class TestSmartPlotter(unittest.TestCase):
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
 
-        xpl = SmartExplainer()
-        xpl.compile(x=X,
-                    model=model
-                    )
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X)
 
         for max_features in [2, 5]:
             output = xpl.plot.stability_plot(distribution="violin", max_features=max_features)
@@ -2172,10 +2164,8 @@ class TestSmartPlotter(unittest.TestCase):
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
 
-        xpl = SmartExplainer()
-        xpl.compile(x=X,
-                    model=model
-                    )
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X)
 
         for max_features in [2, 5]:
             output = xpl.plot.local_neighbors_plot(index=1, max_features=max_features)

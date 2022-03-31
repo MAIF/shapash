@@ -24,8 +24,8 @@ class TestProjectReport(unittest.TestCase):
         self.df['x2'] = np.random.randint(1, 3, self.df.shape[0])
         self.df = self.df.set_index('id')
         self.clf = cb.CatBoostClassifier(n_estimators=1).fit(self.df[['x1', 'x2']], self.df['y'])
-        self.xpl = SmartExplainer()
-        self.xpl.compile(model=self.clf, x=self.df[['x1', 'x2']])
+        self.xpl = SmartExplainer(model=self.clf)
+        self.xpl.compile(x=self.df[['x1', 'x2']])
         self.report1 = ProjectReport(
             explainer=self.xpl,
             project_info_file=os.path.join(current_path, '../../data/metadata.yaml'),
@@ -158,8 +158,8 @@ class TestProjectReport(unittest.TestCase):
         df = encoder.transform(df)
 
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        xpl = SmartExplainer()
-        xpl.compile(model=clf, x=df[['x1', 'x2']])
+        xpl = SmartExplainer(model=clf)
+        xpl.compile(x=df[['x1', 'x2']])
         report = ProjectReport(
             explainer=xpl,
             project_info_file=os.path.join(current_path, '../../data/metadata.yaml'),
@@ -186,8 +186,8 @@ class TestProjectReport(unittest.TestCase):
         df['x2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        xpl = SmartExplainer()
-        xpl.compile(model=clf, x=df[['x1', 'x2']])
+        xpl = SmartExplainer(model=clf)
+        xpl.compile(x=df[['x1', 'x2']])
         report = ProjectReport(
             explainer=xpl,
             project_info_file=os.path.join(current_path, '../../data/metadata.yaml')

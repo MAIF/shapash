@@ -82,15 +82,10 @@ class Consistency():
             Dict whose keys are method names and values are the corresponding contributions
         """
         contributions = {}
-        xpl = SmartExplainer()
 
         for backend in methods:
-            xpl.compile(
-                x=x,
-                model=model,
-                preprocessing=preprocessing,
-                backend=backend
-            )
+            xpl = SmartExplainer(model=model, preprocessing=preprocessing, backend=backend)
+            xpl.compile(x=x)
             if xpl._case == "classification" and len(xpl._classes) == 2:
                 contributions[backend] = xpl.contributions[1]
             elif xpl._case == "classification" and len(xpl._classes) > 2:

@@ -770,13 +770,14 @@ class SmartPredictor :
             if str(type(enc)) in columntransformer:
                 raise ValueError("SmartPredictor can't switch to SmartExplainer for ColumnTransformer preprocessing.")
 
-        xpl = shapash.explainer.smart_explainer.SmartExplainer(features_dict=copy.deepcopy(self.features_dict),
-                                                               label_dict=copy.deepcopy(self.label_dict))
-        xpl.compile(x=copy.deepcopy(self.data["x_preprocessed"]),
-                    model=self.model,
-                    backend=self.backend,
-                    y_pred=copy.deepcopy(self.data["ypred_init"]),
-                    preprocessing=self.preprocessing,
-                    postprocessing=self.postprocessing,
-                    features_groups=self.features_groups)
+        xpl = shapash.explainer.smart_explainer.SmartExplainer(
+            model=self.model,
+            backend=self.backend,
+            preprocessing=self.preprocessing,
+            postprocessing=self.postprocessing,
+            features_groups=self.features_groups,
+            features_dict=copy.deepcopy(self.features_dict),
+            label_dict=copy.deepcopy(self.label_dict)
+        )
+        xpl.compile(x=copy.deepcopy(self.data["x_preprocessed"]), y_pred=copy.deepcopy(self.data["ypred_init"]))
         return xpl

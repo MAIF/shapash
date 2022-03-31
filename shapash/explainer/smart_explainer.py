@@ -81,8 +81,6 @@ class SmartExplainer:
         Inverse label_dict mapping.
     columns_dict: dict
         Dictionary mapping integer column number to technical feature names.
-    inv_columns_dict: dict
-        Inverse columns_dict mapping.
     plot: object
         Helper object containing all plotting functions (Bridge pattern).
     model: model object
@@ -118,67 +116,25 @@ class SmartExplainer:
 
     def __init__(
             self,
+            model,
+            backend='shap',
+            preprocessing=None,
+            postprocessing=None,
+            features_groups=None,
             features_dict=None,
             label_dict=None,
             title_story: str = None,
             palette_name=None,
             colors_dict=None,
+            **kwargs
     ):
-        if features_dict is not None and not isinstance(features_dict, dict):
-            raise ValueError(
-                """
-                features_dict must be a dict
-                """
-            )
-        if label_dict is not None and isinstance(label_dict, dict) is False:
-            raise ValueError(
-                """
-                label_dict must be a dict
-                """
-            )
-        self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
-        self.label_dict = label_dict
-        self.plot = SmartPlotter(self)
-        if title_story is not None:
-            self.title_story = title_story
-        else:
-            self.title_story = ''
-        self.features_groups = None
-        self.palette_name = palette_name if palette_name else 'default'
-        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
-        if colors_dict is not None:
-            self.colors_dict.update(colors_dict)
-        self.plot.define_style_attributes(colors_dict=self.colors_dict)
-
-    def compile(self, x, model, contributions=None, y_pred=None,
-                preprocessing=None, postprocessing=None, title_story=None,
-                features_groups=None, backend='shap', **kwargs):
         """
-        The compile method is the first step to understand model and prediction. It performs the sorting
-        of contributions, the reverse preprocessing steps and performs all the calculations necessary for
-        a quick display of plots and efficient display of summary of explanation.
-        Most of the parameters are optional but all help to display results that can be understood
-
-        This step can last a few moments with large datasets.
 
         Parameters
         ----------
-        x : pandas.DataFrame
-            Prediction set.
-            IMPORTANT: this should be the raw prediction set, whose values are seen by the end user.
-            x is a preprocessed dataset: Shapash can apply the model to it
         model : model object
             model used to consistency check. model object can also be used by some method to compute
             predict and predict_proba values
-        contributions : pandas.DataFrame, np.ndarray or list
-            single or multiple contributions (multi-class) to handle.
-            if pandas.Dataframe, the index and columns should be share with the prediction set.
-            if np.ndarray, index and columns will be generated according to x dataset
-        y_pred : pandas.Series or pandas.DataFrame, optional (default: None)
-            Prediction values (1 column only).
-            The index must be identical to the index of x_pred.
-            This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
-            as they may wish to set their own threshold (classification)
         preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
             --> Differents types of preprocessing are available:
 
@@ -195,7 +151,11 @@ class SmartExplainer:
 
             --> Different types of postprocessing are available, but the syntax is this one:
             One key by features, 5 different types of modifications:
-
+                features_groups : dict, optional (default: None)
+            Dictionnary containing features that should be grouped together. This option allows
+            to compute and display the contributions and importance of this group of features.
+            Features that are grouped together will still be displayed in the webapp when clicking
+            on a group.
             >>> {
             ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
             ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
@@ -205,22 +165,92 @@ class SmartExplainer:
             }
 
             Only one transformation by features is possible.
-        title_story: str (default: None)
-            The default title is empty. You can specify a custom title
-            which can be used the webapp, or other methods
-        features_groups : dict, optional (default: None)
-            Dictionnary containing features that should be grouped together. This option allows
-            to compute and display the contributions and importance of this group of features.
-            Features that are grouped together will still be displayed in the webapp when clicking
-            on a group.
-
+        backend : str (default: 'shap')
+            Select which computation method to use in order to compute contributions
+            and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
             >>> {
             ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
             ‘feature_group_2’ : ['feature1', 'feature12'],
             }
-        backend : str (default: 'shap')
-            Select which computation method to use in order to compute contributions
-            and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
+        features_dict
+        label_dict
+        title_story
+        palette_name
+        colors_dict
+        kwargs
+        """
+        if features_dict is not None and not isinstance(features_dict, dict):
+            raise ValueError(
+                """
+                features_dict must be a dict
+                """
+            )
+        if label_dict is not None and isinstance(label_dict, dict) is False:
+            raise ValueError(
+                """
+                label_dict must be a dict
+                """
+            )
+        self.model = model
+        if isinstance(backend, str):
+            backend_cls = get_backend_cls_from_name(backend)
+            self.backend = backend_cls(model=self.model, preprocessing=preprocessing, **kwargs)
+        elif isinstance(backend, BaseBackend):
+            self.backend = backend
+            if backend.preprocessing is None and preprocessing is not None:
+                self.backend.preprocessing = preprocessing
+        else:
+            raise NotImplementedError(f'Unknown backend : {backend}')
+        self.preprocessing = self.backend.preprocessing
+
+        self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
+        self.label_dict = label_dict
+        self.plot = SmartPlotter(self)
+        self.title_story = title_story if title_story is not None else ''
+        self.palette_name = palette_name if palette_name else 'default'
+        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
+        if colors_dict is not None:
+            self.colors_dict.update(colors_dict)
+        self.plot.define_style_attributes(colors_dict=self.colors_dict)
+
+        self._case, self._classes = check_model(self.model)
+        self.postprocessing = postprocessing
+        self.check_label_dict()
+        if self.label_dict:
+            self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
+
+        self.features_groups = features_groups
+        self.local_neighbors = None
+        self.features_stability = None
+        self.features_compacity = None
+        self.contributions = None
+        self.explain_data = None
+        self.features_imp = None
+
+    def compile(self, x, contributions=None, y_pred=None):
+        """
+        The compile method is the first step to understand model and prediction. It performs the sorting
+        of contributions, the reverse preprocessing steps and performs all the calculations necessary for
+        a quick display of plots and efficient display of summary of explanation.
+        Most of the parameters are optional but all help to display results that can be understood
+
+        This step can last a few moments with large datasets.
+
+        Parameters
+        ----------
+        x : pandas.DataFrame
+            Prediction set.
+            IMPORTANT: this should be the raw prediction set, whose values are seen by the end user.
+            x is a preprocessed dataset: Shapash can apply the model to it
+        contributions : pandas.DataFrame, np.ndarray or list
+            single or multiple contributions (multi-class) to handle.
+            if pandas.Dataframe, the index and columns should be share with the prediction set.
+            if np.ndarray, index and columns will be generated according to x dataset
+        y_pred : pandas.Series or pandas.DataFrame, optional (default: None)
+            Prediction values (1 column only).
+            The index must be identical to the index of x_pred.
+            This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
+            as they may wish to set their own threshold (classification)
 
         Example
         --------
@@ -228,25 +258,28 @@ class SmartExplainer:
 
         """
         self.x_init = x
-        if isinstance(backend, BaseBackend) and backend.preprocessing is not None:
-            preprocessing = backend.preprocessing
-        self.x_pred = inverse_transform(self.x_init, preprocessing)
-        self.preprocessing = preprocessing
-        self.model = model
-        self._case, self._classes = self.check_model()
-        self.check_label_dict()
-        if self.label_dict:
-            self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
+        self.x_pred = inverse_transform(self.x_init, self.preprocessing)
+        self.y_pred = check_ypred(self.x_pred, y_pred)
 
-        if isinstance(backend, str):
-            backend_cls = get_backend_cls_from_name(backend)
-            self.backend = backend_cls(model=self.model, preprocessing=self.preprocessing, **kwargs)
-        elif isinstance(backend, BaseBackend):
-            self.backend = backend
-            self.backend.preprocessing = preprocessing
-        else:
-            raise NotImplementedError(f'Unknown backend : {backend}')
+        self._get_contributions_from_backend_or_user(x, contributions)
+        self.check_contributions()
 
+        self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
+        self.check_features_dict()
+        self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
+        self._apply_all_postprocessing_modifications()
+
+        self.data = self.state.assign_contributions(
+            self.state.rank_contributions(
+                self.contributions,
+                self.x_pred
+            )
+        )
+        self.features_desc = dict(self.x_pred.nunique())
+        if self.features_groups is not None:
+            self._compile_features_groups(self.features_groups)
+
+    def _get_contributions_from_backend_or_user(self, x, contributions):
         # Computing contributions using backend
         if contributions is None:
             self.explain_data = self.backend.run_explainer(x=x)
@@ -258,37 +291,16 @@ class SmartExplainer:
                 contributions=contributions,
             )
             self.backend.explain_data = self.contributions
-
         self.state = self.backend._state
-        self.check_contributions()
-        self.y_pred = self.check_y_pred(y_pred)
-        self.columns_dict = {i: col for i, col in enumerate(self.x_pred.columns)}
-        self.inv_columns_dict = {v: k for k, v in self.columns_dict.items()}
-        self.check_features_dict()
-        self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
-        postprocessing = self.modify_postprocessing(postprocessing)
-        self.check_postprocessing(postprocessing)
+
+    def _apply_all_postprocessing_modifications(self):
+        postprocessing = self.modify_postprocessing(self.postprocessing)
+        check_postprocessing(self.x_pred, postprocessing)
         self.postprocessing_modifications = self.check_postprocessing_modif_strings(postprocessing)
         self.postprocessing = postprocessing
         if self.postprocessing_modifications:
             self.x_contrib_plot = copy.deepcopy(self.x_pred)
         self.x_pred = self.apply_postprocessing(postprocessing)
-        self.data = self.state.assign_contributions(
-            self.state.rank_contributions(
-                self.contributions,
-                self.x_pred
-            )
-        )
-        self.features_imp = None
-        self.features_desc = self.check_features_desc()
-        if title_story is not None:
-            self.title_story = title_story
-        self.features_groups = features_groups
-        if features_groups:
-            self._compile_features_groups(features_groups)
-        self.local_neighbors = None
-        self.features_stability = None
-        self.features_compacity = None
 
     def _compile_features_groups(self, features_groups):
         """
@@ -351,7 +363,7 @@ class SmartExplainer:
             which can be used the webapp, or other methods
         """
         if y_pred is not None:
-            self.y_pred = self.check_y_pred(y_pred)
+            self.y_pred = check_ypred(self.x_pred, y_pred)
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(
@@ -464,19 +476,6 @@ class SmartExplainer:
 
             return new_dic
 
-    def check_postprocessing(self, postprocessing):
-        """
-        Check that postprocessing parameter has good attributes.
-        Check if postprocessing is a dictionnary, and if its parameters are good.
-
-        Parameters
-        ----------
-        postprocessing : dict
-            Dictionnary of postprocessing that need to be checked.
-
-        """
-        check_postprocessing(self.x_pred, postprocessing)
-
     def apply_postprocessing(self, postprocessing=None):
         """
         Modifies x_pred Dataframe according to postprocessing modifications, if exists.
@@ -495,31 +494,6 @@ class SmartExplainer:
             return apply_postprocessing(self.x_pred, postprocessing)
         else:
             return self.x_pred
-
-    def check_y_pred(self, ypred=None):
-        """
-        Check if y_pred is a one column dataframe of integer or float
-        and if y_pred index matches x_pred index
-
-        Parameters
-        ----------
-        ypred: pandas.DataFrame (optional)
-            User-specified prediction values.
-        """
-        return check_ypred(self.x_pred, ypred)
-
-    def check_model(self):
-        """
-        Check if model has a predict_proba method is a one column dataframe of integer or float
-        and if y_pred index matches x_pred index
-
-        Returns
-        -------
-        string:
-            'regression' or 'classification' according to the attributes of the model
-        """
-        _case, _classes = check_model(self.model)
-        return _case, _classes
 
     def check_label_dict(self):
         """
@@ -627,18 +601,6 @@ class SmartExplainer:
         """
         columns_dict = self.columns_dict if use_groups is False else self.columns_dict_groups
         return check_features_name(columns_dict, self.features_dict, features)
-
-    def check_features_desc(self):
-        """
-        Check x_pred dataframe, compute value counts of each feature
-        used in plot part
-
-        Returns
-        -------
-        dict
-            Number of unique values in x_pred
-        """
-        return dict(self.x_pred.nunique())
 
     def check_attributes(self, attribute):
         """
@@ -752,7 +714,8 @@ class SmartExplainer:
         """
         save_pickle(self, path)
 
-    def load(self, path):
+    @classmethod
+    def load(cls, path):
         """
         Load method allows Shapash user to use pickled SmartExplainer.
         To use this method you must first declare your SmartExplainer object
@@ -765,12 +728,13 @@ class SmartExplainer:
 
         Example
         --------
-        >>> xpl = SmartExplainer()
-        >>> xpl.load('path_to_pkl/xpl.pkl')
+        >>> xpl = SmartExplainer.load('path_to_pkl/xpl.pkl')
         """
         xpl = load_pickle(path)
         if isinstance(xpl, SmartExplainer):
-            self.__dict__.update(xpl.__dict__)
+            smart_explainer = cls(model=xpl.model)
+            smart_explainer.__dict__.update(xpl.__dict__)
+            return smart_explainer
         else:
             raise ValueError(
                 "File is not a SmartExplainer object"
@@ -926,7 +890,6 @@ class SmartExplainer:
             subset=None
         )
 
-        # TODO : groups
         if self.features_groups is not None and self.features_imp_groups is None:
             self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
 
@@ -1154,12 +1117,6 @@ class SmartExplainer:
             else:
                 params_checkypred.append(None)
         return params_checkypred
-
-    def check_explainer(self, explainer):
-        """
-        Check if explainer class correspond to a shap explainer object
-        """
-        return check_explainer(explainer)
 
     def generate_report(self,
                         output_file,

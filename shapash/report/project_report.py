@@ -306,6 +306,7 @@ class ProjectReport:
     ):
         col_types = compute_col_types(df)
         n_splits = df[col_splitter].nunique()
+        inv_columns_dict = {v: k for k, v in self.explainer.columns_dict.items()}
         test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]],
                                                                       col_types=col_types)
         if n_splits > 1:
@@ -325,8 +326,9 @@ class ProjectReport:
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,
                 names=names
             )
+
             univariate_features_desc.append({
-                'feature_index': int(self.explainer.inv_columns_dict.get(col, 0)),
+                'feature_index': int(inv_columns_dict.get(col, 0)),
                 'name': col,
                 'type': str(series_dtype(df[col])),
                 'description': col_label,
@@ -354,6 +356,7 @@ class ProjectReport:
         """
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         explainability_template = template_env.get_template("explainability.html")
+        inv_columns_dict = {v: k for k, v in self.explainer.columns_dict.items()}
         explain_data = list()
         multiclass = True if (self.explainer._classes and len(self.explainer._classes) > 2) else False
         c_list = self.explainer._classes if multiclass else [1]  # list just used for multiclass
@@ -368,7 +371,7 @@ class ProjectReport:
                 feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
                 fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
                 explain_contrib_data.append({
-                    'feature_index': int(self.explainer.inv_columns_dict[feature]),
+                    'feature_index': int(inv_columns_dict[feature]),
                     'name': feature,
                     'description': self.explainer.features_dict[feature],
                     'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
