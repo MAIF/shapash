@@ -9,18 +9,18 @@ with open('README.md', encoding='utf8') as readme_file:
 
 
 requirements = [
-        'plotly==4.12.0',
+        'plotly==5.6.0',
         'matplotlib>=3.3.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
         'shap>=0.36.0',
-        'dash==1.17.0',
+        'dash==2.3.1',
         'dash-bootstrap-components==0.9.1',
-        'dash-core-components==1.13.0',
+        'dash-core-components==2.0.0',
         'dash-daq==0.5.0',
-        'dash-html-components==1.1.1',
+        'dash-html-components==2.0.0',
         'dash-renderer==1.8.3',
-        'dash-table==4.11.0',
+        'dash-table==5.0.0',
         'nbformat>4.2.0',
         'numba==0.53.1',
         'scikit-learn'
