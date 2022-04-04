@@ -34,7 +34,7 @@ extras['report'] = [
     'papermill',
     'seaborn<=0.11.2',
     'notebook',
-    'Jinja2',
+    'Jinja2>=2.11.0,<3.1.0',
     'phik'
 ]
 
@@ -43,7 +43,7 @@ extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=0.21']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
 extras['category_encoders'] = ['category_encoders==2.2.2']
-extras['acv'] = ['acv-exp']
+extras['acv'] = ['acv-exp==1.1.2']
 extras['lime'] = ['lime']
 
 setup_requirements = ['pytest-runner', ]
@@ -52,7 +52,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash",
-    version="1.6.1",
+    version="1.7.1",
     python_requires='>3.5, <3.10',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
@@ -83,15 +83,17 @@ setup(
         'shapash.utils': 'shapash/utils',
         'shapash.webapp': 'shapash/webapp',
         'shapash.webapp.utils': 'shapash/webapp/utils',
+        'shapash.style': 'shapash/style',
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
               'shapash.explainer', 'shapash.manipulation',
               'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils',
-              'shapash.report'],
+              'shapash.report','shapash.style'],
     data_files=[('data', ['shapash/data/house_prices_dataset.csv']),
                 ('data', ['shapash/data/house_prices_labels.json']),
                 ('data', ['shapash/data/titanicdata.csv']),
-                ('data', ['shapash/data/titaniclabels.json'])],
+                ('data', ['shapash/data/titaniclabels.json']),
+                ('style', ['shapash/style/colors.json'])],
     include_package_data=True,
     setup_requires=setup_requirements,
     test_suite='tests',

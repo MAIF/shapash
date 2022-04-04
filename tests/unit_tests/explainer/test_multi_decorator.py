@@ -81,15 +81,6 @@ class TestMultiDecorator(unittest.TestCase):
         with self.assertRaises(ValueError):
             state.delegate('dummy_function', 1, 9)
 
-    def test_getattr(self):
-        """
-        Unit test get attr
-        """
-        state = MultiDecorator(DummyState())
-        output = state.dummy_function([1, 2, 3], 9)
-        expected = ['1+9', '2+9', '3+9']
-        self.assertListEqual(output, expected)
-
     def test_assign_contributions(self):
         """
         Unit test assign contributions

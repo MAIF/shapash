@@ -9,8 +9,13 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
 from shapash.explainer.smart_explainer import SmartExplainer
+from shapash.backend import ShapBackend
+from shapash.explainer.multi_decorator import MultiDecorator
+from shapash.explainer.smart_state import SmartState
+from shapash.style.style_utils import get_palette
+
 
 class TestSmartPlotter(unittest.TestCase):
     """
@@ -113,6 +118,9 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.x_init = self.x_pred
         self.smart_explainer.x_pred = self.x_pred
         self.smart_explainer.postprocessing_modifications = False
+        self.smart_explainer.backend = ShapBackend(model=model)
+        self.smart_explainer.backend._state = MultiDecorator(SmartState())
+        self.smart_explainer.explain_data = None
         #self.smart_explainer.x_contrib_plot = self.x_contrib_plot
         self.smart_explainer.columns_dict = {i: col for i, col in enumerate(self.smart_explainer.x_pred.columns)}
         self.smart_explainer.inv_columns_dict = {v: k for k, v in self.smart_explainer.columns_dict.items()}
@@ -121,10 +129,20 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.features_imp = None
         self.smart_explainer.model = model
         self.smart_explainer._case, self.smart_explainer._classes = self.smart_explainer.check_model()
-        self.smart_explainer.state = self.smart_explainer.choose_state(self.smart_explainer.contributions)
+        self.smart_explainer.state = MultiDecorator(SmartState())
         self.smart_explainer.y_pred = None
         self.smart_explainer.features_desc = self.smart_explainer.check_features_desc()
         self.smart_explainer.features_compacity = self.features_compacity
+
+    def test_define_style_attributes(self):
+        # clear style attributes
+        del self.smart_explainer.plot._style_dict
+
+        colors_dict = get_palette('default')
+        self.smart_explainer.plot.define_style_attributes(colors_dict=colors_dict)
+
+        assert hasattr(self.smart_explainer.plot, '_style_dict')
+        assert len(list(self.smart_explainer.plot._style_dict.keys())) > 0       
 
     @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
     @patch('shapash.explainer.smart_plotter.SmartPlotter.local_pred')
@@ -302,7 +320,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer_mi.mask = [mask1, mask2]
         smart_explainer_mi._case = "classification"
         smart_explainer_mi._classes = [0, 1]
-        smart_explainer_mi.state = smart_explainer_mi.choose_state(smart_explainer_mi.contributions)
+        smart_explainer_mi.state = MultiDecorator(SmartState())
         condition = "index == 'B'"
         output = smart_explainer_mi.plot.local_plot(query=condition)
         feature_values = ['<b>Age :</b><br />27', '<b>Education :</b><br />Master']
@@ -446,7 +464,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer_mi._case = "classification"
         smart_explainer_mi._classes = [0, 1]
 
-        smart_explainer_mi.state = smart_explainer_mi.choose_state(smart_explainer_mi.contributions)
+        smart_explainer_mi.state = MultiDecorator(SmartState())
         condition = "index == 'B'"
         output = smart_explainer_mi.plot.local_plot(query=condition)
         feature_values = ['<i>Hidden Positive Contributions</i>',
@@ -634,7 +652,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer_mi._case = "classification"
         smart_explainer_mi._classes = [0, 1]
 
-        smart_explainer_mi.state = smart_explainer_mi.choose_state(smart_explainer_mi.contributions)
+        smart_explainer_mi.state = MultiDecorator(SmartState())
 
         output_fig = smart_explainer_mi.plot.local_plot(row_num=1)
 
@@ -715,7 +733,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_pred.columns)}
         smart_explainer_mi.mask = mask_multi_index
         smart_explainer_mi._case = "regression"
-        smart_explainer_mi.state = smart_explainer_mi.choose_state(smart_explainer_mi.contributions)
+        smart_explainer_mi.state = SmartState()
         smart_explainer_mi.y_pred = None
 
         condition = "index == 'person_B'"
@@ -892,7 +910,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.contributions = self.contrib1
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         output = xpl.plot.contribution_plot(col, violin_maxf=0)
         expected_output = go.Scatter(x=xpl.x_pred[col],
                                      y=xpl.contributions[col],
@@ -933,7 +951,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.contributions = self.contrib1
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         xpl.y_pred = pd.DataFrame([0.46989877093, 12.749302948], columns=['pred'], index=xpl.x_pred.index)
         output = xpl.plot.contribution_plot(col, violin_maxf=0)
         expected_output = go.Scatter(x=xpl.x_pred[col],
@@ -955,7 +973,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.contributions = pd.concat([self.contrib1]*10, ignore_index=True)
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         xpl.x_pred = pd.concat([xpl.x_pred]*10, ignore_index=True)
         xpl.postprocessing_modifications = False
         xpl.y_pred = pd.concat([pd.DataFrame([0.46989877093, 12.749302948])]*10, ignore_index=True)
@@ -976,7 +994,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         xpl.contributions = pd.concat([self.contrib1]*10, ignore_index=True)
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         xpl.x_pred = pd.concat([xpl.x_pred]*10, ignore_index=True)
         xpl.postprocessing_modifications = False
         output = xpl.plot.contribution_plot(col)
@@ -1098,7 +1116,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.postprocessing_modifications = False
         xpl.contributions = pd.concat([self.contrib1] * 4, ignore_index=True)
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         xpl.y_pred = pd.DataFrame([0.46989877093, 12.749302948]*4, columns=['pred'], index=xpl.x_pred.index)
         subset = [1, 2, 6, 7]
         output = xpl.plot.contribution_plot(col, selection=subset, violin_maxf=0)
@@ -1185,7 +1203,8 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.x_init = x_init
         xpl.contributions = pd.concat([self.contrib1] * 10, ignore_index=True)
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
+        xpl.backend._state = SmartState()
         xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
         xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
         xpl.postprocessing_modifications = False
@@ -1254,7 +1273,8 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.x_init = x_init
         xpl.contributions = pd.concat([self.contrib1] * 10, ignore_index=True)
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
+        xpl.backend._state = SmartState()
         xpl.x_pred = pd.concat([xpl.x_pred] * 10, ignore_index=True)
         xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
         xpl.postprocessing_modifications = False
@@ -1326,6 +1346,7 @@ class TestSmartPlotter(unittest.TestCase):
         Unit test features importance 1
         """
         xpl = self.smart_explainer
+        xpl.explain_data = None
         output = xpl.plot.features_importance(selection=['person_A', 'person_B'])
 
         data1 = go.Bar(
@@ -1358,8 +1379,10 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         #regression
         xpl.contributions = self.contrib1
+        xpl.backend._state = SmartState()
+        xpl.explain_data = None
         xpl._case = "regression"
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         output = xpl.plot.features_importance(selection=['person_A', 'person_B'])
 
         data1 = go.Bar(
@@ -1417,7 +1440,10 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.inv_features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.model = self.smart_explainer.model
         smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
-        smart_explainer.state = smart_explainer.choose_state(smart_explainer.contributions)
+        smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
+        smart_explainer.backend._state = MultiDecorator(SmartState())
+        smart_explainer.explain_data = None
+        smart_explainer.state = MultiDecorator(SmartState())
         smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
             smart_explainer.contributions, smart_explainer.features_groups)
         smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
@@ -1468,8 +1494,11 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.inv_features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.model = self.smart_explainer.model
+        smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
+        smart_explainer.backend._state = MultiDecorator(SmartState())
+        smart_explainer.explain_data = None
         smart_explainer._case, smart_explainer._classes = smart_explainer.check_model()
-        smart_explainer.state = smart_explainer.choose_state(smart_explainer.contributions)
+        smart_explainer.state = smart_explainer.backend._state
         smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
             smart_explainer.contributions, smart_explainer.features_groups)
         smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
@@ -2032,10 +2061,11 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].z.shape == (3, 3)
 
     def test_stability_plot_1(self):
+        np.random.seed(42)
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
@@ -2050,10 +2080,11 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array(list(output.data[0].y)).dtype == "float"
 
     def test_stability_plot_2(self):
+        np.random.seed(42)
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         selection = list(range(6))
         xpl = SmartExplainer()
@@ -2075,7 +2106,7 @@ class TestSmartPlotter(unittest.TestCase):
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
@@ -2096,7 +2127,7 @@ class TestSmartPlotter(unittest.TestCase):
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         selection = list(range(6))
         xpl = SmartExplainer()
@@ -2118,7 +2149,7 @@ class TestSmartPlotter(unittest.TestCase):
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
@@ -2139,7 +2170,7 @@ class TestSmartPlotter(unittest.TestCase):
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         xpl = SmartExplainer()
         xpl.compile(x=X,

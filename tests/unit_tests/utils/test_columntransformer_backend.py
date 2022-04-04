@@ -15,6 +15,7 @@ from shapash.utils.transform import inverse_transform
 from shapash.utils.transform import apply_preprocessing
 from shapash.utils.columntransformer_backend import get_feature_names, get_names, get_list_features_names, \
         get_col_mapping_ct
+from sklearn.ensemble import GradientBoostingClassifier
 
 
 # TODO
@@ -874,7 +875,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         enc.fit(train, y)
 
         train_preprocessed = pd.DataFrame(enc.transform(train))
-        clf = sklearn.ensemble._gb.GradientBoostingClassifier(n_estimators=1).fit(train_preprocessed, y)
+        clf = GradientBoostingClassifier(n_estimators=1).fit(train_preprocessed, y)
         test = pd.DataFrame({'num1': [0, 1, 1],
                              'num2': [0, 2, 0],
                              'other': [1, 0, 0]})

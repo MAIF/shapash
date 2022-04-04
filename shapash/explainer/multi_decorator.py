@@ -1,6 +1,9 @@
 """
 Multi Decorator module
 """
+from shapash.explainer.smart_state import SmartState
+
+
 class MultiDecorator:
     """
     Decorator pattern. It simply iterates the method of its member as many times as needed.
@@ -11,9 +14,12 @@ class MultiDecorator:
         self.member = member
 
     def __getattr__(self, item):
-        def wrapper(*args, **kwargs):
-            return self.delegate(item, *args, **kwargs)
-        return wrapper
+        if item in [x for x in dir(SmartState) if not x.startswith('__')]:
+            def wrapper(*args, **kwargs):
+                return self.delegate(item, *args, **kwargs)
+            return wrapper
+        else:
+            return self.__getattribute__(item)
 
     def delegate(self, func, *args, **kwargs):
         """

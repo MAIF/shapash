@@ -284,13 +284,23 @@ def adapt_contributions(case,contributions):
         pandas.DataFrame, np.ndarray or list
         contributions object modified
     """
-    if isinstance(contributions, (np.ndarray, pd.DataFrame)) and case == 'classification':
+    # For classification with numpy arrays, we first transform the last dimension in lists
+    # So that we have the following format : [contributions_class_0, contributions_class_1, ...]
+    if isinstance(contributions, np.ndarray) and contributions.ndim == 3:
+        contributions = [contributions[:, :, i] for i in range(contributions.shape[-1])]
+    if (
+            (isinstance(contributions, pd.DataFrame) and case == 'classification')
+            or (
+            isinstance(contributions, (np.ndarray, list))
+            and case == 'classification'
+            and np.array(contributions).ndim == 2)
+    ):
         return [contributions * -1, contributions]
     else:
         return contributions
 
 
-def _get_preprocessing_mapping(x_init, preprocessing=None):
+def get_preprocessing_mapping(x_init, preprocessing=None):
     """
     Get the columns mapping from preprocessing.
 
@@ -333,7 +343,7 @@ def _get_preprocessing_mapping(x_init, preprocessing=None):
         elif isinstance(enc, list):
             for sub_enc in enc:
                 # Recursive call
-                dict_col_mapping.update(_get_preprocessing_mapping(preprocessing=sub_enc, x_init=x_init))
+                dict_col_mapping.update(get_preprocessing_mapping(preprocessing=sub_enc, x_init=x_init))
 
     return dict_col_mapping
 
@@ -357,7 +367,7 @@ def get_features_transform_mapping(x_pred, x_init, preprocessing=None):
         the mapping between columns names before and after preprocessing.
     """
     dict_all_cols_mapping = dict()
-    dict_all_cols_mapping.update(_get_preprocessing_mapping(x_init=x_init, preprocessing=preprocessing))
+    dict_all_cols_mapping.update(get_preprocessing_mapping(x_init=x_init, preprocessing=preprocessing))
     # Adding columns which name was not changed during preprocessing
     for col_name in x_pred.columns:
         if col_name not in dict_all_cols_mapping.keys():

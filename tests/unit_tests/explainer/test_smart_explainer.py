@@ -11,10 +11,11 @@ import types
 import pandas as pd
 import numpy as np
 import catboost as cb
-from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from shapash.explainer.smart_explainer import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
+from shapash.backend import ShapBackend
 from shapash.explainer.smart_state import SmartState
 import category_encoders as ce
 import shap
@@ -34,7 +35,8 @@ def init_sme_to_pickle_test():
     contributions = pd.DataFrame([[-0.1, 0.2, -0.3], [0.1, -0.2, 0.3]])
     y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
     dataframe_x = pd.DataFrame([[1, 2, 3], [1, 2, 3]])
-    xpl.compile(contributions=contributions, x=dataframe_x, y_pred=y_pred, model=LinearRegression())
+    model = DecisionTreeRegressor().fit(dataframe_x, y_pred)
+    xpl.compile(contributions=contributions, x=dataframe_x, y_pred=y_pred, model=model)
     xpl.filter(max_contrib=2)
     return pkl_file, xpl
 
@@ -56,93 +58,6 @@ class TestSmartExplainer(unittest.TestCase):
             self.assertFail()
         except Exception as inst:
             self.assertEqual(inst.args[0]['message'], msg)
-
-    @patch('shapash.explainer.smart_explainer.SmartState')
-    def test_choose_state_1(self, mock_smart_state):
-        """
-        Unit test choose state 1
-        Parameters
-        ----------
-        mock_smart_state : [type]
-            [description]
-        """
-        xpl = SmartExplainer()
-        xpl.choose_state('contributions')
-        mock_smart_state.assert_called()
-
-    @patch('shapash.explainer.smart_explainer.MultiDecorator')
-    def test_choose_state_2(self, mock_multi_decorator):
-        """
-        Unit test choose state 2
-        Parameters
-        ----------
-        mock_multi_decorator : [type]
-            [description]
-        """
-        xpl = SmartExplainer()
-        xpl.choose_state([1, 2, 3])
-        mock_multi_decorator.assert_called()
-
-    def test_validate_contributions_1(self):
-        """
-        Unit test validate contributions 1
-        """
-        xpl = SmartExplainer()
-        contributions = [
-            np.array([[2, 1], [8, 4]]),
-            np.array([[5, 5], [0, 0]])
-        ]
-        model = Mock()
-        model._classes = np.array([1, 3])
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-        xpl.model = model
-        xpl._case = "classification"
-        xpl._classes = list(model._classes)
-        xpl.state = xpl.choose_state(contributions)
-        xpl.x_init = pd.DataFrame(
-            [[1, 2],
-             [3, 4]],
-            columns=['Col1', 'Col2'],
-            index=['Id1', 'Id2']
-        )
-        expected_output = [
-            pd.DataFrame(
-                [[2, 1], [8, 4]],
-                columns=['Col1', 'Col2'],
-                index=['Id1', 'Id2']
-            ),
-            pd.DataFrame(
-                [[5, 5], [0, 0]],
-                columns=['Col1', 'Col2'],
-                index=['Id1', 'Id2']
-            )
-        ]
-        output = xpl.validate_contributions(contributions)
-        assert len(expected_output) == len(output)
-        test_list = [pd.testing.assert_frame_equal(e, m) for e, m in zip(expected_output, output)]
-        assert all(x is None for x in test_list)
-
-    def test_apply_preprocessing_1(self):
-        """
-        Unit test apply preprocessing 1
-        """
-        xpl = SmartExplainer()
-        contributions = [1, 2, 3]
-        output = xpl.apply_preprocessing(contributions)
-        expected = contributions
-        self.assertListEqual(output, expected)
-
-    def test_apply_preprocessing_2(self):
-        """
-        Unit test apply preprocessing 2
-        """
-        xpl = SmartExplainer()
-        xpl.state = Mock()
-        preprocessing = Mock()
-        contributions = [1, 2, 3]
-        xpl.apply_preprocessing(contributions, preprocessing)
-        xpl.state.inverse_transform_contributions.assert_called()
 
     def test_modify_postprocessing_1(self):
         """
@@ -304,41 +219,6 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl.features_dict['Age'] == 'Age (Years Old)'
         assert xpl.features_dict['Education'] == 'Education'
 
-    @patch('shapash.explainer.smart_explainer.SmartExplainer.choose_state')
-    @patch('shapash.explainer.smart_explainer.SmartExplainer.apply_preprocessing')
-    def test_compile_0(self, mock_apply_preprocessing, mock_choose_state):
-        """
-        Unit test compile
-        Parameters
-        ----------
-        mock_apply_preprocessing : [type]
-            [description]
-        mock_choose_state : [type]
-            [description]
-        """
-        xpl = SmartExplainer()
-        mock_state = Mock()
-        mock_choose_state.return_value = mock_state
-        model = lambda: None
-        model.predict = types.MethodType(self.predict, model)
-        mock_state.rank_contributions.return_value = 1, 2, 3
-        contributions = pd.DataFrame([[-0.1, 0.2, -0.3], [0.1, -0.2, 0.3]])
-        mock_state.validate_contributions.return_value = contributions
-        mock_apply_preprocessing.return_value = contributions
-        x_pred = pd.DataFrame([[1, 2, 3], [1, 2, 3]])
-        xpl.compile(x=x_pred, model=model, contributions=contributions)
-        assert hasattr(xpl, 'state')
-        assert xpl.state == mock_state
-        assert hasattr(xpl, 'x_pred')
-        pd.testing.assert_frame_equal(xpl.x_pred, x_pred)
-        assert hasattr(xpl, 'contributions')
-        pd.testing.assert_frame_equal(xpl.contributions, contributions)
-        mock_choose_state.assert_called()
-        mock_state.validate_contributions.assert_called()
-        mock_apply_preprocessing.assert_called()
-        mock_state.rank_contributions.assert_called()
-        assert xpl._case == "regression"
-
     def test_compile_1(self):
         """
         Unit test compile 1
@@ -450,8 +330,8 @@ class TestSmartExplainer(unittest.TestCase):
         clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
 
         xpl = SmartExplainer()
-        xpl.compile(model=clf, x=df[['x1', 'x2']], x_train=df[['x1', 'x2']], backend='acv')
-        assert xpl.backend == 'acv'
+        xpl.compile(model=clf, x=df[['x1', 'x2']], data=df[['x1', 'x2']], backend='acv')
+        assert xpl.backend.__class__.__name__ == 'AcvBackend'
     
     def test_compile_5(self):
         """
@@ -466,7 +346,7 @@ class TestSmartExplainer(unittest.TestCase):
         clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
 
         xpl = SmartExplainer()
-        xpl.compile(model=clf, x=df[['x1', 'x2']], x_train=df[['x1', 'x2']], backend="lime")
+        xpl.compile(model=clf, x=df[['x1', 'x2']], data=df[['x1', 'x2']], backend="lime")
         
 
     def test_filter_0(self):
@@ -918,7 +798,7 @@ class TestSmartExplainer(unittest.TestCase):
         X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
         y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
         y_false = pd.DataFrame(data=np.array([1, 2, 4]), columns=['pred'])
-        model = LinearRegression().fit(X, y_true)
+        model = DecisionTreeRegressor().fit(X, y_true)
 
         xpl.compile(x=X, y_pred=y_false, model=model)
         xpl.predict()  # y_false should be replaced by predictions which are equal to y_true
@@ -932,7 +812,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer()
         X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
         y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
-        model = LinearRegression().fit(X, y_true)
+        model = DecisionTreeRegressor().fit(X, y_true)
 
         xpl.compile(x=X, model=model)
         xpl.predict()
@@ -959,7 +839,7 @@ class TestSmartExplainer(unittest.TestCase):
         df1 = pd.DataFrame([1, 2])
         df2 = pd.DataFrame([3, 4])
         xpl.contributions = [df1, df2]
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         model = lambda: None
         model._classes = np.array([1, 2])
         model.predict = types.MethodType(self.predict, model)
@@ -1075,7 +955,7 @@ class TestSmartExplainer(unittest.TestCase):
         model.predict = types.MethodType(self.predict, model)
         xpl.model = model
         xpl._case, xpl._classes = xpl.check_model()
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         output = xpl.to_pandas(max_contrib=2)
         expected = pd.DataFrame(
             [[1, 'Sex', 1.0, 0.32230754, 'Pclass', 3.0, 0.1550689],
@@ -1233,7 +1113,7 @@ class TestSmartExplainer(unittest.TestCase):
         model.predict = types.MethodType(self.predict, model)
         xpl.model = model
         xpl._case, xpl._classes = xpl.check_model()
-        xpl.state = xpl.choose_state(xpl.contributions)
+        xpl.state = SmartState()
         output = xpl.to_pandas(max_contrib=2, use_groups=True)
 
         expected = pd.DataFrame(
@@ -1268,7 +1148,9 @@ class TestSmartExplainer(unittest.TestCase):
         )
         xpl.features_imp = None
         xpl.contributions = contributions
-        xpl.state = xpl.choose_state(contributions)
+        xpl.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
+        xpl.backend._state = SmartState()
+        xpl.explain_data = None
         xpl._case = 'regression'
         xpl.compute_features_import()
         expected = contributions.abs().sum().sort_values(ascending=True)
@@ -1298,8 +1180,10 @@ class TestSmartExplainer(unittest.TestCase):
         contributions = [contrib1, contrib2]
         xpl.features_imp = None
         xpl.contributions = contributions
-        xpl.state = xpl.choose_state(contributions)
         xpl._case = "classification"
+        xpl.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
+        xpl.backend._state = MultiDecorator(SmartState())
+        xpl.explain_data = None
         xpl.compute_features_import()
         expect1 = contrib1.abs().sum().sort_values(ascending=True)
         expect1 = expect1 / expect1.sum()
@@ -1307,46 +1191,6 @@ class TestSmartExplainer(unittest.TestCase):
         expect2 = expect2 / expect2.sum()
         assert expect1.equals(xpl.features_imp[0])
         assert expect2.equals(xpl.features_imp[1])
-
-    def test_adapt_contributions_1(self):
-        """
-        Unit test 1 adapt_contributions
-        Classification with one contribution pd.DataFrame
-        """
-        xpl = SmartExplainer()
-        contrib = pd.DataFrame(
-            [[1, 2, 3, 4],
-             [5, 6, 7, 8],
-             [9, 10, 11, 12]],
-            columns=['contribution_0', 'contribution_1', 'contribution_2', 'contribution_3'],
-            index=[0, 1, 2]
-        )
-        model = Mock()
-        model._classes = np.array([1, 3])
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
-        xpl.model = model
-        xpl._case, xpl._classes = xpl.check_model()
-        output = xpl.adapt_contributions(contrib)
-        assert isinstance(output, list)
-        assert len(output) == 2
-
-    def test_adapt_contributions_2(self):
-        """
-        Unit test 1 adapt_contributions
-        Classification with one contribution pd.DataFrame
-        """
-        xpl = SmartExplainer()
-        contrib = pd.DataFrame(
-            [[1, 2, 3, 4],
-             [5, 6, 7, 8],
-             [9, 10, 11, 12]],
-            columns=['contribution_0', 'contribution_1', 'contribution_2', 'contribution_3'],
-            index=[0, 1, 2]
-        )
-        xpl._case = "regression"
-        output = xpl.adapt_contributions(contrib)
-        pd.testing.assert_frame_equal(contrib, output)
 
     def test_to_smartpredictor_1(self):
         """
@@ -1383,7 +1227,7 @@ class TestSmartExplainer(unittest.TestCase):
         predictor_2 = xpl.to_smartpredictor()
 
         assert hasattr(predictor_1, 'model')
-        assert hasattr(predictor_1, 'explainer')
+        assert hasattr(predictor_1, 'backend')
         assert hasattr(predictor_1, 'features_dict')
         assert hasattr(predictor_1, 'label_dict')
         assert hasattr(predictor_1, '_case')
@@ -1396,7 +1240,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(predictor_2, 'mask_params')
 
         assert predictor_1.model == xpl.model
-        assert predictor_1.explainer == xpl.explainer
+        assert predictor_1.backend == xpl.backend
         assert predictor_1.features_dict == xpl.features_dict
         assert predictor_1.label_dict == xpl.label_dict
         assert predictor_1._case == xpl._case
@@ -1440,7 +1284,7 @@ class TestSmartExplainer(unittest.TestCase):
         X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
         contributions = pd.DataFrame([[0.1, -0.2, 0.3], [0.1, -0.2, 0.3], [0.1, -0.2, 0.3]])
         y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
-        model = LinearRegression().fit(X, y_true)
+        model = DecisionTreeRegressor().fit(X, y_true)
 
         xpl.compile(contributions=contributions, x=X, model=model)
         xpl.run_app()
@@ -1470,7 +1314,7 @@ class TestSmartExplainer(unittest.TestCase):
         selection = [1, 3]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
@@ -1488,7 +1332,7 @@ class TestSmartExplainer(unittest.TestCase):
         selection = [1]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         xpl = SmartExplainer()
         xpl.compile(x=X,
@@ -1505,7 +1349,7 @@ class TestSmartExplainer(unittest.TestCase):
         selection = [1, 3]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
-        model = LinearRegression().fit(X, y)
+        model = DecisionTreeRegressor().fit(X, y)
 
         distance = 0.1
         nb_features = 2
