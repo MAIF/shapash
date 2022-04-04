@@ -164,9 +164,9 @@ class TestSmartExplainer(unittest.TestCase):
         """
         xpl = SmartExplainer(self.model)
         xpl.contributions, xpl.x_init = Mock(), Mock()
-        mock_state = Mock()
-        mock_state.check_contributions.return_value = False
-        xpl.state = mock_state
+        mockstate = Mock()
+        mockstate.check_contributions.return_value = False
+        xpl.state = mockstate
         with self.assertRaises(ValueError):
             xpl.check_contributions()
 
@@ -330,17 +330,17 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter()
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_not_called()
-        mock_state.cap_contributions.assert_not_called()
-        mock_state.sign_contributions.assert_not_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_not_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_not_called()
+        mockstate.cap_contributions.assert_not_called()
+        mockstate.sign_contributions.assert_not_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_not_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     @patch('shapash.explainer.smart_explainer.SmartExplainer.check_features_name')
@@ -356,17 +356,17 @@ class TestSmartExplainer(unittest.TestCase):
         mock_check_features_name.return_value = [1, 2]
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter(features_to_hide=['X1', 'X2'])
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_called()
-        mock_state.cap_contributions.assert_not_called()
-        mock_state.sign_contributions.assert_not_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_not_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_called()
+        mockstate.cap_contributions.assert_not_called()
+        mockstate.sign_contributions.assert_not_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_not_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     def test_filter_2(self):
@@ -376,17 +376,17 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter(threshold=0.1)
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_not_called()
-        mock_state.cap_contributions.assert_called()
-        mock_state.sign_contributions.assert_not_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_not_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_not_called()
+        mockstate.cap_contributions.assert_called()
+        mockstate.sign_contributions.assert_not_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_not_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     def test_filter_3(self):
@@ -396,17 +396,17 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter(positive=True)
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_not_called()
-        mock_state.cap_contributions.assert_not_called()
-        mock_state.sign_contributions.assert_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_not_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_not_called()
+        mockstate.cap_contributions.assert_not_called()
+        mockstate.sign_contributions.assert_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_not_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     def test_filter_4(self):
@@ -416,17 +416,17 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter(max_contrib=10)
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_not_called()
-        mock_state.cap_contributions.assert_not_called()
-        mock_state.sign_contributions.assert_not_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_not_called()
+        mockstate.cap_contributions.assert_not_called()
+        mockstate.sign_contributions.assert_not_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     def test_filter_5(self):
@@ -436,17 +436,17 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter(positive=True, max_contrib=10)
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_not_called()
-        mock_state.cap_contributions.assert_not_called()
-        mock_state.sign_contributions.assert_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_not_called()
+        mockstate.cap_contributions.assert_not_called()
+        mockstate.sign_contributions.assert_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     def test_filter_6(self):
@@ -456,17 +456,17 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         mock_data = {'var_dict': 1, 'contrib_sorted': 2, 'x_sorted': 3}
         xpl.data = mock_data
-        mock_state = Mock()
-        xpl.state = mock_state
+        mockstate = Mock()
+        xpl.state = mockstate
         xpl.filter()
-        mock_state.init_mask.assert_called()
-        mock_state.hide_contributions.assert_not_called()
-        mock_state.cap_contributions.assert_not_called()
-        mock_state.sign_contributions.assert_not_called()
-        mock_state.combine_masks.assert_called()
-        mock_state.cutoff_contributions.assert_not_called()
+        mockstate.init_mask.assert_called()
+        mockstate.hide_contributions.assert_not_called()
+        mockstate.cap_contributions.assert_not_called()
+        mockstate.sign_contributions.assert_not_called()
+        mockstate.combine_masks.assert_called()
+        mockstate.cutoff_contributions.assert_not_called()
         assert hasattr(xpl, 'mask')
-        mock_state.compute_masked_contributions.assert_called()
+        mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, 'masked_contributions')
 
     def test_filter_7(self):
@@ -994,7 +994,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.features_imp = None
         xpl.contributions = contributions
         xpl.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
-        xpl.backend._state = SmartState()
+        xpl.backend.state = SmartState()
         xpl.explain_data = None
         xpl._case = 'regression'
         xpl.compute_features_import()
@@ -1027,7 +1027,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.contributions = contributions
         xpl._case = "classification"
         xpl.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
-        xpl.backend._state = MultiDecorator(SmartState())
+        xpl.backend.state = MultiDecorator(SmartState())
         xpl.explain_data = None
         xpl.compute_features_import()
         expect1 = contrib1.abs().sum().sort_values(ascending=True)

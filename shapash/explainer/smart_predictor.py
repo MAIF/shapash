@@ -363,7 +363,7 @@ class SmartPredictor :
         else:
             x = self.data["x"]
 
-        if not self.backend._state.check_contributions(contributions, x, features_names=False):
+        if not self.backend.state.check_contributions(contributions, x, features_names=False):
             raise ValueError(
                 """
                 Prediction set and contributions should have exactly the same number of lines

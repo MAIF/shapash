@@ -87,7 +87,7 @@ class TestSmartPredictor(unittest.TestCase):
         self.predictor_1_w_groups = SmartPredictor(self.features_dict_w_groups, clf,
                                                    columns_dict, backend, features_types, label_dict,
                                                    encoder_fitted, postprocessing, self.features_groups)
-        self.predictor_1.backend._state = SmartState()
+        self.predictor_1.backend.state = SmartState()
         df['x2'] = np.random.randint(1, 100, df.shape[0])
         encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
         encoder_fitted = encoder.fit(df[["x1", "x2"]])
@@ -112,7 +112,7 @@ class TestSmartPredictor(unittest.TestCase):
         self.predictor_2 = SmartPredictor(features_dict, clf,
                                      columns_dict, backend, features_types, label_dict,
                                      encoder_fitted, postprocessing)
-        self.predictor_2.backend._state = SmartState()
+        self.predictor_2.backend.state = SmartState()
 
         df['x1'] = [25, 39, 50, 43, 67]
         df['x2'] = [90, 78, 84, 85, 53]
@@ -140,7 +140,7 @@ class TestSmartPredictor(unittest.TestCase):
         self.predictor_3 = SmartPredictor(features_dict, clf,
                                      columns_dict, backend,
                                      features_types, label_dict)
-        self.predictor_3.backend._state = SmartState()
+        self.predictor_3.backend.state = SmartState()
 
     def predict_proba(self, arg1, arg2):
         """
@@ -339,7 +339,7 @@ class TestSmartPredictor(unittest.TestCase):
         for element in adapt_contrib:
             contributions.append(pd.DataFrame(element, columns=["x1", "x2"]))
 
-        predictor_1.backend._state = MultiDecorator(SmartState())
+        predictor_1.backend.state = MultiDecorator(SmartState())
         predictor_1.check_contributions(contributions)
 
         with self.assertRaises(ValueError):

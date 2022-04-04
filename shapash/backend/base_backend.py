@@ -5,7 +5,7 @@ import numpy as np
 
 from shapash.utils.check import check_model, check_contribution_object
 from shapash.utils.transform import adapt_contributions, get_preprocessing_mapping
-from shapash.utils.utils import choosestate
+from shapash.utils.utils import choose_state
 
 
 class BaseBackend(ABC):
@@ -146,7 +146,7 @@ class BaseBackend(ABC):
             Contributions formatted and aggregated
         """
         contributions = adapt_contributions(self._case, contributions)
-        self.state = choosestate(contributions)
+        self.state = choose_state(contributions)
         check_contribution_object(self._case, self._classes, contributions)
         contributions = self.state.validate_contributions(contributions, x)
         contributions_cols = (

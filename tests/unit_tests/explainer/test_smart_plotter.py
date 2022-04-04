@@ -121,7 +121,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.x_init = self.x_init
         self.smart_explainer.postprocessing_modifications = False
         self.smart_explainer.backend = ShapBackend(model=model)
-        self.smart_explainer.backend._state = MultiDecorator(SmartState())
+        self.smart_explainer.backend.state = MultiDecorator(SmartState())
         self.smart_explainer.explain_data = None
         #self.smart_explainer.x_contrib_plot = self.x_contrib_plot
         self.smart_explainer.columns_dict = {i: col for i, col in enumerate(self.smart_explainer.x_init.columns)}
@@ -1206,7 +1206,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.contributions = pd.concat([self.contrib1] * 10, ignore_index=True)
         xpl._case = "regression"
         xpl.state = SmartState()
-        xpl.backend._state = SmartState()
+        xpl.backend.state = SmartState()
         xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
         xpl.x_encoded = pd.concat([xpl.x_encoded] * 10, ignore_index=True)
         xpl.postprocessing_modifications = False
@@ -1276,7 +1276,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.contributions = pd.concat([self.contrib1] * 10, ignore_index=True)
         xpl._case = "regression"
         xpl.state = SmartState()
-        xpl.backend._state = SmartState()
+        xpl.backend.state = SmartState()
         xpl.x_init = pd.concat([xpl.x_init] * 10, ignore_index=True)
         xpl.x_encoded = pd.concat([xpl.x_encoded] * 10, ignore_index=True)
         xpl.postprocessing_modifications = False
@@ -1381,7 +1381,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = self.smart_explainer
         #regression
         xpl.contributions = self.contrib1
-        xpl.backend._state = SmartState()
+        xpl.backend.state = SmartState()
         xpl.explain_data = None
         xpl._case = "regression"
         xpl.state = SmartState()
@@ -1443,7 +1443,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.model = self.smart_explainer.model
         smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
         smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
-        smart_explainer.backend._state = MultiDecorator(SmartState())
+        smart_explainer.backend.state = MultiDecorator(SmartState())
         smart_explainer.explain_data = None
         smart_explainer.state = MultiDecorator(SmartState())
         smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
@@ -1497,10 +1497,10 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.inv_features_dict = {'X1': 'X1', 'X2': 'X2', 'X3': 'X3', 'group0': 'group0'}
         smart_explainer.model = self.smart_explainer.model
         smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
-        smart_explainer.backend._state = MultiDecorator(SmartState())
+        smart_explainer.backend.state = MultiDecorator(SmartState())
         smart_explainer.explain_data = None
         smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
-        smart_explainer.state = smart_explainer.backend._state
+        smart_explainer.state = smart_explainer.backend.state
         smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
             smart_explainer.contributions, smart_explainer.features_groups)
         smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
