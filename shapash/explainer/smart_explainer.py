@@ -38,7 +38,70 @@ class SmartExplainer:
     linking encoders, models, predictions, label dict and datasets.
     SmartExplainer users have several methods which are described below.
 
-    The SmartExplainer Attributes :
+    Parameters
+    ----------
+    model : model object
+        model used to consistency check. model object can also be used by some method to compute
+        predict and predict_proba values
+    backend : str or shpash.backend object (default: 'shap')
+        Select which computation method to use in order to compute contributions
+        and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
+        It is also possible to pass a backend class inherited from shpash.backend.BaseBackend.
+    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+        --> Differents types of preprocessing are available:
+
+        - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+        - A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
+        - A list with multiple category_encoders with optional (dict, list of dict)
+        - A list with a single ColumnTransformer with optional (dict, list of dict)
+        - A dict
+        - A list of dict
+    postprocessing : dict, optional (default: None)
+        Dictionnary of postprocessing modifications to apply in x_init dataframe.
+        Dictionnary with feature names as keys (or number, or well labels referencing to features names),
+        which modifies dataset features by features.
+
+        --> Different types of postprocessing are available, but the syntax is this one:
+        One key by features, 5 different types of modifications:
+            features_groups : dict, optional (default: None)
+        Dictionnary containing features that should be grouped together. This option allows
+        to compute and display the contributions and importance of this group of features.
+        Features that are grouped together will still be displayed in the webapp when clicking
+        on a group.
+        >>> {
+        ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
+        ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
+        ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}},
+        ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }},
+        ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
+        }
+        Only one transformation by features is possible.
+    features_groups : dict, optional (default: None)
+        Dictionnary containing features that should be grouped together. This option allows
+        to compute and display the contributions and importance of this group of features.
+        Features that are grouped together will still be displayed in the webapp when clicking
+        on a group.
+        >>> {
+        ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
+        ‘feature_group_2’ : ['feature1', 'feature12'],
+        }
+    features_dict: dict
+        Dictionary mapping technical feature names to domain names.
+    label_dict: dict
+        Dictionary mapping integer labels to domain names (classification - target values).
+    title_story: str (default: None)
+        The default title is empty. You can specify a custom title
+        which can be used the webapp, or other methods
+    palette_name : str
+        Name of the palette used for the colors of the report (refer to style folder).
+    colors_dic : dict
+        dictionnary contaning every palettes of colors. You can use this parameter to change
+        any color of the graphs.
+    **kwargs : dict
+        Keyword parameters to be passed to the backend.
+
+    Attributes
+    ----------
 
     data: dict
         Data dictionary has 3 entries. Each key returns a pd.DataFrame (regression) or a list of pd.DataFrame
@@ -100,18 +163,12 @@ class SmartExplainer:
         The processing apply to the original data.
     postprocessing : dict
         Dictionnary of postprocessing modifications to apply in x_init dataframe.
-    palette_name : str
-        Name of the palette used for the colors of the report (refer to style folder).
-
-    How to declare a new SmartExplainer object?
 
     Example
     --------
-    >>> xpl = SmartExplainer(features_dict=featd,label_dict=labeld)
-
-    features_dict & label_dict are both optional.
-    features_dict maps technical feature names to domain names.
-    label_dict specify the labels of target (classification).
+    >>> xpl = SmartExplainer(model, features_dict=featd,label_dict=labeld)
+    >>> xpl.compile(x=x_pred)
+    >>> xpl.plot.features_importance()
     """
 
     def __init__(
@@ -128,57 +185,6 @@ class SmartExplainer:
             colors_dict=None,
             **kwargs
     ):
-        """
-
-        Parameters
-        ----------
-        model : model object
-            model used to consistency check. model object can also be used by some method to compute
-            predict and predict_proba values
-        preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
-            --> Differents types of preprocessing are available:
-
-            - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
-            - A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
-            - A list with multiple category_encoders with optional (dict, list of dict)
-            - A list with a single ColumnTransformer with optional (dict, list of dict)
-            - A dict
-            - A list of dict
-        postprocessing : dict, optional (default: None)
-            Dictionnary of postprocessing modifications to apply in x_init dataframe.
-            Dictionnary with feature names as keys (or number, or well labels referencing to features names),
-            which modifies dataset features by features.
-
-            --> Different types of postprocessing are available, but the syntax is this one:
-            One key by features, 5 different types of modifications:
-                features_groups : dict, optional (default: None)
-            Dictionnary containing features that should be grouped together. This option allows
-            to compute and display the contributions and importance of this group of features.
-            Features that are grouped together will still be displayed in the webapp when clicking
-            on a group.
-            >>> {
-            ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
-            ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
-            ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}},
-            ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }},
-            ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
-            }
-
-            Only one transformation by features is possible.
-        backend : str (default: 'shap')
-            Select which computation method to use in order to compute contributions
-            and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
-            >>> {
-            ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
-            ‘feature_group_2’ : ['feature1', 'feature12'],
-            }
-        features_dict
-        label_dict
-        title_story
-        palette_name
-        colors_dict
-        kwargs
-        """
         if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
                 """
@@ -232,7 +238,6 @@ class SmartExplainer:
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
         a quick display of plots and efficient display of summary of explanation.
-        Most of the parameters are optional but all help to display results that can be understood
 
         This step can last a few moments with large datasets.
 
