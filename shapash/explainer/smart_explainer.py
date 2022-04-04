@@ -291,7 +291,7 @@ class SmartExplainer:
                 contributions=contributions,
             )
             self.backend.explain_data = self.contributions
-        self.state = self.backend._state
+        self.state = self.backend.state
 
     def _apply_all_postprocessing_modifications(self):
         postprocessing = self.modify_postprocessing(self.postprocessing)
