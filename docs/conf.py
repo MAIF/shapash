@@ -129,7 +129,8 @@ def setup_tutorials():
 
         # RST file (see for example docs/overview.rst)
         rst_file = '\n'.join(
-            [f'{d_name}', '===========', '', '.. toctree::', '    :maxdepth: 1', '    :glob:', '', '    *', '']
+            [f'{d_name}', '======================', '', '.. toctree::',
+             '    :maxdepth: 1', '    :glob:', '', '    *', '']
         )
         with open(os.path.join(new_d_path, 'index.rst'), 'w') as f:
             f.write(rst_file)
