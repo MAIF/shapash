@@ -54,12 +54,17 @@ df.reset_index(level=0, inplace=True)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
-xpl = SmartExplainer()
 y_pred = pd.DataFrame(data=y_pred,
                       columns=y.columns.to_list(),
                       index=X_test.index)
 
-xpl.compile(X_test, model, y_pred=y_pred, preprocessing=encoder, title_story=cases[CASE])
+xpl = SmartExplainer(
+    model,
+    preprocessing=encoder,
+    title_story=cases[CASE]
+)
+
+xpl.compile(X_test, y_pred=y_pred)
 
 xpl.init_app()
 app = xpl.smartapp.app

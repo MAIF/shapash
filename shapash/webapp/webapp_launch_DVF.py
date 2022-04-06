@@ -29,15 +29,14 @@ regressor = LGBMRegressor(n_estimators=200).fit(Xtrain, ytrain)
 
 y_pred = pd.DataFrame(regressor.predict(Xtest), columns=['pred'], index=Xtest.index)
 
-xpl = SmartExplainer(features_dict=house_dict)
-
-xpl.compile(
-    x=Xtest,
+xpl = SmartExplainer(
     model=regressor,
+    features_dict=house_dict,
     preprocessing=encoder,
-    y_pred=y_pred,
     title_story='House Prices - Lightgbm Regressor'
 )
+
+xpl.compile(x=Xtest, y_pred=y_pred)
 
 xpl.init_app()
 app = xpl.smartapp.app
