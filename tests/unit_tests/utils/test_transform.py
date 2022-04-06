@@ -112,8 +112,8 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         list_dict = [input_dict2, input_dict3]
 
         test_encoded.columns = ['col1_0', 'col1_1', 'col2_0', 'col2_1', 'col3_0', 'col3_1', 'col4_0', 'col4_1']
-        # Construct expected x_init that will be built from test dataframe
-        x_init = pd.DataFrame({'onehot_ce_city': ['chicago', 'chicago', 'paris'],
+        # Construct expected x_encoded that will be built from test dataframe
+        x_encoded = pd.DataFrame({'onehot_ce_city': ['chicago', 'chicago', 'paris'],
                                'onehot_ce_state': ['US', 'FR', 'FR'],
                                'onehot_skp_city': ['chicago', 'chicago', 'paris'],
                                'onehot_skp_state': ['US', 'FR', 'FR'],
@@ -121,7 +121,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
                                'other2': ['D', 'E', 'F']},
                               index=['index1', 'index2', 'index3'])
 
-        mapping = get_features_transform_mapping(x_init, test_encoded, [enc, input_dict1, list_dict])
+        mapping = get_features_transform_mapping(x_encoded, test_encoded, [enc, input_dict1, list_dict])
 
         expected_mapping = {'onehot_ce_city': ['col1_0', 'col1_1'], 'onehot_ce_state': ['col2_0', 'col2_1'],
                             'onehot_skp_city': ['col3_0', 'col3_1'], 'onehot_skp_state': ['col4_0', 'col4_1'],
@@ -148,14 +148,14 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         test_encoded = pd.DataFrame(enc.fit_transform(test))
 
         test_encoded.columns = ['col1_0', 'col1_1', 'col2']
-        # Construct expected x_init that will be built from test dataframe
-        x_init = pd.DataFrame({'onehot_ce_city': ['chicago', 'chicago', 'paris'],
+        # Construct expected x_encoded that will be built from test dataframe
+        x_encoded = pd.DataFrame({'onehot_ce_city': ['chicago', 'chicago', 'paris'],
                                'ordinal_skp_state': ['US', 'FR', 'FR'],
                                'other': ['A', 'B', 'C'],
                                'other2': ['D', 'E', 'F']},
                               index=['index1', 'index2', 'index3'])
 
-        mapping = get_features_transform_mapping(x_init, test_encoded, enc)
+        mapping = get_features_transform_mapping(x_encoded, test_encoded, enc)
         print(mapping)
 
         expected_mapping = {'onehot_ce_city': ['col1_0', 'col1_1'],
@@ -175,11 +175,11 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.OneHotEncoder(cols=['city', 'state'], use_cat_names=True)
         test_encoded = pd.DataFrame(enc.fit_transform(test, y))
 
-        x_init = pd.DataFrame({'city': ['chicago', 'paris', 'chicago'],
+        x_encoded = pd.DataFrame({'city': ['chicago', 'paris', 'chicago'],
                                'state': ['US', 'FR', 'FR'],
                                'other': ['A', 'B', 'B']})
 
-        mapping = get_features_transform_mapping(x_init, test_encoded, enc)
+        mapping = get_features_transform_mapping(x_encoded, test_encoded, enc)
         expected_mapping = {'city': ['city_chicago', 'city_paris'],
                             'state': ['state_US', 'state_FR'],
                             'other': ['other']}
@@ -201,11 +201,11 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc2 = ce.OrdinalEncoder(cols=['city'])
         test_encoded = enc2.fit_transform(test_encoded, y)
 
-        x_init = pd.DataFrame({'city': ['chicago', 'paris', 'chicago'],
+        x_encoded = pd.DataFrame({'city': ['chicago', 'paris', 'chicago'],
                                'state': ['US', 'FR', 'FR'],
                                'other': ['A', 'B', 'B']})
 
-        mapping = get_features_transform_mapping(x_init, test_encoded, [enc, enc2])
+        mapping = get_features_transform_mapping(x_encoded, test_encoded, [enc, enc2])
         expected_mapping = {'city': ['city'],
                             'state': ['state_US', 'state_FR'],
                             'other': ['other']}

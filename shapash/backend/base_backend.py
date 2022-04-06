@@ -40,7 +40,7 @@ class BaseBackend(ABC):
         self.model = model
         self.preprocessing = preprocessing
         self.explain_data: Any = None
-        self._state = None
+        self.state = None
         self._case, self._classes = check_model(model)
         if self._case not in self.supported_cases:
             raise ValueError(f'Model not supported by the backend as it does not cover {self._case} case')
@@ -118,9 +118,9 @@ class BaseBackend(ABC):
             The global features importance computed by the backend.
         """
         if subset is not None:
-            return self._state.compute_features_import(contributions.loc[subset])
+            return self.state.compute_features_import(contributions.loc[subset])
         else:
-            return self._state.compute_features_import(contributions)
+            return self.state.compute_features_import(contributions)
 
     def format_and_aggregate_local_contributions(
             self,
@@ -146,9 +146,9 @@ class BaseBackend(ABC):
             Contributions formatted and aggregated
         """
         contributions = adapt_contributions(self._case, contributions)
-        self._state = choose_state(contributions)
+        self.state = choose_state(contributions)
         check_contribution_object(self._case, self._classes, contributions)
-        contributions = self._state.validate_contributions(contributions, x)
+        contributions = self.state.validate_contributions(contributions, x)
         contributions_cols = (
             contributions.columns.to_list() if isinstance(contributions, pd.DataFrame)
             else contributions[0].columns.to_list()
@@ -175,7 +175,7 @@ class BaseBackend(ABC):
             Reconstructed local contributions in the original space. Can be a list.
         """
         if self.preprocessing:
-            return self._state.inverse_transform_contributions(
+            return self.state.inverse_transform_contributions(
                 contributions,
                 self.preprocessing,
                 agg_columns=self.column_aggregation

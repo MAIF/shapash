@@ -16,8 +16,8 @@ from shapash.utils.transform import get_features_transform_mapping
 
 def active_shapley_values(
         model: Any,
-        x_pred: pd.DataFrame,
         x_init: pd.DataFrame,
+        x_encoded: pd.DataFrame,
         x_train: Optional[pd.DataFrame] = None,
         c: Optional[List[List[int]]] = None,
         explainer: Optional[Any] = None,
@@ -30,9 +30,9 @@ def active_shapley_values(
     model: model object from sklearn, catboost, xgboost or lightgbm library
         this model is used to choose a shap explainer and to compute
         active shapley values
-    x_init  : pd.DataFrame
-        x_init dataset with inverse transformation with eventual postprocessing modifications.
-    x_pred : pd.DataFrame
+    x_encoded  : pd.DataFrame
+        x_encoded dataset with inverse transformation with eventual postprocessing modifications.
+    x_init : pd.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_train : pd.DataFrame, Optional
         Training dataset used as background.
@@ -59,7 +59,7 @@ def active_shapley_values(
     else:
         logging.warning("No train set passed. We recommend to pass the x_train parameter "
                         "in order to avoid errors.")
-        data = np.array(x_init.values, dtype=np.double)
+        data = np.array(x_encoded.values, dtype=np.double)
 
     if explainer is None:
         if str(type(model)) in simple_tree_model or str(type(model)) in catboost_model:
@@ -73,7 +73,7 @@ def active_shapley_values(
             )
 
     if c is None:
-        c = _get_one_hot_encoded_cols(x_pred=x_pred, x_init=x_init, preprocessing=preprocessing)
+        c = _get_one_hot_encoded_cols(x_init=x_init, x_encoded=x_encoded, preprocessing=preprocessing)
 
     # Below we have following notations used in ACV (see ACV package for more information) :
     # S_star : index of variables in the Sufficient Coalition
@@ -82,37 +82,37 @@ def active_shapley_values(
     # sdp[i] : SDP value of the $S^\star$ of observation i
     # sdp_importance : global sdp of each variable
     sdp_importance, sdp_index, size, sdp = explainer.importance_sdp_clf(
-        X=x_init.values,
+        X=x_encoded.values,
         data=data,
         C=c,
         pi_level=0.9
     )
     s_star, n_star = get_null_coalition(sdp_index, size)
     contributions = explainer.shap_values_acv_adap(
-        X=x_init.values,
+        X=x_encoded.values,
         C=c,
         S_star=s_star,
         N_star=n_star,
         size=size
     )
     if contributions.shape[-1] > 1:
-        contributions = [pd.DataFrame(contributions[:, :, i], columns=x_init.columns, index=x_init.index)
+        contributions = [pd.DataFrame(contributions[:, :, i], columns=x_encoded.columns, index=x_encoded.index)
                          for i in range(contributions.shape[-1])]
     else:
-        contributions = pd.DataFrame(contributions[:, :, 0], columns=x_init.columns, index=x_init.index)
+        contributions = pd.DataFrame(contributions[:, :, 0], columns=x_encoded.columns, index=x_encoded.index)
 
     return contributions, explainer, sdp_index, sdp
 
 
-def _get_one_hot_encoded_cols(x_pred, x_init, preprocessing):
+def _get_one_hot_encoded_cols(x_init, x_encoded, preprocessing):
     """
     Returns list of list of one hot encoded variables, or empty list of list otherwise.
     """
-    mapping_features = get_features_transform_mapping(x_pred, x_init, preprocessing)
+    mapping_features = get_features_transform_mapping(x_init, x_encoded, preprocessing)
     ohe_coalitions = []
     for col, encoded_col_list in mapping_features.items():
         if len(encoded_col_list) > 1:
-            ohe_coalitions.append([x_init.columns.to_list().index(c) for c in encoded_col_list])
+            ohe_coalitions.append([x_encoded.columns.to_list().index(c) for c in encoded_col_list])
 
     if ohe_coalitions == list():
         return [[]]

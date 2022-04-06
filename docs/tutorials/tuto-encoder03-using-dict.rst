@@ -174,7 +174,7 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    xpl.x_pred.head(4)
+    xpl.x_init.head(4)
 
 
 
@@ -197,7 +197,7 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    xpl.x_init.head(4)
+    xpl.x_encoded.head(4)
 
 
 

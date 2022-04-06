@@ -9,7 +9,7 @@ import logging
 
 
 def lime_contributions(model,
-                       x_init,
+                       x_encoded,
                        x_train=None,
                        mode="classification",
                        classes=None):
@@ -25,7 +25,7 @@ def lime_contributions(model,
                 is `regressor.predict()`. The prediction function needs to work
                 on multiple feature vectors (the vectors randomly perturbed
                 from the data_row).
-        x_init  : pd.DataFrame
+        x_encoded  : pd.DataFrame
             preprocessed dataset used by the model to perform the prediction.
         x_train : pd.DataFrame
             Training dataset used as background.
@@ -50,7 +50,7 @@ def lime_contributions(model,
     else:
         logging.warning("No train set passed. We recommend to pass the x_train parameter "
                         "in order to avoid errors.")
-        x_lime_explainer = x_init
+        x_lime_explainer = x_encoded
 
     explainer = lime_tabular.LimeTabularExplainer(x_lime_explainer.values,
                                                        feature_names=x_lime_explainer.columns,
@@ -58,35 +58,35 @@ def lime_contributions(model,
     print("Backend: LIME")
     lime_contrib = []
 
-    for i in x_init.index:
+    for i in x_encoded.index:
         if mode == "classification":
             num_classes = len(classes)
 
             if num_classes <= 2:
-                exp = explainer.explain_instance(x_init.loc[i], model.predict_proba, num_features=x_init.shape[1])
-                lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
+                exp = explainer.explain_instance(x_encoded.loc[i], model.predict_proba, num_features=x_encoded.shape[1])
+                lime_contrib.append(dict([[transform_name(var_name[0], x_encoded), var_name[1]] for var_name in exp.as_list()]))
 
             elif num_classes > 2:
                 contribution = []
                 for j in range(num_classes):
                     list_contrib = []
                     df_contrib = pd.DataFrame()
-                    for i in x_init.index:
+                    for i in x_encoded.index:
                         exp = explainer.explain_instance(
-                            x_init.loc[i], model.predict_proba, top_labels=num_classes, num_features=x_init.shape[1])
+                            x_encoded.loc[i], model.predict_proba, top_labels=num_classes, num_features=x_encoded.shape[1])
                         list_contrib.append(
-                            dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list(j)]))
+                            dict([[transform_name(var_name[0], x_encoded), var_name[1]] for var_name in exp.as_list(j)]))
                         df_contrib = pd.DataFrame(list_contrib)
-                        df_contrib = df_contrib[list(x_init.columns)]
+                        df_contrib = df_contrib[list(x_encoded.columns)]
                     contribution.append(df_contrib.values)
                 return contribution
 
         else:
-            exp = explainer.explain_instance(x_init.loc[i], model.predict, num_features=x_init.shape[1])
-            lime_contrib.append(dict([[transform_name(var_name[0], x_init), var_name[1]] for var_name in exp.as_list()]))
+            exp = explainer.explain_instance(x_encoded.loc[i], model.predict, num_features=x_encoded.shape[1])
+            lime_contrib.append(dict([[transform_name(var_name[0], x_encoded), var_name[1]] for var_name in exp.as_list()]))
 
-    contribution = pd.DataFrame(lime_contrib, index=x_init.index)
-    contribution = contribution[list(x_init.columns)]
+    contribution = pd.DataFrame(lime_contrib, index=x_encoded.index)
+    contribution = contribution[list(x_encoded.columns)]
 
     return contribution
 

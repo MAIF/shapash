@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import shap
 
 from shapash.backend.base_backend import BaseBackend

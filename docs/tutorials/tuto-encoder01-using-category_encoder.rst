@@ -140,7 +140,7 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    xpl.x_pred
+    xpl.x_init
 
 
 
@@ -165,7 +165,7 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    xpl.x_init
+    xpl.x_encoded
 
 
 

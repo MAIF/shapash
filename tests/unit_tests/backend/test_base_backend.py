@@ -38,7 +38,7 @@ class TestBaseBackend(unittest.TestCase):
         assert self.test_backend.model == self.model
         assert self.test_backend.preprocessing == self.preprocessing
         assert self.test_backend.explain_data is None
-        assert self.test_backend._state is None
+        assert self.test_backend.state is None
         assert self.test_backend._case
         assert self.test_backend._classes is None
 
@@ -60,7 +60,7 @@ class TestBaseBackend(unittest.TestCase):
             res = self.test_backend.get_local_contributions(pd.DataFrame([0]), explain_data)
 
     def test_get_global_features_importance(self):
-        self.test_backend._state = SmartState()
+        self.test_backend.state = SmartState()
         res = self.test_backend.get_global_features_importance(
             pd.DataFrame([[-1, -2, -3, -4], [1, 2, 3, 4]]),
         )

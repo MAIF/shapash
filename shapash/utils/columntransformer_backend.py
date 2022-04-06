@@ -411,7 +411,7 @@ def get_feature_out(estimator, feature_in):
         return feature_in, []
 
 
-def get_col_mapping_ct(encoder, x_init):
+def get_col_mapping_ct(encoder, x_encoded):
     """
     Get the columns mapping of a column transformer encoder.
 
@@ -419,7 +419,7 @@ def get_col_mapping_ct(encoder, x_init):
     ----------
     encoder : ColumnTransformer
         The encoder used.
-    x_init : pd.DataFrame
+    x_encoded : pd.DataFrame
         Pandas dataframe after encoder transformations
 
     Returns
@@ -428,7 +428,7 @@ def get_col_mapping_ct(encoder, x_init):
         Dict of mapping between dataframe columns before and after encoding.
     """
     dict_col_mapping = dict()
-    idx_init = 0
+    idx_encoded = 0
     for name, estimator, features in encoder.transformers_:
         if name != 'remainder':
 
@@ -437,22 +437,22 @@ def get_col_mapping_ct(encoder, x_init):
                 for i, f_name in enumerate(features):
                     dict_col_mapping[name + '_' + f_name] = list()
                     for _ in categories_out[i]:
-                        dict_col_mapping[name + '_' + f_name].append(x_init.columns.to_list()[idx_init])
-                        idx_init += 1
+                        dict_col_mapping[name + '_' + f_name].append(x_encoded.columns.to_list()[idx_encoded])
+                        idx_encoded += 1
 
             elif str(type(estimator)) in no_dummies_sklearn:
                 features_out, categories_out = get_feature_out(estimator, features)
                 for f_name in features_out:
-                    dict_col_mapping[name + '_' + f_name] = [x_init.columns.to_list()[idx_init]]
-                    idx_init += 1
+                    dict_col_mapping[name + '_' + f_name] = [x_encoded.columns.to_list()[idx_encoded]]
+                    idx_encoded += 1
 
             elif str(type(estimator)) in supported_category_encoder:
                 dict_mapping_ce = get_col_mapping_ce(estimator)
                 for f_name in dict_mapping_ce.keys():
                     dict_col_mapping[name + '_' + f_name] = list()
                     for _ in dict_mapping_ce[f_name]:
-                        dict_col_mapping[name + '_' + f_name].append(x_init.columns.to_list()[idx_init])
-                        idx_init += 1
+                        dict_col_mapping[name + '_' + f_name].append(x_encoded.columns.to_list()[idx_encoded])
+                        idx_encoded += 1
 
             else:
                 raise NotImplementedError(f'Estimator not supported : {estimator}')
@@ -460,7 +460,7 @@ def get_col_mapping_ct(encoder, x_init):
         elif estimator == 'passthrough':
             features_out = encoder._feature_names_in[features]
             for f_name in features_out:
-                dict_col_mapping[f_name] = [x_init.columns.to_list()[idx_init]]
-                idx_init += 1
+                dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
+                idx_encoded += 1
 
     return dict_col_mapping

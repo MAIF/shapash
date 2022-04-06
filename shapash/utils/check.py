@@ -30,7 +30,7 @@ def check_preprocessing(preprocessing=None):
 def check_model(model):
     """
     Check if model has a predict_proba method is a one column dataframe of integer or float
-    and if y_pred index matches x_pred index
+    and if y_pred index matches x_init index
 
     Parameters
     ----------

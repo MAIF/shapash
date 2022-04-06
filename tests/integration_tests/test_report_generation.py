@@ -21,8 +21,8 @@ class TestGeneration(unittest.TestCase):
         df['x2'] = np.random.randint(1, 3, df.shape[0])
         df = df.set_index('id')
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-        self.xpl = SmartExplainer()
-        self.xpl.compile(model=clf, x=df[['x1', 'x2']])
+        self.xpl = SmartExplainer(model=clf)
+        self.xpl.compile(x=df[['x1', 'x2']])
         self.df = df
 
     def test_execute_report_1(self):
