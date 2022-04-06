@@ -103,7 +103,7 @@ Very few arguments are required to display results. But the more you work on cle
 
    overview
    installation-instructions/index
-   tutorials/index
+   tutorials
    autodocs/index
 
 License is Apache Software License 2.0
