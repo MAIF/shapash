@@ -9,9 +9,9 @@ from shapash.utils.category_encoder_backend import inv_transform_ce
 from shapash.utils.category_encoder_backend import supported_category_encoder
 from shapash.utils.category_encoder_backend import dummies_category_encoder
 from shapash.utils.category_encoder_backend import category_encoder_binary
-from shapash.utils.category_encoder_backend import transform_ordinal
-from shapash.utils.model_synoptic import simple_tree_model_sklearn,catboost_model,\
-    linear_model,svm_model, xgboost_model, lightgbm_model, dict_model_feature
+from shapash.utils.category_encoder_backend import transform_ordinal, get_col_mapping_ce
+from shapash.utils.model_synoptic import simple_tree_model_sklearn, catboost_model,\
+    linear_model, svm_model, xgboost_model, lightgbm_model, dict_model_feature
 from shapash.utils.model import extract_features_model
 
 columntransformer = "<class 'sklearn.compose._column_transformer.ColumnTransformer'>"
@@ -179,7 +179,7 @@ def inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_enco
     init += nb_col
     return frame, init
 
-def calc_inv_contrib_ct(x_contrib, encoding):
+def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
     """
     Reversed contribution when ColumnTransformer is used.
 
@@ -192,6 +192,12 @@ def calc_inv_contrib_ct(x_contrib, encoding):
         Contributions set.
     encoding : ColumnTransformer, list, dict
         The processing apply to the original data.
+    agg_columns : str (default: 'sum')
+        Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
+        For ACV we want to take any value as ACV computes contributions of coalition of variables (like
+        one hot encoded variables) differently from Shap and then give the same value to each variable of the
+        coalition. As a result we just need to take the value of one of these variables to get the contribution
+        value of the group.
 
     Returns
     -------
@@ -224,7 +230,10 @@ def calc_inv_contrib_ct(x_contrib, encoding):
                         else:
                             col_origin = ct_encoding.mapping[i_enc].get('mapping').columns.tolist()
                         nb_col = len(col_origin)
-                        contrib_inverse = x_contrib.iloc[:, init:init + nb_col].sum(axis=1)
+                        if agg_columns == 'first':
+                            contrib_inverse = x_contrib.iloc[:, init]
+                        else:
+                            contrib_inverse = x_contrib.iloc[:, init:init + nb_col].sum(axis=1)
                         frame = pd.DataFrame(contrib_inverse,
                                              columns=[colname_output[i_enc]],
                                              index=contrib_inverse.index)
@@ -391,3 +400,67 @@ def get_list_features_names(list_preprocessing, columns_dict):
 
     return feature_expected
 
+
+def get_feature_out(estimator, feature_in):
+    """
+    Returns estimator features out if it has get_feature_names method, else features_in
+    """
+    if hasattr(estimator, 'get_feature_names'):
+        return estimator.get_feature_names(), estimator.categories_
+    else:
+        return feature_in, []
+
+
+def get_col_mapping_ct(encoder, x_encoded):
+    """
+    Get the columns mapping of a column transformer encoder.
+
+    Parameters
+    ----------
+    encoder : ColumnTransformer
+        The encoder used.
+    x_encoded : pd.DataFrame
+        Pandas dataframe after encoder transformations
+
+    Returns
+    -------
+    dict_col_mapping : dict
+        Dict of mapping between dataframe columns before and after encoding.
+    """
+    dict_col_mapping = dict()
+    idx_encoded = 0
+    for name, estimator, features in encoder.transformers_:
+        if name != 'remainder':
+
+            if str(type(estimator)) in dummies_sklearn:
+                features_out, categories_out = get_feature_out(estimator, features)
+                for i, f_name in enumerate(features):
+                    dict_col_mapping[name + '_' + f_name] = list()
+                    for _ in categories_out[i]:
+                        dict_col_mapping[name + '_' + f_name].append(x_encoded.columns.to_list()[idx_encoded])
+                        idx_encoded += 1
+
+            elif str(type(estimator)) in no_dummies_sklearn:
+                features_out, categories_out = get_feature_out(estimator, features)
+                for f_name in features_out:
+                    dict_col_mapping[name + '_' + f_name] = [x_encoded.columns.to_list()[idx_encoded]]
+                    idx_encoded += 1
+
+            elif str(type(estimator)) in supported_category_encoder:
+                dict_mapping_ce = get_col_mapping_ce(estimator)
+                for f_name in dict_mapping_ce.keys():
+                    dict_col_mapping[name + '_' + f_name] = list()
+                    for _ in dict_mapping_ce[f_name]:
+                        dict_col_mapping[name + '_' + f_name].append(x_encoded.columns.to_list()[idx_encoded])
+                        idx_encoded += 1
+
+            else:
+                raise NotImplementedError(f'Estimator not supported : {estimator}')
+
+        elif estimator == 'passthrough':
+            features_out = encoder._feature_names_in[features]
+            for f_name in features_out:
+                dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
+                idx_encoded += 1
+
+    return dict_col_mapping

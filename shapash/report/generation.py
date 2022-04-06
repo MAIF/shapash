@@ -28,7 +28,7 @@ def execute_report(
     ----------
     working_dir : str
         Directory in which will be saved the executed notebook.
-    explainer : shapash.explainer.smart_explainer.SmartExplainer object
+    explainer : shapash.explainer.smart_explainer.SmartExplainer
         Compiled shapash explainer.
     project_info_file : str
         Path to the file used to display some information about the project in the report.

@@ -29,14 +29,14 @@ def extract_features_model(model, model_attribute):
                 return extract_features_model(getattr(model, model_attribute[0]), model_attribute[1:])
 
 
-def predict_proba(model, x_init, classes):
+def predict_proba(model, x_encoded, classes):
     """
-    The predict_proba compute the proba values for each x_init row
+    The predict_proba compute the proba values for each x_encoded row
     Parameters
     -------
     model: model object
         model used to check the different values of target estimate predict proba
-    x_init: pandas.DataFrame
+    x_encoded: pandas.DataFrame
         Prediction set.
     classes: list
         List of labels if the model used is for classification problem, None otherwise.
@@ -47,24 +47,24 @@ def predict_proba(model, x_init, classes):
     """
     if hasattr(model, 'predict_proba'):
         proba_values = pd.DataFrame(
-            model.predict_proba(x_init),
+            model.predict_proba(x_encoded),
             columns=['class_' + str(x) for x in classes],
-            index=x_init.index)
+            index=x_encoded.index)
     else:
         raise ValueError("model has no predict_proba method")
 
     return proba_values
 
 
-def predict(model, x_init):
+def predict(model, x_encoded):
     """
-    The predict function computes the prediction values for each x_init row
+    The predict function computes the prediction values for each x_encoded row
 
     Parameters
     -------
     model: model object
         model used to perform predictions
-    x_init: pandas.DataFrame
+    x_encoded: pandas.DataFrame
         Observations on which to compute predictions.
 
     Returns
@@ -73,7 +73,7 @@ def predict(model, x_init):
             1-column dataframe containing the predictions.
     """
     if hasattr(model, 'predict'):
-        y_pred = pd.DataFrame(model.predict(x_init), columns=['pred'], index=x_init.index)
+        y_pred = pd.DataFrame(model.predict(x_encoded), columns=['pred'], index=x_encoded.index)
     else:
         raise ValueError("model has no predict method")
 

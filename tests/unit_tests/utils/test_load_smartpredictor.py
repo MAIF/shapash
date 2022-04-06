@@ -16,11 +16,11 @@ class Test_load_smartpredictor(unittest.TestCase):
         """
         Unit test load_smartpredictor 1
         """
-        xpl = SmartExplainer(features_dict={})
         y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
         dataframe_x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
         clf = cb.CatBoostClassifier(n_estimators=1).fit(dataframe_x, y_pred)
-        xpl.compile(x=dataframe_x, y_pred=y_pred, model=clf)
+        xpl = SmartExplainer(model=clf, features_dict={})
+        xpl.compile(x=dataframe_x, y_pred=y_pred)
         predictor = xpl.to_smartpredictor()
 
         current = Path(path.abspath(__file__)).parent.parent.parent
@@ -30,6 +30,10 @@ class Test_load_smartpredictor(unittest.TestCase):
             pkl_file = path.join(current, 'data/predictor_to_load_36.pkl')
         elif str(sys.version)[0:3] == '3.8':
             pkl_file = path.join(current, 'data/predictor_to_load_38.pkl')
+        elif str(sys.version)[0:3] == '3.9':
+            pkl_file = path.join(current, 'data/predictor_to_load_39.pkl')
+        else:
+            raise NotImplementedError
 
         predictor2 = load_smartpredictor(pkl_file)
 

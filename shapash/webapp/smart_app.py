@@ -3,6 +3,7 @@ Main class of Web application Shapash
 """
 import dash
 import dash_table
+import dash_daq as daq
 from dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -42,13 +43,17 @@ class SmartApp:
             SmartExplainer instance to point to.
     """
 
-    def __init__(self, explainer):
+    def __init__(self, explainer, settings: dict = None):
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
         explainer : SmartExplainer
             SmartExplainer object
+        settings : dict
+            A dict describing the default webapp settings values to be used
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
+            Values should be positive ints
         """
         # APP
         self.server = Flask(__name__)
@@ -63,15 +68,21 @@ class SmartApp:
 
         # SETTINGS
         self.logo = self.app.get_asset_url('shapash-fond-fonce.png')
-        self.color = '#f4c000'
-        self.bkg_color = "#343736"
+        self.color = explainer.plot._style_dict["webapp_button"]
+        self.bkg_color = explainer.plot._style_dict["webapp_bkg"]
+        self.title_menu_color = explainer.plot._style_dict["webapp_title"]
         self.settings_ini = {
             'rows': 1000,
             'points': 1000,
             'violin': 10,
             'features': 20,
         }
+        if settings is not None:
+            for k, v in self.settings_ini.items():
+                self.settings_ini[k] = settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
+                
         self.settings = self.settings_ini.copy()
+
         self.predict_col = ['_predict_']
         self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
         if self.explainer._case == 'classification':
@@ -85,6 +96,7 @@ class SmartApp:
             self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_k(x, k=1)).max().max())
         self.list_index = []
         self.subset = None
+        self.last_click_data = None
 
         # DATA
         self.dataframe = pd.DataFrame()
@@ -119,20 +131,20 @@ class SmartApp:
         Method which initializes data from explainer object
         """
         if hasattr(self.explainer, 'y_pred'):
-            self.dataframe = self.explainer.x_pred.copy()
+            self.dataframe = self.explainer.x_init.copy()
             if isinstance(self.explainer.y_pred, (pd.Series, pd.DataFrame)):
                 self.predict_col = self.explainer.y_pred.columns.to_list()[0]
                 self.dataframe = self.dataframe.join(self.explainer.y_pred)
             elif isinstance(self.explainer.y_pred, list):
                 self.dataframe = self.dataframe.join(pd.DataFrame(data=self.explainer.y_pred,
                                                                   columns=[self.predict_col],
-                                                                  index=self.explainer.x_pred.index))
+                                                                  index=self.explainer.x_init.index))
             else:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
             raise ValueError('y_pred must be set when calling compile function.')
 
-        self.dataframe['_index_'] = self.explainer.x_pred.index
+        self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
         col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
         self.list_index = random.sample(population=self.dataframe.index.tolist(),
@@ -146,7 +158,7 @@ class SmartApp:
                 std = self.dataframe[col].std()
                 if std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
-                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format)
+                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format).astype(float)
 
     def init_components(self):
         """
@@ -216,6 +228,30 @@ class SmartApp:
             [
                 dbc.Col(
                     [
+                        html.Div(
+                            daq.BooleanSwitch(
+                                id='bool_groups',
+                                on=True,
+                                style={'display': 'none'} if self.explainer.features_groups is None else {},
+                                color=self.color[0],
+                                label={
+                                    'label': 'Groups',
+                                    'style': {
+                                        'fontSize': 18,
+                                        'color': self.color[0],
+                                        'fontWeight': 'bold',
+                                        "margin-left": "5px"
+                                    },
+                                },
+                                labelPosition="right"
+                            ),
+                            style={"margin-right": "35px"}
+                        )
+                    ],
+                    width="auto", align="center",
+                ),
+                dbc.Col(
+                    [
                         html.H4(
                             [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}),
                              dbc.Badge("Classification", id='classification_badge')
@@ -229,12 +265,12 @@ class SmartApp:
                     dbc.Collapse(
                         dbc.FormGroup(
                             [
-                                dbc.Label("Class to analyse", style={'color': 'white', 'margin': '0px 5px'}),
+                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
                                     clearable=False, searchable=False,
-                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '200px'}
+                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
                             row=True, style={"margin": "0px 0px 0px 5px", "align-items": "center"}
@@ -272,7 +308,7 @@ class SmartApp:
             ], tooltip_duration=2000,
 
             columns=[{"name": '_index_', "id": '_index_'}, {"name": '_predict_', "id": '_predict_'}] +
-                    [{"name": i, "id": i} for i in self.explainer.x_pred],
+                    [{"name": i, "id": i} for i in self.explainer.x_init],
             editable=False, row_deletable=False,
             style_as_list_view=True,
             virtualization=True,
@@ -399,7 +435,7 @@ class SmartApp:
                                         html.Img(src=self.logo, height="40px"),
                                         html.H4("Shapash Monitor", id="shapash_title"),
                                     ],
-                                    align="center",
+                                    align="center", style={'color': self.title_menu_color}
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
@@ -521,8 +557,8 @@ class SmartApp:
         """
         Override menu from explainer object depending on classification or regression case.
         """
-        on_style = {'backgroundColor': self.color, 'color': self.bkg_color, 'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': '#71653B', 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        on_style = {'backgroundColor': self.color[0], 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        off_style = {'backgroundColor': self.color[1], 'color': self.bkg_color, 'margin-right': '0.5rem'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -768,7 +804,7 @@ class SmartApp:
                         columns = [
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
+                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
 
             if not filter_query:
                 df = self.round_dataframe
@@ -807,42 +843,67 @@ class SmartApp:
             [
                 Input('select_label', 'value'),
                 Input('dataset', 'data'),
-                Input('modal', 'is_open')
+                Input('modal', 'is_open'),
+                Input('card_global_feature_importance', 'n_clicks'),
+                Input('bool_groups', 'on')
             ],
-            [State('global_feature_importance', 'clickData'),
-             State('dataset', "filter_query"),
-             State('features', 'value')]
+            [
+                State('global_feature_importance', 'clickData'),
+                State('dataset', "filter_query"),
+                State('features', 'value')
+            ]
         )
-        def update_feature_importance(label, data, is_open, clickData, filter_query, features):
+        def update_feature_importance(label, data, is_open, n_clicks, bool_group, clickData, filter_query, features):
             """
             update feature importance plot according to selected label and dataset state.
             """
             ctx = dash.callback_context
+            selected_feature = self.explainer.inv_features_dict.get(
+                clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
+            ) if clickData else None
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-
                 if is_open:
                     raise PreventUpdate
                 else:
-
                     self.settings['features'] = features
                     self.settings_ini['features'] = self.settings['features']
-
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
                 self.list_index = [d['_index_'] for d in data]
+            elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
+                  and self.explainer.features_groups):
+                # When we click twice on the same bar this will reset the graph
+                if self.last_click_data == clickData:
+                    selected_feature = None
+                list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                     for f in group_features]
+                if selected_feature in list_sub_features:
+                    self.last_click_data = clickData
+                    raise PreventUpdate
+                else:
+                    pass
+            elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
+                clickData = None  # We reset the graph and clicks if we toggle the button
             else:
+                self.last_click_data = clickData
                 raise PreventUpdate
 
+            group_name = selected_feature if (self.explainer.features_groups is not None
+                                              and selected_feature in self.explainer.features_groups.keys()) else None
             selection = self.list_index if filter_query else None
             self.components['graph']['global_feature_importance'].figure = \
-                self.explainer.plot.features_importance(max_features=features,
-                                                        selection=selection,
-                                                        label=self.label
-                                                        )
+                self.explainer.plot.features_importance(
+                    max_features=features,
+                    selection=selection,
+                    label=self.label,
+                    group_name=group_name,
+                    display_groups=bool_group
+                )
             self.components['graph']['global_feature_importance'].adjust_graph()
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
-            self.select_point('global_feature_importance', clickData)
+            if selected_feature and selected_feature not in self.explainer.features_groups.keys():
+                self.select_point('global_feature_importance', clickData)
 
             # font size can be adapted to screen size
             nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
@@ -850,7 +911,7 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
-
+            self.last_click_data = clickData
             return self.components['graph']['global_feature_importance'].figure, clickData
 
         @app.callback(
@@ -883,7 +944,8 @@ class SmartApp:
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
                 if feature is not None:
-                    self.selected_feature = feature['points'][0]['label']
+                    # Removing bold
+                    self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     if feature['points'][0]['curveNumber'] == 0 and \
                             len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
                         self.subset = self.list_index
@@ -1008,6 +1070,8 @@ class SmartApp:
                 Input('select_label', 'value'),
                 Input('dataset', 'active_cell'),
                 Input('feature_selector', 'clickData'),
+                Input("validation", "n_clicks"),
+                Input('bool_groups', 'on')
             ],
             [
                 State('index_id', 'value'),
@@ -1015,7 +1079,7 @@ class SmartApp:
             ]
         )
         def update_detail_feature(threshold, max_contrib, positive, negative, masked, label, cell,
-                                  click_data, index, data):
+                                  click_data, validation_click, bool_group, index, data):
             """
             update local explanation plot according to app changes.
             """
@@ -1023,7 +1087,7 @@ class SmartApp:
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                 selected = click_data['points'][0]['customdata']
-            elif ctx.triggered[0]['prop_id'] == 'threshold_id.value':
+            elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
                 selected = index
             elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
                 if cell:
@@ -1032,10 +1096,7 @@ class SmartApp:
                     raise PreventUpdate
 
             if selected is None:
-                if cell is not None:
-                    selected = data[cell['row']]['_index_']
-                else:
-                    selected = index
+                selected = index
 
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
@@ -1046,17 +1107,24 @@ class SmartApp:
             self.explainer.filter(threshold=threshold,
                                   features_to_hide=masked,
                                   positive=sign,
-                                  max_contrib=max_contrib)
-            if np.issubdtype(type(self.explainer.x_pred.index[0]), np.dtype(int).type):
+                                  max_contrib=max_contrib,
+                                  display_groups=bool_group)
+            if np.issubdtype(type(self.explainer.x_init.index[0]), np.dtype(int).type):
                 selected = int(selected)
-            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(index=selected,
-                                                                                               label=label,
-                                                                                               show_masked=True,
-                                                                                               yaxis_max_label=0)
+            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
+                index=selected,
+                label=label,
+                show_masked=True,
+                yaxis_max_label=8,
+                display_groups=bool_group
+            )
             self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
             # font size can be adapted to screen size
-            nb_car = max([len(self.components['graph']['detail_feature'].figure.data[i].y[0]) for i in
-                          range(len(self.components['graph']['detail_feature'].figure.data))])
+            list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
+                          range(len(self.components['graph']['detail_feature'].figure.data))]
+            # exclude new line with labels of y axis
+            list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
+            nb_car = max([len(x) for x in list_yaxis])
             self.components['graph']['detail_feature'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
@@ -1119,6 +1187,6 @@ class SmartApp:
 
             selected = check_row(data, index)
             if selected is not None:
-                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color}]
+                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional

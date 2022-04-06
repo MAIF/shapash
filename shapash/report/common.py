@@ -1,5 +1,6 @@
 from typing import Union, Optional
 from enum import Enum
+from numbers import Number
 
 import pandas as pd
 import os
@@ -148,27 +149,49 @@ def load_saved_df(path: str) -> Union[pd.DataFrame, None]:
         return None
 
 
-def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> list:
+def display_value(value: float, thousands_separator: str = ',', decimal_separator: str = '.') -> str:
     """
-    Returns the max_features features having top correlations.
+    Display a value as a string with specific format.
 
     Parameters
     ----------
-    corr: pd.DataFrame
-    max_features : int
+    value : float
+        Value to display.
+    thousands_separator : str
+        The separator used to separate thousands.
+    decimal_separator : str
+        The separator used to separate decimal values.
 
     Returns
     -------
-    list
+    str
+
+    Examples
+    --------
+    >>> display_value(1255000, thousands_separator=',')
+    '1,255,000'
+
     """
-    sorted_corr = corr.abs().unstack().sort_values(kind="quicksort")[::-1]
-    set_features = set()
-    i = 0
-    while len(set_features) < max_features and i < len(sorted_corr):
-        if sorted_corr.index[i][0] != sorted_corr.index[i][1]:
-            set_features.add(sorted_corr.index[i][0])
-            # Last iteration can add one more feature otherwise
-            if len(set_features) != max_features:
-                set_features.add(sorted_corr.index[i][1])
-        i += 1
-    return list(set_features)
+    value_str = '{:,}'.format(value).replace(',', '/thousands/').replace('.', '/decimal/')
+    return value_str.replace('/thousands/', thousands_separator).replace('/decimal/', decimal_separator)
+
+
+def replace_dict_values(obj: dict, replace_fn: callable, *args) -> dict:
+    """
+    Recursively iterates over all values of obj and changes its values using the replace_fn
+
+    Parameters
+    ----------
+    obj : dict
+    replace_fn : callable
+
+    Returns
+    -------
+    dict
+    """
+    for k, v in obj.items():
+        if isinstance(v, dict):
+            obj[k] = replace_dict_values(v, replace_fn)
+        elif isinstance(v, Number):
+            obj[k] = replace_fn(v, *args)
+    return obj

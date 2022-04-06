@@ -176,7 +176,7 @@ def reverse_basen(x_in, encoding):
     return x
 
 
-def calc_inv_contrib_ce(x_contrib, encoding):
+def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
     """
     Reversed contribution when category encoder and/or a dict is used.
     If category encoder create multiple columns, we use the mapping to find which contribution columns to sum.
@@ -188,6 +188,12 @@ def calc_inv_contrib_ce(x_contrib, encoding):
         Contributions set.
     encoding : category_encoders, list, dict
         The processing apply to the original data.
+    agg_columns : str (default: 'sum')
+        Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
+        For ACV we want to take any value as ACV computes contributions of coalition of variables (like
+        one hot encoded variables) differently from Shap and then give the same value to each variable of the
+        coalition. As a result we just need to take the value of one of these variables to get the contribution
+        value of the group.
 
     Returns
     -------
@@ -202,7 +208,10 @@ def calc_inv_contrib_ce(x_contrib, encoding):
             col_in = switch.get('col')
             mod = switch.get('mapping').columns.tolist()
             insert_at = x_contrib.columns.tolist().index(mod[0])
-            x_contrib.insert(insert_at, col_in, x_contrib[mod].sum(axis=1))
+            if agg_columns == 'first':
+                x_contrib.insert(insert_at, col_in, x_contrib[mod[0]])
+            else:
+                x_contrib.insert(insert_at, col_in, x_contrib[mod].sum(axis=1))
             drop_col += mod
         x_contrib.drop(drop_col, axis=1, inplace=True)
         return x_contrib
@@ -265,3 +274,40 @@ def transform_ordinal(x_in, encoding):
         transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
         x_in[col_name] = x_in[col_name].map(transform).astype(switch.get('mapping').values.dtype)
     return x_in
+
+
+def get_col_mapping_ce(encoder):
+    """
+    Get the columns mapping of a category encoder list.
+
+    Parameters
+    ----------
+    encoder : category_encoders
+        The encoder used.
+
+    Returns
+    -------
+    dict_col_mapping : dict
+        Dict of mapping between dataframe columns before and after encoding.
+    """
+    if str(type(encoder)) in [category_encoder_ordinal, category_encoder_onehot, category_encoder_basen,
+                              category_encoder_targetencoder]:
+        encoder_mapping = encoder.mapping
+    elif str(type(encoder)) == category_encoder_binary:
+        encoder_mapping = encoder.base_n_encoder.mapping
+    else:
+        raise NotImplementedError(f"{encoder} not supported.")
+
+    dict_col_mapping = dict()
+    if isinstance(encoder_mapping, dict):
+        for col in encoder_mapping.keys():
+            dict_col_mapping[col] = [col]
+    elif isinstance(encoder_mapping, list):
+        for col_enc in encoder_mapping:
+            if isinstance(col_enc.get('mapping'), pd.DataFrame):
+                dict_col_mapping[col_enc.get('col')] = col_enc.get('mapping').columns.to_list()
+            else:
+                dict_col_mapping[col_enc.get('col')] = [col_enc.get('col')]
+    else:
+        raise NotImplementedError
+    return dict_col_mapping
