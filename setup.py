@@ -2,10 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
+import os
 from setuptools import setup
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 with open('README.md', encoding='utf8') as readme_file:
     long_description = readme_file.read()
+
+# Load the package's __version__.py module as a dictionary.
+version_d: dict = {}
+with open(os.path.join(here, 'shapash', "__version__.py")) as f:
+    exec(f.read(), version_d)
 
 
 requirements = [
@@ -52,7 +60,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash",
-    version="1.7.1",
+    version=version_d['__version__'],
     python_requires='>3.5, <3.10',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
