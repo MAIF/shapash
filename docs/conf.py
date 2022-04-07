@@ -75,8 +75,8 @@ html_theme_options = {
     # Set the name of the project to appear in the navigation.
     'nav_title': 'Shapash',
     # Set the color and the accent color
-    'color_primary': 'yellow',
-    'color_accent': 'orange',
+    'color_primary': 'amber',
+    'color_accent': 'deep-orange',
 
     # Set the repo location to get a badge with stats
     'repo_url': 'https://github.com/MAIF/shapash',
