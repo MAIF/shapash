@@ -6,7 +6,7 @@ import sys
 from os import path
 from pathlib import Path
 from shapash.utils.load_smartpredictor import load_smartpredictor
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 import pandas as pd
 import numpy as np
 import catboost as cb

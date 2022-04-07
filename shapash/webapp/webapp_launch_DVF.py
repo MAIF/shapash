@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from category_encoders import OrdinalEncoder
 
 from shapash.data.data_loader import data_loading
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 
 house_df, house_dict = data_loading('house_prices')
 y_df = house_df['SalePrice'].to_frame()

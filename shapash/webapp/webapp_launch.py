@@ -5,7 +5,7 @@ This is an example in python how to launch app from explainer
 from lightgbm import LGBMClassifier, LGBMRegressor
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from category_encoders import one_hot
 
 cases = {
