@@ -17,10 +17,9 @@ from shapash.manipulation.summarize import compute_features_import, project_feat
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
     compute_top_correlations_features
-from shapash.utils.transform import get_features_transform_mapping
-from shapash.utils.acv_backend import compute_features_import_acv
 from shapash.webapp.utils.utils import round_to_k
 from shapash.style.style_utils import colors_loading, select_palette, define_style
+
 
 class SmartPlotter:
     """
@@ -1302,20 +1301,11 @@ class SmartPlotter:
             label_num, _, label_value = self.explainer.check_label_name(label)
             global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
-                subset = contributions[label_num].loc[selection]
-                if hasattr(self.explainer, 'backend') and self.explainer.backend == 'acv':
-                    selection_ids = [i for i, x in enumerate(contributions[label_num].index) if x in selection]
-                    subset_feat_imp = compute_features_import_acv(
-                        sdp_index=np.array(self.explainer.sdp_index)[selection_ids],
-                        sdp=np.array(self.explainer.sdp)[selection_ids],
-                        init_columns=self.explainer.x_encoded.columns,
-                        features_mapping=get_features_transform_mapping(
-                            self.explainer.x_init, self.explainer.x_encoded, self.explainer.preprocessing
-                        )
-                    )
-                else:
-                    subset_feat_imp = compute_features_import(subset)
-                    subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions[label_num],
+                    explain_data=self.explainer.explain_data,
+                    subset=selection
+                )
             else:
                 subset_feat_imp = None
             subtitle = f"Response: <b>{label_value}</b>"
@@ -1323,17 +1313,20 @@ class SmartPlotter:
         elif self.explainer._case == "regression":
             global_feat_imp = features_importance.tail(max_features)
             if selection is not None:
-                subset = contributions.loc[selection]
-                subset_feat_imp = compute_features_import(subset)
-                subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions,
+                    explain_data=self.explainer.explain_data,
+                    subset=selection
+                )
             else:
                 subset_feat_imp = None
         addnote = ''
         if subset_feat_imp is not None:
+            subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             subset_feat_imp.index = subset_feat_imp.index.map(self.explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
-            subset_len = subset.shape[0]
+            subset_len = len(selection)
             total_len = self.explainer.x_init.shape[0]
             addnote = add_text([addnote,
                                 f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],

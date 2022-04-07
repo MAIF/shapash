@@ -1,5 +1,5 @@
 import unittest
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from sklearn.tree import DecisionTreeRegressor
 import pandas as pd
 import numpy as np

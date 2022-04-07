@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
 from shapash.data.data_loader import data_loading
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 
 if __name__ == "__main__":
     house_df, house_dict = data_loading('house_prices')

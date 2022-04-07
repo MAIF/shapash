@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.manifold import MDS
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 
 
 class Consistency():

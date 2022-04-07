@@ -59,7 +59,7 @@ The 4 steps to display results:
 
 .. code:: ipython
 
-    from shapash.explainer.smart_explainer import SmartExplainer
+    from shapash import SmartExplainer
     xpl = SmartExplainer(features_dict=house_dict) # optional parameter
 
 
