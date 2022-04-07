@@ -5,3 +5,4 @@ __author__ = """Yann Golhen, Yann Lagré, Sebastien Bidault, Maxime Gendre, Thom
 __email__ = 'yann.golhen@maif.fr, yann.lagre@maif.fr, sebabstien.bidault.marketing@maif.fr, thomas.bouche@maif.fr, guillaume.vignal@maif.fr'
 
 from .__version__ import __version__
+from shapash.explainer.smart_explainer import SmartExplainer
