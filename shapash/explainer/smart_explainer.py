@@ -8,16 +8,14 @@ import shutil
 import numpy as np
 import pandas as pd
 from shapash.webapp.smart_app import SmartApp
-from shapash.backend import ShapBackend, AcvBackend, BaseBackend, LimeBackend, get_backend_cls_from_name
+from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.shap_backend import check_explainer, get_shap_interaction_values
-from shapash.utils.utils import choose_state
-from shapash.utils.check import check_model, check_label_dict, check_ypred, check_contribution_object,\
-    check_postprocessing, check_features_name
+from shapash.utils.check import check_model, check_label_dict, check_ypred, check_postprocessing, check_features_name
+from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.report import check_report_requirements
 from shapash.manipulation.summarize import create_grouped_features_values
@@ -25,7 +23,7 @@ from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
 from shapash.utils.model import predict_proba, predict
 from shapash.utils.explanation_metrics import find_neighbors, shap_neighbors, get_min_nb_features, get_distance
-from shapash.style.style_utils import colors_loading, select_palette, define_style
+from shapash.style.style_utils import colors_loading, select_palette
 
 logging.basicConfig(level=logging.INFO)
 
@@ -295,7 +293,6 @@ class SmartExplainer:
                 x=x,
                 contributions=contributions,
             )
-            self.backend.explain_data = self.contributions
         self.state = self.backend.state
 
     def _apply_all_postprocessing_modifications(self):

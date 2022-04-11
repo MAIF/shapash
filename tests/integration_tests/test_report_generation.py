@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import catboost as cb
 
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.report.generation import execute_report, export_and_save_report
 
 current_path = os.path.dirname(os.path.abspath(__file__))

@@ -9,7 +9,6 @@ from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import pandas as pd
 from shapash.decomposition.contributions import rank_contributions
-from shapash.utils.shap_backend import shap_contributions
 
 
 class TestContributions(unittest.TestCase):

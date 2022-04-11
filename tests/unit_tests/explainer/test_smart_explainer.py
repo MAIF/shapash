@@ -13,7 +13,7 @@ import numpy as np
 import catboost as cb
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.backend import ShapBackend
 from shapash.explainer.smart_state import SmartState

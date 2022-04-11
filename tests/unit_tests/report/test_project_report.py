@@ -6,7 +6,7 @@ import pandas as pd
 import catboost as cb
 from category_encoders import OrdinalEncoder
 
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.report.project_report import ProjectReport
 
 expected_attrs = ['explainer', 'metadata', 'x_train_init', 'y_test', 'x_init', 'config',

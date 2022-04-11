@@ -117,10 +117,13 @@ class BaseBackend(ABC):
         pd.Series or list of pd.Series
             The global features importance computed by the backend.
         """
+        state = choose_state(contributions)
         if subset is not None:
-            return self.state.compute_features_import(contributions.loc[subset])
-        else:
-            return self.state.compute_features_import(contributions)
+            if isinstance(contributions, list):
+                contributions = [c.loc[subset] for c in contributions]
+            else:
+                contributions = contributions.loc[subset]
+        return state.compute_features_import(contributions)
 
     def format_and_aggregate_local_contributions(
             self,
