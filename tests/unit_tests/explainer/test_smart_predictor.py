@@ -4,7 +4,7 @@ Unit test smart predictor
 
 import unittest
 from shapash.explainer.smart_predictor import SmartPredictor
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.explainer.smart_state import SmartState
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.backend import ShapBackend

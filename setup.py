@@ -2,29 +2,40 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
+import os
 from setuptools import setup
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 with open('README.md', encoding='utf8') as readme_file:
     long_description = readme_file.read()
 
+# Load the package's __version__.py module as a dictionary.
+version_d: dict = {}
+with open(os.path.join(here, 'shapash', "__version__.py")) as f:
+    exec(f.read(), version_d)
+
 
 requirements = [
-        'plotly==4.12.0',
-        'matplotlib>=3.3.0',
+        'plotly>=4.7.0',
+        'matplotlib>=3.2.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
-        'shap>=0.36.0',
-        'dash==1.17.0',
+        'shap>=0.38.1',
+        'dash>=1.17.0',
         'dash-bootstrap-components==0.9.1',
-        'dash-core-components==1.13.0',
-        'dash-daq==0.5.0',
-        'dash-html-components==1.1.1',
+        'dash-core-components>=1.13.0',
+        'dash-daq>=0.5.0',
+        'dash-html-components>=1.1.1',
         'dash-renderer==1.8.3',
-        'dash-table==4.11.0',
+        'dash-table>=4.11.0',
         'nbformat>4.2.0',
-        'numba==0.53.1',
-        'scikit-learn'
-    ]
+        'numba>=0.53.1',
+        # we should change _feature_names_in attribute in shapash columntransformer_backend.py file
+        # in order to resolve compatibility with scikit-learn versions>=1.0
+        'scikit-learn>=0.24.0,<=0.24.2',
+        'Werkzeug<=2.0.3'
+]
 
 extras = dict()
 
@@ -52,7 +63,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash",
-    version="1.7.1",
+    version=version_d['__version__'],
     python_requires='>3.5, <3.10',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",

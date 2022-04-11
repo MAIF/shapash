@@ -10,7 +10,7 @@ import numpy as np
 import plotly
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.utils.io import load_yml
 from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, \

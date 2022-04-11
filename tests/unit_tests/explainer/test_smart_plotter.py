@@ -10,7 +10,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from sklearn.tree import DecisionTreeRegressor
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.backend import ShapBackend
 from shapash.utils.check import check_model
 from shapash.explainer.multi_decorator import MultiDecorator

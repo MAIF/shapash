@@ -7,7 +7,7 @@ This part offers a series of tutorials and allows users to gradually discover th
 
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :glob:
 
     tutorials/index
