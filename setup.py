@@ -16,7 +16,7 @@ with open(os.path.join(here, 'shapash', "__version__.py")) as f:
     exec(f.read(), version_d)
 
 
-requirements=[
+requirements = [
         'plotly>=4.7.0',
         'matplotlib>=3.2.0',
         'numpy>1.18.0',
