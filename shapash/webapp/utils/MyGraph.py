@@ -2,7 +2,7 @@
 Class inherited from dcc.Graph. Add one method for updating graph layout.
 """
 
-import dash_core_components as dcc
+from dash import dcc
 from math import floor
 import re
 
