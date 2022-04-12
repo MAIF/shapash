@@ -37,4 +37,4 @@ phik
 acv-exp==1.1.2
 lime
 regex
-Werkzeug==2.1.0
+Werkzeug>=2.0.3
