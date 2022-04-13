@@ -17,24 +17,23 @@ with open(os.path.join(here, 'shapash', "__version__.py")) as f:
 
 
 requirements = [
-        'plotly>=4.7.0',
+        'plotly>=5.0.0',
         'matplotlib>=3.2.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
         'shap>=0.38.1',
-        'dash>=1.17.0',
-        'dash-bootstrap-components==0.9.1',
-        'dash-core-components>=1.13.0',
+        'dash>=2.3.1',
+        'dash-bootstrap-components>=1.1.0',
+        'dash-core-components>=2.0.0',
         'dash-daq>=0.5.0',
-        'dash-html-components>=1.1.1',
+        'dash-html-components>=2.0.0',
         'dash-renderer==1.8.3',
-        'dash-table>=4.11.0',
+        'dash-table>=5.0.0',
         'nbformat>4.2.0',
         'numba>=0.53.1',
         # we should change _feature_names_in attribute in shapash columntransformer_backend.py file
         # in order to resolve compatibility with scikit-learn versions>=1.0
         'scikit-learn>=0.24.0,<=0.24.2',
-        'Werkzeug<=2.0.3'
 ]
 
 extras = dict()
