@@ -1,14 +1,16 @@
 """
 Main class of Web application Shapash
 """
+from pydoc import classname
+from turtle import width
 import dash
-import dash_table
+from dash import dash_table
 import dash_daq as daq
 from dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 from dash.dependencies import Output, Input, State
 from flask import Flask
 import pandas as pd
@@ -23,14 +25,14 @@ from shapash.utils.utils import truncate_str
 
 
 def create_input_modal(id, label, tooltip):
-    return dbc.FormGroup(
+    return dbc.Row(
         [
             dbc.Label(label, id=f'{id}_label', html_for=id, width=8),
             dbc.Col(
                 dbc.Input(id=id, type="number", value=0),
                 width=4),
             dbc.Tooltip(tooltip, target=f'{id}_label', placement='bottom'),
-        ], row=True,
+        ], className="g-3"
     )
 
 
@@ -191,7 +193,7 @@ class SmartApp:
                     "scatter plot is displayed)."
         )
 
-        self.components['settings']['name'] = dbc.FormGroup(
+        self.components['settings']['name'] = dbc.Row(
             [
                 dbc.Checklist(
                     options=[{"label": "Use domain name for features name.", "value": 1}], value=[], inline=True,
@@ -200,7 +202,7 @@ class SmartApp:
                 ),
                 dbc.Tooltip("Replace technical feature names by domain names if exists.",
                             target='name', placement='bottom'),
-            ], row=True,
+            ], className="g-3",
         )
 
         self.components['settings']['modal'] = dbc.Modal(
@@ -253,8 +255,8 @@ class SmartApp:
                 dbc.Col(
                     [
                         html.H4(
-                            [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}),
-                             dbc.Badge("Classification", id='classification_badge')
+                            [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}, color=''),
+                             dbc.Badge("Classification", id='classification_badge', color='')
                              ],
                             style={"margin": "0px"}
                         ),
@@ -263,7 +265,7 @@ class SmartApp:
                 ),
                 dbc.Col(
                     dbc.Collapse(
-                        dbc.FormGroup(
+                        dbc.Row(
                             [
                                 dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
@@ -273,13 +275,13 @@ class SmartApp:
                                     style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
-                            row=True, style={"margin": "0px 0px 0px 5px", "align-items": "center"}
+                            style={"margin": "0px 0px 0px 5px", "align-items": "center"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
                     width="auto", align="center", style={'padding': 'none'}
                 ),
-                dbc.Col(
+                dbc.Col([
                     html.Div(
                         [
                             html.Img(id='settings', title='settings', alt='Settings',
@@ -288,11 +290,11 @@ class SmartApp:
                                      style={'cursor': 'pointer'}),
                             self.components['settings']['modal'],
                         ]
-                    ),
-                    align="center", width="50px", style={'padding': '0px 0px 0px 20px'}
+                    )],
+                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
                 )
             ],
-            form=True, no_gutters=True, justify="end"
+            className="g-0", justify="end"
         )
 
         self.adjust_menu()
@@ -337,28 +339,27 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
-        self.components['filter']['index'] = dbc.FormGroup(
+        self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
                 dbc.Label("Index ", align="center", width=4),
-                dbc.Col(
+                dbc.Col([
                     dbc.Input(
-                        id="index_id", type="text", bs_size="md", placeholder="Id must exist",
+                        id="index_id", type="text", size="s", placeholder="Id must exist",
                         debounce=True, persistence=True, style={'textAlign': 'right'}
-                    ),
+                    )], width={"size": 5},
                     style={'padding': "0px"}
                 ),
-                dbc.Col(
+                dbc.Col([
                     html.Img(id='validation', alt='Validate', title='Validate index',
                              src=self.app.get_asset_url('reload.png'),
                              height='30px', style={'cursor': 'pointer'},
-                             ),
-                    style={'padding': "0px"}, align="center", width="40px"
+                             )], width={"size": 2},
+                    style={'padding': "0px"}, align="center"
                 )
-            ],
-            row=True
+            ])
         )
 
-        self.components['filter']['threshold'] = dbc.FormGroup(
+        self.components['filter']['threshold'] = dbc.Col(
             [
                 dbc.Label("Threshold", html_for="slider", id='threshold_label'),
                 dcc.Slider(
@@ -371,7 +372,7 @@ class SmartApp:
             className='filter_dashed'
         )
 
-        self.components['filter']['max_contrib'] = dbc.FormGroup(
+        self.components['filter']['max_contrib'] = dbc.Col(
             [
                 dbc.Label(
                     "Features to display : ", id='max_contrib_label'),
@@ -384,7 +385,7 @@ class SmartApp:
             className='filter_dashed'
         )
 
-        self.components['filter']['positive_contrib'] = dbc.FormGroup(
+        self.components['filter']['positive_contrib'] = dbc.Col(
             [
                 dbc.Label("Contributions to display : "),
                 dbc.Row(
@@ -401,13 +402,13 @@ class SmartApp:
                                 id="check_id_negative"
                             ), width=6, style={'padding': "0px"}, align="center"
                         ),
-                    ], no_gutters=True, justify="center", form=True
+                    ], className="g-0", justify="center"
                 )
             ],
             className='filter_dashed'
         )
 
-        self.components['filter']['masked_contrib'] = dbc.FormGroup(
+        self.components['filter']['masked_contrib'] = dbc.Col(
             [
                 dbc.Label(
                     "Feature(s) to mask :"),
@@ -426,37 +427,32 @@ class SmartApp:
         """
         self.skeleton['navbar'] = dbc.Container(
             [
-                dbc.Row(
-                    [
+                dbc.Row([
                         dbc.Col(
                             html.A(
-                                dbc.Row(
-                                    [
-                                        html.Img(src=self.logo, height="40px"),
-                                        html.H4("Shapash Monitor", id="shapash_title"),
+                                dbc.Row([
+                                    dbc.Col([
+                                        html.Img(src=self.logo, height="40px")], className='col-1'),
+                                    dbc.Col([
+                                        html.H4("Shapash Monitor", id="shapash_title")]),
                                     ],
                                     align="center", style={'color': self.title_menu_color}
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=4, align="left"
-                        ),
-                        dbc.Col(
-                            html.A(
-                                dbc.Row(
-                                    [
-                                        html.H3(truncate_str(self.explainer.title_story, maxlen=40),
-                                                id="shapash_title_story"),
-                                    ],
-                                    align="center",
-                                ),
-                                href="https://github.com/MAIF/shapash", target="_blank",
-                            ),
                             md=4, align="center"
                         ),
-                        dbc.Col(
-                            self.components['menu'],
-                            md=4, align='right',
+                        dbc.Col([
+                            html.A(
+                                dbc.Row([
+                                        html.H3(truncate_str(self.explainer.title_story, maxlen=40),
+                                                id="shapash_title_story")]
+                                ),
+                                href="https://github.com/MAIF/shapash", target="_blank",
+                            )],
+                            md=4, align="center"
+                        ),
+                        dbc.Col([self.components['menu']]
                         )
                     ],
                     style={'padding': "5px 15px", "verticalAlign": "middle"},
@@ -1190,3 +1186,4 @@ class SmartApp:
                 style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional
+    
