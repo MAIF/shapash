@@ -1,6 +1,9 @@
 """
 Multi Decorator module
 """
+from shapash.explainer.smart_state import SmartState
+
+
 class MultiDecorator:
     """
     Decorator pattern. It simply iterates the method of its member as many times as needed.
@@ -11,9 +14,12 @@ class MultiDecorator:
         self.member = member
 
     def __getattr__(self, item):
-        def wrapper(*args, **kwargs):
-            return self.delegate(item, *args, **kwargs)
-        return wrapper
+        if item in [x for x in dir(SmartState) if not x.startswith('__')]:
+            def wrapper(*args, **kwargs):
+                return self.delegate(item, *args, **kwargs)
+            return wrapper
+        else:
+            return self.__getattribute__(item)
 
     def delegate(self, func, *args, **kwargs):
         """
@@ -137,7 +143,7 @@ class MultiDecorator:
         keys = list(dicts[0].keys())
         return {key: [d[key] for d in dicts] for key in keys}
 
-    def check_contributions(self, contributions, x_pred, features_names=True):
+    def check_contributions(self, contributions, x_init, features_names=True):
         """
         Override check_contributions from SmartState.
         Return True if all conditions computed are True.
@@ -146,7 +152,7 @@ class MultiDecorator:
         ----------
         contributions : list
             List of local contributions to check.
-        x_pred : pandas.DataFrame
+        x_init : pandas.DataFrame
             Prediction set.
 
         Returns
@@ -154,7 +160,7 @@ class MultiDecorator:
         Bool
             True if all inputs share same shape and index with the prediction set.
         """
-        bools = self.delegate('check_contributions', contributions, x_pred, features_names)
+        bools = self.delegate('check_contributions', contributions, x_init, features_names)
         return all(bools)
 
     def combine_masks(self, masks):

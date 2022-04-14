@@ -197,7 +197,7 @@ class TestCheck(unittest.TestCase):
         """
         Unit test check y pred 2
         """
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             data=np.array([[1, 2], [3, 4]]),
             columns=['Col1', 'Col2']
         )
@@ -206,13 +206,13 @@ class TestCheck(unittest.TestCase):
             columns=['Y']
         )
         with self.assertRaises(ValueError):
-            check_ypred(x_pred, y_pred)
+            check_ypred(x_init, y_pred)
 
     def test_check_ypred_3(self):
         """
         Unit test check y pred 3
         """
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             data=np.array([[1, 2], [3, 4]]),
             columns=['Col1', 'Col2']
         )
@@ -221,7 +221,7 @@ class TestCheck(unittest.TestCase):
             columns=['Y']
         )
         with self.assertRaises(ValueError):
-            check_ypred(x_pred, y_pred)
+            check_ypred(x_init, y_pred)
 
     def test_check_y_pred_4(self):
         """
@@ -235,7 +235,7 @@ class TestCheck(unittest.TestCase):
         """
         Unit test check y pred 5
         """
-        x_pred = pd.DataFrame(
+        x_init = pd.DataFrame(
             data=np.array([[1, 2], [3, 4]]),
             columns=['Col1', 'Col2']
         )
@@ -243,7 +243,7 @@ class TestCheck(unittest.TestCase):
             data=np.array(['0'])
         )
         with self.assertRaises(ValueError):
-            check_ypred(x_pred, y_pred)
+            check_ypred(x_init, y_pred)
 
     def test_check_contribution_object_1(self):
         """

@@ -21,7 +21,7 @@ class SmartState:
     of local contributions. The multi-class case is tackled in SmartMultiState.
     """
 
-    def validate_contributions(self, contributions, x_pred):
+    def validate_contributions(self, contributions, x_init):
         """
         Check type of contributions and transform into pd.Dataframe if necessary
 
@@ -29,7 +29,7 @@ class SmartState:
         ----------
         contributions : pandas.DataFrame or np.ndarray
             Local contributions
-        x_pred : pandas.DataFrame
+        x_init : pandas.DataFrame
             Prediction set.
 
         Returns
@@ -44,8 +44,8 @@ class SmartState:
         if isinstance(contributions, np.ndarray):
             return pd.DataFrame(
                 contributions,
-                columns=x_pred.columns,
-                index=x_pred.index
+                columns=x_init.columns,
+                index=x_init.index
             )
         else:
             return contributions
@@ -74,7 +74,7 @@ class SmartState:
         """
         return inverse_transform_contributions(contributions, preprocessing, agg_columns)
 
-    def check_contributions(self, contributions, x_pred, features_names=True):
+    def check_contributions(self, contributions, x_init, features_names=True):
         """
         Check that contributions and prediction set match in terms of lines and columns.
 
@@ -82,28 +82,28 @@ class SmartState:
         ----------
         contributions : pandas.DataFrame
             Local contributions to check.
-        x_pred : pandas.DataFrame
+        x_init : pandas.DataFrame
             Prediction set.
         features_names: bool (optional), defaut = True
-            Boolean whether or not check if contributions and x_pred have the same features names
+            Boolean whether or not check if contributions and x_init have the same features names
         Returns
         -------
         Bool
             True if inputs share shape and index. False otherwise.
         """
-        if x_pred.shape != contributions.shape:
+        if x_init.shape != contributions.shape:
             return False
-        if not x_pred.index.equals(contributions.index):
+        if not x_init.index.equals(contributions.index):
             return False
         if features_names:
-            if not x_pred.columns.equals(contributions.columns):
+            if not x_init.columns.equals(contributions.columns):
                 return False
         else:
-            if not len(x_pred.columns) == len(contributions.columns):
+            if not len(x_init.columns) == len(contributions.columns):
                 return False
         return True
 
-    def rank_contributions(self, contributions, x_pred):
+    def rank_contributions(self, contributions, x_init):
         """
         Rank contributions line by line and build a reference dictionary to the prediction set.
 
@@ -111,7 +111,7 @@ class SmartState:
         ----------
         contributions : pandas.DataFrame
             Local contributions to sort.
-        x_pred : pandas.DataFrame
+        x_init : pandas.DataFrame
             Prediction set.
 
         Returns
@@ -124,7 +124,7 @@ class SmartState:
             Input features names sorted for each observation
             by decreasing contributions absolute values.
         """
-        return rank_contributions(contributions, x_pred)
+        return rank_contributions(contributions, x_init)
 
     def assign_contributions(self, ranked):
         """

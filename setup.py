@@ -2,29 +2,39 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
+import os
 from setuptools import setup
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 with open('README.md', encoding='utf8') as readme_file:
     long_description = readme_file.read()
 
+# Load the package's __version__.py module as a dictionary.
+version_d: dict = {}
+with open(os.path.join(here, 'shapash', "__version__.py")) as f:
+    exec(f.read(), version_d)
+
 
 requirements = [
-        'plotly==5.6.0',
-        'matplotlib>=3.3.0',
+        'plotly>=5.0.0',
+        'matplotlib>=3.2.0',
         'numpy>1.18.0',
         'pandas>1.0.2',
-        'shap>=0.36.0',
+        'shap>=0.38.1',
         'dash>=2.3.1',
         'dash-bootstrap-components>=1.1.0',
         'dash-core-components>=2.0.0',
         'dash-daq>=0.5.0',
         'dash-html-components>=2.0.0',
-        'dash-renderer>=1.8.3',
+        'dash-renderer==1.8.3',
         'dash-table>=5.0.0',
         'nbformat>4.2.0',
-        'numba==0.53.1',
-        'scikit-learn'
-    ]
+        'numba>=0.53.1',
+        # we should change _feature_names_in attribute in shapash columntransformer_backend.py file
+        # in order to resolve compatibility with scikit-learn versions>=1.0
+        'scikit-learn>=0.24.0,<=0.24.2',
+]
 
 extras = dict()
 
@@ -52,7 +62,7 @@ test_requirements = ['pytest', ]
 
 setup(
     name="shapash",
-    version="1.7.1",
+    version=version_d['__version__'],
     python_requires='>3.5, <3.10',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
@@ -78,6 +88,7 @@ setup(
         'shapash.data': 'shapash/data',
         'shapash.decomposition': 'shapash/decomposition',
         'shapash.explainer': 'shapash/explainer',
+        'shapash.backend': 'shapash/backend',
         'shapash.manipulation': 'shapash/manipulation',
         'shapash.report': 'shapash/report',
         'shapash.utils': 'shapash/utils',
@@ -86,9 +97,9 @@ setup(
         'shapash.style': 'shapash/style',
     },
     packages=['shapash', 'shapash.data', 'shapash.decomposition',
-              'shapash.explainer', 'shapash.manipulation',
+              'shapash.explainer', 'shapash.backend', 'shapash.manipulation',
               'shapash.utils', 'shapash.webapp', 'shapash.webapp.utils',
-              'shapash.report','shapash.style'],
+              'shapash.report', 'shapash.style'],
     data_files=[('data', ['shapash/data/house_prices_dataset.csv']),
                 ('data', ['shapash/data/house_prices_labels.json']),
                 ('data', ['shapash/data/titanicdata.csv']),

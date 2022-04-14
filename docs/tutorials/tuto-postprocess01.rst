@@ -125,7 +125,7 @@ preprocessing.
 
 .. code:: ipython3
 
-    xpl.x_pred.head()
+    xpl.x_init.head()
 
 
 
@@ -283,7 +283,7 @@ You can now visualize your dataset, which is modified.
 
 .. code:: ipython3
 
-    xpl_postprocess.x_pred.head()
+    xpl_postprocess.x_init.head()
 
 
 

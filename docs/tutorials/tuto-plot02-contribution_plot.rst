@@ -195,7 +195,7 @@ With *selection* param you can specify a list of index of people you want to foc
 
 .. code:: ipython
 
-    index = list(Xtest[xpl.x_pred['Pclass'].isin(['First class','Second class'])].index.values)
+    index = list(Xtest[xpl.x_init['Pclass'].isin(['First class','Second class'])].index.values)
     xpl.plot.contribution_plot(col='Pclass',selection=index)
 
 

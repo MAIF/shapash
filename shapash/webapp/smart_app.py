@@ -133,20 +133,20 @@ class SmartApp:
         Method which initializes data from explainer object
         """
         if hasattr(self.explainer, 'y_pred'):
-            self.dataframe = self.explainer.x_pred.copy()
+            self.dataframe = self.explainer.x_init.copy()
             if isinstance(self.explainer.y_pred, (pd.Series, pd.DataFrame)):
                 self.predict_col = self.explainer.y_pred.columns.to_list()[0]
                 self.dataframe = self.dataframe.join(self.explainer.y_pred)
             elif isinstance(self.explainer.y_pred, list):
                 self.dataframe = self.dataframe.join(pd.DataFrame(data=self.explainer.y_pred,
                                                                   columns=[self.predict_col],
-                                                                  index=self.explainer.x_pred.index))
+                                                                  index=self.explainer.x_init.index))
             else:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
             raise ValueError('y_pred must be set when calling compile function.')
 
-        self.dataframe['_index_'] = self.explainer.x_pred.index
+        self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
         col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
         self.list_index = random.sample(population=self.dataframe.index.tolist(),
@@ -310,7 +310,7 @@ class SmartApp:
             ], tooltip_duration=2000,
 
             columns=[{"name": '_index_', "id": '_index_'}, {"name": '_predict_', "id": '_predict_'}] +
-                    [{"name": i, "id": i} for i in self.explainer.x_pred],
+                    [{"name": i, "id": i} for i in self.explainer.x_init],
             editable=False, row_deletable=False,
             style_as_list_view=True,
             virtualization=True,
@@ -800,7 +800,7 @@ class SmartApp:
                         columns = [
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
+                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
 
             if not filter_query:
                 df = self.round_dataframe
@@ -1105,7 +1105,7 @@ class SmartApp:
                                   positive=sign,
                                   max_contrib=max_contrib,
                                   display_groups=bool_group)
-            if np.issubdtype(type(self.explainer.x_pred.index[0]), np.dtype(int).type):
+            if np.issubdtype(type(self.explainer.x_init.index[0]), np.dtype(int).type):
                 selected = int(selected)
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
                 index=selected,

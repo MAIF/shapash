@@ -1,6 +1,6 @@
 import unittest
-from shapash.explainer.smart_explainer import SmartExplainer
-from sklearn.linear_model import LinearRegression
+from shapash import SmartExplainer
+from sklearn.tree import DecisionTreeRegressor
 import pandas as pd
 import numpy as np
 
@@ -13,11 +13,12 @@ class TestWebappSettings(unittest.TestCase):
         """
         Constructor - loads a SmartExplainer object from the appropriate pickle
         """
-        self.xpl = SmartExplainer()
         contributions = pd.DataFrame([[-0.1, 0.2, -0.3], [0.1, -0.2, 0.3]])
         y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
         dataframe_x = pd.DataFrame([[1, 2, 3], [1, 2, 3]])
-        self.xpl.compile(contributions=contributions, x=dataframe_x, y_pred=y_pred, model=LinearRegression())
+        model = DecisionTreeRegressor().fit([[0]], [[0]])
+        self.xpl = SmartExplainer(model=model)
+        self.xpl.compile(contributions=contributions, x=dataframe_x, y_pred=y_pred)
         self.xpl.filter(max_contrib=2)
         super(TestWebappSettings, self).__init__(*args, **kwargs)
 

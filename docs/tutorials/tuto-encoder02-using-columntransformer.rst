@@ -177,7 +177,7 @@ Visualize data in pandas
 
     #Cause in ColumnsTransformer we apply multiple transformer on the same column.
     #the Pclass column is now : TransformersName +  Pclass
-    xpl.x_pred.head(4)
+    xpl.x_init.head(4)
 
 
 
@@ -200,7 +200,7 @@ Visualize data in pandas
 
 .. code:: ipython
 
-    xpl.x_init.head(4)
+    xpl.x_encoded.head(4)
 
 
 

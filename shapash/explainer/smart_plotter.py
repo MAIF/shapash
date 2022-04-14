@@ -17,10 +17,9 @@ from shapash.manipulation.summarize import compute_features_import, project_feat
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
     compute_top_correlations_features
-from shapash.utils.transform import get_features_transform_mapping
-from shapash.utils.acv_backend import compute_features_import_acv
 from shapash.webapp.utils.utils import round_to_k
 from shapash.style.style_utils import colors_loading, select_palette, define_style
+
 
 class SmartPlotter:
     """
@@ -73,9 +72,9 @@ class SmartPlotter:
             values ​​whose quantiles must be calculated
         """
         desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
-        min_pred, max_pred = list(desc_df.loc[['min', 'max']].values)
+        min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
-                      (max_pred - min_pred)
+                      (max_init - min_pred)
         color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
         return color_scale
 
@@ -641,7 +640,7 @@ class SmartPlotter:
                         and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
                         and len(index_value) > 0):
                     group_name = self.explainer.inv_features_dict.get(expl[0])
-                    feat_groups_values = self.explainer.x_pred[self.explainer.features_groups[group_name]]\
+                    feat_groups_values = self.explainer.x_init[self.explainer.features_groups[group_name]]\
                                                        .loc[index_value[0]]
                     hoverlabel = '<br />'.join([
                         '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
@@ -831,7 +830,7 @@ class SmartPlotter:
             if self.explainer.y_pred is not None:
                 value = self.explainer.y_pred.loc[index]
             else:
-                value = self.explainer.model.predict(self.explainer.x_init.loc[[index]])[0]
+                value = self.explainer.model.predict(self.explainer.x_encoded.loc[[index]])[0]
 
         if isinstance(value, pd.Series):
             value = value.values[0]
@@ -916,14 +915,14 @@ class SmartPlotter:
             )
 
         if index is not None:
-            if index in self.explainer.x_pred.index:
+            if index in self.explainer.x_init.index:
                 line = [index]
             else:
                 line = []
         elif row_num is not None:
-            line = [self.explainer.x_pred.index[row_num]]
+            line = [self.explainer.x_init.index[row_num]]
         elif query is not None:
-            line = select_lines(self.explainer.x_pred, query)
+            line = select_lines(self.explainer.x_init, query)
 
         subtitle = ""
 
@@ -982,7 +981,7 @@ class SmartPlotter:
             var_dict, x_val, contrib = self.apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
             # use label of each column
             if display_groups:
-                var_dict = [self.explainer.features_dict[self.explainer.x_pred_groups.columns[x]] for x in var_dict]
+                var_dict = [self.explainer.features_dict[self.explainer.x_init_groups.columns[x]] for x in var_dict]
             else:
                 var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
@@ -1096,11 +1095,11 @@ class SmartPlotter:
 
         # Sampling
         if selection is None:
-            if self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
                 addnote = None
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
@@ -1113,7 +1112,7 @@ class SmartPlotter:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:
             addnote = add_text([addnote,
-                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
+                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
                                sep='')
 
         col_value = None
@@ -1152,11 +1151,11 @@ class SmartPlotter:
         if self.explainer.postprocessing_modifications:
             feature_values = self.explainer.x_contrib_plot.loc[list_ind, col_name]
         else:
-            feature_values = self.explainer.x_pred.loc[list_ind, col_name]
+            feature_values = self.explainer.x_init.loc[list_ind, col_name]
 
         if col_is_group:
-            feature_values = project_feature_values_1d(feature_values, col, self.explainer.x_pred,
-                                                       self.explainer.x_init, self.explainer.preprocessing,
+            feature_values = project_feature_values_1d(feature_values, col, self.explainer.x_init,
+                                                       self.explainer.x_encoded, self.explainer.preprocessing,
                                                        features_dict=self.explainer.features_dict)
             contrib = subcontrib.loc[list_ind, col].to_frame()
             if self.explainer.features_imp is None:
@@ -1166,7 +1165,7 @@ class SmartPlotter:
             top_features_of_group = features_imp.loc[self.explainer.features_groups[col]] \
                                                 .sort_values(ascending=False)[:4].index  # Displaying top 4 features
             metadata = {
-                self.explainer.features_dict[f_name]: self.explainer.x_pred[f_name]
+                self.explainer.features_dict[f_name]: self.explainer.x_init[f_name]
                 for f_name in top_features_of_group
             }
             text_group = "Features values were projected on the x axis using t-SNE"
@@ -1302,20 +1301,11 @@ class SmartPlotter:
             label_num, _, label_value = self.explainer.check_label_name(label)
             global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
-                subset = contributions[label_num].loc[selection]
-                if hasattr(self.explainer, 'backend') and self.explainer.backend == 'acv':
-                    selection_ids = [i for i, x in enumerate(contributions[label_num].index) if x in selection]
-                    subset_feat_imp = compute_features_import_acv(
-                        sdp_index=np.array(self.explainer.sdp_index)[selection_ids],
-                        sdp=np.array(self.explainer.sdp)[selection_ids],
-                        init_columns=self.explainer.x_init.columns,
-                        features_mapping=get_features_transform_mapping(
-                            self.explainer.x_pred, self.explainer.x_init, self.explainer.preprocessing
-                        )
-                    )
-                else:
-                    subset_feat_imp = compute_features_import(subset)
-                    subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions[label_num],
+                    explain_data=self.explainer.explain_data,
+                    subset=selection
+                )
             else:
                 subset_feat_imp = None
             subtitle = f"Response: <b>{label_value}</b>"
@@ -1323,24 +1313,27 @@ class SmartPlotter:
         elif self.explainer._case == "regression":
             global_feat_imp = features_importance.tail(max_features)
             if selection is not None:
-                subset = contributions.loc[selection]
-                subset_feat_imp = compute_features_import(subset)
-                subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions,
+                    explain_data=self.explainer.explain_data,
+                    subset=selection
+                )
             else:
                 subset_feat_imp = None
         addnote = ''
         if subset_feat_imp is not None:
+            subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             subset_feat_imp.index = subset_feat_imp.index.map(self.explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
-            subset_len = subset.shape[0]
-            total_len = self.explainer.x_pred.shape[0]
+            subset_len = len(selection)
+            total_len = self.explainer.x_init.shape[0]
             addnote = add_text([addnote,
                                 f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],
                                sep=" - ")
-        if self.explainer.x_pred.shape[1] >= max_features:
+        if self.explainer.x_init.shape[1] >= max_features:
             addnote = add_text([addnote,
-                                f"Total number of features: {int(self.explainer.x_pred.shape[1])}"],
+                                f"Total number of features: {int(self.explainer.x_init.shape[1])}"],
                                sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
@@ -1550,13 +1543,13 @@ class SmartPlotter:
         line_reference = []
         if index is not None:
             for ident in index:
-                if ident in self.explainer.x_pred.index:
+                if ident in self.explainer.x_init.index:
                     line_reference.append(ident)
 
         elif row_num is not None:
-            line_reference = [self.explainer.x_pred.index.values[row_nb_reference]
+            line_reference = [self.explainer.x_init.index.values[row_nb_reference]
                               for row_nb_reference in row_num
-                              if self.explainer.x_pred.index.values[row_nb_reference] in self.explainer.x_pred.index]
+                              if self.explainer.x_init.index.values[row_nb_reference] in self.explainer.x_init.index]
 
         subtitle = ""
         if len(line_reference) < 1:
@@ -1598,7 +1591,7 @@ class SmartPlotter:
                 feature_name = self.explainer.features_dict[name]
                 feature_values[i] = feature_name
 
-        preds = [self.explainer.x_pred.loc[id] for id in line_reference]
+        preds = [self.explainer.x_init.loc[id] for id in line_reference]
         dict_features = self.explainer.inv_features_dict
 
         iteration_list = list(zip(new_contrib, feature_values))
@@ -1830,10 +1823,10 @@ class SmartPlotter:
             # interaction_selection attribute is used to store already computed indices of interaction_values
             if hasattr(self, 'interaction_selection'):
                 list_ind = self.interaction_selection
-            elif self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            elif self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
             if hasattr(self, 'interaction_selection'):
@@ -1918,7 +1911,7 @@ class SmartPlotter:
 
         if addnote is not None:
             addnote = add_text([addnote,
-                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
+                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
                                sep='')
 
         # Subset
@@ -1926,8 +1919,8 @@ class SmartPlotter:
             feature_values1 = self.explainer.x_contrib_plot.loc[list_ind, col_name1].to_frame()
             feature_values2 = self.explainer.x_contrib_plot.loc[list_ind, col_name2].to_frame()
         else:
-            feature_values1 = self.explainer.x_pred.loc[list_ind, col_name1].to_frame()
-            feature_values2 = self.explainer.x_pred.loc[list_ind, col_name2].to_frame()
+            feature_values1 = self.explainer.x_init.loc[list_ind, col_name1].to_frame()
+            feature_values2 = self.explainer.x_init.loc[list_ind, col_name2].to_frame()
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
 
@@ -2133,7 +2126,7 @@ class SmartPlotter:
         Parameters
         ----------
         df : pd.DataFrame, optional
-            DataFrame for which we want to compute correlations. Will use x_pred by default.
+            DataFrame for which we want to compute correlations. Will use x_init by default.
         max_features : int (default: 10)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
@@ -2165,8 +2158,8 @@ class SmartPlotter:
             features_to_hide = []
 
         if df is None:
-            # Use x_pred by default
-            df = self.explainer.x_pred
+            # Use x_init by default
+            df = self.explainer.x_init
 
         if facet_col:
             features_to_hide += [facet_col]
@@ -2333,7 +2326,7 @@ class SmartPlotter:
         mean_amplitude: array
             Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
         dataset: DataFrame
-            x_pred dataset
+            x_init dataset
         column_names: list
             Columns names that are displayed on the plot
         file_name: string
@@ -2544,11 +2537,11 @@ class SmartPlotter:
         fig
             The figure that will be displayed
         """
-        assert index in self.explainer.x_pred.index, "index must exist in pandas dataframe"
+        assert index in self.explainer.x_init.index, "index must exist in pandas dataframe"
 
         self.explainer.compute_features_stability([index])
 
-        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_init.columns])
         ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Compute explanations for instance and neighbors
@@ -2679,10 +2672,10 @@ class SmartPlotter:
         """
         # Sampling
         if selection is None:
-            if self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
             # By default, don't compute calculation if it has already been done
             if (self.explainer.features_stability is None) or self.last_stability_selection or force:
                 self.explainer.compute_features_stability(list_ind)
@@ -2700,7 +2693,7 @@ class SmartPlotter:
         else:
             raise ValueError('Parameter selection must be a list')
 
-        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_init.columns])
 
         variability = self.explainer.features_stability["variability"]
         amplitude = self.explainer.features_stability["amplitude"]
@@ -2722,7 +2715,7 @@ class SmartPlotter:
 
                 variability = variability[:, keep]
                 mean_amplitude = mean_amplitude[keep]
-                dataset = self.explainer.x_pred.iloc[:, keep]
+                dataset = self.explainer.x_init.iloc[:, keep]
                 column_names = column_names[keep]
 
             fig = self.plot_stability_distribution(variability, distribution, mean_amplitude, dataset,
@@ -2785,10 +2778,10 @@ class SmartPlotter:
         """
         # Sampling
         if selection is None:
-            if self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
             # By default, don't compute calculation if it has already been done
             if (self.explainer.features_compacity is None) or self.last_compacity_selection or force:
                 self.explainer.compute_features_compacity(list_ind, 1 - approx, nb_features)

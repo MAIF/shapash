@@ -186,7 +186,7 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
         all_neighbors[i] = neighbors[neighbors[:, -2] < radius]
     return all_neighbors
 
-def shap_neighbors(instance, x_init, contributions, mode):
+def shap_neighbors(instance, x_encoded, contributions, mode):
     """
     For an instance and corresponding neighbors, calculate various
     metrics (described below) that are useful to evaluate local stability
@@ -195,7 +195,7 @@ def shap_neighbors(instance, x_init, contributions, mode):
     ----------
     instance : 2D array
         Instance + neighbours with corresponding features
-    x_init : DataFrame
+    x_encoded : DataFrame
         Entire dataset used to identify neighbors
     contributions : DataFrame
         Calculated contribution values for the dataset
@@ -211,8 +211,8 @@ def shap_neighbors(instance, x_init, contributions, mode):
     """
     # Extract SHAP values for instance and neighbors
     # :-2 indicates that two columns are disregarded : distance to instance and model output
-    ind = pd.merge(x_init.reset_index(), pd.DataFrame(instance[:, :-2], columns=x_init.columns), how='inner')\
-        .set_index(x_init.index.name if x_init.index.name is not None else 'index').index
+    ind = pd.merge(x_encoded.reset_index(), pd.DataFrame(instance[:, :-2], columns=x_encoded.columns), how='inner')\
+        .set_index(x_encoded.index.name if x_encoded.index.name is not None else 'index').index
     # If classification, select contrbutions of one class only
     if mode == "classification" and len(contributions) == 2:
         contributions = contributions[1]
