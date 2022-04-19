@@ -31,15 +31,16 @@
 </p>
 
 ## 🎉 What's new ?
-<div class="warning" style='background-color:#fff7c4; color: #9f5f00; border-left: solid #edd987 6px; border-radius: 10px; padding:0.4em;'>
-<span>
-<p style='margin-top:1em; text-align:center'>
-<b>Starting from Shapash V2: '.compile()' parameters must be provided in the SmartExplainer init</b></p>
-<p style='margin-left:1em;'>
-For clearer initiation, method's parameters must be provided at the init :
-xpl = SmartExplainer(model,backend,preprocessing,postprocessing,features_groups) instead of xpl.compile(x,model,backend,preprocessing,postprocessing,,features_groups)
-</span>
-</div>
+
+---
+
+:warning: **Starting from Shapash v2.0.0: '.compile()' parameters must be provided in the SmartExplainer init:**   :warning:
+
+For clearer initiation, method's parameters must be provided at the init:
+`xpl = SmartExplainer(model, backend, preprocessing, postprocessing, features_groups)` **_instead of_** `xpl.compile(x, model, backend, preprocessing, postprocessing, features_groups)`
+
+---
+
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
