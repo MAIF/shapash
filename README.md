@@ -31,9 +31,19 @@
 </p>
 
 ## 🎉 What's new ?
+<div class="warning" style='background-color:#fff7c4; color: #9f5f00; border-left: solid #edd987 6px; border-radius: 10px; padding:0.4em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Starting from Shapash V2: '.compile()' parameters must be provided in the SmartExplainer init</b></p>
+<p style='margin-left:1em;'>
+For clearer initiation, method's parameters must be provided at the init :
+xpl = SmartExplainer(model,backend,preprocessing,postprocessing,features_groups) instead of xpl.compile(x,model,backend,preprocessing,postprocessing,,features_groups)
+</span>
+</div>
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
+| 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](https://github.com/MAIF/shapash/blob/master/tutorial/backend/tuto-backend-01.ipynb)
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
 | 1.6.x         |  Explainability Quality Metrics <br> [article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb) 
 | 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://towardsdatascience.com/the-right-way-to-compute-your-shapley-values-cfea30509254).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)    |
@@ -173,7 +183,12 @@ The 4 steps to display results:
 
 ```
 from shapash import SmartExplainer
-xpl = SmartExplainer(features_dict=house_dict) # optional parameter
+xpl = SmartExplainer(
+  features_dict=house_dict,  # Optional parameter
+  model=regressor,
+  preprocessing=encoder, # Optional: compile step can use inverse_transform method
+  postprocessing=postprocess # Optional: see tutorial postprocessing
+)
 ```
 
 - Step 2: Compile Model, Dataset, Encoders, ...
@@ -181,11 +196,8 @@ xpl = SmartExplainer(features_dict=house_dict) # optional parameter
  
 ```
 xpl.compile(
-    x=Xtest,
-    model=regressor,
-    preprocessing=encoder, # Optional: compile step can use inverse_transform method
-    y_pred=y_pred, # Optional
-    postprocessing=postprocess # Optional: see tutorial postprocessing
+    x=Xtest,    
+    y_pred=y_pred, # Optional    
 )
 ```  
 
