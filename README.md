@@ -34,7 +34,7 @@
 
 ---
 
-:warning: **Starting from Shapash V2: '.compile()' parameters must be provided in the SmartExplainer init:**   :warning:
+:warning: **Starting from Shapash v2.0.0: '.compile()' parameters must be provided in the SmartExplainer init:**   :warning:
 
 For clearer initiation, method's parameters must be provided at the init:
 `xpl = SmartExplainer(model, backend, preprocessing, postprocessing, features_groups)` **_instead of_** `xpl.compile(x, model, backend, preprocessing, postprocessing, features_groups)`
