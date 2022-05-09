@@ -440,25 +440,27 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=4, align="center"
+                            md=3, align="center"
                         ),
                         dbc.Col([
                             html.A(
                                 dbc.Row([
                                         html.H3(truncate_str(self.explainer.title_story, maxlen=40),
-                                                id="shapash_title_story")]
+                                                id="shapash_title_story", style={'text-align':'center'})]
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             )],
-                            md=4, align="center"
+                            md=3, align="center"
                         ),
-                        dbc.Col([self.components['menu']]
+                        dbc.Col([
+                            self.components['menu']
+                            ], align="end"
                         )
                     ],
-                    style={'padding': "5px 15px", "verticalAlign": "middle"},
+                    style={'padding': "5px 15px", "verticalAlign": "middle", "width":"auto", "justify":"end"}
                 )
             ],
-            fluid=True, style={'height': '50px', 'backgroundColor': self.bkg_color},
+            fluid=True, style={'height': '70px', 'backgroundColor': self.bkg_color}
         )
 
         self.skeleton['body'] = dbc.Container(
