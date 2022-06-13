@@ -1,12 +1,64 @@
+import copy
 import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from plotly import graph_objs as go
+from plotly.offline import plot
+from plotly.subplots import make_subplots
 from sklearn.manifold import MDS
+
 from shapash import SmartExplainer
+from shapash.style.style_utils import colors_loading, select_palette, define_style
+
+init_colorscale = ['rgb(52, 55, 54)',
+    'rgb(74, 99, 138)',
+    'rgb(116, 153, 214)',
+    'rgb(162, 188, 213)',
+    'rgb(212, 234, 242)',
+    'rgb(235, 216, 134)',
+    'rgb(255, 204, 83)',
+    'rgb(244 ,192, 0)',
+    'rgb(255, 166, 17)',
+    'rgb(255, 123, 38)',
+    'rgb(255, 77, 7)']
+    
+def tuning_colorscalee(values):
+        """
+        adapts the color scale to the distribution of points
+        Parameters
+        ----------
+        values: 1 column pd.DataFrame
+            values ​​whose quantiles must be calculated
+        """
+        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+        min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
+        desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
+                    (max_init - min_pred)
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), init_colorscale))))
+        return color_scale
 
 
 class Consistency():
+
+    def __init__(self):
+        self._palette_name = list(colors_loading().keys())[0]
+        self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
+
+    def tuning_colorscale(self, values):
+        """
+        adapts the color scale to the distribution of points
+        Parameters
+        ----------
+        values: 1 column pd.DataFrame
+            values ​​whose quantiles must be calculated
+        """
+        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+        min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
+        desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
+                      (max_init - min_pred)
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
+        return color_scale
 
     def compile(self, x=None, model=None, preprocessing=None, contributions=None, methods=["shap", "acv", "lime"]):
         """If not provided, compute contributions according to provided methods (default are shap, acv, lime).
@@ -49,7 +101,7 @@ class Consistency():
         self.check_consistency_contributions(self.weights)
         self.index = self.weights[0].index
 
-        self.weights = [weight.values for weight in self.weights]
+        # self.weights_values = [weight.values for weight in self.weights]
 
     def compute_contributions(self, x, model, methods, preprocessing):
         """
@@ -139,12 +191,12 @@ class Consistency():
         """
         # Selection
         if selection is None:
-            weights = self.weights
+            weights = [weight.values for weight in self.weights]
         elif isinstance(selection, list):
             if len(selection) == 1:
                 raise ValueError('Selection must include multiple points')
             else:
-                weights = [weight[selection] for weight in self.weights]
+                weights = [weight.values[selection] for weight in self.weights]
         else:
             raise ValueError('Parameter selection must be a list')
 
@@ -458,3 +510,159 @@ class Consistency():
             axes[n].set_yticks([])
 
         return fig
+
+    def pairwise_consistency_plot(self, methods, x, selection=None, max_features=20, file_name=None, auto_open=False):
+        """
+        The Consistency_plot has the main objective of comparing explainability methods.
+
+        Because explainability methods are different from each other,
+        they may not give the same explanation to the same instance.
+        Then, which method should be selected?
+        Answering this question is tough. This method compares methods between them
+        and evaluates how close the explanations are from each other.
+        The idea behind this is pretty simple: if underlying assumptions lead to similar results,
+        we would be more confident in using those methods.
+        If not, careful conideration should be taken in the interpretation of the explanations
+
+        Parameters
+        ----------
+        selection: list
+            Contains list of index, subset of the input DataFrame that we use
+            for the compute of consitency statistics, by default None
+        max_features: int, optional
+            Maximum number of displayed features, by default 20
+        """
+        if not isinstance(x, pd.DataFrame):
+            raise ValueError('x must be a pandas DataFrame')
+        if not all(x.columns == self.weights[0].columns):
+            raise ValueError('Column names mismatch between x and contributions defined in compile method')
+        if len(x) != len(self.weights[0]):
+            raise ValueError('Shape mismatch between x and contributions defined in compile method')
+
+        pair_indices = [self.methods.index(x) for x in methods]
+        pair_weights = [self.weights[i] for i in pair_indices]
+        
+        # Selection
+        if selection is None:
+            weights = pair_weights
+        elif isinstance(selection, list):
+            if len(selection) == 1:
+                raise ValueError('Selection must include multiple points')
+            else:
+                weights = [weight.iloc[selection] for weight in pair_weights]
+        else:
+            raise ValueError('Parameter selection must be a list')
+
+        # Only keep features based on largest mean of absolute values
+        mean_contributions = np.mean(np.abs(pd.concat(weights)))
+        top_features = np.flip(mean_contributions.sort_values(ascending=False)[:max_features].keys())
+
+        self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
+    
+    def plot_pairwise_consistency(self, weights, x, top_features, methods, file_name, auto_open):
+
+        xaxis_title = "Difference of contributions between the 2 methods" \
+                      + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
+        yaxis_title = "Top features<span style='font-size: 12px;'><br />(By mean of absolute contributions)</span>"
+
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # Plot the distribution
+        
+        for i, c in enumerate(top_features):
+        
+            fig.add_trace(
+                go.Violin(
+                    x=(weights[0][c] - weights[1][c]).values,
+                    name=c,
+                    points=False,
+                    fillcolor="rgba(255, 0, 0, 0.1)",
+                    line={"color": "black", "width":0.5},
+                    showlegend=False,
+                ), secondary_y=False
+            )
+        
+            fig.add_trace(
+                go.Scatter(
+                    x=(weights[0][c] - weights[1][c]).values,
+                    y=len(x)*[i] + np.random.normal(0, 0.1, len(x)),
+                    mode='markers',
+                    marker={"color":x[c].values,
+                            "colorscale":[self.tuning_colorscale(x[c])[0], self.tuning_colorscale(x[c])[-1]],
+                            "opacity": 0.3},
+                    name=c,
+                    text=len(x)*[c],
+                    hovertemplate=
+                        "<b>%{text}</b><br><br>" +
+                        f"{methods[0]} - {methods[1]}= " +
+                        "%{x:,.2f}<br>" +
+                        "<extra></extra>",
+                    showlegend=False,
+        #             stripmode='overlay',
+                ), secondary_y=True
+            )
+
+        # Dummy invisible plot to add the color scale
+        colorbar_trace = go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(
+                size=1,
+                color=[x.min(), x.max()],
+                colorscale=[self.tuning_colorscale(x[c])[0], [1.0, self.tuning_colorscale(x)[-1][1]]],
+                colorbar=dict(thickness=20,
+                            lenmode="pixels",
+                            len=400,
+                            yanchor="top",
+                            y=1.1,
+                            ypad=20,
+                            title="Feature values",
+                            tickvals=[x.min().min(), x.max().max()],
+                            ticktext=["Low", "High"]),
+                showscale=True,
+            ),
+            hoverinfo="none",
+            showlegend=False,
+        )
+        
+        # fig["layout"]["showlegend"] = False
+        fig.add_trace(colorbar_trace)
+
+        self._update_pairwise_consistency_fig(fig=fig,
+                                              top_features=top_features,
+                                              xaxis_title=xaxis_title,
+                                              yaxis_title=yaxis_title,
+                                              file_name=file_name,
+                                              auto_open=auto_open)
+
+        fig.show()
+
+        return fig
+
+    def _update_pairwise_consistency_fig(self, fig, top_features, xaxis_title, yaxis_title, file_name, auto_open):
+
+        title = "Pairwise comparison of Consistency:"
+        title += "<span style='font-size: 16px;'><br />How are differences in contributions distributed across features?</span>"
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+        dict_xaxis['text'] = xaxis_title
+        dict_yaxis['text'] = yaxis_title
+        dict_stability_bar_colors = copy.deepcopy(self._style_dict["dict_stability_bar_colors"])
+        dict_t['text'] = title
+
+        fig.layout.yaxis.update(showticklabels=True)
+        fig.layout.yaxis2.update(showticklabels=False)
+        fig.update_layout(template="none",
+                          title=dict_t,
+                          xaxis_title=dict_xaxis,
+                          yaxis_title=dict_yaxis,
+                          yaxis=dict(range=[-0.7, len(top_features)-0.3]), 
+                          yaxis2=dict(range=[-0.7, len(top_features)-0.3]))
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+
+        if file_name is not None:
+            plot(fig, filename=file_name, auto_open=auto_open)
