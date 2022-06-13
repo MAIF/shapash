@@ -11,33 +11,6 @@ from sklearn.manifold import MDS
 from shapash import SmartExplainer
 from shapash.style.style_utils import colors_loading, select_palette, define_style
 
-init_colorscale = ['rgb(52, 55, 54)',
-    'rgb(74, 99, 138)',
-    'rgb(116, 153, 214)',
-    'rgb(162, 188, 213)',
-    'rgb(212, 234, 242)',
-    'rgb(235, 216, 134)',
-    'rgb(255, 204, 83)',
-    'rgb(244 ,192, 0)',
-    'rgb(255, 166, 17)',
-    'rgb(255, 123, 38)',
-    'rgb(255, 77, 7)']
-    
-def tuning_colorscalee(values):
-        """
-        adapts the color scale to the distribution of points
-        Parameters
-        ----------
-        values: 1 column pd.DataFrame
-            values ​​whose quantiles must be calculated
-        """
-        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
-        min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
-        desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
-                    (max_init - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), init_colorscale))))
-        return color_scale
-
 
 class Consistency():
 
@@ -649,7 +622,6 @@ class Consistency():
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = xaxis_title
         dict_yaxis['text'] = yaxis_title
-        dict_stability_bar_colors = copy.deepcopy(self._style_dict["dict_stability_bar_colors"])
         dict_t['text'] = title
 
         fig.layout.yaxis.update(showticklabels=True)
