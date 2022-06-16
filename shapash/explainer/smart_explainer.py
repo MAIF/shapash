@@ -254,6 +254,10 @@ class SmartExplainer:
             The index must be identical to the index of x_init.
             This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
             as they may wish to set their own threshold (classification)
+        y_target : pandas.Series or pandas.DataFrame, optional (default: None)
+            Target values (1 column only).
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for outputs on prediction
 
         Example
         --------
