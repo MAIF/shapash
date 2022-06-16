@@ -252,6 +252,17 @@ class SmartApp:
                     ],
                     width="auto", align="center",
                 ),
+                dbc.Col([
+                    html.Div(
+                        [
+                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
+                                     src=self.app.get_asset_url('reload.png'),
+                                     height='40px',
+                                     style={'cursor': 'pointer'}),
+                        ]
+                    )],
+                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
+                ),
                 dbc.Col(
                     [
                         html.H4(
@@ -795,23 +806,25 @@ class SmartApp:
             [
                 Input('dataset', 'sort_by'),
                 Input('dataset', "filter_query"),
+                Input('prediction_picking', 'selectedData'),
+                Input('clear_filter', 'n_clicks'),
                 Input('modal', 'is_open')
             ],
             [State('rows', 'value'),
              State('name', 'value')]
         )
-        def update_datatable(sort_by, filter_query, is_open, rows, name):
+        def update_datatable(sort_by, filter_query, selected_data, clear_filter, is_open, rows, name):
             """
             update datatable according to sorting, filtering and settings modifications
             """
             ctx = dash.callback_context
             active_cell = no_update
+            df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
                 else:
-
                     self.settings['rows'] = rows
                     self.init_data()
                     active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
@@ -823,9 +836,17 @@ class SmartApp:
                             {"name": '_predict_', "id": '_predict_'}] + \
                             [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
 
-            if not filter_query:
-                df = self.round_dataframe
-            else:
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+                row_ids = []
+                if selected_data is not None:
+                    for p in selected_data['points']:
+                        row_ids.append(p['customdata'])
+                df = self.round_dataframe.loc[row_ids]
+
+            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                df= self.round_dataframe
+
+            if filter_query:
                 df = apply_filter(self.round_dataframe, filter_query)
 
             if len(sort_by):
@@ -860,6 +881,8 @@ class SmartApp:
             [
                 Input('select_label', 'value'),
                 Input('dataset', 'data'),
+                Input('prediction_picking', 'selectedData'),
+                Input('clear_filter', 'n_clicks'),
                 Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
                 Input('bool_groups', 'on')
@@ -870,10 +893,11 @@ class SmartApp:
                 State('features', 'value')
             ]
         )
-        def update_feature_importance(label, data, is_open, n_clicks, bool_group, clickData, filter_query, features):
+        def update_feature_importance(label, data, selected_data, clear_filter, is_open, n_clicks, bool_group, clickData, filter_query, features):
             """
             update feature importance plot according to selected label and dataset state.
             """
+            selection = None
             ctx = dash.callback_context
             selected_feature = self.explainer.inv_features_dict.get(
                 clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
@@ -902,13 +926,21 @@ class SmartApp:
                     pass
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
                 clickData = None  # We reset the graph and clicks if we toggle the button
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+                row_ids = []
+                if selected_data is not None:
+                    for p in selected_data['points']:
+                        row_ids.append(p['customdata'])
+                selection = row_ids
+            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                selection = None
             else:
                 self.last_click_data = clickData
                 raise PreventUpdate
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
-            selection = self.list_index if filter_query else None
+            selection = self.list_index if filter_query else selection
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
                     max_features=features,
@@ -936,6 +968,7 @@ class SmartApp:
             [
                 Input('global_feature_importance', 'clickData'),
                 Input('prediction_picking', 'selectedData'),
+                Input('clear_filter', 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('modal', 'is_open')
             ],
@@ -944,7 +977,7 @@ class SmartApp:
                 State('violin', 'value')
             ]
         )
-        def update_feature_selector(feature, selected_data, label, is_open, points, violin):
+        def update_feature_selector(feature, selected_data, clear_filter, label, is_open, points, violin):
             """
             Update feature plot according to label, data, selected feature and settings modifications
             """
@@ -970,13 +1003,13 @@ class SmartApp:
                     else:
                         self.subset = None
             elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
-                print(selected_data)
-                print(type(selected_data))
                 row_ids = []
                 if selected_data is not None:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                 self.subset = row_ids
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+                self.subset = None
             else:
                 raise PreventUpdate
 

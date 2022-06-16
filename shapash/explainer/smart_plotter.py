@@ -2885,3 +2885,144 @@ class SmartPlotter:
             plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig
+
+    def scatter_plot_prediction(self,
+                    feature_values,
+                    contributions,
+                    feature_name,
+                    pred=None,
+                    proba_values=None,
+                    col_modality=None,
+                    col_scale=None,
+                    addnote=None,
+                    subtitle=None,
+                    width=900,
+                    height=600,
+                    file_name=None,
+                    auto_open=False):
+        """
+        scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
+
+        This plot allows the user to understand the distribution of predictions in comparison to the target variable.
+        With the web app, it is possible to select the bad predictions or a subset of predictions.
+
+        Parameters
+        ----------
+        feature_values : 1 column pd.Dataframe
+            The values of one feature
+        contributions : 1 column pd.Dataframe
+            The contributions associate
+        feature_name : String
+            Name of the feature, used in title
+        pred: 1 column pd.DataFrame (optional)
+            predicted values used to color plot - One Vs All in multiclass case
+        proba_values: 1 column pd.DataFrame (optional)
+            predicted proba used to color points - One Vs All in multiclass case
+        col_modality: Int, Float or String (optional)
+            parameter used in classification case,
+            specify the modality to color in scatter plot (One Vs All)
+        col_scale: list (optional)
+            specify the color of points in scatter data
+        addnote : String (default: None)
+            Specify a note to display
+        subtitle : String (default: None)
+            Subtitle to display
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot
+        """
+        fig = go.Figure()
+
+        feature_name="classe"
+        hv_text = [f"Id: {x}<br />" for x in zip(pred.index)]
+        hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=pred.index)
+        hv_temp = f'{feature_name} :<br />' + '%{x}<br />Proba: %{y:.4f}<extra></extra>'
+
+        hovertext0=hv_text_df.loc[(df_model_picking['CTBfinNN1'][(df_model_picking['erreur_prediction'] == 0)]) &
+                    (df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 0)])].values.flatten()
+        hovertext1=hv_text_df.loc[(df_model_picking['CTBfinNN1'][(df_model_picking['erreur_prediction'] == 1)]) &
+                    (df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 1)])].values.flatten()
+
+        df_model_picking_copy = df_model_picking.copy()
+
+        colorpoints=df_model_picking['CTBfinNN1']
+
+
+
+        fig.add_trace(go.Violin(
+            x=df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 0)].values.flatten(),
+            y=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 0)].values.flatten(),
+            points=False,
+            legendgroup='M', scalegroup='M', name='Bonne prédiction',
+            side='positive',                        
+            line_color='blue',
+            pointpos=-0.1,                            
+            showlegend=False,
+            jitter=0.075,
+            meanline_visible=True,
+            hovertext=hovertext0,
+            customdata=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 1)].index.values
+            )
+                    )
+        fig.add_trace(go.Violin(
+            x=df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 1)].values.flatten(),
+            y=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 1)].values.flatten(),
+            points=False,
+            legendgroup='F', scalegroup='F', name='Mauvaise prédiction',
+            side='negative',                       
+            line_color='orange',
+            pointpos=-0.1,                            
+            showlegend=False,
+            jitter=0.075,
+            meanline_visible=True,
+            hovertext=hovertext1,
+            customdata=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 0)].index.values
+        )
+                    )
+
+        # update characteristics shared by all traces
+        #fig.update_traces(meanline_visible=True,
+        #                   # show all points
+        #                  jitter=0.05,  # add some jitter on points for better visibility
+        #                  scalemode='count') #scale violin plot area with total count
+        #fig.update_layout(   
+        #    violingap=0, violingroupgap=0, violinmode='overlay')
+
+
+        if colorpoints is not None:
+                    fig.add_trace(go.Scatter(
+                        x=df_model_picking['target_sin_status'].values.flatten(),
+                        y=df_model_picking['prob_predite'].values.flatten(),
+                        mode='markers',
+                        showlegend=False,
+                        hovertext=hv_text,
+                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,                
+                        customdata=df_model_picking['prob_predite'].index.values,
+                    ))
+                
+        if colorpoints is not None:
+                    fig.data[-1].marker.color = np.log10(colorpoints).values.flatten()
+                    fig.data[-1].marker.coloraxis = 'coloraxis'
+                    fig.layout.coloraxis.colorscale = [
+                    [0,"rgb(52, 55, 54)"],           
+                    [0.2,"rgb(116, 153, 255)"],           
+                    [0.4,"rgb(108, 187, 252)"],           
+                    [0.6,"rgb(255, 204, 83)"],         
+                    [0.8,"rgb(255, 77, 7)"],    
+                    [1,"rgb(78, 7, 2)"]
+                ]
+                    fig.layout.coloraxis.colorbar = {'title': {'text': 'montants'},                                            
+                                                    'ticks':'outside',
+                                                    'tickvals':[0,2,2.96,3.58,4.3,5,6],
+                                                    'ticktext':[0,100,915,3800,20000,100000,1000000]
+                                                    }
+
+        #fig.update_traces(meanline_visible=True)
+        fig.update_layout(violingap=0, violinmode='overlay')
+
+        return fig
