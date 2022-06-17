@@ -161,6 +161,8 @@ class SmartExplainer:
         The processing apply to the original data.
     postprocessing : dict
         Dictionnary of postprocessing modifications to apply in x_init dataframe.
+    y_target : pandas.Series or pandas.DataFrame, optional (default: None)
+        Target values
 
     Example
     --------
@@ -231,7 +233,7 @@ class SmartExplainer:
         self.explain_data = None
         self.features_imp = None
 
-    def compile(self, x, contributions=None, y_pred=None):
+    def compile(self, x, contributions=None, y_pred=None, y_target=None):
         """
         The compile method is the first step to understand model and prediction. It performs the sorting
         of contributions, the reverse preprocessing steps and performs all the calculations necessary for
@@ -267,6 +269,7 @@ class SmartExplainer:
         self.x_encoded = x
         self.x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.y_pred = check_ypred(self.x_init, y_pred)
+        self.y_target = check_ypred(self.x_init, y_target)
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
@@ -347,7 +350,7 @@ class SmartExplainer:
         self.colors_dict.update(new_colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
-    def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
+    def add(self, y_pred=None, y_target=None, label_dict=None, features_dict=None, title_story: str = None):
         """
         add method allows the user to add a label_dict, features_dict
         or y_pred without compiling again (and it can last a few moments).
@@ -367,9 +370,15 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             which can be used the webapp, or other methods
+        y_target : pandas.Series or pandas.DataFrame, optional (default: None)
+            Target values (1 column only).
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for outputs on prediction
         """
         if y_pred is not None:
             self.y_pred = check_ypred(self.x_init, y_pred)
+        if y_target is not None:
+            self.y_target = check_ypred(self.x_init, y_target)
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(

@@ -2887,15 +2887,15 @@ class SmartPlotter:
         return fig
 
     def scatter_plot_prediction(self,
-                    feature_values,
-                    contributions,
-                    feature_name,
+                    selection=None,
                     pred=None,
+                    label=-1,
                     proba_values=None,
                     col_modality=None,
                     col_scale=None,
                     addnote=None,
                     subtitle=None,
+                    max_points=2000,
                     width=900,
                     height=600,
                     file_name=None,
@@ -2908,16 +2908,21 @@ class SmartPlotter:
 
         Parameters
         ----------
-        feature_values : 1 column pd.Dataframe
-            The values of one feature
-        contributions : 1 column pd.Dataframe
-            The contributions associate
+        selection: list (optional)
+            Contains list of index, subset of the input DataFrame that we want to plot
         feature_name : String
             Name of the feature, used in title
         pred: 1 column pd.DataFrame (optional)
             predicted values used to color plot - One Vs All in multiclass case
         proba_values: 1 column pd.DataFrame (optional)
             predicted proba used to color points - One Vs All in multiclass case
+        label: integer or string (default -1)
+            If the label is of string type, check if it can be changed to integer to select the
+            good dataframe object.
+        max_points: int (optional, default: 2000)
+            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
         col_modality: Int, Float or String (optional)
             parameter used in classification case,
             specify the modality to color in scatter plot (One Vs All)
@@ -2936,93 +2941,181 @@ class SmartPlotter:
         auto_open: bool (default=False)
             open automatically the plot
         """
+        if self.explainer._case == "classification":
+            label_num, _, label_value = self.explainer.check_label_name(label)
+        
+        # Sampling
+        if selection is None:
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
+                addnote = None
+            else:
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
+                addnote = "Length of random Subset : "
+        elif isinstance(selection, list):
+            if len(selection) <= max_points:
+                list_ind = selection
+                addnote = "Length of user-defined Subset : "
+            else:
+                list_ind = random.sample(selection, max_points)
+                addnote = "Length of random Subset : "
+        else:
+            raise ValueError('parameter selection must be a list')
+        if addnote is not None:
+            addnote = add_text([addnote,
+                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
+                               sep='')
+        
+        # Classification Case
+        if self.explainer._case == "classification":
+            # predict proba Color scale
+            if hasattr(self.explainer.model, "predict_proba"):
+                if not hasattr(self.explainer, "proba_values"):
+                    self.explainer.predict_proba()
+                proba_values = self.explainer.proba_values.iloc[:, [label_num]]
+                if not hasattr(self, "pred_colorscale"):
+                    self.pred_colorscale = {}
+                if label_num not in self.pred_colorscale:
+                    self.pred_colorscale[label_num] = self.tuning_colorscale(proba_values)
+                col_scale = self.pred_colorscale[label_num]
+                # Proba subset:
+                proba_values = proba_values.loc[list_ind, :]
+                target = self.explainer.y_target.loc[list_ind, :]
+                class_predict = pd.DataFrame(np.where(proba_values>0.5, 1, 0))
+                df_pred = pd.concat([proba_values.reset_index(drop=True),class_predict.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
+                df_pred.columns=["proba_values","predict_class","target"]
+                df_pred['bad_predict'] = 1
+                df_pred.loc[(df_pred['predict_class'] == 1)&(df_pred['target'] == 1),'bad_predict'] = 0
+                df_pred.loc[(df_pred['predict_class'] == 0)&(df_pred['target'] == 0),'bad_predict'] = 0
+
+        # Regression Case - color scale
+        elif self.explainer._case == "regression":
+            if self.explainer.y_pred is None:
+                if hasattr(self.explainer.model, "predict"):
+                    self.explainer.predict()
+            if self.explainer.y_pred is not None:
+                if not hasattr(self, "pred_colorscale"):
+                    self.pred_colorscale = self.tuning_colorscale(self.explainer.y_pred)
+                col_scale = self.pred_colorscale
+
+        if self.explainer.y_pred is not None:
+            y_pred = self.explainer.y_pred.loc[list_ind]
+            # Add labels if exist
+            if self.explainer._case == 'classification' and self.explainer.label_dict is not None:
+                y_pred = y_pred.applymap(lambda x: self.explainer.label_dict[x])
+            # round predict
+            elif self.explainer._case == 'regression':
+                if self.round_digit is None:
+                    self.tuning_round_digit()
+                y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+
         fig = go.Figure()
 
-        feature_name="classe"
-        hv_text = [f"Id: {x}<br />" for x in zip(pred.index)]
-        hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=pred.index)
-        hv_temp = f'{feature_name} :<br />' + '%{x}<br />Proba: %{y:.4f}<extra></extra>'
+        if self.explainer._case == "classification":
+            hv_text = [f"Id: {x}<br />" for x in zip(proba_values.index)]
+            #hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=pred.index)
+            #hv_temp = f'{feature_name} :<br />' + '%{x}<br />Proba: %{y:.4f}<extra></extra>'
 
-        hovertext0=hv_text_df.loc[(df_model_picking['CTBfinNN1'][(df_model_picking['erreur_prediction'] == 0)]) &
-                    (df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 0)])].values.flatten()
-        hovertext1=hv_text_df.loc[(df_model_picking['CTBfinNN1'][(df_model_picking['erreur_prediction'] == 1)]) &
-                    (df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 1)])].values.flatten()
+            fig.add_trace(go.Violin(
+                x=df_pred['target'][(df_pred['bad_predict'] == 0)].values.flatten(),
+                y=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].values.flatten(),
+                points=False,
+                legendgroup='M', scalegroup='M', name='Good Prediction',
+                side='positive',
+                line_color='blue',
+                pointpos=-0.1,
+                showlegend=False,
+                jitter=0.075,
+                meanline_visible=True,
+                hovertext=hv_text,
+                customdata=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].index.values
+                ))
 
-        df_model_picking_copy = df_model_picking.copy()
+            fig.add_trace(go.Violin(
+                x=df_pred['target'][(df_pred['bad_predict'] == 1)].values.flatten(),
+                y=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].values.flatten(),
+                points=False,
+                legendgroup='F', scalegroup='F', name='Bad Prediction',
+                side='negative',
+                line_color='orange',
+                pointpos=-0.1,
+                showlegend=False,
+                jitter=0.075,
+                meanline_visible=True,
+                hovertext=hv_text,
+                customdata=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].index.values
+                ))
 
-        colorpoints=df_model_picking['CTBfinNN1']
+            fig.add_trace(go.Scatter(
+                x=df_pred['target'].values.flatten(),
+                y=df_pred['proba_values'].values.flatten(),
+                mode='markers',
+                showlegend=False,
+                hovertext=hv_text,
+                hovertemplate='<b>%{hovertext}</b><br />',
+                customdata=df_pred['proba_values'].index.values,
+            ))
 
+            fig.update_layout(violingap=0, violinmode='overlay')
 
+        if self.explainer._case == "regression":
+            hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}" for x, y, z in \
+                zip(self.explainer.y_target.index,self.explainer.y_target, self.explainer.y_pred)]
+            hovertemplate = '<b>%{hovertext}</b><br />'
 
-        fig.add_trace(go.Violin(
-            x=df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 0)].values.flatten(),
-            y=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 0)].values.flatten(),
-            points=False,
-            legendgroup='M', scalegroup='M', name='Bonne prédiction',
-            side='positive',                        
-            line_color='blue',
-            pointpos=-0.1,                            
-            showlegend=False,
-            jitter=0.075,
-            meanline_visible=True,
-            hovertext=hovertext0,
-            customdata=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 1)].index.values
-            )
-                    )
-        fig.add_trace(go.Violin(
-            x=df_model_picking['target_sin_status'][(df_model_picking['erreur_prediction'] == 1)].values.flatten(),
-            y=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 1)].values.flatten(),
-            points=False,
-            legendgroup='F', scalegroup='F', name='Mauvaise prédiction',
-            side='negative',                       
-            line_color='orange',
-            pointpos=-0.1,                            
-            showlegend=False,
-            jitter=0.075,
-            meanline_visible=True,
-            hovertext=hovertext1,
-            customdata=df_model_picking['prob_predite'][(df_model_picking['erreur_prediction'] == 0)].index.values
+            fig.add_scatter(
+            x=self.explainer.y_target.values.flatten(),
+            y=self.explainer.y_pred.values.flatten(),
+            mode='markers',
+            hovertext=hv_text,
+            hovertemplate=hovertemplate,
+            customdata=self.explainer.y_pred.index.values
         )
-                    )
 
-        # update characteristics shared by all traces
-        #fig.update_traces(meanline_visible=True,
-        #                   # show all points
-        #                  jitter=0.05,  # add some jitter on points for better visibility
-        #                  scalemode='count') #scale violin plot area with total count
-        #fig.update_layout(   
-        #    violingap=0, violingroupgap=0, violinmode='overlay')
+        title = f"<b> Prediction"
+        if subtitle or addnote:
+            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+        dict_t['text'] = title
+        dict_xaxis['text'] = truncate_str('Prediction', 110)
+        dict_yaxis['text'] = 'Target'
 
+        if self.explainer._case == "regression":
+            colorpoints = self.explainer.y_pred
+            colorbar_title = 'Predicted'
+        elif self.explainer._case == "classification":
+            colorpoints = proba_values
+            colorbar_title = 'Predicted Proba'
 
         if colorpoints is not None:
-                    fig.add_trace(go.Scatter(
-                        x=df_model_picking['target_sin_status'].values.flatten(),
-                        y=df_model_picking['prob_predite'].values.flatten(),
-                        mode='markers',
-                        showlegend=False,
-                        hovertext=hv_text,
-                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,                
-                        customdata=df_model_picking['prob_predite'].index.values,
-                    ))
-                
-        if colorpoints is not None:
-                    fig.data[-1].marker.color = np.log10(colorpoints).values.flatten()
-                    fig.data[-1].marker.coloraxis = 'coloraxis'
-                    fig.layout.coloraxis.colorscale = [
-                    [0,"rgb(52, 55, 54)"],           
-                    [0.2,"rgb(116, 153, 255)"],           
-                    [0.4,"rgb(108, 187, 252)"],           
-                    [0.6,"rgb(255, 204, 83)"],         
-                    [0.8,"rgb(255, 77, 7)"],    
-                    [1,"rgb(78, 7, 2)"]
-                ]
-                    fig.layout.coloraxis.colorbar = {'title': {'text': 'montants'},                                            
-                                                    'ticks':'outside',
-                                                    'tickvals':[0,2,2.96,3.58,4.3,5,6],
-                                                    'ticktext':[0,100,915,3800,20000,100000,1000000]
-                                                    }
+            fig.data[-1].marker.color = colorpoints.values.flatten()
+            fig.data[-1].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
 
-        #fig.update_traces(meanline_visible=True)
-        fig.update_layout(violingap=0, violinmode='overlay')
+        fig.update_traces(
+            marker={
+                'size': 10,
+                'opacity': 0.8,
+                'line': {'width': 0.8, 'color': 'white'}
+            }
+        )
+
+        fig.update_layout(
+            template='none',
+            title=dict_t,
+            width=width,
+            height=height,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            hovermode='closest'
+        )
+
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
+        if file_name:
+            plot(fig, filename=file_name, auto_open=auto_open)
 
         return fig

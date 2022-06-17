@@ -1285,23 +1285,12 @@ class SmartApp:
 
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
-            elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
-                if feature is not None:
-                    # Removing bold
-                    self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
-                    if feature['points'][0]['curveNumber'] == 0 and \
-                            len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                        self.subset = self.list_index
-                    else:
-                        self.subset = None
             else:
                 raise PreventUpdate
 
-            self.components['graph']['prediction_picking'].figure = self.explainer.plot.contribution_plot(
-                col=self.selected_feature,
+            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
                 label=self.label,
-                violin_maxf=violin,
                 max_points=points
             )
 
