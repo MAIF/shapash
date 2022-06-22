@@ -1,5 +1,5 @@
 plotly==4.5.4
-numpy==1.21.0
+numpy==1.22.0
 pandas==1.0.3
 shap==0.32.1
 dash==1.9.1
