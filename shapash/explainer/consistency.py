@@ -61,10 +61,11 @@ class Consistency():
         methods : list
             Methods used to compute contributions, by default ["shap", "acv", "lime"]
         """
+        self.x = x
         if contributions is None:
-            if (x is None) or (model is None):
+            if (self.x is None) or (model is None):
                 raise ValueError('If no contributions are provided, parameters "x" and "model" must be defined')
-            contributions = self.compute_contributions(x, model, methods, preprocessing)
+            contributions = self.compute_contributions(self.x, model, methods, preprocessing)
         else:
             if not isinstance(contributions, dict):
                 raise ValueError('Contributions must be a dictionary')
@@ -484,7 +485,7 @@ class Consistency():
 
         return fig
 
-    def pairwise_consistency_plot(self, methods, x, selection=None, max_features=20, file_name=None, auto_open=False):
+    def pairwise_consistency_plot(self, methods, selection=None, max_features=10, max_points=100, file_name=None, auto_open=False):
         """
         The Consistency_plot has the main objective of comparing explainability methods.
 
@@ -505,24 +506,26 @@ class Consistency():
         max_features: int, optional
             Maximum number of displayed features, by default 20
         """
-        if not isinstance(x, pd.DataFrame):
+        if self.x is None:
+            raise ValueError('x must be defined in the compile to display the plot')
+        if not isinstance(self.x, pd.DataFrame):
             raise ValueError('x must be a pandas DataFrame')
-        if not all(x.columns == self.weights[0].columns):
-            raise ValueError('Column names mismatch between x and contributions defined in compile method')
-        if len(x) != len(self.weights[0]):
-            raise ValueError('Shape mismatch between x and contributions defined in compile method')
 
+        # Select contributions of input methods
         pair_indices = [self.methods.index(x) for x in methods]
         pair_weights = [self.weights[i] for i in pair_indices]
         
         # Selection
         if selection is None:
-            weights = pair_weights
+            ind_max_points = self.x.sample(min(max_points, len(self.x))).index
+            weights = [weight.iloc[ind_max_points] for weight in pair_weights]
+            x = self.x.iloc[ind_max_points]
         elif isinstance(selection, list):
             if len(selection) == 1:
                 raise ValueError('Selection must include multiple points')
             else:
                 weights = [weight.iloc[selection] for weight in pair_weights]
+                x = self.x.iloc[selection]
         else:
             raise ValueError('Parameter selection must be a list')
 
@@ -536,13 +539,22 @@ class Consistency():
 
         xaxis_title = "Difference of contributions between the 2 methods" \
                       + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
-        yaxis_title = "Top features<span style='font-size: 12px;'><br />(By mean of absolute contributions)</span>"
+        yaxis_title = "Top features<span style='font-size: 12px;'><br />(Ordered by mean of absolute contributions)</span>"
 
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         
         # Plot the distribution
         
         for i, c in enumerate(top_features):
+
+            hv_text = [f"<b>Feature value</b>: {i}<br>\
+                <b>{methods[0]}</b>: {j}<br>\
+                <b>{methods[1]}</b>: {k}<br>\
+                <b>Diff</b>: {l}"
+                    for i,j,k,l in zip(x[c].round(3),
+                                       weights[0][c].round(2),
+                                       weights[1][c].round(2), 
+                                       (weights[0][c] - weights[1][c]).round(2))]
         
             fig.add_trace(
                 go.Violin(
@@ -561,14 +573,14 @@ class Consistency():
                     y=len(x)*[i] + np.random.normal(0, 0.1, len(x)),
                     mode='markers',
                     marker={"color":x[c].values,
-                            "colorscale":[self.tuning_colorscale(x[c])[0], self.tuning_colorscale(x[c])[-1]],
-                            "opacity": 0.3},
+                            "colorscale":self.tuning_colorscale(x[c]),
+                            "opacity": 0.7},
                     name=c,
                     text=len(x)*[c],
+                    hovertext=hv_text,
                     hovertemplate=
                         "<b>%{text}</b><br><br>" +
-                        f"{methods[0]} - {methods[1]}= " +
-                        "%{x:,.2f}<br>" +
+                        "%{hovertext}<br>" +
                         "<extra></extra>",
                     showlegend=False,
         #             stripmode='overlay',
@@ -583,7 +595,7 @@ class Consistency():
             marker=dict(
                 size=1,
                 color=[x.min(), x.max()],
-                colorscale=[self.tuning_colorscale(x[c])[0], [1.0, self.tuning_colorscale(x)[-1][1]]],
+                colorscale=self.tuning_colorscale(pd.Series(np.linspace(x.min().min(), x.max().max(), 10))),
                 colorbar=dict(thickness=20,
                             lenmode="pixels",
                             len=400,
@@ -631,9 +643,10 @@ class Consistency():
                           xaxis_title=dict_xaxis,
                           yaxis_title=dict_yaxis,
                           yaxis=dict(range=[-0.7, len(top_features)-0.3]), 
-                          yaxis2=dict(range=[-0.7, len(top_features)-0.3]))
+                          yaxis2=dict(range=[-0.7, len(top_features)-0.3]),
+                          height = max(500, 40 * len(top_features)))
 
-        fig.update_yaxes(automargin=True)
+        fig.update_yaxes(automargin=True, zeroline=False)
         fig.update_xaxes(automargin=True)
 
         if file_name is not None:
