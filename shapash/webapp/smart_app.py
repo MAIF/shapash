@@ -951,8 +951,11 @@ class SmartApp:
                 )
             self.components['graph']['global_feature_importance'].adjust_graph()
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
-            if selected_feature and selected_feature not in self.explainer.features_groups.keys():
-                self.select_point('global_feature_importance', clickData)
+            if selected_feature:
+                if self.explainer.features_groups is None:
+                    self.select_point('global_feature_importance', clickData)
+                elif selected_feature not in self.explainer.features_groups.keys():
+                    self.select_point('global_feature_importance', clickData)
 
             # font size can be adapted to screen size
             nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
@@ -1008,7 +1011,7 @@ class SmartApp:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                 self.subset = row_ids
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
                 self.subset = None
             else:
                 raise PreventUpdate
@@ -1152,7 +1155,7 @@ class SmartApp:
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                 selected = click_data['points'][0]['customdata']
             elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
-                selected = click_data['points'][0]['customdata']
+                selected = prediction_picking['points'][0]['customdata']
             elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
                 selected = index
             elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':

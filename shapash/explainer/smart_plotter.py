@@ -1099,6 +1099,7 @@ class SmartPlotter:
                 list_ind = self.explainer.x_init.index.tolist()
                 addnote = None
             else:
+                random.seed(41)
                 list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
@@ -1106,6 +1107,7 @@ class SmartPlotter:
                 list_ind = selection
                 addnote = "Length of user-defined Subset : "
             else:
+                random.seed(41)
                 list_ind = random.sample(selection, max_points)
                 addnote = "Length of random Subset : "
         else:
@@ -2950,6 +2952,7 @@ class SmartPlotter:
                 list_ind = self.explainer.x_init.index.tolist()
                 addnote = None
             else:
+                random.seed(41)
                 list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
@@ -2957,6 +2960,7 @@ class SmartPlotter:
                 list_ind = selection
                 addnote = "Length of user-defined Subset : "
             else:
+                random.seed(41)
                 list_ind = random.sample(selection, max_points)
                 addnote = "Length of random Subset : "
         else:
@@ -2982,7 +2986,8 @@ class SmartPlotter:
                 proba_values = proba_values.loc[list_ind, :]
                 target = self.explainer.y_target.loc[list_ind, :]
                 class_predict = pd.DataFrame(np.where(proba_values>0.5, 1, 0))
-                df_pred = pd.concat([proba_values.reset_index(drop=True),class_predict.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
+                df_pred = pd.concat([proba_values.reset_index(),class_predict.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
+                df_pred.set_index(df_pred.columns[0],inplace=True)
                 df_pred.columns=["proba_values","predict_class","target"]
                 df_pred['bad_predict'] = 1
                 df_pred.loc[(df_pred['predict_class'] == 1)&(df_pred['target'] == 1),'bad_predict'] = 0
@@ -3012,7 +3017,8 @@ class SmartPlotter:
         fig = go.Figure()
 
         if self.explainer._case == "classification":
-            hv_text = [f"Id: {x}<br />" for x in zip(proba_values.index)]
+            hv_text = [f"Id: {x}<br />Proba_values: {y}<br />Predict_class: {w}<br />Target: {z}<br />" for x, y, w, z in zip(df_pred.index,
+            df_pred.proba_values.values.round(3).flatten(),df_pred.predict_class.values.flatten(),df_pred.target.values.flatten())]
             #hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=pred.index)
             #hv_temp = f'{feature_name} :<br />' + '%{x}<br />Proba: %{y:.4f}<extra></extra>'
 
@@ -3022,7 +3028,7 @@ class SmartPlotter:
                 points=False,
                 legendgroup='M', scalegroup='M', name='Good Prediction',
                 side='positive',
-                line_color='blue',
+                line_color=self._style_dict["violin_area_classif"][1],
                 pointpos=-0.1,
                 showlegend=False,
                 jitter=0.075,
@@ -3037,7 +3043,7 @@ class SmartPlotter:
                 points=False,
                 legendgroup='F', scalegroup='F', name='Bad Prediction',
                 side='negative',
-                line_color='orange',
+                line_color=self._style_dict["violin_area_classif"][0],
                 pointpos=-0.1,
                 showlegend=False,
                 jitter=0.075,
@@ -3047,7 +3053,7 @@ class SmartPlotter:
                 ))
 
             fig.add_trace(go.Scatter(
-                x=df_pred['target'].values.flatten(),
+                x=df_pred['target'].values.flatten()+ np.random.normal(0, 0.02, len(df_pred)),
                 y=df_pred['proba_values'].values.flatten(),
                 mode='markers',
                 showlegend=False,
@@ -3059,16 +3065,15 @@ class SmartPlotter:
             fig.update_layout(violingap=0, violinmode='overlay')
 
         if self.explainer._case == "regression":
-            hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}" for x, y, z in \
+            hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}" for x, y, z in
                 zip(self.explainer.y_target.index,self.explainer.y_target, self.explainer.y_pred)]
-            hovertemplate = '<b>%{hovertext}</b><br />'
 
             fig.add_scatter(
             x=self.explainer.y_target.values.flatten(),
             y=self.explainer.y_pred.values.flatten(),
             mode='markers',
             hovertext=hv_text,
-            hovertemplate=hovertemplate,
+            hovertemplate='<b>%{hovertext}</b><br />',
             customdata=self.explainer.y_pred.index.values
         )
 
