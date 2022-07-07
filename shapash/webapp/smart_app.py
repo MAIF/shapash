@@ -836,7 +836,7 @@ class SmartApp:
                             {"name": '_predict_', "id": '_predict_'}] + \
                             [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
 
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
                 row_ids = []
                 if selected_data is not None:
                     for p in selected_data['points']:
@@ -926,7 +926,7 @@ class SmartApp:
                     pass
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
                 clickData = None  # We reset the graph and clicks if we toggle the button
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
                 row_ids = []
                 if selected_data is not None:
                     for p in selected_data['points']:
@@ -1005,7 +1005,7 @@ class SmartApp:
                         self.subset = self.list_index
                     else:
                         self.subset = None
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData':
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
                 row_ids = []
                 if selected_data is not None:
                     for p in selected_data['points']:

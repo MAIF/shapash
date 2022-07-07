@@ -2977,11 +2977,6 @@ class SmartPlotter:
                 if not hasattr(self.explainer, "proba_values"):
                     self.explainer.predict_proba()
                 proba_values = self.explainer.proba_values.iloc[:, [label_num]]
-                if not hasattr(self, "pred_colorscale"):
-                    self.pred_colorscale = {}
-                if label_num not in self.pred_colorscale:
-                    self.pred_colorscale[label_num] = self.tuning_colorscale(proba_values)
-                col_scale = self.pred_colorscale[label_num]
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 target = self.explainer.y_target.loc[list_ind, :]
@@ -2995,13 +2990,17 @@ class SmartPlotter:
 
         # Regression Case - color scale
         elif self.explainer._case == "regression":
+            prediction_error=None
             if self.explainer.y_pred is None:
                 if hasattr(self.explainer.model, "predict"):
                     self.explainer.predict()
             if self.explainer.y_pred is not None:
-                if not hasattr(self, "pred_colorscale"):
-                    self.pred_colorscale = self.tuning_colorscale(self.explainer.y_pred)
-                col_scale = self.pred_colorscale
+                if (self.explainer.y_pred == 0).any()[0]:
+                    prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values))
+                else:
+                    prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values)/self.explainer.y_pred.values)
+            self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(prediction_error))
+            col_scale = self.pred_colorscale
 
         if self.explainer.y_pred is not None:
             y_pred = self.explainer.y_pred.loc[list_ind]
@@ -3028,12 +3027,13 @@ class SmartPlotter:
                 points=False,
                 legendgroup='M', scalegroup='M', name='Good Prediction',
                 side='positive',
-                line_color=self._style_dict["violin_area_classif"][1],
+                line_color=self._style_dict["prediction_plot"][0],
                 pointpos=-0.1,
                 showlegend=False,
                 jitter=0.075,
                 meanline_visible=True,
                 hovertext=hv_text,
+                spanmode="hard",
                 customdata=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].index.values
                 ))
 
@@ -3043,19 +3043,32 @@ class SmartPlotter:
                 points=False,
                 legendgroup='F', scalegroup='F', name='Bad Prediction',
                 side='negative',
-                line_color=self._style_dict["violin_area_classif"][0],
+                line_color=self._style_dict["prediction_plot"][1],
                 pointpos=-0.1,
                 showlegend=False,
                 jitter=0.075,
                 meanline_visible=True,
                 hovertext=hv_text,
+                spanmode="hard",
                 customdata=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].index.values
                 ))
 
             fig.add_trace(go.Scatter(
-                x=df_pred['target'].values.flatten()+ np.random.normal(0, 0.02, len(df_pred)),
-                y=df_pred['proba_values'].values.flatten(),
+                x=df_pred['target'][(df_pred['bad_predict'] == 0)].values.flatten()+ np.random.normal(0, 0.02, len(df_pred[(df_pred['bad_predict'] == 0)])),
+                y=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].values.flatten(),
                 mode='markers',
+                marker_color=self._style_dict["prediction_plot"][0],
+                showlegend=False,
+                hovertext=hv_text,
+                hovertemplate='<b>%{hovertext}</b><br />',
+                customdata=df_pred['proba_values'].index.values,
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=df_pred['target'][(df_pred['bad_predict'] == 1)].values.flatten()+ np.random.normal(0, 0.02, len(df_pred[(df_pred['bad_predict'] == 1)])),
+                y=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].values.flatten(),
+                mode='markers',
+                marker_color=self._style_dict["prediction_plot"][1],
                 showlegend=False,
                 hovertext=hv_text,
                 hovertemplate='<b>%{hovertext}</b><br />',
@@ -3063,10 +3076,11 @@ class SmartPlotter:
             ))
 
             fig.update_layout(violingap=0, violinmode='overlay')
+            fig.update_xaxes(tickvals=[0, 1])
 
         if self.explainer._case == "regression":
-            hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}" for x, y, z in
-                zip(self.explainer.y_target.index,self.explainer.y_target, self.explainer.y_pred)]
+            hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}<br />Prediction Error: {w}" for x, y, z, w in
+                zip(self.explainer.y_target.index,self.explainer.y_target, self.explainer.y_pred, prediction_error)]
 
             fig.add_scatter(
             x=self.explainer.y_target.values.flatten(),
@@ -3077,6 +3091,13 @@ class SmartPlotter:
             customdata=self.explainer.y_pred.index.values
         )
 
+            colorpoints = prediction_error
+            colorbar_title = 'Prediction Error'
+            fig.data[-1].marker.color = colorpoints.flatten()
+            fig.data[-1].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+
         title = f"<b> Prediction"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
@@ -3084,21 +3105,8 @@ class SmartPlotter:
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str('Prediction', 110)
-        dict_yaxis['text'] = 'Target'
-
-        if self.explainer._case == "regression":
-            colorpoints = self.explainer.y_pred
-            colorbar_title = 'Predicted'
-        elif self.explainer._case == "classification":
-            colorpoints = proba_values
-            colorbar_title = 'Predicted Proba'
-
-        if colorpoints is not None:
-            fig.data[-1].marker.color = colorpoints.values.flatten()
-            fig.data[-1].marker.coloraxis = 'coloraxis'
-            fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+        dict_xaxis['text'] = truncate_str('Target', 110)
+        dict_yaxis['text'] = 'Prediction'
 
         fig.update_traces(
             marker={
