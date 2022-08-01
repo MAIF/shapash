@@ -3075,7 +3075,7 @@ class SmartPlotter:
             ))
 
             fig.update_layout(violingap=0, violinmode='overlay')
-            fig.update_xaxes(tickvals=[0, 1])
+            fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
 
         if self.explainer._case == "regression":
             hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}<br />Prediction Error: {w}" for x, y, z, w in
