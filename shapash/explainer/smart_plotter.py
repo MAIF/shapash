@@ -2985,8 +2985,7 @@ class SmartPlotter:
                 df_pred.set_index(df_pred.columns[0],inplace=True)
                 df_pred.columns=["proba_values","predict_class","target"]
                 df_pred['bad_predict'] = 1
-                df_pred.loc[(df_pred['predict_class'] == 1)&(df_pred['target'] == 1),'bad_predict'] = 0
-                df_pred.loc[(df_pred['predict_class'] == 0)&(df_pred['target'] == 0),'bad_predict'] = 0
+                df_pred.loc[(df_pred['predict_class'] == df_pred['target']),'bad_predict'] = 0
 
         # Regression Case - color scale
         elif self.explainer._case == "regression":
