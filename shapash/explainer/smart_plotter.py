@@ -2980,8 +2980,11 @@ class SmartPlotter:
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 target = self.explainer.y_target.loc[list_ind, :]
-                class_predict = pd.DataFrame(np.where(proba_values>0.5, 1, 0))
-                df_pred = pd.concat([proba_values.reset_index(),class_predict.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
+                if hasattr(self.explainer.model, "predict"):
+                    if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
+                        self.explainer.predict()
+                    y_pred = self.explainer.y_pred.loc[list_ind, :]
+                df_pred = pd.concat([proba_values.reset_index(),y_pred.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
                 df_pred.set_index(df_pred.columns[0],inplace=True)
                 df_pred.columns=["proba_values","predict_class","target"]
                 df_pred['bad_predict'] = 1
