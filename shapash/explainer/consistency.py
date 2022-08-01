@@ -529,6 +529,11 @@ class Consistency():
         else:
             raise ValueError('Parameter selection must be a list')
 
+        # Remove constant columns
+        const_cols = x.loc[:, x.apply(pd.Series.nunique) == 1]
+        x = x.drop(const_cols, axis=1)
+        weights = [weight.drop(const_cols, axis=1) for weight in weights]
+
         # Only keep features based on largest mean of absolute values
         mean_contributions = np.mean(np.abs(pd.concat(weights)))
         top_features = np.flip(mean_contributions.sort_values(ascending=False)[:max_features].keys())
