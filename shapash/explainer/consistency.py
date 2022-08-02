@@ -62,10 +62,11 @@ class Consistency():
             Methods used to compute contributions, by default ["shap", "acv", "lime"]
         """
         self.x = x
+        self.preprocessing = preprocessing
         if contributions is None:
             if (self.x is None) or (model is None):
                 raise ValueError('If no contributions are provided, parameters "x" and "model" must be defined')
-            contributions = self.compute_contributions(self.x, model, methods, preprocessing)
+            contributions = self.compute_contributions(self.x, model, methods, self.preprocessing)
         else:
             if not isinstance(contributions, dict):
                 raise ValueError('Contributions must be a dictionary')
@@ -552,11 +553,20 @@ class Consistency():
         
         for i, c in enumerate(top_features):
 
+            switch = False
+            if (self.preprocessing is not None) and (c in self.preprocessing.cols):
+
+                switch = True
+
+                mapping = self.preprocessing.mapping[self.preprocessing.cols.index(c)]["mapping"]
+                inverse_mapping = {v: k for k, v in mapping.to_dict().items()}
+                feature_value = self.x[c].map(inverse_mapping)
+
             hv_text = [f"<b>Feature value</b>: {i}<br>\
                 <b>{methods[0]}</b>: {j}<br>\
                 <b>{methods[1]}</b>: {k}<br>\
                 <b>Diff</b>: {l}"
-                    for i,j,k,l in zip(x[c].round(3),
+                    for i,j,k,l in zip(feature_value if switch else x[c].round(3),
                                        weights[0][c].round(2),
                                        weights[1][c].round(2), 
                                        (weights[0][c] - weights[1][c]).round(2))]
