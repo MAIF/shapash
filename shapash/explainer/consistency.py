@@ -506,6 +506,11 @@ class Consistency():
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool
             open automatically the plot, by default False
+
+        
+        Returns
+        -------
+        figure
         """  
         if self.x is None:
             raise ValueError('x must be defined in the compile to display the plot')
@@ -541,7 +546,9 @@ class Consistency():
         mean_contributions = np.mean(np.abs(pd.concat(weights)))
         top_features = np.flip(mean_contributions.sort_values(ascending=False)[:max_features].keys())
 
-        self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
+        fig = self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
+
+        return fig
     
     def plot_pairwise_consistency(self, weights, x, top_features, methods, file_name, auto_open):
         """Plot the main graph displaying distances between methods across each feature and data point
@@ -657,8 +664,6 @@ class Consistency():
                                               yaxis_title=yaxis_title,
                                               file_name=file_name,
                                               auto_open=auto_open)
-
-        fig.show()
 
         return fig
 
