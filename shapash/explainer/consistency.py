@@ -19,8 +19,7 @@ class Consistency():
         self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
 
     def tuning_colorscale(self, values):
-        """
-        adapts the color scale to the distribution of points
+        """Adapts the color scale to the distribution of points
         Parameters
         ----------
         values: 1 column pd.DataFrame
@@ -487,30 +486,33 @@ class Consistency():
         return fig
 
     def pairwise_consistency_plot(self, methods, selection=None, max_features=10, max_points=100, file_name=None, auto_open=False):
-        """
-        The Consistency_plot has the main objective of comparing explainability methods.
+        """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point, and plots the distribution of those differences.
 
-        Because explainability methods are different from each other,
-        they may not give the same explanation to the same instance.
-        Then, which method should be selected?
-        Answering this question is tough. This method compares methods between them
-        and evaluates how close the explanations are from each other.
-        The idea behind this is pretty simple: if underlying assumptions lead to similar results,
-        we would be more confident in using those methods.
-        If not, careful conideration should be taken in the interpretation of the explanations
+        This plot goes one step deeper than the consistency_plot which compares methods on a global level by expressing differences in terms of mean across the entire dataset.
+        Not only we get an understanding of how differences are distributed across the dataset, but we can also identify whether there are patterns based on feature values, and understand when a method overestimates contributions compared to the other
 
         Parameters
         ----------
+        methods : list
+            List of explainbility methods to compare
         selection: list
             Contains list of index, subset of the input DataFrame that we use
             for the compute of consitency statistics, by default None
         max_features: int, optional
-            Maximum number of displayed features, by default 20
-        """
+            Maximum number of displayed features, by default 10
+        max_points : int, optional
+            Maximum number of displayed datapoints per feature, by default 100
+        file_name: string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool
+            open automatically the plot, by default False
+        """  
         if self.x is None:
             raise ValueError('x must be defined in the compile to display the plot')
         if not isinstance(self.x, pd.DataFrame):
             raise ValueError('x must be a pandas DataFrame')
+        if len(methods) != 2:
+            raise ValueError('Choose 2 methods among "shap", "lime" and "acv"')
 
         # Select contributions of input methods
         pair_indices = [self.methods.index(x) for x in methods]
@@ -542,7 +544,27 @@ class Consistency():
         self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
     
     def plot_pairwise_consistency(self, weights, x, top_features, methods, file_name, auto_open):
+        """Plot the main graph displaying distances between methods across each feature and data point
 
+        Parameters
+        ----------
+        weights : list
+            List of 2 dataframes containing contributions for the selected points
+        x : DataFrame
+            Original input data filtered on selected points
+        top_features : array
+            Top features to display ordered by mean of absolute contributions across all the selected points
+        methods : list
+            List of explainbility methods to compare
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool
+            open automatically the plot
+
+        Returns
+        -------
+        figure
+        """
         xaxis_title = "Difference of contributions between the 2 methods" \
                       + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
         yaxis_title = "Top features<span style='font-size: 12px;'><br />(Ordered by mean of absolute contributions)</span>"
@@ -560,7 +582,7 @@ class Consistency():
 
                 mapping = self.preprocessing.mapping[self.preprocessing.cols.index(c)]["mapping"]
                 inverse_mapping = {v: k for k, v in mapping.to_dict().items()}
-                feature_value = self.x[c].map(inverse_mapping)
+                feature_value = x[c].map(inverse_mapping)
 
             hv_text = [f"<b>Feature value</b>: {i}<br>\
                 <b>{methods[0]}</b>: {j}<br>\
@@ -641,7 +663,23 @@ class Consistency():
         return fig
 
     def _update_pairwise_consistency_fig(self, fig, top_features, xaxis_title, yaxis_title, file_name, auto_open):
+        """Function used for the pairwise_consistency_plot to update the layout of the plotly figure.
 
+        Parameters
+        ----------
+        fig : figure
+            Plotly figure
+        top_features : array
+            Top features to display ordered by mean of absolute contributions across all the selected points
+        xaxis_title : str
+            Title for the x-axis
+        yaxis_title : str
+            Title for the y-axis
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool
+            open automatically the plot
+        """        
         title = "Pairwise comparison of Consistency:"
         title += "<span style='font-size: 16px;'><br />How are differences in contributions distributed across features?</span>"
         dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
