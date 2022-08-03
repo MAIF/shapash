@@ -485,11 +485,16 @@ class Consistency():
 
         return fig
 
-    def pairwise_consistency_plot(self, methods, selection=None, max_features=10, max_points=100, file_name=None, auto_open=False):
-        """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point, and plots the distribution of those differences.
+    def pairwise_consistency_plot(self, methods, selection=None,
+                                  max_features=10, max_points=100, file_name=None, auto_open=False):
+        """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point,
+        and plots the distribution of those differences.
 
-        This plot goes one step deeper than the consistency_plot which compares methods on a global level by expressing differences in terms of mean across the entire dataset.
-        Not only we get an understanding of how differences are distributed across the dataset, but we can also identify whether there are patterns based on feature values, and understand when a method overestimates contributions compared to the other
+        This plot goes one step deeper than the consistency_plot which compares methods on a global level
+        by expressing differences in terms of mean across the entire dataset.
+        Not only we get an understanding of how differences are distributed across the dataset,
+        but we can also identify whether there are patterns based on feature values,
+        and understand when a method overestimates contributions compared to the other
 
         Parameters
         ----------
@@ -507,11 +512,11 @@ class Consistency():
         auto_open: bool
             open automatically the plot, by default False
 
-        
+
         Returns
         -------
         figure
-        """  
+        """
         if self.x is None:
             raise ValueError('x must be defined in the compile to display the plot')
         if not isinstance(self.x, pd.DataFrame):
@@ -522,7 +527,7 @@ class Consistency():
         # Select contributions of input methods
         pair_indices = [self.methods.index(x) for x in methods]
         pair_weights = [self.weights[i] for i in pair_indices]
-        
+
         # Selection
         if selection is None:
             ind_max_points = self.x.sample(min(max_points, len(self.x))).index
@@ -549,7 +554,7 @@ class Consistency():
         fig = self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
 
         return fig
-    
+
     def plot_pairwise_consistency(self, weights, x, top_features, methods, file_name, auto_open):
         """Plot the main graph displaying distances between methods across each feature and data point
 
@@ -577,9 +582,9 @@ class Consistency():
         yaxis_title = "Top features<span style='font-size: 12px;'><br />(Ordered by mean of absolute contributions)</span>"
 
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-        
+
         # Plot the distribution
-        
+
         for i, c in enumerate(top_features):
 
             switch = False
@@ -595,39 +600,38 @@ class Consistency():
                 <b>{methods[0]}</b>: {j}<br>\
                 <b>{methods[1]}</b>: {k}<br>\
                 <b>Diff</b>: {l}"
-                    for i,j,k,l in zip(feature_value if switch else x[c].round(3),
-                                       weights[0][c].round(2),
-                                       weights[1][c].round(2), 
-                                       (weights[0][c] - weights[1][c]).round(2))]
-        
+                       for i, j, k, l in zip(feature_value if switch else x[c].round(3),
+                                             weights[0][c].round(2),
+                                             weights[1][c].round(2),
+                                             (weights[0][c] - weights[1][c]).round(2))]
+
             fig.add_trace(
                 go.Violin(
                     x=(weights[0][c] - weights[1][c]).values,
                     name=c,
                     points=False,
                     fillcolor="rgba(255, 0, 0, 0.1)",
-                    line={"color": "black", "width":0.5},
+                    line={"color": "black", "width": 0.5},
                     showlegend=False,
                 ), secondary_y=False
             )
-        
+
             fig.add_trace(
                 go.Scatter(
                     x=(weights[0][c] - weights[1][c]).values,
                     y=len(x)*[i] + np.random.normal(0, 0.1, len(x)),
                     mode='markers',
-                    marker={"color":x[c].values,
-                            "colorscale":self.tuning_colorscale(x[c]),
+                    marker={"color": x[c].values,
+                            "colorscale": self.tuning_colorscale(x[c]),
                             "opacity": 0.7},
                     name=c,
                     text=len(x)*[c],
                     hovertext=hv_text,
-                    hovertemplate=
-                        "<b>%{text}</b><br><br>" +
-                        "%{hovertext}<br>" +
-                        "<extra></extra>",
+                    hovertemplate="<b>%{text}</b><br><br>" +
+                    "%{hovertext}<br>" +
+                    "<extra></extra>",
                     showlegend=False,
-        #             stripmode='overlay',
+                    # stripmode='overlay',
                 ), secondary_y=True
             )
 
@@ -641,20 +645,20 @@ class Consistency():
                 color=[x.min(), x.max()],
                 colorscale=self.tuning_colorscale(pd.Series(np.linspace(x.min().min(), x.max().max(), 10))),
                 colorbar=dict(thickness=20,
-                            lenmode="pixels",
-                            len=400,
-                            yanchor="top",
-                            y=1.1,
-                            ypad=20,
-                            title="Feature values",
-                            tickvals=[x.min().min(), x.max().max()],
-                            ticktext=["Low", "High"]),
+                              lenmode="pixels",
+                              len=400,
+                              yanchor="top",
+                              y=1.1,
+                              ypad=20,
+                              title="Feature values",
+                              tickvals=[x.min().min(), x.max().max()],
+                              ticktext=["Low", "High"]),
                 showscale=True,
             ),
             hoverinfo="none",
             showlegend=False,
         )
-        
+
         # fig["layout"]["showlegend"] = False
         fig.add_trace(colorbar_trace)
 
@@ -684,9 +688,10 @@ class Consistency():
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool
             open automatically the plot
-        """        
+        """
         title = "Pairwise comparison of Consistency:"
-        title += "<span style='font-size: 16px;'><br />How are differences in contributions distributed across features?</span>"
+        title += "<span style='font-size: 16px;'>\
+                 <br />How are differences in contributions distributed across features?</span>"
         dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
@@ -700,9 +705,9 @@ class Consistency():
                           title=dict_t,
                           xaxis_title=dict_xaxis,
                           yaxis_title=dict_yaxis,
-                          yaxis=dict(range=[-0.7, len(top_features)-0.3]), 
+                          yaxis=dict(range=[-0.7, len(top_features)-0.3]),
                           yaxis2=dict(range=[-0.7, len(top_features)-0.3]),
-                          height = max(500, 40 * len(top_features)))
+                          height=max(500, 40 * len(top_features)))
 
         fig.update_yaxes(automargin=True, zeroline=False)
         fig.update_xaxes(automargin=True)
