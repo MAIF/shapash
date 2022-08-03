@@ -2890,10 +2890,6 @@ class SmartPlotter:
 
     def scatter_plot_prediction(self,
                     selection=None,
-                    pred=None,
-                    label=-1,
-                    proba_values=None,
-                    col_modality=None,
                     col_scale=None,
                     addnote=None,
                     subtitle=None,
@@ -2943,9 +2939,7 @@ class SmartPlotter:
         auto_open: bool (default=False)
             open automatically the plot
         """
-        if self.explainer._case == "classification":
-            label_num, _, label_value = self.explainer.check_label_name(label)
-        
+
         # Sampling
         if selection is None:
             if self.explainer.x_init.shape[0] <= max_points:
@@ -2969,21 +2963,27 @@ class SmartPlotter:
             addnote = add_text([addnote,
                                 f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
                                sep='')
-        
+
         # Classification Case
         if self.explainer._case == "classification":
             # predict proba Color scale
             if hasattr(self.explainer.model, "predict_proba"):
                 if not hasattr(self.explainer, "proba_values"):
                     self.explainer.predict_proba()
-                proba_values = self.explainer.proba_values.iloc[:, [label_num]]
-                # Proba subset:
-                proba_values = proba_values.loc[list_ind, :]
-                target = self.explainer.y_target.loc[list_ind, :]
                 if hasattr(self.explainer.model, "predict"):
                     if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
                         self.explainer.predict()
-                    y_pred = self.explainer.y_pred.loc[list_ind, :]
+                # Assign proba values of the target
+                df_proba_target= pd.concat([self.explainer.proba_values,pd.DataFrame(self.explainer.y_target)],axis=1)
+                df_proba_target.columns = [*df_proba_target.columns[:-1], 'target_name']
+                df_proba_target['target_name'] = 'class_' + df_proba_target['target_name'].astype(str)
+                idx, cols = pd.factorize(df_proba_target['target_name'])
+                df_proba_target['proba_target'] = df_proba_target.reindex(cols, axis=1).to_numpy()[np.arange(len(df_proba_target)), idx]
+                proba_values = df_proba_target[['proba_target']]
+                # Proba subset:
+                proba_values = proba_values.loc[list_ind, :]
+                target = self.explainer.y_target.loc[list_ind, :]
+                y_pred = self.explainer.y_pred.loc[list_ind, :]
                 df_pred = pd.concat([proba_values.reset_index(),y_pred.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
                 df_pred.set_index(df_pred.columns[0],inplace=True)
                 df_pred.columns=["proba_values","predict_class","target"]
@@ -3004,77 +3004,62 @@ class SmartPlotter:
             self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(prediction_error))
             col_scale = self.pred_colorscale
 
-        if self.explainer.y_pred is not None:
             y_pred = self.explainer.y_pred.loc[list_ind]
-            # Add labels if exist
-            if self.explainer._case == 'classification' and self.explainer.label_dict is not None:
-                y_pred = y_pred.applymap(lambda x: self.explainer.label_dict[x])
+            y_target = self.explainer.y_target.loc[list_ind]
+            prediction_error = np.array(pd.DataFrame(prediction_error).loc[list_ind])
             # round predict
-            elif self.explainer._case == 'regression':
-                if self.round_digit is None:
-                    self.tuning_round_digit()
-                y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+            if self.round_digit is None:
+                self.tuning_round_digit()
+            y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
 
         fig = go.Figure()
 
         if self.explainer._case == "classification":
-            hv_text = [f"Id: {x}<br />Proba_values: {y}<br />Predict_class: {w}<br />Target: {z}<br />" for x, y, w, z in zip(df_pred.index,
-            df_pred.proba_values.values.round(3).flatten(),df_pred.predict_class.values.flatten(),df_pred.target.values.flatten())]
-            #hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=pred.index)
-            #hv_temp = f'{feature_name} :<br />' + '%{x}<br />Proba: %{y:.4f}<extra></extra>'
 
             fig.add_trace(go.Violin(
-                x=df_pred['target'][(df_pred['bad_predict'] == 0)].values.flatten(),
-                y=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].values.flatten(),
+                x=df_pred['target'].values.flatten(),
+                y=df_pred['proba_values'].values.flatten(),
                 points=False,
                 legendgroup='M', scalegroup='M', name='Good Prediction',
                 side='positive',
-                line_color=self._style_dict["prediction_plot"][0],
+                line_color=self._style_dict["violin_area_classif"][1],
                 pointpos=-0.1,
                 showlegend=False,
                 jitter=0.075,
                 meanline_visible=True,
-                hovertext=hv_text,
                 spanmode="hard",
-                customdata=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].index.values
+                customdata=df_pred['proba_values'].index.values,
+                scalemode='count',
+                bandwidth = 1
                 ))
 
-            fig.add_trace(go.Violin(
-                x=df_pred['target'][(df_pred['bad_predict'] == 1)].values.flatten(),
-                y=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].values.flatten(),
-                points=False,
-                legendgroup='F', scalegroup='F', name='Bad Prediction',
-                side='negative',
-                line_color=self._style_dict["prediction_plot"][1],
-                pointpos=-0.1,
-                showlegend=False,
-                jitter=0.075,
-                meanline_visible=True,
-                hovertext=hv_text,
-                spanmode="hard",
-                customdata=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].index.values
-                ))
+            df_good_predict = df_pred[(df_pred['bad_predict'] == 0)]
+            df_bad_predict = df_pred[(df_pred['bad_predict'] == 1)]
+            hv_text_good_predict = [f"Id: {x}<br />Proba_values: {y}<br />Predict_class: {w}<br />Target: {z}<br />" for x, y, w, z in zip(df_good_predict.index,
+            df_good_predict.proba_values.values.round(3).flatten(),df_good_predict.predict_class.values.flatten(),df_good_predict.target.values.flatten())]
+            hv_text_bad_predict = [f"Id: {x}<br />Proba_values: {y}<br />Predict_class: {w}<br />Target: {z}<br />" for x, y, w, z in zip(df_bad_predict.index,
+            df_bad_predict.proba_values.values.round(3).flatten(),df_bad_predict.predict_class.values.flatten(),df_bad_predict.target.values.flatten())]
 
             fig.add_trace(go.Scatter(
-                x=df_pred['target'][(df_pred['bad_predict'] == 0)].values.flatten()+ np.random.normal(0, 0.02, len(df_pred[(df_pred['bad_predict'] == 0)])),
-                y=df_pred['proba_values'][(df_pred['bad_predict'] == 0)].values.flatten(),
+                x=df_good_predict['target'].values.flatten()+ np.random.normal(0, 0.02, len(df_good_predict)),
+                y=df_good_predict['proba_values'].values.flatten(),
                 mode='markers',
                 marker_color=self._style_dict["prediction_plot"][0],
                 showlegend=False,
-                hovertext=hv_text,
+                hovertext=hv_text_good_predict,
                 hovertemplate='<b>%{hovertext}</b><br />',
-                customdata=df_pred['proba_values'].index.values,
+                customdata=df_good_predict['proba_values'].index.values,
             ))
 
             fig.add_trace(go.Scatter(
-                x=df_pred['target'][(df_pred['bad_predict'] == 1)].values.flatten()+ np.random.normal(0, 0.02, len(df_pred[(df_pred['bad_predict'] == 1)])),
-                y=df_pred['proba_values'][(df_pred['bad_predict'] == 1)].values.flatten(),
+                x=df_bad_predict['target'].values.flatten()+ np.random.normal(0, 0.02, len(df_bad_predict)),
+                y=df_bad_predict['proba_values'].values.flatten(),
                 mode='markers',
                 marker_color=self._style_dict["prediction_plot"][1],
                 showlegend=False,
-                hovertext=hv_text,
+                hovertext=hv_text_bad_predict,
                 hovertemplate='<b>%{hovertext}</b><br />',
-                customdata=df_pred['proba_values'].index.values,
+                customdata=df_bad_predict['proba_values'].index.values,
             ))
 
             fig.update_layout(violingap=0, violinmode='overlay')
@@ -3082,15 +3067,15 @@ class SmartPlotter:
 
         if self.explainer._case == "regression":
             hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}<br />Prediction Error: {w}" for x, y, z, w in
-                zip(self.explainer.y_target.index,self.explainer.y_target, self.explainer.y_pred, prediction_error)]
+                zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
 
             fig.add_scatter(
-            x=self.explainer.y_target.values.flatten(),
-            y=self.explainer.y_pred.values.flatten(),
+            x=y_target.values.flatten(),
+            y=y_pred.values.flatten(),
             mode='markers',
             hovertext=hv_text,
             hovertemplate='<b>%{hovertext}</b><br />',
-            customdata=self.explainer.y_pred.index.values
+            customdata=y_pred.index.values
         )
 
             colorpoints = prediction_error

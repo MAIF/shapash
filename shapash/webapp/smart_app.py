@@ -566,7 +566,7 @@ class SmartApp:
                                 html.Div(
                                     self.draw_component('graph', 'prediction_picking'),
                                     className="card",
-                                    id='card_picking',
+                                    id='card_prediction_picking',
                                 )
                             ],
                             md=5,
