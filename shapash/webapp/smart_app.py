@@ -256,7 +256,7 @@ class SmartApp:
                     html.Div(
                         [
                             html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
-                                     src=self.app.get_asset_url('reload.png'),
+                                     src=self.app.get_asset_url('icon_reset.png'),
                                      height='40px',
                                      style={'cursor': 'pointer'}),
                         ]
@@ -1293,7 +1293,6 @@ class SmartApp:
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
-                label=self.label,
                 max_points=points
             )
 
