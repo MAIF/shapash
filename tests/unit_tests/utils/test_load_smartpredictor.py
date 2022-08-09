@@ -3,7 +3,6 @@ Unit test smart predictor
 """
 import unittest
 import sys
-import os
 from os import path
 from pathlib import Path
 from shapash.utils.load_smartpredictor import load_smartpredictor
@@ -44,4 +43,3 @@ class Test_load_smartpredictor(unittest.TestCase):
 
         assert all(attrib in attrib_predictor2 for attrib in attrib_predictor)
         assert all(attrib2 in attrib_predictor for attrib2 in attrib_predictor2)
-        os.remove(pkl_file)
