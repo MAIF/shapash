@@ -17,9 +17,8 @@ from shapash.manipulation.summarize import compute_features_import, project_feat
 from shapash.utils.utils import add_line_break, truncate_str, compute_digit_number, add_text, \
     maximum_difference_sort_value, compute_sorted_variables_interactions_list_indices, \
     compute_top_correlations_features
-from shapash.utils.transform import get_features_transform_mapping
-from shapash.utils.acv_backend import compute_features_import_acv
 from shapash.webapp.utils.utils import round_to_k
+from shapash.style.style_utils import colors_loading, select_palette, define_style
 
 
 class SmartPlotter:
@@ -43,143 +42,25 @@ class SmartPlotter:
 
     def __init__(self, explainer):
         self.explainer = explainer
-        self.dict_title = {
-            'xanchor': "center",
-            'yanchor': "middle",
-            'x': 0.5,
-            'y': 0.9,
-            'font': {
-                'size': 24,
-                'family': "Arial",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_title_stability = {
-            'xanchor': "center",
-            'x': 0.5,
-            "yanchor": "bottom",
-            "pad": dict(b=50),
-            'font': {
-                'size': 24,
-                'family': "Arial",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_title_compacity = {
-            'font': {
-                'size': 14,
-                'family': "Arial",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_xaxis = {
-            'font': {
-                'size': 16,
-                'family': "Arial Black",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_yaxis = {
-            'font': {
-                'size': 16,
-                'family': "Arial Black",
-                'color': "rgb(50, 50, 50)"
-            }
-        }
-        self.dict_ycolors = {
-            1: "rgba(255, 166, 17, 0.9)",
-            0: "rgba(117, 152, 189, 0.9)"
-        }
-        self.init_colorscale = [
-            "rgb(52, 55, 54)",
-            "rgb(74, 99, 138)",
-            "rgb(116, 153, 214)",
-            "rgb(162, 188, 213)",
-            "rgb(212, 234, 242)",
-            "rgb(235, 216, 134)",
-            "rgb(255, 204, 83)",
-            "rgb(244 ,192, 0)",
-            "rgb(255, 166, 17)",
-            "rgb(255, 123, 38)",
-            "rgb(255, 77, 7)"
-        ]
-        self.default_color = 'rgba(117, 152, 189, 0.9)'
-        self.dict_featimp_colors = {
-            1: {
-                'color': 'rgba(244, 192, 0, 1.0)',
-                'line': {
-                    'color': 'rgba(52, 55, 54, 0.8)',
-                    'width': 0.5
-                }
-            },
-            2: {
-                'color': 'rgba(52, 55, 54, 0.7)'
-            }
-        }
-        self.dict_local_plot_colors = {
-            1: {
-                'color': 'rgba(244, 192, 0, 1.0)',
-                'line': {
-                    'color': 'rgba(52, 55, 54, 0.8)',
-                    'width': 0.5
-                }
-            },
-            -1: {
-                'color': 'rgba(74, 99, 138, 0.7)',
-                'line': {
-                    'color': 'rgba(27, 28, 28, 1.0)',
-                    'width': 0.5
-                }
-            },
-            0: {
-                'color': 'rgba(113, 101, 59, 1.0)',
-                'line': {
-                    'color': 'rgba(52, 55, 54, 0.8)',
-                    'width': 0.5
-                }
-            },
-            -2: {
-                'color': 'rgba(52, 55, 54, 0.7)',
-                'line': {
-                    'color': 'rgba(27, 28, 28, 1.0)',
-                    'width': 0.5
-                }
-            }
-        }
-
-        self.dict_compare_colors = [
-            'rgba(244, 192, 0, 1.0)',
-            'rgba(74, 99, 138, 0.7)',
-            'rgba(113, 101, 59, 1.0)',
-            "rgba(183, 58, 56, 0.9)",
-            "rgba(255, 123, 38, 1.0)",
-            'rgba(0, 21, 179, 0.97)',
-            'rgba(116, 1, 179, 0.9)',
-        ]
-
-        self.groups_colors = [
-            px.colors.qualitative.T10[1],
-            px.colors.qualitative.G10[9]
-        ]
-
-        self.dict_stability_bar_colors = {
-            1: "rgba(255, 166, 17, 0.9)",
-            0: "rgba(117, 152, 189, 0.9)"
-        }
-
-        self.dict_compacity_bar_colors = {
-            1: "rgba(255, 166, 17, 0.9)",
-            0: "rgba(117, 152, 189, 0.9)"
-        }
-
+        self._palette_name = list(colors_loading().keys())[0]
+        self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
         self.round_digit = None
-
-        self.interactions_col_scale = ["rgb(175, 169, 157)", "rgb(255, 255, 255)", "rgb(255, 77, 7)"]
-
-        self.interactions_discrete_colors = px.colors.qualitative.Antique
-
         self.last_stability_selection = False
         self.last_compacity_selection = False
+
+    def define_style_attributes(self, colors_dict):
+        """
+        define_style_attributes allows shapash user to change the color of plot
+
+        Parameters
+        ----------
+        colors_dict: dict
+            Dict of the colors used in the different plots
+        """
+        self._style_dict = define_style(colors_dict)
+
+        if hasattr(self, "pred_colorscale"):
+            delattr(self, "pred_colorscale")
 
     def tuning_colorscale(self, values):
         """
@@ -191,10 +72,10 @@ class SmartPlotter:
             values ​​whose quantiles must be calculated
         """
         desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
-        min_pred, max_pred = list(desc_df.loc[['min', 'max']].values)
+        min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
-                      (max_pred - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self.init_colorscale))))
+                      (max_init - min_pred)
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
         return color_scale
 
     def tuning_round_digit(self):
@@ -256,9 +137,9 @@ class SmartPlotter:
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_t['text'] = title
         dict_xaxis['text'] = truncate_str(feature_name, 110)
         dict_yaxis['text'] = 'Contribution'
@@ -279,10 +160,10 @@ class SmartPlotter:
         elif fig.data[0].type != 'violin':
             if self.explainer._case == 'classification' and pred is not None:
                 fig.data[-1].marker.color = pred.iloc[:, 0].apply(lambda
-                                                                  x: self.dict_ycolors[1] if x == col_modality else
-                                                                  self.dict_ycolors[0])
+                                                                  x: self._style_dict["violin_area_classif"][1] if x == col_modality else
+                                                                  self._style_dict["violin_area_classif"][0])
             else:
-                fig.data[-1].marker.color = self.default_color
+                fig.data[-1].marker.color = self._style_dict["violin_default"]
 
         fig.update_traces(
             marker={
@@ -483,7 +364,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=-0.1,
                                         side='negative',
-                                        line_color=self.dict_ycolors[0],
+                                        line_color=self._style_dict["violin_area_classif"][0],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -500,7 +381,7 @@ class SmartPlotter:
                                         points=points_param,
                                         pointpos=0.1,
                                         side='positive',
-                                        line_color=self.dict_ycolors[1],
+                                        line_color=self._style_dict["violin_area_classif"][1],
                                         showlegend=False,
                                         jitter=jitter_param,
                                         meanline_visible=True,
@@ -515,7 +396,7 @@ class SmartPlotter:
             else:
                 fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        line_color=self.default_color,
+                                        line_color=self._style_dict["violin_default"],
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
@@ -600,23 +481,23 @@ class SmartPlotter:
         auto_open: bool (default=False)
             open automatically the plot
         """
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             topmargin = topmargin + 15
         dict_t.update(text=title)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_xaxis.update(text='Contribution')
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_yaxis.update(text=None)
-        dict_style_bar1 = self.dict_featimp_colors[1]
-        dict_style_bar2 = self.dict_featimp_colors[2]
+        dict_style_bar1 = self._style_dict["dict_featimp_colors"][1]
+        dict_style_bar2 = self._style_dict["dict_featimp_colors"][2]
         dict_yaxis['text'] = None
 
         # Change bar color for groups of features
         marker_color = [
-            self.groups_colors[0]
+            self._style_dict['featureimp_groups'][0]
             if (
                     self.explainer.features_groups is not None
                     and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
@@ -712,11 +593,11 @@ class SmartPlotter:
             A bar plot with selected contributions and
             associated feature values for one observation.
         """
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
-        dict_local_plot_colors = copy.deepcopy(self.dict_local_plot_colors)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+        dict_local_plot_colors = copy.deepcopy(self._style_dict["dict_local_plot_colors"])
         if len(index_value) == 0:
             warnings.warn('Only one line/observation must match the condition', UserWarning)
             dict_t['text'] = "Local Explanation - <b>No Matching Entry</b>"
@@ -759,7 +640,7 @@ class SmartPlotter:
                         and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
                         and len(index_value) > 0):
                     group_name = self.explainer.inv_features_dict.get(expl[0])
-                    feat_groups_values = self.explainer.x_pred[self.explainer.features_groups[group_name]]\
+                    feat_groups_values = self.explainer.x_init[self.explainer.features_groups[group_name]]\
                                                        .loc[index_value[0]]
                     hoverlabel = '<br />'.join([
                         '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
@@ -792,7 +673,7 @@ class SmartPlotter:
 
             # If the bar is a group of features we modify the color
             if group_name is not None:
-                bar_color = self.groups_colors[0] if color == 1 else self.groups_colors[1]
+                bar_color = self._style_dict["featureimp_groups"][0] if color == 1 else self._style_dict["featureimp_groups"][1]
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
@@ -949,7 +830,7 @@ class SmartPlotter:
             if self.explainer.y_pred is not None:
                 value = self.explainer.y_pred.loc[index]
             else:
-                value = self.explainer.model.predict(self.explainer.x_init.loc[[index]])[0]
+                value = self.explainer.model.predict(self.explainer.x_encoded.loc[[index]])[0]
 
         if isinstance(value, pd.Series):
             value = value.values[0]
@@ -1034,14 +915,14 @@ class SmartPlotter:
             )
 
         if index is not None:
-            if index in self.explainer.x_pred.index:
+            if index in self.explainer.x_init.index:
                 line = [index]
             else:
                 line = []
         elif row_num is not None:
-            line = [self.explainer.x_pred.index[row_num]]
+            line = [self.explainer.x_init.index[row_num]]
         elif query is not None:
-            line = select_lines(self.explainer.x_pred, query)
+            line = select_lines(self.explainer.x_init, query)
 
         subtitle = ""
 
@@ -1100,7 +981,7 @@ class SmartPlotter:
             var_dict, x_val, contrib = self.apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
             # use label of each column
             if display_groups:
-                var_dict = [self.explainer.features_dict[self.explainer.x_pred_groups.columns[x]] for x in var_dict]
+                var_dict = [self.explainer.features_dict[self.explainer.x_init_groups.columns[x]] for x in var_dict]
             else:
                 var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
@@ -1214,11 +1095,11 @@ class SmartPlotter:
 
         # Sampling
         if selection is None:
-            if self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
                 addnote = None
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
@@ -1231,7 +1112,7 @@ class SmartPlotter:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:
             addnote = add_text([addnote,
-                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
+                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
                                sep='')
 
         col_value = None
@@ -1270,11 +1151,11 @@ class SmartPlotter:
         if self.explainer.postprocessing_modifications:
             feature_values = self.explainer.x_contrib_plot.loc[list_ind, col_name]
         else:
-            feature_values = self.explainer.x_pred.loc[list_ind, col_name]
+            feature_values = self.explainer.x_init.loc[list_ind, col_name]
 
         if col_is_group:
-            feature_values = project_feature_values_1d(feature_values, col, self.explainer.x_pred,
-                                                       self.explainer.x_init, self.explainer.preprocessing,
+            feature_values = project_feature_values_1d(feature_values, col, self.explainer.x_init,
+                                                       self.explainer.x_encoded, self.explainer.preprocessing,
                                                        features_dict=self.explainer.features_dict)
             contrib = subcontrib.loc[list_ind, col].to_frame()
             if self.explainer.features_imp is None:
@@ -1284,7 +1165,7 @@ class SmartPlotter:
             top_features_of_group = features_imp.loc[self.explainer.features_groups[col]] \
                                                 .sort_values(ascending=False)[:4].index  # Displaying top 4 features
             metadata = {
-                self.explainer.features_dict[f_name]: self.explainer.x_pred[f_name]
+                self.explainer.features_dict[f_name]: self.explainer.x_init[f_name]
                 for f_name in top_features_of_group
             }
             text_group = "Features values were projected on the x axis using t-SNE"
@@ -1420,20 +1301,11 @@ class SmartPlotter:
             label_num, _, label_value = self.explainer.check_label_name(label)
             global_feat_imp = features_importance[label_num].tail(max_features)
             if selection is not None:
-                subset = contributions[label_num].loc[selection]
-                if hasattr(self.explainer, 'backend') and self.explainer.backend == 'acv':
-                    selection_ids = [i for i, x in enumerate(contributions[label_num].index) if x in selection]
-                    subset_feat_imp = compute_features_import_acv(
-                        sdp_index=np.array(self.explainer.sdp_index)[selection_ids],
-                        sdp=np.array(self.explainer.sdp)[selection_ids],
-                        init_columns=self.explainer.x_init.columns,
-                        features_mapping=get_features_transform_mapping(
-                            self.explainer.x_pred, self.explainer.x_init, self.explainer.preprocessing
-                        )
-                    )
-                else:
-                    subset_feat_imp = compute_features_import(subset)
-                    subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions[label_num],
+                    explain_data=self.explainer.explain_data,
+                    subset=selection
+                )
             else:
                 subset_feat_imp = None
             subtitle = f"Response: <b>{label_value}</b>"
@@ -1441,24 +1313,27 @@ class SmartPlotter:
         elif self.explainer._case == "regression":
             global_feat_imp = features_importance.tail(max_features)
             if selection is not None:
-                subset = contributions.loc[selection]
-                subset_feat_imp = compute_features_import(subset)
-                subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
+                subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions,
+                    explain_data=self.explainer.explain_data,
+                    subset=selection
+                )
             else:
                 subset_feat_imp = None
         addnote = ''
         if subset_feat_imp is not None:
+            subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             subset_feat_imp.index = subset_feat_imp.index.map(self.explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
-            subset_len = subset.shape[0]
-            total_len = self.explainer.x_pred.shape[0]
+            subset_len = len(selection)
+            total_len = self.explainer.x_init.shape[0]
             addnote = add_text([addnote,
                                 f"Subset length: {subset_len} ({int(np.round(100 * subset_len / total_len))}%)"],
                                sep=" - ")
-        if self.explainer.x_pred.shape[1] >= max_features:
+        if self.explainer.x_init.shape[1] >= max_features:
             addnote = add_text([addnote,
-                                f"Total number of features: {int(self.explainer.x_pred.shape[1])}"],
+                                f"Total number of features: {int(self.explainer.x_init.shape[1])}"],
                                sep=" - ")
 
         global_feat_imp.index = global_feat_imp.index.map(self.explainer.features_dict)
@@ -1527,10 +1402,10 @@ class SmartPlotter:
             Plot of the contributions of individuals, feature by feature.
         """
 
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
 
         if len(index) == 0:
             warnings.warn('No individuals matched', UserWarning)
@@ -1570,7 +1445,7 @@ class SmartPlotter:
 
         iteration_list = list(zip(contributions, feature_values))
 
-        dic_color = copy.deepcopy(self.dict_compare_colors)
+        dic_color = copy.deepcopy(self._style_dict["dict_compare_colors"])
         lines = list()
 
         for i, id_i in enumerate(index):
@@ -1668,13 +1543,13 @@ class SmartPlotter:
         line_reference = []
         if index is not None:
             for ident in index:
-                if ident in self.explainer.x_pred.index:
+                if ident in self.explainer.x_init.index:
                     line_reference.append(ident)
 
         elif row_num is not None:
-            line_reference = [self.explainer.x_pred.index.values[row_nb_reference]
+            line_reference = [self.explainer.x_init.index.values[row_nb_reference]
                               for row_nb_reference in row_num
-                              if self.explainer.x_pred.index.values[row_nb_reference] in self.explainer.x_pred.index]
+                              if self.explainer.x_init.index.values[row_nb_reference] in self.explainer.x_init.index]
 
         subtitle = ""
         if len(line_reference) < 1:
@@ -1716,7 +1591,7 @@ class SmartPlotter:
                 feature_name = self.explainer.features_dict[name]
                 feature_values[i] = feature_name
 
-        preds = [self.explainer.x_pred.loc[id] for id in line_reference]
+        preds = [self.explainer.x_init.loc[id] for id in line_reference]
         dict_features = self.explainer.inv_features_dict
 
         iteration_list = list(zip(new_contrib, feature_values))
@@ -1776,7 +1651,7 @@ class SmartPlotter:
 
         if isinstance(col_values.values.flatten()[0], str):
             fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name,
-                             color_discrete_sequence=self.interactions_discrete_colors)
+                             color_discrete_sequence=self._style_dict["interactions_discrete_colors"])
         else:
             fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name, color_continuous_scale=col_scale)
 
@@ -1829,7 +1704,7 @@ class SmartPlotter:
         for i in uniq_l:
             fig.add_trace(go.Violin(x=x_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
                                     y=y_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
-                                    line_color=self.default_color,
+                                    line_color=self._style_dict["violin_default"],
                                     showlegend=False,
                                     meanline_visible=True,
                                     scalemode='count',
@@ -1880,19 +1755,19 @@ class SmartPlotter:
         """
 
         if fig.data[-1]['showlegend'] is False:  # Case where col2 is not categorical
-            fig.layout.coloraxis.colorscale = self.interactions_col_scale
+            fig.layout.coloraxis.colorscale = self._style_dict["interactions_col_scale"]
         else:
             fig.update_layout(legend=dict(title=dict(text=col_name2)))
 
         title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
         if addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         dict_t['text'] = title
 
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_xaxis['text'] = truncate_str(col_name1, 110)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_yaxis['text'] = 'Shap interaction value'
 
         fig.update_traces(
@@ -1948,10 +1823,10 @@ class SmartPlotter:
             # interaction_selection attribute is used to store already computed indices of interaction_values
             if hasattr(self, 'interaction_selection'):
                 list_ind = self.interaction_selection
-            elif self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            elif self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
             if hasattr(self, 'interaction_selection'):
@@ -2036,7 +1911,7 @@ class SmartPlotter:
 
         if addnote is not None:
             addnote = add_text([addnote,
-                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_pred.shape[0]))}%)"],
+                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
                                sep='')
 
         # Subset
@@ -2044,8 +1919,8 @@ class SmartPlotter:
             feature_values1 = self.explainer.x_contrib_plot.loc[list_ind, col_name1].to_frame()
             feature_values2 = self.explainer.x_contrib_plot.loc[list_ind, col_name2].to_frame()
         else:
-            feature_values1 = self.explainer.x_pred.loc[list_ind, col_name1].to_frame()
-            feature_values2 = self.explainer.x_pred.loc[list_ind, col_name2].to_frame()
+            feature_values1 = self.explainer.x_init.loc[list_ind, col_name1].to_frame()
+            feature_values2 = self.explainer.x_init.loc[list_ind, col_name2].to_frame()
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
 
@@ -2058,7 +1933,7 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=self.interactions_col_scale
+                col_scale=self._style_dict["interactions_col_scale"]
             )
         else:
             fig = self._plot_interactions_violin(
@@ -2068,7 +1943,7 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=self.interactions_col_scale
+                col_scale=self._style_dict["interactions_col_scale"]
             )
 
         self._update_interactions_fig(
@@ -2167,11 +2042,11 @@ class SmartPlotter:
             title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
             if addnote:
                 title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
-            dict_t = copy.deepcopy(self.dict_title)
+            dict_t = copy.deepcopy(self._style_dict["dict_title"])
             dict_t.update({'text': title, 'y': 0.88, 'x': 0.5, 'xanchor': 'center', 'yanchor': 'top'})
             return dict_t
 
-        fig.layout.coloraxis.colorscale = self.interactions_col_scale
+        fig.layout.coloraxis.colorscale = self._style_dict["interactions_col_scale"]
         fig.update_layout(
             xaxis_title=self.explainer.columns_dict[sorted_top_features_indices[0][0]],
             yaxis_title="Shap interaction value",
@@ -2184,7 +2059,7 @@ class SmartPlotter:
                              args=[{"visible": [True if i == id_trace else False
                                                 for i, x in enumerate(interactions_indices_traces_mapping)
                                                 for _ in range(x)]},
-                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[i]}, **self.dict_xaxis}},
+                                   {'xaxis': {'title': {**{'text': self.explainer.columns_dict[i]}, **self._style_dict["dict_xaxis"]}},
                                     'legend': {'title': {'text': self.explainer.columns_dict[j]}},
                                     'coloraxis': {'colorbar': {'title': {'text': self.explainer.columns_dict[j]}},
                                                   'colorscale': fig.layout.coloraxis.colorscale},
@@ -2251,7 +2126,7 @@ class SmartPlotter:
         Parameters
         ----------
         df : pd.DataFrame, optional
-            DataFrame for which we want to compute correlations. Will use x_pred by default.
+            DataFrame for which we want to compute correlations. Will use x_init by default.
         max_features : int (default: 10)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
@@ -2283,8 +2158,8 @@ class SmartPlotter:
             features_to_hide = []
 
         if df is None:
-            # Use x_pred by default
-            df = self.explainer.x_pred
+            # Use x_init by default
+            df = self.explainer.x_init
 
         if facet_col:
             features_to_hide += [facet_col]
@@ -2350,11 +2225,11 @@ class SmartPlotter:
         if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
             subtitle = f"Top {len(list_features)} correlations"
             title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
-        dict_t = copy.deepcopy(self.dict_title)
+        dict_t = copy.deepcopy(self._style_dict["dict_title"])
         dict_t['text'] = title
 
         fig.update_layout(
-            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self.init_colorscale[5:-1]),
+            coloraxis=dict(colorscale=['rgb(255, 255, 255)'] + self._style_dict["init_contrib_colorscale"][5:-1]),
             showlegend=True,
             title=dict_t,
             width=width,
@@ -2451,7 +2326,7 @@ class SmartPlotter:
         mean_amplitude: array
             Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
         dataset: DataFrame
-            x_pred dataset
+            x_init dataset
         column_names: list
             Columns names that are displayed on the plot
         file_name: string
@@ -2569,12 +2444,12 @@ class SmartPlotter:
         """
         title = "Importance & Local Stability of explanations:"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = copy.deepcopy(self.dict_title_stability)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = xaxis_title
         dict_yaxis['text'] = yaxis_title
-        dict_stability_bar_colors = copy.deepcopy(self.dict_stability_bar_colors)
+        dict_stability_bar_colors = copy.deepcopy(self._style_dict["dict_stability_bar_colors"])
         dict_t['text'] = title
 
         fig.add_trace(
@@ -2662,11 +2537,11 @@ class SmartPlotter:
         fig
             The figure that will be displayed
         """
-        assert index in self.explainer.x_pred.index, "index must exist in pandas dataframe"
+        assert index in self.explainer.x_init.index, "index must exist in pandas dataframe"
 
         self.explainer.compute_features_stability([index])
 
-        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_init.columns])
         ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Compute explanations for instance and neighbors
@@ -2691,17 +2566,17 @@ class SmartPlotter:
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
                         y=g_df.iloc[::-1, ::-1].index.tolist(),
                         x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                        marker_color=self.dict_stability_bar_colors[1] if i == g_df.shape[1]-1
-                        else self.dict_stability_bar_colors[0],
+                        marker_color=self._style_dict["dict_stability_bar_colors"][1] if i == g_df.shape[1]-1
+                        else self._style_dict["dict_stability_bar_colors"][0],
                         orientation='h',
                         opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
                         if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
 
         title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = copy.deepcopy(self.dict_title_stability)
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = "Normalized contribution values"
         dict_yaxis['text'] = ""
         dict_t['text'] = title
@@ -2797,10 +2672,10 @@ class SmartPlotter:
         """
         # Sampling
         if selection is None:
-            if self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
             # By default, don't compute calculation if it has already been done
             if (self.explainer.features_stability is None) or self.last_stability_selection or force:
                 self.explainer.compute_features_stability(list_ind)
@@ -2818,7 +2693,7 @@ class SmartPlotter:
         else:
             raise ValueError('Parameter selection must be a list')
 
-        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_pred.columns])
+        column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_init.columns])
 
         variability = self.explainer.features_stability["variability"]
         amplitude = self.explainer.features_stability["amplitude"]
@@ -2840,7 +2715,7 @@ class SmartPlotter:
 
                 variability = variability[:, keep]
                 mean_amplitude = mean_amplitude[keep]
-                dataset = self.explainer.x_pred.iloc[:, keep]
+                dataset = self.explainer.x_init.iloc[:, keep]
                 column_names = column_names[keep]
 
             fig = self.plot_stability_distribution(variability, distribution, mean_amplitude, dataset,
@@ -2903,10 +2778,10 @@ class SmartPlotter:
         """
         # Sampling
         if selection is None:
-            if self.explainer.x_pred.shape[0] <= max_points:
-                list_ind = self.explainer.x_pred.index.tolist()
+            if self.explainer.x_init.shape[0] <= max_points:
+                list_ind = self.explainer.x_init.index.tolist()
             else:
-                list_ind = random.sample(self.explainer.x_pred.index.tolist(), max_points)
+                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
             # By default, don't compute calculation if it has already been done
             if (self.explainer.features_compacity is None) or self.last_compacity_selection or force:
                 self.explainer.compute_features_compacity(list_ind, 1 - approx, nb_features)
@@ -2941,7 +2816,7 @@ class SmartPlotter:
         )
 
         # Used as titles in make_subplots are considered annotations
-        fig.update_annotations(font=self.dict_title_compacity["font"])
+        fig.update_annotations(font=self._style_dict["dict_title_compacity"]["font"])
 
         # First plot: number of features required for a given approximation
         fig.add_trace(
@@ -2954,14 +2829,14 @@ class SmartPlotter:
                 + str(round(100 * approx))
                 + "%<br>of the model for %{y:.1f}% of the instances",
                 hovertext="none",
-                marker_color=self.dict_compacity_bar_colors[1],
+                marker_color=self._style_dict["dict_compacity_bar_colors"][1],
                 ),
             row=1,
             col=1,
         )
 
-        dict_xaxis = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis['text'] = "Number of selected features"
         dict_yaxis['text'] = "Cumulative distribution over<br>dataset's instances (%)"
 
@@ -2978,14 +2853,14 @@ class SmartPlotter:
                 hovertemplate="Top " + str(nb_features) + " features explain at least "
                 + "%{x:.0f}"
                 + "%<br>of the model for %{y:.1f}% of the instances",
-                marker_color=self.dict_compacity_bar_colors[0],
+                marker_color=self._style_dict["dict_compacity_bar_colors"][0],
                 ),
             row=1,
             col=2,
         )
 
-        dict_xaxis2 = copy.deepcopy(self.dict_xaxis)
-        dict_yaxis2 = copy.deepcopy(self.dict_yaxis)
+        dict_xaxis2 = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis2 = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_xaxis2['text'] = "Percentage of model output<br>explained (%)"
         dict_yaxis2['text'] = "Cumulative distribution over<br>dataset's instances (%)"
 
@@ -2994,7 +2869,7 @@ class SmartPlotter:
 
         title = "Compacity of explanations:"
         title += "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
-        dict_t = copy.deepcopy(self.dict_title_stability)
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
         dict_t['text'] = title
 
         fig.update_layout(

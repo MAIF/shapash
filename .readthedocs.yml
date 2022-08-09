@@ -21,6 +21,6 @@ sphinx:
 python:
   version: 3.7
   install:
-    - requirements: requirements.dev.txt
     - method: pip
       path: .
+    - requirements: requirements.dev.txt

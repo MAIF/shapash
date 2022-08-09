@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import socket
 import math
+from shapash.explainer.smart_state import SmartState
+from shapash.explainer.multi_decorator import MultiDecorator
 
 def get_host_name():
     """
@@ -269,3 +271,41 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
                 set_features.add(sorted_corr.index[i][1])
         i += 1
     return list(set_features)
+
+
+def choose_state(contributions):
+    """
+    Select implementation of the smart explainer. Typically check if it is a
+    multi-class problem, in which case the implementation should be adapted
+    to lists of contributions.
+
+    Parameters
+    ----------
+    contributions : object
+        Local contributions. Could also be a list of local contributions.
+
+    Returns
+    -------
+    object
+        SmartState or SmartMultiState, depending on the nature of the input.
+    """
+    if isinstance(contributions, list):
+        return MultiDecorator(SmartState())
+    else:
+        return SmartState()
+
+
+def convert_string_to_int_keys(input_dict: dict) -> dict:    
+    """
+    Returns the dict with integer keys instead of string keys
+
+    Parameters
+    ----------
+    input_dict: dict
+
+    Returns
+    -------
+    dict
+    """
+    return {int(k): v for k,v in input_dict.items()}
+
