@@ -1152,7 +1152,7 @@ class TestSmartExplainer(unittest.TestCase):
         mock_export_and_save_report.assert_called_once()
 
     def test_compute_features_stability_1(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
         selection = [1, 3]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
@@ -1168,7 +1168,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl.features_stability["amplitude"].shape == expected
 
     def test_compute_features_stability_2(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
         selection = [1]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
