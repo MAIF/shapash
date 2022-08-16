@@ -1,3 +1,4 @@
+from category_encoders import OrdinalEncoder
 import copy
 import itertools
 import matplotlib.pyplot as plt
@@ -577,6 +578,15 @@ class Consistency():
         -------
         figure
         """
+        # Look for existing OrdinalEncoder. If none, create one for string columns
+        if isinstance(self.preprocessing, OrdinalEncoder):
+            encoder = self.preprocessing
+        else:
+            categorical_features = [col for col in x.columns if x[col].dtype == 'object']
+            encoder = OrdinalEncoder(cols=categorical_features,
+                                     handle_unknown='ignore',
+                                     return_df=True).fit(x)
+
         xaxis_title = "Difference of contributions between the 2 methods" \
                       + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
         yaxis_title = "Top features<span style='font-size: 12px;'><br />(Ordered by mean of absolute contributions)</span>"
@@ -588,11 +598,11 @@ class Consistency():
         for i, c in enumerate(top_features):
 
             switch = False
-            if (self.preprocessing is not None) and (c in self.preprocessing.cols):
+            if c in encoder.cols:
 
                 switch = True
 
-                mapping = self.preprocessing.mapping[self.preprocessing.cols.index(c)]["mapping"]
+                mapping = encoder.mapping[encoder.cols.index(c)]["mapping"]
                 inverse_mapping = {v: k for k, v in mapping.to_dict().items()}
                 feature_value = x[c].map(inverse_mapping)
 
@@ -631,7 +641,6 @@ class Consistency():
                     "%{hovertext}<br>" +
                     "<extra></extra>",
                     showlegend=False,
-                    # stripmode='overlay',
                 ), secondary_y=True
             )
 
@@ -659,7 +668,6 @@ class Consistency():
             showlegend=False,
         )
 
-        # fig["layout"]["showlegend"] = False
         fig.add_trace(colorbar_trace)
 
         self._update_pairwise_consistency_fig(fig=fig,
