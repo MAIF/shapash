@@ -252,17 +252,6 @@ class SmartApp:
                     ],
                     width="auto", align="center",
                 ),
-                dbc.Col([
-                    html.Div(
-                        [
-                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
-                                     src=self.app.get_asset_url('icon_reset.png'),
-                                     height='40px',
-                                     style={'cursor': 'pointer'}),
-                        ]
-                    )],
-                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
-                ),
                 dbc.Col(
                     [
                         html.H4(
@@ -291,6 +280,17 @@ class SmartApp:
                         is_open=True, id='select_collapse'
                     ),
                     width="auto", align="center", style={'padding': 'none'}
+                ),
+                dbc.Col([
+                    html.Div(
+                        [
+                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
+                                     src=self.app.get_asset_url('icon_reset.png'),
+                                     height='40px',
+                                     style={'cursor': 'pointer'}),
+                        ]
+                    )],
+                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
                 ),
                 dbc.Col([
                     html.Div(
