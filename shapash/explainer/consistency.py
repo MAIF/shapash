@@ -586,6 +586,7 @@ class Consistency():
             encoder = OrdinalEncoder(cols=categorical_features,
                                      handle_unknown='ignore',
                                      return_df=True).fit(x)
+            x = encoder.transform(x)
 
         xaxis_title = "Difference of contributions between the 2 methods" \
                       + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
