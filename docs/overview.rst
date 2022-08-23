@@ -59,8 +59,13 @@ The 4 steps to display results:
 
 .. code:: ipython
 
-    from shapash.explainer.smart_explainer import SmartExplainer
-    xpl = SmartExplainer(features_dict=house_dict) # optional parameter
+    from shapash import SmartExplainer
+    xpl = SmartExplainer(
+      features_dict=house_dict,  # Optional parameter
+      model=regressor,
+      preprocessing=encoder, # Optional: compile step can use inverse_transform method
+      postprocessing=postprocess # Optional: see tutorial postprocessing
+    )
 
 
 - Step 2: Compile Model, Dataset, Encoders, ...
@@ -69,10 +74,8 @@ The 4 steps to display results:
 .. code:: ipython
 
     xpl.compile(
-        x=Xtest,
-        model=regressor,
-        preprocessing=encoder, # Optional: compile step can use inverse_transform method
-        y_pred=y_pred # Optional
+        x=Xtest,    
+        y_pred=y_pred, # Optional    
     )
 
 - Step 3: Display output
@@ -82,7 +85,25 @@ The 4 steps to display results:
 
     app = xpl.run_app()
 
-- Step 4: From training to deployment : SmartPredictor Object
+- Step 4: Generate the Shapash Report
+  > This step allows to generate a standalone html report of your project using the different splits
+   of your dataset and also the metrics you used:
+
+.. code:: ipython
+
+    xpl.generate_report(
+        output_file='path/to/output/report.html',
+        project_info_file='path/to/project_info.yml',
+        x_train=Xtrain,
+        y_train=ytrain,
+        y_test=ytest,
+        title_story="House prices report",
+        title_description="""This document is a data science report of the kaggle house prices tutorial project.
+            It was generated using the Shapash library.""",
+        metrics=[{'name': 'MSE', 'path': 'sklearn.metrics.mean_squared_error'}]
+    )
+
+- Step 5: From training to deployment : SmartPredictor Object
 
 Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
 It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.

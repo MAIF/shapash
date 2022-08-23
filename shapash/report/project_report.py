@@ -10,7 +10,7 @@ import numpy as np
 import plotly
 
 from shapash.utils.transform import inverse_transform, apply_postprocessing
-from shapash.explainer.smart_explainer import SmartExplainer
+from shapash import SmartExplainer
 from shapash.utils.io import load_yml
 from shapash.utils.utils import get_project_root, truncate_str
 from shapash.report.visualisation import print_md, print_html, print_css_style, convert_fig_to_html, \
@@ -76,14 +76,14 @@ class ProjectReport:
                 self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
         else:
             self.x_train_pre = None
-        self.x_pred = self.explainer.x_pred
+        self.x_init = self.explainer.x_init
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
-        self.df_train_test = self._create_train_test_df(test=self.x_pred, train=self.x_train_pre)
+        self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
         if self.explainer.y_pred is not None:
             self.y_pred = np.array(self.explainer.y_pred.T)[0]
         else:
-            self.y_pred = self.explainer.model.predict(self.explainer.x_init)
+            self.y_pred = self.explainer.model.predict(self.explainer.x_encoded)
         self.y_test, target_name_test = self._get_values_and_name(y_test, 'target')
         self.y_train, target_name_train = self._get_values_and_name(y_train, 'target')
         self.target_name = target_name_train or target_name_test
@@ -173,7 +173,7 @@ class ProjectReport:
         if test is None and train is None:
             return None
         return pd.concat([test.assign(data_train_test="test") if test is not None else None,
-                          train.assign(data_train_test="train") if train is not None else None])
+                          train.assign(data_train_test="train") if train is not None else None]).reset_index(drop=True)
 
     def display_title_description(self):
         """
@@ -291,7 +291,7 @@ class ProjectReport:
         print_md('---')
 
     def _display_dataset_analysis_global(self):
-        df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_pred),
+        df_stats_global = self._stats_to_table(test_stats=perform_global_dataframe_analysis(self.x_init),
                                                train_stats=perform_global_dataframe_analysis(self.x_train_pre),
                                                names=["Prediction dataset", "Training dataset"])
         print_html(df_stats_global.to_html(classes="greyGridTable"))
@@ -306,6 +306,7 @@ class ProjectReport:
     ):
         col_types = compute_col_types(df)
         n_splits = df[col_splitter].nunique()
+        inv_columns_dict = {v: k for k, v in self.explainer.columns_dict.items()}
         test_stats_univariate = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == split_values[0]],
                                                                       col_types=col_types)
         if n_splits > 1:
@@ -318,14 +319,16 @@ class ProjectReport:
                             for col in df.drop(col_splitter, axis=1).columns.to_list()]
         for col_label in sorted(list_cols_labels):
             col = self.explainer.inv_features_dict.get(col_label, col_label)
-            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col])
+            fig = generate_fig_univariate(df_all=df, col=col, hue=col_splitter, type=col_types[col],
+                                          colors_dict=self.explainer.colors_dict)
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
                 train_stats=train_stats_univariate[col] if n_splits > 1 else None,
                 names=names
             )
+
             univariate_features_desc.append({
-                'feature_index': int(self.explainer.inv_columns_dict.get(col, 0)),
+                'feature_index': int(inv_columns_dict.get(col, 0)),
                 'name': col,
                 'type': str(series_dtype(df[col])),
                 'description': col_label,
@@ -353,6 +356,7 @@ class ProjectReport:
         """
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         explainability_template = template_env.get_template("explainability.html")
+        inv_columns_dict = {v: k for k, v in self.explainer.columns_dict.items()}
         explain_data = list()
         multiclass = True if (self.explainer._classes and len(self.explainer._classes) > 2) else False
         c_list = self.explainer._classes if multiclass else [1]  # list just used for multiclass
@@ -367,7 +371,7 @@ class ProjectReport:
                 feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
                 fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
                 explain_contrib_data.append({
-                    'feature_index': int(self.explainer.inv_columns_dict[feature]),
+                    'feature_index': int(inv_columns_dict[feature]),
                     'name': feature,
                     'description': self.explainer.features_dict[feature],
                     'plot': plotly.io.to_html(fig, include_plotlyjs=False, full_html=False)
@@ -413,7 +417,7 @@ class ProjectReport:
         print_md("### Univariate analysis of target variable")
         df = pd.concat([pd.DataFrame({self.target_name: self.y_pred}).assign(_dataset="pred"),
                         pd.DataFrame({self.target_name: self.y_test}).assign(_dataset="true")
-                        if self.y_test is not None else None])
+                        if self.y_test is not None else None]).reset_index(drop=True)
         self._perform_and_display_analysis_univariate(
             df=df,
             col_splitter="_dataset",
@@ -434,7 +438,11 @@ class ProjectReport:
             if metric['path'] in ['confusion_matrix', 'sklearn.metrics.confusion_matrix'] or \
                     metric['name'] == 'confusion_matrix':
                 print_md(f"**{metric['name']} :**")
-                print_html(convert_fig_to_html(generate_confusion_matrix_plot(y_true=self.y_test, y_pred=self.y_pred)))
+                print_html(convert_fig_to_html(generate_confusion_matrix_plot(
+                    y_true=self.y_test,
+                    y_pred=self.y_pred,
+                    colors_dict=self.explainer.colors_dict
+                )))
             else:
                 try:
                     metric_fn = get_callable(path=metric['path'])

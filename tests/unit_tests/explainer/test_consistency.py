@@ -124,3 +124,14 @@ class TestConsistency(unittest.TestCase):
         coords = self.cns.calculate_coords(mean_distances)
 
         assert coords.shape == (len(self.cns.methods), 2)
+
+    def test_pairwise_consistency_plot(self):
+        methods = ["shap", "lime"]
+        max_features = 2
+        max_points = 100
+        output = self.cns.pairwise_consistency_plot(methods=methods,
+                                                    max_features=max_features,
+                                                    max_points=max_points)
+
+        assert len(output.data[0].x) == min(max_points, len(self.X))
+        assert len(output.data) == 2 * max_features + 1

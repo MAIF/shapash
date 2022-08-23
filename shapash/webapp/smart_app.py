@@ -1,14 +1,16 @@
 """
 Main class of Web application Shapash
 """
+from pydoc import classname
+from turtle import width
 import dash
-import dash_table
+from dash import dash_table
 import dash_daq as daq
 from dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 from dash.dependencies import Output, Input, State
 from flask import Flask
 import pandas as pd
@@ -23,14 +25,14 @@ from shapash.utils.utils import truncate_str
 
 
 def create_input_modal(id, label, tooltip):
-    return dbc.FormGroup(
+    return dbc.Row(
         [
             dbc.Label(label, id=f'{id}_label', html_for=id, width=8),
             dbc.Col(
                 dbc.Input(id=id, type="number", value=0),
                 width=4),
             dbc.Tooltip(tooltip, target=f'{id}_label', placement='bottom'),
-        ], row=True,
+        ], className="g-3"
     )
 
 
@@ -68,8 +70,9 @@ class SmartApp:
 
         # SETTINGS
         self.logo = self.app.get_asset_url('shapash-fond-fonce.png')
-        self.color = '#f4c000'
-        self.bkg_color = "#343736"
+        self.color = explainer.plot._style_dict["webapp_button"]
+        self.bkg_color = explainer.plot._style_dict["webapp_bkg"]
+        self.title_menu_color = explainer.plot._style_dict["webapp_title"]
         self.settings_ini = {
             'rows': 1000,
             'points': 1000,
@@ -130,20 +133,20 @@ class SmartApp:
         Method which initializes data from explainer object
         """
         if hasattr(self.explainer, 'y_pred'):
-            self.dataframe = self.explainer.x_pred.copy()
+            self.dataframe = self.explainer.x_init.copy()
             if isinstance(self.explainer.y_pred, (pd.Series, pd.DataFrame)):
                 self.predict_col = self.explainer.y_pred.columns.to_list()[0]
                 self.dataframe = self.dataframe.join(self.explainer.y_pred)
             elif isinstance(self.explainer.y_pred, list):
                 self.dataframe = self.dataframe.join(pd.DataFrame(data=self.explainer.y_pred,
                                                                   columns=[self.predict_col],
-                                                                  index=self.explainer.x_pred.index))
+                                                                  index=self.explainer.x_init.index))
             else:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
             raise ValueError('y_pred must be set when calling compile function.')
 
-        self.dataframe['_index_'] = self.explainer.x_pred.index
+        self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
         col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
         self.list_index = random.sample(population=self.dataframe.index.tolist(),
@@ -190,7 +193,7 @@ class SmartApp:
                     "scatter plot is displayed)."
         )
 
-        self.components['settings']['name'] = dbc.FormGroup(
+        self.components['settings']['name'] = dbc.Row(
             [
                 dbc.Checklist(
                     options=[{"label": "Use domain name for features name.", "value": 1}], value=[], inline=True,
@@ -199,7 +202,7 @@ class SmartApp:
                 ),
                 dbc.Tooltip("Replace technical feature names by domain names if exists.",
                             target='name', placement='bottom'),
-            ], row=True,
+            ], className="g-3",
         )
 
         self.components['settings']['modal'] = dbc.Modal(
@@ -232,12 +235,12 @@ class SmartApp:
                                 id='bool_groups',
                                 on=True,
                                 style={'display': 'none'} if self.explainer.features_groups is None else {},
-                                color='rgba(244, 192, 0, 1.0)',
+                                color=self.color[0],
                                 label={
                                     'label': 'Groups',
                                     'style': {
                                         'fontSize': 18,
-                                        'color': 'rgb(244, 192, 0)',
+                                        'color': self.color[0],
                                         'fontWeight': 'bold',
                                         "margin-left": "5px"
                                     },
@@ -252,8 +255,8 @@ class SmartApp:
                 dbc.Col(
                     [
                         html.H4(
-                            [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}),
-                             dbc.Badge("Classification", id='classification_badge')
+                            [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}, color=''),
+                             dbc.Badge("Classification", id='classification_badge', color='')
                              ],
                             style={"margin": "0px"}
                         ),
@@ -262,7 +265,7 @@ class SmartApp:
                 ),
                 dbc.Col(
                     dbc.Collapse(
-                        dbc.FormGroup(
+                        dbc.Row(
                             [
                                 dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
@@ -272,13 +275,13 @@ class SmartApp:
                                     style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
-                            row=True, style={"margin": "0px 0px 0px 5px", "align-items": "center"}
+                            style={"margin": "0px 0px 0px 5px", "align-items": "center"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
                     width="auto", align="center", style={'padding': 'none'}
                 ),
-                dbc.Col(
+                dbc.Col([
                     html.Div(
                         [
                             html.Img(id='settings', title='settings', alt='Settings',
@@ -287,11 +290,11 @@ class SmartApp:
                                      style={'cursor': 'pointer'}),
                             self.components['settings']['modal'],
                         ]
-                    ),
-                    align="center", width="50px", style={'padding': '0px 0px 0px 20px'}
+                    )],
+                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
                 )
             ],
-            form=True, no_gutters=True, justify="end"
+            className="g-0", justify="end"
         )
 
         self.adjust_menu()
@@ -307,7 +310,7 @@ class SmartApp:
             ], tooltip_duration=2000,
 
             columns=[{"name": '_index_', "id": '_index_'}, {"name": '_predict_', "id": '_predict_'}] +
-                    [{"name": i, "id": i} for i in self.explainer.x_pred],
+                    [{"name": i, "id": i} for i in self.explainer.x_init],
             editable=False, row_deletable=False,
             style_as_list_view=True,
             virtualization=True,
@@ -336,28 +339,27 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
-        self.components['filter']['index'] = dbc.FormGroup(
+        self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
                 dbc.Label("Index ", align="center", width=4),
-                dbc.Col(
+                dbc.Col([
                     dbc.Input(
-                        id="index_id", type="text", bs_size="md", placeholder="Id must exist",
+                        id="index_id", type="text", size="s", placeholder="Id must exist",
                         debounce=True, persistence=True, style={'textAlign': 'right'}
-                    ),
+                    )], width={"size": 5},
                     style={'padding': "0px"}
                 ),
-                dbc.Col(
+                dbc.Col([
                     html.Img(id='validation', alt='Validate', title='Validate index',
                              src=self.app.get_asset_url('reload.png'),
                              height='30px', style={'cursor': 'pointer'},
-                             ),
-                    style={'padding': "0px"}, align="center", width="40px"
+                             )], width={"size": 2},
+                    style={'padding': "0px"}, align="center"
                 )
-            ],
-            row=True
+            ])
         )
 
-        self.components['filter']['threshold'] = dbc.FormGroup(
+        self.components['filter']['threshold'] = dbc.Col(
             [
                 dbc.Label("Threshold", html_for="slider", id='threshold_label'),
                 dcc.Slider(
@@ -370,7 +372,7 @@ class SmartApp:
             className='filter_dashed'
         )
 
-        self.components['filter']['max_contrib'] = dbc.FormGroup(
+        self.components['filter']['max_contrib'] = dbc.Col(
             [
                 dbc.Label(
                     "Features to display : ", id='max_contrib_label'),
@@ -383,7 +385,7 @@ class SmartApp:
             className='filter_dashed'
         )
 
-        self.components['filter']['positive_contrib'] = dbc.FormGroup(
+        self.components['filter']['positive_contrib'] = dbc.Col(
             [
                 dbc.Label("Contributions to display : "),
                 dbc.Row(
@@ -400,13 +402,13 @@ class SmartApp:
                                 id="check_id_negative"
                             ), width=6, style={'padding': "0px"}, align="center"
                         ),
-                    ], no_gutters=True, justify="center", form=True
+                    ], className="g-0", justify="center"
                 )
             ],
             className='filter_dashed'
         )
 
-        self.components['filter']['masked_contrib'] = dbc.FormGroup(
+        self.components['filter']['masked_contrib'] = dbc.Col(
             [
                 dbc.Label(
                     "Feature(s) to mask :"),
@@ -425,43 +427,40 @@ class SmartApp:
         """
         self.skeleton['navbar'] = dbc.Container(
             [
-                dbc.Row(
-                    [
+                dbc.Row([
                         dbc.Col(
                             html.A(
-                                dbc.Row(
-                                    [
-                                        html.Img(src=self.logo, height="40px"),
-                                        html.H4("Shapash Monitor", id="shapash_title"),
+                                dbc.Row([
+                                    dbc.Col([
+                                        html.Img(src=self.logo, height="40px")], className='col-1'),
+                                    dbc.Col([
+                                        html.H4("Shapash Monitor", id="shapash_title")]),
                                     ],
-                                    align="center",
+                                    align="center", style={'color': self.title_menu_color}
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=4, align="left"
+                            md=3, align="center"
                         ),
-                        dbc.Col(
+                        dbc.Col([
                             html.A(
-                                dbc.Row(
-                                    [
+                                dbc.Row([
                                         html.H3(truncate_str(self.explainer.title_story, maxlen=40),
-                                                id="shapash_title_story"),
-                                    ],
-                                    align="center",
+                                                id="shapash_title_story", style={'text-align':'center'})]
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
-                            ),
-                            md=4, align="center"
+                            )],
+                            md=3, align="center"
                         ),
-                        dbc.Col(
-                            self.components['menu'],
-                            md=4, align='right',
+                        dbc.Col([
+                            self.components['menu']
+                            ], align="end"
                         )
                     ],
-                    style={'padding': "5px 15px", "verticalAlign": "middle"},
+                    style={'padding': "5px 15px", "verticalAlign": "middle", "width":"auto", "justify":"end"}
                 )
             ],
-            fluid=True, style={'height': '50px', 'backgroundColor': self.bkg_color},
+            fluid=True, style={'height': '70px', 'backgroundColor': self.bkg_color}
         )
 
         self.skeleton['body'] = dbc.Container(
@@ -556,8 +555,8 @@ class SmartApp:
         """
         Override menu from explainer object depending on classification or regression case.
         """
-        on_style = {'backgroundColor': self.color, 'color': self.bkg_color, 'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': '#71653B', 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        on_style = {'backgroundColor': self.color[0], 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        off_style = {'backgroundColor': self.color[1], 'color': self.bkg_color, 'margin-right': '0.5rem'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -803,7 +802,7 @@ class SmartApp:
                         columns = [
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_pred]
+                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
 
             if not filter_query:
                 df = self.round_dataframe
@@ -1108,7 +1107,7 @@ class SmartApp:
                                   positive=sign,
                                   max_contrib=max_contrib,
                                   display_groups=bool_group)
-            if np.issubdtype(type(self.explainer.x_pred.index[0]), np.dtype(int).type):
+            if np.issubdtype(type(self.explainer.x_init.index[0]), np.dtype(int).type):
                 selected = int(selected)
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
                 index=selected,
@@ -1186,6 +1185,7 @@ class SmartApp:
 
             selected = check_row(data, index)
             if selected is not None:
-                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color}]
+                style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional
+    
