@@ -76,8 +76,6 @@ class Consistency():
         self.check_consistency_contributions(self.weights)
         self.index = self.weights[0].index
 
-        # self.weights_values = [weight.values for weight in self.weights]
-
     def compute_contributions(self, x, model, methods, preprocessing):
         """
         Compute contributions based on specified methods
@@ -523,7 +521,7 @@ class Consistency():
         if not isinstance(self.x, pd.DataFrame):
             raise ValueError('x must be a pandas DataFrame')
         if len(methods) != 2:
-            raise ValueError('Choose 2 methods among "shap", "lime" and "acv"')
+            raise ValueError('Choose 2 methods among methods of the contributions')
 
         # Select contributions of input methods
         pair_indices = [self.methods.index(x) for x in methods]
@@ -607,10 +605,7 @@ class Consistency():
                 inverse_mapping = {v: k for k, v in mapping.to_dict().items()}
                 feature_value = x[c].map(inverse_mapping)
 
-            hv_text = [f"<b>Feature value</b>: {i}<br>\
-                <b>{methods[0]}</b>: {j}<br>\
-                <b>{methods[1]}</b>: {k}<br>\
-                <b>Diff</b>: {l}"
+            hv_text = [f"<b>Feature value</b>: {i}<br><b>{methods[0]}</b>: {j}<br><b>{methods[1]}</b>: {k}<br><b>Diff</b>: {l}"
                        for i, j, k, l in zip(feature_value if switch else x[c].round(3),
                                              weights[0][c].round(2),
                                              weights[1][c].round(2),
