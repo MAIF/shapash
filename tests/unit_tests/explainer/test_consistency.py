@@ -110,8 +110,9 @@ class TestConsistency(unittest.TestCase):
             mean_distances.loc[self.cns.methods[1], self.cns.methods[0]]
 
     def test_find_examples(self):
-        all_comparisons, mean_distances = self.cns.calculate_all_distances(self.cns.methods, self.cns.weights)
-        method_1, method_2, l2, _, _, _ = self.cns.find_examples(mean_distances, all_comparisons, self.cns.weights)
+        weights = [weight.values for weight in self.cns.weights]
+        all_comparisons, mean_distances = self.cns.calculate_all_distances(self.cns.methods, weights)
+        method_1, method_2, l2, _, _, _ = self.cns.find_examples(mean_distances, all_comparisons, weights)
 
         assert isinstance(method_1, list)
         assert isinstance(method_2, list)
