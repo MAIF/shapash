@@ -567,8 +567,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
 
         expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
                                  'std_num2': [0.0, 2.0, 3.0],
-                                 'other': ['A', 'B', 'C']},
-                                dtype=object)
+                                 'other': ['A', 'B', 'C']})
 
         result = pd.DataFrame(enc.transform(test))
         result.columns = ['col1', 'col2', 'other']
