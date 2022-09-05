@@ -8,7 +8,7 @@ import category_encoders as ce
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import catboost as cb
-import sklearn
+import sklearn as sk
 import lightgbm
 import xgboost
 from shapash.utils.transform import inverse_transform
@@ -563,11 +563,19 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         enc.fit(train, y)
         test = pd.DataFrame({'num1': [0, 1, 1],
                              'num2': [0, 2, 3],
-                             'other': ['A', 'B', 'C']})
-
-        expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
-                                 'std_num2': [0.0, 2.0, 3.0],
-                                 'other': ['A', 'B', 'C']})
+                             'other': ['A', 'B', 'C']},
+                              )
+        if sk.__version__ >="1.0.0":
+            expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
+                                    'std_num2': [0.0, 2.0, 3.0],
+                                    'other': ['A', 'B', 'C']},
+                                    )
+        else:
+            expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
+                                    'std_num2': [0.0, 2.0, 3.0],
+                                    'other': ['A', 'B', 'C']},
+                                    dtype=object
+                                    )
 
         result = pd.DataFrame(enc.transform(test))
         result.columns = ['col1', 'col2', 'other']
