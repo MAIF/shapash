@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 import category_encoders as ce
 import catboost as cb
-import sklearn
 import lightgbm
 import xgboost
 from shapash.utils.transform import inverse_transform, apply_preprocessing, get_col_mapping_ce
@@ -86,7 +85,6 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
                                                list_dict])
 
         pd.testing.assert_frame_equal(expected, original)
-
 
     def test_inverse_transform_3(self):
         """
@@ -404,7 +402,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
                              'BaseN1': ['M', 'N', 'N'], 'BaseN2': ['O', 'P', 'ZZ'],
                              'Target1': ['Q', 'R', 'R'], 'Target2': ['S', 'T', 'ZZ'],
                              'other': ['other', '123', np.nan]},
-                             index=['index1', 'index2', 'index3'])
+                            index=['index1', 'index2', 'index3'])
 
         expected = pd.DataFrame({'Onehot1': ['A', 'B', 'A'], 'Onehot2': ['C', 'D', 'missing'],
                                  'Binary1': ['E', 'F', 'F'], 'Binary2': ['G', 'H', 'missing'],
@@ -412,7 +410,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
                                  'BaseN1': ['M', 'N', 'N'], 'BaseN2': ['O', 'P', np.nan],
                                  'Target1': ['Q', 'R', 'R'], 'Target2': ['S', 'T', 'NaN'],
                                  'other': ['other', '123', np.nan]},
-                             index=['index1', 'index2', 'index3'])
+                                index=['index1', 'index2', 'index3'])
 
         y = pd.DataFrame(data=[0, 1, 0, 0], columns=['y'])
 
@@ -668,7 +666,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
 
         enc = ce.TargetEncoder(cols=['city', 'state'])
-        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        enc.fit(test, y)
 
         mapping = get_col_mapping_ce(enc)
         expected_mapping = {'city': ['city'], 'state': ['state']}
@@ -685,7 +683,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
 
         enc = ce.OrdinalEncoder(handle_missing='value', handle_unknown='value')
-        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        enc.fit(test, y)
 
         mapping = get_col_mapping_ce(enc)
         expected_mapping = {'city': ['city'], 'state': ['state'], 'other': ['other']}
@@ -702,7 +700,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
 
         enc = ce.BinaryEncoder(cols=['city', 'state'])
-        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        enc.fit(test, y)
 
         mapping = get_col_mapping_ce(enc)
         expected_mapping = {'city': ['city_0', 'city_1'], 'state': ['state_0', 'state_1']}
@@ -719,11 +717,15 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
 
         enc = ce.BaseNEncoder(base=2)
-        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        enc.fit(test, y)
 
         mapping = get_col_mapping_ce(enc)
-        expected_mapping = {'city': ['city_0', 'city_1', 'city_2'], 'state': ['state_0', 'state_1'],
-                            'other': ['other_0', 'other_1']}
+        if ce.__version__ <= '2.2.2':
+            expected_mapping = {'city': ['city_0', 'city_1', 'city_2'], 'state': ['state_0', 'state_1'],
+                                'other': ['other_0', 'other_1']}
+        else:
+            expected_mapping = {'city': ['city_0', 'city_1'], 'state': ['state_0', 'state_1'],
+                                'other': ['other_0', 'other_1']}
 
         self.assertDictEqual(mapping, expected_mapping)
 
@@ -737,7 +739,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
 
         enc = ce.OneHotEncoder(cols=['city', 'state'], use_cat_names=True)
-        test_encoded = pd.DataFrame(enc.fit_transform(test, y))
+        enc.fit(test, y)
 
         mapping = get_col_mapping_ce(enc)
         expected_mapping = {'city': ['city_chicago', 'city_paris'], 'state': ['state_US', 'state_FR']}

@@ -1,12 +1,37 @@
+from category_encoders import OrdinalEncoder
+import copy
 import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from plotly import graph_objs as go
+from plotly.offline import plot
+from plotly.subplots import make_subplots
 from sklearn.manifold import MDS
+
 from shapash import SmartExplainer
+from shapash.style.style_utils import colors_loading, select_palette, define_style
 
 
 class Consistency():
+
+    def __init__(self):
+        self._palette_name = list(colors_loading().keys())[0]
+        self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
+
+    def tuning_colorscale(self, values):
+        """Adapts the color scale to the distribution of points
+        Parameters
+        ----------
+        values: 1 column pd.DataFrame
+            values ​​whose quantiles must be calculated
+        """
+        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+        min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
+        desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
+                      (max_init - min_pred)
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
+        return color_scale
 
     def compile(self, x=None, model=None, preprocessing=None, contributions=None, methods=["shap", "acv", "lime"]):
         """If not provided, compute contributions according to provided methods (default are shap, acv, lime).
@@ -36,10 +61,12 @@ class Consistency():
         methods : list
             Methods used to compute contributions, by default ["shap", "acv", "lime"]
         """
+        self.x = x
+        self.preprocessing = preprocessing
         if contributions is None:
-            if (x is None) or (model is None):
+            if (self.x is None) or (model is None):
                 raise ValueError('If no contributions are provided, parameters "x" and "model" must be defined')
-            contributions = self.compute_contributions(x, model, methods, preprocessing)
+            contributions = self.compute_contributions(self.x, model, methods, self.preprocessing)
         else:
             if not isinstance(contributions, dict):
                 raise ValueError('Contributions must be a dictionary')
@@ -48,8 +75,6 @@ class Consistency():
 
         self.check_consistency_contributions(self.weights)
         self.index = self.weights[0].index
-
-        self.weights = [weight.values for weight in self.weights]
 
     def compute_contributions(self, x, model, methods, preprocessing):
         """
@@ -139,12 +164,12 @@ class Consistency():
         """
         # Selection
         if selection is None:
-            weights = self.weights
+            weights = [weight.values for weight in self.weights]
         elif isinstance(selection, list):
             if len(selection) == 1:
                 raise ValueError('Selection must include multiple points')
             else:
-                weights = [weight[selection] for weight in self.weights]
+                weights = [weight.values[selection] for weight in self.weights]
         else:
             raise ValueError('Parameter selection must be a list')
 
@@ -458,3 +483,238 @@ class Consistency():
             axes[n].set_yticks([])
 
         return fig
+
+    def pairwise_consistency_plot(self, methods, selection=None,
+                                  max_features=10, max_points=100, file_name=None, auto_open=False):
+        """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point,
+        and plots the distribution of those differences.
+
+        This plot goes one step deeper than the consistency_plot which compares methods on a global level
+        by expressing differences in terms of mean across the entire dataset.
+        Not only we get an understanding of how differences are distributed across the dataset,
+        but we can also identify whether there are patterns based on feature values,
+        and understand when a method overestimates contributions compared to the other
+
+        Parameters
+        ----------
+        methods : list
+            List of explainbility methods to compare
+        selection: list
+            Contains list of index, subset of the input DataFrame that we use
+            for the compute of consitency statistics, by default None
+        max_features: int, optional
+            Maximum number of displayed features, by default 10
+        max_points : int, optional
+            Maximum number of displayed datapoints per feature, by default 100
+        file_name: string, optional
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool
+            open automatically the plot, by default False
+
+
+        Returns
+        -------
+        figure
+        """
+        if self.x is None:
+            raise ValueError('x must be defined in the compile to display the plot')
+        if not isinstance(self.x, pd.DataFrame):
+            raise ValueError('x must be a pandas DataFrame')
+        if len(methods) != 2:
+            raise ValueError('Choose 2 methods among methods of the contributions')
+
+        # Select contributions of input methods
+        pair_indices = [self.methods.index(x) for x in methods]
+        pair_weights = [self.weights[i] for i in pair_indices]
+
+        # Selection
+        if selection is None:
+            ind_max_points = self.x.sample(min(max_points, len(self.x))).index
+            weights = [weight.iloc[ind_max_points] for weight in pair_weights]
+            x = self.x.iloc[ind_max_points]
+        elif isinstance(selection, list):
+            if len(selection) == 1:
+                raise ValueError('Selection must include multiple points')
+            else:
+                weights = [weight.iloc[selection] for weight in pair_weights]
+                x = self.x.iloc[selection]
+        else:
+            raise ValueError('Parameter selection must be a list')
+
+        # Remove constant columns
+        const_cols = x.loc[:, x.apply(pd.Series.nunique) == 1]
+        x = x.drop(const_cols, axis=1)
+        weights = [weight.drop(const_cols, axis=1) for weight in weights]
+
+        # Only keep features based on largest mean of absolute values
+        mean_contributions = np.mean(np.abs(pd.concat(weights)))
+        top_features = np.flip(mean_contributions.sort_values(ascending=False)[:max_features].keys())
+
+        fig = self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
+
+        return fig
+
+    def plot_pairwise_consistency(self, weights, x, top_features, methods, file_name, auto_open):
+        """Plot the main graph displaying distances between methods across each feature and data point
+
+        Parameters
+        ----------
+        weights : list
+            List of 2 dataframes containing contributions for the selected points
+        x : DataFrame
+            Original input data filtered on selected points
+        top_features : array
+            Top features to display ordered by mean of absolute contributions across all the selected points
+        methods : list
+            List of explainbility methods to compare
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool
+            open automatically the plot
+
+        Returns
+        -------
+        figure
+        """
+        # Look for existing OrdinalEncoder. If none, create one for string columns
+        if isinstance(self.preprocessing, OrdinalEncoder):
+            encoder = self.preprocessing
+        else:
+            categorical_features = [col for col in x.columns if x[col].dtype == 'object']
+            encoder = OrdinalEncoder(cols=categorical_features,
+                                     handle_unknown='ignore',
+                                     return_df=True).fit(x)
+            x = encoder.transform(x)
+
+        xaxis_title = "Difference of contributions between the 2 methods" \
+                      + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
+        yaxis_title = "Top features<span style='font-size: 12px;'><br />(Ordered by mean of absolute contributions)</span>"
+
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Plot the distribution
+
+        for i, c in enumerate(top_features):
+
+            switch = False
+            if c in encoder.cols:
+
+                switch = True
+
+                mapping = encoder.mapping[encoder.cols.index(c)]["mapping"]
+                inverse_mapping = {v: k for k, v in mapping.to_dict().items()}
+                feature_value = x[c].map(inverse_mapping)
+
+            hv_text = [f"<b>Feature value</b>: {i}<br><b>{methods[0]}</b>: {j}<br><b>{methods[1]}</b>: {k}<br><b>Diff</b>: {l}"
+                       for i, j, k, l in zip(feature_value if switch else x[c].round(3),
+                                             weights[0][c].round(2),
+                                             weights[1][c].round(2),
+                                             (weights[0][c] - weights[1][c]).round(2))]
+
+            fig.add_trace(
+                go.Violin(
+                    x=(weights[0][c] - weights[1][c]).values,
+                    name=c,
+                    points=False,
+                    fillcolor="rgba(255, 0, 0, 0.1)",
+                    line={"color": "black", "width": 0.5},
+                    showlegend=False,
+                ), secondary_y=False
+            )
+
+            fig.add_trace(
+                go.Scatter(
+                    x=(weights[0][c] - weights[1][c]).values,
+                    y=len(x)*[i] + np.random.normal(0, 0.1, len(x)),
+                    mode='markers',
+                    marker={"color": x[c].values,
+                            "colorscale": self.tuning_colorscale(x[c]),
+                            "opacity": 0.7},
+                    name=c,
+                    text=len(x)*[c],
+                    hovertext=hv_text,
+                    hovertemplate="<b>%{text}</b><br><br>" +
+                    "%{hovertext}<br>" +
+                    "<extra></extra>",
+                    showlegend=False,
+                ), secondary_y=True
+            )
+
+        # Dummy invisible plot to add the color scale
+        colorbar_trace = go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(
+                size=1,
+                color=[x.min(), x.max()],
+                colorscale=self.tuning_colorscale(pd.Series(np.linspace(x.min().min(), x.max().max(), 10))),
+                colorbar=dict(thickness=20,
+                              lenmode="pixels",
+                              len=400,
+                              yanchor="top",
+                              y=1.1,
+                              ypad=20,
+                              title="Feature values",
+                              tickvals=[x.min().min(), x.max().max()],
+                              ticktext=["Low", "High"]),
+                showscale=True,
+            ),
+            hoverinfo="none",
+            showlegend=False,
+        )
+
+        fig.add_trace(colorbar_trace)
+
+        self._update_pairwise_consistency_fig(fig=fig,
+                                              top_features=top_features,
+                                              xaxis_title=xaxis_title,
+                                              yaxis_title=yaxis_title,
+                                              file_name=file_name,
+                                              auto_open=auto_open)
+
+        return fig
+
+    def _update_pairwise_consistency_fig(self, fig, top_features, xaxis_title, yaxis_title, file_name, auto_open):
+        """Function used for the pairwise_consistency_plot to update the layout of the plotly figure.
+
+        Parameters
+        ----------
+        fig : figure
+            Plotly figure
+        top_features : array
+            Top features to display ordered by mean of absolute contributions across all the selected points
+        xaxis_title : str
+            Title for the x-axis
+        yaxis_title : str
+            Title for the y-axis
+        file_name: string
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool
+            open automatically the plot
+        """
+        title = "Pairwise comparison of Consistency:"
+        title += "<span style='font-size: 16px;'>\
+                 <br />How are differences in contributions distributed across features?</span>"
+        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+        dict_xaxis['text'] = xaxis_title
+        dict_yaxis['text'] = yaxis_title
+        dict_t['text'] = title
+
+        fig.layout.yaxis.update(showticklabels=True)
+        fig.layout.yaxis2.update(showticklabels=False)
+        fig.update_layout(template="none",
+                          title=dict_t,
+                          xaxis_title=dict_xaxis,
+                          yaxis_title=dict_yaxis,
+                          yaxis=dict(range=[-0.7, len(top_features)-0.3]),
+                          yaxis2=dict(range=[-0.7, len(top_features)-0.3]),
+                          height=max(500, 40 * len(top_features)))
+
+        fig.update_yaxes(automargin=True, zeroline=False)
+        fig.update_xaxes(automargin=True)
+
+        if file_name is not None:
+            plot(fig, filename=file_name, auto_open=auto_open)

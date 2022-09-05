@@ -52,7 +52,7 @@ extras['xgboost'] = ['xgboost>=1.0.0']
 extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=1.0.1']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
-extras['category_encoders'] = ['category_encoders==2.2.2']
+extras['category_encoders'] = ['category_encoders>=2.2.2']
 extras['acv'] = ['acv-exp==1.2.0']
 extras['lime'] = ['lime>=0.2.0.0']
 

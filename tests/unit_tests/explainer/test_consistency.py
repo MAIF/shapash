@@ -110,8 +110,9 @@ class TestConsistency(unittest.TestCase):
             mean_distances.loc[self.cns.methods[1], self.cns.methods[0]]
 
     def test_find_examples(self):
-        all_comparisons, mean_distances = self.cns.calculate_all_distances(self.cns.methods, self.cns.weights)
-        method_1, method_2, l2, _, _, _ = self.cns.find_examples(mean_distances, all_comparisons, self.cns.weights)
+        weights = [weight.values for weight in self.cns.weights]
+        all_comparisons, mean_distances = self.cns.calculate_all_distances(self.cns.methods, weights)
+        method_1, method_2, l2, _, _, _ = self.cns.find_examples(mean_distances, all_comparisons, weights)
 
         assert isinstance(method_1, list)
         assert isinstance(method_2, list)
@@ -124,3 +125,14 @@ class TestConsistency(unittest.TestCase):
         coords = self.cns.calculate_coords(mean_distances)
 
         assert coords.shape == (len(self.cns.methods), 2)
+
+    def test_pairwise_consistency_plot(self):
+        methods = ["shap", "lime"]
+        max_features = 2
+        max_points = 100
+        output = self.cns.pairwise_consistency_plot(methods=methods,
+                                                    max_features=max_features,
+                                                    max_points=max_points)
+
+        assert len(output.data[0].x) == min(max_points, len(self.X))
+        assert len(output.data) == 2 * max_features + 1
