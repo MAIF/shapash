@@ -4,6 +4,7 @@ Category_encoder
 
 import pandas as pd
 import numpy as np
+import category_encoders as ce
 
 category_encoder_onehot = "<class 'category_encoders.one_hot.OneHotEncoder'>"
 category_encoder_ordinal = "<class 'category_encoders.ordinal.OrdinalEncoder'>"
@@ -54,8 +55,12 @@ def inv_transform_ce(x_in, encoding):
         rst = inv_transform_ordinal(x, encoding.ordinal_encoder.mapping)
 
     elif str(type(encoding)) == category_encoder_binary:
-        x = reverse_basen(x_in, encoding.base_n_encoder)
-        rst = inv_transform_ordinal(x, encoding.base_n_encoder.ordinal_encoder.mapping)
+        if ce.__version__ <= '2.2.2':
+            x = reverse_basen(x_in, encoding.base_n_encoder)
+            rst = inv_transform_ordinal(x, encoding.base_n_encoder.ordinal_encoder.mapping)
+        else:
+            x = reverse_basen(x_in, encoding)
+            rst = inv_transform_ordinal(x, encoding.ordinal_encoder.mapping)
 
     elif str(type(encoding)) == category_encoder_targetencoder:
         rst = inv_transform_target(x_in, encoding)
@@ -106,8 +111,8 @@ def inv_transform_target(x_in, enc_target):
         rst_target = pd.concat([reverse_target, mapping_ordinal], axis=1, join='inner').fillna(value='NaN')
         aggregate = rst_target.groupby(1)[0].apply(lambda x: ' / '.join(map(str, x)))
         if aggregate.shape[0] != rst_target.shape[0]:
-            raise Exception('Multiple label found for the same value in TargetEncoder on col '+str(name_target) +'.')
-            #print("Warning in inverse TargetEncoder - col " + str(name_target) + ": Multiple label for the same value, "
+            raise Exception('Multiple label found for the same value in TargetEncoder on col '+str(name_target) + '.')
+            # print("Warning in inverse TargetEncoder - col " + str(name_target) + ": Multiple label for the same value, "
             #                                                                   "each label will be separate using : / ")
 
         transco = {'col': name_target,
@@ -138,7 +143,10 @@ def inv_transform_ordinal(x_in, encoding):
         if not col_name in x_in.columns:
             raise Exception(f'Columns {col_name} not in dataframe.')
         column_mapping = switch.get('mapping')
-        inverse = pd.Series(data=column_mapping.index, index=column_mapping.values)
+        if isinstance(column_mapping, dict):
+            inverse = pd.Series(data=column_mapping.keys(), index=column_mapping.values())
+        else:
+            inverse = pd.Series(data=column_mapping.index, index=column_mapping.values)
         x_in[col_name] = x_in[col_name].map(inverse).astype(switch.get('data_type'))
     return x_in
 
@@ -201,7 +209,7 @@ def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
         The aggregate contributions depending on which processing is apply.
     """
     if str(type(encoding)) in dummies_category_encoder:
-        if str(type(encoding)) in category_encoder_binary:
+        if str(type(encoding)) in category_encoder_binary and ce.__version__ <= '2.2.2':
             encoding = encoding.base_n_encoder
         drop_col = []
         for switch in encoding.mapping:
@@ -217,6 +225,7 @@ def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
         return x_contrib
     else:
         return x_contrib
+
 
 def transform_ce(x_in, encoding):
     """
@@ -242,13 +251,14 @@ def transform_ce(x_in, encoding):
     if str(type(encoding)) in encoder:
         rst = encoding.transform(x_in)
 
-    elif isinstance(encoding,list):
+    elif isinstance(encoding, list):
         rst = transform_ordinal(x_in, encoding)
 
     else:
         raise Exception(f"{encoding.__class__.__name__} not supported, no preprocessing done.")
 
     return rst
+
 
 def transform_ordinal(x_in, encoding):
     """
@@ -271,7 +281,10 @@ def transform_ordinal(x_in, encoding):
         if not col_name in x_in.columns:
             raise Exception(f'Columns {col_name} not in dataframe.')
         column_mapping = switch.get('mapping')
-        transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
+        if isinstance(column_mapping, dict):
+            transform = pd.Series(data=column_mapping.values(), index=column_mapping.keys())
+        else:
+            transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
         x_in[col_name] = x_in[col_name].map(transform).astype(switch.get('mapping').values.dtype)
     return x_in
 
@@ -294,7 +307,10 @@ def get_col_mapping_ce(encoder):
                               category_encoder_targetencoder]:
         encoder_mapping = encoder.mapping
     elif str(type(encoder)) == category_encoder_binary:
-        encoder_mapping = encoder.base_n_encoder.mapping
+        if ce.__version__ <= '2.2.2':
+            encoder_mapping = encoder.base_n_encoder.mapping
+        else:
+            encoder_mapping = encoder.mapping
     else:
         raise NotImplementedError(f"{encoder} not supported.")
 
