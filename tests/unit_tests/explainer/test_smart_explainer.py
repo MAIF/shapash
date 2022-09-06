@@ -661,15 +661,15 @@ class TestSmartExplainer(unittest.TestCase):
         """
         temp, xpl = init_sme_to_pickle_test()
 
-        current = Path(path.abspath(__file__)).parent.parent.parent
-        if str(sys.version)[0:3] == '3.6':
-            pkl_file = path.join(current, 'data/xpl_to_load_36.pkl')
-        elif str(sys.version)[0:3] == '3.7':
+        current = Path(path.abspath(__file__)).parent.parent.parent        
+        if str(sys.version)[0:3] == '3.7':
             pkl_file = path.join(current, 'data/xpl_to_load_37.pkl')
         elif str(sys.version)[0:3] == '3.8':
             pkl_file = path.join(current, 'data/xpl_to_load_38.pkl')
         elif str(sys.version)[0:3] == '3.9':
             pkl_file = path.join(current, 'data/xpl_to_load_39.pkl')
+        elif str(sys.version)[0:4] == '3.10':
+            pkl_file = path.join(current, 'data/xpl_to_load_310.pkl')
         else:
             raise NotImplementedError
         
@@ -1152,7 +1152,7 @@ class TestSmartExplainer(unittest.TestCase):
         mock_export_and_save_report.assert_called_once()
 
     def test_compute_features_stability_1(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
         selection = [1, 3]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
@@ -1168,7 +1168,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl.features_stability["amplitude"].shape == expected
 
     def test_compute_features_stability_2(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
         selection = [1]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]

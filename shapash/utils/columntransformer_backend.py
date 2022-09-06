@@ -465,7 +465,10 @@ def get_col_mapping_ct(encoder, x_encoded):
                 raise NotImplementedError(f'Estimator not supported : {estimator}')
 
         elif estimator == 'passthrough':
-            features_out = encoder._feature_names_in[features]
+            try:
+                features_out = encoder.feature_names_in_[features]
+            except:
+                features_out = encoder._feature_names_in[features] #for oldest sklearn version
             for f_name in features_out:
                 dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
                 idx_encoded += 1
