@@ -30,10 +30,8 @@ requirements = [
         'dash-renderer==1.8.3',
         'dash-table>=5.0.0',
         'nbformat>4.2.0',
-        'numba>=0.53.1',
-        # we should change _feature_names_in attribute in shapash columntransformer_backend.py file
-        # in order to resolve compatibility with scikit-learn versions>=1.0
-        'scikit-learn>=0.24.0,<=0.24.2',
+        'numba>=0.53.1',        
+        'scikit-learn>=0.24.0',
 ]
 
 extras = dict()
@@ -53,7 +51,7 @@ extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=1.0.1']
 extras['scikit-learn'] = ['scikit-learn>=0.23.0']
 extras['category_encoders'] = ['category_encoders>=2.2.2']
-extras['acv'] = ['acv-exp==1.2.0']
+extras['acv'] = ['acv-exp>=1.2.0']
 extras['lime'] = ['lime>=0.2.0.0']
 
 setup_requirements = ['pytest-runner', ]
@@ -71,7 +69,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
-        "Programming Language :: Python :: 3",        
+        'Programming Language :: Python :: 3',        
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
