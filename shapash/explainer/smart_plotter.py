@@ -7,6 +7,8 @@ import random
 import copy
 import math
 import numpy as np
+from scipy.optimize import fsolve
+import scipy.cluster.hierarchy as sch
 import pandas as pd
 from plotly import graph_objs as go
 import plotly.express as px
@@ -499,9 +501,9 @@ class SmartPlotter:
         marker_color = [
             self._style_dict['featureimp_groups'][0]
             if (
-                    self.explainer.features_groups is not None
-                    and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
-                    in self.explainer.features_groups.keys()
+                self.explainer.features_groups is not None
+                and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
+                in self.explainer.features_groups.keys()
             )
             else dict_style_bar1["color"]
             for f in feature_imp1.index
@@ -655,12 +657,12 @@ class SmartPlotter:
                         self.explainer.features_groups is None
                         # We don't want to display label values for t-sne projected values of groups of features.
                         or (
-                                self.explainer.features_groups is not None
-                                and self.explainer.inv_features_dict.get(expl[0])
-                                not in self.explainer.features_groups.keys()
+                            self.explainer.features_groups is not None
+                            and self.explainer.inv_features_dict.get(expl[0])
+                            not in self.explainer.features_groups.keys()
                         )
                 ):
-                        ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
+                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
 
                 else:
                     ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
@@ -2115,6 +2117,8 @@ class SmartPlotter:
             how='phik',
             width=900,
             height=500,
+            degree=2.5,
+            decimals=2,
             file_name=None,
             auto_open=False
     ):
@@ -2140,6 +2144,11 @@ class SmartPlotter:
             Plotly figure - layout width
         height : Int (default: 600)
             Plotly figure - layout height
+        degree  : int, optional, (default 2.5)
+            degree applied on the correlation matrix in order to focus more or less the clustering
+            on strong correlated variables
+        decimals : int, optional, (default 2)
+            number of decimals to plot for correlation values
         file_name: string (optional)
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
@@ -2153,6 +2162,44 @@ class SmartPlotter:
         --------
         >>> xpl.plot.correlations()
         """
+
+        def cluster_corr(corr, degree, inplace=False):
+            """
+            Rearranges the correlation matrix, corr, so that groups of highly 
+            correlated variables are next to eachother 
+
+            Parameters
+            ----------
+            corr : pandas.DataFrame or numpy.ndarray
+                a NxN correlation matrix
+            degree  : int
+                degree applied on the correlation matrix in order to focus more or less the clustering
+                on strong correlated variables
+            inplace : bool, optional
+                to replace the original correlation matrix by the new one, by default False
+
+            Returns
+            -------
+            pandas.DataFrame or numpy.ndarray
+                a NxN correlation matrix with the columns and rows rearranged
+            """
+
+            if corr.shape[0] < 2:
+                return corr
+
+            pairwise_distances = sch.distance.pdist(corr**degree)
+            linkage = sch.linkage(pairwise_distances, method='complete')
+            cluster_distance_threshold = pairwise_distances.max()/2
+            idx_to_cluster_array = sch.fcluster(linkage, cluster_distance_threshold, criterion='distance')
+            idx = np.argsort(idx_to_cluster_array)
+
+            if not inplace:
+                corr = corr.copy()
+
+            if isinstance(corr, pd.DataFrame):
+                return corr.iloc[idx, :].T.iloc[idx, :]
+
+            return corr[idx, :][:, idx]
 
         if features_to_hide is None:
             features_to_hide = []
@@ -2192,11 +2239,13 @@ class SmartPlotter:
 
                 # Keep the same list of features for each subplot
                 if len(list_features) == 0:
-                    list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+                    top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+                    corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
+                    list_features = list(corr.columns)
 
                 fig.add_trace(
                     go.Heatmap(
-                        z=corr.loc[list_features, list_features].round(2).values,
+                        z=corr.loc[list_features, list_features].round(decimals).values,
                         x=list_features,
                         y=list_features,
                         coloraxis='coloraxis',
@@ -2208,18 +2257,20 @@ class SmartPlotter:
 
         else:
             corr = compute_corr(df.drop(features_to_hide, axis=1), compute_method)
-            list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+            top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+            corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
+            list_features = [col for col in corr.columns if col in top_features]
 
             fig = go.Figure(go.Heatmap(
-                        z=corr.loc[list_features, list_features].round(2).values,
-                        x=list_features,
-                        y=list_features,
-                        coloraxis='coloraxis',
-                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
-                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
-                              for y in list_features],
-                        hovertemplate=hovertemplate,
-                    ))
+                z=corr.loc[list_features, list_features].round(decimals).values,
+                x=list_features,
+                y=list_features,
+                coloraxis='coloraxis',
+                text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                       f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                      for y in list_features],
+                hovertemplate=hovertemplate,
+            ))
 
         title = f'Correlation ({compute_method})'
         if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
@@ -2542,7 +2593,7 @@ class SmartPlotter:
         self.explainer.compute_features_stability([index])
 
         column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_init.columns])
-        ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
+        def ordinal(n): return "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Compute explanations for instance and neighbors
         g = self.explainer.local_neighbors["norm_shap"]
@@ -2554,23 +2605,24 @@ class SmartPlotter:
 
         # Plot
         g_df = pd.DataFrame(g, columns=columns).T.rename(
-                columns={
-                    **{0: "instance", 1: "closest neighbor"},
-                    **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
-                }
-            )
+            columns={
+                **{0: "instance", 1: "closest neighbor"},
+                **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
+            }
+        )
 
         # Keep only max_features
-        if max_features is not None: g_df = g_df[:max_features]
+        if max_features is not None:
+            g_df = g_df[:max_features]
 
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
-                        y=g_df.iloc[::-1, ::-1].index.tolist(),
-                        x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                        marker_color=self._style_dict["dict_stability_bar_colors"][1] if i == g_df.shape[1]-1
-                        else self._style_dict["dict_stability_bar_colors"][0],
-                        orientation='h',
-                        opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
-                        if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
+                                     y=g_df.iloc[::-1, ::-1].index.tolist(),
+                                     x=g_df.iloc[::-1, ::-1].iloc[:, i],
+                                     marker_color=self._style_dict["dict_stability_bar_colors"][1] if i == g_df.shape[1]-1
+                                     else self._style_dict["dict_stability_bar_colors"][0],
+                                     orientation='h',
+                                     opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
+                                     if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
 
         title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
@@ -2830,7 +2882,7 @@ class SmartPlotter:
                 + "%<br>of the model for %{y:.1f}% of the instances",
                 hovertext="none",
                 marker_color=self._style_dict["dict_compacity_bar_colors"][1],
-                ),
+            ),
             row=1,
             col=1,
         )
@@ -2854,7 +2906,7 @@ class SmartPlotter:
                 + "%{x:.0f}"
                 + "%<br>of the model for %{y:.1f}% of the instances",
                 marker_color=self._style_dict["dict_compacity_bar_colors"][0],
-                ),
+            ),
             row=1,
             col=2,
         )
