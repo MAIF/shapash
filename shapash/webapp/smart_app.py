@@ -255,19 +255,20 @@ class SmartApp:
                 dbc.Col(
                     [
                         html.H4(
-                            [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}, color=''),
+                            [dbc.Badge("Regression", id='regression_badge', 
+                                       style={"margin-right": "5px"}, 
+                                       color=''),
                              dbc.Badge("Classification", id='classification_badge', color='')
-                             ],
-                            style={"margin": "0px"}
+                             ], style={"margin": "0px"}
                         ),
                     ],
-                    width="auto", align="center",
+                    width="auto", align="center", style={'padding': 'auto'}
                 ),
                 dbc.Col(
                     dbc.Collapse(
                         dbc.Row(
                             [
-                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
+                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 3px'}),
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
@@ -275,11 +276,11 @@ class SmartApp:
                                     style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
-                            style={"margin": "0px 0px 0px 5px", "align-items": "center"}
+                            style={"margin": "0px 0px 0px 3px"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
-                    width="auto", align="center", style={'padding': 'none'}
+                    width="auto", align="center", style={'padding': 'auto'}
                 ),
                 dbc.Col([
                     html.Div(
@@ -290,7 +291,7 @@ class SmartApp:
                                      style={'cursor': 'pointer'}),
                         ]
                     )],
-                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
+                    align="center", width="auto", style={'padding': 'auto'}
                 ),
                 dbc.Col([
                     html.Div(
@@ -302,7 +303,7 @@ class SmartApp:
                             self.components['settings']['modal'],
                         ]
                     )],
-                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
+                    align="center", width="auto", style={'padding': 'auto'}
                 )
             ],
             className="g-0", justify="end"
@@ -455,7 +456,7 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=3, align="center"
+                            md=3, align="center", width="auto", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             html.A(
@@ -465,17 +466,20 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             )],
-                            md=3, align="center"
+                            md=3, align="center", width="auto", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             self.components['menu']
-                            ], align="end"
+                            ], align="end", md=6
                         )
                     ],
-                    style={'padding': "5px 15px", "verticalAlign": "middle", "width":"auto", "justify":"end"}
+                    style={'padding': "5px 15px",
+                           "verticalAlign": "middle",
+                           "width": "auto",
+                           "justify": "end"}
                 )
             ],
-            fluid=True, style={'height': '70px', 'backgroundColor': self.bkg_color}
+            fluid=True, style={'height': '100%', 'backgroundColor': self.bkg_color}
         )
 
         self.skeleton['body'] = dbc.Container(
@@ -496,12 +500,6 @@ class SmartApp:
                         ),
                         dbc.Col(
                             [
-                                # html.Div(
-                                #     self.draw_component('table', 'dataset'),
-                                #     className="card",
-                                #     id='card_dataset',
-                                #     style={'cursor': 'pointer', 'height':'60%', 'width': '80%'},
-                                # )
                                 dbc.Tabs([
                                     dbc.Tab(
                                         self.draw_component('table', 'dataset'),
@@ -516,8 +514,7 @@ class SmartApp:
                                         id="card_prediction",
                                         label='Prediction',
                                         style={'padding': '0px 10px'}
-                                    )
-                                    
+                                    )    
                                 ], id="card_dataset_and_graph"
                                 )
                             ],
@@ -579,23 +576,6 @@ class SmartApp:
                     ],
                     style={'padding': '15px 10px'},
                 ),
-            # dbc.Row(
-            #         [
-            #             dbc.Col(
-            #                 [
-            #                     html.Div(
-            #                         self.draw_component('graph', 'prediction_picking'),
-            #                         className="card",
-            #                         id='card_prediction_picking',
-            #                     )
-            #                 ],
-            #                 md=5,
-            #                 align="center",
-            #                 style={'padding': '0px 10px'},
-            #             ),
-            #         ],
-            #         style={'padding': '15px 10px'},
-            #     )
             ],
             className="mt-12",
             fluid=True
@@ -603,10 +583,15 @@ class SmartApp:
 
     def adjust_menu(self):
         """
-        Override menu from explainer object depending on classification or regression case.
+        Override menu from explainer object depending on
+        classification or regression case.
         """
-        on_style = {'backgroundColor': self.color[0], 'color': self.bkg_color, 'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': self.color[1], 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        on_style = {'backgroundColor': self.color[0],
+                    'color': self.bkg_color,
+                    'margin-right': '0.5rem'}
+        off_style = {'backgroundColor': self.color[1],
+                     'color': self.bkg_color,
+                     'margin-right': '0.5rem'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -839,7 +824,13 @@ class SmartApp:
             [State('rows', 'value'),
              State('name', 'value')]
         )
-        def update_datatable(sort_by, filter_query, selected_data, clear_filter, is_open, rows, name):
+        def update_datatable(sort_by,
+                             filter_query,
+                             selected_data,
+                             clear_filter,
+                             is_open,
+                             rows,
+                             name):
             """
             update datatable according to sorting, filtering and settings modifications
             """
@@ -919,7 +910,16 @@ class SmartApp:
                 State('features', 'value')
             ]
         )
-        def update_feature_importance(label, data, selected_data, clear_filter, is_open, n_clicks, bool_group, clickData, filter_query, features):
+        def update_feature_importance(label,
+                                      data,
+                                      selected_data,
+                                      clear_filter,
+                                      is_open,
+                                      n_clicks,
+                                      bool_group,
+                                      clickData,
+                                      filter_query,
+                                      features):
             """
             update feature importance plot according to selected label and dataset state.
             """
@@ -1062,7 +1062,7 @@ class SmartApp:
             self.components['graph']['feature_selector'].adjust_graph(
                 subset_graph=subset_graph,
                 title_size_adjust=True,
-                x_ax=self.selected_feature,
+                x_ax=truncate_str(self.selected_feature, 110),
                 y_ax='Shap interaction value')
 
             return self.components['graph']['feature_selector'].figure
@@ -1335,7 +1335,11 @@ class SmartApp:
 
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
             subset_graph = True if self.subset is not None else False
-            self.components['graph']['prediction_picking'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
+            self.components['graph']['prediction_picking'].adjust_graph(
+                subset_graph=subset_graph,
+                title_size_adjust=True,
+                x_ax="Target",
+                y_ax="Prediction")
 
             return self.components['graph']['prediction_picking'].figure
 
