@@ -284,6 +284,17 @@ class SmartApp:
                 dbc.Col([
                     html.Div(
                         [
+                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
+                                     src=self.app.get_asset_url('icon_reset.png'),
+                                     height='40px',
+                                     style={'cursor': 'pointer'}),
+                        ]
+                    )],
+                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
+                ),
+                dbc.Col([
+                    html.Div(
+                        [
                             html.Img(id='settings', title='settings', alt='Settings',
                                      src=self.app.get_asset_url('settings.png'),
                                      height='40px',
@@ -333,6 +344,10 @@ class SmartApp:
 
         self.components['graph']['feature_selector'] = MyGraph(
             figure=go.Figure(), id='feature_selector'
+        )
+
+        self.components['graph']['prediction_picking'] = MyGraph(
+            figure=go.Figure(), id='prediction_picking'
         )
 
         self.components['graph']['detail_feature'] = MyGraph(
@@ -481,11 +496,29 @@ class SmartApp:
                         ),
                         dbc.Col(
                             [
-                                html.Div(
-                                    self.draw_component('table', 'dataset'),
-                                    className="card",
-                                    id='card_dataset',
-                                    style={'cursor': 'pointer'},
+                                # html.Div(
+                                #     self.draw_component('table', 'dataset'),
+                                #     className="card",
+                                #     id='card_dataset',
+                                #     style={'cursor': 'pointer', 'height':'60%', 'width': '80%'},
+                                # )
+                                dbc.Tabs([
+                                    dbc.Tab(
+                                        self.draw_component('table', 'dataset'),
+                                        label='DataSet',
+                                        className="card",
+                                        id='card_dataset',
+                                        style={'cursor': 'pointer', 'padding': '0px 10px'}
+                                         ),
+                                    dbc.Tab(
+                                        self.draw_component('graph', 'prediction_picking'),
+                                        className="card",
+                                        id="card_prediction",
+                                        label='Prediction',
+                                        style={'padding': '0px 10px'}
+                                    )
+                                    
+                                ], id="card_dataset_and_graph"
                                 )
                             ],
                             md=7,
@@ -546,6 +579,23 @@ class SmartApp:
                     ],
                     style={'padding': '15px 10px'},
                 ),
+            # dbc.Row(
+            #         [
+            #             dbc.Col(
+            #                 [
+            #                     html.Div(
+            #                         self.draw_component('graph', 'prediction_picking'),
+            #                         className="card",
+            #                         id='card_prediction_picking',
+            #                     )
+            #                 ],
+            #                 md=5,
+            #                 align="center",
+            #                 style={'padding': '0px 10px'},
+            #             ),
+            #         ],
+            #         style={'padding': '15px 10px'},
+            #     )
             ],
             className="mt-12",
             fluid=True
@@ -576,7 +626,10 @@ class SmartApp:
         else:
             raise ValueError(f'No rule defined for explainer case : {self.explainer._case}')
 
-    def draw_component(self, component_type, component_id, title=None):
+    def draw_component(self,
+                       component_type,
+                       component_id,
+                       title=None):
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
@@ -592,7 +645,8 @@ class SmartApp:
         -------
         list
             list of components
-            (combining for example Graph + embed button to get fullscreen details)
+            (combining for example Graph + embed button to get fullscreen
+             details)
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
@@ -611,7 +665,8 @@ class SmartApp:
 
     def draw_filter(self):
         """
-        Method which returns filter components block for local contributions plot.
+        Method which returns filter components block for local
+        contributions plot.
         Returns
         -------
         list
@@ -641,12 +696,14 @@ class SmartApp:
 
     def select_point(self, graph, click_data):
         """
-        Method which set the selected point in graph component corresponding to click_data
+        Method which set the selected point in graph component
+        corresponding to click_data.
         """
         if click_data:
             curve_id = click_data['points'][0]['curveNumber']
             point_id = click_data['points'][0]['pointIndex']
-            for curve in range(len(self.components['graph'][graph].figure['data'])):
+            for curve in range(
+                    len(self.components['graph'][graph].figure['data'])):
                 self.components['graph'][graph].figure['data'][curve].selectedpoints = \
                     [point_id] if curve == curve_id else []
 
@@ -654,7 +711,6 @@ class SmartApp:
         """
         Initialize callbacks for each fullscreen button
         the callback alter style of the component (height, ...)
-
         Returns
         -------
         dict
@@ -776,23 +832,25 @@ class SmartApp:
             [
                 Input('dataset', 'sort_by'),
                 Input('dataset', "filter_query"),
+                Input('prediction_picking', 'selectedData'),
+                Input('clear_filter', 'n_clicks'),
                 Input('modal', 'is_open')
             ],
             [State('rows', 'value'),
              State('name', 'value')]
         )
-        def update_datatable(sort_by, filter_query, is_open, rows, name):
+        def update_datatable(sort_by, filter_query, selected_data, clear_filter, is_open, rows, name):
             """
             update datatable according to sorting, filtering and settings modifications
             """
             ctx = dash.callback_context
             active_cell = no_update
+            df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
                 else:
-
                     self.settings['rows'] = rows
                     self.init_data()
                     active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
@@ -804,9 +862,17 @@ class SmartApp:
                             {"name": '_predict_', "id": '_predict_'}] + \
                             [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
 
-            if not filter_query:
-                df = self.round_dataframe
-            else:
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
+                row_ids = []
+                if selected_data is not None:
+                    for p in selected_data['points']:
+                        row_ids.append(p['customdata'])
+                df = self.round_dataframe.loc[row_ids]
+
+            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                df= self.round_dataframe
+
+            if filter_query:
                 df = apply_filter(self.round_dataframe, filter_query)
 
             if len(sort_by):
@@ -841,6 +907,8 @@ class SmartApp:
             [
                 Input('select_label', 'value'),
                 Input('dataset', 'data'),
+                Input('prediction_picking', 'selectedData'),
+                Input('clear_filter', 'n_clicks'),
                 Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
                 Input('bool_groups', 'on')
@@ -851,10 +919,11 @@ class SmartApp:
                 State('features', 'value')
             ]
         )
-        def update_feature_importance(label, data, is_open, n_clicks, bool_group, clickData, filter_query, features):
+        def update_feature_importance(label, data, selected_data, clear_filter, is_open, n_clicks, bool_group, clickData, filter_query, features):
             """
             update feature importance plot according to selected label and dataset state.
             """
+            selection = None
             ctx = dash.callback_context
             selected_feature = self.explainer.inv_features_dict.get(
                 clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
@@ -883,13 +952,21 @@ class SmartApp:
                     pass
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
                 clickData = None  # We reset the graph and clicks if we toggle the button
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
+                row_ids = []
+                if selected_data is not None:
+                    for p in selected_data['points']:
+                        row_ids.append(p['customdata'])
+                selection = row_ids
+            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                selection = None
             else:
                 self.last_click_data = clickData
                 raise PreventUpdate
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
-            selection = self.list_index if filter_query else None
+            selection = self.list_index if filter_query else selection
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
                     max_features=features,
@@ -898,10 +975,13 @@ class SmartApp:
                     group_name=group_name,
                     display_groups=bool_group
                 )
-            self.components['graph']['global_feature_importance'].adjust_graph()
+            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
-            if selected_feature and selected_feature not in self.explainer.features_groups.keys():
-                self.select_point('global_feature_importance', clickData)
+            if selected_feature:
+                if self.explainer.features_groups is None:
+                    self.select_point('global_feature_importance', clickData)
+                elif selected_feature not in self.explainer.features_groups.keys():
+                    self.select_point('global_feature_importance', clickData)
 
             # font size can be adapted to screen size
             nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
@@ -916,6 +996,8 @@ class SmartApp:
             Output(component_id='feature_selector', component_property='figure'),
             [
                 Input('global_feature_importance', 'clickData'),
+                Input('prediction_picking', 'selectedData'),
+                Input('clear_filter', 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('modal', 'is_open')
             ],
@@ -924,9 +1006,16 @@ class SmartApp:
                 State('violin', 'value')
             ]
         )
-        def update_feature_selector(feature, label, is_open, points, violin):
+        def update_feature_selector(feature,
+                                    selected_data,
+                                    clear_filter,
+                                    label,
+                                    is_open,
+                                    points,
+                                    violin):
             """
-            Update feature plot according to label, data, selected feature and settings modifications
+            Update feature plot according to label, data,
+            selected feature and settings modifications
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
@@ -949,6 +1038,14 @@ class SmartApp:
                         self.subset = self.list_index
                     else:
                         self.subset = None
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
+                row_ids = []
+                if selected_data is not None:
+                    for p in selected_data['points']:
+                        row_ids.append(p['customdata'])
+                self.subset = row_ids
+            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                self.subset = None
             else:
                 raise PreventUpdate
 
@@ -960,9 +1057,13 @@ class SmartApp:
                 max_points=points
             )
 
-            self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event'
+            self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
             subset_graph = True if self.subset is not None else False
-            self.components['graph']['feature_selector'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
+            self.components['graph']['feature_selector'].adjust_graph(
+                subset_graph=subset_graph,
+                title_size_adjust=True,
+                x_ax=self.selected_feature,
+                y_ax='Shap interaction value')
 
             return self.components['graph']['feature_selector'].figure
 
@@ -973,6 +1074,7 @@ class SmartApp:
             ],
             [
                 Input('feature_selector', 'clickData'),
+                Input('prediction_picking', 'clickData'),
                 Input('dataset', 'active_cell')
             ],
             [
@@ -980,7 +1082,7 @@ class SmartApp:
                 State('index_id', 'value')  # Get the current value of the index
             ]
         )
-        def update_index_id(click_data, cell, data, current_index_id):
+        def update_index_id(click_data, prediction_picking, cell, data, current_index_id):
             """
             update index value according to active cell and click data on feature plot.
             """
@@ -988,6 +1090,9 @@ class SmartApp:
             if ctx.triggered[0]['prop_id'] != 'dataset.data':
                 if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                     selected = click_data['points'][0]['customdata']
+                    self.click_graph = True
+                elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
+                    selected = prediction_picking['points'][0]['customdata']
                     self.click_graph = True
                 elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
                     if cell is not None:
@@ -1068,6 +1173,7 @@ class SmartApp:
                 Input('select_label', 'value'),
                 Input('dataset', 'active_cell'),
                 Input('feature_selector', 'clickData'),
+                Input('prediction_picking', 'clickData'),
                 Input("validation", "n_clicks"),
                 Input('bool_groups', 'on')
             ],
@@ -1077,7 +1183,7 @@ class SmartApp:
             ]
         )
         def update_detail_feature(threshold, max_contrib, positive, negative, masked, label, cell,
-                                  click_data, validation_click, bool_group, index, data):
+                                  click_data, prediction_picking, validation_click, bool_group, index, data):
             """
             update local explanation plot according to app changes.
             """
@@ -1085,6 +1191,8 @@ class SmartApp:
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                 selected = click_data['points'][0]['customdata']
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
+                selected = prediction_picking['points'][0]['customdata']
             elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
                 selected = index
             elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
@@ -1116,7 +1224,9 @@ class SmartApp:
                 yaxis_max_label=8,
                 display_groups=bool_group
             )
-            self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
+            self.components['graph']['detail_feature'].adjust_graph(
+                title_size_adjust=True,
+                x_ax='Contribution')
             # font size can be adapted to screen size
             list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
                           range(len(self.components['graph']['detail_feature'].figure.data))]
@@ -1133,7 +1243,6 @@ class SmartApp:
             [
                 Input("index_id", "n_submit")
             ],
-
         )
         def click_validation(n_submit):
             """
@@ -1158,7 +1267,6 @@ class SmartApp:
                 State('dataset', 'data'),
                 State('index_id', 'value')
             ]
-
         )
         def datatable_layout(validation, data, index):
             ctx = dash.callback_context
@@ -1188,4 +1296,52 @@ class SmartApp:
                 style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional
-    
+
+        @app.callback(
+            Output(component_id='prediction_picking', component_property='figure'),
+            [
+                Input('global_feature_importance', 'clickData'),
+                Input('select_label', 'value'),
+                Input('modal', 'is_open')
+            ],
+            [
+                State('points', 'value'),
+                State('violin', 'value')
+            ]
+        )
+        def update_prediction_picking(feature, label, is_open, points, violin):
+            """
+            Update feature plot according to label, data, selected feature and settings modifications
+            """
+            ctx = dash.callback_context
+            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
+                if is_open:
+                    raise PreventUpdate
+                else:
+                    self.settings['points'] = points
+                    self.settings_ini['points'] = self.settings['points']
+                    self.settings['violin'] = violin
+                    self.settings_ini['violin'] = self.settings['violin']
+
+            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
+                self.label = label
+            else:
+                raise PreventUpdate
+
+            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
+                selection=self.subset,
+                max_points=points
+            )
+
+            self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
+            subset_graph = True if self.subset is not None else False
+            self.components['graph']['prediction_picking'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
+
+            return self.components['graph']['prediction_picking'].figure
+
+    def hl_tab_rows(selectedData : dict):
+        row_ids = []
+        if selectedData is not None:
+            for p in selectedData['points']:
+                row_ids.append(p['customdata'][0])
+        return row_ids

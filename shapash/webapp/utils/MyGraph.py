@@ -16,20 +16,24 @@ class MyGraph(dcc.Graph):
         self.id = id
         # self.config = {'modeBarButtons': {'pan2d': True}}
         self.config = {
-            'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'zoomOut2d', 'zoomIn2d', 'resetScale2d',
+            'modeBarButtonsToRemove': ['lasso2d', 'zoomOut2d', 'zoomIn2d', 'resetScale2d',
                                        'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines'],
             #'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
             'displaylogo': False,
 
         }
 
-    def adjust_graph(self, subset_graph=False, title_size_adjust=False):
+    def adjust_graph(self,
+                     subset_graph=False,
+                     title_size_adjust=False,
+                     x_ax='',
+                     y_ax=''):
         """
         Override graph layout for app use
         """
         new_title = update_title(self.figure.layout.title.text) + (" <b>< Subset ></b>" if subset_graph else "")
         if title_size_adjust:
-            new_size_font = floor(self.figure.layout.title.font.size * min(60 / len(new_title), 1))
+            new_size_font = floor(self.figure.layout.title.font.size * min(45 / len(new_title), 1))
         else:
             new_size_font = self.figure.layout.title.font.size
         self.figure.update_layout(
@@ -37,7 +41,7 @@ class MyGraph(dcc.Graph):
             margin=dict(
                 l=50,
                 r=10,
-                b=0,
+                b=10,
                 t=50,
                 pad=0
             ),
@@ -52,8 +56,10 @@ class MyGraph(dcc.Graph):
                 'font': {'size': new_size_font}
             }
         )
-        self.figure.update_xaxes(title='', automargin=True)
-        self.figure.update_yaxes(title='', automargin=True)
+        self.figure.update_xaxes(title='<b>{}</b>'.format(x_ax),
+                                 automargin=True)
+        self.figure.update_yaxes(title='<b>{}</b>'.format(y_ax),
+                                 automargin=True)
 
 
 def update_title(title):
