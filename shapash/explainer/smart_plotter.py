@@ -44,7 +44,8 @@ class SmartPlotter:
         self.last_stability_selection = False
         self.last_compacity_selection = False
 
-    def define_style_attributes(self, colors_dict):
+    def define_style_attributes(self,
+                                colors_dict):
         """
         define_style_attributes allows shapash user to change the color of plot
         Parameters
@@ -57,7 +58,8 @@ class SmartPlotter:
         if hasattr(self, "pred_colorscale"):
             delattr(self, "pred_colorscale")
 
-    def tuning_colorscale(self, values):
+    def tuning_colorscale(self,
+                          values):
         """
         adapts the color scale to the distribution of points
         Parameters
@@ -69,7 +71,8 @@ class SmartPlotter:
         min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
                       (max_init - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(),
+                                          self._style_dict["init_contrib_colorscale"]))))
         return color_scale
 
     def tuning_round_digit(self):
@@ -96,8 +99,8 @@ class SmartPlotter:
                                   file_name,
                                   auto_open):
         """
-        Function used by both violin and scatter methods for contributions plots in order to update the layout
-        of the (already) created plotly figure.
+        Function used by both violin and scatter methods for contributions plots in order to
+        update the layout of the (already) created plotly figure.
         Parameters
         ----------
         fig : go.Figure
@@ -333,15 +336,18 @@ class SmartPlotter:
         jitter_param = 0.075
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(
+                feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
         hv_temp = f'{feature_name} :<br />' + '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
 
         # add break line to X label
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
+        max_len_by_row = max([round(
+            50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
+            add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(feature_values.values.flatten()))
         uniq_l.sort()
@@ -483,7 +489,7 @@ class SmartPlotter:
         dict_yaxis.update(text=None)
         dict_style_bar1 = self._style_dict["dict_featimp_colors"][1]
         dict_style_bar2 = self._style_dict["dict_featimp_colors"][2]
-        dict_yaxis['text'] = None
+        # dict_yaxis['text'] = None
 
         # Change bar color for groups of features
         marker_color = [
@@ -500,12 +506,12 @@ class SmartPlotter:
         layout = go.Layout(
             barmode='group',
             template='none',
-            autosize=False,
+            # autosize=False,
             width=width,
             height=height,
             title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
+            # xaxis_title=dict_xaxis,
+            # yaxis_title=dict_yaxis,
             hovermode='closest',
             margin={
                 'l': 160,
@@ -534,8 +540,8 @@ class SmartPlotter:
         else:
             data = bar1
         fig = go.Figure(data=data, layout=layout)
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
+        # fig.update_yaxes(automargin=True)
+        # fig.update_xaxes(automargin=True)
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
         return fig
@@ -604,8 +610,8 @@ class SmartPlotter:
             width=width,
             height=height,
             title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
+            # xaxis_title=dict_xaxis,
+            # yaxis_title=dict_yaxis,
             yaxis_type='category',
             hovermode='closest',
             margin={
@@ -679,8 +685,8 @@ class SmartPlotter:
 
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
+        # fig.update_yaxes(automargin=True)
+        # fig.update_xaxes(automargin=True)
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
@@ -790,7 +796,9 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
-    def local_pred(self, index, label=None):
+    def local_pred(self,
+                   index,
+                   label=None):
         """
         compute a local pred to display in local_plot
         Parameters
@@ -2241,27 +2249,28 @@ class SmartPlotter:
                                    auto_open=auto_open)
         return fig
 
-    def plot_stability_distribution(
-            self,
-            variability,
-            plot_type,
-            mean_amplitude,
-            dataset,
-            column_names,
-            file_name,
-            auto_open
-    ):
+    def plot_stability_distribution(self,
+                                    variability,
+                                    plot_type,
+                                    mean_amplitude,
+                                    dataset,
+                                    column_names,
+                                    file_name,
+                                    auto_open):
         """
-        Intermediate function used to display the stability plot when plot_type is "boxplot" or "violin"
+        Intermediate function used to display the stability plot when plot_type is "boxplot" or
+        "violin"
         Parameters
         ----------
         variability: array
-            Local stability expressed as a distribution across all instances (one distribution per feature).
-            Displayed on the X-axis on the plot
+            Local stability expressed as a distribution across all instances
+            (one distribution per feature). Displayed on the X-axis on the plot
         plot_type: string
-            Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
+            Defines the type of plot that will be displayed.
+            Possible values are "boxplot" or "violin"
         mean_amplitude: array
-            Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
+            Average of the normalized SHAP values in the neighborhood.
+            Displayed as a colorscale in the plot.
         dataset: DataFrame
             x_init dataset
         column_names: list
@@ -2785,18 +2794,20 @@ class SmartPlotter:
         return fig
 
     def scatter_plot_prediction(self,
-                    selection=None,
-                    col_scale=None,
-                    addnote=None,
-                    subtitle=None,
-                    max_points=2000,
-                    width=900,
-                    height=600,
-                    file_name=None,
-                    auto_open=False):
+                                selection=None,
+                                col_scale=None,
+                                addnote=None,
+                                subtitle=None,
+                                max_points=2000,
+                                width=900,
+                                height=600,
+                                file_name=None,
+                                auto_open=False):
         """
-        scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
-        This plot allows the user to understand the distribution of predictions in comparison to the target variable.
+        scatter_plot_prediction displays a Plotly scatter or violin plot of predictions
+        in comparison to the target variable.
+        This plot allows the user to understand the distribution of predictions
+        in comparison to the target variable.
         With the web app, it is possible to select the bad predictions or a subset of predictions.
         Parameters
         ----------
@@ -2973,7 +2984,6 @@ class SmartPlotter:
 
             fig.update_layout(violingap=0, violinmode='overlay')
             fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
-
         if self.explainer._case == "regression":
             hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}<br />Prediction Error: {w}" for x, y, z, w in
                        zip(y_target.index,
@@ -2995,17 +3005,17 @@ class SmartPlotter:
             fig.data[-1].marker.color = colorpoints.flatten()
             fig.data[-1].marker.coloraxis = 'coloraxis'
             fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {
-                'title': {'text': colorbar_title}}     
-        title = f"<b> Prediction"
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
+            fig.update_yaxes(scaleanchor="x", scaleratio=1)
+        title = f"<b> Prediction error"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
-        # dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
-        # dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_t['text'] = title
-        # dict_xaxis['text'] = truncate_str('Target', 110)
-        # dict_yaxis['text'] = 'Prediction'
+        dict_xaxis['text'] = truncate_str('Target', 110)
+        dict_yaxis['text'] = 'Prediction'
 
         fig.update_traces(
             marker={
@@ -3017,16 +3027,16 @@ class SmartPlotter:
 
         fig.update_layout(
             template='none',
-            title=dict_t
-            # width=width,
-            # height=height,
-            # xaxis_title=dict_xaxis,
-            # yaxis_title=dict_yaxis,
-            # hovermode='closest'
+            title=dict_t,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
+            width=width,
+            height=height,
+            hovermode='closest'
         )
 
-        # fig.update_yaxes(automargin=True)
-        # fig.update_xaxes(automargin=True)
+        fig.update_yaxes(automargin=True)
+        fig.update_xaxes(automargin=True)
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
 

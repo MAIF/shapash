@@ -357,7 +357,7 @@ class SmartApp:
 
         self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
-                dbc.Label("Index ", align="center", width=4),
+                dbc.Label("Index", align="center", width=4),
                 dbc.Col([
                     dbc.Input(
                         id="index_id", type="text", size="s", placeholder="Id must exist",
@@ -391,7 +391,7 @@ class SmartApp:
         self.components['filter']['max_contrib'] = dbc.Col(
             [
                 dbc.Label(
-                    "Features to display : ", id='max_contrib_label'),
+                    "Features to display: ", id='max_contrib_label'),
                 dcc.Slider(
                     min=1, max=min(self.settings['features'], len(self.dataframe.columns) - 2),
                     step=1, value=min(self.settings['features'], len(self.dataframe.columns) - 2),
@@ -402,22 +402,26 @@ class SmartApp:
         )
 
         self.components['filter']['positive_contrib'] = dbc.Col(
-            [
-                dbc.Label("Contributions to display : "),
+            [dbc.Row(
+                    [
+                dbc.Label("Contributions to display:", style={'font-size': '95%'}),
+               ]),
                 dbc.Row(
                     [
                         dbc.Col(
                             dbc.Checklist(
                                 options=[{"label": "Positive", "value": 1}], value=[1], inline=True,
-                                id="check_id_positive"
-                            ), width=6
+                                id="check_id_positive",
+                                style={'font-size': '82%'}
+                            ),style={'display': 'inline-block'} 
                         ),
                         dbc.Col(
                             dbc.Checklist(
                                 options=[{"label": "Negative", "value": 1}], value=[1], inline=True,
-                                id="check_id_negative"
-                            ), width=6, style={'padding': "0px"}, align="center"
-                        ),
+                                id="check_id_negative",
+                                style={'font-size':'82%'}
+                                ), style={'display': 'inline-block'}, align="center"
+                            )
                     ], className="g-0", justify="center"
                 )
             ],
@@ -427,7 +431,7 @@ class SmartApp:
         self.components['filter']['masked_contrib'] = dbc.Col(
             [
                 dbc.Label(
-                    "Feature(s) to mask :"),
+                    "Feature(s) to mask:"),
                 dcc.Dropdown(options=[{'label': key, 'value': value} for key, value in sorted(
                     self.explainer.inv_features_dict.items(), key=lambda item: item[0])],
                     value='', multi=True, searchable=True,
@@ -495,8 +499,8 @@ class SmartApp:
                                 )
                             ],
                             md=5,
-                            align="center",
-                            style={'padding': '0px 10px'},
+                            align="end",
+                            style={'padding': '0px 10px', 'display': 'inline-block'},
                         ),
                         dbc.Col(
                             [
@@ -504,26 +508,28 @@ class SmartApp:
                                     dbc.Tab(
                                         self.draw_component('table', 'dataset'),
                                         label='DataSet',
+                                        activeTabClassName="fw-bold fst-italic",
                                         className="card",
                                         id='card_dataset',
-                                        style={'cursor': 'pointer', 'padding': '0px 10px'}
+                                        style={'cursor': 'pointer',
+                                               'padding': '0px 10px'}
                                          ),
                                     dbc.Tab(
                                         self.draw_component('graph', 'prediction_picking'),
                                         className="card",
+                                        activeTabClassName="fw-bold fst-italic",
                                         id="card_prediction",
                                         label='Prediction',
                                         style={'padding': '0px 10px'}
-                                    )    
+                                    )
                                 ], id="card_dataset_and_graph"
                                 )
                             ],
                             md=7,
                             align="center",
-                            style={'padding': '0px 10px'},
+                            style={'padding': '0px 10px', 'display': 'inline-block'},
                         ),
-                    ],
-                    style={'padding': '15px 10px 0px 10px'},
+                    ], style={'padding': '15px 10px 0px 10px'},
                 ),
                 dbc.Row(
                     [
@@ -1112,7 +1118,7 @@ class SmartApp:
             """
             update threshold label
             """
-            return f'Threshold : {value}'
+            return f'Threshold: {value}'
 
         @app.callback(
             Output('max_contrib_label', 'children'),
@@ -1122,7 +1128,7 @@ class SmartApp:
             update max_contrib label
             """
             self.components['filter']['max_contrib']['max_contrib_id'].value = value
-            return f'Features to display : {value}'
+            return f'Features to display: {value}'
 
         @app.callback(
             [Output('max_contrib_id', 'value'),
@@ -1340,6 +1346,10 @@ class SmartApp:
                 title_size_adjust=True,
                 x_ax="Target",
                 y_ax="Prediction")
+            self.components['graph']['prediction_picking'].figure.update_layout(
+                autosize=False,
+                height=414
+                )
 
             return self.components['graph']['prediction_picking'].figure
 

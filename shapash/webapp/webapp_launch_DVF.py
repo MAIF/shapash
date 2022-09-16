@@ -29,7 +29,7 @@ regressor = LGBMRegressor(n_estimators=200).fit(Xtrain, ytrain)
 
 y_pred = pd.DataFrame(regressor.predict(Xtest), columns=['pred'], index=Xtest.index)
 y_target = pd.DataFrame(data=ytest,
-                        columns=['target'],
+                        columns=y_df.columns.to_list(),
                         index=Xtest.index)
 
 xpl = SmartExplainer(
