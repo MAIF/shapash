@@ -36,7 +36,7 @@ xpl = SmartExplainer(
     title_story='House Prices - Lightgbm Regressor'
 )
 
-xpl.compile(x=Xtest, y_pred=y_pred)
+xpl.compile(x=Xtest, y_pred=y_pred, y_target=ytest)
 
 xpl.init_app()
 app = xpl.smartapp.app

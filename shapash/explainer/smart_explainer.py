@@ -167,7 +167,7 @@ class SmartExplainer:
     Example
     --------
     >>> xpl = SmartExplainer(model, features_dict=featd,label_dict=labeld)
-    >>> xpl.compile(x=x_pred)
+    >>> xpl.compile(x=x_encoded, y_target=y)
     >>> xpl.plot.features_importance()
     """
 

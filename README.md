@@ -198,7 +198,8 @@ xpl = SmartExplainer(
 ```
 xpl.compile(
     x=Xtest,    
-    y_pred=y_pred, # Optional    
+    y_pred=y_pred, # Optional
+    y_target=yTest, # Optional: allows to display True Values vs Predicted Values
 )
 ```  
 

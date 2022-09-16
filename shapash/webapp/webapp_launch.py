@@ -64,7 +64,7 @@ xpl = SmartExplainer(
     title_story=cases[CASE]
 )
 
-xpl.compile(X_test, y_pred=y_pred)
+xpl.compile(X_test, y_pred=y_pred, y_target=y_test)
 
 xpl.init_app()
 app = xpl.smartapp.app

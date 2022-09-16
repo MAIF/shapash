@@ -1295,6 +1295,7 @@ class SmartApp:
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
+                label=self.label,
                 max_points=points
             )
 
