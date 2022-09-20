@@ -26,8 +26,8 @@ class MyGraph(dcc.Graph):
     def adjust_graph(self,
                      subset_graph=False,
                      title_size_adjust=False,
-                     x_ax='',
-                     y_ax=''):
+                     x_ax="",
+                     y_ax=""):
         """
         Override graph layout for app use
         """
@@ -53,13 +53,19 @@ class MyGraph(dcc.Graph):
                 'xanchor': 'center',
                 'yanchor': 'top',
                 'text': new_title,
-                'font': {'size': new_size_font}
+                'font': {'size': new_size_font, 'family': 'verdana'}
             }
         )
-        self.figure.update_xaxes(title='<b>{}</b>'.format(x_ax),
-                                 automargin=True)
-        self.figure.update_yaxes(title='<b>{}</b>'.format(y_ax),
-                                 automargin=True)
+        self.figure.update_xaxes(title=x_ax,
+                                 #title='<b>{}</b>'.format(x_ax),
+                                 automargin=True,
+                                 title_font_size=17,
+                                 title_font_family="verdana")
+        self.figure.update_yaxes(title=y_ax,
+                                 #title='<b>{}</b>'.format(y_ax),
+                                 automargin=True,
+                                 title_font_size=17,
+                                 title_font_family="verdana")
 
 
 def update_title(title):

@@ -329,7 +329,7 @@ class SmartApp:
             page_action='none',
             fixed_rows={'headers': True, 'data': 0},
             fixed_columns={'headers': True, 'data': 0},
-            filter_action='custom', filter_query='',
+            #filter_action='custom', filter_query='',
             sort_action='custom', sort_mode='multi', sort_by=[],
             active_cell={'row': 0, 'column': 0, 'column_id': '_index_'},
             style_table={'overflowY': 'auto', 'overflowX': 'auto'},
@@ -355,6 +355,13 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
+        self.components['filter']['filter_dataset'] = dbc.Col(dbc.Row(
+            [
+                dbc.Label(" ", align="center", width=4)
+            ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800}
+            )
+        )
+
         self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
                 dbc.Label("Index", align="center", width=4),
@@ -370,8 +377,8 @@ class SmartApp:
                              src=self.app.get_asset_url('reload.png'),
                              height='30px', style={'cursor': 'pointer'},
                              )], width={"size": 2},
-                    style={'padding': "0px"}, align="center"
-                )
+                        style={'padding': "0px"}, align="center"
+                        )
             ])
         )
 
@@ -495,41 +502,62 @@ class SmartApp:
                                 html.Div(
                                     self.draw_component('graph', 'global_feature_importance'),
                                     className="card",
-                                    id="card_global_feature_importance",
-                                )
+                                    id="card_global_feature_importance"
+                                    )
                             ],
                             md=5,
-                            align="end",
-                            style={'padding': '0px 10px', 'display': 'inline-block'},
+                            style={'padding': '10px 10px 0px 10px'},
                         ),
                         dbc.Col(
                             [
                                 dbc.Tabs([
                                     dbc.Tab(
                                         self.draw_component('table', 'dataset'),
-                                        label='DataSet',
-                                        activeTabClassName="fw-bold fst-italic",
+                                        label='Dataset',
+                                        active_tab_class_name="fw-bold fst-italic",
                                         className="card",
                                         id='card_dataset',
                                         style={'cursor': 'pointer',
-                                               'padding': '0px 10px'}
+                                               'height': '24rem'},
+                                        label_style={'color': "black", 'height': '25px',
+                                                     'padding': '0px 5px'},
+                                        tab_style={'backgroundColor': self.color[0]},
+                                        active_label_style={'backgroundColor': self.color[0]},
+                                        ),
+                                    dbc.Tab(
+                                        self.draw_component('filter', 'filter_dataset'),
+                                        label='Dataset Filters',
+                                        active_tab_class_name="fw-bold fst-italic",
+                                        className="card",
+                                        id='card_filters_dataset',
+                                        style={'height': '24rem'},
+                                        label_style={'color': "black", 'height': '25px',
+                                                     'padding': '0px 5px'},
+                                        tab_style={'backgroundColor': self.color[0],
+                                                   'border-left': '2px solid #ddd',
+                                                   'border-right': '2px solid #ddd'},
+                                        active_label_style={'backgroundColor': self.color[0]}
                                          ),
                                     dbc.Tab(
                                         self.draw_component('graph', 'prediction_picking'),
                                         className="card",
-                                        activeTabClassName="fw-bold fst-italic",
+                                        active_tab_class_name="fw-bold fst-italic",
                                         id="card_prediction",
-                                        label='Prediction',
-                                        style={'padding': '0px 10px'}
+                                        label='True Values Vs Predicted Values',
+                                        style={'height': '24rem'},
+                                        label_style={'color': "black", 'height': '25px',
+                                                     'padding': '0px 5px'},
+                                        tab_style={'backgroundColor': self.color[0]},
+                                        active_label_style={'backgroundColor': self.color[0]}
                                     )
-                                ], id="card_dataset_and_graph"
+                                ], id="card_dataset_filter_and_graph"
                                 )
                             ],
                             md=7,
-                            align="center",
-                            style={'padding': '0px 10px', 'display': 'inline-block'},
+                            #align="center",
+                            style={'padding': '10px 10px'},
                         ),
-                    ], style={'padding': '15px 10px 0px 10px'},
+                    ], style={'padding': '10px 10px 0px 10px', 'height':'100%'}, align="center"
                 ),
                 dbc.Row(
                     [
@@ -580,7 +608,7 @@ class SmartApp:
                             style={'padding': '0px 10px'},
                         ),
                     ],
-                    style={'padding': '15px 10px'},
+                    style={'padding': '10px 5px 10px 10px'},
                 ),
             ],
             className="mt-12",
@@ -728,27 +756,30 @@ class SmartApp:
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
                     style_component = {
-                        'height': '25rem'
+                        'height': '24rem'
+                    }
+                    this_style_card = {
+                        'height': '25rem', 'zIndex': 900,
                     }
                     if data_component_type == 'table':
                         style_component = {
-                            'maxHeight': '25rem',
+                            'maxHeight': '23rem',
                         }
-                    this_style_card = {
-                        'height': '26rem', 'zIndex': 900,
-                    }
-
+                        this_style_card = {
+                        'height': '24rem', 'zIndex': 900,
+                        }     
                     return this_style_card, style_component
 
                 else:
                     this_style_card = {
-                        'height': 'auto', 'width': 'auto',
+                        'height': 'auto', 
+                        'width': 'auto',
                         'zIndex': 998,
                         'position': 'fixed', 'top': '50px',
                         'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '87vh', 'maxHeight': '87vh',
+                        'height': '87vh', 'maxHeight': '87vh', #87
                     }
                     return this_style_card, style_component
 
@@ -1070,7 +1101,6 @@ class SmartApp:
                 title_size_adjust=True,
                 x_ax=truncate_str(self.selected_feature, 110),
                 y_ax='Shap interaction value')
-
             return self.components['graph']['feature_selector'].figure
 
         @app.callback(
@@ -1347,9 +1377,9 @@ class SmartApp:
                 x_ax="Target",
                 y_ax="Prediction")
             self.components['graph']['prediction_picking'].figure.update_layout(
-                autosize=False,
-                height=414
-                )
+               autosize=False,
+               height=360
+              )
 
             return self.components['graph']['prediction_picking'].figure
 

@@ -254,21 +254,34 @@ class SmartPlotter:
                                 for i in range(len(text_groups_features_keys))
                             ]) + '<extra></extra>'
         else:
+            print(feature_name)
             hovertemplate = '<b>%{hovertext}</b><br />' +\
-                            f'{feature_name} : ' +\
-                            '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
+                            f'{feature_name}: ' +\
+                            '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
             text_groups_features = None
 
+        if type(feature_values.values.flatten()[0]) == str:
+            feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
+            feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+            angle=45
+        else:
+            feature_val = feature_values.values.flatten()
+            angle=0
+        
         fig.add_scatter(
-            x=feature_values.values.flatten(),
+            x=feature_val,
             y=contributions.values.flatten(),
             mode='markers',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
-            customdata=feature_values.index.values,
-            text=text_groups_features
+            customdata=feature_values.values.flatten(),
+            text=text_groups_features,
         )
-
+             
+        fig.update_xaxes(
+            tickangle=angle
+        )
+            
         self._update_contributions_fig(fig=fig,
                                        feature_name=feature_name,
                                        pred=pred,
@@ -281,7 +294,7 @@ class SmartPlotter:
                                        height=height,
                                        file_name=file_name,
                                        auto_open=auto_open)
-
+        
         return fig
 
     def plot_violin(self,
@@ -341,7 +354,7 @@ class SmartPlotter:
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
-        hv_temp = f'{feature_name} :<br />' + '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
+        hv_temp = f'{feature_name} :<br />' + '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
 
         # add break line to X label
         max_len_by_row = max([round(
@@ -354,8 +367,16 @@ class SmartPlotter:
 
         for i in uniq_l:
             if pred is not None and self.explainer._case == 'classification':
-                fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
+                if type(feature_values.values.flatten()[0]) == str:
+                    feature_val = [x.replace('<br />', '') for x in feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()]
+                    feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+                    angle=45
+                else:
+                    feature_val = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
+                    angle=0
+                fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         points=points_param,
@@ -368,11 +389,12 @@ class SmartPlotter:
                                         hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                     (feature_values.iloc[:, 0] == i)].index.values
+                                        # customdata=contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                        #                              (feature_values.iloc[:, 0] == i)].index.values
+                                        customdata=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                                         ))
-                fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] == col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
+                fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         points=points_param,
@@ -386,12 +408,21 @@ class SmartPlotter:
                                         hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                                                     (feature_values.iloc[:, 0] == i)].index.values
+                                        # customdata=contributions.loc[(pred.iloc[:, 0] == col_modality) &
+                                        #                              (feature_values.iloc[:, 0] == i)].index.values
+                                        customdata=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                                         ))
 
             else:
-                fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                if type(feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()[0]) == str:
+                    feature_val = [x.replace('<br />', '') for x in feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()]
+                    feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+                    angle=45
+                else:
+                    feature_val = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
+                    angle=0
+                fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         line_color=self._style_dict["violin_default"],
                                         showlegend=False,
@@ -399,7 +430,8 @@ class SmartPlotter:
                                         scalemode='count',
                                         hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.index.values
+                                        # customdata=contributions.index.values
+                                        customdata=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
                                         ))
                 if pred is None:
                     fig.data[-1].points = points_param
@@ -417,7 +449,7 @@ class SmartPlotter:
                 showlegend=False,
                 hovertext=hv_text,
                 hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                customdata=contributions.index.values,
+                customdata=feature_values.values.flatten(),
             ))
 
         fig.update_layout(
@@ -426,8 +458,8 @@ class SmartPlotter:
             violinmode='overlay',
             xaxis_type='category'
         )
-
-        fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+        fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4],
+                         tickangle=angle)
 
         self._update_contributions_fig(fig=fig,
                                        feature_name=feature_name,
@@ -489,7 +521,7 @@ class SmartPlotter:
         dict_yaxis.update(text=None)
         dict_style_bar1 = self._style_dict["dict_featimp_colors"][1]
         dict_style_bar2 = self._style_dict["dict_featimp_colors"][2]
-        # dict_yaxis['text'] = None
+        dict_yaxis['text'] = None
 
         # Change bar color for groups of features
         marker_color = [
@@ -506,12 +538,12 @@ class SmartPlotter:
         layout = go.Layout(
             barmode='group',
             template='none',
-            # autosize=False,
+            autosize=False,
             width=width,
             height=height,
             title=dict_t,
-            # xaxis_title=dict_xaxis,
-            # yaxis_title=dict_yaxis,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
             hovermode='closest',
             margin={
                 'l': 160,
@@ -1079,15 +1111,15 @@ class SmartPlotter:
             else:
                 random.seed(41)
                 list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
-                addnote = "Length of user-defined Subset : "
+                addnote = "Length of user-defined Subset: "
             else:
                 random.seed(41)
                 list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         else:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:
@@ -1174,14 +1206,14 @@ class SmartPlotter:
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
-            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
-                                    metadata, addnote,
+            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values,
+                                    col_value, col_scale, metadata, addnote,
                                     subtitle, width, height, file_name, auto_open)
         else:
-            fig = self.plot_violin(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
-                                   addnote,
-                                   subtitle, width, height, file_name, auto_open)
-
+            fig = self.plot_violin(feature_values, contrib, col_label, y_pred,
+                                   proba_values, col_value, col_scale, addnote,
+                                   subtitle, width, height, file_name, auto_open)   
+        
         return fig
 
     def features_importance(self,
@@ -1692,7 +1724,15 @@ class SmartPlotter:
 
         return fig
 
-    def _update_interactions_fig(self, fig, col_name1, col_name2, addnote, width, height, file_name, auto_open):
+    def _update_interactions_fig(self,
+                                 fig,
+                                 col_name1,
+                                 col_name2,
+                                 addnote,
+                                 width,
+                                 height,
+                                 file_name,
+                                 auto_open):
         """
         Function used for the interactions plot to update the layout of the plotly figure.
         Parameters
@@ -2432,7 +2472,11 @@ class SmartPlotter:
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
 
-    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
+    def local_neighbors_plot(self,
+                             index,
+                             max_features=10,
+                             file_name=None,
+                             auto_open=False):
         """
         The Local_neighbors_plot has the main objective of increasing confidence \
         in interpreting the contribution values of a selected instance.
@@ -2441,7 +2485,8 @@ class SmartPlotter:
         Intuitively, for similar instances, we would expect similar contributions.
         Those neighbors are selected as follows :
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
-        * We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        * We discard neighbors whose model output is too **different** (see equations below)
+        from the instance output
         * We discard additional neighbors if their distance to the instance \
         is bigger than a predefined value (to remove outliers)
         In this neighborhood, we would expect instances to have similar SHAP values. \
@@ -2449,7 +2494,8 @@ class SmartPlotter:
         The **difference** between outputs is measured with the following distance definition :
         * For regression:
         .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+            distance = \\frac{|output_{allFeatures} -
+                              output_{currentFeatures}|}{|output_{allFeatures}|}
         * For classification:
         .. math::
             distance = |output_{allFeatures} - output_{currentFeatures}|
@@ -2511,7 +2557,6 @@ class SmartPlotter:
         dict_xaxis['text'] = "Normalized contribution values"
         dict_yaxis['text'] = ""
         dict_t['text'] = title
-
         fig.update_layout(template="none",
                           title=dict_t,
                           xaxis_title=dict_xaxis,
@@ -3007,7 +3052,8 @@ class SmartPlotter:
             fig.layout.coloraxis.colorscale = col_scale
             fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
             fig.update_yaxes(scaleanchor="x", scaleratio=1)
-        title = f"<b> Prediction error"
+       # title = f"<b> Prediction error"
+        title = "True Values Vs Predicted Values"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
