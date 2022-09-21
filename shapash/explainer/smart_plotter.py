@@ -3076,16 +3076,16 @@ class SmartPlotter:
             fig.data[-1].marker.coloraxis = 'coloraxis'
             fig.layout.coloraxis.colorscale = col_scale
             fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals":[col_scale[0][0],col_scale[-1][0]-0.15],
-            "ticktext":[float('{:0.2e}'.format(equal_bins[0][0])), float('{:0.2e}'.format(equal_bins[-1][0]))], "tickformat":".2s",
+            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat":".2s",
             "yanchor":"top", "y":1.1}
             range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()), max(y_pred.values.flatten()))]
             fig.update_xaxes(range=range_axis)
             fig.update_yaxes(range=range_axis)
-            fig.update_layout(shapes = [{'type': 'line', 'yref': 'paper', 'xref': 'paper', 'y0': 0, 'y1': 1, 'x0': 0, 'x1': 1,
+            fig.update_layout(shapes = [{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1, 'x0': 0, 'x1': 1,
                             'line' : dict(color="grey",width=1,dash="dot")}])
 
         #Add traces, title and template
-        title = f"<b> True Values Vs Predicted Values"
+        title = f"True Values Vs Predicted Values"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
