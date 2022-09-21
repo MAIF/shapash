@@ -255,19 +255,20 @@ class SmartApp:
                 dbc.Col(
                     [
                         html.H4(
-                            [dbc.Badge("Regression", id='regression_badge', style={"margin-right": "5px"}, color=''),
+                            [dbc.Badge("Regression", id='regression_badge', 
+                                       style={"margin-right": "5px"}, 
+                                       color=''),
                              dbc.Badge("Classification", id='classification_badge', color='')
-                             ],
-                            style={"margin": "0px"}
+                             ], style={"margin": "0px"}
                         ),
                     ],
-                    width="auto", align="center",
+                    width="auto", align="center", style={'padding': 'auto'}
                 ),
                 dbc.Col(
                     dbc.Collapse(
                         dbc.Row(
                             [
-                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
+                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 3px'}),
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
@@ -275,11 +276,22 @@ class SmartApp:
                                     style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
-                            style={"margin": "0px 0px 0px 5px", "align-items": "center"}
+                            style={"margin": "0px 0px 0px 3px"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
-                    width="auto", align="center", style={'padding': 'none'}
+                    width="auto", align="center", style={'padding': 'auto'}
+                ),
+                dbc.Col([
+                    html.Div(
+                        [
+                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
+                                     src=self.app.get_asset_url('icon_reset.png'),
+                                     height='40px',
+                                     style={'cursor': 'pointer'}),
+                        ]
+                    )],
+                    align="center", width="auto", style={'padding': 'auto'}
                 ),
                 dbc.Col([
                     html.Div(
@@ -302,7 +314,7 @@ class SmartApp:
                             self.components['settings']['modal'],
                         ]
                     )],
-                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
+                    align="center", width="auto", style={'padding': 'auto'}
                 )
             ],
             className="g-0", justify="end"
@@ -328,7 +340,7 @@ class SmartApp:
             page_action='none',
             fixed_rows={'headers': True, 'data': 0},
             fixed_columns={'headers': True, 'data': 0},
-            filter_action='custom', filter_query='',
+            #filter_action='custom', filter_query='',
             sort_action='custom', sort_mode='multi', sort_by=[],
             active_cell={'row': 0, 'column': 0, 'column_id': '_index_'},
             style_table={'overflowY': 'auto', 'overflowX': 'auto'},
@@ -354,9 +366,16 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
+        self.components['filter']['filter_dataset'] = dbc.Col(dbc.Row(
+            [
+                dbc.Label(" ", align="center", width=4)
+            ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800}
+            )
+        )
+
         self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
-                dbc.Label("Index ", align="center", width=4),
+                dbc.Label("Index", align="center", width=4),
                 dbc.Col([
                     dbc.Input(
                         id="index_id", type="text", size="s", placeholder="Id must exist",
@@ -369,8 +388,8 @@ class SmartApp:
                              src=self.app.get_asset_url('reload.png'),
                              height='30px', style={'cursor': 'pointer'},
                              )], width={"size": 2},
-                    style={'padding': "0px"}, align="center"
-                )
+                        style={'padding': "0px"}, align="center"
+                        )
             ])
         )
 
@@ -390,7 +409,7 @@ class SmartApp:
         self.components['filter']['max_contrib'] = dbc.Col(
             [
                 dbc.Label(
-                    "Features to display : ", id='max_contrib_label'),
+                    "Features to display: ", id='max_contrib_label'),
                 dcc.Slider(
                     min=1, max=min(self.settings['features'], len(self.dataframe.columns) - 2),
                     step=1, value=min(self.settings['features'], len(self.dataframe.columns) - 2),
@@ -401,22 +420,26 @@ class SmartApp:
         )
 
         self.components['filter']['positive_contrib'] = dbc.Col(
-            [
-                dbc.Label("Contributions to display : "),
+            [dbc.Row(
+                    [
+                dbc.Label("Contributions to display:", style={'font-size': '95%'}),
+               ]),
                 dbc.Row(
                     [
                         dbc.Col(
                             dbc.Checklist(
                                 options=[{"label": "Positive", "value": 1}], value=[1], inline=True,
-                                id="check_id_positive"
-                            ), width=6
+                                id="check_id_positive",
+                                style={'font-size': '82%'}
+                            ),style={'display': 'inline-block'} 
                         ),
                         dbc.Col(
                             dbc.Checklist(
                                 options=[{"label": "Negative", "value": 1}], value=[1], inline=True,
-                                id="check_id_negative"
-                            ), width=6, style={'padding': "0px"}, align="center"
-                        ),
+                                id="check_id_negative",
+                                style={'font-size':'82%'}
+                                ), style={'display': 'inline-block'}, align="center"
+                            )
                     ], className="g-0", justify="center"
                 )
             ],
@@ -426,7 +449,7 @@ class SmartApp:
         self.components['filter']['masked_contrib'] = dbc.Col(
             [
                 dbc.Label(
-                    "Feature(s) to mask :"),
+                    "Feature(s) to mask:"),
                 dcc.Dropdown(options=[{'label': key, 'value': value} for key, value in sorted(
                     self.explainer.inv_features_dict.items(), key=lambda item: item[0])],
                     value='', multi=True, searchable=True,
@@ -455,7 +478,7 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=3, align="center"
+                            md=3, align="center", width="auto", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             html.A(
@@ -465,17 +488,20 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             )],
-                            md=3, align="center"
+                            md=3, align="center", width="auto", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             self.components['menu']
-                            ], align="end"
+                            ], align="end", md=6
                         )
                     ],
-                    style={'padding': "5px 15px", "verticalAlign": "middle", "width":"auto", "justify":"end"}
+                    style={'padding': "5px 15px",
+                           "verticalAlign": "middle",
+                           "width": "auto",
+                           "justify": "end"}
                 )
             ],
-            fluid=True, style={'height': '70px', 'backgroundColor': self.bkg_color}
+            fluid=True, style={'height': '100%', 'backgroundColor': self.bkg_color}
         )
 
         self.skeleton['body'] = dbc.Container(
@@ -487,28 +513,70 @@ class SmartApp:
                                 html.Div(
                                     self.draw_component('graph', 'global_feature_importance'),
                                     className="card",
-                                    id="card_global_feature_importance",
-                                )
+                                    id="card_global_feature_importance"
+                                    )
                             ],
                             md=5,
-                            align="center",
-                            style={'padding': '0px 10px'},
+                            style={'padding': '10px 10px 0px 10px'},
                         ),
                         dbc.Col(
                             [
-                                html.Div(
-                                    self.draw_component('table', 'dataset'),
-                                    className="card",
-                                    id='card_dataset',
-                                    style={'cursor': 'pointer'},
+                                dbc.Tabs([
+                                    dbc.Tab(
+                                        self.draw_component('table', 'dataset'),
+                                        label='Dataset',
+                                        active_tab_class_name="fw-bold fst-italic",
+                                        className="card",
+                                        id='card_dataset',
+                                        style={'cursor': 'pointer',
+                                               'height': '24rem'},
+                                        label_style={'color': "black", 'height': '25px',
+                                                     'padding': '0px 5px'},
+                                        #tab_style={'backgroundColor': self.color[0]},
+                                        #active_label_style={'backgroundColor': self.color[0]},
+                                        active_label_style={'border-top': '3px solid',
+                                                            'border-top-color': self.color[0]
+                                                            }
+                                        ),
+                                    dbc.Tab(
+                                        self.draw_component('filter', 'filter_dataset'),
+                                        label='Dataset Filters',
+                                        active_tab_class_name="fw-bold fst-italic",
+                                        className="card",
+                                        id='card_filters_dataset',
+                                        style={'height': '24rem'},
+                                        label_style={'color': "black", 'height': '25px',
+                                                     'padding': '0px 5px'},
+                                        tab_style={'border-left': '2px solid #ddd',
+                                                   'border-right': '2px solid #ddd'},
+                                        #active_label_style={'backgroundColor': self.color[0]}
+                                        active_label_style={'border-top': '3px solid',
+                                                            'border-top-color': self.color[0]
+                                                            }
+                                         ),
+                                    dbc.Tab(
+                                        self.draw_component('graph', 'prediction_picking'),
+                                        className="card",
+                                        active_tab_class_name="fw-bold fst-italic",
+                                        id="card_prediction",
+                                        label='True Values Vs Predicted Values',
+                                        style={'height': '24rem'},
+                                        label_style={'color': "black", 'height': '25px',
+                                                     'padding': '0px 5px'},
+                                        #tab_style={'backgroundColor': self.color[0]},
+                                        #active_label_style={'backgroundColor': self.color[0]}
+                                        active_label_style={'border-top': '3px solid',
+                                                            'border-top-color': self.color[0]
+                                                            }
+                                    )
+                                ], id="card_dataset_filter_and_graph"
                                 )
                             ],
                             md=7,
-                            align="center",
-                            style={'padding': '0px 10px'},
+                            #align="center",
+                            style={'padding': '10px 10px'},
                         ),
-                    ],
-                    style={'padding': '15px 10px 0px 10px'},
+                    ], style={'padding': '10px 10px 0px 10px', 'height':'100%'}, align="center"
                 ),
                 dbc.Row(
                     [
@@ -559,7 +627,7 @@ class SmartApp:
                             style={'padding': '0px 10px'},
                         ),
                     ],
-                    style={'padding': '15px 10px'},
+                    style={'padding': '10px 5px 10px 10px'},
                 ),
             dbc.Row(
                     [
@@ -585,10 +653,15 @@ class SmartApp:
 
     def adjust_menu(self):
         """
-        Override menu from explainer object depending on classification or regression case.
+        Override menu from explainer object depending on
+        classification or regression case.
         """
-        on_style = {'backgroundColor': self.color[0], 'color': self.bkg_color, 'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': self.color[1], 'color': self.bkg_color, 'margin-right': '0.5rem'}
+        on_style = {'backgroundColor': self.color[0],
+                    'color': self.bkg_color,
+                    'margin-right': '0.5rem'}
+        off_style = {'backgroundColor': self.color[1],
+                     'color': self.bkg_color,
+                     'margin-right': '0.5rem'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -608,7 +681,10 @@ class SmartApp:
         else:
             raise ValueError(f'No rule defined for explainer case : {self.explainer._case}')
 
-    def draw_component(self, component_type, component_id, title=None):
+    def draw_component(self,
+                       component_type,
+                       component_id,
+                       title=None):
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
@@ -624,7 +700,8 @@ class SmartApp:
         -------
         list
             list of components
-            (combining for example Graph + embed button to get fullscreen details)
+            (combining for example Graph + embed button to get fullscreen
+             details)
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
@@ -643,7 +720,8 @@ class SmartApp:
 
     def draw_filter(self):
         """
-        Method which returns filter components block for local contributions plot.
+        Method which returns filter components block for local
+        contributions plot.
         Returns
         -------
         list
@@ -673,12 +751,14 @@ class SmartApp:
 
     def select_point(self, graph, click_data):
         """
-        Method which set the selected point in graph component corresponding to click_data
+        Method which set the selected point in graph component
+        corresponding to click_data.
         """
         if click_data:
             curve_id = click_data['points'][0]['curveNumber']
             point_id = click_data['points'][0]['pointIndex']
-            for curve in range(len(self.components['graph'][graph].figure['data'])):
+            for curve in range(
+                    len(self.components['graph'][graph].figure['data'])):
                 self.components['graph'][graph].figure['data'][curve].selectedpoints = \
                     [point_id] if curve == curve_id else []
 
@@ -686,7 +766,6 @@ class SmartApp:
         """
         Initialize callbacks for each fullscreen button
         the callback alter style of the component (height, ...)
-
         Returns
         -------
         dict
@@ -713,27 +792,30 @@ class SmartApp:
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
                     style_component = {
-                        'height': '25rem'
+                        'height': '24rem'
+                    }
+                    this_style_card = {
+                        'height': '25rem', 'zIndex': 900,
                     }
                     if data_component_type == 'table':
                         style_component = {
-                            'maxHeight': '25rem',
+                            'maxHeight': '23rem',
                         }
-                    this_style_card = {
-                        'height': '26rem', 'zIndex': 900,
-                    }
-
+                        this_style_card = {
+                        'height': '24rem', 'zIndex': 900,
+                        }     
                     return this_style_card, style_component
 
                 else:
                     this_style_card = {
-                        'height': 'auto', 'width': 'auto',
+                        'height': 'auto', 
+                        'width': 'auto',
                         'zIndex': 998,
                         'position': 'fixed', 'top': '50px',
                         'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '87vh', 'maxHeight': '87vh',
+                        'height': '87vh', 'maxHeight': '87vh', #87
                     }
                     return this_style_card, style_component
 
@@ -815,7 +897,13 @@ class SmartApp:
             [State('rows', 'value'),
              State('name', 'value')]
         )
-        def update_datatable(sort_by, filter_query, selected_data, clear_filter, is_open, rows, name):
+        def update_datatable(sort_by,
+                             filter_query,
+                             selected_data,
+                             clear_filter,
+                             is_open,
+                             rows,
+                             name):
             """
             update datatable according to sorting, filtering and settings modifications
             """
@@ -895,7 +983,16 @@ class SmartApp:
                 State('features', 'value')
             ]
         )
-        def update_feature_importance(label, data, selected_data, clear_filter, is_open, n_clicks, bool_group, clickData, filter_query, features):
+        def update_feature_importance(label,
+                                      data,
+                                      selected_data,
+                                      clear_filter,
+                                      is_open,
+                                      n_clicks,
+                                      bool_group,
+                                      clickData,
+                                      filter_query,
+                                      features):
             """
             update feature importance plot according to selected label and dataset state.
             """
@@ -951,7 +1048,7 @@ class SmartApp:
                     group_name=group_name,
                     display_groups=bool_group
                 )
-            self.components['graph']['global_feature_importance'].adjust_graph()
+            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             if selected_feature:
                 if self.explainer.features_groups is None:
@@ -982,9 +1079,16 @@ class SmartApp:
                 State('violin', 'value')
             ]
         )
-        def update_feature_selector(feature, selected_data, clear_filter, label, is_open, points, violin):
+        def update_feature_selector(feature,
+                                    selected_data,
+                                    clear_filter,
+                                    label,
+                                    is_open,
+                                    points,
+                                    violin):
             """
-            Update feature plot according to label, data, selected feature and settings modifications
+            Update feature plot according to label, data,
+            selected feature and settings modifications
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
@@ -1028,8 +1132,11 @@ class SmartApp:
 
             self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
             subset_graph = True if self.subset is not None else False
-            self.components['graph']['feature_selector'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
-
+            self.components['graph']['feature_selector'].adjust_graph(
+                subset_graph=subset_graph,
+                title_size_adjust=True,
+                x_ax=truncate_str(self.selected_feature, 110),
+                y_ax='Contribution')
             return self.components['graph']['feature_selector'].figure
 
         @app.callback(
@@ -1077,7 +1184,7 @@ class SmartApp:
             """
             update threshold label
             """
-            return f'Threshold : {value}'
+            return f'Threshold: {value}'
 
         @app.callback(
             Output('max_contrib_label', 'children'),
@@ -1087,7 +1194,7 @@ class SmartApp:
             update max_contrib label
             """
             self.components['filter']['max_contrib']['max_contrib_id'].value = value
-            return f'Features to display : {value}'
+            return f'Features to display: {value}'
 
         @app.callback(
             [Output('max_contrib_id', 'value'),
@@ -1189,7 +1296,9 @@ class SmartApp:
                 yaxis_max_label=8,
                 display_groups=bool_group
             )
-            self.components['graph']['detail_feature'].adjust_graph(title_size_adjust=True)
+            self.components['graph']['detail_feature'].adjust_graph(
+                title_size_adjust=True,
+                x_ax='Contribution')
             # font size can be adapted to screen size
             list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
                           range(len(self.components['graph']['detail_feature'].figure.data))]
@@ -1206,7 +1315,6 @@ class SmartApp:
             [
                 Input("index_id", "n_submit")
             ],
-
         )
         def click_validation(n_submit):
             """
@@ -1231,7 +1339,6 @@ class SmartApp:
                 State('dataset', 'data'),
                 State('index_id', 'value')
             ]
-
         )
         def datatable_layout(validation, data, index):
             ctx = dash.callback_context
@@ -1295,13 +1402,20 @@ class SmartApp:
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
-                label=self.label,
                 max_points=points
             )
 
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
             subset_graph = True if self.subset is not None else False
-            self.components['graph']['prediction_picking'].adjust_graph(subset_graph=subset_graph, title_size_adjust=True)
+            self.components['graph']['prediction_picking'].adjust_graph(
+                subset_graph=subset_graph,
+                title_size_adjust=True,
+                x_ax="Target",
+                y_ax="Prediction")
+            self.components['graph']['prediction_picking'].figure.update_layout(
+               autosize=False,
+               height=360
+              )
 
             return self.components['graph']['prediction_picking'].figure
 

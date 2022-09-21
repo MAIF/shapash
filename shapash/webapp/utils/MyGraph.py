@@ -23,13 +23,17 @@ class MyGraph(dcc.Graph):
 
         }
 
-    def adjust_graph(self, subset_graph=False, title_size_adjust=False):
+    def adjust_graph(self,
+                     subset_graph=False,
+                     title_size_adjust=False,
+                     x_ax="",
+                     y_ax=""):
         """
         Override graph layout for app use
         """
         new_title = update_title(self.figure.layout.title.text) + (" <b>< Subset ></b>" if subset_graph else "")
         if title_size_adjust:
-            new_size_font = floor(self.figure.layout.title.font.size * min(60 / len(new_title), 1))
+            new_size_font = floor(self.figure.layout.title.font.size * min(42 / len(new_title), 1))
         else:
             new_size_font = self.figure.layout.title.font.size
         self.figure.update_layout(
@@ -37,7 +41,7 @@ class MyGraph(dcc.Graph):
             margin=dict(
                 l=50,
                 r=10,
-                b=0,
+                b=10,
                 t=50,
                 pad=0
             ),
@@ -49,11 +53,19 @@ class MyGraph(dcc.Graph):
                 'xanchor': 'center',
                 'yanchor': 'top',
                 'text': new_title,
-                'font': {'size': new_size_font}
+                'font': {'size': new_size_font, 'family': 'verdana'}
             }
         )
-        self.figure.update_xaxes(title='', automargin=True)
-        self.figure.update_yaxes(title='', automargin=True)
+        self.figure.update_xaxes(title=x_ax,
+                                 #title='<b>{}</b>'.format(x_ax),
+                                 automargin=True,
+                                 title_font_size=17,
+                                 title_font_family="verdana")
+        self.figure.update_yaxes(title=y_ax,
+                                 #title='<b>{}</b>'.format(y_ax),
+                                 automargin=True,
+                                 title_font_size=17,
+                                 title_font_family="verdana")
 
 
 def update_title(title):

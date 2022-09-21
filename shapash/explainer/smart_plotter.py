@@ -27,22 +27,18 @@ class SmartPlotter:
     """
     SmartPlotter is a Bridge pattern decoupling plotting functions from SmartExplainer.
     The smartplotter class includes all the methods used to display graphics
-
     Each SmartPlotter method is easy to use from a Smart explainer object,
     just use the following syntax
-
     Attributes :
-
     explainer: object
         SmartExplainer instance to point to.
-
     Example
     --------
     >>> xpl.plot.my_plot_method(param=value)
-
     """
 
-    def __init__(self, explainer):
+    def __init__(self,
+                 explainer):
         self.explainer = explainer
         self._palette_name = list(colors_loading().keys())[0]
         self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
@@ -50,10 +46,10 @@ class SmartPlotter:
         self.last_stability_selection = False
         self.last_compacity_selection = False
 
-    def define_style_attributes(self, colors_dict):
+    def define_style_attributes(self,
+                                colors_dict):
         """
         define_style_attributes allows shapash user to change the color of plot
-
         Parameters
         ----------
         colors_dict: dict
@@ -64,10 +60,10 @@ class SmartPlotter:
         if hasattr(self, "pred_colorscale"):
             delattr(self, "pred_colorscale")
 
-    def tuning_colorscale(self, values):
+    def tuning_colorscale(self,
+                          values):
         """
         adapts the color scale to the distribution of points
-
         Parameters
         ----------
         values: 1 column pd.DataFrame
@@ -77,7 +73,8 @@ class SmartPlotter:
         min_pred, max_init = list(desc_df.loc[['min', 'max']].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(['count', 'mean', 'std'])] - min_pred) / \
                       (max_init - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
+        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(),
+                                          self._style_dict["init_contrib_colorscale"]))))
         return color_scale
 
     def tuning_round_digit(self):
@@ -104,9 +101,8 @@ class SmartPlotter:
                                   file_name,
                                   auto_open):
         """
-        Function used by both violin and scatter methods for contributions plots in order to update the layout
-        of the (already) created plotly figure.
-
+        Function used by both violin and scatter methods for contributions plots in order to
+        update the layout of the (already) created plotly figure.
         Parameters
         ----------
         fig : go.Figure
@@ -134,7 +130,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
-
         """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
         if subtitle or addnote:
@@ -207,7 +202,6 @@ class SmartPlotter:
                      auto_open=False):
         """
         Scatter plot of one feature contribution across the prediction set.
-
         Parameters
         ----------
         feature_values : 1 column pd.Dataframe
@@ -241,18 +235,22 @@ class SmartPlotter:
         fig = go.Figure()
 
         # add break line to X label if necessary
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
+        max_len_by_row = max([
+            round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
+            add_line_break, args=(max_len_by_row, 120,))
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in
+                       zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
 
         if metadata:
             metadata = {k: [round_to_k(x, 3) if isinstance(x, Number) else x for x in v]
                         for k, v in metadata.items()}
-            text_groups_features = np.swap = np.array([col_values for col_values in metadata.values()])
+            text_groups_features = np.swap = np.array(
+                [col_values for col_values in metadata.values()])
             text_groups_features = np.swapaxes(text_groups_features, 0, 1)
             text_groups_features_keys = list(metadata.keys())
             hovertemplate = '<b>%{hovertext}</b><br />' + \
@@ -263,18 +261,31 @@ class SmartPlotter:
                             ]) + '<extra></extra>'
         else:
             hovertemplate = '<b>%{hovertext}</b><br />' +\
-                            f'{feature_name} : ' +\
-                            '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
+                            f'{feature_name}: ' +\
+                            '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
             text_groups_features = None
+        # To change ticktext when the label size is upper than 10
+        if type(feature_values.values.flatten()[0]) == str:
+            feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
+            feature_val = [
+                x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+            angle = 45
+        else:
+            feature_val = feature_values.values.flatten()
+            angle = 0
 
         fig.add_scatter(
-            x=feature_values.values.flatten(),
+            x=feature_val,
             y=contributions.values.flatten(),
             mode='markers',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
-            customdata=feature_values.index.values,
-            text=text_groups_features
+            customdata=feature_values.values.flatten(),
+            text=text_groups_features,
+        )
+
+        fig.update_xaxes(
+            tickangle=angle
         )
 
         self._update_contributions_fig(fig=fig,
@@ -344,23 +355,35 @@ class SmartPlotter:
         jitter_param = 0.075
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(
+                feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
-        hv_temp = f'{feature_name} :<br />' + '%{x}<br />Contribution: %{y:.4f}<extra></extra>'
+        hv_temp = f'{feature_name} :<br />' + '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
 
         # add break line to X label
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
+        max_len_by_row = max([round(
+            50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
+            add_line_break, args=(max_len_by_row, 120,))
 
         uniq_l = list(pd.unique(feature_values.values.flatten()))
         uniq_l.sort()
 
         for i in uniq_l:
             if pred is not None and self.explainer._case == 'classification':
-                fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
+                # To change ticktext when the label size is upper than 10
+                if type(feature_values.values.flatten()[0]) == str:
+                    feature_val = [x.replace('<br />', '') for x in feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()]
+                    feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+                    angle = 45
+                else:
+                    feature_val = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
+                    angle = 0
+                fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         points=points_param,
@@ -373,11 +396,12 @@ class SmartPlotter:
                                         hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                     (feature_values.iloc[:, 0] == i)].index.values
+                                        # customdata=contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                        #                              (feature_values.iloc[:, 0] == i)].index.values
+                                        customdata=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                                         ))
-                fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] == col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
+                fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         points=points_param,
@@ -391,12 +415,22 @@ class SmartPlotter:
                                         hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                                                     (feature_values.iloc[:, 0] == i)].index.values
+                                        # customdata=contributions.loc[(pred.iloc[:, 0] == col_modality) &
+                                        #                              (feature_values.iloc[:, 0] == i)].index.values
+                                        customdata=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                                         ))
 
             else:
-                fig.add_trace(go.Violin(x=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                # To change ticktext when the label size is upper than 10
+                if type(feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()[0]) == str:
+                    feature_val = [x.replace('<br />', '') for x in feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()]
+                    feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+                    angle=45
+                else:
+                    feature_val = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
+                    angle=0
+                fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         line_color=self._style_dict["violin_default"],
                                         showlegend=False,
@@ -404,7 +438,8 @@ class SmartPlotter:
                                         scalemode='count',
                                         hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        customdata=contributions.index.values
+                                        # customdata=contributions.index.values
+                                        customdata=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
                                         ))
                 if pred is None:
                     fig.data[-1].points = points_param
@@ -422,7 +457,7 @@ class SmartPlotter:
                 showlegend=False,
                 hovertext=hv_text,
                 hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                customdata=contributions.index.values,
+                customdata=feature_values.values.flatten(),
             ))
 
         fig.update_layout(
@@ -431,8 +466,8 @@ class SmartPlotter:
             violinmode='overlay',
             xaxis_type='category'
         )
-
-        fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+        fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4],
+                         tickangle=angle)
 
         self._update_contributions_fig(fig=fig,
                                        feature_name=feature_name,
@@ -461,7 +496,6 @@ class SmartPlotter:
                              auto_open=False):
         """
         Plot features importance computed with the prediction set.
-
         Parameters
         ----------
         feature_imp1 : pd.Series
@@ -526,28 +560,37 @@ class SmartPlotter:
                 'b': 50
             }
         )
+        
+        if type(feature_imp1.index[0]) == str:
+            index_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
+        else:
+            index_val = feature_imp1.index
         bar1 = go.Bar(
             x=feature_imp1.round(4),
-            y=feature_imp1.index,
+            y=index_val,
             orientation='h',
             name='Global',
             marker=dict_style_bar1,
-            marker_color=marker_color
+            marker_color=marker_color,
+            hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+            customdata=feature_imp1.index
         )
         if feature_imp2 is not None:
             bar2 = go.Bar(
                 x=feature_imp2.round(4),
-                y=feature_imp2.index,
+                y=index_val,
                 orientation='h',
                 name='Subset',
-                marker=dict_style_bar2
+                marker=dict_style_bar2,
+                hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+                customdata=feature_imp2.index
             )
             data = [bar2, bar1]
         else:
             data = bar1
         fig = go.Figure(data=data, layout=layout)
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
+        # fig.update_yaxes(automargin=True)
+        # fig.update_xaxes(automargin=True)
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
         return fig
@@ -565,7 +608,6 @@ class SmartPlotter:
                        auto_open=False):
         """
         Plotly bar plot of local explainers
-
         Parameters
         ----------
         index_value:
@@ -588,7 +630,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
-
         Returns
         -------
         plotly bar plot
@@ -618,8 +659,8 @@ class SmartPlotter:
             width=width,
             height=height,
             title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
+            # xaxis_title=dict_xaxis,
+            # yaxis_title=dict_yaxis,
             yaxis_type='category',
             hovermode='closest',
             margin={
@@ -652,7 +693,9 @@ class SmartPlotter:
                     ])
                 else:
                     hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
-                                                              add_line_break(expl[1], 40, maxlen=160))
+                                                          add_line_break(expl[1], 40, maxlen=160))     
+                trunc_0 = truncate_str(expl[0], 45)
+                trunc_0_v2 = trunc_0.replace(trunc_0[24: len(trunc_0)-3], '...') if len(trunc_0) > 30 else trunc_0
                 if len(contrib) <= yaxis_max_label and (
                         self.explainer.features_groups is None
                         # We don't want to display label values for t-sne projected values of groups of features.
@@ -662,10 +705,12 @@ class SmartPlotter:
                             not in self.explainer.features_groups.keys()
                         )
                 ):
-                    ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
-
+                        ylabel = '<b>{} :</b><br />{}'.format(trunc_0_v2, truncate_str(expl[1], 45))
+                                      
                 else:
-                    ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
+                    ylabel = ('<b>{}</b>'.format(trunc_0_v2))
+ 
+           # print(ylabel)
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
@@ -679,6 +724,14 @@ class SmartPlotter:
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
+            # if type([ylabel][0]) == str:
+            #     print(ylabel)
+            #     #label_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in [ylabel]][0]
+            #     label_val = ylabel.replace(ylabel[24: len(ylabel)-3], '...') if len(ylabel) > 30 else ylabel
+            #     print("blabla")
+            #     print(label_val)
+            # else:
+            #     label_val = ylabel
             barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
@@ -693,8 +746,10 @@ class SmartPlotter:
 
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
+        fig.update_yaxes(dtick=1,
+                         tickfont={'size': 17})
+        # fig.update_yaxes(automargin=True)
+        # fig.update_xaxes(automargin=True)
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
@@ -703,7 +758,6 @@ class SmartPlotter:
     def get_selection(self, line, var_dict, x_val, contrib):
         """
         An auxiliary function to select the row of interest.
-
         Parameters
         ----------
         line: list
@@ -731,7 +785,6 @@ class SmartPlotter:
         """
         An auxiliary function to select the mask to apply before plotting local
         explanation.
-
         Parameters
         ----------
         line: list
@@ -767,7 +820,6 @@ class SmartPlotter:
         """
         Check for masked contributions and update features_values and contrib
         to take the sum of masked contributions into account.
-
         Parameters
         ----------
         line: list
@@ -807,16 +859,16 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
-    def local_pred(self, index, label=None):
+    def local_pred(self,
+                   index,
+                   label=None):
         """
         compute a local pred to display in local_plot
-
         Parameters
         ----------
         index: string, int, float, ...
             specify the row we want to pred
         label: int (default: None)
-
         Returns
         -------
         float: Predict or predict_proba value
@@ -858,11 +910,8 @@ class SmartPlotter:
         The plot returned is a summary of local explainability.
         you could use the method filter beforehand to modify the parameters of this summary.
         preprocessing is used here to make this graph more intelligible
-
         index, row_num or query parameter can be used to select the local explanations to display
-
         local_plot tutorial offers a lot of examples (please check tutorial part of this doc)
-
         Parameters
         ----------
         index: string, int, float, ... type of index in x_val input matrix (default None)
@@ -895,12 +944,10 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         Plotly Figure Object
             Input arrays updated with masked contributions.
-
         Example
         --------
         >>> xpl.plot.local_plot(row_num=0)
@@ -1019,20 +1066,14 @@ class SmartPlotter:
         """
         contribution_plot method diplays a Plotly scatter or violin plot of a selected feature.
         It represents the contribution of the selected feature to the predicted value.
-
         This plot allows the user to understand how the value of a feature affects a prediction
-
         Type of plot (Violin/scatter) is automatically selected. It depends on the feature
         to be analyzed, the type of use case (regression / classification) and the presence of
         predicted values attribute.
-
         A sample is taken if the number of points to be displayed is too large
-
         Using col parameter, shapash user can specify the column num, name or column label of
         the feature
-
         contribution_plot tutorial offers many examples (please check tutorial part of this doc)
-
         Parameters
         ----------
         col: String or Int
@@ -1059,11 +1100,9 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         Plotly Figure Object
-
         Example
         --------
         >>> xpl.plot.contribution_plot(0)
@@ -1103,15 +1142,15 @@ class SmartPlotter:
             else:
                 random.seed(41)
                 list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
-                addnote = "Length of user-defined Subset : "
+                addnote = "Length of user-defined Subset: "
             else:
                 random.seed(41)
                 list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         else:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:
@@ -1198,14 +1237,14 @@ class SmartPlotter:
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
-            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
-                                    metadata, addnote,
+            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values,
+                                    col_value, col_scale, metadata, addnote,
                                     subtitle, width, height, file_name, auto_open)
         else:
-            fig = self.plot_violin(feature_values, contrib, col_label, y_pred, proba_values, col_value, col_scale,
-                                   addnote,
-                                   subtitle, width, height, file_name, auto_open)
-
+            fig = self.plot_violin(feature_values, contrib, col_label, y_pred,
+                                   proba_values, col_value, col_scale, addnote,
+                                   subtitle, width, height, file_name, auto_open)   
+        
         return fig
 
     def features_importance(self,
@@ -1221,16 +1260,12 @@ class SmartPlotter:
                             auto_open=False):
         """
         features_importance display a plotly features importance plot.
-
         in Multiclass Case, this features_importance focus on a label value.
         User specifies the label value using label parameter.
-
         the selection parameter allows the user to compare a subset to the global features
         importance
-
         features_importance tutorial offers several examples
          (please check tutorial part of this doc)
-
         Parameters
         ----------
         max_features: int (optional, default 20)
@@ -1262,11 +1297,9 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         Plotly Figure Object
-
         Example
         --------
         >>> xpl.plot.features_importance()
@@ -1375,7 +1408,6 @@ class SmartPlotter:
         Plotly plot for comparisons. Displays
         the contributions of several individuals. One line represents
         the different contributions of a unique individual.
-
         Parameters
         ----------
         index: list
@@ -1399,7 +1431,6 @@ class SmartPlotter:
             File name to use to save the plotly scatter chart. If None the scatter chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the scatter plot or not.
-
         Returns
         -------
         Plotly Figure Object
@@ -1502,10 +1533,8 @@ class SmartPlotter:
         Plotly comparison plot of several individuals' contributions. Plots contributions feature by feature.
         Allows to see the differences of contributions between two or more individuals,
         with each individual represented by a unique line.
-
         Parameters
         ----------
-
         index: list
             1st option to select individual rows.
             Int list of index referencing rows.
@@ -1528,12 +1557,10 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: boolean (optional)
             Indicates whether to open the bar plot or not.
-
         Returns
         -------
         Plotly Figure Object
             Comparison plot of the contributions of the different individuals.
-
         Example
         -------
         >>> xpl.plot.compare_plot(row_num=[0, 1, 2])
@@ -1621,7 +1648,6 @@ class SmartPlotter:
                                    col_scale):
         """
         Function used to generate a scatter plot figure for the interactions plots.
-
         Parameters
         ----------
         x_name : str
@@ -1638,7 +1664,6 @@ class SmartPlotter:
             Values of the color of the points as a 1 column DataFrame
         col_scale : list
             color scale
-
         Returns
         -------
         go.Figure
@@ -1673,7 +1698,6 @@ class SmartPlotter:
                                   col_scale):
         """
         Function used to generate a violin plot figure for the interactions plots.
-
         Parameters
         ----------
         x_name : str
@@ -1690,7 +1714,6 @@ class SmartPlotter:
             Values of the color of the points as a 1 column DataFrame
         col_scale : list
             color scale
-
         Returns
         -------
         go.Figure
@@ -1732,10 +1755,17 @@ class SmartPlotter:
 
         return fig
 
-    def _update_interactions_fig(self, fig, col_name1, col_name2, addnote, width, height, file_name, auto_open):
+    def _update_interactions_fig(self,
+                                 fig,
+                                 col_name1,
+                                 col_name2,
+                                 addnote,
+                                 width,
+                                 height,
+                                 file_name,
+                                 auto_open):
         """
         Function used for the interactions plot to update the layout of the plotly figure.
-
         Parameters
         ----------
         col_name1 : str
@@ -1752,7 +1782,6 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         go.Figure
@@ -1804,7 +1833,6 @@ class SmartPlotter:
     def _select_indices_interactions_plot(self, selection, max_points):
         """
         Method used for sampling indices.
-
         Parameters
         ----------
         selection : list
@@ -1813,7 +1841,6 @@ class SmartPlotter:
             Maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
             nb: you can also limit the number using 'selection' parameter.
-
         Returns
         -------
         list_ind : list
@@ -1861,12 +1888,9 @@ class SmartPlotter:
         """
         Diplays a Plotly scatter plot or violin plot of two selected features and their combined
         contributions for each of their values.
-
         This plot allows the user to understand how the different combinations of values of the
         two selected features influence the importance of the two features in the model output.
-
         A sample is taken if the number of points to be displayed is too large
-
         Parameters
         ----------
         col1: String or Int
@@ -1890,11 +1914,9 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         Plotly Figure Object
-
         Example
         --------
         >>> xpl.plot.interactions_plot(0, 1)
@@ -1975,11 +1997,9 @@ class SmartPlotter:
         """
         Displays a dynamic plot with the `nb_top_interactions` most important interactions existing
         between two variables.
-
         The most important interactions are determined computing the sum of all absolute shap interactions
         values between all existing pairs of variables.
         A button allows to select and display the corresponding features values and their shap contribution values.
-
         Parameters
         ----------
         nb_top_interactions : int
@@ -2001,11 +2021,9 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         go.Figure
-
         Example
         --------
         >>> xpl.plot.top_interactions_plot()
@@ -2128,7 +2146,6 @@ class SmartPlotter:
         Correlations matrix heatmap plot.
         The method can use phik or pearson correlations.
         The correlations computed can be changed using the parameter 'how'.
-
         Parameters
         ----------
         df : pd.DataFrame, optional
@@ -2155,11 +2172,9 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
-
         Returns
         -------
         go.Figure
-
         Example
         --------
         >>> xpl.plot.correlations()
@@ -2300,7 +2315,6 @@ class SmartPlotter:
     def plot_amplitude_vs_stability(self, mean_variability, mean_amplitude, column_names, file_name, auto_open):
         """
         Intermediate function used to display the stability plot when plot_type is "none"
-
         Parameters
         ----------
         mean_variability: array
@@ -2314,7 +2328,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved
         auto_open: bool
             open automatically the plot
-
         Returns
         -------
         go.Figure
@@ -2356,28 +2369,28 @@ class SmartPlotter:
                                    auto_open=auto_open)
         return fig
 
-    def plot_stability_distribution(
-            self,
-            variability,
-            plot_type,
-            mean_amplitude,
-            dataset,
-            column_names,
-            file_name,
-            auto_open
-    ):
+    def plot_stability_distribution(self,
+                                    variability,
+                                    plot_type,
+                                    mean_amplitude,
+                                    dataset,
+                                    column_names,
+                                    file_name,
+                                    auto_open):
         """
-        Intermediate function used to display the stability plot when plot_type is "boxplot" or "violin"
-
+        Intermediate function used to display the stability plot when plot_type is "boxplot" or
+        "violin"
         Parameters
         ----------
         variability: array
-            Local stability expressed as a distribution across all instances (one distribution per feature).
-            Displayed on the X-axis on the plot
+            Local stability expressed as a distribution across all instances
+            (one distribution per feature). Displayed on the X-axis on the plot
         plot_type: string
-            Defines the type of plot that will be displayed. Possible values are "boxplot" or "violin"
+            Defines the type of plot that will be displayed.
+            Possible values are "boxplot" or "violin"
         mean_amplitude: array
-            Average of the normalized SHAP values in the neighborhood. Displayed as a colorscale in the plot.
+            Average of the normalized SHAP values in the neighborhood.
+            Displayed as a colorscale in the plot.
         dataset: DataFrame
             x_init dataset
         column_names: list
@@ -2386,7 +2399,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved
         auto_open: bool
             open automatically the plot
-
         Returns
         -------
         go.Figure
@@ -2473,7 +2485,6 @@ class SmartPlotter:
         """
         Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
         to update the layout of the plotly figure.
-
         Parameters
         ----------
         fig: plotly.graph_objs._figure.Figure
@@ -2490,7 +2501,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
-
         Returns
         -------
         go.Figure
@@ -2542,38 +2552,33 @@ class SmartPlotter:
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
 
-    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
+    def local_neighbors_plot(self,
+                             index,
+                             max_features=10,
+                             file_name=None,
+                             auto_open=False):
         """
         The Local_neighbors_plot has the main objective of increasing confidence \
         in interpreting the contribution values of a selected instance.
         This plot analyzes the local neighborhood of the instance, \
         and compares its contribution values with those of its neighbors.
         Intuitively, for similar instances, we would expect similar contributions.
-
         Those neighbors are selected as follows :
-
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
-        * We discard neighbors whose model output is too **different** (see equations below) from the instance output
+        * We discard neighbors whose model output is too **different** (see equations below)
+        from the instance output
         * We discard additional neighbors if their distance to the instance \
         is bigger than a predefined value (to remove outliers)
-
         In this neighborhood, we would expect instances to have similar SHAP values. \
         If not, one might need to be cautious when interpreting SHAP values.
-
         The **difference** between outputs is measured with the following distance definition :
-
         * For regression:
-
         .. math::
-
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
-
+            distance = \\frac{|output_{allFeatures} -
+                              output_{currentFeatures}|}{|output_{allFeatures}|}
         * For classification:
-
         .. math::
-
             distance = |output_{allFeatures} - output_{currentFeatures}|
-
         Parameters
         ----------
         index: int
@@ -2584,7 +2589,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
-
         Returns
         -------
         fig
@@ -2634,7 +2638,6 @@ class SmartPlotter:
         dict_xaxis['text'] = "Normalized contribution values"
         dict_yaxis['text'] = ""
         dict_t['text'] = title
-
         fig.update_layout(template="none",
                           title=dict_t,
                           xaxis_title=dict_xaxis,
@@ -2668,35 +2671,23 @@ class SmartPlotter:
         then one would expect the explanations to be similar as well.
         Therefore, locally stable explanations are an important factor that help \
         build trust around a particular explanation method.
-
         The generated graphs can take multiple forms, but they all analyze \
         the same two aspects: for each feature we look at Amplitude vs. Variability. \
         in order terms, how important the feature is on average vs. how the feature impact \
         changes in the instance neighborhood.
-
         The average importance of the feature is the average SHAP value of the feature acros all considered instances
-
         The neighborhood is defined as follows :
-
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
         * We discard neighbors whose model output is too **different** (see equations below) from the instance output
         * We discard additional neighbors if their distance to the instance \
         is bigger than a predefined value (to remove outliers)
-
         The **difference** between outputs is measured with the following distance definition:
-
         * For regression:
-
         .. math::
-
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
-
         * For classification:
-
         .. math::
-
             distance = |output_{allFeatures} - output_{currentFeatures}|
-
         Parameters
         ----------
         selection: list
@@ -2712,7 +2703,6 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
-
         Returns
         -------
         If single instance:
@@ -2789,30 +2779,19 @@ class SmartPlotter:
         The Compacity_plot has the main objective of determining if a small subset of features \
         can be extracted to provide a simpler explanation of the model. \
         indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
-
         The following two plots are proposed:
-
         * We identify the minimum number of required features (based on the top contribution values) \
         that well approximate the model, and thus, provide accurate explanations.
         In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*) \
         to the one obtained with all features.
-
         * Conversely, we determine how close we get to the output with all features by using only a subset of them.
-
         *Distance definition*
-
         * For regression:
-
         .. math::
-
             distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
-
         * For classification:
-
         .. math::
-
             distance = |output_{allFeatures} - output_{currentFeatures}|
-
         Parameters
         ----------
         selection: list
@@ -2986,7 +2965,8 @@ class SmartPlotter:
                 addnote = None
             else:
                 random.seed(41)
-                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
+                list_ind = random.sample(
+                    self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
             if len(selection) <= max_points:

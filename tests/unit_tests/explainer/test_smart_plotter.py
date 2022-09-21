@@ -22,7 +22,6 @@ class TestSmartPlotter(unittest.TestCase):
     """
     Unit test Smart plotter class
     check the different plots available
-
     Parameters
     ----------
     unittest : [type]
@@ -2064,7 +2063,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_stability_plot_1(self):
         np.random.seed(42)
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2081,7 +2080,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_stability_plot_2(self):
         np.random.seed(42)
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2101,7 +2100,7 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_stability_plot_3(self):
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2120,7 +2119,7 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_stability_plot_4(self):
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2140,7 +2139,7 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_stability_plot_5(self):
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)

@@ -58,13 +58,17 @@ y_pred = pd.DataFrame(data=y_pred,
                       columns=y.columns.to_list(),
                       index=X_test.index)
 
+y_target = pd.DataFrame(data=y_test,
+                        columns=y.columns.to_list(),
+                        index=X_test.index)
+
 xpl = SmartExplainer(
     model,
     preprocessing=encoder,
     title_story=cases[CASE]
 )
 
-xpl.compile(X_test, y_pred=y_pred, y_target=y_test)
+xpl.compile(X_test, y_pred=y_pred, y_target=y_target)
 
 xpl.init_app()
 app = xpl.smartapp.app
