@@ -179,6 +179,7 @@ def inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_enco
     init += nb_col
     return frame, init
 
+
 def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
     """
     Reversed contribution when ColumnTransformer is used.
@@ -226,7 +227,10 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
                         if str(type(ct_encoding)) == sklearn_onehot:
                             col_origin = ct_encoding.categories_[i_enc]
                         elif str(type(ct_encoding)) == category_encoder_binary:
-                            col_origin = ct_encoding.base_n_encoder.mapping[i_enc].get('mapping').columns.tolist()
+                            try:
+                                col_origin = ct_encoding.base_n_encoder.mapping[i_enc].get('mapping').columns.tolist()
+                            except:
+                                col_origin = ct_encoding.mapping[i_enc].get('mapping').columns.tolist()
                         else:
                             col_origin = ct_encoding.mapping[i_enc].get('mapping').columns.tolist()
                         nb_col = len(col_origin)
@@ -292,8 +296,8 @@ def transform_ct(x_in, model, encoding):
 
         elif str(type(model)) in other_model:
             rst = pd.DataFrame(encoding.transform(x_in),
-                                columns=extract_features_model(model, dict_model_feature[str(type(model))]),
-                                index=x_in.index)
+                               columns=extract_features_model(model, dict_model_feature[str(type(model))]),
+                               index=x_in.index)
         else:
             raise ValueError("Model specified isn't supported by Shapash.")
 
@@ -304,6 +308,7 @@ def transform_ct(x_in, model, encoding):
         raise Exception(f"{encoding.__class__.__name__} not supported, no preprocessing done.")
 
     return rst
+
 
 def get_names(name, trans, column, column_transformer):
     """
@@ -347,6 +352,7 @@ def get_names(name, trans, column, column_transformer):
 
     return [name + "__" + f for f in trans.get_feature_names()]
 
+
 def get_feature_names(column_transformer):
     """
     Allow to extract all features names from encoders of the ColumnTransformer once it has been applied.
@@ -369,6 +375,7 @@ def get_feature_names(column_transformer):
         feature_names.extend(get_names(name, trans, column, column_transformer))
 
     return feature_names
+
 
 def get_list_features_names(list_preprocessing, columns_dict):
     """
@@ -458,7 +465,10 @@ def get_col_mapping_ct(encoder, x_encoded):
                 raise NotImplementedError(f'Estimator not supported : {estimator}')
 
         elif estimator == 'passthrough':
-            features_out = encoder._feature_names_in[features]
+            try:
+                features_out = encoder.feature_names_in_[features]
+            except:
+                features_out = encoder._feature_names_in[features] #for oldest sklearn version
             for f_name in features_out:
                 dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
                 idx_encoded += 1

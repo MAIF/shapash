@@ -8,13 +8,13 @@ import category_encoders as ce
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import catboost as cb
-import sklearn
+import sklearn as sk
 import lightgbm
 import xgboost
 from shapash.utils.transform import inverse_transform
 from shapash.utils.transform import apply_preprocessing
 from shapash.utils.columntransformer_backend import get_feature_names, get_names, get_list_features_names, \
-        get_col_mapping_ct
+    get_col_mapping_ct
 from sklearn.ensemble import GradientBoostingClassifier
 
 
@@ -95,28 +95,28 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         test inv_transform_ct with multiple encoding and dictionnary
         """
         train = pd.DataFrame({'city': ['chicago', 'paris'],
-                                  'state': ['US', 'FR'],
-                                  'other': ['A', 'B']},
-                                 index=['index1', 'index2'])
+                              'state': ['US', 'FR'],
+                              'other': ['A', 'B']},
+                             index=['index1', 'index2'])
 
         enc = ColumnTransformer(
-                transformers=[
-                    ('onehot_ce', ce.OneHotEncoder(), ['city', 'state']),
-                    ('onehot_skp', skp.OneHotEncoder(), ['city', 'state'])
-                ],
-                remainder='passthrough')
+            transformers=[
+                ('onehot_ce', ce.OneHotEncoder(), ['city', 'state']),
+                ('onehot_skp', skp.OneHotEncoder(), ['city', 'state'])
+            ],
+            remainder='passthrough')
         enc.fit(train)
         test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
-                                 'state': ['US', 'FR', 'FR'],
-                                 'other': ['A', 'B', 'C']},
-                                index=['index1', 'index2', 'index3'])
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['A', 'B', 'C']},
+                            index=['index1', 'index2', 'index3'])
 
         expected = pd.DataFrame({'onehot_ce_city': ['CH', 'CH', 'PR'],
-                                     'onehot_ce_state': ['US-FR', 'US-FR', 'US-FR'],
-                                     'onehot_skp_city': ['chicago', 'chicago', 'paris'],
-                                     'onehot_skp_state': ['US', 'FR', 'FR'],
-                                     'other': ['A-B', 'A-B', 'C']},
-                                    index=['index1', 'index2', 'index3'])
+                                 'onehot_ce_state': ['US-FR', 'US-FR', 'US-FR'],
+                                 'onehot_skp_city': ['chicago', 'chicago', 'paris'],
+                                 'onehot_skp_state': ['US', 'FR', 'FR'],
+                                 'other': ['A-B', 'A-B', 'C']},
+                                index=['index1', 'index2', 'index3'])
 
         result = pd.DataFrame(enc.transform(test))
         result.columns = ['col1_0', 'col1_1', 'col2_0', 'col2_1', 'col3_0', 'col3_1', 'col4_0', 'col4_1', 'other']
@@ -138,7 +138,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         input_dict3['data_type'] = 'object'
         list_dict = [input_dict2, input_dict3]
 
-        original = inverse_transform(result, [enc,input_dict1,list_dict])
+        original = inverse_transform(result, [enc, input_dict1, list_dict])
         pd.testing.assert_frame_equal(original, expected)
 
     def test_inv_transform_ct_4(self):
@@ -193,8 +193,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
                              'other': ['A', 'B', 'C']})
 
         expected = pd.DataFrame(data={
-                    'target_city': ['chicago', 'chicago', 'paris'],
-                    'target_state': ['US', 'FR', 'FR']})
+            'target_city': ['chicago', 'chicago', 'paris'],
+            'target_state': ['US', 'FR', 'FR']})
 
         result = pd.DataFrame(enc.transform(test))
         result.columns = ['col1', 'col2']
@@ -563,12 +563,19 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         enc.fit(train, y)
         test = pd.DataFrame({'num1': [0, 1, 1],
                              'num2': [0, 2, 3],
-                             'other': ['A', 'B', 'C']})
-
-        expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
-                                 'std_num2': [0.0, 2.0, 3.0],
-                                 'other': ['A', 'B', 'C']},
-                                dtype=object)
+                             'other': ['A', 'B', 'C']},
+                              )
+        if sk.__version__ >="1.0.0":
+            expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
+                                    'std_num2': [0.0, 2.0, 3.0],
+                                    'other': ['A', 'B', 'C']},
+                                    )
+        else:
+            expected = pd.DataFrame({'std_num1': [0.0, 1.0, 1.0],
+                                    'std_num2': [0.0, 2.0, 3.0],
+                                    'other': ['A', 'B', 'C']},
+                                    dtype=object
+                                    )
 
         result = pd.DataFrame(enc.transform(test))
         result.columns = ['col1', 'col2', 'other']
@@ -975,10 +982,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
                               'other': ['A', 'B']})
 
         enc_1 = ColumnTransformer(transformers=[('Quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
-                                remainder='drop')
+                                  remainder='drop')
 
         enc_2 = ColumnTransformer(transformers=[('Quantile', skp.QuantileTransformer(n_quantiles=2), ['num1', 'num2'])],
-                                remainder='passthrough')
+                                  remainder='passthrough')
 
         enc_1.fit(train)
         enc_2.fit(train)
@@ -1126,7 +1133,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         test_encoded = pd.DataFrame(enc.fit_transform(test))
 
         mapping = get_col_mapping_ct(enc, test_encoded)
-        expected_mapping = {'onehot_ce_city': [0, 1], 'onehot_ce_state': [2, 3], 'onehot_skp_city': [4, 5], 'onehot_skp_state': [6, 7]}
+        expected_mapping = {'onehot_ce_city': [0, 1], 'onehot_ce_state': [
+            2, 3], 'onehot_skp_city': [4, 5], 'onehot_skp_state': [6, 7]}
 
         self.assertDictEqual(mapping, expected_mapping)
 
@@ -1164,7 +1172,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
             ],
             remainder='passthrough')
 
-        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'],
+                         index=['index1', 'index2', 'index3'])
         test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
                              'state': ['US', 'FR', 'FR'],
                              'other': ['A', 'B', 'C']},
@@ -1187,7 +1196,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
             ],
             remainder='drop')
 
-        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'],
+                         index=['index1', 'index2', 'index3'])
         test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
                              'state': ['US', 'FR', 'FR'],
                              'other': ['A', 'B', 'C']},
@@ -1210,7 +1220,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
             ],
             remainder='drop')
 
-        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'],
+                         index=['index1', 'index2', 'index3'])
         test = pd.DataFrame({'city': ['chicago', 'chicago', 'paris'],
                              'state': ['US', 'FR', 'FR'],
                              'other': ['A', 'B', 'C']},
@@ -1232,7 +1243,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
             ],
             remainder='drop')
 
-        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'],
+                         index=['index1', 'index2', 'index3'])
         test = pd.DataFrame({'city': ['chicago', 'new york', 'paris'],
                              'state': ['US', 'FR', 'FR'],
                              'other': ['A', 'B', 'C']},
@@ -1240,7 +1252,10 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
 
         test_encoded = pd.DataFrame(enc.fit_transform(test, y))
         mapping = get_col_mapping_ct(enc, test_encoded)
-        expected_mapping = {'basen_city': [0, 1, 2], 'basen_state': [3, 4]}
+        if ce.__version__ <= '2.2.2':
+            expected_mapping = {'basen_city': [0, 1, 2], 'basen_state': [3, 4]}
+        else:
+            expected_mapping = {'basen_city': [0, 1], 'basen_state': [2, 3]}
 
         self.assertDictEqual(mapping, expected_mapping)
 
@@ -1254,7 +1269,8 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
             ],
             remainder='drop')
 
-        y = pd.DataFrame(data=[0, 1, 1], columns=['y'])
+        y = pd.DataFrame(data=[0, 1, 1], columns=['y'],
+                         index=['index1', 'index2', 'index3'])
         test = pd.DataFrame({'city': ['chicago', 'new york', 'paris'],
                              'state': ['US', 'FR', 'FR'],
                              'other': ['A', 'B', 'C']},
