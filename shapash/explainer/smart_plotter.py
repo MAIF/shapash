@@ -233,18 +233,22 @@ class SmartPlotter:
         fig = go.Figure()
 
         # add break line to X label if necessary
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
-        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(add_line_break, args=(max_len_by_row, 120,))
+        max_len_by_row = max([
+            round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
+        feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
+            add_line_break, args=(max_len_by_row, 120,))
 
         if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
+            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in
+                       zip(feature_values.index, pred.values.flatten())]
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
 
         if metadata:
             metadata = {k: [round_to_k(x, 3) if isinstance(x, Number) else x for x in v]
                         for k, v in metadata.items()}
-            text_groups_features = np.swap = np.array([col_values for col_values in metadata.values()])
+            text_groups_features = np.swap = np.array(
+                [col_values for col_values in metadata.values()])
             text_groups_features = np.swapaxes(text_groups_features, 0, 1)
             text_groups_features_keys = list(metadata.keys())
             hovertemplate = '<b>%{hovertext}</b><br />' + \
@@ -254,20 +258,20 @@ class SmartPlotter:
                                 for i in range(len(text_groups_features_keys))
                             ]) + '<extra></extra>'
         else:
-            print(feature_name)
             hovertemplate = '<b>%{hovertext}</b><br />' +\
                             f'{feature_name}: ' +\
                             '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
             text_groups_features = None
-
+        # To change ticktext when the label size is upper than 10
         if type(feature_values.values.flatten()[0]) == str:
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
-            feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
-            angle=45
+            feature_val = [
+                x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+            angle = 45
         else:
             feature_val = feature_values.values.flatten()
-            angle=0
-        
+            angle = 0
+
         fig.add_scatter(
             x=feature_val,
             y=contributions.values.flatten(),
@@ -277,11 +281,11 @@ class SmartPlotter:
             customdata=feature_values.values.flatten(),
             text=text_groups_features,
         )
-             
+
         fig.update_xaxes(
             tickangle=angle
         )
-            
+
         self._update_contributions_fig(fig=fig,
                                        feature_name=feature_name,
                                        pred=pred,
@@ -294,7 +298,7 @@ class SmartPlotter:
                                        height=height,
                                        file_name=file_name,
                                        auto_open=auto_open)
-        
+
         return fig
 
     def plot_violin(self,
@@ -367,15 +371,16 @@ class SmartPlotter:
 
         for i in uniq_l:
             if pred is not None and self.explainer._case == 'classification':
+                # To change ticktext when the label size is upper than 10
                 if type(feature_values.values.flatten()[0]) == str:
                     feature_val = [x.replace('<br />', '') for x in feature_values.loc[(pred.iloc[:, 0] != col_modality) &
                                                              (feature_values.iloc[:, 0] == i)].values.flatten()]
                     feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
-                    angle=45
+                    angle = 45
                 else:
                     feature_val = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
                                                              (feature_values.iloc[:, 0] == i)].values.flatten()
-                    angle=0
+                    angle = 0
                 fig.add_trace(go.Violin(x=feature_val,
                                         y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
@@ -415,6 +420,7 @@ class SmartPlotter:
                                         ))
 
             else:
+                # To change ticktext when the label size is upper than 10
                 if type(feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()[0]) == str:
                     feature_val = [x.replace('<br />', '') for x in feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()]
                     feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
@@ -552,21 +558,30 @@ class SmartPlotter:
                 'b': 50
             }
         )
+        
+        if type(feature_imp1.index[0]) == str:
+            index_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
+        else:
+            index_val = feature_imp1.index
         bar1 = go.Bar(
             x=feature_imp1.round(4),
-            y=feature_imp1.index,
+            y=index_val,
             orientation='h',
             name='Global',
             marker=dict_style_bar1,
-            marker_color=marker_color
+            marker_color=marker_color,
+            hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+            customdata=feature_imp1.index
         )
         if feature_imp2 is not None:
             bar2 = go.Bar(
                 x=feature_imp2.round(4),
-                y=feature_imp2.index,
+                y=index_val,
                 orientation='h',
                 name='Subset',
-                marker=dict_style_bar2
+                marker=dict_style_bar2,
+                hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+                customdata=feature_imp2.index
             )
             data = [bar2, bar1]
         else:
@@ -676,7 +691,9 @@ class SmartPlotter:
                     ])
                 else:
                     hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
-                                                              add_line_break(expl[1], 40, maxlen=160))
+                                                          add_line_break(expl[1], 40, maxlen=160))     
+                trunc_0 = truncate_str(expl[0], 45)
+                trunc_0_v2 = trunc_0.replace(trunc_0[24: len(trunc_0)-3], '...') if len(trunc_0) > 30 else trunc_0
                 if len(contrib) <= yaxis_max_label and (
                         self.explainer.features_groups is None
                         # We don't want to display label values for t-sne projected values of groups of features.
@@ -686,10 +703,12 @@ class SmartPlotter:
                                 not in self.explainer.features_groups.keys()
                         )
                 ):
-                        ylabel = '<b>{} :</b><br />{}'.format(truncate_str(expl[0], 45), truncate_str(expl[1], 45))
-
+                        ylabel = '<b>{} :</b><br />{}'.format(trunc_0_v2, truncate_str(expl[1], 45))
+                                      
                 else:
-                    ylabel = ('<b>{}</b>'.format(truncate_str(expl[0], maxlen=45)))
+                    ylabel = ('<b>{}</b>'.format(trunc_0_v2))
+ 
+           # print(ylabel)
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
@@ -703,6 +722,14 @@ class SmartPlotter:
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
+            # if type([ylabel][0]) == str:
+            #     print(ylabel)
+            #     #label_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in [ylabel]][0]
+            #     label_val = ylabel.replace(ylabel[24: len(ylabel)-3], '...') if len(ylabel) > 30 else ylabel
+            #     print("blabla")
+            #     print(label_val)
+            # else:
+            #     label_val = ylabel
             barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
@@ -717,6 +744,8 @@ class SmartPlotter:
 
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
+        fig.update_yaxes(dtick=1,
+                         tickfont={'size': 17})
         # fig.update_yaxes(automargin=True)
         # fig.update_xaxes(automargin=True)
 

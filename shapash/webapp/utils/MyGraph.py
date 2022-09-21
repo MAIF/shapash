@@ -33,7 +33,7 @@ class MyGraph(dcc.Graph):
         """
         new_title = update_title(self.figure.layout.title.text) + (" <b>< Subset ></b>" if subset_graph else "")
         if title_size_adjust:
-            new_size_font = floor(self.figure.layout.title.font.size * min(45 / len(new_title), 1))
+            new_size_font = floor(self.figure.layout.title.font.size * min(42 / len(new_title), 1))
         else:
             new_size_font = self.figure.layout.title.font.size
         self.figure.update_layout(
