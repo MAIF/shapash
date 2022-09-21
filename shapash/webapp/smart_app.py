@@ -521,8 +521,11 @@ class SmartApp:
                                                'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
-                                        tab_style={'backgroundColor': self.color[0]},
-                                        active_label_style={'backgroundColor': self.color[0]},
+                                        #tab_style={'backgroundColor': self.color[0]},
+                                        #active_label_style={'backgroundColor': self.color[0]},
+                                        active_label_style={'border-top': '3px solid',
+                                                            'border-top-color': self.color[0]
+                                                            }
                                         ),
                                     dbc.Tab(
                                         self.draw_component('filter', 'filter_dataset'),
@@ -533,10 +536,12 @@ class SmartApp:
                                         style={'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
-                                        tab_style={'backgroundColor': self.color[0],
-                                                   'border-left': '2px solid #ddd',
+                                        tab_style={'border-left': '2px solid #ddd',
                                                    'border-right': '2px solid #ddd'},
-                                        active_label_style={'backgroundColor': self.color[0]}
+                                        #active_label_style={'backgroundColor': self.color[0]}
+                                        active_label_style={'border-top': '3px solid',
+                                                            'border-top-color': self.color[0]
+                                                            }
                                          ),
                                     dbc.Tab(
                                         self.draw_component('graph', 'prediction_picking'),
@@ -547,8 +552,11 @@ class SmartApp:
                                         style={'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
-                                        tab_style={'backgroundColor': self.color[0]},
-                                        active_label_style={'backgroundColor': self.color[0]}
+                                        #tab_style={'backgroundColor': self.color[0]},
+                                        #active_label_style={'backgroundColor': self.color[0]}
+                                        active_label_style={'border-top': '3px solid',
+                                                            'border-top-color': self.color[0]
+                                                            }
                                     )
                                 ], id="card_dataset_filter_and_graph"
                                 )
@@ -1100,7 +1108,7 @@ class SmartApp:
                 subset_graph=subset_graph,
                 title_size_adjust=True,
                 x_ax=truncate_str(self.selected_feature, 110),
-                y_ax='Shap interaction value')
+                y_ax='Contribution')
             return self.components['graph']['feature_selector'].figure
 
         @app.callback(

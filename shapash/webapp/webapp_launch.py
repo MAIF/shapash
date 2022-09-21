@@ -14,7 +14,7 @@ cases = {
     3: 'Titanic multi class classification',
 }
 
-CASE = 2
+CASE = 1
 
 titanic = pd.read_pickle('tests/data/clean_titanic.pkl')
 if CASE == 1:
