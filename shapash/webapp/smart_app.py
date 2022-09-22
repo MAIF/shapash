@@ -296,17 +296,6 @@ class SmartApp:
                 dbc.Col([
                     html.Div(
                         [
-                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
-                                     src=self.app.get_asset_url('icon_reset.png'),
-                                     height='40px',
-                                     style={'cursor': 'pointer'}),
-                        ]
-                    )],
-                    align="center", width="auto", style={'padding': '0px 0px 0px 20px'}
-                ),
-                dbc.Col([
-                    html.Div(
-                        [
                             html.Img(id='settings', title='settings', alt='Settings',
                                      src=self.app.get_asset_url('settings.png'),
                                      height='40px',
@@ -629,23 +618,6 @@ class SmartApp:
                     ],
                     style={'padding': '10px 5px 10px 10px'},
                 ),
-            dbc.Row(
-                    [
-                        dbc.Col(
-                            [
-                                html.Div(
-                                    self.draw_component('graph', 'prediction_picking'),
-                                    className="card",
-                                    id='card_prediction_picking',
-                                )
-                            ],
-                            md=5,
-                            align="center",
-                            style={'padding': '0px 10px'},
-                        ),
-                    ],
-                    style={'padding': '15px 10px'},
-                )
             ],
             className="mt-12",
             fluid=True
@@ -1402,7 +1374,8 @@ class SmartApp:
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
-                max_points=points
+                max_points=points,
+                label=self.label,
             )
 
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
@@ -1410,8 +1383,8 @@ class SmartApp:
             self.components['graph']['prediction_picking'].adjust_graph(
                 subset_graph=subset_graph,
                 title_size_adjust=True,
-                x_ax="Target",
-                y_ax="Prediction")
+                x_ax="True Values",
+                y_ax="Predicted Values")
             self.components['graph']['prediction_picking'].figure.update_layout(
                autosize=False,
                height=360
