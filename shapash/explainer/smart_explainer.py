@@ -156,10 +156,7 @@ class SmartExplainer:
         Dictionnary of postprocessing modifications to apply in x_init dataframe.
     y_target : pandas.Series or pandas.DataFrame, optional (default: None)
         Target values
-<<<<<<< HEAD
 
-=======
->>>>>>> f8d5d2ca78aef3d3421ad2ba7803c2777f3a2a8b
     Example
     --------
     >>> xpl = SmartExplainer(model, features_dict=featd,label_dict=labeld)
