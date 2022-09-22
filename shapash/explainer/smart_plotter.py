@@ -260,31 +260,36 @@ class SmartPlotter:
         else:
             hovertemplate = '<b>%{hovertext}</b><br />' +\
                             f'{feature_name}: ' +\
-                            '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
+                             '%{customdata[0]}<br />Contribution: %{y:.4f}<extra></extra>'
             text_groups_features = None
+
+        fig.add_scatter(
+            x=feature_values.values.flatten(),
+            y=contributions.values.flatten(),
+            mode='markers + text',
+            hovertext=hv_text,
+            hovertemplate=hovertemplate,
+            # customdata=feature_values.index.values,
+            text=text_groups_features,
+        )
         # To change ticktext when the label size is upper than 10
         if type(feature_values.values.flatten()[0]) == str:
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
             feature_val = [
                 x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
-            angle = 45
-        else:
-            feature_val = feature_values.values.flatten()
-            angle = 0
 
-        fig.add_scatter(
-            x=feature_val,
-            y=contributions.values.flatten(),
-            mode='markers',
-            hovertext=hv_text,
-            hovertemplate=hovertemplate,
-            customdata=feature_values.values.flatten(),
-            text=text_groups_features,
-        )
+            fig.update_xaxes(
+                tickangle=45,
+                ticktext=feature_val,
+                tickvals=feature_values.values.flatten(),
+                tickmode="array",
+                dtick=1
+            )
 
-        fig.update_xaxes(
-            tickangle=angle
-        )
+        customdata = np.stack((feature_values.values.flatten(),
+                               feature_values.index.values), axis=-1)
+
+        fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
         self._update_contributions_fig(fig=fig,
                                        feature_name=feature_name,
@@ -358,7 +363,7 @@ class SmartPlotter:
         else:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
-        hv_temp = f'{feature_name} :<br />' + '%{customdata}<br />Contribution: %{y:.4f}<extra></extra>'
+        hv_temp = f'{feature_name} :<br />' + '%{customdata[0]}<br />Contribution: %{y:.4f}<extra></extra>'
 
         # add break line to X label
         max_len_by_row = max([round(
@@ -371,17 +376,12 @@ class SmartPlotter:
 
         for i in uniq_l:
             if pred is not None and self.explainer._case == 'classification':
-                # To change ticktext when the label size is upper than 10
-                if type(feature_values.values.flatten()[0]) == str:
-                    feature_val = [x.replace('<br />', '') for x in feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten()]
-                    feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
-                    angle = 45
-                else:
-                    feature_val = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
-                    angle = 0
-                fig.add_trace(go.Violin(x=feature_val,
+                feature = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                              (feature_values.iloc[:, 0] == i)].values.flatten()
+                customdata = np.stack((feature, 
+                                        contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
+                fig.add_trace(go.Violin(x=feature,
                                         y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         points=points_param,
@@ -393,13 +393,8 @@ class SmartPlotter:
                                         meanline_visible=True,
                                         hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        # customdata=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                        #                              (feature_values.iloc[:, 0] == i)].index.values
-                                        customdata=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                                         ))
-                fig.add_trace(go.Violin(x=feature_val,
+                fig.add_trace(go.Violin(x=feature,
                                         y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten(),
                                         points=points_param,
@@ -412,33 +407,20 @@ class SmartPlotter:
                                         scalemode='count',
                                         hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
                                                                  (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        # customdata=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                        #                              (feature_values.iloc[:, 0] == i)].index.values
-                                        customdata=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                                         ))
 
             else:
-                # To change ticktext when the label size is upper than 10
-                if type(feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()[0]) == str:
-                    feature_val = [x.replace('<br />', '') for x in feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()]
-                    feature_val = [x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
-                    angle=45
-                else:
-                    feature_val = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
-                    angle=0
-                fig.add_trace(go.Violin(x=feature_val,
+                feature = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
+                customdata = np.stack((feature, 
+                                        contributions.loc[feature_values.iloc[:, 0] == i].index.values), axis=-1)
+                fig.add_trace(go.Violin(x=feature,
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         line_color=self._style_dict["violin_default"],
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
                                         hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                                        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                                        # customdata=contributions.index.values
-                                        customdata=feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
-                                        ))
+                                     ))
                 if pred is None:
                     fig.data[-1].points = points_param
                     fig.data[-1].pointpos = 0
@@ -448,14 +430,14 @@ class SmartPlotter:
             self.explainer._case == 'classification' else None
 
         if colorpoints is not None:
+            customdata = np.stack((feature_values.values.flatten(), 
+                                    contributions.index.values), axis=-1)
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
                 y=contributions.values.flatten(),
                 mode='markers',
                 showlegend=False,
-                hovertext=hv_text,
-                hovertemplate='<b>%{hovertext}</b><br />' + hv_temp,
-                customdata=feature_values.values.flatten(),
+                hovertext=hv_text
             ))
 
         fig.update_layout(
@@ -464,8 +446,25 @@ class SmartPlotter:
             violinmode='overlay',
             xaxis_type='category'
         )
-        fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4],
-                         tickangle=angle)
+        
+        # To change ticktext when the label size is upper than 10
+        if type(feature[0]) == str:
+            feature_val = [x.replace('<br />', '') for x in np.unique(feature_values.values.flatten())]
+            feature_val = [
+                x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
+            fig.update_xaxes(
+                tickangle=45,
+                ticktext=feature_val,
+                tickvals=np.unique(feature_values.values.flatten()),
+                tickmode="array",
+                dtick=1,
+                range=[-0.6, len(uniq_l) - 0.4]
+            )
+        else:
+            fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+            
+        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp
+        fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
         self._update_contributions_fig(fig=fig,
                                        feature_name=feature_name,
@@ -565,7 +564,7 @@ class SmartPlotter:
             index_val = feature_imp1.index
         bar1 = go.Bar(
             x=feature_imp1.round(4),
-            y=index_val,
+            y=feature_imp1.index,
             orientation='h',
             name='Global',
             marker=dict_style_bar1,
@@ -576,7 +575,7 @@ class SmartPlotter:
         if feature_imp2 is not None:
             bar2 = go.Bar(
                 x=feature_imp2.round(4),
-                y=index_val,
+                y=feature_imp2.index,
                 orientation='h',
                 name='Subset',
                 marker=dict_style_bar2,
@@ -586,9 +585,12 @@ class SmartPlotter:
             data = [bar2, bar1]
         else:
             data = bar1
+
         fig = go.Figure(data=data, layout=layout)
-        # fig.update_yaxes(automargin=True)
-        # fig.update_xaxes(automargin=True)
+        fig.update_yaxes(ticktext=index_val,
+                         tickvals=feature_imp1.index,
+                         tickmode="array",
+                         dtick=1)
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
         return fig
@@ -692,8 +694,9 @@ class SmartPlotter:
                 else:
                     hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
                                                           add_line_break(expl[1], 40, maxlen=160))     
-                trunc_0 = truncate_str(expl[0], 45)
-                trunc_0_v2 = trunc_0.replace(trunc_0[24: len(trunc_0)-3], '...') if len(trunc_0) > 30 else trunc_0
+                trunc_value = truncate_str(expl[0], 45)
+                trunc_new_value = trunc_value.replace(
+                    trunc_value[24: len(trunc_value)-3], '...') if len(trunc_value) > 30 else trunc_value
                 if len(contrib) <= yaxis_max_label and (
                         self.explainer.features_groups is None
                         # We don't want to display label values for t-sne projected values of groups of features.
@@ -703,12 +706,11 @@ class SmartPlotter:
                                 not in self.explainer.features_groups.keys()
                         )
                 ):
-                        ylabel = '<b>{} :</b><br />{}'.format(trunc_0_v2, truncate_str(expl[1], 45))
-                                      
+                    ylabel = '<b>{} :</b><br />{}'.format(
+                            trunc_new_value, truncate_str(expl[1], 45))
                 else:
-                    ylabel = ('<b>{}</b>'.format(trunc_0_v2))
- 
-           # print(ylabel)
+                    ylabel = ('<b>{}</b>'.format(trunc_new_value))
+
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
@@ -722,14 +724,6 @@ class SmartPlotter:
             else:
                 bar_color = dict_local_plot_colors[color]['color']
 
-            # if type([ylabel][0]) == str:
-            #     print(ylabel)
-            #     #label_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in [ylabel]][0]
-            #     label_val = ylabel.replace(ylabel[24: len(ylabel)-3], '...') if len(ylabel) > 30 else ylabel
-            #     print("blabla")
-            #     print(label_val)
-            # else:
-            #     label_val = ylabel
             barobj = go.Bar(
                 x=[contrib_value],
                 y=[ylabel],
@@ -740,12 +734,12 @@ class SmartPlotter:
                 showlegend=False,
                 hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
             )
+
             bars.append([color, contrib_value, num, barobj])
 
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
-        fig.update_yaxes(dtick=1,
-                         tickfont={'size': 17})
+        fig.update_yaxes(dtick=1)
         # fig.update_yaxes(automargin=True)
         # fig.update_xaxes(automargin=True)
 
