@@ -52,21 +52,25 @@ class MyGraph(dcc.Graph):
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top',
-                'text': new_title,
-                'font': {'size': new_size_font, 'family': 'verdana'}
+                'text': '<span style="font-size: 1.25vw;">' + new_title + '</span>'
+                # 'text': new_title,
+                # 'font': {'size': new_size_font}
+                #, 'family': 'verdana'}
             }
         )
-        self.figure.update_xaxes(title=x_ax,
+        self.figure.update_xaxes(title='<span style="font-size: 1vw;">'  + x_ax + '</span>',
                                  #title='<b>{}</b>'.format(x_ax),
                                  automargin=True,
-                                 title_font_size=17,
-                                 title_font_family="verdana")
-        self.figure.update_yaxes(title=y_ax,
+                                 #tickfont='<span style="size: 1vw"></span>'
+                                 # title_font_size=17
+                                 )
+                                # title_font_family="verdana")
+        self.figure.update_yaxes(title='<span style="font-size: 1vw;">' + y_ax + '</span>',
                                  #title='<b>{}</b>'.format(y_ax),
                                  automargin=True,
-                                 title_font_size=17,
-                                 title_font_family="verdana")
-
+                                 # title_font_size=17)
+                                 #title_font_family="verdana")
+                                 )
 
 def update_title(title):
     """

@@ -259,7 +259,7 @@ class SmartApp:
                                        style={"margin-right": "5px"}, 
                                        color=''),
                              dbc.Badge("Classification", id='classification_badge', color='')
-                             ], style={"margin": "0px"}
+                             ], style={"margin": "5px"}
                         ),
                     ],
                     width="auto", align="center", style={'padding': 'auto'}
@@ -268,7 +268,7 @@ class SmartApp:
                     dbc.Collapse(
                         dbc.Row(
                             [
-                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 3px'}),
+                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
@@ -276,7 +276,7 @@ class SmartApp:
                                     style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
                                 )
                             ],
-                            style={"margin": "0px 0px 0px 3px"}
+                            style={"margin": "0px 0px 0px 5px"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
@@ -481,7 +481,7 @@ class SmartApp:
                         ),
                         dbc.Col([
                             self.components['menu']
-                            ], align="end", md=6
+                            ], align="end", md=6, width='auto'
                         )
                     ],
                     style={'padding': "5px 15px",
@@ -490,7 +490,8 @@ class SmartApp:
                            "justify": "end"}
                 )
             ],
-            fluid=True, style={'height': '100%', 'backgroundColor': self.bkg_color}
+            fluid=True, style={'height': '100%', 'backgroundColor': self.bkg_color
+                               }
         )
 
         self.skeleton['body'] = dbc.Container(
@@ -499,11 +500,17 @@ class SmartApp:
                     [
                         dbc.Col(
                             [
-                                html.Div(
-                                    self.draw_component('graph', 'global_feature_importance'),
-                                    className="card",
-                                    id="card_global_feature_importance"
-                                    )
+                                    html.Div(
+                                        self.draw_component('graph', 'global_feature_importance'),
+                                        className="card",
+                                        id="card_global_feature_importance",
+                                        
+                                        )
+                                    # html.Div(
+                                    #     html.Button("?", id="open_risque_classement", className="button_bleu",
+                                    #                 )
+
+                                    #     )
                             ],
                             md=5,
                             style={'padding': '10px 10px 0px 10px'},
@@ -620,7 +627,8 @@ class SmartApp:
                 ),
             ],
             className="mt-12",
-            fluid=True
+            fluid=True,
+           # style={'position': 'relative'}
         )
 
     def adjust_menu(self):
@@ -768,6 +776,7 @@ class SmartApp:
                     }
                     this_style_card = {
                         'height': '25rem', 'zIndex': 900,
+                        'position': 'relative'
                     }
                     if data_component_type == 'table':
                         style_component = {
@@ -1133,7 +1142,7 @@ class SmartApp:
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] != 'dataset.data':
                 if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                    selected = click_data['points'][0]['customdata']
+                    selected = click_data['points'][0]['customdata'][1]
                     self.click_graph = True
                 elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
                     selected = prediction_picking['points'][0]['customdata']
@@ -1234,7 +1243,7 @@ class SmartApp:
             ctx = dash.callback_context
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                selected = click_data['points'][0]['customdata']
+                selected = click_data['points'][0]['customdata'][1]
             elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
                 selected = prediction_picking['points'][0]['customdata']
             elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
