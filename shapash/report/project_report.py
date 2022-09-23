@@ -58,6 +58,7 @@ class ProjectReport:
         Configuration options for the report.
 
     """
+
     def __init__(
             self,
             explainer: SmartExplainer,
@@ -284,7 +285,7 @@ class ProjectReport:
                 self.df_train_test,
                 facet_col='data_train_test',
                 max_features=20,
-                width=900,
+                width=900 if len(self.df_train_test['data_train_test'].unique()) > 1 else 500,
                 height=500,
             )
             print_html(plotly.io.to_html(fig_corr))
@@ -344,9 +345,9 @@ class ProjectReport:
                         ) -> pd.DataFrame:
         if train_stats is not None:
             return pd.DataFrame({
-                    names[1]: pd.Series(train_stats),
-                    names[0]: pd.Series(test_stats)
-                })
+                names[1]: pd.Series(train_stats),
+                names[0]: pd.Series(test_stats)
+            })
         else:
             return pd.DataFrame({names[0]: pd.Series(test_stats)})
 
@@ -448,7 +449,7 @@ class ProjectReport:
                     metric_fn = get_callable(path=metric['path'])
                     #  Look if we should use proba values instead of predicted values
                     if 'use_proba_values' in metric.keys() and metric['use_proba_values'] is True:
-                            y_pred = self.explainer.proba_values
+                        y_pred = self.explainer.proba_values
                     else:
                         y_pred = self.y_pred
                     res = metric_fn(self.y_test, y_pred)

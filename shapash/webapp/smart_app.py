@@ -1383,7 +1383,8 @@ class SmartApp:
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
-                max_points=points
+                max_points=points,
+                label=self.label,
             )
 
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
@@ -1391,8 +1392,8 @@ class SmartApp:
             self.components['graph']['prediction_picking'].adjust_graph(
                 subset_graph=subset_graph,
                 title_size_adjust=True,
-                x_ax="Target",
-                y_ax="Prediction")
+                x_ax="True Values",
+                y_ax="Predicted Values")
             self.components['graph']['prediction_picking'].figure.update_layout(
                autosize=False,
                height=360

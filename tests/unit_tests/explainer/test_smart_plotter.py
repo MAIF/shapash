@@ -2211,7 +2211,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array(list(output.data[0].x)).dtype == "int64"
         assert np.array(list(output.data[0].y)).dtype == "float64"
         assert output.data[0].type == "scatter"
-        assert f"Target" in output.data[0].hovertext[0]
+        assert f"True Values" in output.data[0].hovertext[0]
 
     def test_scatter_plot_prediction_2(self):
         """
@@ -2235,7 +2235,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array(list(output.data[0].x)).dtype == "int64"
         assert np.array(list(output.data[0].y)).dtype == "float64"
         assert output.data[0].type == "scatter"
-        assert f"Target" in output.data[0].hovertext[0]
+        assert f"True Values" in output.data[0].hovertext[0]
 
     def test_scatter_plot_prediction_3(self):
         """
@@ -2258,7 +2258,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].type == "violin"
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
-        assert f"Target" in output.data[1].hovertext[0]
+        assert f"True Values" in output.data[1].hovertext[0]
 
     def test_scatter_plot_prediction_4(self):
         """
@@ -2283,7 +2283,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].type == "violin"
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
-        assert f"Target" in output.data[1].hovertext[0]
+        assert f"True Values" in output.data[1].hovertext[0]
 
     def test_scatter_plot_prediction_5(self):
         """
@@ -2307,7 +2307,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].type == "violin"
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
-        assert f"Target" in output.data[1].hovertext[0]
+        assert f"True Values" in output.data[1].hovertext[0]
 
     def test_scatter_plot_prediction_6(self):
         """
@@ -2332,4 +2332,4 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].type == "violin"
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
-        assert f"Target" in output.data[1].hovertext[0]
+        assert f"True Values" in output.data[1].hovertext[0]

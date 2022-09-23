@@ -74,8 +74,9 @@ The 4 steps to display results:
 .. code:: ipython
 
     xpl.compile(
-        x=Xtest,    
-        y_pred=y_pred, # Optional    
+        x=Xtest,
+        y_pred=y_pred, # Optional
+        y_target=yTest, # Optional: allows to display True Values vs Predicted Values
     )
 
 - Step 3: Display output
