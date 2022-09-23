@@ -2920,14 +2920,14 @@ class SmartPlotter:
         return fig
 
     def scatter_plot_prediction(self,
-                    selection=None,
-                    label=-1,
-                    subtitle=None,
-                    max_points=2000,
-                    width=900,
-                    height=600,
-                    file_name=None,
-                    auto_open=False):
+                selection=None,
+                label=-1,
+                subtitle=None,
+                max_points=2000,
+                width=900,
+                height=600,
+                file_name=None,
+                auto_open=False):
         """
         scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
         This plot represents Trues Values versus Predicted Values.
@@ -2996,21 +2996,22 @@ class SmartPlotter:
                     if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
                         self.explainer.predict()
                 # Assign proba values of the target
-                df_proba_target= self.explainer.proba_values
+                df_proba_target = self.explainer.proba_values
                 df_proba_target['proba_target'] = df_proba_target.iloc[:, label_num]
                 proba_values = df_proba_target[['proba_target']]
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 target = self.explainer.y_target.loc[list_ind, :]
                 y_pred = self.explainer.y_pred.loc[list_ind, :]
-                df_pred = pd.concat([proba_values.reset_index(),y_pred.reset_index(drop=True),target.reset_index(drop=True)],axis=1)
-                df_pred.set_index(df_pred.columns[0],inplace=True)
-                df_pred.columns=["proba_values","predict_class","target"]
+                df_pred = pd.concat([proba_values.reset_index(), y_pred.reset_index(drop=True),
+                    target.reset_index(drop=True)], axis=1)
+                df_pred.set_index(df_pred.columns[0], inplace=True)
+                df_pred.columns = ["proba_values", "predict_class", "target"]
                 df_pred['bad_predict'] = 1
-                df_pred.loc[(df_pred['predict_class'] == df_pred['target']),'bad_predict'] = 0
+                df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'bad_predict'] = 0
                 subtitle = f"Response: <b>{label_value}</b>"
 
-            #Plot distribution
+            # Plot distribution
             fig.add_trace(go.Violin(
                 x=df_pred['target'].values.flatten(),
                 y=df_pred['proba_values'].values.flatten(),
@@ -3026,33 +3027,35 @@ class SmartPlotter:
                 scalemode='count',
                 ))
 
-            #Plot points depending if bad or good prediction
+            # Plot points depending if bad or good prediction
             df_good_predict = df_pred[(df_pred['bad_predict'] == 0)]
             df_bad_predict = df_pred[(df_pred['bad_predict'] == 1)]
-            hv_text_good_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for x, y, w, z in zip(df_good_predict.index,
-            df_good_predict.proba_values.values.round(3).flatten(),df_good_predict.predict_class.values.flatten(),df_good_predict.target.values.flatten())]
-            hv_text_bad_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for x, y, w, z in zip(df_bad_predict.index,
-            df_bad_predict.proba_values.values.round(3).flatten(),df_bad_predict.predict_class.values.flatten(),df_bad_predict.target.values.flatten())]
+            hv_text_good_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+             x, y, w, z in zip(df_good_predict.index, df_good_predict.proba_values.values.round(3).flatten(),
+             df_good_predict.predict_class.values.flatten(), df_good_predict.target.values.flatten())]
+            hv_text_bad_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+             x, y, w, z in zip(df_bad_predict.index, df_bad_predict.proba_values.values.round(3).flatten(),
+             df_bad_predict.predict_class.values.flatten(), df_bad_predict.target.values.flatten())]
 
             fig.add_trace(go.Scatter(
-                x=df_good_predict['target'].values.flatten()+ np.random.normal(0, 0.02, len(df_good_predict)),
+                x=df_good_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_good_predict)),
                 y=df_good_predict['proba_values'].values.flatten(),
                 mode='markers',
                 marker_color=self._style_dict["prediction_plot"][0],
                 showlegend=True,
-                name = "Good Prediction",
+                name="Good Prediction",
                 hovertext=hv_text_good_predict,
                 hovertemplate='<b>%{hovertext}</b><br />',
                 customdata=df_good_predict['proba_values'].index.values,
             ))
 
             fig.add_trace(go.Scatter(
-                x=df_bad_predict['target'].values.flatten()+ np.random.normal(0, 0.02, len(df_bad_predict)),
+                x=df_bad_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_bad_predict)),
                 y=df_bad_predict['proba_values'].values.flatten(),
                 mode='markers',
                 marker_color=self._style_dict["prediction_plot"][1],
                 showlegend=True,
-                name = "Bad Prediction",
+                name="Bad Prediction",
                 hovertext=hv_text_bad_predict,
                 hovertemplate='<b>%{hovertext}</b><br />',
                 customdata=df_bad_predict['proba_values'].index.values,
@@ -3060,13 +3063,14 @@ class SmartPlotter:
 
             fig.update_layout(violingap=0, violinmode='overlay')
             if self.explainer.label_dict is not None:
-                fig.update_xaxes(tickmode='array', tickvals=list(df_pred['target'].unique()),ticktext=list(df_pred['target'].apply(lambda x: self.explainer.label_dict[x]).unique()))
+                fig.update_xaxes(tickmode='array', tickvals=list(df_pred['target'].unique()),
+                ticktext=list(df_pred['target'].apply(lambda x: self.explainer.label_dict[x]).unique()))
             if self.explainer.label_dict is None:
                 fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
 
         # Regression Case
         elif self.explainer._case == "regression":
-            prediction_error=None
+            prediction_error = None
             if self.explainer.y_pred is None:
                 if hasattr(self.explainer.model, "predict"):
                     self.explainer.predict()
@@ -3079,45 +3083,47 @@ class SmartPlotter:
                     subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
             df_equal_bins = pd.DataFrame(prediction_error).describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
             equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
-            self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins],labels=False)))
+            self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error],
+             bins=[i[0] for i in equal_bins], labels=False)))
             col_scale = self.pred_colorscale
 
             y_pred = self.explainer.y_pred.loc[list_ind]
             y_target = self.explainer.y_target.loc[list_ind]
-            prediction_error = np.array(pd.DataFrame(prediction_error,index=self.explainer.y_target.index).loc[list_ind])
+            prediction_error = np.array(pd.DataFrame(prediction_error, index=self.explainer.y_target.index).loc[list_ind])
             # round predict
             if self.round_digit is None:
                 self.tuning_round_digit()
             y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
 
             hv_text = [f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}" for x, y, z, w in
-                zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
+            zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
 
             fig.add_scatter(
-            x=y_target.values.flatten(),
-            y=y_pred.values.flatten(),
-            mode='markers',
-            hovertext=hv_text,
-            hovertemplate='<b>%{hovertext}</b><br />',
-            customdata=y_pred.index.values
+                x=y_target.values.flatten(),
+                y=y_pred.values.flatten(),
+                mode='markers',
+                hovertext=hv_text,
+                hovertemplate='<b>%{hovertext}</b><br />',
+                customdata=y_pred.index.values
             )
 
-            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins],labels=False)/10
+            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
             colorbar_title = 'Prediction Error'
             fig.data[-1].marker.color = colorpoints.flatten()
             fig.data[-1].marker.coloraxis = 'coloraxis'
             fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals":[col_scale[0][0],col_scale[-1][0]-0.15],
-            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat":".2s",
-            "yanchor":"top", "y":1.1}
-            range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()), max(y_pred.values.flatten()))]
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
+            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
+            "yanchor": "top", "y": 1.1}
+            range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
+             max(y_pred.values.flatten()))]
             fig.update_xaxes(range=range_axis)
             fig.update_yaxes(range=range_axis)
-            fig.update_layout(shapes = [{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1, 'x0': 0, 'x1': 1,
-                            'line' : dict(color="grey",width=1,dash="dot")}])
+            fig.update_layout(shapes=[{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1,
+             'x0': 0, 'x1': 1, 'line': dict(color="grey", width=1, dash="dot")}])
 
-        #Add traces, title and template
-        title = f"True Values Vs Predicted Values"
+        # Add traces, title and template
+        title = "True Values Vs Predicted Values"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
