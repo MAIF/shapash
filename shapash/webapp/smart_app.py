@@ -510,21 +510,42 @@ class SmartApp:
                     [
                         dbc.Col(
                             [
-                                    html.Div(
-                                        self.draw_component('graph', 'global_feature_importance'),
-                                        className="card",
-                                        id="card_global_feature_importance",
-                                        #top=True,
-                                        #style={"opacity": 0.7}
-                                        )
-                                    # dbc.CardImgOverlay(
-                                    #     dbc.CardBody(
-                                    #         html.Button("?", id="open_risque_classement", className="button_bleu",
-                                    #                     ),
-                                    #         className="card"
-    
-                                    #         )
-                                    # )
+                                dbc.Card([
+                                        html.Div(
+                                         self.draw_component('graph', 'global_feature_importance'),
+                                         #className="card",
+                                         id="card_global_feature_importance",
+                                         #top=True,
+                                         style={"position": 'absolute'}
+                                         ),
+                                         html.Div([
+                                             dbc.Button("?", id="open_feature_importance", size='sm',
+                                                        color="warning"),
+                                                dbc.Modal(
+                                                    [
+                                                        dbc.ModalBody([
+                                                            html.Div(
+                                                                """
+                                                                feature importance is computed from the sum of the contributions (by default) on the whole dataset
+                                                                you can click on each feature to update the contribution plot below.
+                                                                If you have grouped the variables with the "features_groups" parameter, 
+                                                                you can have the group details by clicking on the grouped variable
+                                                                """),
+                                                                      ]),
+                                                        dbc.ModalFooter(
+                                                            dbc.Button(
+                                                                "Close", id="close_feature_importance",
+                                                                color="warning"
+                                                            )
+                                                        ),
+                                                    ],
+                                                    id="modal_feature_importance",
+                                                    centered=True,
+                                                    size = 'lg'
+                                                )   
+                                                ],  style={'position': 'relative', 'left': 0})
+                                    ])
+                                
                             ],
                             md=5,
                             style={'padding': '10px 10px 0px 10px'},
@@ -539,8 +560,8 @@ class SmartApp:
                                         active_tab_class_name="fw-bold fst-italic",
                                         className="card",
                                         id='card_dataset',
-                                        style={'cursor': 'pointer',
-                                               'height': '24rem'},
+                                        style={'cursor': 'pointer'},
+                                        #       'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
                                         active_label_style={'border-top': '3px solid',
@@ -568,7 +589,7 @@ class SmartApp:
                                         active_tab_class_name="fw-bold fst-italic",
                                         id="card_prediction_picking",
                                         label='True Values Vs Predicted Values',
-                                        style={'height': '24rem'},
+                                        #style={'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
                                         active_label_style={'border-top': '3px solid',
@@ -588,11 +609,45 @@ class SmartApp:
                     [
                         dbc.Col(
                             [
-                                html.Div(
-                                    self.draw_component('graph', 'feature_selector'),
-                                    className="card",
-                                    id='card_feature_selector',
-                                )
+                                dbc.Card([
+                                        html.Div(
+                                         self.draw_component('graph', 'feature_selector'),
+                                         #className="card",
+                                         id='card_feature_selector',
+                                         #top=True,
+                                         style={"position": 'absolute'}
+                                         ),
+                                         html.Div([
+                                             dbc.Button("?", id="open_feature_selector", size='sm',
+                                                        color="warning"),
+                                                dbc.Modal(
+                                                    [
+                                                        dbc.ModalBody([
+                                                            html.Div(
+                                                                """
+                                                                How does a feature influence the prediction?
+                                                                colour of the point represents the value of the prediction
+                                                                The position on the x-axis represents the modality
+                                                                the y-axis represents the contribution of the variable
+                                                                If the point is at the bottom, the contribution of the variable 
+                                                                negatively impacts the prediction. If the point is up, the contribution 
+                                                                of the variable positively impacts the prediction
+                                                                (Link on a article for more details)
+                                                                """),
+                                                                      ]),
+                                                        dbc.ModalFooter(
+                                                            dbc.Button(
+                                                                "Close", id="close_feature_selector",
+                                                                color="warning"
+                                                            )
+                                                        ),
+                                                    ],
+                                                    id="modal_feature_selector",
+                                                    centered=True,
+                                                    size = 'lg'
+                                                )   
+                                                ],  style={'position': 'relative', 'left': 0})
+                                    ])
                             ],
                             md=5,
                             align="center",
@@ -604,11 +659,45 @@ class SmartApp:
                                     [
                                         dbc.Col(
                                             [
-                                                html.Div(
-                                                    self.draw_component('graph', 'detail_feature'),
-                                                    className="card",
-                                                    id='card_detail_feature',
-                                                ),
+                                                
+                                                 dbc.Card([
+                                                    html.Div(
+                                                     self.draw_component('graph', 'detail_feature'),
+                                                     #className="card",
+                                                     id='card_detail_feature',
+                                                     #top=True,
+                                                     style={"position": 'absolute'}
+                                                     ),
+                                                     html.Div([
+                                                         dbc.Button("?", id="open_detail_feature", size='sm',
+                                                                    color="warning"),
+                                                            dbc.Modal(
+                                                                [
+                                                                    dbc.ModalBody([
+                                                                        html.Div(
+                                                                            """
+                                                                            The contributions displayed are those of a single sample,
+                                                                            It is possible to select the sample by the index or by clicking 
+                                                                            on a point of the contribution_plot or the table
+                                                                            The hidden contributions, are the sum of the remaining contributions, 
+                                                                            "less high than the others", to have less hidden contributions, 
+                                                                            you have to increase the features to display
+
+                                                                            """),
+                                                                                  ]),
+                                                                    dbc.ModalFooter(
+                                                                        dbc.Button(
+                                                                            "Close", id="close_detail_feature",
+                                                                            color="warning"
+                                                                        )
+                                                                    ),
+                                                                ],
+                                                                id="modal_detail_feature",
+                                                                centered=True,
+                                                                size = 'lg'
+                                                            )   
+                                                            ],  style={'position': 'relative', 'left': 0})
+                                                ])
                                             ],
                                             md=8,
                                             align="center",
@@ -785,6 +874,7 @@ class SmartApp:
             def ember(click,
                       data_component_type,
                       data_component_id):
+                print(click)
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
@@ -794,7 +884,14 @@ class SmartApp:
                     this_style_card = {
                         'height': '25rem', 'zIndex': 900,
                     }
-                    if (data_component_type == 'table') | (data_component_id == 'prediction_picking'):
+                    if data_component_id == 'prediction_picking':
+                        style_component = {
+                            'height': '22rem',
+                        }
+                        this_style_card = {
+                            'height': '24rem', 'zIndex': 900,
+                        }
+                    if data_component_type == 'table':
                         style_component = {
                             'maxHeight': '22rem',
                         }
@@ -1404,7 +1501,7 @@ class SmartApp:
                                       points,
                                       violin):
             """
-            Update feature plot according to label, data, 
+            Update feature plot according to label, data,
             selected feature and settings modifications
             """
             ctx = dash.callback_context
@@ -1435,12 +1532,40 @@ class SmartApp:
                 x_ax="Target",
                 y_ax="Prediction")
 
-            self.components['graph']['prediction_picking'].figure.update_layout(
-                autosize=False,
-                height=360
-              )
-
             return self.components['graph']['prediction_picking'].figure
+        
+        @app.callback(
+        Output("modal_feature_importance", "is_open"),
+        [Input("open_feature_importance", "n_clicks"), 
+         Input("close_feature_importance", "n_clicks")],
+        [State("modal_feature_importance", "is_open")],
+        )
+        def toggle_modal_classement(n1, n2, is_open):
+            if n1 or n2:
+                return not is_open
+            return is_open
+        
+        @app.callback(
+        Output("modal_feature_selector", "is_open"),
+        [Input("open_feature_selector", "n_clicks"), 
+         Input("close_feature_selector", "n_clicks")],
+        [State("modal_feature_selector", "is_open")],
+        )
+        def toggle_modal_classement(n1, n2, is_open):
+            if n1 or n2:
+                return not is_open
+            return is_open
+        
+        @app.callback(
+        Output("modal_detail_feature", "is_open"),
+        [Input("open_detail_feature", "n_clicks"), 
+         Input("close_detail_feature", "n_clicks")],
+        [State("modal_detail_feature", "is_open")],
+        )
+        def toggle_modal_classement(n1, n2, is_open):
+            if n1 or n2:
+                return not is_open
+            return is_open
 
     def hl_tab_rows(selectedData : dict):
         row_ids = []
@@ -1448,3 +1573,5 @@ class SmartApp:
             for p in selectedData['points']:
                 row_ids.append(p['customdata'][0])
         return row_ids
+
+    

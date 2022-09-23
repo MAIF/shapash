@@ -2914,14 +2914,14 @@ class SmartPlotter:
         return fig
 
     def scatter_plot_prediction(self,
-                selection=None,
-                label=-1,
-                subtitle=None,
-                max_points=2000,
-                width=900,
-                height=600,
-                file_name=None,
-                auto_open=False):
+                                selection=None,
+                                label=-1,
+                                subtitle=None,
+                                max_points=2000,
+                                width=900,
+                                height=600,
+                                file_name=None,
+                                auto_open=False):
         """
         scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
         This plot represents Trues Values versus Predicted Values.
