@@ -16,31 +16,27 @@ class MyGraph(dcc.Graph):
         self.id = id
         # self.config = {'modeBarButtons': {'pan2d': True}}
         self.config = {
-            'modeBarButtonsToRemove': ['lasso2d', 
-                                       'zoomOut2d', 
-                                       'zoomIn2d', 
+            'responsive': True,
+            'modeBarButtonsToRemove': ['lasso2d',
+                                       'zoomOut2d',
+                                       'zoomIn2d',
                                        'resetScale2d',
-                                       'hoverClosestCartesian', 
-                                       'hoverCompareCartesian', 
+                                       'hoverClosestCartesian',
+                                       'hoverCompareCartesian',
                                        'toggleSpikelines'],
-            #'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
+            # 'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
             'displaylogo': False,
 
         }
 
     def adjust_graph(self,
                      subset_graph=False,
-                     title_size_adjust=False,
                      x_ax="",
                      y_ax=""):
         """
         Override graph layout for app use
         """
         new_title = update_title(self.figure.layout.title.text) + (" <b>< Subset ></b>" if subset_graph else "")
-        if title_size_adjust:
-            new_size_font = floor(self.figure.layout.title.font.size * min(42 / len(new_title), 1))
-        else:
-            new_size_font = self.figure.layout.title.font.size
         self.figure.update_layout(
             autosize=True,
             margin=dict(

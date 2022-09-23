@@ -256,10 +256,11 @@ class SmartApp:
                     [
                         html.H4(
                             [dbc.Badge("Regression", id='regression_badge', 
-                                       style={"margin-right": "5px"}, 
+                                       style={"margin-right": "5px",
+                                              "margin-left": "0px"}, 
                                        color=''),
                              dbc.Badge("Classification", id='classification_badge', color='')
-                             ], style={"margin": "5px"}
+                             ], style={"margin-right": "5px"}
                         ),
                     ],
                     width="auto", align="center", style={'padding': 'auto'}
@@ -268,19 +269,24 @@ class SmartApp:
                     dbc.Collapse(
                         dbc.Row(
                             [
-                                dbc.Label("Class", style={'color': 'white', 'margin': '0px 5px'}),
+                                dbc.Col([
+                                    dbc.Label("Class:", style={'color': 'white', 'margin': '0px'}),
+                                ], align="center"),
+                                dbc.Col([
                                 dcc.Dropdown(
                                     id="select_label",
                                     options=[], value=None,
                                     clearable=False, searchable=False,
-                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '100px'}
+                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '90px',
+                                           'height':'100%'}
                                 )
+                                ],style={"margin-right": "17px", "padding": "0px"})
                             ],
-                            style={"margin": "0px 0px 0px 5px"}
+                            style={"margin": "0px"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
-                    width="auto", align="center", style={'padding': 'auto'}
+                    width="auto", align="center", style={'padding': '0px'}
                 ),
                 dbc.Col([
                     html.Div(
@@ -291,7 +297,8 @@ class SmartApp:
                                      style={'cursor': 'pointer'}),
                         ]
                     )],
-                    align="center", width="auto", style={'padding': 'auto'}
+                    align="center", width="auto", style={'padding': '0px',
+                                                         "margin-right": "15px"}
                 ),
                 dbc.Col([
                     html.Div(
@@ -303,7 +310,7 @@ class SmartApp:
                             self.components['settings']['modal'],
                         ]
                     )],
-                    align="center", width="auto", style={'padding': 'auto'}
+                    align="center", width="auto", style={'padding': '0px'}
                 )
             ],
             className="g-0", justify="end"
@@ -355,11 +362,14 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
-        self.components['filter']['filter_dataset'] = dbc.Col(dbc.Row(
-            [
-                dbc.Label(" ", align="center", width=4)
-            ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800}
-            )
+        self.components['filter']['filter_dataset'] = dbc.Col(
+            [ 
+                dbc.Row(
+                [
+                    dbc.Label(" ", align="center", width=4)
+                ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800}
+                )
+            ], className='filter'
         )
 
         self.components['filter']['index'] = dbc.Col(dbc.Row(
@@ -467,21 +477,21 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
-                            md=3, align="center", width="auto", style={'padding': 'auto'}
+                            md=2, align="center", width="100%", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             html.A(
                                 dbc.Row([
                                         html.H3(truncate_str(self.explainer.title_story, maxlen=40),
-                                                id="shapash_title_story", style={'text-align':'center'})]
+                                                id="shapash_title_story", style={'text-align': 'center'})]
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             )],
-                            md=3, align="center", width="auto", style={'padding': 'auto'}
+                            md=4, align="center", width="100%", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             self.components['menu']
-                            ], align="end", md=6, width='auto'
+                            ], align="end", md=6, width='100%'
                         )
                     ],
                     style={'padding': "5px 15px",
@@ -504,13 +514,17 @@ class SmartApp:
                                         self.draw_component('graph', 'global_feature_importance'),
                                         className="card",
                                         id="card_global_feature_importance",
-                                        
+                                        #top=True,
+                                        #style={"opacity": 0.7}
                                         )
-                                    # html.Div(
-                                    #     html.Button("?", id="open_risque_classement", className="button_bleu",
-                                    #                 )
-
-                                    #     )
+                                    # dbc.CardImgOverlay(
+                                    #     dbc.CardBody(
+                                    #         html.Button("?", id="open_risque_classement", className="button_bleu",
+                                    #                     ),
+                                    #         className="card"
+    
+                                    #         )
+                                    # )
                             ],
                             md=5,
                             style={'padding': '10px 10px 0px 10px'},
@@ -518,6 +532,7 @@ class SmartApp:
                         dbc.Col(
                             [
                                 dbc.Tabs([
+                                    
                                     dbc.Tab(
                                         self.draw_component('table', 'dataset'),
                                         label='Dataset',
@@ -528,8 +543,6 @@ class SmartApp:
                                                'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
-                                        #tab_style={'backgroundColor': self.color[0]},
-                                        #active_label_style={'backgroundColor': self.color[0]},
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
                                                             }
@@ -539,13 +552,12 @@ class SmartApp:
                                         label='Dataset Filters',
                                         active_tab_class_name="fw-bold fst-italic",
                                         className="card",
-                                        id='card_filters_dataset',
+                                        id='card_filter_dataset',
                                         style={'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
                                         tab_style={'border-left': '2px solid #ddd',
                                                    'border-right': '2px solid #ddd'},
-                                        #active_label_style={'backgroundColor': self.color[0]}
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
                                                             }
@@ -554,25 +566,23 @@ class SmartApp:
                                         self.draw_component('graph', 'prediction_picking'),
                                         className="card",
                                         active_tab_class_name="fw-bold fst-italic",
-                                        id="card_prediction",
+                                        id="card_prediction_picking",
                                         label='True Values Vs Predicted Values',
                                         style={'height': '24rem'},
                                         label_style={'color': "black", 'height': '25px',
                                                      'padding': '0px 5px'},
-                                        #tab_style={'backgroundColor': self.color[0]},
-                                        #active_label_style={'backgroundColor': self.color[0]}
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
                                                             }
-                                    )
-                                ], id="card_dataset_filter_and_graph"
+                                    )   
+                                ], id="tabs"
                                 )
                             ],
                             md=7,
-                            #align="center",
                             style={'padding': '10px 10px'},
                         ),
-                    ], style={'padding': '10px 10px 0px 10px', 'height':'100%'}, align="center"
+                    ], style={'padding': '10px 10px 0px 10px',
+                              'height': '100%'}, align="center"
                 ),
                 dbc.Row(
                     [
@@ -631,6 +641,7 @@ class SmartApp:
            # style={'position': 'relative'}
         )
 
+                              
     def adjust_menu(self):
         """
         Override menu from explainer object depending on
@@ -693,7 +704,8 @@ class SmartApp:
                        ),
                 id=f"ember_{component_id}",
                 className="dock-expand",
-                **{'data-component-type': component_type}
+                **{'data-component-type': component_type},
+                **{'data-component-id': component_id}
             )
         )
         return component
@@ -729,7 +741,9 @@ class SmartApp:
         ]
         return filter
 
-    def select_point(self, graph, click_data):
+    def select_point(self,
+                     graph,
+                     click_data):
         """
         Method which set the selected point in graph component
         corresponding to click_data.
@@ -764,10 +778,13 @@ class SmartApp:
                 ],
                 [
                     Input(f'ember_{component_id}', 'n_clicks'),
-                    Input(f'ember_{component_id}', 'data-component-type')
+                    Input(f'ember_{component_id}', 'data-component-type'),
+                    Input(f'ember_{component_id}', 'data-component-id')
                 ]
             )
-            def ember(click, data_component_type):
+            def ember(click,
+                      data_component_type,
+                      data_component_id):
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
@@ -776,27 +793,26 @@ class SmartApp:
                     }
                     this_style_card = {
                         'height': '25rem', 'zIndex': 900,
-                        'position': 'relative'
                     }
-                    if data_component_type == 'table':
+                    if (data_component_type == 'table') | (data_component_id == 'prediction_picking'):
                         style_component = {
-                            'maxHeight': '23rem',
+                            'maxHeight': '22rem',
                         }
                         this_style_card = {
-                        'height': '24rem', 'zIndex': 900,
-                        }     
+                            'height': '24rem', 'zIndex': 900,
+                        }
                     return this_style_card, style_component
 
                 else:
                     this_style_card = {
-                        'height': 'auto', 
+                        'height': 'auto',
                         'width': 'auto',
                         'zIndex': 998,
                         'position': 'fixed', 'top': '50px',
                         'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '87vh', 'maxHeight': '87vh', #87
+                        'height': '87vh', 'maxHeight': '87vh',
                     }
                     return this_style_card, style_component
 
@@ -842,7 +858,12 @@ class SmartApp:
                 State('violin', 'valid'),
             ],
         )
-        def toggle_modal(n1, n2, rows, points, features, violin):
+        def toggle_modal(n1,
+                         n2,
+                         rows,
+                         points,
+                         features,
+                         violin):
             """
             open modal /close modal (only if all input are valid)
             """
@@ -915,7 +936,7 @@ class SmartApp:
                 df = self.round_dataframe.loc[row_ids]
 
             elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
-                df= self.round_dataframe
+                df = self.round_dataframe
 
             if filter_query:
                 df = apply_filter(self.round_dataframe, filter_query)
@@ -1115,7 +1136,6 @@ class SmartApp:
             subset_graph = True if self.subset is not None else False
             self.components['graph']['feature_selector'].adjust_graph(
                 subset_graph=subset_graph,
-                title_size_adjust=True,
                 x_ax=truncate_str(self.selected_feature, 110),
                 y_ax='Contribution')
             return self.components['graph']['feature_selector'].figure
@@ -1135,7 +1155,11 @@ class SmartApp:
                 State('index_id', 'value')  # Get the current value of the index
             ]
         )
-        def update_index_id(click_data, prediction_picking, cell, data, current_index_id):
+        def update_index_id(click_data,
+                            prediction_picking,
+                            cell,
+                            data,
+                            current_index_id):
             """
             update index value according to active cell and click data on feature plot.
             """
@@ -1185,7 +1209,8 @@ class SmartApp:
             [Input('modal', 'is_open')],
             [State('features', 'value')]
         )
-        def update_max_contrib_id(is_open, features):
+        def update_max_contrib_id(is_open,
+                                  features):
             """
             update max contrib component layout after settings modifications
             """
@@ -1235,8 +1260,19 @@ class SmartApp:
                 State('dataset', 'data')
             ]
         )
-        def update_detail_feature(threshold, max_contrib, positive, negative, masked, label, cell,
-                                  click_data, prediction_picking, validation_click, bool_group, index, data):
+        def update_detail_feature(threshold,
+                                  max_contrib,
+                                  positive,
+                                  negative,
+                                  masked,
+                                  label,
+                                  cell,
+                                  click_data,
+                                  prediction_picking,
+                                  validation_click,
+                                  bool_group,
+                                  index,
+                                  data):
             """
             update local explanation plot according to app changes.
             """
@@ -1277,9 +1313,7 @@ class SmartApp:
                 yaxis_max_label=8,
                 display_groups=bool_group
             )
-            self.components['graph']['detail_feature'].adjust_graph(
-                title_size_adjust=True,
-                x_ax='Contribution')
+            self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
             # font size can be adapted to screen size
             list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
                           range(len(self.components['graph']['detail_feature'].figure.data))]
@@ -1321,7 +1355,9 @@ class SmartApp:
                 State('index_id', 'value')
             ]
         )
-        def datatable_layout(validation, data, index):
+        def datatable_layout(validation,
+                             data,
+                             index):
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'validation.n_clicks' and validation is not None:
                 pass
@@ -1362,9 +1398,14 @@ class SmartApp:
                 State('violin', 'value')
             ]
         )
-        def update_prediction_picking(feature, label, is_open, points, violin):
+        def update_prediction_picking(feature,
+                                      label,
+                                      is_open,
+                                      points,
+                                      violin):
             """
-            Update feature plot according to label, data, selected feature and settings modifications
+            Update feature plot according to label, data, 
+            selected feature and settings modifications
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
@@ -1390,12 +1431,11 @@ class SmartApp:
             subset_graph = True if self.subset is not None else False
             self.components['graph']['prediction_picking'].adjust_graph(
                 subset_graph=subset_graph,
-                title_size_adjust=True,
                 x_ax="Target",
                 y_ax="Prediction")
             self.components['graph']['prediction_picking'].figure.update_layout(
-               autosize=False,
-               height=360
+                autosize=False,
+                height=360
               )
 
             return self.components['graph']['prediction_picking'].figure
