@@ -25,6 +25,7 @@ class MyGraph(dcc.Graph):
                                        'hoverCompareCartesian',
                                        'toggleSpikelines'],
             # 'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
+
             'displaylogo': False,
 
         }

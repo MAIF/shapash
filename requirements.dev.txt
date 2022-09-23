@@ -32,6 +32,7 @@ nbconvert>=6.0.7
 papermill>=2.0.0
 matplotlib>=3.3.0
 seaborn==0.11.1
+scipy>=0.19.1
 notebook>=6.0.0
 Jinja2>=2.11.0
 phik>=0.12.0

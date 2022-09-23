@@ -7,6 +7,8 @@ import random
 import copy
 import math
 import numpy as np
+from scipy.optimize import fsolve
+import scipy.cluster.hierarchy as sch
 import pandas as pd
 from plotly import graph_objs as go
 import plotly.express as px
@@ -532,9 +534,9 @@ class SmartPlotter:
         marker_color = [
             self._style_dict['featureimp_groups'][0]
             if (
-                    self.explainer.features_groups is not None
-                    and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
-                    in self.explainer.features_groups.keys()
+                self.explainer.features_groups is not None
+                and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
+                in self.explainer.features_groups.keys()
             )
             else dict_style_bar1["color"]
             for f in feature_imp1.index
@@ -701,9 +703,9 @@ class SmartPlotter:
                         self.explainer.features_groups is None
                         # We don't want to display label values for t-sne projected values of groups of features.
                         or (
-                                self.explainer.features_groups is not None
-                                and self.explainer.inv_features_dict.get(expl[0])
-                                not in self.explainer.features_groups.keys()
+                            self.explainer.features_groups is not None
+                            and self.explainer.inv_features_dict.get(expl[0])
+                            not in self.explainer.features_groups.keys()
                         )
                 ):
                     ylabel = '<b>{} :</b><br />{}'.format(
@@ -2129,6 +2131,8 @@ class SmartPlotter:
             how='phik',
             width=900,
             height=500,
+            degree=2.5,
+            decimals=2,
             file_name=None,
             auto_open=False
     ):
@@ -2153,6 +2157,11 @@ class SmartPlotter:
             Plotly figure - layout width
         height : Int (default: 600)
             Plotly figure - layout height
+        degree  : int, optional, (default 2.5)
+            degree applied on the correlation matrix in order to focus more or less the clustering
+            on strong correlated variables
+        decimals : int, optional, (default 2)
+            number of decimals to plot for correlation values
         file_name: string (optional)
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
@@ -2164,6 +2173,44 @@ class SmartPlotter:
         --------
         >>> xpl.plot.correlations()
         """
+
+        def cluster_corr(corr, degree, inplace=False):
+            """
+            Rearranges the correlation matrix, corr, so that groups of highly 
+            correlated variables are next to eachother 
+
+            Parameters
+            ----------
+            corr : pandas.DataFrame or numpy.ndarray
+                a NxN correlation matrix
+            degree  : int
+                degree applied on the correlation matrix in order to focus more or less the clustering
+                on strong correlated variables
+            inplace : bool, optional
+                to replace the original correlation matrix by the new one, by default False
+
+            Returns
+            -------
+            pandas.DataFrame or numpy.ndarray
+                a NxN correlation matrix with the columns and rows rearranged
+            """
+
+            if corr.shape[0] < 2:
+                return corr
+
+            pairwise_distances = sch.distance.pdist(corr**degree)
+            linkage = sch.linkage(pairwise_distances, method='complete')
+            cluster_distance_threshold = pairwise_distances.max()/2
+            idx_to_cluster_array = sch.fcluster(linkage, cluster_distance_threshold, criterion='distance')
+            idx = np.argsort(idx_to_cluster_array)
+
+            if not inplace:
+                corr = corr.copy()
+
+            if isinstance(corr, pd.DataFrame):
+                return corr.iloc[idx, :].T.iloc[idx, :]
+
+            return corr[idx, :][:, idx]
 
         if features_to_hide is None:
             features_to_hide = []
@@ -2203,11 +2250,13 @@ class SmartPlotter:
 
                 # Keep the same list of features for each subplot
                 if len(list_features) == 0:
-                    list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+                    top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+                    corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
+                    list_features = list(corr.columns)
 
                 fig.add_trace(
                     go.Heatmap(
-                        z=corr.loc[list_features, list_features].round(2).values,
+                        z=corr.loc[list_features, list_features].round(decimals).values,
                         x=list_features,
                         y=list_features,
                         coloraxis='coloraxis',
@@ -2219,18 +2268,20 @@ class SmartPlotter:
 
         else:
             corr = compute_corr(df.drop(features_to_hide, axis=1), compute_method)
-            list_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+            top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+            corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
+            list_features = [col for col in corr.columns if col in top_features]
 
             fig = go.Figure(go.Heatmap(
-                        z=corr.loc[list_features, list_features].round(2).values,
-                        x=list_features,
-                        y=list_features,
-                        coloraxis='coloraxis',
-                        text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
-                               f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
-                              for y in list_features],
-                        hovertemplate=hovertemplate,
-                    ))
+                z=corr.loc[list_features, list_features].round(decimals).values,
+                x=list_features,
+                y=list_features,
+                coloraxis='coloraxis',
+                text=[[f'Feature 1: {self.explainer.features_dict.get(y, y)} <br />'
+                       f'Feature 2: {self.explainer.features_dict.get(x, x)}' for x in list_features]
+                      for y in list_features],
+                hovertemplate=hovertemplate,
+            ))
 
         title = f'Correlation ({compute_method})'
         if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
@@ -2542,7 +2593,7 @@ class SmartPlotter:
         self.explainer.compute_features_stability([index])
 
         column_names = np.array([self.explainer.features_dict.get(x) for x in self.explainer.x_init.columns])
-        ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
+        def ordinal(n): return "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10:: 4])
 
         # Compute explanations for instance and neighbors
         g = self.explainer.local_neighbors["norm_shap"]
@@ -2554,23 +2605,24 @@ class SmartPlotter:
 
         # Plot
         g_df = pd.DataFrame(g, columns=columns).T.rename(
-                columns={
-                    **{0: "instance", 1: "closest neighbor"},
-                    **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
-                }
-            )
+            columns={
+                **{0: "instance", 1: "closest neighbor"},
+                **{i: ordinal(i) + " closest neighbor" for i in range(2, len(g))},
+            }
+        )
 
         # Keep only max_features
-        if max_features is not None: g_df = g_df[:max_features]
+        if max_features is not None:
+            g_df = g_df[:max_features]
 
         fig = go.Figure(data=[go.Bar(name=g_df.iloc[::-1, ::-1].columns[i],
-                        y=g_df.iloc[::-1, ::-1].index.tolist(),
-                        x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                        marker_color=self._style_dict["dict_stability_bar_colors"][1] if i == g_df.shape[1]-1
-                        else self._style_dict["dict_stability_bar_colors"][0],
-                        orientation='h',
-                        opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
-                        if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
+                                     y=g_df.iloc[::-1, ::-1].index.tolist(),
+                                     x=g_df.iloc[::-1, ::-1].iloc[:, i],
+                                     marker_color=self._style_dict["dict_stability_bar_colors"][1] if i == g_df.shape[1]-1
+                                     else self._style_dict["dict_stability_bar_colors"][0],
+                                     orientation='h',
+                                     opacity=np.clip(0.2+i*(1-0.2)/(g_df.shape[1]-1), 0.2, 1)
+                                     if g_df.shape[1] > 1 else 1) for i in range(g_df.shape[1])])
 
         title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
@@ -2805,7 +2857,7 @@ class SmartPlotter:
                 + "%<br>of the model for %{y:.1f}% of the instances",
                 hovertext="none",
                 marker_color=self._style_dict["dict_compacity_bar_colors"][1],
-                ),
+            ),
             row=1,
             col=1,
         )
@@ -2829,7 +2881,7 @@ class SmartPlotter:
                 + "%{x:.0f}"
                 + "%<br>of the model for %{y:.1f}% of the instances",
                 marker_color=self._style_dict["dict_compacity_bar_colors"][0],
-                ),
+            ),
             row=1,
             col=2,
         )
@@ -2862,31 +2914,25 @@ class SmartPlotter:
         return fig
 
     def scatter_plot_prediction(self,
-                                selection=None,
-                                col_scale=None,
-                                addnote=None,
-                                subtitle=None,
-                                max_points=2000,
-                                width=900,
-                                height=600,
-                                file_name=None,
-                                auto_open=False):
+                selection=None,
+                label=-1,
+                subtitle=None,
+                max_points=2000,
+                width=900,
+                height=600,
+                file_name=None,
+                auto_open=False):
         """
-        scatter_plot_prediction displays a Plotly scatter or violin plot of predictions
-        in comparison to the target variable.
-        This plot allows the user to understand the distribution of predictions
-        in comparison to the target variable.
+        scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
+        This plot represents Trues Values versus Predicted Values.
+
+        This plot allows the user to understand the distribution of predictions in comparison to the target variable.
         With the web app, it is possible to select the bad predictions or a subset of predictions.
+
         Parameters
         ----------
         selection: list (optional)
             Contains list of index, subset of the input DataFrame that we want to plot
-        feature_name : String
-            Name of the feature, used in title
-        pred: 1 column pd.DataFrame (optional)
-            predicted values used to color plot - One Vs All in multiclass case
-        proba_values: 1 column pd.DataFrame (optional)
-            predicted proba used to color points - One Vs All in multiclass case
         label: integer or string (default -1)
             If the label is of string type, check if it can be changed to integer to select the
             good dataframe object.
@@ -2894,13 +2940,6 @@ class SmartPlotter:
             maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
             nb: you can also limit the number using 'selection' parameter.
-        col_modality: Int, Float or String (optional)
-            parameter used in classification case,
-            specify the modality to color in scatter plot (One Vs All)
-        col_scale: list (optional)
-            specify the color of points in scatter data
-        addnote : String (default: None)
-            Specify a note to display
         subtitle : String (default: None)
             Subtitle to display
         width : Int (default: 900)
@@ -2938,8 +2977,11 @@ class SmartPlotter:
                                 f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
                                sep='')
 
+        fig = go.Figure()
+
         # Classification Case
         if self.explainer._case == "classification":
+            label_num, _, label_value = self.explainer.check_label_name(label)
             # predict proba Color scale
             if hasattr(self.explainer.model, "predict_proba"):
                 if not hasattr(self.explainer, "proba_values"):
@@ -2948,68 +2990,27 @@ class SmartPlotter:
                     if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
                         self.explainer.predict()
                 # Assign proba values of the target
-                df_proba_target = pd.concat([self.explainer.proba_values,
-                                            pd.DataFrame(self.explainer.y_target)],
-                                            axis=1)
-                df_proba_target.columns = [*df_proba_target.columns[:-1],
-                                           'target_name']
-                df_proba_target['target_name'] = 'class_' + df_proba_target['target_name'].astype(str)
-                idx, cols = pd.factorize(df_proba_target['target_name'])
-                df_proba_target['proba_target'] = df_proba_target.reindex(
-                    cols, axis=1).to_numpy()[np.arange(len(df_proba_target)),
-                                             idx]
+                df_proba_target = self.explainer.proba_values
+                df_proba_target['proba_target'] = df_proba_target.iloc[:, label_num]
                 proba_values = df_proba_target[['proba_target']]
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 target = self.explainer.y_target.loc[list_ind, :]
                 y_pred = self.explainer.y_pred.loc[list_ind, :]
-                df_pred = pd.concat([proba_values.reset_index(),
-                                    y_pred.reset_index(drop=True),
-                                    target.reset_index(drop=True)],
-                                    axis=1)
+                df_pred = pd.concat([proba_values.reset_index(), y_pred.reset_index(drop=True),
+                    target.reset_index(drop=True)], axis=1)
                 df_pred.set_index(df_pred.columns[0], inplace=True)
                 df_pred.columns = ["proba_values", "predict_class", "target"]
                 df_pred['bad_predict'] = 1
-                df_pred.loc[(df_pred['predict_class'] == df_pred['target']),
-                            'bad_predict'] = 0
+                df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'bad_predict'] = 0
+                subtitle = f"Response: <b>{label_value}</b>"
 
-        # Regression Case - color scale
-        elif self.explainer._case == "regression":
-            prediction_error = None
-            if self.explainer.y_pred is None:
-                if hasattr(self.explainer.model, "predict"):
-                    self.explainer.predict()
-            if self.explainer.y_pred is not None:
-                if (self.explainer.y_pred == 0).any()[0]:
-                    prediction_error = abs((self.explainer.y_target.values -
-                                            self.explainer.y_pred.values))
-                else:
-                    prediction_error = abs((self.explainer.y_target.values -
-                                            self.explainer.y_pred.values) /
-                                           self.explainer.y_pred.values)
-
-            self.pred_colorscale = self.tuning_colorscale(
-                pd.DataFrame(prediction_error))
-            col_scale = self.pred_colorscale
-
-            y_pred = self.explainer.y_pred.loc[list_ind, :]
-            y_target = self.explainer.y_target.loc[list_ind, :]
-            prediction_error = np.array(pd.DataFrame(prediction_error))
-            # round predict
-            if self.round_digit is None:
-                self.tuning_round_digit()
-            y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
-
-        fig = go.Figure()
-
-        if self.explainer._case == "classification":
-
+            # Plot distribution
             fig.add_trace(go.Violin(
                 x=df_pred['target'].values.flatten(),
                 y=df_pred['proba_values'].values.flatten(),
                 points=False,
                 legendgroup='M', scalegroup='M', name='Good Prediction',
-                side='positive',
                 line_color=self._style_dict["violin_area_classif"][1],
                 pointpos=-0.1,
                 showlegend=False,
@@ -3018,22 +3019,25 @@ class SmartPlotter:
                 spanmode="hard",
                 customdata=df_pred['proba_values'].index.values,
                 scalemode='count',
-                bandwidth=1
                 ))
 
+            # Plot points depending if bad or good prediction
             df_good_predict = df_pred[(df_pred['bad_predict'] == 0)]
             df_bad_predict = df_pred[(df_pred['bad_predict'] == 1)]
-            hv_text_good_predict = [f"Id: {x}<br />Proba_values: {y}<br />Predict_class: {w}<br />Target: {z}<br />" for x, y, w, z in zip(df_good_predict.index,
-            df_good_predict.proba_values.values.round(3).flatten(),df_good_predict.predict_class.values.flatten(),df_good_predict.target.values.flatten())]
-            hv_text_bad_predict = [f"Id: {x}<br />Proba_values: {y}<br />Predict_class: {w}<br />Target: {z}<br />" for x, y, w, z in zip(df_bad_predict.index,
-            df_bad_predict.proba_values.values.round(3).flatten(),df_bad_predict.predict_class.values.flatten(),df_bad_predict.target.values.flatten())]
+            hv_text_good_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+             x, y, w, z in zip(df_good_predict.index, df_good_predict.proba_values.values.round(3).flatten(),
+             df_good_predict.predict_class.values.flatten(), df_good_predict.target.values.flatten())]
+            hv_text_bad_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+             x, y, w, z in zip(df_bad_predict.index, df_bad_predict.proba_values.values.round(3).flatten(),
+             df_bad_predict.predict_class.values.flatten(), df_bad_predict.target.values.flatten())]
 
             fig.add_trace(go.Scatter(
                 x=df_good_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_good_predict)),
                 y=df_good_predict['proba_values'].values.flatten(),
                 mode='markers',
                 marker_color=self._style_dict["prediction_plot"][0],
-                showlegend=False,
+                showlegend=True,
+                name="Good Prediction",
                 hovertext=hv_text_good_predict,
                 hovertemplate='<b>%{hovertext}</b><br />',
                 customdata=df_good_predict['proba_values'].index.values,
@@ -3044,20 +3048,49 @@ class SmartPlotter:
                 y=df_bad_predict['proba_values'].values.flatten(),
                 mode='markers',
                 marker_color=self._style_dict["prediction_plot"][1],
-                showlegend=False,
+                showlegend=True,
+                name="Bad Prediction",
                 hovertext=hv_text_bad_predict,
                 hovertemplate='<b>%{hovertext}</b><br />',
                 customdata=df_bad_predict['proba_values'].index.values,
             ))
 
             fig.update_layout(violingap=0, violinmode='overlay')
-            fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
-        if self.explainer._case == "regression":
-            hv_text = [f"Id: {x}<br />Target: {y}<br />Predict: {z}<br />Prediction Error: {w}" for x, y, z, w in
-                       zip(y_target.index,
-                           y_target.values.flatten(),
-                           y_pred.values.flatten(),
-                           prediction_error.flatten())]
+            if self.explainer.label_dict is not None:
+                fig.update_xaxes(tickmode='array', tickvals=list(df_pred['target'].unique()),
+                ticktext=list(df_pred['target'].apply(lambda x: self.explainer.label_dict[x]).unique()))
+            if self.explainer.label_dict is None:
+                fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
+
+        # Regression Case
+        elif self.explainer._case == "regression":
+            prediction_error = None
+            if self.explainer.y_pred is None:
+                if hasattr(self.explainer.model, "predict"):
+                    self.explainer.predict()
+            if self.explainer.y_pred is not None:
+                if (self.explainer.y_target == 0).any()[0]:
+                    prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values))
+                    subtitle = "Prediction Error = abs(True Values - Predicted Values)"
+                else:
+                    prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values)/self.explainer.y_target.values)
+                    subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
+            df_equal_bins = pd.DataFrame(prediction_error).describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+            equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
+            self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error],
+             bins=[i[0] for i in equal_bins], labels=False)))
+            col_scale = self.pred_colorscale
+
+            y_pred = self.explainer.y_pred.loc[list_ind]
+            y_target = self.explainer.y_target.loc[list_ind]
+            prediction_error = np.array(pd.DataFrame(prediction_error, index=self.explainer.y_target.index).loc[list_ind])
+            # round predict
+            if self.round_digit is None:
+                self.tuning_round_digit()
+            y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+
+            hv_text = [f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}" for x, y, z, w in
+            zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
 
             fig.add_scatter(
                 x=y_target.values.flatten(),
@@ -3068,14 +3101,22 @@ class SmartPlotter:
                 customdata=y_pred.index.values
             )
 
-            colorpoints = prediction_error
+            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
             colorbar_title = 'Prediction Error'
             fig.data[-1].marker.color = colorpoints.flatten()
             fig.data[-1].marker.coloraxis = 'coloraxis'
             fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}}
-            fig.update_yaxes(scaleanchor="x", scaleratio=1)
-       # title = f"<b> Prediction error"
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
+            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
+            "yanchor": "top", "y": 1.1}
+            range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
+             max(y_pred.values.flatten()))]
+            fig.update_xaxes(range=range_axis)
+            fig.update_yaxes(range=range_axis)
+            fig.update_layout(shapes=[{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1,
+             'x0': 0, 'x1': 1, 'line': dict(color="grey", width=1, dash="dot")}])
+
+        # Add traces, title and template
         title = "True Values Vs Predicted Values"
         if subtitle or addnote:
             title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
@@ -3083,8 +3124,8 @@ class SmartPlotter:
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str('Target', 110)
-        dict_yaxis['text'] = 'Prediction'
+        dict_xaxis['text'] = truncate_str('True Values', 110)
+        dict_yaxis['text'] = 'Predicted Values'
 
         fig.update_traces(
             marker={
@@ -3097,10 +3138,10 @@ class SmartPlotter:
         fig.update_layout(
             template='none',
             title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
             width=width,
             height=height,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
             hovermode='closest'
         )
 
