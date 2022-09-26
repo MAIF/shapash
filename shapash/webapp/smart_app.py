@@ -548,8 +548,8 @@ class SmartApp:
                                                     #size='sm'
                                                     size = 'lg'  
                                                 )   
-                                           #     ],  style={'position': 'relative', 'left': 0, 'height': '2rem'})
-                                                ],  style={'position': 'relative', 'left': '96%'})
+                                                ],  style={'position': 'relative', 'left': 0, 'height': '2rem'})
+                                                # ],  style={'position': 'relative', 'left': '96%'})
                                     ])
                             ],
                             md=5,
@@ -621,8 +621,8 @@ class SmartApp:
                                                     centered=True,
                                                     size = 'lg'
                                                 )   
-                                                #],  style={'position': 'relative', 'left': 0})
-                                                ],  style={'position': 'relative', 'left': '97%'})
+                                                ],  style={'position': 'relative', 'left': 0})
+                                                # ],  style={'position': 'relative', 'left': '97%'})
                                     ]),
                                         
                                         active_tab_class_name="fw-bold fst-italic", 
@@ -687,8 +687,8 @@ class SmartApp:
                                                     centered=True,
                                                     size = 'lg'
                                                 )   
-                                                # ],  style={'position': 'relative', 'left': 0})
-                                                ],  style={'position': 'relative', 'left': '96%'})
+                                                ],  style={'position': 'relative', 'left': 0})
+                                                # ],  style={'position': 'relative', 'left': '96%'})
                                     ])
                             ],
                             md=5,
@@ -740,8 +740,8 @@ class SmartApp:
                                                                 centered=True,
                                                                 size = 'lg'
                                                             )   
-                                                            # ],  style={'position': 'relative', 'left': 0})
-                                                            ],  style={'position': 'relative', 'left': '96%'})
+                                                            ],  style={'position': 'relative', 'left': 0})
+                                                            # ],  style={'position': 'relative', 'left': '96%'})
                                                 ])
                                             ],
                                             md=8,
@@ -1265,7 +1265,6 @@ class SmartApp:
                 self.subset = None
             else:
                 raise PreventUpdate
-
             self.components['graph']['feature_selector'].figure = self.explainer.plot.contribution_plot(
                 col=self.selected_feature,
                 selection=self.subset,

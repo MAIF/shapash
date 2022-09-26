@@ -31,13 +31,15 @@ class MyGraph(dcc.Graph):
         }
 
     def adjust_graph(self,
+                     subtitle=None,
                      subset_graph=False,
                      x_ax="",
                      y_ax=""):
         """
         Override graph layout for app use
         """
-        new_title = update_title(self.figure.layout.title.text) + (" <b>< Subset ></b>" if subset_graph else "")
+        new_title = update_title(self.figure.layout.title.text) 
+        #subtitle = ("<br><sup><" + subtitle + "></sup></br>" if subset_graph else "")
         self.figure.update_layout(
             autosize=True,
             margin=dict(
@@ -50,11 +52,11 @@ class MyGraph(dcc.Graph):
             width=None,
             height=None,
             title={
-                'y': 0.98,
+                'y': 0.94,
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top',
-                'text': '<span style="font-size: 1.25vw;">' + new_title + '</span>'
+                'text': '<span style="font-size: 1.2vw;">' + new_title + '</span>' 
                 # 'text': new_title,
                 # 'font': {'size': new_size_font}
                 #, 'family': 'verdana'}

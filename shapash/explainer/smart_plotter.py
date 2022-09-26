@@ -132,8 +132,15 @@ class SmartPlotter:
             open automatically the plot
         """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
+        print(subtitle)
         if subtitle or addnote:
-            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            #title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            if subtitle and addnote:
+                title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            elif subtitle:
+                title += "<br><sup>" + subtitle + "</sup>"
+            else:
+                title += "<br><sup>" + addnote + "</sup>"
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
@@ -519,7 +526,13 @@ class SmartPlotter:
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
         if subtitle or addnote:
-            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            # title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            if subtitle and addnote:
+                title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            elif subtitle:
+                title += "<br><sup>" + subtitle + "</sup>"
+            else:
+                title += "<br><sup>" + addnote + "</sup>"
             topmargin = topmargin + 15
         dict_t.update(text=title)
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
