@@ -519,10 +519,11 @@ class SmartApp:
                                          style={"position": 'absolute'}
                                          ),
                                          html.Div([
-                                             dbc.Button("?", id="open_feature_importance", size='sm',
+                                             dbc.Button("?", id="open_feature_importance", size='sm', 
                                                         color="warning"),
                                                 dbc.Modal(
                                                     [
+                                                        dbc.ModalHeader(dbc.ModalTitle("Feature importance")),
                                                         dbc.ModalBody([
                                                             html.Div(
                                                                 """
@@ -530,8 +531,11 @@ class SmartApp:
                                                                 you can click on each feature to update the contribution plot below.
                                                                 If you have grouped the variables with the "features_groups" parameter, 
                                                                 you can have the group details by clicking on the grouped variable
-                                                                """),
-                                                                      ]),
+                                                                """
+                                                                ),
+                                                           html.A('Click here for more details', href="https://github.com/MAIF/shapash",
+                                                                     style={'color': self.color[0]})
+                                                        ]),
                                                         dbc.ModalFooter(
                                                             dbc.Button(
                                                                 "Close", id="close_feature_importance",
@@ -540,12 +544,13 @@ class SmartApp:
                                                         ),
                                                     ],
                                                     id="modal_feature_importance",
-                                                    centered=True,
-                                                    size = 'lg'
+                                                    centered=False,
+                                                    #size='sm'
+                                                    size = 'lg'  
                                                 )   
-                                                ],  style={'position': 'relative', 'left': 0})
+                                           #     ],  style={'position': 'relative', 'left': 0, 'height': '2rem'})
+                                                ],  style={'position': 'relative', 'left': '96%'})
                                     ])
-                                
                             ],
                             md=5,
                             style={'padding': '10px 10px 0px 10px'},
@@ -562,7 +567,7 @@ class SmartApp:
                                         id='card_dataset',
                                         style={'cursor': 'pointer'},
                                         #       'height': '24rem'},
-                                        label_style={'color': "black", 'height': '25px',
+                                        label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
@@ -574,8 +579,8 @@ class SmartApp:
                                         active_tab_class_name="fw-bold fst-italic",
                                         className="card",
                                         id='card_filter_dataset',
-                                        style={'height': '24rem'},
-                                        label_style={'color': "black", 'height': '25px',
+                                        style={'height': '24.1rem'},
+                                        label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
                                         tab_style={'border-left': '2px solid #ddd',
                                                    'border-right': '2px solid #ddd'},
@@ -584,13 +589,46 @@ class SmartApp:
                                                             }
                                          ),
                                     dbc.Tab(
-                                        self.draw_component('graph', 'prediction_picking'),
-                                        className="card",
-                                        active_tab_class_name="fw-bold fst-italic",
-                                        id="card_prediction_picking",
+                                        dbc.Card([
+                                        html.Div(
+                                         self.draw_component('graph', 'prediction_picking'),
+                                         # className="card",
+                                         id="card_prediction_picking",
+                                         style={"position": 'absolute'}
+                                         ),
+                                         html.Div([
+                                             dbc.Button("?", id="open_prediction_picking", size='sm',
+                                                        color="warning"),
+                                                dbc.Modal(
+                                                    [
+                                                        dbc.ModalHeader(dbc.ModalTitle("True values Vs Predicted values")),
+                                                        dbc.ModalBody([
+                                                            html.Div(
+                                                                """
+                                                                Text have to be written.
+                                                                """),
+                                                                html.A('Click here for more details', href="https://github.com/MAIF/shapash",
+                                                                     style={'color': self.color[0]})
+                                                        ]),
+                                                        dbc.ModalFooter(
+                                                            dbc.Button(
+                                                                "Close", id="close_prediction_picking",
+                                                                color="warning"
+                                                            )
+                                                        ),
+                                                    ],
+                                                    id="modal_prediction_picking",
+                                                    centered=True,
+                                                    size = 'lg'
+                                                )   
+                                                #],  style={'position': 'relative', 'left': 0})
+                                                ],  style={'position': 'relative', 'left': '97%'})
+                                    ]),
+                                        
+                                        active_tab_class_name="fw-bold fst-italic", 
                                         label='True Values Vs Predicted Values',
                                         #style={'height': '24rem'},
-                                        label_style={'color': "black", 'height': '25px',
+                                        label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
@@ -622,6 +660,7 @@ class SmartApp:
                                                         color="warning"),
                                                 dbc.Modal(
                                                     [
+                                                        dbc.ModalHeader(dbc.ModalTitle("Feature selector")),
                                                         dbc.ModalBody([
                                                             html.Div(
                                                                 """
@@ -634,7 +673,9 @@ class SmartApp:
                                                                 of the variable positively impacts the prediction
                                                                 (Link on a article for more details)
                                                                 """),
-                                                                      ]),
+                                                                html.A('Click here for more details', href="https://github.com/MAIF/shapash",
+                                                                     style={'color': self.color[0]})
+                                                        ]),
                                                         dbc.ModalFooter(
                                                             dbc.Button(
                                                                 "Close", id="close_feature_selector",
@@ -646,7 +687,8 @@ class SmartApp:
                                                     centered=True,
                                                     size = 'lg'
                                                 )   
-                                                ],  style={'position': 'relative', 'left': 0})
+                                                # ],  style={'position': 'relative', 'left': 0})
+                                                ],  style={'position': 'relative', 'left': '96%'})
                                     ])
                             ],
                             md=5,
@@ -673,6 +715,7 @@ class SmartApp:
                                                                     color="warning"),
                                                             dbc.Modal(
                                                                 [
+                                                                    dbc.ModalHeader(dbc.ModalTitle("Detail feature")),
                                                                     dbc.ModalBody([
                                                                         html.Div(
                                                                             """
@@ -681,10 +724,11 @@ class SmartApp:
                                                                             on a point of the contribution_plot or the table
                                                                             The hidden contributions, are the sum of the remaining contributions, 
                                                                             "less high than the others", to have less hidden contributions, 
-                                                                            you have to increase the features to display
-
+                                                                            you have to increase the features to display.
                                                                             """),
-                                                                                  ]),
+                                                                            html.A('Click here for more details', href="https://github.com/MAIF/shapash",
+                                                                                   style={'color': self.color[0]})
+                                                                        ]),
                                                                     dbc.ModalFooter(
                                                                         dbc.Button(
                                                                             "Close", id="close_detail_feature",
@@ -696,7 +740,8 @@ class SmartApp:
                                                                 centered=True,
                                                                 size = 'lg'
                                                             )   
-                                                            ],  style={'position': 'relative', 'left': 0})
+                                                            # ],  style={'position': 'relative', 'left': 0})
+                                                            ],  style={'position': 'relative', 'left': '96%'})
                                                 ])
                                             ],
                                             md=8,
@@ -879,24 +924,24 @@ class SmartApp:
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
                     style_component = {
-                        'height': '24rem'
+                        'height': '20rem'
                     }
                     this_style_card = {
-                        'height': '25rem', 'zIndex': 900,
+                        'height': '22rem', 'zIndex': 900,
                     }
                     if data_component_id == 'prediction_picking':
                         style_component = {
-                            'height': '22rem',
+                            'height': '20rem',
                         }
                         this_style_card = {
-                            'height': '24rem', 'zIndex': 900,
+                            'height': '20.8rem', 'zIndex': 901,
                         }
                     if data_component_type == 'table':
                         style_component = {
                             'maxHeight': '22rem',
                         }
                         this_style_card = {
-                            'height': '24rem', 'zIndex': 900,
+                            'height': '24.1rem', 'zIndex': 900,
                         }
                     return this_style_card, style_component
 
@@ -1540,7 +1585,7 @@ class SmartApp:
          Input("close_feature_importance", "n_clicks")],
         [State("modal_feature_importance", "is_open")],
         )
-        def toggle_modal_classement(n1, n2, is_open):
+        def toggle_modal_feature_importancet(n1, n2, is_open):
             if n1 or n2:
                 return not is_open
             return is_open
@@ -1551,7 +1596,7 @@ class SmartApp:
          Input("close_feature_selector", "n_clicks")],
         [State("modal_feature_selector", "is_open")],
         )
-        def toggle_modal_classement(n1, n2, is_open):
+        def toggle_modal_feature_selector(n1, n2, is_open):
             if n1 or n2:
                 return not is_open
             return is_open
@@ -1562,10 +1607,22 @@ class SmartApp:
          Input("close_detail_feature", "n_clicks")],
         [State("modal_detail_feature", "is_open")],
         )
-        def toggle_modal_classement(n1, n2, is_open):
+        def toggle_modal_detail_feature(n1, n2, is_open):
             if n1 or n2:
                 return not is_open
             return is_open
+
+        @app.callback(
+        Output("modal_prediction_picking", "is_open"),
+        [Input("open_prediction_picking", "n_clicks"), 
+         Input("close_prediction_picking", "n_clicks")],
+        [State("modal_prediction_picking", "is_open")],
+        )
+        def toggle_modal_prediction_picking(n1, n2, is_open):
+            if n1 or n2:
+                return not is_open
+            return is_open
+
 
     def hl_tab_rows(selectedData : dict):
         row_ids = []
