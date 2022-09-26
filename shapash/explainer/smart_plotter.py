@@ -206,7 +206,8 @@ class SmartPlotter:
                      width=900,
                      height=600,
                      file_name=None,
-                     auto_open=False):
+                     auto_open=False,
+                     zoom=False):
         """
         Scatter plot of one feature contribution across the prediction set.
         Parameters
@@ -282,7 +283,7 @@ class SmartPlotter:
             text=text_groups_features,
         )
         # To change ticktext when the label size is upper than 10
-        if type(feature_values.values.flatten()[0]) == str:
+        if (type(feature_values.values.flatten()[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
             feature_val = [
                 x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
@@ -328,7 +329,8 @@ class SmartPlotter:
                     width=900,
                     height=600,
                     file_name=None,
-                    auto_open=False):
+                    auto_open=False,
+                    zoom=False):
         """
         Violin plot of one feature contribution across the prediction set.
         Parameters
@@ -457,7 +459,7 @@ class SmartPlotter:
         )
         
         # To change ticktext when the label size is upper than 10
-        if type(feature[0]) == str:
+        if (type(feature[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in np.unique(feature_values.values.flatten())]
             feature_val = [
                 x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
@@ -499,7 +501,8 @@ class SmartPlotter:
                              width=900,
                              height=500,
                              file_name=None,
-                             auto_open=False):
+                             auto_open=False,
+                             zoom=False):
         """
         Plot features importance computed with the prediction set.
         Parameters
@@ -573,7 +576,7 @@ class SmartPlotter:
             }
         )
         
-        if type(feature_imp1.index[0]) == str:
+        if (type(feature_imp1.index[0]) == str) & (zoom == False):
             index_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
         else:
             index_val = feature_imp1.index
@@ -620,7 +623,8 @@ class SmartPlotter:
                        width=900,
                        height=550,
                        file_name=None,
-                       auto_open=False):
+                       auto_open=False,
+                       zoom=False):
         """
         Plotly bar plot of local explainers
         Parameters
@@ -662,7 +666,7 @@ class SmartPlotter:
         else:
             title = f"Local Explanation - Id: <b>{index_value[0]}</b>"
             if subtitle:
-                title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
+                title  += "<br><sup>" + subtitle + "</sup>"
                 topmargin += 15
             dict_t['text'] = title
         dict_xaxis['text'] = 'Contribution'
@@ -710,8 +714,11 @@ class SmartPlotter:
                     hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
                                                           add_line_break(expl[1], 40, maxlen=160))     
                 trunc_value = truncate_str(expl[0], 45)
-                trunc_new_value = trunc_value.replace(
-                    trunc_value[24: len(trunc_value)-3], '...') if len(trunc_value) > 30 else trunc_value
+                if zoom == False:
+                    trunc_new_value = trunc_value.replace(
+                        trunc_value[24: len(trunc_value)-3], '...') if len(trunc_value) > 30 else trunc_value
+                else:
+                    trunc_new_value = trunc_value
                 if len(contrib) <= yaxis_max_label and (
                         self.explainer.features_groups is None
                         # We don't want to display label values for t-sne projected values of groups of features.
@@ -910,7 +917,8 @@ class SmartPlotter:
                    width=900,
                    height=550,
                    file_name=None,
-                   auto_open=False):
+                   auto_open=False,
+                   zoom=False):
         """
         The local_plot method is used to display the local contributions of
         an individual in the dataset.
@@ -1056,7 +1064,7 @@ class SmartPlotter:
                 del contrib[expl]
 
         fig = self.plot_bar_chart(line, var_dict, x_val, contrib, yaxis_max_label, subtitle, width, height, file_name,
-                                  auto_open)
+                                  auto_open, zoom)
         return fig
 
     def contribution_plot(self,
@@ -1069,7 +1077,8 @@ class SmartPlotter:
                           width=900,
                           height=600,
                           file_name=None,
-                          auto_open=False):
+                          auto_open=False,
+                          zoom=False):
         """
         contribution_plot method diplays a Plotly scatter or violin plot of a selected feature.
         It represents the contribution of the selected feature to the predicted value.
@@ -1244,13 +1253,15 @@ class SmartPlotter:
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
-            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, proba_values,
-                                    col_value, col_scale, metadata, addnote,
-                                    subtitle, width, height, file_name, auto_open)
+            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, 
+                                    proba_values, col_value, col_scale, metadata, 
+                                    addnote, subtitle, width, height, file_name, 
+                                    auto_open, zoom)
         else:
             fig = self.plot_violin(feature_values, contrib, col_label, y_pred,
                                    proba_values, col_value, col_scale, addnote,
-                                   subtitle, width, height, file_name, auto_open)   
+                                   subtitle, width, height, file_name, auto_open,
+                                   zoom)   
         
         return fig
 
@@ -1264,7 +1275,8 @@ class SmartPlotter:
                             width=900,
                             height=500,
                             file_name=None,
-                            auto_open=False):
+                            auto_open=False,
+                            zoom=False):
         """
         features_importance display a plotly features importance plot.
         in Multiclass Case, this features_importance focus on a label value.
@@ -1397,7 +1409,7 @@ class SmartPlotter:
                 ]
 
         fig = self.plot_features_import(global_feat_imp, subset_feat_imp, title, addnote,
-                                        subtitle, width, height, file_name, auto_open)
+                                        subtitle, width, height, file_name, auto_open, zoom)
         return fig
 
     def plot_line_comparison(self,
@@ -2934,7 +2946,8 @@ class SmartPlotter:
                                 width=900,
                                 height=600,
                                 file_name=None,
-                                auto_open=False):
+                                auto_open=False,
+                                zoom=False):
         """
         scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
         This plot represents Trues Values versus Predicted Values.

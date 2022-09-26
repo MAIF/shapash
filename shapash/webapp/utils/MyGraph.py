@@ -46,13 +46,13 @@ class MyGraph(dcc.Graph):
                 l=50,
                 r=10,
                 b=10,
-                t=50,
+                t=67,
                 pad=0
             ),
             width=None,
             height=None,
             title={
-                'y': 0.94,
+                'y': 0.95,
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top',

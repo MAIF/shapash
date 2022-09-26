@@ -919,7 +919,6 @@ class SmartApp:
             def ember(click,
                       data_component_type,
                       data_component_id):
-                print(click)
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
@@ -947,14 +946,14 @@ class SmartApp:
 
                 else:
                     this_style_card = {
-                        'height': 'auto',
+                        'height': '70vh',
                         'width': 'auto',
                         'zIndex': 998,
-                        'position': 'fixed', 'top': '50px',
+                        'position': 'fixed', 'top': '55px',
                         'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '87vh', 'maxHeight': '87vh',
+                        'height': '92vh', 'maxHeight': '92vh',
                     }
                     return this_style_card, style_component
 
@@ -1119,7 +1118,8 @@ class SmartApp:
                 Input('clear_filter', 'n_clicks'),
                 Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
-                Input('bool_groups', 'on')
+                Input('bool_groups', 'on'),
+                Input('ember_global_feature_importance', 'n_clicks')
             ],
             [
                 State('global_feature_importance', 'clickData'),
@@ -1134,12 +1134,19 @@ class SmartApp:
                                       is_open,
                                       n_clicks,
                                       bool_group,
+                                      click_zoom,
                                       clickData,
                                       filter_query,
                                       features):
+           
             """
             update feature importance plot according to selected label and dataset state.
             """
+            click = 2 if click_zoom is None else click_zoom
+            if click % 2 == 0:
+                zoom_active = False
+            else:
+                zoom_active = True
             selection = None
             ctx = dash.callback_context
             selected_feature = self.explainer.inv_features_dict.get(
@@ -1179,18 +1186,27 @@ class SmartApp:
                 selection = None
             else:
                 self.last_click_data = clickData
-                raise PreventUpdate
+                if zoom_active:
+                    row_ids = []
+                    if selected_data is not None:
+                        for p in selected_data['points']:
+                            row_ids.append(p['customdata'])
+                        selection = row_ids
+                else:
+                    raise PreventUpdate
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
             selection = self.list_index if filter_query else selection
+
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
                     max_features=features,
                     selection=selection,
                     label=self.label,
                     group_name=group_name,
-                    display_groups=bool_group
+                    display_groups=bool_group,
+                    zoom=zoom_active
                 )
             self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
@@ -1206,6 +1222,7 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
+            
             self.last_click_data = clickData
             return self.components['graph']['global_feature_importance'].figure, clickData
 
@@ -1216,7 +1233,8 @@ class SmartApp:
                 Input('prediction_picking', 'selectedData'),
                 Input('clear_filter', 'n_clicks'),
                 Input('select_label', 'value'),
-                Input('modal', 'is_open')
+                Input('modal', 'is_open'),
+                Input('ember_feature_selector', 'n_clicks')
             ],
             [
                 State('points', 'value'),
@@ -1228,14 +1246,19 @@ class SmartApp:
                                     clear_filter,
                                     label,
                                     is_open,
+                                    click_zoom,
                                     points,
                                     violin):
             """
             Update feature plot according to label, data,
             selected feature and settings modifications
             """
+            click = 2 if click_zoom is None else click_zoom
+            if click % 2 == 0:
+                zoom_active = False
+            else:
+                zoom_active = True
             ctx = dash.callback_context
-            
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
@@ -1248,9 +1271,7 @@ class SmartApp:
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
-                print("info")
-                print(self.components['graph']['global_feature_importance'].figure['data'][0]['name'])
-                if feature is not None:
+                 if feature is not None:
                     # Removing bold
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     
@@ -1279,13 +1300,22 @@ class SmartApp:
             elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
                 self.subset = None
             else:
-                raise PreventUpdate
+                if zoom_active:
+                    row_ids = []
+                    if selected_data is not None:
+                        for p in selected_data['points']:
+                            row_ids.append(p['customdata'])
+                    self.subset = row_ids
+                else:  
+                    raise PreventUpdate
+
             self.components['graph']['feature_selector'].figure = self.explainer.plot.contribution_plot(
                 col=self.selected_feature,
                 selection=self.subset,
                 label=self.label,
                 violin_maxf=violin,
-                max_points=points
+                max_points=points,
+                zoom=zoom_active
             )
 
             self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
@@ -1409,7 +1439,8 @@ class SmartApp:
                 Input('feature_selector', 'clickData'),
                 Input('prediction_picking', 'clickData'),
                 Input("validation", "n_clicks"),
-                Input('bool_groups', 'on')
+                Input('bool_groups', 'on'),
+                Input('ember_detail_feature', 'n_clicks')
             ],
             [
                 State('index_id', 'value'),
@@ -1427,11 +1458,17 @@ class SmartApp:
                                   prediction_picking,
                                   validation_click,
                                   bool_group,
+                                  click_zoom,
                                   index,
                                   data):
             """
             update local explanation plot according to app changes.
             """
+            click = 2 if click_zoom is None else click_zoom
+            if click % 2 == 0:
+                zoom_active = False
+            else:
+                zoom_active = True
             ctx = dash.callback_context
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
@@ -1444,7 +1481,8 @@ class SmartApp:
                 if cell:
                     selected = data[cell['row']]['_index_']
                 else:
-                    raise PreventUpdate
+                    zoom_active = zoom_active
+                    #raise PreventUpdate
 
             if selected is None:
                 selected = index
@@ -1467,7 +1505,8 @@ class SmartApp:
                 label=label,
                 show_masked=True,
                 yaxis_max_label=8,
-                display_groups=bool_group
+                display_groups=bool_group,
+                zoom=zoom_active
             )
             self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
             # font size can be adapted to screen size
@@ -1547,7 +1586,8 @@ class SmartApp:
             [
                 Input('global_feature_importance', 'clickData'),
                 Input('select_label', 'value'),
-                Input('modal', 'is_open')
+                Input('modal', 'is_open'),
+                Input('ember_prediction_picking', 'n_clicks')
             ],
             [
                 State('points', 'value'),
@@ -1557,12 +1597,18 @@ class SmartApp:
         def update_prediction_picking(feature,
                                       label,
                                       is_open,
+                                      click_zoom,
                                       points,
                                       violin):
             """
             Update feature plot according to label, data,
             selected feature and settings modifications
             """
+            click = 2 if click_zoom is None else click_zoom
+            if click % 2 == 0:
+                zoom_active = False
+            else:
+                zoom_active = True
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
@@ -1575,13 +1621,14 @@ class SmartApp:
 
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
-            else:
+            else: 
                 raise PreventUpdate
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
                 max_points=points,
                 label=self.label,
+                zoom=zoom_active
             )
 
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
