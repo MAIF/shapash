@@ -924,7 +924,7 @@ class SmartApp:
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
                     style_component = {
-                        'height': '20rem'
+                        'height': '21rem'
                     }
                     this_style_card = {
                         'height': '22rem', 'zIndex': 900,
@@ -1235,6 +1235,7 @@ class SmartApp:
             selected feature and settings modifications
             """
             ctx = dash.callback_context
+            
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
@@ -1247,14 +1248,28 @@ class SmartApp:
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
+                print("info")
+                print(self.components['graph']['global_feature_importance'].figure['data'][0]['name'])
                 if feature is not None:
                     # Removing bold
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
-                    if feature['points'][0]['curveNumber'] == 0 and \
-                            len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                        self.subset = self.list_index
+                    
+                    if self.components['graph']['global_feature_importance'].figure['data'][0]['name'] == 'Global':
+                        if feature['points'][0]['curveNumber'] == 0 and \
+                                len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                            self.subset = self.list_index
+                        else:
+                            self.subset = None
                     else:
-                        self.subset = None
+                         if feature['points'][0]['curveNumber'] == 0 and \
+                                len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                            row_ids = []
+                            for p in selected_data['points']:
+                                row_ids.append(p['customdata'])
+                            self.subset = row_ids
+                         else:
+                             self.subset = None
+                         
             elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
                 row_ids = []
                 if selected_data is not None:
