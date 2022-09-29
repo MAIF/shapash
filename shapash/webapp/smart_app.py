@@ -367,10 +367,13 @@ class SmartApp:
             [ html.Div([
                 html.Div(id='dynamic-dropdown-container', children=[]),
                 html.Hr(),
-                dbc.Button("Add Filter", id="dynamic-add-filter", n_clicks=0,
-                           color='warning')
+                html.Div([dbc.Button("Add Filter", id="dynamic-add-filter", n_clicks=0,
+                           color='warning'),
+                          dbc.Button("Reset Filter", id="dynamic-reset-filter", n_clicks=0,
+                           color='warning', disabled=True)
+                          ])
                 ])
-                ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800},
+                ], style={'maxheight': '22rem', 'height': '21rem', 'zIndex': 800},
                 className='filter'
             )
 
@@ -584,7 +587,7 @@ class SmartApp:
                                             ]),
                                        #className="card",
                                         active_tab_class_name="fw-bold fst-italic",
-                                        style={'height': '24.1rem'},
+                                        style={'height': '24.7rem'},
                                         label='Dataset Filters',
                                         label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
@@ -1689,34 +1692,70 @@ class SmartApp:
             if n1 or n2:
                 return not is_open
             return is_open
+        
+        @app.callback(Output('dynamic-add-filter', 'n_clicks'),
+                      [Input('dynamic-reset-filter', 'n_clicks')])
+        def update_add_click(n_clicks):
+            return 0
+            
         @app.callback(
             Output('dynamic-dropdown-container', 'children'),
-            [Input('dynamic-add-filter', 'n_clicks')],
+            [Input('dynamic-add-filter', 'n_clicks'),
+             Input('dynamic-reset-filter', 'n_clicks')],          
             [State('dynamic-dropdown-container', 'children')])
-        def display_dropdowns(n_clicks, children):
-            print(self.round_dataframe)
+        def display_dropdowns(n_clicks_add, n_clicks_reset, children): 
+            print("n_click : {}".format(n_clicks_add))
+            ctx = dash.callback_context
             new_element = html.Div([
                 html.Br(),
-                html.Label('select new variable to filter'),
+                html.Div(
+                    id={
+                        'type': 'dynamic-output-label',
+                        'index': n_clicks_add
+                    }
+                ),
+                html.Div([
                 html.Div(dcc.Dropdown(
                     [{'label': i, 'value': i} for i in self.round_dataframe.columns],
                     id={
                         'type': 'dynamic-dropdown',
-                        'index': n_clicks
+                        'index': n_clicks_add
                     },
                     ),style={"width": "30%"}
                 ),
-                html.Div(
-                    id={
+                html.Div(id={
                         'type': 'dynamic-output',
-                        'index': n_clicks
-                    }
-                )
-            ])
-            children.append(new_element)
+                        'index': n_clicks_add
+                    }, style={'width': '100%'})
+            ], style={'display': 'flex'})
+            ]) 
+            if ctx.triggered[0]['prop_id'] == 'dynamic-reset-filter.n_clicks':
+                children = [new_element]
+            else:
+                children.append(new_element)
             return children
+        
+        @app.callback(
+            Output('dynamic-reset-filter', 'disabled'),
+            [Input('dynamic-add-filter', 'n_clicks')]
+        )
+        def update_reset_button(n_click):
+            if n_click > 0:
+                return False
+            else:
+                return True
 
-
+        @app.callback(
+            Output({'type': 'dynamic-output-label', 'index': MATCH}, 'children'),
+            Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
+            State({'type': 'dynamic-dropdown', 'index': MATCH}, 'id'),
+        )
+        def update_label_filter(value, id):
+            if value != None :
+                return html.Label("Variable {} is filtered".format(value))
+            else: 
+                return html.Label('select variable to filter')
+                
         @app.callback(
             Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
             [Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')],
@@ -1725,6 +1764,7 @@ class SmartApp:
         )
         def display_output(value, id, children):
             if (value != None):
+                
                 if type(self.round_dataframe[value].iloc[0]) == bool:
                     if children['props']['children'] != None :
                         bool_value = children['props']['children']['props']['value']
