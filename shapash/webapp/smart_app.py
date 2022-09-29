@@ -11,6 +11,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from dash import dcc
 from dash import html
+from dash import MATCH
 from dash.dependencies import Output, Input, State
 from flask import Flask
 import pandas as pd
@@ -363,14 +364,15 @@ class SmartApp:
         )
 
         self.components['filter']['filter_dataset'] = dbc.Col(
-            [ 
-                dbc.Row(
-                [
-                    dbc.Label(" ", align="center", width=4)
-                ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800}
-                )
-            ], className='filter'
-        )
+            [ html.Div([
+                html.Div(id='dynamic-dropdown-container', children=[]),
+                html.Hr(),
+                dbc.Button("Add Filter", id="dynamic-add-filter", n_clicks=0,
+                           color='warning')
+                ])
+                ], style={'maxheight': '22rem', 'height': '22rem', 'zIndex': 800},
+                className='filter'
+            )
 
         self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
@@ -574,12 +576,16 @@ class SmartApp:
                                                             }
                                         ),
                                     dbc.Tab(
-                                        self.draw_component('filter', 'filter_dataset'),
-                                        label='Dataset Filters',
+                                        dbc.Card([
+                                            html.Div(
+                                            self.draw_component('filter', 'filter_dataset'), 
+                                            id='card_filter_dataset',
+                                            style={'overflow': "scroll"})
+                                            ]),
+                                       #className="card",
                                         active_tab_class_name="fw-bold fst-italic",
-                                        className="card",
-                                        id='card_filter_dataset',
                                         style={'height': '24.1rem'},
+                                        label='Dataset Filters',
                                         label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
                                         tab_style={'border-left': '2px solid #ddd',
@@ -930,7 +936,7 @@ class SmartApp:
                     }
                     if data_component_id == 'prediction_picking':
                         style_component = {
-                            'height': '20rem',
+                            'height': '20.3rem',
                         }
                         this_style_card = {
                             'height': '20.8rem', 'zIndex': 901,
@@ -1683,6 +1689,99 @@ class SmartApp:
             if n1 or n2:
                 return not is_open
             return is_open
+        @app.callback(
+            Output('dynamic-dropdown-container', 'children'),
+            [Input('dynamic-add-filter', 'n_clicks')],
+            [State('dynamic-dropdown-container', 'children')])
+        def display_dropdowns(n_clicks, children):
+            print(self.round_dataframe)
+            new_element = html.Div([
+                html.Br(),
+                html.Label('select new variable to filter'),
+                html.Div(dcc.Dropdown(
+                    [{'label': i, 'value': i} for i in self.round_dataframe.columns],
+                    id={
+                        'type': 'dynamic-dropdown',
+                        'index': n_clicks
+                    },
+                    ),style={"width": "30%"}
+                ),
+                html.Div(
+                    id={
+                        'type': 'dynamic-output',
+                        'index': n_clicks
+                    }
+                )
+            ])
+            children.append(new_element)
+            return children
+
+
+        @app.callback(
+            Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
+            [Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')],
+            [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'id'),
+             State({'type': 'dynamic-output', 'index': MATCH}, 'children')]
+        )
+        def display_output(value, id, children):
+            if (value != None):
+                if type(self.round_dataframe[value].iloc[0]) == bool:
+                    if children['props']['children'] != None :
+                        bool_value = children['props']['children']['props']['value']
+                    else:
+                        bool_value = self.round_dataframe[value].iloc[0]
+                    new_element = html.Div(dcc.RadioItems(
+                    [{'label': val, 'value': val} for val in self.round_dataframe[value].unique()],
+                    id={
+                        'type': 'dynamic-bool',
+                        'index': id['index']
+                    },
+                    value=bool_value,
+                    inline=False
+                    ),style={"width": "30%"})
+                elif (type(self.round_dataframe[value].iloc[0]) == str) | ((type(self.round_dataframe[value].iloc[0]) == np.int64) & (len(self.round_dataframe[value].unique()) <= 10)):
+                    if children['props']['children'] != None :
+                        str_values = children['props']['children']['props']['value']
+                    else:
+                        str_values = []
+                    new_element = html.Div(dcc.Dropdown(
+                         id={
+                        'type': 'dynamic-str',
+                        'index': id['index']
+                        },
+                         options=[{'label': i, 'value': i} for i in self.round_dataframe[value].unique()],
+                         multi=True,
+                         value=str_values
+                     ), style={"width": "30%"})
+                else:
+                    if children['props']['children'] != None:
+                        lower_value = children['props']['children'][0]['props']['value']
+                        upper_value = children['props']['children'][2]['props']['value']
+                    else:
+                        lower_value = 0.0
+                        upper_value = 0.0
+                    new_element = html.Div([
+                        dcc.Input(
+                            id={
+                            'type': 'lower',
+                            'index': id['index']
+                            },
+                            value=lower_value,
+                            type="number"
+                        ),
+                        '  {}  '.format(value),
+                        dcc.Input(
+                            id={
+                            'type': 'upper',
+                            'index': id['index']
+                            },
+                            value=upper_value,
+                            type="number",
+                        )
+                    ])
+            else:
+                new_element = html.Div()
+            return new_element
 
 
     def hl_tab_rows(selectedData : dict):
@@ -1692,4 +1791,5 @@ class SmartApp:
                 row_ids.append(p['customdata'][0])
         return row_ids
 
+   
     
