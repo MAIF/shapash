@@ -39,7 +39,6 @@ class MyGraph(dcc.Graph):
         Override graph layout for app use
         """
         new_title = update_title(self.figure.layout.title.text) 
-        #subtitle = ("<br><sup><" + subtitle + "></sup></br>" if subset_graph else "")
         self.figure.update_layout(
             autosize=True,
             margin=dict(

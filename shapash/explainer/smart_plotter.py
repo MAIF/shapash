@@ -132,7 +132,7 @@ class SmartPlotter:
             open automatically the plot
         """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
-        print(subtitle)
+        # Add subtitle and addnote
         if subtitle or addnote:
             #title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             if subtitle and addnote:
@@ -283,6 +283,7 @@ class SmartPlotter:
             text=text_groups_features,
         )
         # To change ticktext when the label size is upper than 10
+        print(zoom)
         if (type(feature_values.values.flatten()[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
             feature_val = [
@@ -441,6 +442,7 @@ class SmartPlotter:
             self.explainer._case == 'classification' else None
 
         if colorpoints is not None:
+            feature = feature_values.values.flatten()
             customdata = np.stack((feature_values.values.flatten(), 
                                     contributions.index.values), axis=-1)
             fig.add_trace(go.Scatter(
@@ -459,6 +461,7 @@ class SmartPlotter:
         )
         
         # To change ticktext when the label size is upper than 10
+        print(feature)
         if (type(feature[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in np.unique(feature_values.values.flatten())]
             feature_val = [
