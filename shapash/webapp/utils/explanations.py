@@ -4,8 +4,6 @@ Created on Mon Oct  3 15:12:08 2022
 
 @author: Florine
 """
-import markdown
-from bs4 import BeautifulSoup
 
 class Explanations:
 
