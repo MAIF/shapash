@@ -283,7 +283,6 @@ class SmartPlotter:
             text=text_groups_features,
         )
         # To change ticktext when the label size is upper than 10
-        print(zoom)
         if (type(feature_values.values.flatten()[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
             feature_val = [
@@ -461,7 +460,6 @@ class SmartPlotter:
         )
         
         # To change ticktext when the label size is upper than 10
-        print(feature)
         if (type(feature[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in np.unique(feature_values.values.flatten())]
             feature_val = [
@@ -498,6 +496,7 @@ class SmartPlotter:
     def plot_features_import(self,
                              feature_imp1,
                              feature_imp2=None,
+                             feature_imp3=None,
                              title='Features Importance',
                              addnote=None,
                              subtitle=None,
@@ -514,6 +513,8 @@ class SmartPlotter:
             Feature importance computed with every rows
         feature_imp2 : pd.Series, optional (default: None)
             The contributions associate
+        feature_imp3 : pd.Series, optional (default: None)
+            The contributions associate
         title : str
             Title of the plot, default set to 'Features Importance'
         addnote : String (default: None)
@@ -528,6 +529,7 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+        Zoom:
         """
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
@@ -583,6 +585,8 @@ class SmartPlotter:
             index_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
         else:
             index_val = feature_imp1.index
+        
+        print(feature_imp3)
         bar1 = go.Bar(
             x=feature_imp1.round(4),
             y=feature_imp1.index,
@@ -593,19 +597,43 @@ class SmartPlotter:
             hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
             customdata=feature_imp1.index
         )
-        if feature_imp2 is not None:
-            bar2 = go.Bar(
-                x=feature_imp2.round(4),
-                y=feature_imp2.index,
-                orientation='h',
-                name='Subset',
-                marker=dict_style_bar2,
-                hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
-                customdata=feature_imp2.index
-            )
-            data = [bar2, bar1]
+        if feature_imp3 is not None:
+            bar3 = go.Bar(
+                    x=feature_imp3.round(4),
+                    y=feature_imp3.index,
+                    orientation='h',
+                    name='Global',
+                    marker=dict_style_bar1,
+                    hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+                    customdata=feature_imp3.index
+                )
+            if feature_imp2 is not None:
+                bar2 = go.Bar(
+                    x=feature_imp2.round(4),
+                    y=feature_imp2.index,
+                    orientation='h',
+                    name='Subset',
+                    marker=dict_style_bar2,
+                    hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+                    customdata=feature_imp2.index
+                )
+                data = [bar2, bar3]
+            else:
+                data = bar3
         else:
-            data = bar1
+            if feature_imp2 is not None:
+                bar2 = go.Bar(
+                    x=feature_imp2.round(4),
+                    y=feature_imp2.index,
+                    orientation='h',
+                    name='Subset',
+                    marker=dict_style_bar2,
+                    hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+                    customdata=feature_imp2.index
+                )
+                data = [bar2, bar1]
+            else:
+                data = bar1
 
         fig = go.Figure(data=data, layout=layout)
         fig.update_yaxes(ticktext=index_val,
@@ -1271,6 +1299,7 @@ class SmartPlotter:
     def features_importance(self,
                             max_features=20,
                             selection=None,
+                            filter_selection=None,
                             label=-1,
                             group_name=None,
                             display_groups=True,
@@ -1294,8 +1323,12 @@ class SmartPlotter:
             this argument limit the number of hbar in features importance plot
             if max_features is 20, plot selects the 20 most important features
         selection: list (optional, default None)
-            This  argument allows to represent the importance calculated with a subset.
+            This argument allows to represent the importance calculated with a subset.
             Subset features importance is compared to global in the plot
+            Argument must contains list of index, subset of the input DataFrame that we want to plot
+        filter_selection: list (optional, default None)
+            This argument allows to represent the importance calculated with a subset
+            that is the result of filters applied to the dataframe.
             Argument must contains list of index, subset of the input DataFrame that we want to plot
         label: integer or string (default -1)
             If the label is of string type, check if it can be changed to integer to select the
@@ -1319,6 +1352,8 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+        zoom: Boolean (optional)
+            Indicate if the graph is currently zoomed.
         Returns
         -------
         Plotly Figure Object
@@ -1326,12 +1361,11 @@ class SmartPlotter:
         --------
         >>> xpl.plot.features_importance()
         """
-
         self.explainer.compute_features_import(force=force)
         subtitle = None
         title = 'Features Importance'
         display_groups = self.explainer.features_groups is not None and display_groups
-
+        print(filter_selection)
         if display_groups:
             if group_name:  # Case where we have groups of features and we want to display only features inside a group
                 if group_name not in self.explainer.features_groups.keys():
@@ -1367,6 +1401,15 @@ class SmartPlotter:
                 )
             else:
                 subset_feat_imp = None
+            if filter_selection is not None:
+                filter_subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions[label_num],
+                    explain_data=self.explainer.explain_data,
+                    subset=filter_selection
+                )
+            else:
+                filter_subset_feat_imp = None
+            
             subtitle = f"Response: <b>{label_value}</b>"
         # regression
         elif self.explainer._case == "regression":
@@ -1379,7 +1422,18 @@ class SmartPlotter:
                 )
             else:
                 subset_feat_imp = None
+            if filter_selection is not None:
+                filter_subset_feat_imp = self.explainer.backend.get_global_features_importance(
+                    contributions=contributions,
+                    explain_data=self.explainer.explain_data,
+                    subset=filter_selection
+                )
+            else:
+                filter_subset_feat_imp = None
         addnote = ''
+        if filter_subset_feat_imp is not None:
+            filter_subset_feat_imp = filter_subset_feat_imp.reindex(global_feat_imp.index)
+            filter_subset_feat_imp.index = filter_subset_feat_imp.index.map(self.explainer.features_dict)
         if subset_feat_imp is not None:
             subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             subset_feat_imp.index = subset_feat_imp.index.map(self.explainer.features_dict)
@@ -1403,7 +1457,12 @@ class SmartPlotter:
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
-
+            if filter_subset_feat_imp is not None:
+                filter_subset_feat_imp.index = [
+                    '<b>' + str(f) + '</b>'
+                    if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
+                    else str(f) for f in filter_subset_feat_imp.index
+                ]
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
                     '<b>' + str(f) + '</b>'
@@ -1411,8 +1470,9 @@ class SmartPlotter:
                     else str(f) for f in subset_feat_imp.index
                 ]
 
-        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, title, addnote,
-                                        subtitle, width, height, file_name, auto_open, zoom)
+        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, filter_subset_feat_imp, 
+                                        title, addnote, subtitle, width, height, file_name, 
+                                        auto_open, zoom)
         return fig
 
     def plot_line_comparison(self,
@@ -2943,6 +3003,7 @@ class SmartPlotter:
 
     def scatter_plot_prediction(self,
                                 selection=None,
+                                index_subset=None,
                                 label=-1,
                                 subtitle=None,
                                 max_points=2000,
@@ -2983,22 +3044,26 @@ class SmartPlotter:
 
         # Sampling
         if selection is None:
-            if self.explainer.x_init.shape[0] <= max_points:
-                list_ind = self.explainer.x_init.index.tolist()
+            if index_subset is not None:
+                list_ind = index_subset
                 addnote = None
             else:
-                random.seed(41)
-                list_ind = random.sample(
-                    self.explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
+                if self.explainer.x_init.shape[0] <= max_points:
+                    list_ind = self.explainer.x_init.index.tolist()
+                    addnote = None
+                else:
+                    random.seed(41)
+                    list_ind = random.sample(
+                        self.explainer.x_init.index.tolist(), max_points)
+                    addnote = "Length of random Subset: "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
-                addnote = "Length of user-defined Subset : "
+                addnote = "Length of user-defined Subset: "
             else:
                 random.seed(41)
                 list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         else:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:
@@ -3033,7 +3098,6 @@ class SmartPlotter:
                 df_pred['bad_predict'] = 1
                 df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'bad_predict'] = 0
                 subtitle = f"Response: <b>{label_value}</b>"
-
             # Plot distribution
             fig.add_trace(go.Violin(
                 x=df_pred['target'].values.flatten(),
@@ -3148,7 +3212,13 @@ class SmartPlotter:
         # Add traces, title and template
         title = "True Values Vs Predicted Values"
         if subtitle or addnote:
-            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            #title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            if subtitle and addnote:
+                title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            elif subtitle:
+                title += "<br><sup>" + subtitle + "</sup>"
+            else:
+                title += "<br><sup>" + addnote + "</sup>"
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])

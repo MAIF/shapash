@@ -11,7 +11,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from dash import dcc
 from dash import html
-from dash import MATCH, ALLSMALLER
+from dash import MATCH, ALL
 from dash.dependencies import Output, Input, State
 from flask import Flask
 import pandas as pd
@@ -357,7 +357,7 @@ class SmartApp:
             figure=go.Figure(), id='feature_selector'
         )
 
-        # Component for prediction picking graph
+        # Component for the graph prediction picking
         self.components['graph']['prediction_picking'] = MyGraph(
             figure=go.Figure(), id='prediction_picking'
         )
@@ -366,18 +366,53 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
-        # component fo filter dataset
+        # Component which contains buttons to add or reset filters on the dataset
         self.components['filter']['filter_dataset'] = dbc.Col(
-            [ html.Div([
-                html.Div(id='dynamic-dropdown-container', children=[]),
-                html.Hr(),
-                html.Div([dbc.Button("Add Filter", id="dynamic-add-filter", n_clicks=0,
-                           color='warning', style={'margin-right': '20px'}),
-                          dbc.Button("Reset Filter", id="dynamic-reset-filter", n_clicks=0,
-                           color='warning', disabled=True)
-                          ])
-                ])
-                ], style={'maxheight': '22rem', 'height': '21rem', 'zIndex': 800},
+            [dbc.Row(
+                html.Div(
+                    # Titles
+                    id='main',
+                    children=[
+                        html.Div(
+                                id='graphs',
+                                children=[
+                                    dbc.Button(
+                                        id='add_dropdown_button',
+                                        children='Add Filter',
+                                        color='warning',
+                                        size='sm',
+                                        style={'margin-right': '20px'}
+                                    ),
+                                    dbc.Button(
+                                        id='reset_dropdown_button',
+                                        children='Reset all existing filters',
+                                        color='warning', disabled=True,
+                                        size='sm'
+                                    ),
+                                    html.Div(
+                                        id='dropdowns_container',
+                                        children=[]
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                ),
+                dbc.Row(
+                    html.Div([
+                        html.Br(),
+                        dbc.Button(
+                                id='apply_filter',
+                                children='Apply filters',
+                                color='warning',
+                                size='sm',
+                                style={'display': 'none'}
+                                ),
+                        html.Div(id='test')
+                        ],
+                      )
+                    )
+            ], style={'maxheight': '22rem', 'height': '21rem', 'zIndex': 800},
                 className='filter'
             )
 
@@ -588,7 +623,7 @@ class SmartApp:
                                             ]),
                                        #className="card",
                                         active_tab_class_name="fw-bold fst-italic",
-                                        style={'height': '24.1rem'},
+                                        style={'height': '25.1rem'},
                                         label='Dataset Filters',
                                         label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
@@ -961,7 +996,7 @@ class SmartApp:
                         'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '92vh', 'maxHeight': '92vh',
+                        'height': '89vh', 'maxHeight': '89vh',
                     }
                     return this_style_card, style_component
 
@@ -1031,6 +1066,7 @@ class SmartApp:
     def callback_generator(self):
         app = self.app
 
+
         @app.callback(
             [
                 Output('dataset', 'data'),
@@ -1039,26 +1075,54 @@ class SmartApp:
                 Output('dataset', 'active_cell'),
             ],
             [
-                Input('dataset', 'sort_by'),
-                Input('dataset', "filter_query"),
                 Input('prediction_picking', 'selectedData'),
                 Input('clear_filter', 'n_clicks'),
-                Input('modal', 'is_open')
+                Input('modal', 'is_open'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')
             ],
-            [State('rows', 'value'),
-             State('name', 'value')]
+            [
+                State('rows', 'value'),
+                State('name', 'value'),
+                State({'type': 'var_dropdown', 'index': ALL}, 'value'),
+                State({'type': 'var_dropdown', 'index': ALL}, 'id'),
+                State({'type': 'dynamic-str', 'index': ALL}, 'value'),
+                State({'type': 'dynamic-str', 'index': ALL}, 'id'),
+                State({'type': 'dynamic-bool', 'index': ALL}, 'value'),
+                State({'type': 'dynamic-bool', 'index': ALL}, 'id'),
+                State({'type': 'lower', 'index': ALL}, 'value'),
+                State({'type': 'lower', 'index': ALL}, 'id'),
+                State({'type': 'upper', 'index': ALL}, 'value'),
+                State({'type': 'upper', 'index': ALL}, 'id')
+            ]
+            
         )
-        def update_datatable(sort_by,
-                             filter_query,
-                             selected_data,
+        def update_datatable(selected_data,
                              clear_filter,
                              is_open,
+                             nclicks_apply,
+                             nclicks_reset,
+                             nclicks_del,
                              rows,
-                             name):
+                             name,
+                             val_feature,
+                             id_feature,
+                             val_str_modality,
+                             id_str_modality,
+                             val_bool_modality,
+                             id_bool_modality,
+                             val_lower_modality,
+                             id_lower_modality,
+                             val_upper_modality,
+                             id_upper_modality):
             """
             update datatable according to sorting, filtering and settings modifications
             """
             ctx = dash.callback_context
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
             active_cell = no_update
             df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
@@ -1084,19 +1148,34 @@ class SmartApp:
 
             elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
                 df = self.round_dataframe
+            elif button_id == 'reset_dropdown_button':
+               df = self.round_dataframe
+            elif button_id == 'apply_filter':
+                feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
+                str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
+                bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
+                lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
+                upper_id = [id_upper_modality[i]['index'] for i in range(len(id_upper_modality))]
+                df = self.round_dataframe
+                if len(feature_id) > 0:
+                    for i in range(len(feature_id)):
+                        if feature_id[i] in str_id:
+                            position = np.where(np.array(str_id) == feature_id[i])[0][0]
+                            if position is not None:
+                                df = df[df[val_feature[i]].isin(val_str_modality[position])]
+                        elif feature_id[i] in bool_id:
+                            position = np.where(np.array(bool_id) == feature_id[i])[0][0]
+                            if position is not None:
+                                df = df[df[val_feature[i]] == val_bool_modality[position]]
+                        elif feature_id[i] in lower_id:
+                            position = np.where(np.array(lower_id) == feature_id[i])[0][0]
+                            if position is not None:
+                                df = df[(df[val_feature[i]] >= val_lower_modality[position]) & 
+                                          (df[val_feature[i]] <= val_upper_modality[position])]
 
-            if filter_query:
-                df = apply_filter(self.round_dataframe, filter_query)
-
-            if len(sort_by):
-                df = df.sort_values(
-                    [col['column_id'] for col in sort_by],
-                    ascending=[
-                        col['direction'] == 'asc'
-                        for col in sort_by
-                    ],
-                    inplace=False
-                )
+            else:
+                raise dash.exceptions.PreventUpdate
+        
             self.components['table']['dataset'].data = df.to_dict('records')
             self.components['table']['dataset'].tooltip_data = [
                 {
@@ -1104,7 +1183,6 @@ class SmartApp:
                     for column, value in row.items()
                 } for row in df.to_dict('rows')
             ]
-
             return (
                 self.components['table']['dataset'].data,
                 self.components['table']['dataset'].tooltip_data,
@@ -1122,6 +1200,8 @@ class SmartApp:
                 Input('dataset', 'data'),
                 Input('prediction_picking', 'selectedData'),
                 Input('clear_filter', 'n_clicks'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
                 Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
                 Input('bool_groups', 'on'),
@@ -1137,6 +1217,8 @@ class SmartApp:
                                       data,
                                       selected_data,
                                       clear_filter,
+                                      apply_filter,
+                                      reset_filter,
                                       is_open,
                                       n_clicks,
                                       bool_group,
@@ -1144,7 +1226,6 @@ class SmartApp:
                                       clickData,
                                       filter_query,
                                       features):
-           
             """
             update feature importance plot according to selected label and dataset state.
             """
@@ -1154,6 +1235,7 @@ class SmartApp:
             else:
                 zoom_active = True
             selection = None
+            filter_selection = None  # For filtered subset
             ctx = dash.callback_context
             selected_feature = self.explainer.inv_features_dict.get(
                 clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
@@ -1188,8 +1270,15 @@ class SmartApp:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                 selection = row_ids
+                filter_selection = self.list_index
             elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
                 selection = None
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                self.list_index = [d['_index_'] for d in data]
+                filter_selection = None
+            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                self.list_index = [d['_index_'] for d in data]
+                filter_selection = [d['_index_'] for d in data]
             else:
                 self.last_click_data = clickData
                 if zoom_active:
@@ -1203,12 +1292,13 @@ class SmartApp:
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
-            selection = self.list_index if filter_query else selection
+            # selection = self.list_index if filter_query else selection
 
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
                     max_features=features,
                     selection=selection,
+                    filter_selection=filter_selection,
                     label=self.label,
                     group_name=group_name,
                     display_groups=bool_group,
@@ -1237,7 +1327,10 @@ class SmartApp:
             [
                 Input('global_feature_importance', 'clickData'),
                 Input('prediction_picking', 'selectedData'),
+                Input('dataset', 'data'),
                 Input('clear_filter', 'n_clicks'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('modal', 'is_open'),
                 Input('ember_feature_selector', 'n_clicks')
@@ -1249,7 +1342,10 @@ class SmartApp:
         )
         def update_feature_selector(feature,
                                     selected_data,
+                                    data,
                                     clear_filter,
+                                    apply_filter,
+                                    reset_filter,
                                     label,
                                     is_open,
                                     click_zoom,
@@ -1264,6 +1360,7 @@ class SmartApp:
                 zoom_active = False
             else:
                 zoom_active = True  # To check if zoom is activated
+            filter_applied = None
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
@@ -1281,23 +1378,38 @@ class SmartApp:
                     # Removing bold
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     # If we click on global sample in feature importance :
-                    print(self.components['graph']['global_feature_importance'].figure['data'][0]['name'])
-                    if self.components['graph']['global_feature_importance'].figure['data'][0]['name'] == 'Global':
-                        if feature['points'][0]['curveNumber'] == 0 and \
-                                len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                            self.subset = self.list_index
-                        else:
-                            self.subset = None
-                    # If we click on subset sample in feature importance
-                    else:
-                        if feature['points'][0]['curveNumber'] == 0 and \
-                                len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                    # if self.components['graph']['global_feature_importance'].figure['data'][0]['name'] == 'Global':
+                    #     if feature['points'][0]['curveNumber'] == 0 and \
+                    #             len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                    #         print('on est la')
+                    #         self.subset = self.list_index
+                    #     else:
+                    #         print('plutot ici')
+                    #         self.subset = None
+                    # # If we click on subset sample in feature importance
+                    #     #self.subset = self.list_index
+                    # else:
+                    # print(self.components['graph']['global_feature_importance'].figure['data'])
+                    # print(feature['points'][0]['curveNumber'])
+                    if feature['points'][0]['curveNumber'] == 0 and \
+                             len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                        if selected_data is not None:
+                            print('ici')
                             row_ids = []
                             for p in selected_data['points']:
                                 row_ids.append(p['customdata'])
                             self.subset = row_ids
                         else:
-                            self.subset = None     
+                            self.subset = self.list_index
+                    else:
+                        self.subset = self.list_index
+                       # #print(filter_applied)
+                       #  if filter_applied:
+                       #      print('applied')
+                       #      self.subset = self.list_index
+                       #  else:
+                       #      print('plutot la')
+                       #      self.subset = None
             elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
                 row_ids = []
                 if selected_data is not None:
@@ -1306,6 +1418,12 @@ class SmartApp:
                 self.subset = row_ids
             elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
                 self.subset = None
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                self.subset = None
+                filter_applied = False
+            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                self.subset = [d['_index_'] for d in data] 
+                filter_applied = True
             else:
                 if zoom_active:
                     row_ids = []
@@ -1329,10 +1447,10 @@ class SmartApp:
             self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
             subset_graph = True if self.subset is not None else False
             self.components['graph']['feature_selector'].adjust_graph(
-                subset_graph=subset_graph,
                 x_ax=truncate_str(self.selected_feature, 110),
                 y_ax='Contribution')
             return self.components['graph']['feature_selector'].figure
+
 
         @app.callback(
             [
@@ -1342,7 +1460,9 @@ class SmartApp:
             [
                 Input('feature_selector', 'clickData'),
                 Input('prediction_picking', 'clickData'),
-                Input('dataset', 'active_cell')
+                Input('dataset', 'active_cell'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks')
             ],
             [
                 State('dataset', 'data'),
@@ -1352,12 +1472,15 @@ class SmartApp:
         def update_index_id(click_data,
                             prediction_picking,
                             cell,
+                            apply_filter,
+                            reset_filter,
                             data,
                             current_index_id):
             """
             update index value according to active cell and click data on feature plot.
             """
             ctx = dash.callback_context
+            selected = None
             if ctx.triggered[0]['prop_id'] != 'dataset.data':
                 if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                     selected = click_data['points'][0]['customdata'][1]
@@ -1372,6 +1495,12 @@ class SmartApp:
                         selected = current_index_id  # Get actual value in field to refresh the selected value
                 elif ctx.triggered[0]['prop_id'] == '.':
                     selected = data[0]['_index_']
+                elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                    selected = data[cell['row']]['_index_']
+                elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                    selected = data[cell['row']]['_index_']
+                else:
+                    selected = data[cell['row']]['_index_']
             else:
                 raise PreventUpdate
             return selected, True
@@ -1448,7 +1577,7 @@ class SmartApp:
                 Input('prediction_picking', 'clickData'),
                 Input("validation", "n_clicks"),
                 Input('bool_groups', 'on'),
-                Input('ember_detail_feature', 'n_clicks')
+                Input('ember_detail_feature', 'n_clicks'),
             ],
             [
                 State('index_id', 'value'),
@@ -1473,7 +1602,6 @@ class SmartApp:
             update local explanation plot according to app changes.
             """
             click = 2 if click_zoom is None else click_zoom
-            print(click_zoom)
             if click % 2 == 0:
                 zoom_active = False
             else:
@@ -1492,16 +1620,13 @@ class SmartApp:
                 else:
                     zoom_active = zoom_active
                     # raise PreventUpdate
-
-            if selected is None:
+            else:
                 selected = index
-
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
                 sign = (None if negative == [1] else True)
             else:
                 sign = (False if negative == [1] else None)
-
             self.explainer.filter(threshold=threshold,
                                   features_to_hide=masked,
                                   positive=sign,
@@ -1594,6 +1719,9 @@ class SmartApp:
             Output(component_id='prediction_picking', component_property='figure'),
             [
                 Input('global_feature_importance', 'clickData'),
+                Input('dataset', 'data'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('modal', 'is_open'),
                 Input('ember_prediction_picking', 'n_clicks')
@@ -1604,6 +1732,9 @@ class SmartApp:
             ]
         )
         def update_prediction_picking(feature,
+                                      data,
+                                      apply_filter,
+                                      reset_filter,
                                       label,
                                       is_open,
                                       click_zoom,
@@ -1618,6 +1749,7 @@ class SmartApp:
                 zoom_active = False
             else:
                 zoom_active = True  # To knoow il click zoom is activate
+            index_subset = None
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
@@ -1630,11 +1762,16 @@ class SmartApp:
 
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                index_subset = None
+            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                index_subset = [d['_index_'] for d in data]
             else:
                 raise PreventUpdate
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
+                index_subset=index_subset,
                 max_points=points,
                 label=self.label,
                 zoom=zoom_active
@@ -1643,7 +1780,6 @@ class SmartApp:
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
             subset_graph = True if self.subset is not None else False
             self.components['graph']['prediction_picking'].adjust_graph(
-                subset_graph=subset_graph,
                 x_ax="Target",
                 y_ax="Prediction")
 
@@ -1736,119 +1872,91 @@ class SmartApp:
             if n1 or n2:
                 return not is_open
             return is_open
-
-        @app.callback([Output('dynamic-add-filter', 'n_clicks'),
-                      Output('dynamic-reset-filter', 'n_clicks')],
-                      [Input('dynamic-reset-filter', 'n_clicks')])
-        def update_add_click(n_clicks):
-            """
-            Function used to reset the number of clicks on add filter button
-            to 0 if we click on reset filter button.
-            ---------------------------------------------------------------
-            n_clicks: click on reset filter
-            ---------------------------------------------------------------
-            return 0
-            """
-            return 0, 0
-
+        
+        # Add or remove plot blocs in the 'dropdowns_container'
         @app.callback(
-            Output('dynamic-dropdown-container', 'children'),
-            [Input('dynamic-add-filter', 'n_clicks'),
-             Input('dynamic-reset-filter', 'n_clicks')],
-            [State('dynamic-dropdown-container', 'children')])
-        def display_dropdowns(n_clicks_add,
-                              n_clicks_reset,
-                              children):
-            """
-            Function used to create new children component when we click on
-            add Filter. This children contains a div for output label,
-            a dropdown button to select variable to filter and an other div
-            that will contain modalities choices.
-            ---------------------------------------------------------------
-            n_click_add: number of click on Add filter button
-            children : list of elements of dynamic dropdown container
-            ---------------------------------------------------------------
-            return children
-            """
-            ctx = dash.callback_context
-            new_element = html.Div([
-                html.Br(),
-                html.Div(
-                    id={
-                        'type': 'dynamic-output-label',
-                        'index': n_clicks_add
-                    }
-                ),
-                html.Div([
-                    html.Div(dcc.Dropdown(
-                        [{'label': i, 'value': i} for i in self.round_dataframe.columns],
-                        id={
-                            'type': 'dynamic-dropdown',
-                            'index': n_clicks_add
-                        },
-                        ),
-                        id={
-                            'type': 'div_dynamic-dropdown',
-                            'index': n_clicks_add
-                        },
-                        style={"width": "50%"}
-                        ),
-                    html.Div(id={
-                                'type': 'dynamic-output',
-                                'index': n_clicks_add
-                                },
-                             style={'width': '100%'}
-                             ),
-                    html.Div(id={
-                            'type': 'dynamic-reset-output',
-                            'index': n_clicks_add
-                        }, style={'width': '50%'})
-                ], style={'display': 'flex'})
-            ]) 
-            if ctx.triggered[0]['prop_id'] == 'dynamic-reset-filter.n_clicks':
-                children = [new_element]
-            else:
-                children.append(new_element)
-            return children
-
-        # @app.callback(
-        #     Output({'type': 'div_dynamic-dropdown', 'index': MATCH}, 'children'),
-        #     [Input({'type': 'dynamic-reset-output', 'index': MATCH}, 'n_clicks'),
-        #      Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'id')],
-        #     [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')]
-        #     )
-        # def display_dropdowns_with_reset(clicks, id, value): 
-        #     ctx = dash.callback_context
-        #     print(ctx.triggered[0])
-        #     if clicks != None:
-        #         if clicks > 0:
-        #             return html.Div()
-        #         else:
-        #             element = dcc.Dropdown(
-        #                 [{'label': i, 'value': i} for i in self.round_dataframe.columns],
-        #                 id={
-        #                     'type': 'dynamic-dropdown',
-        #                     'index': id['index']
-        #                 },
-        #                 value=value
-        #                 )
-        #             return element
-        #     else:
-        #         element = dcc.Dropdown(
-        #                 [{'label': i, 'value': i} for i in self.round_dataframe.columns],
-        #                 id={
-        #                     'type': 'dynamic-dropdown',
-        #                     'index': id['index']
-        #                 },
-        #                 value=value
-        #                 )
-        #         return element
-
-        @app.callback(
-            Output('dynamic-reset-filter', 'disabled'),
-            [Input('dynamic-add-filter', 'n_clicks')]
+            Output('dropdowns_container', 'children'),
+            [
+            Input('add_dropdown_button', 'n_clicks'),
+            Input('reset_dropdown_button', 'n_clicks'),
+            Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')
+            ],
+            [
+            State('dropdowns_container', 'children')
+            ]
         )
-        def update_reset_button(n_click):
+        def manage_filter(n_clicks_add,
+                          n_clicks_rm,
+                          n_clicks_reset,
+                          currents_filters):
+            
+            # Context and init handling (no action)
+            ctx = dash.callback_context
+            if not ctx.triggered :
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+                     
+            # Creation of a new graph
+            if button_id == 'add_dropdown_button':
+                # ID index definition
+                if n_clicks_add is None :
+                    index_id = 0
+                else:
+                    index_id = n_clicks_add
+                # Appending a dropdown block to 'dropdowns_container'children
+                subset_filter = html.Div(
+                    id={'type': 'bloc_div',
+                        'index': index_id},
+                    children=[
+                        html.Div([html.Br(),
+                        html.Div(
+                            id={'type': 'dynamic-output-label',
+                                'index': index_id},
+                        )]),
+                        html.Div([
+                            html.Div(dcc.Dropdown(
+                            id={'type': 'var_dropdown',
+                                'index': index_id},
+                            options=[{'label': i, 'value': i} for i in self.round_dataframe.columns],
+                            placeholder="Variable"
+                        ), style={"width": "30%"}),
+                        html.Div(
+                             id={'type': 'dynamic-output',
+                                'index': index_id},
+                             style={"width": "50%"}
+                            ),
+                        dbc.Button(
+                            id={'type': 'del_dropdown_button',
+                                'index': index_id},
+                            children='del',
+                            color='warning',
+                            size='sm'
+                        )
+                            
+                        ], style={'display': 'flex'})
+                    ]
+                )
+                return currents_filters + [subset_filter]
+            elif button_id == 'reset_dropdown_button':
+                return [html.Div(
+                    id={'type': 'bloc_div',
+                        'index': 0},
+                    children=[])]
+            # Removal of an existing filter
+            else:
+                filter_id_to_remove = eval(button_id)['index']
+                return [gr for gr in currents_filters
+                        if gr['props']['id']['index'] != filter_id_to_remove]
+
+        @app.callback(
+            Output('reset_dropdown_button', 'disabled'),
+            [Input('add_dropdown_button', 'n_clicks'),
+             Input('reset_dropdown_button', 'n_clicks'),
+             Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')]
+        )
+        def update_disabled_reset_button(n_click_add,
+                                         n_click_reset,
+                                         n_click_del):
             """
             Function used to disabled or not the reset filter button.
             This button is disabled if there is no filter added.
@@ -1857,17 +1965,54 @@ class SmartApp:
             ---------------------------------------------------------------
             return boolean
             """
-            if n_click > 0:
+            ctx = dash.callback_context
+            if not ctx.triggered :
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+            if button_id == 'add_dropdown_button':
                 return False
-            else:
+            elif button_id == 'reset_dropdown_button':
                 return True
+            else:
+                return False
+            
+        @app.callback(
+            Output('apply_filter', 'style'),
+            [Input('add_dropdown_button', 'n_clicks'),
+             Input('reset_dropdown_button', 'n_clicks'),
+             Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')]
+        )
+        def update_style_apply_filter_button(n_click_add,
+                                             n_click_reset,
+                                             n_click_del):
+            """
+            Function used to display or not the apply filter button.
+            This button is only display if almost one filter was added.
+            ---------------------------------------------------------------
+            n_clicks: click on add filter
+            ---------------------------------------------------------------
+            return style of apply filter button
+            """
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
+            if button_id == 'add_dropdown_button':
+                return {'display': 'block'}
+            elif button_id == 'reset_dropdown_button':
+                return {'display': 'none'}
+            else:
+                return {'display': 'block'}
+
+        
         @app.callback(
             Output({'type': 'dynamic-output-label', 'index': MATCH}, 'children'),
-            Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
-            State({'type': 'dynamic-dropdown', 'index': MATCH}, 'id'),
+            Input({'type': 'var_dropdown', 'index': MATCH}, 'value'),
+            State({'type': 'var_dropdown', 'index': MATCH}, 'id'),
         )
-        def update_label_filter(value, id):
+        def update_label_filter(value,
+                                id):
             """
             Function used to disabled or not the reset filter button.
             This button is disabled if there is no filter added.
@@ -1879,67 +2024,17 @@ class SmartApp:
             if value is not None:
                 return html.Label("Variable {} is filtered".format(value))
             else:
-                return html.Label('select variable to filter')
+                return html.Label('Select variable to filter')
 
         @app.callback(
-            Output({'type': 'dynamic-reset-output', 'index': MATCH}, 'children'),
-            [Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')],
-            [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'id')]
+        Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
+        [Input({'type': 'var_dropdown', 'index': MATCH}, 'value'),
+         Input({'type': 'var_dropdown', 'index': MATCH}, 'id'),
+         Input('add_dropdown_button', 'n_clicks')],
         )
-        def display_reset_output(value, id):
-            """
-            Function used to create matching reset button (one button by filter)
-            ---------------------------------------------------------------
-            value: value selected on the dynamic dropdown button
-            id: id of the dynamic dropdown button
-            ---------------------------------------------------------------
-            return button if the value is not None else an empty Div
-            """
-            if (value is not None):
-                new_element = dbc.Button("X",
-                                         id={
-                                             'type': 'reset_id_filter',
-                                             'index': id['index']
-                                             },
-                                         color='warning',
-                                         size='sm')
-            else:
-                new_element = html.Div()
-            return new_element
-        
-        @app.callback(
-            [Output({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
-             Output({'type': 'dynamic-reset-output', 'index': MATCH}, 'style')],
-            [Input({'type': 'dynamic-reset-output', 'index': MATCH}, 'n_clicks')],
-            [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')]
-            )
-        def display_dropdowns_with_reset(clicks, value):
-            if clicks is not None:
-                if clicks > 0:
-                    print('oui')
-                    return None, 0
-                else:
-                    return value, clicks
-            else:
-                return value,  clicks
-        
-        # @app.callback(
-        #     Output({'type': 'dynamic-str', 'index': MATCH}, 'value'),
-        #     [ Input({'type': 'dynamic-str', 'index': MATCH}, 'value'),
-        #       Input({'type': 'dynamic-str', 'index': ALLSMALLER}, 'value')]
-        #     )
-        # def update_str_component(val, previous_value):
-        #     print('previous_value {}'.format(previous_value))
-        #     return val
-        
-        @app.callback(
-            Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
-            [Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
-             Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'id'),
-             Input('dynamic-add-filter', 'n_clicks'),
-             Input({'type': 'dynamic-output', 'index': MATCH}, 'children')]
-            )
-        def display_output(value, id, add_click, children):
+        def display_output(value,
+                           id,
+                           nclick):
             """
             Function used to create modalities choices. Componenents are different
             according to the type of the selected variable. 
@@ -1955,82 +2050,60 @@ class SmartApp:
             ---------------------------------------------------------------
             return modalities components
             """
+            # Context and init handling (no action)
             ctx = dash.callback_context
-            print('create_output')
-
-            if value is not None:
-                if type(self.round_dataframe[value].iloc[0]) == bool:
-                    # if ctx.triggered[0]['prop_id'] == 'dynamic-add-filter.n_clicks':
-                    #         bool_value = children['props']['children']['props']['value']
-                    # else:
-                    if id['index'] != add_click:
-                        bool_value = children['props']['children']['props']['value']
-                    else:
-                        bool_value = self.round_dataframe[value].iloc[0]
-                    new_element = html.Div(dcc.RadioItems(
-                        [{'label': val, 'value': val} for val in self.round_dataframe[value].unique()],
-                        id={'type': 'dynamic-bool',
-                            'index': id['index']},
-                        value=bool_value,
-                        # value=self.round_dataframe[value].iloc[0],
-                        inline=False
-                        ), style={"width": "50%", 'margin-left': '20px'})
-                elif (type(self.round_dataframe[value].iloc[0]) == str) | ((type(self.round_dataframe[value].iloc[0]) == np.int64) & (len(self.round_dataframe[value].unique()) <= 10)):
-                    # if ctx.triggered[0]['prop_id'] == 'dynamic-add-filter.n_clicks':
-                    #      print('ouiiiiiii')
-                    #      str_values = children['props']['children']['props']['value']
-                    #      print(str_values)
-                    # else:
-                    #     print('aussi')
-                    if id['index'] != add_click:
-                        str_values = children['props']['children']['props']['value']
-                    else:
-                        str_values = []
-                    new_element = html.Div(dcc.Dropdown(
-                        id={
-                           'type': 'dynamic-str',
-                           'index': id['index']
-                        },
-                        options=[{'label': i, 'value': i} for i in self.round_dataframe[value].unique()],
-                        multi=True,
-                        #value=str_values
-                        ), style={"width": "50%", 'margin-left': '20px'})
-                else:
-                    # if ctx.triggered[0]['prop_id'] == 'dynamic-add-filter.n_clicks':
-                    #     lower_value = children['props']['children'][0]['props']['value']
-                    #     upper_value = children['props']['children'][2]['props']['value']
-                    # else:
-                    if id['index'] != add_click:
-                        lower_value = children['props']['children'][0]['props']['value']
-                        upper_value = children['props']['children'][2]['props']['value']
+            if not ctx.triggered :
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+                     
+            # Creation of a new graph
+            if button_id == 'add_dropdown_button':
+                raise dash.exceptions.PreventUpdate
+            else:
+                if value is not None:
+                    if type(self.round_dataframe[value].iloc[0]) == bool:
+                        new_element = html.Div(dcc.RadioItems(
+                            [{'label': val, 'value': val} for val in self.round_dataframe[value].unique()],
+                            id={'type': 'dynamic-bool',
+                                'index': id['index']},
+                            value=self.round_dataframe[value].iloc[0],
+                            inline=False
+                            ), style={"width": "50%", 'margin-left': '20px'})
+                    elif (type(self.round_dataframe[value].iloc[0]) == str) | ((type(self.round_dataframe[value].iloc[0]) == np.int64) & (len(self.round_dataframe[value].unique()) <= 10)):
+                        new_element = html.Div(dcc.Dropdown(
+                            id={
+                               'type': 'dynamic-str',
+                               'index': id['index']
+                            },
+                            options=[{'label': i, 'value': i} for i in self.round_dataframe[value].unique()],
+                            multi=True,
+                            ), style={"width": "50%", 'margin-left': '20px'})
                     else:
                         lower_value = 0.0
                         upper_value = 0.0
-                    new_element = html.Div([
-                                    dcc.Input(
-                                        id={
-                                        'type': 'lower',
-                                        'index': id['index']
-                                        },
-                                        value=lower_value,
-                                        type="number",
-                                        style={'width': '50px'}),
-                                    '  {}  '.format(value),
-                                    dcc.Input(
-                                        id={
-                                        'type': 'upper',
-                                        'index': id['index']
-                                        },
-                                        value=upper_value,
-                                        type="number",
-                                        style={'width': '50px'}
-                                    )
-                    ], style={'margin-left': '20px'})
-            else:
-                new_element = html.Div()
-            return new_element
-        
-        
+                        new_element = html.Div([
+                                        dcc.Input(
+                                            id={
+                                            'type': 'lower',
+                                            'index': id['index']
+                                            },
+                                            value=lower_value,
+                                            type="number",
+                                            style={'width': '50px'}),
+                                        ' <= {} <= '.format(value),
+                                        dcc.Input(
+                                            id={
+                                            'type': 'upper',
+                                            'index': id['index']
+                                            },
+                                            value=upper_value,
+                                            type="number",
+                                            style={'width': '50px'}
+                                        )
+                        ], style={'margin-left': '20px'})
+                else:
+                    new_element = html.Div()
+                return new_element
 
     def hl_tab_rows(selectedData: dict):
         row_ids = []

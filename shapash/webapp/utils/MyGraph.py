@@ -31,8 +31,6 @@ class MyGraph(dcc.Graph):
         }
 
     def adjust_graph(self,
-                     subtitle=None,
-                     subset_graph=False,
                      x_ax="",
                      y_ax=""):
         """
