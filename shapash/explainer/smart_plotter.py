@@ -499,7 +499,6 @@ class SmartPlotter:
     def plot_features_import(self,
                              feature_imp1,
                              feature_imp2=None,
-                             feature_imp3=None,
                              title='Features Importance',
                              addnote=None,
                              subtitle=None,
@@ -515,8 +514,6 @@ class SmartPlotter:
         feature_imp1 : pd.Series
             Feature importance computed with every rows
         feature_imp2 : pd.Series, optional (default: None)
-            The contributions associate
-        feature_imp3 : pd.Series, optional (default: None)
             The contributions associate
         title : str
             Title of the plot, default set to 'Features Importance'
@@ -599,43 +596,19 @@ class SmartPlotter:
             hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
             customdata=feature_imp1.index
         )
-        if feature_imp3 is not None:
-            bar3 = go.Bar(
-                    x=feature_imp3.round(4),
-                    y=feature_imp3.index,
-                    orientation='h',
-                    name='Global',
-                    marker=dict_style_bar1,
-                    hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
-                    customdata=feature_imp3.index
-                )
-            if feature_imp2 is not None:
-                bar2 = go.Bar(
-                    x=feature_imp2.round(4),
-                    y=feature_imp2.index,
-                    orientation='h',
-                    name='Subset',
-                    marker=dict_style_bar2,
-                    hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
-                    customdata=feature_imp2.index
-                )
-                data = [bar2, bar3]
-            else:
-                data = bar3
+        if feature_imp2 is not None:
+            bar2 = go.Bar(
+                x=feature_imp2.round(4),
+                y=feature_imp2.index,
+                orientation='h',
+                name='Subset',
+                marker=dict_style_bar2,
+                hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
+                customdata=feature_imp2.index
+            )
+            data = [bar2, bar1]
         else:
-            if feature_imp2 is not None:
-                bar2 = go.Bar(
-                    x=feature_imp2.round(4),
-                    y=feature_imp2.index,
-                    orientation='h',
-                    name='Subset',
-                    marker=dict_style_bar2,
-                    hovertemplate='Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>',
-                    customdata=feature_imp2.index
-                )
-                data = [bar2, bar1]
-            else:
-                data = bar1
+            data = bar1
 
         fig = go.Figure(data=data, layout=layout)
         fig.update_yaxes(ticktext=index_val,
@@ -1301,7 +1274,6 @@ class SmartPlotter:
     def features_importance(self,
                             max_features=20,
                             selection=None,
-                            filter_selection=None,
                             label=-1,
                             group_name=None,
                             display_groups=True,
@@ -1327,10 +1299,6 @@ class SmartPlotter:
         selection: list (optional, default None)
             This argument allows to represent the importance calculated with a subset.
             Subset features importance is compared to global in the plot
-            Argument must contains list of index, subset of the input DataFrame that we want to plot
-        filter_selection: list (optional, default None)
-            This argument allows to represent the importance calculated with a subset
-            that is the result of filters applied to the dataframe.
             Argument must contains list of index, subset of the input DataFrame that we want to plot
         label: integer or string (default -1)
             If the label is of string type, check if it can be changed to integer to select the
@@ -1402,15 +1370,6 @@ class SmartPlotter:
                 )
             else:
                 subset_feat_imp = None
-            if filter_selection is not None:
-                filter_subset_feat_imp = self.explainer.backend.get_global_features_importance(
-                    contributions=contributions[label_num],
-                    explain_data=self.explainer.explain_data,
-                    subset=filter_selection
-                )
-            else:
-                filter_subset_feat_imp = None
-            
             subtitle = f"Response: <b>{label_value}</b>"
         # regression
         elif self.explainer._case == "regression":
@@ -1423,18 +1382,7 @@ class SmartPlotter:
                 )
             else:
                 subset_feat_imp = None
-            if filter_selection is not None:
-                filter_subset_feat_imp = self.explainer.backend.get_global_features_importance(
-                    contributions=contributions,
-                    explain_data=self.explainer.explain_data,
-                    subset=filter_selection
-                )
-            else:
-                filter_subset_feat_imp = None
         addnote = ''
-        if filter_subset_feat_imp is not None:
-            filter_subset_feat_imp = filter_subset_feat_imp.reindex(global_feat_imp.index)
-            filter_subset_feat_imp.index = filter_subset_feat_imp.index.map(self.explainer.features_dict)
         if subset_feat_imp is not None:
             subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
             subset_feat_imp.index = subset_feat_imp.index.map(self.explainer.features_dict)
@@ -1458,12 +1406,6 @@ class SmartPlotter:
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
-            if filter_subset_feat_imp is not None:
-                filter_subset_feat_imp.index = [
-                    '<b>' + str(f) + '</b>'
-                    if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
-                    else str(f) for f in filter_subset_feat_imp.index
-                ]
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
                     '<b>' + str(f) + '</b>'
@@ -1471,9 +1413,9 @@ class SmartPlotter:
                     else str(f) for f in subset_feat_imp.index
                 ]
 
-        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, filter_subset_feat_imp, 
-                                        title, addnote, subtitle, width, height, file_name, 
-                                        auto_open, zoom)
+        fig = self.plot_features_import(global_feat_imp, subset_feat_imp,
+                                        title, addnote, subtitle, width,
+                                        height, file_name, auto_open, zoom)
         return fig
 
     def plot_line_comparison(self,
