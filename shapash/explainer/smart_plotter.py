@@ -279,7 +279,6 @@ class SmartPlotter:
             mode='markers + text',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
-            # customdata=feature_values.index.values,
             text=text_groups_features,
         )
         # To change ticktext when the label size is upper than 10
@@ -375,7 +374,6 @@ class SmartPlotter:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
         hv_temp = f'{feature_name} :<br />' + '%{customdata[0]}<br />Contribution: %{y:.4f}<extra></extra>'
-
         # add break line to X label
         max_len_by_row = max([round(
             50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
@@ -390,35 +388,38 @@ class SmartPlotter:
                 feature = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
                                                               (feature_values.iloc[:, 0] == i)].values.flatten()
                 customdata = np.stack((feature, 
-                                        contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                      (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
-                fig.add_trace(go.Violin(x=feature,
-                                        y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points=points_param,
-                                        pointpos=-0.1,
-                                        side='negative',
-                                        line_color=self._style_dict["violin_area_classif"][0],
-                                        showlegend=False,
-                                        jitter=jitter_param,
-                                        meanline_visible=True,
-                                        hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                 (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        ))
-                fig.add_trace(go.Violin(x=feature,
-                                        y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points=points_param,
-                                        pointpos=0.1,
-                                        side='positive',
-                                        line_color=self._style_dict["violin_area_classif"][1],
-                                        showlegend=False,
-                                        jitter=jitter_param,
-                                        meanline_visible=True,
-                                        scalemode='count',
-                                        hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
-                                                                 (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        ))
+                                       contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                     (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
+                
+                contribution = contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                            (feature_values.iloc[:, 0] == i)].values.flatten()
+                if len(contribution) != 0:
+                    fig.add_trace(go.Violin(x=feature,
+                                            y=contribution,
+                                            points=points_param,
+                                            pointpos=-0.1,
+                                            side='negative',
+                                            line_color=self._style_dict["violin_area_classif"][0],
+                                            showlegend=False,
+                                            jitter=jitter_param,
+                                            meanline_visible=True,
+                                            hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].values.flatten()
+                                            ))
+                    
+                    fig.add_trace(go.Violin(x=feature,
+                                            y=contribution,
+                                            points=points_param,
+                                            pointpos=0.1,
+                                            side='positive',
+                                            line_color=self._style_dict["violin_area_classif"][1],
+                                            showlegend=False,
+                                            jitter=jitter_param,
+                                            meanline_visible=True,
+                                            scalemode='count',
+                                            hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].values.flatten()
+                                            ))
 
             else:
                 feature = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
@@ -430,7 +431,7 @@ class SmartPlotter:
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
-                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten()
                                      ))
                 if pred is None:
                     fig.data[-1].points = points_param
@@ -440,6 +441,7 @@ class SmartPlotter:
         colorpoints = pred if self.explainer._case == "regression" else proba_values if \
             self.explainer._case == 'classification' else None
 
+        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp
         if colorpoints is not None:
             feature = feature_values.values.flatten()
             customdata = np.stack((feature_values.values.flatten(), 
@@ -449,7 +451,8 @@ class SmartPlotter:
                 y=contributions.values.flatten(),
                 mode='markers',
                 showlegend=False,
-                hovertext=hv_text
+                hovertext=hv_text,
+                hovertemplate=hovertemplate
             ))
 
         fig.update_layout(
@@ -474,8 +477,8 @@ class SmartPlotter:
             )
         else:
             fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
-            
-        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp
+
+        
         fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
         self._update_contributions_fig(fig=fig,
@@ -586,7 +589,6 @@ class SmartPlotter:
         else:
             index_val = feature_imp1.index
         
-        print(feature_imp3)
         bar1 = go.Bar(
             x=feature_imp1.round(4),
             y=feature_imp1.index,
@@ -1365,7 +1367,6 @@ class SmartPlotter:
         subtitle = None
         title = 'Features Importance'
         display_groups = self.explainer.features_groups is not None and display_groups
-        print(filter_selection)
         if display_groups:
             if group_name:  # Case where we have groups of features and we want to display only features inside a group
                 if group_name not in self.explainer.features_groups.keys():
