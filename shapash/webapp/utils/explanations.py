@@ -43,3 +43,19 @@ class Explanations:
                                     you can have the group details by clicking
                                     on the grouped variable.
                                     """
+        self.filter = """
+                      **To create a new filter**, you must click on the
+                      *Add Filter* button. You can create as many filters
+                      as you want.
+
+                      **To apply your filters**, you have to click on the
+                      *Apply Filter* button.
+
+                      If you want **to delete a filter line**, you can click
+                      on the *del* button and then click on the *Apply Filter*
+                      button again. **Please note** that the filters will not
+                      be updated if you do not click on the *Apply Filter* button.
+
+                      Finally, if you want **to delete all the filters**,
+                      you can click on the *Reset all existing filters* button.
+                      """
