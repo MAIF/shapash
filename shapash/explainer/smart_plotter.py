@@ -1076,6 +1076,7 @@ class SmartPlotter:
     def contribution_plot(self,
                           col,
                           selection=None,
+                          index_subset=None,
                           label=-1,
                           violin_maxf=10,
                           max_points=2000,
@@ -1156,7 +1157,7 @@ class SmartPlotter:
             else:
                 col_label = col_name
 
-        list_ind, addnote = self.explainer.plot._subset_sampling(selection, max_points)
+        list_ind, addnote = self.explainer.plot._subset_sampling(selection, index_subset, max_points)
 
         col_value = None
         proba_values = None
@@ -3213,6 +3214,8 @@ class SmartPlotter:
         ----------
         selection: list (optional)
             Contains list of index, subset of the input DataFrame that we want to plot
+        index_subset: list (optional)
+            Add description
         max_points: int (optional, default: 2000)
             maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
