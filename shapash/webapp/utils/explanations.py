@@ -4,7 +4,15 @@ Created on Mon Oct  3 15:12:08 2022
 
 @author: Florine
 """
+
+
 class Explanations:
+    """
+        Contains the explanations of all "?" buttons in the app.
+        ----------
+        explanations: object
+            SmartApp instance to point to.
+    """
 
 
     def __init__(self):
@@ -58,3 +66,19 @@ class Explanations:
                                 the group detail is available by clicking on the grouped variable
                                 (displayed in dark orange).
                                 """
+        self.filter = """
+                      **To create a new filter**, you must click on the
+                      *Add Filter* button. You can create as many filters
+                      as you want.
+
+                      **To apply your filters**, you have to click on the
+                      *Apply Filter* button.
+
+                      If you want **to delete a filter line**, you can click
+                      on the *del* button and then click on the *Apply Filter*
+                      button again. **Please note** that the filters will not
+                      be updated if you do not click on the *Apply Filter* button.
+
+                      Finally, if you want **to delete all the filters**,
+                      you can click on the *Reset all existing filters* button.
+                      """

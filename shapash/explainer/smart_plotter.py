@@ -279,11 +279,9 @@ class SmartPlotter:
             mode='markers + text',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
-            # customdata=feature_values.index.values,
             text=text_groups_features,
         )
         # To change ticktext when the label size is upper than 10
-        print(zoom)
         if (type(feature_values.values.flatten()[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
             feature_val = [
@@ -376,7 +374,6 @@ class SmartPlotter:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
         hv_temp = f'{feature_name} :<br />' + '%{customdata[0]}<br />Contribution: %{y:.4f}<extra></extra>'
-
         # add break line to X label
         max_len_by_row = max([round(
             50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
@@ -391,35 +388,38 @@ class SmartPlotter:
                 feature = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
                                                               (feature_values.iloc[:, 0] == i)].values.flatten()
                 customdata = np.stack((feature, 
-                                        contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                      (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
-                fig.add_trace(go.Violin(x=feature,
-                                        y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points=points_param,
-                                        pointpos=-0.1,
-                                        side='negative',
-                                        line_color=self._style_dict["violin_area_classif"][0],
-                                        showlegend=False,
-                                        jitter=jitter_param,
-                                        meanline_visible=True,
-                                        hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                 (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        ))
-                fig.add_trace(go.Violin(x=feature,
-                                        y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points=points_param,
-                                        pointpos=0.1,
-                                        side='positive',
-                                        line_color=self._style_dict["violin_area_classif"][1],
-                                        showlegend=False,
-                                        jitter=jitter_param,
-                                        meanline_visible=True,
-                                        scalemode='count',
-                                        hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
-                                                                 (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        ))
+                                       contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                     (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
+                
+                contribution = contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                            (feature_values.iloc[:, 0] == i)].values.flatten()
+                if len(contribution) != 0:
+                    fig.add_trace(go.Violin(x=feature,
+                                            y=contribution,
+                                            points=points_param,
+                                            pointpos=-0.1,
+                                            side='negative',
+                                            line_color=self._style_dict["violin_area_classif"][0],
+                                            showlegend=False,
+                                            jitter=jitter_param,
+                                            meanline_visible=True,
+                                            hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].values.flatten()
+                                            ))
+                    
+                    fig.add_trace(go.Violin(x=feature,
+                                            y=contribution,
+                                            points=points_param,
+                                            pointpos=0.1,
+                                            side='positive',
+                                            line_color=self._style_dict["violin_area_classif"][1],
+                                            showlegend=False,
+                                            jitter=jitter_param,
+                                            meanline_visible=True,
+                                            scalemode='count',
+                                            hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].values.flatten()
+                                            ))
 
             else:
                 feature = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
@@ -431,7 +431,7 @@ class SmartPlotter:
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
-                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten()
                                      ))
                 if pred is None:
                     fig.data[-1].points = points_param
@@ -441,6 +441,7 @@ class SmartPlotter:
         colorpoints = pred if self.explainer._case == "regression" else proba_values if \
             self.explainer._case == 'classification' else None
 
+        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp
         if colorpoints is not None:
             feature = feature_values.values.flatten()
             customdata = np.stack((feature_values.values.flatten(), 
@@ -450,7 +451,8 @@ class SmartPlotter:
                 y=contributions.values.flatten(),
                 mode='markers',
                 showlegend=False,
-                hovertext=hv_text
+                hovertext=hv_text,
+                hovertemplate=hovertemplate
             ))
 
         fig.update_layout(
@@ -461,7 +463,6 @@ class SmartPlotter:
         )
         
         # To change ticktext when the label size is upper than 10
-        print(feature)
         if (type(feature[0]) == str) & (zoom == False):
             feature_val = [x.replace('<br />', '') for x in np.unique(feature_values.values.flatten())]
             feature_val = [
@@ -476,8 +477,8 @@ class SmartPlotter:
             )
         else:
             fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
-            
-        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp
+
+        
         fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
         self._update_contributions_fig(fig=fig,
@@ -528,6 +529,7 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+        Zoom:
         """
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
@@ -583,6 +585,7 @@ class SmartPlotter:
             index_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
         else:
             index_val = feature_imp1.index
+        
         bar1 = go.Bar(
             x=feature_imp1.round(4),
             y=feature_imp1.index,
@@ -1272,7 +1275,7 @@ class SmartPlotter:
             this argument limit the number of hbar in features importance plot
             if max_features is 20, plot selects the 20 most important features
         selection: list (optional, default None)
-            This  argument allows to represent the importance calculated with a subset.
+            This argument allows to represent the importance calculated with a subset.
             Subset features importance is compared to global in the plot
             Argument must contains list of index, subset of the input DataFrame that we want to plot
         label: integer or string (default -1)
@@ -1297,6 +1300,8 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+        zoom: Boolean (optional)
+            Indicate if the graph is currently zoomed.
         Returns
         -------
         Plotly Figure Object
@@ -1304,12 +1309,10 @@ class SmartPlotter:
         --------
         >>> xpl.plot.features_importance()
         """
-
         self.explainer.compute_features_import(force=force)
         subtitle = None
         title = 'Features Importance'
         display_groups = self.explainer.features_groups is not None and display_groups
-
         if display_groups:
             if group_name:  # Case where we have groups of features and we want to display only features inside a group
                 if group_name not in self.explainer.features_groups.keys():
@@ -1381,7 +1384,6 @@ class SmartPlotter:
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
-
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
                     '<b>' + str(f) + '</b>'
@@ -1389,8 +1391,9 @@ class SmartPlotter:
                     else str(f) for f in subset_feat_imp.index
                 ]
 
-        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, title, addnote,
-                                        subtitle, width, height, file_name, auto_open, zoom)
+        fig = self.plot_features_import(global_feat_imp, subset_feat_imp,
+                                        title, addnote, subtitle, width,
+                                        height, file_name, auto_open, zoom)
         return fig
 
     def plot_line_comparison(self,
@@ -2921,6 +2924,7 @@ class SmartPlotter:
 
     def scatter_plot_prediction(self,
                                 selection=None,
+                                index_subset=None,
                                 label=-1,
                                 max_points=2000,
                                 width=900,
@@ -2958,7 +2962,7 @@ class SmartPlotter:
         """
         if self.explainer.y_target is not None:
             # Sampling
-            list_ind, addnote = self.explainer.plot._subset_sampling(selection, max_points)
+            list_ind, addnote = self.explainer.plot._subset_sampling(selection, index_subset, max_points)
 
             # Classification Case
             if self.explainer._case == "classification":
@@ -2970,8 +2974,12 @@ class SmartPlotter:
 
             # Add traces, title and template
             title = "True Values Vs Predicted Values"
-            if subtitle or addnote:
-                title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            if subtitle and addnote:
+                title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            elif subtitle:
+                title += "<br><sup>" + subtitle + "</sup>"
+            else:
+                title += "<br><sup>" + addnote + "</sup>"
             dict_t = copy.deepcopy(self._style_dict["dict_title"])
             dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
             dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
@@ -3197,7 +3205,7 @@ class SmartPlotter:
 
         return fig, subtitle
 
-    def _subset_sampling(self, selection = None, max_points = 2000):
+    def _subset_sampling(self, selection = None, index_subset=None, max_points = 2000):
         """
         Subset sampling for plots and create addnote for subtitle
 
@@ -3213,22 +3221,26 @@ class SmartPlotter:
 
         # Sampling
         if selection is None:
-            if self.explainer.x_init.shape[0] <= max_points:
-                list_ind = self.explainer.x_init.index.tolist()
+            if index_subset is not None:
+                list_ind = index_subset
                 addnote = None
             else:
-                random.seed(79)
-                list_ind = random.sample(
-                    self.explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
+                if self.explainer.x_init.shape[0] <= max_points:
+                    list_ind = self.explainer.x_init.index.tolist()
+                    addnote = None
+                else:
+                    random.seed(79)
+                    list_ind = random.sample(
+                        self.explainer.x_init.index.tolist(), max_points)
+                    addnote = "Length of random Subset: "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
-                addnote = "Length of user-defined Subset : "
+                addnote = "Length of user-defined Subset: "
             else:
                 random.seed(79)
                 list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         else:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:
