@@ -961,7 +961,9 @@ class SmartApp:
                 ),
             ],
             className="mt-12",
-            fluid=True
+            fluid=True,
+            # To drop the x scroll-bar
+            style={'overflow-x': 'hidden'}
         )
 
     def adjust_menu(self):
