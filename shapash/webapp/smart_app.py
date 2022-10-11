@@ -1633,19 +1633,38 @@ class SmartApp:
             else:
                 raise PreventUpdate
 
-            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
-                selection=self.subset,
-                max_points=points,
-                label=self.label,
-                zoom=zoom_active
-            )
+            if self.explainer.y_target is not None:
+                self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
+                    selection=self.subset,
+                    max_points=points,
+                    label=self.label,
+                    zoom=zoom_active
+                )
 
-            self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
-            subset_graph = True if self.subset is not None else False
-            self.components['graph']['prediction_picking'].adjust_graph(
-                subset_graph=subset_graph,
-                x_ax="Target",
-                y_ax="Prediction")
+                self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
+                subset_graph = True if self.subset is not None else False
+                self.components['graph']['prediction_picking'].adjust_graph(
+                    subset_graph=subset_graph,
+                    x_ax="True Values",
+                    y_ax="Predicted Values")
+            else:
+                fig = go.Figure()
+                fig.update_layout(
+                xaxis =  { "visible": False },
+                yaxis = { "visible": False },
+                annotations = [
+                    {
+                        "text": "Fill y_target on method compile() to display this plot",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {
+                            "size": 28
+                        }
+                    }
+                ]
+            )
+                self.components['graph']['prediction_picking'].figure = fig
 
             return self.components['graph']['prediction_picking'].figure
 

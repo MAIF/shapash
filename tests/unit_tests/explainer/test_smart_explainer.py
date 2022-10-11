@@ -11,6 +11,7 @@ import types
 import pandas as pd
 import numpy as np
 import catboost as cb
+from pandas.testing import assert_frame_equal
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from shapash import SmartExplainer
@@ -305,7 +306,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(clf, backend='acv', data=df[['x1', 'x2']])
         xpl.compile(x=df[['x1', 'x2']])
         assert xpl.backend.__class__.__name__ == 'AcvBackend'
-    
+
     def test_compile_5(self):
         """
         Unit test compile 5
@@ -321,7 +322,23 @@ class TestSmartExplainer(unittest.TestCase):
 
         xpl = SmartExplainer(clf, data=df[['x1', 'x2']], backend="lime")
         xpl.compile(x=df[['x1', 'x2']])
-        
+
+    def test_compile_6(self):
+        """
+        Unit test compile 6
+        checking compile method with y_target
+        """
+        df = pd.DataFrame(range(0, 21), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 10 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+        xpl = SmartExplainer(clf)
+        xpl.compile(x=df[['x1', 'x2']], y_target=df['y'])
+        assert xpl._case == "classification"
+        assert_frame_equal(xpl.y_target, df[['y']])
+        self.assertListEqual(xpl._classes, [0, 1])
 
     def test_filter_0(self):
         """
@@ -1093,7 +1110,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert predictor_1.preprocessing == xpl.preprocessing
         assert predictor_1.postprocessing == xpl.postprocessing
         assert all(predictor_1.features_types[feature] == str(xpl.x_init[feature].dtypes)
-                   for feature in xpl.x_init.columns )
+                   for feature in xpl.x_init.columns)
 
         assert predictor_2.mask_params == xpl.mask_params
 
@@ -1132,6 +1149,22 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.run_app()
 
         assert xpl.y_pred is not None
+
+    @patch('shapash.explainer.smart_explainer.SmartApp')
+    @patch('shapash.explainer.smart_explainer.CustomThread')
+    @patch('shapash.explainer.smart_explainer.get_host_name')
+    def test_run_app_2(self, mock_get_host_name, mock_custom_thread, mock_smartapp):
+        """
+        Test that when y_target is given
+        """
+        X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        contributions = pd.DataFrame([[0.1, -0.2, 0.3], [0.1, -0.2, 0.3], [0.1, -0.2, 0.3]])
+        y_true = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
+        model = DecisionTreeRegressor().fit(X, y_true)
+        xpl = SmartExplainer(model)
+        xpl.compile(contributions=contributions, x=X, y_target=y_true)
+        xpl.run_app()
+        assert xpl.y_target is not None
 
     @patch('shapash.report.generation.export_and_save_report')
     @patch('shapash.report.generation.execute_report')

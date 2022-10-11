@@ -1153,29 +1153,7 @@ class SmartPlotter:
             else:
                 col_label = col_name
 
-        # Sampling
-        if selection is None:
-            if self.explainer.x_init.shape[0] <= max_points:
-                list_ind = self.explainer.x_init.index.tolist()
-                addnote = None
-            else:
-                random.seed(41)
-                list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset: "
-        elif isinstance(selection, list):
-            if len(selection) <= max_points:
-                list_ind = selection
-                addnote = "Length of user-defined Subset: "
-            else:
-                random.seed(41)
-                list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset: "
-        else:
-            raise ValueError('parameter selection must be a list')
-        if addnote is not None:
-            addnote = add_text([addnote,
-                                f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
-                               sep='')
+        list_ind, addnote = self.explainer.plot._subset_sampling(selection, max_points)
 
         col_value = None
         proba_values = None
@@ -2944,13 +2922,13 @@ class SmartPlotter:
     def scatter_plot_prediction(self,
                                 selection=None,
                                 label=-1,
-                                subtitle=None,
                                 max_points=2000,
                                 width=900,
                                 height=600,
                                 file_name=None,
                                 auto_open=False,
-                                zoom=False):
+                                zoom=False
+                                ):
         """
         scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
         This plot represents Trues Values versus Predicted Values.
@@ -2969,8 +2947,6 @@ class SmartPlotter:
             maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
             nb: you can also limit the number using 'selection' parameter.
-        subtitle : String (default: None)
-            Subtitle to display
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 600)
@@ -2980,6 +2956,260 @@ class SmartPlotter:
         auto_open: bool (default=False)
             open automatically the plot
         """
+        if self.explainer.y_target is not None:
+            # Sampling
+            list_ind, addnote = self.explainer.plot._subset_sampling(selection, max_points)
+
+            # Classification Case
+            if self.explainer._case == "classification":
+                fig, subtitle = self.explainer.plot._prediction_classification_plot(list_ind, label)
+
+            # Regression Case
+            elif self.explainer._case == "regression":
+                fig, subtitle = self.explainer.plot._prediction_regression_plot(list_ind)
+
+            # Add traces, title and template
+            title = "True Values Vs Predicted Values"
+            if subtitle or addnote:
+                title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
+            dict_t = copy.deepcopy(self._style_dict["dict_title"])
+            dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+            dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+            dict_t['text'] = title
+            dict_xaxis['text'] = truncate_str('True Values', 110)
+            dict_yaxis['text'] = 'Predicted Values'
+
+            fig.update_traces(
+                marker={
+                    'size': 10,
+                    'opacity': 0.8,
+                    'line': {'width': 0.8, 'color': 'white'}
+                }
+            )
+
+            fig.update_layout(
+                template='none',
+                title=dict_t,
+                width=width,
+                height=height,
+                xaxis_title=dict_xaxis,
+                yaxis_title=dict_yaxis,
+                hovermode='closest'
+            )
+
+            fig.update_yaxes(automargin=True)
+            fig.update_xaxes(automargin=True)
+            if file_name:
+                plot(fig, filename=file_name, auto_open=auto_open)
+
+        else:
+            fig = go.Figure()
+            fig.update_layout(
+            xaxis =  { "visible": False },
+            yaxis = { "visible": False },
+            annotations = [
+                {
+                    "text": "Fill y_target on method compile() to display this plot",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "showarrow": False,
+                    "font": {
+                        "size": 28
+                    }
+                }
+            ]
+        )
+
+        return fig
+
+    def _prediction_classification_plot(self,
+                                list_ind,
+                                label=-1,
+                                ):
+        """
+        _prediction_classification_plot displays a Plotly violin plot of predictions in comparison to the target variable.
+        This plot represents Trues Values versus Predicted Values.
+
+        This plot allows the user to understand the distribution of predictions in comparison to the target variable.
+        With the web app, it is possible to select the bad predictions or a subset of predictions.
+
+        Parameters
+        ----------
+        label: integer or string (default -1)
+            If the label is of string type, check if it can be changed to integer to select the
+            good dataframe object.
+        list_ind: list
+            Contains list of index that we want to plot
+        """
+        fig = go.Figure()
+
+        label_num, _, label_value = self.explainer.check_label_name(label)
+        # predict proba Color scale
+        if hasattr(self.explainer.model, "predict_proba"):
+            if not hasattr(self.explainer, "proba_values"):
+                self.explainer.predict_proba()
+            if hasattr(self.explainer.model, "predict"):
+                if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
+                    self.explainer.predict()
+            # Assign proba values of the target
+            df_proba_target = self.explainer.proba_values.copy()
+            df_proba_target['proba_target'] = df_proba_target.iloc[:, label_num]
+            proba_values = df_proba_target[['proba_target']]
+            # Proba subset:
+            proba_values = proba_values.loc[list_ind, :]
+            target = self.explainer.y_target.loc[list_ind, :]
+            y_pred = self.explainer.y_pred.loc[list_ind, :]
+            df_pred = pd.concat([proba_values.reset_index(), y_pred.reset_index(drop=True),
+                target.reset_index(drop=True)], axis=1)
+            df_pred.set_index(df_pred.columns[0], inplace=True)
+            df_pred.columns = ["proba_values", "predict_class", "target"]
+            df_pred['bad_predict'] = 1
+            df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'bad_predict'] = 0
+            subtitle = f"Response: <b>{label_value}</b>"
+
+        # Plot distribution
+        fig.add_trace(go.Violin(
+            x=df_pred['target'].values.flatten(),
+            y=df_pred['proba_values'].values.flatten(),
+            points=False,
+            legendgroup='M', scalegroup='M', name='Good Prediction',
+            line_color=self._style_dict["violin_area_classif"][1],
+            pointpos=-0.1,
+            showlegend=False,
+            jitter=0.075,
+            meanline_visible=True,
+            spanmode="hard",
+            customdata=df_pred['proba_values'].index.values,
+            scalemode='count',
+            ))
+
+        # Plot points depending if bad or good prediction
+        df_good_predict = df_pred[(df_pred['bad_predict'] == 0)]
+        df_bad_predict = df_pred[(df_pred['bad_predict'] == 1)]
+        hv_text_good_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+        x, y, w, z in zip(df_good_predict.index, df_good_predict.proba_values.values.round(3).flatten(),
+        df_good_predict.predict_class.values.flatten(), df_good_predict.target.values.flatten())]
+        hv_text_bad_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+        x, y, w, z in zip(df_bad_predict.index, df_bad_predict.proba_values.values.round(3).flatten(),
+        df_bad_predict.predict_class.values.flatten(), df_bad_predict.target.values.flatten())]
+
+        fig.add_trace(go.Scatter(
+            x=df_good_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_good_predict)),
+            y=df_good_predict['proba_values'].values.flatten(),
+            mode='markers',
+            marker_color=self._style_dict["prediction_plot"][0],
+            showlegend=True,
+            name="Good Prediction",
+            hovertext=hv_text_good_predict,
+            hovertemplate='<b>%{hovertext}</b><br />',
+            customdata=df_good_predict['proba_values'].index.values,
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=df_bad_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_bad_predict)),
+            y=df_bad_predict['proba_values'].values.flatten(),
+            mode='markers',
+            marker_color=self._style_dict["prediction_plot"][1],
+            showlegend=True,
+            name="Bad Prediction",
+            hovertext=hv_text_bad_predict,
+            hovertemplate='<b>%{hovertext}</b><br />',
+            customdata=df_bad_predict['proba_values'].index.values,
+        ))
+
+        fig.update_layout(violingap=0, violinmode='overlay')
+        if self.explainer.label_dict is not None:
+            fig.update_xaxes(tickmode='array', tickvals=list(df_pred['target'].unique()),
+            ticktext=list(df_pred['target'].apply(lambda x: self.explainer.label_dict[x]).unique()))
+        if self.explainer.label_dict is None:
+            fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
+
+        return fig, subtitle
+
+    def _prediction_regression_plot(self,
+                                list_ind,
+                                ):
+        """
+        _prediction_regression_plot displays a Plotly scatter plot of predictions in comparison to the target variable.
+        This plot represents Trues Values versus Predicted Values.
+
+        This plot allows the user to understand the distribution of predictions in comparison to the target variable.
+        With the web app, it is possible to select the bad predictions or a subset of predictions.
+
+        Parameters
+        ----------
+        list_ind: list
+            Contains list of index that we want to plot
+        """
+        fig = go.Figure()
+
+        prediction_error = None
+        if self.explainer.y_pred is None:
+            if hasattr(self.explainer.model, "predict"):
+                self.explainer.predict()
+        if self.explainer.y_pred is not None:
+            if (self.explainer.y_target == 0).any()[0]:
+                prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values))
+                subtitle = "Prediction Error = abs(True Values - Predicted Values)"
+            else:
+                prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values)/self.explainer.y_target.values)
+                subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
+        df_equal_bins = pd.DataFrame(prediction_error).describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+        equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
+        self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error],
+        bins=[i[0] for i in equal_bins], labels=False)))
+        col_scale = self.pred_colorscale
+
+        y_pred = self.explainer.y_pred.loc[list_ind]
+        y_target = self.explainer.y_target.loc[list_ind]
+        prediction_error = np.array(pd.DataFrame(prediction_error, index=self.explainer.y_target.index).loc[list_ind])
+        # round predict
+        if self.round_digit is None:
+            self.tuning_round_digit()
+        y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+
+        hv_text = [f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}" for x, y, z, w in
+        zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
+
+        fig.add_scatter(
+            x=y_target.values.flatten(),
+            y=y_pred.values.flatten(),
+            mode='markers',
+            hovertext=hv_text,
+            hovertemplate='<b>%{hovertext}</b><br />',
+            customdata=y_pred.index.values
+        )
+
+        colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
+        colorbar_title = 'Prediction Error'
+        fig.data[-1].marker.color = colorpoints.flatten()
+        fig.data[-1].marker.coloraxis = 'coloraxis'
+        fig.layout.coloraxis.colorscale = col_scale
+        fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
+        "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
+        "yanchor": "top", "y": 1.1}
+        range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
+        max(y_pred.values.flatten()))]
+        fig.update_xaxes(range=range_axis)
+        fig.update_yaxes(range=range_axis)
+        fig.update_layout(shapes=[{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1,
+        'x0': 0, 'x1': 1, 'line': dict(color="grey", width=1, dash="dot")}])
+
+        return fig, subtitle
+
+    def _subset_sampling(self, selection = None, max_points = 2000):
+        """
+        Subset sampling for plots and create addnote for subtitle
+
+        Parameters
+        ----------
+        selection: list (optional)
+            Contains list of index, subset of the input DataFrame that we want to plot
+        max_points: int (optional, default: 2000)
+            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+        """
 
         # Sampling
         if selection is None:
@@ -2987,7 +3217,7 @@ class SmartPlotter:
                 list_ind = self.explainer.x_init.index.tolist()
                 addnote = None
             else:
-                random.seed(41)
+                random.seed(79)
                 list_ind = random.sample(
                     self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
@@ -2996,7 +3226,7 @@ class SmartPlotter:
                 list_ind = selection
                 addnote = "Length of user-defined Subset : "
             else:
-                random.seed(41)
+                random.seed(79)
                 list_ind = random.sample(selection, max_points)
                 addnote = "Length of random Subset : "
         else:
@@ -3004,179 +3234,6 @@ class SmartPlotter:
         if addnote is not None:
             addnote = add_text([addnote,
                                 f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
-                               sep='')
+                            sep='')
 
-        fig = go.Figure()
-
-        # Classification Case
-        if self.explainer._case == "classification":
-            label_num, _, label_value = self.explainer.check_label_name(label)
-            # predict proba Color scale
-            if hasattr(self.explainer.model, "predict_proba"):
-                if not hasattr(self.explainer, "proba_values"):
-                    self.explainer.predict_proba()
-                if hasattr(self.explainer.model, "predict"):
-                    if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
-                        self.explainer.predict()
-                # Assign proba values of the target
-                df_proba_target = self.explainer.proba_values
-                df_proba_target['proba_target'] = df_proba_target.iloc[:, label_num]
-                proba_values = df_proba_target[['proba_target']]
-                # Proba subset:
-                proba_values = proba_values.loc[list_ind, :]
-                target = self.explainer.y_target.loc[list_ind, :]
-                y_pred = self.explainer.y_pred.loc[list_ind, :]
-                df_pred = pd.concat([proba_values.reset_index(), y_pred.reset_index(drop=True),
-                    target.reset_index(drop=True)], axis=1)
-                df_pred.set_index(df_pred.columns[0], inplace=True)
-                df_pred.columns = ["proba_values", "predict_class", "target"]
-                df_pred['bad_predict'] = 1
-                df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'bad_predict'] = 0
-                subtitle = f"Response: <b>{label_value}</b>"
-
-            # Plot distribution
-            fig.add_trace(go.Violin(
-                x=df_pred['target'].values.flatten(),
-                y=df_pred['proba_values'].values.flatten(),
-                points=False,
-                legendgroup='M', scalegroup='M', name='Good Prediction',
-                line_color=self._style_dict["violin_area_classif"][1],
-                pointpos=-0.1,
-                showlegend=False,
-                jitter=0.075,
-                meanline_visible=True,
-                spanmode="hard",
-                customdata=df_pred['proba_values'].index.values,
-                scalemode='count',
-                ))
-
-            # Plot points depending if bad or good prediction
-            df_good_predict = df_pred[(df_pred['bad_predict'] == 0)]
-            df_bad_predict = df_pred[(df_pred['bad_predict'] == 1)]
-            hv_text_good_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
-             x, y, w, z in zip(df_good_predict.index, df_good_predict.proba_values.values.round(3).flatten(),
-             df_good_predict.predict_class.values.flatten(), df_good_predict.target.values.flatten())]
-            hv_text_bad_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
-             x, y, w, z in zip(df_bad_predict.index, df_bad_predict.proba_values.values.round(3).flatten(),
-             df_bad_predict.predict_class.values.flatten(), df_bad_predict.target.values.flatten())]
-
-            fig.add_trace(go.Scatter(
-                x=df_good_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_good_predict)),
-                y=df_good_predict['proba_values'].values.flatten(),
-                mode='markers',
-                marker_color=self._style_dict["prediction_plot"][0],
-                showlegend=True,
-                name="Good Prediction",
-                hovertext=hv_text_good_predict,
-                hovertemplate='<b>%{hovertext}</b><br />',
-                customdata=df_good_predict['proba_values'].index.values,
-            ))
-
-            fig.add_trace(go.Scatter(
-                x=df_bad_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_bad_predict)),
-                y=df_bad_predict['proba_values'].values.flatten(),
-                mode='markers',
-                marker_color=self._style_dict["prediction_plot"][1],
-                showlegend=True,
-                name="Bad Prediction",
-                hovertext=hv_text_bad_predict,
-                hovertemplate='<b>%{hovertext}</b><br />',
-                customdata=df_bad_predict['proba_values'].index.values,
-            ))
-
-            fig.update_layout(violingap=0, violinmode='overlay')
-            if self.explainer.label_dict is not None:
-                fig.update_xaxes(tickmode='array', tickvals=list(df_pred['target'].unique()),
-                ticktext=list(df_pred['target'].apply(lambda x: self.explainer.label_dict[x]).unique()))
-            if self.explainer.label_dict is None:
-                fig.update_xaxes(tickvals=sorted(list(df_pred['target'].unique())))
-
-        # Regression Case
-        elif self.explainer._case == "regression":
-            prediction_error = None
-            if self.explainer.y_pred is None:
-                if hasattr(self.explainer.model, "predict"):
-                    self.explainer.predict()
-            if self.explainer.y_pred is not None:
-                if (self.explainer.y_target == 0).any()[0]:
-                    prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values))
-                    subtitle = "Prediction Error = abs(True Values - Predicted Values)"
-                else:
-                    prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values)/self.explainer.y_target.values)
-                    subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
-            df_equal_bins = pd.DataFrame(prediction_error).describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
-            equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
-            self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error],
-             bins=[i[0] for i in equal_bins], labels=False)))
-            col_scale = self.pred_colorscale
-
-            y_pred = self.explainer.y_pred.loc[list_ind]
-            y_target = self.explainer.y_target.loc[list_ind]
-            prediction_error = np.array(pd.DataFrame(prediction_error, index=self.explainer.y_target.index).loc[list_ind])
-            # round predict
-            if self.round_digit is None:
-                self.tuning_round_digit()
-            y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
-
-            hv_text = [f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}" for x, y, z, w in
-            zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
-
-            fig.add_scatter(
-                x=y_target.values.flatten(),
-                y=y_pred.values.flatten(),
-                mode='markers',
-                hovertext=hv_text,
-                hovertemplate='<b>%{hovertext}</b><br />',
-                customdata=y_pred.index.values
-            )
-
-            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
-            colorbar_title = 'Prediction Error'
-            fig.data[-1].marker.color = colorpoints.flatten()
-            fig.data[-1].marker.coloraxis = 'coloraxis'
-            fig.layout.coloraxis.colorscale = col_scale
-            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
-            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
-            "yanchor": "top", "y": 1.1}
-            range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
-             max(y_pred.values.flatten()))]
-            fig.update_xaxes(range=range_axis)
-            fig.update_yaxes(range=range_axis)
-            fig.update_layout(shapes=[{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1,
-             'x0': 0, 'x1': 1, 'line': dict(color="grey", width=1, dash="dot")}])
-
-        # Add traces, title and template
-        title = "True Values Vs Predicted Values"
-        if subtitle or addnote:
-            title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
-        dict_t = copy.deepcopy(self._style_dict["dict_title"])
-        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
-        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
-        dict_t['text'] = title
-        dict_xaxis['text'] = truncate_str('True Values', 110)
-        dict_yaxis['text'] = 'Predicted Values'
-
-        fig.update_traces(
-            marker={
-                'size': 10,
-                'opacity': 0.8,
-                'line': {'width': 0.8, 'color': 'white'}
-            }
-        )
-
-        fig.update_layout(
-            template='none',
-            title=dict_t,
-            width=width,
-            height=height,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
-            hovermode='closest'
-        )
-
-        fig.update_yaxes(automargin=True)
-        fig.update_xaxes(automargin=True)
-        if file_name:
-            plot(fig, filename=file_name, auto_open=auto_open)
-
-        return fig
+        return list_ind, addnote
