@@ -1133,12 +1133,14 @@ class SmartApp:
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
+                    # Style for graph
                     style_component = {
                         'height': '21.6rem'
                     }
                     this_style_card = {
                         'height': '22rem', 'zIndex': 900,
                     }
+                    # Style for prediction picking graph
                     if data_component_id == 'prediction_picking':
                         style_component = {
                             'height': '20.7rem',
@@ -1146,6 +1148,7 @@ class SmartApp:
                         this_style_card = {
                             'height': '20.8rem', 'zIndex': 901,
                         }
+                    # Style for the Dataset
                     if data_component_type == 'table':
                         style_component = {
                             'maxHeight': '23rem',
@@ -1156,6 +1159,7 @@ class SmartApp:
                     return this_style_card, style_component
 
                 else:
+                    # Style when zoom button is clicked
                     this_style_card = {
                         'height': '70vh',
                         'width': 'auto',
@@ -1289,32 +1293,36 @@ class SmartApp:
                              id_upper_modality,
                              children):
             """
-            This function is used to update the datatable according to sorting, 
-            filtering and settings modifications
+            This function is used to update the datatable according to sorting,
+            filtering and settings modifications.
             ------------------------------------------------------------------
-            selected_data: 
-            is_open: 
+            selected_data: selected data in prediction picking graph
+            is_open: modal
             nclicks_apply: click on Apply Filter button
             nclicks_reset: click on Reset All Filter button
             nclicks_del: click on delete button
-            rows,
-            name,
+            rows: number of rows for subset
+            name: name for features name
             val_feature: feature selected to filter
-            id_feature: id 
-            val_str_modality:
-            id_str_modality:
-            val_bool_modality:
-            id_bool_modality:
-            start_date: 
-            end_date:
-            id_date:
-            val_lower_modality,
-            id_lower_modality,
-            val_upper_modality,
-            id_upper_modality,
-            children
+            id_feature: id of feature selected to filter
+            val_str_modality: string modalities selected
+            id_str_modality: id of string modalities selected
+            val_bool_modality: boolean modalities selected
+            id_bool_modality: id of boolean modalities selected
+            start_date: start dates selected
+            end_date: end dates selected
+            id_date: id of dates selected
+            val_lower_modality: lower values of numeric filter
+            id_lower_modality: id of lower modalities of numeric filter
+            val_upper_modality: upper values of numeric filter
+            id_upper_modality: id of upper values of numeric filter
+            children: children of dropdown container
             ------------------------------------------------------------------
-            
+            return
+            data: available dataset
+            tooltip_data: tooltip of the dataset
+            columns: columns of the dataset
+            active_cell: activated cell
             """
             ctx = dash.callback_context
             active_cell = no_update
@@ -1336,48 +1344,57 @@ class SmartApp:
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None)):
                 row_ids = []
+                # If some data have been selected in prediction picking graph
                 if len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                     df = self.round_dataframe.loc[row_ids]
                 else:
                     df = self.round_dataframe
+            # If click on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 df = self.round_dataframe
+            # If click on Apply filter
             elif ((ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks') | (
                     (ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is None))):
+                # get list of ID
                 feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
                 str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
                 bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
                 lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
                 date_id = [id_date[i]['index'] for i in range(len(id_date))]
                 df = self.round_dataframe
+                # If there is some filters
                 if len(feature_id) > 0:
                     for i in range(len(feature_id)):
+                        # String filter
                         if feature_id[i] in str_id:
                             position = np.where(np.array(str_id) == feature_id[i])[0][0]
                             if ((position is not None) & (val_str_modality[position] is not None)):
                                 df = df[df[val_feature[i]].isin(val_str_modality[position])]
                             else:
                                 df = df
+                        # Boolean filter
                         elif feature_id[i] in bool_id:
                             position = np.where(np.array(bool_id) == feature_id[i])[0][0]
                             if ((position is not None) & (val_bool_modality[position] is not None)):
                                 df = df[df[val_feature[i]] == val_bool_modality[position]]
                             else:
                                 df = df
+                        # Date filter
                         elif feature_id[i] in date_id:
                             position = np.where(np.array(date_id) == feature_id[i])[0][0]
-                            if((position is not None) & 
+                            if((position is not None) &
                                (start_date[position] < end_date[position])):
-                                    df = df[((df[val_feature[i]] >= start_date[position]) &
-                                             (df[val_feature[i]] <= end_date[position]))]
+                                df = df[((df[val_feature[i]] >= start_date[position]) &
+                                         (df[val_feature[i]] <= end_date[position]))]
                             else:
                                 df = df
+                        # Numeric filter
                         elif feature_id[i] in lower_id:
                             position = np.where(np.array(lower_id) == feature_id[i])[0][0]
-                            if((position is not None) & (val_lower_modality[position] is not None) & 
+                            if((position is not None) & (val_lower_modality[position] is not None) &
                                (val_upper_modality[position] is not None)):
                                 if (val_lower_modality[position] < val_upper_modality[position]):
                                     df = df[(df[val_feature[i]] >= val_lower_modality[position]) &
@@ -1431,7 +1448,6 @@ class SmartApp:
             ],
             [
                 State('global_feature_importance', 'clickData'),
-                State('dataset', "filter_query"),
                 State('features', 'value')
             ]
         )
@@ -1446,12 +1462,30 @@ class SmartApp:
                                       bool_group,
                                       click_zoom,
                                       clickData,
-                                      filter_query,
                                       features):
             """
-            update feature importance plot according to selected label and dataset state.
+            update feature importance plot according label, click on graph,
+            filters applied and subset selected in prediction picking graph.
+            ------------------------------------------------------------
+            label: label of data
+            data: dataset
+            selected_data : data selected on prediction picking graph
+            apply_filters: click on apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click on del button
+            is_open: modal
+            n_clicks: click on features importance card
+            bool_group: display groups
+            click_zoom: click on zoom button
+            clickData: click on features importance graph
+            features: features value
+            -------------------------------------------------------------
+            return
+            figure of Features Importance graph
+            click on Features Importance graph
             """
             ctx = dash.callback_context
+            # Zoom is False by Default. It becomes True if we click on it
             click = 2 if click_zoom is None else click_zoom
             if click % 2 == 0:
                 zoom_active = False
@@ -1485,8 +1519,9 @@ class SmartApp:
                     pass
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
                 clickData = None  # We reset the graph and clicks if we toggle the button
+            # If we have selected data on prediction picking graph
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None)): 
+                  (selected_data is not None)):
                 row_ids = []
                 if len(selected_data) > 1:
                     for p in selected_data['points']:
@@ -1494,36 +1529,42 @@ class SmartApp:
                     selection = row_ids
                 else:
                     selection = None
+            # If we have dubble click on prediction picking to remove the selected subset
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is None)):
+                # If there is some filters applied
                 if (len([d['_index_'] for d in data]) != len(self.list_index)):
                     selection = [d['_index_'] for d in data]
                 else:
                     selection = None
+            # If we click on reset filter button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 selection = None
+            # If we click on Apply button
             elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
                 selection = [d['_index_'] for d in data]
+            # If we click on the last del button
             elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
                   (None not in nclicks_del)):
-                self.list_index = [d['_index_'] for d in data]
                 selection = None
             else:
-                # When zoom_in
+                # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
                     selection = None
                 else:
                     row_ids = []
                     if selected_data is not None:
+                        # we plot prediction picking subset
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
                         selection = row_ids
                     else:
-                        selection = [d['_index_'] for d in data] 
+                        # we plot filter subset
+                        selection = [d['_index_'] for d in data]
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
-            
+
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
                     max_features=features,
@@ -1533,6 +1574,7 @@ class SmartApp:
                     display_groups=bool_group,
                     zoom=zoom_active
                 )
+            # Adjust graph with adding x axis title
             self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             if selected_feature:
@@ -1547,7 +1589,7 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
-
+            
             self.last_click_data = clickData
             return self.components['graph']['global_feature_importance'].figure, clickData
 
@@ -1582,8 +1624,25 @@ class SmartApp:
                                     violin):
             """
             Update feature plot according to label, data,
-            selected feature and settings modifications
+            selected feature on features importance graph,
+            filters and settings modifications
+            --------------------------------------------
+            feature: click on feature importance graph
+            selected_data: Data selected on prediction picking graph
+            data: dataset
+            apply_filters: click on apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click del button
+            label: selected label
+            is_open: modal
+            click_zoom: click on zoom button
+            points: points value in setting
+            violin: violin value in setting
+            ---------------------------------------------
+            return
+            figure: feature selector graph
             """
+            # Zoom is False by Default. It becomes True if we click on it
             click = 2 if click_zoom is None else click_zoom
             if click % 2 == 0:
                 zoom_active = False
@@ -1615,7 +1674,8 @@ class SmartApp:
                         else:
                             self.subset = [d['_index_'] for d in data]
                     else:
-                        self.subset = self.list_index 
+                        self.subset = self.list_index
+            # If we have selected data on prediction picking graph
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None)):
                 row_ids = []
@@ -1625,28 +1685,30 @@ class SmartApp:
                     self.subset = row_ids
                 else:
                     self.subset = None
+            # if we have click on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 self.subset = None
+            # If we have clik on Apply filter button
             elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
                 self.subset = [d['_index_'] for d in data]
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) & (None not in nclicks_del)):
-                 self.subset = None
+            # If we have click on the last del button
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                  (None not in nclicks_del)):
+                self.subset = None
             else:
+                # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
-                    self.subset = self.list_index 
+                    self.subset = self.list_index
                 else:
-                    if feature['points'][0]['curveNumber'] == 0 and \
-                              len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                        if selected_data is not None:
-                            row_ids = []
-                            for p in selected_data['points']:
-                                row_ids.append(p['customdata'])
-                            self.subset = row_ids
-                        else:
-                            self.subset = [d['_index_'] for d in data]
+                    row_ids = []
+                    if selected_data is not None:
+                        # we plot prediction picking subset
+                        for p in selected_data['points']:
+                            row_ids.append(p['customdata'])
+                        self.subset = row_ids
                     else:
-                        self.subset = self.list_index 
-                    
+                        # we plot filter subset
+                        self.subset = [d['_index_'] for d in data]
 
             self.components['graph']['feature_selector'].figure = \
                 self.explainer.plot.contribution_plot(
@@ -1659,6 +1721,7 @@ class SmartApp:
                 )
 
             self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
+            # Adjust graph with adding x and y axis titles
             self.components['graph']['feature_selector'].adjust_graph(
                 x_ax=truncate_str(self.selected_feature, 110),
                 y_ax='Contribution')
@@ -1691,7 +1754,22 @@ class SmartApp:
                             data,
                             current_index_id):
             """
-            update index value according to active cell and click data on feature plot.
+            This function is used to update index value according to
+            active cell, filters and click data on feature plot or on
+            prediction picking graph.
+            ----------------------------------------------------------------
+            click_data: click on feature selector
+            prediction_picking: click on prediction picking graph
+            cell: selected sell on dataset
+            apply_filters: click on Apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click on del button
+            data: dataset
+            current_index_id: the current value of the index
+            ----------------------------------------------------------------
+            return
+            selected index id
+            boolean n_submit
             """
             ctx = dash.callback_context
             selected = None
@@ -1710,11 +1788,18 @@ class SmartApp:
                         selected = current_index_id
                 elif ctx.triggered[0]['prop_id'] == '.':
                     selected = data[0]['_index_']
+                # If click on Reset apply button
                 elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                    # Get the row index value
                     selected = data[cell['row']]['_index_']
+                # If click on Apply filter button
                 elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                    # get the first index on the dataset
                     selected = data[0]['_index_']
-                elif None not in nclicks_del:
+                # If click on the last del button
+                elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                      (None not in nclicks_del)):
+                    # Get the row index value
                     selected = data[cell['row']]['_index_']
                 else:
                     selected = data[0]['_index_']
@@ -1817,7 +1902,26 @@ class SmartApp:
                                   data):
             """
             update local explanation plot according to app changes.
+            -------------------------------------------------------
+            threshold: threshold
+            max_contrib: max contribution
+            positive: boolean
+            negative: boolean
+            masked: feature(s) to mask
+            label: label
+            cell: selected cell
+            click_data: click on feature selector graph
+            prediction_picking: click on prediction picking graph
+            validation_click: click on validation
+            bool_group: boolean
+            click_zoom: click on zoom button
+            index: selected index
+            data: the dataset
+            --------------------------------------------------------
+            return
+            detail feature graph
             """
+            # Zoom is False by Default. It becomes True if we click on it
             click = 2 if click_zoom is None else click_zoom
             if click % 2 == 0:
                 zoom_active = False
@@ -1859,6 +1963,7 @@ class SmartApp:
                 display_groups=bool_group,
                 zoom=zoom_active
             )
+            # Adjust graph with adding x axis titles
             self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
             # font size can be adapted to screen size
             list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
@@ -1962,14 +2067,24 @@ class SmartApp:
             """
             Update feature plot according to label, data,
             selected feature and settings modifications
+            ------------------------------------------------
+            feature: click on features importance graph
+            data: the dataset
+            apply_filters: click on apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click on del button
+            label: selected label
+            is_open: modal
+            click_zoom: click on zoom button
+            points: number of points
+            violin: number of violin plot
+            -------------------------------------------------
+            return
+            prediction picking graph
             """
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True  # To knoow il click zoom is activate
             ctx = dash.callback_context
-            index_subset = None
+            # Filter subset
+            filter_subset = None
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
@@ -1980,27 +2095,29 @@ class SmartApp:
                     self.settings_ini['points'] = self.settings['points']
                     self.settings['violin'] = violin
                     self.settings_ini['violin'] = self.settings['violin']
-
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
+            # If we have clicked on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                index_subset = None
+                self.subset = None
+            # If we have clicked on Apply filter button
             elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                index_subset = [d['_index_'] for d in data]
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) & (None not in nclicks_del)):
-                index_subset = None
+                self.subset = [d['_index_'] for d in data]
+            # If we have clicked on the last delete button (X)
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                  (None not in nclicks_del)):
+                self.subset = None
             else:
                 raise PreventUpdate
 
             self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                 selection=self.subset,
-                index_subset=index_subset,
                 max_points=points,
-                label=self.label,
-                zoom=zoom_active
+                label=self.label
             )
 
             self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
+            # Adjust graph with adding x and y axis titles
             self.components['graph']['prediction_picking'].adjust_graph(
                 x_ax="Target",
                 y_ax="Prediction")
@@ -2106,7 +2223,7 @@ class SmartApp:
                                  is_open):
             """
             Function used to open and close modal explication when we click
-            on "?" button to have information on filters
+            on "?" button on Dataset Filters Tab
             ---------------------------------------------------------------
             n1: click on "?" button
             n2: click on close button in modal
@@ -2134,14 +2251,20 @@ class SmartApp:
                           n_clicks_reset,
                           currents_filters):
             """
-            Function used to 
+            Function used to create filter blocs in the dropdowns_container.
+            Each bloc will contains:
+                -label
+                -dropdown button to select feature to filter
+                -div which will contains modalities
+                -delete button
             ---------------------------------------------------------------
             n_clicks_add: click on add filter
-            n_clicks_reset:
-            n_click_del:
-            children
+            n_clicks_reset: click on reset filter button
+            n_click_del: click on delete button
+            children: information on dropdown container
             ---------------------------------------------------------------
-            return 
+            return
+                filter blocs
             """
             # Context and init handling (no action)
             ctx = dash.callback_context
@@ -2163,28 +2286,33 @@ class SmartApp:
                     children=[
                         html.Div([
                             html.Br(),
+                            # div which will contains label
                             html.Div(
                                     id={'type': 'dynamic-output-label',
                                         'index': index_id},
                                     )
                             ]),
                         html.Div([
+                            # div with dopdown button to select feature to filter
                             html.Div(dcc.Dropdown(
                                 id={'type': 'var_dropdown',
                                     'index': index_id},
                                 options=[
-                                    {'label': i, 'value': i} for i in self.round_dataframe.columns],
+                                    {'label': i, 'value': i} for i in np.sort(
+                                        self.round_dataframe.columns)],
                                 placeholder="Variable"
                             ), style={"width": "30%"}),
+                            # div which will contains modalities
                             html.Div(
                                  id={'type': 'dynamic-output',
                                      'index': index_id},
                                  style={"width": "50%"}
                                 ),
+                            # Button to delete bloc
                             dbc.Button(
                                 id={'type': 'del_dropdown_button',
                                     'index': index_id},
-                                children='del',
+                                children='X',
                                 color='warning',
                                 size='sm'
                             )
@@ -2192,6 +2320,7 @@ class SmartApp:
                     ]
                 )
                 return currents_filters + [subset_filter]
+            # Removal of all existing filters
             elif button_id == 'reset_dropdown_button':
                 return [html.Div(
                     id={'type': 'bloc_div',
@@ -2216,9 +2345,9 @@ class SmartApp:
             Function used to disabled or not the reset filter button.
             This button is disabled if there is no filter added.
             ---------------------------------------------------------------
-            n_click_add: click on add filter
-            n_click_reset:
-            n_click_del:
+            n_click_add: click on add filter button
+            n_click_reset: click on reset filter button
+            n_click_del: click on delete button
             ---------------------------------------------------------------
             return disabled style
             """
@@ -2246,9 +2375,9 @@ class SmartApp:
             Function used to display or not the apply filter button.
             This button is only display if almost one filter was added.
             ---------------------------------------------------------------
-            n_click_add: click on add filter
-            n_click_reset:
-            n_click_del:
+            n_click_add: click on add filter button
+            n_click_reset: click on reset filter button
+            n_click_del: click on delete button
             ---------------------------------------------------------------
             return style of apply filter button
             """
@@ -2271,7 +2400,7 @@ class SmartApp:
             Function used to add label to the filters. Label is updated
             when value is not None
             ---------------------------------------------------------------
-            value: value: value selected on the var dropdown button
+            value: value selected on the var dropdown button
             ---------------------------------------------------------------
             return label
             """
@@ -2296,6 +2425,7 @@ class SmartApp:
             For boolean variable: component is a RadioItems button
             For Integer variable that have less than 20 modalities: component
             is a dropdown button.
+            For date variable: component is a DatePickerRange
             Else: components are lower and upper values
             ---------------------------------------------------------------
             value: value selected on the var dropdown button
