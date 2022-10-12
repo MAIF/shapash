@@ -14,21 +14,35 @@ class MyGraph(dcc.Graph):
         self.style = style
         self.id = id
         # self.config = {'modeBarButtons': {'pan2d': True}}
-        self.config = {
-            # The graph is responsive
-            'responsive': True,
-            'modeBarButtonsToRemove': ['lasso2d',
-                                       'zoomOut2d',
-                                       'zoomIn2d',
-                                       'resetScale2d',
-                                       'hoverClosestCartesian',
-                                       'hoverCompareCartesian',
-                                       'toggleSpikelines'],
+        if id == 'prediction_picking':
+            self.config = {
+                # Graph is responsive
+                'responsive': True,
+                'modeBarButtonsToRemove': ['lasso2d',
+                                           'zoomOut2d',
+                                           'zoomIn2d',
+                                           'resetScale2d',
+                                           'hoverClosestCartesian',
+                                           'hoverCompareCartesian',
+                                           'toggleSpikelines'],
+                'displaylogo': False
+                }
             # 'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
-
-            'displaylogo': False,
-
-        }
+        else:
+            self.config = {
+                # Graph is responsive
+                'responsive': True,
+                # Graph don't have select box button
+                'modeBarButtonsToRemove': ['lasso2d',
+                                           'zoomOut2d',
+                                           'zoomIn2d',
+                                           'resetScale2d',
+                                           'hoverClosestCartesian',
+                                           'hoverCompareCartesian',
+                                           'toggleSpikelines',
+                                           'select'],
+                'displaylogo': False
+                }
 
     def adjust_graph(self,
                      x_ax="",
