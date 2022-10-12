@@ -2243,13 +2243,16 @@ class SmartApp:
                 Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')
             ],
             [
-                State('dropdowns_container', 'children')
+                 State('dropdowns_container', 'children'),
+                 State('name', 'value')
             ]
         )
         def layout_filter(n_clicks_add,
                           n_clicks_rm,
                           n_clicks_reset,
-                          currents_filters):
+                          currents_filters,
+                          name
+                          ):
             """
             Function used to create filter blocs in the dropdowns_container.
             Each bloc will contains:
@@ -2262,6 +2265,7 @@ class SmartApp:
             n_clicks_reset: click on reset filter button
             n_click_del: click on delete button
             children: information on dropdown container
+            name: name for feature name
             ---------------------------------------------------------------
             return
                 filter blocs
@@ -2271,6 +2275,29 @@ class SmartApp:
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+            # If we use domain name for feature name
+            if name == [1]:
+                dict_name = [self.explainer.features_dict[i]
+                             for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+                dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+                # Create dataframe to sort it by feature_name
+                df_feature_name = pd.DataFrame({'feature_name': dict_name,
+                                                'feature_id': dict_id})
+                df_feature_name = df_feature_name.sort_values(
+                    by='feature_name').reset_index(drop=True)
+                # Options are sorted by feature_name
+                options = [
+                    {"label": '_index_', "value": '_index_'},
+                    {"label": '_predict_', "value": '_predict_'}] + \
+                    [{"label": df_feature_name.loc[i, 'feature_name'],
+                      "value": df_feature_name.loc[i, 'feature_id']}
+                     for i in range(len(df_feature_name))]
+            else:
+                options = [
+                    {"label": '_index_', "value": '_index_'},
+                    {"label": '_predict_', "value": '_predict_'}] + \
+                    [{"label": i, "value": i} for i in np.sort(
+                        self.dataframe.drop(['_index_', '_predict_'], axis=1).columns)]
 
             # Creation of a new graph
             if button_id == 'add_dropdown_button':
@@ -2297,9 +2324,7 @@ class SmartApp:
                             html.Div(dcc.Dropdown(
                                 id={'type': 'var_dropdown',
                                     'index': index_id},
-                                options=[
-                                    {'label': i, 'value': i} for i in np.sort(
-                                        self.round_dataframe.columns)],
+                                options=options,
                                 placeholder="Variable"
                             ), style={"width": "30%"}),
                             # div which will contains modalities
@@ -2463,7 +2488,7 @@ class SmartApp:
                                'index': id['index']
                             },
                             options=[{'label': i, 'value': i} for
-                                     i in self.round_dataframe[value].unique()],
+                                    i in np.sort(self.round_dataframe[value].unique())],
                             multi=True,
                             ), style={"width": "65%", 'margin-left': '20px'})
                     elif ((type(self.round_dataframe[value].iloc[0]) is pd.Timestamp) |
@@ -2491,7 +2516,10 @@ class SmartApp:
                                                 value=lower_value,
                                                 type="number",
                                                 style={'width': '60px'}),
-                                            ' <= {} <= '.format(value),
+                                            ' <= {} in [{}, {}]<= '.format(
+                                                value,
+                                                self.round_dataframe[value].min(),
+                                                self.round_dataframe[value].max()),
                                             dcc.Input(
                                                 id={
                                                     'type': 'upper',
