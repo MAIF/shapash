@@ -2113,10 +2113,8 @@ class SmartApp:
             if self.explainer.y_target is not None:
                 self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                     selection=self.subset,
-                    index_subset=index_subset,
                     max_points=points,
-                    label=self.label,
-                    zoom=zoom_active
+                    label=self.label
                 )
 
                 self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
@@ -2135,7 +2133,7 @@ class SmartApp:
                         "yref": "paper",
                         "showarrow": False,
                         "font": {
-                            "size": 28
+                            "size": 14
                         }
                     }
                 ]
