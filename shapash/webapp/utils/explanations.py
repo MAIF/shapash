@@ -5,7 +5,6 @@ Created on Mon Oct  3 15:12:08 2022
 @author: Florine
 """
 
-
 class Explanations:
     """
         Contains the explanations of all "?" buttons in the app.
