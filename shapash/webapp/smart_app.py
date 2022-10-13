@@ -1143,7 +1143,7 @@ class SmartApp:
                     # Style for prediction picking graph
                     if data_component_id == 'prediction_picking':
                         style_component = {
-                            'height': '20.7rem',
+                            'height': '20.6rem',
                         }
                         this_style_card = {
                             'height': '20.8rem', 'zIndex': 901,
