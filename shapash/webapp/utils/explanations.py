@@ -4,7 +4,18 @@ Created on Mon Oct  3 15:12:08 2022
 
 @author: Florine
 """
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> cb6d7da3170e702604b1f3abed14e2bd352287c4
 class Explanations:
+    """
+        Contains the explanations of all "?" buttons in the app.
+        ----------
+        explanations: object
+            SmartApp instance to point to.
+    """
 
 
     def __init__(self):

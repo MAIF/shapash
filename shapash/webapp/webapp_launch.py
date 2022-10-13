@@ -17,6 +17,7 @@ cases = {
 CASE = 2
 
 titanic = pd.read_pickle('tests/data/clean_titanic.pkl')
+
 if CASE == 1:
     features = ['Pclass', 'Survived', 'Embarked', 'Sex']
     encoder = one_hot.OneHotEncoder(titanic, cols=['Embarked', 'Sex'])
@@ -62,10 +63,12 @@ y_target = pd.DataFrame(data=y_test,
                         columns=y.columns.to_list(),
                         index=X_test.index)
 
+response_dict = {0: 'Death', 1: 'Survivalethdgtu'}
 xpl = SmartExplainer(
     model,
     preprocessing=encoder,
-    title_story=cases[CASE]
+    title_story=cases[CASE],
+    label_dict=response_dict
 )
 
 xpl.compile(X_test, y_pred=y_pred, y_target=y_target)

@@ -132,7 +132,7 @@ class SmartPlotter:
             open automatically the plot
         """
         title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
-        # Add subtitle and addnote
+        # Add subtitle and / or addnote
         if subtitle or addnote:
             #title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             if subtitle and addnote:
@@ -239,6 +239,8 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+        zoom: bool (default=False)
+            graph is currently zoomed
         """
         fig = go.Figure()
 
@@ -279,12 +281,10 @@ class SmartPlotter:
             mode='markers + text',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
-            # customdata=feature_values.index.values,
             text=text_groups_features,
         )
-        # To change ticktext when the label size is upper than 10
-        print(zoom)
-        if (type(feature_values.values.flatten()[0]) == str) & (zoom == False):
+        # To change ticktext when the x label size is upper than 10 and zoom is False
+        if (type(feature_values.values.flatten()[0]) == str) & (not zoom):
             feature_val = [x.replace('<br />', '') for x in feature_values.values.flatten()]
             feature_val = [
                 x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
@@ -296,7 +296,9 @@ class SmartPlotter:
                 tickmode="array",
                 dtick=1
             )
-
+        # Customdata contains the values and index of feature_values.
+        # The values are used in the hovertext and the indexes are used for
+        # the interactions between the graphics.
         customdata = np.stack((feature_values.values.flatten(),
                                feature_values.index.values), axis=-1)
 
@@ -363,6 +365,8 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+        zoom: bool (default=False)
+            graph is currently zoomed
         """
         fig = go.Figure()
 
@@ -376,7 +380,6 @@ class SmartPlotter:
             hv_text = [f"Id: {x}" for x in feature_values.index]
         hv_text_df = pd.DataFrame(hv_text, columns=['text'], index=feature_values.index)
         hv_temp = f'{feature_name} :<br />' + '%{customdata[0]}<br />Contribution: %{y:.4f}<extra></extra>'
-
         # add break line to X label
         max_len_by_row = max([round(
             50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
@@ -390,40 +393,44 @@ class SmartPlotter:
             if pred is not None and self.explainer._case == 'classification':
                 feature = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
                                                               (feature_values.iloc[:, 0] == i)].values.flatten()
-                customdata = np.stack((feature, 
-                                        contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                      (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
-                fig.add_trace(go.Violin(x=feature,
-                                        y=contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points=points_param,
-                                        pointpos=-0.1,
-                                        side='negative',
-                                        line_color=self._style_dict["violin_area_classif"][0],
-                                        showlegend=False,
-                                        jitter=jitter_param,
-                                        meanline_visible=True,
-                                        hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                 (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        ))
-                fig.add_trace(go.Violin(x=feature,
-                                        y=contributions.loc[(pred.iloc[:, 0] == col_modality) &
-                                                            (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        points=points_param,
-                                        pointpos=0.1,
-                                        side='positive',
-                                        line_color=self._style_dict["violin_area_classif"][1],
-                                        showlegend=False,
-                                        jitter=jitter_param,
-                                        meanline_visible=True,
-                                        scalemode='count',
-                                        hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
-                                                                 (feature_values.iloc[:, 0] == i)].values.flatten(),
-                                        ))
+                customdata = np.stack((feature,
+                                       contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                     (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
+
+                contribution = contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                                                            (feature_values.iloc[:, 0] == i)].values.flatten()
+                # Check if contribution is not empty
+                if len(contribution) != 0:
+                    fig.add_trace(go.Violin(x=feature,
+                                            y=contribution,
+                                            points=points_param,
+                                            pointpos=-0.1,
+                                            side='negative',
+                                            line_color=self._style_dict["violin_area_classif"][0],
+                                            showlegend=False,
+                                            jitter=jitter_param,
+                                            meanline_visible=True,
+                                            hovertext=hv_text_df.loc[(pred.iloc[:, 0] != col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].values.flatten()
+                                            ))
+
+                    fig.add_trace(go.Violin(x=feature,
+                                            y=contribution,
+                                            points=points_param,
+                                            pointpos=0.1,
+                                            side='positive',
+                                            line_color=self._style_dict["violin_area_classif"][1],
+                                            showlegend=False,
+                                            jitter=jitter_param,
+                                            meanline_visible=True,
+                                            scalemode='count',
+                                            hovertext=hv_text_df.loc[(pred.iloc[:, 0] == col_modality) &
+                                                                      (feature_values.iloc[:, 0] == i)].values.flatten()
+                                            ))
 
             else:
                 feature = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
-                customdata = np.stack((feature, 
+                customdata = np.stack((feature,
                                         contributions.loc[feature_values.iloc[:, 0] == i].index.values), axis=-1)
                 fig.add_trace(go.Violin(x=feature,
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
@@ -431,7 +438,7 @@ class SmartPlotter:
                                         showlegend=False,
                                         meanline_visible=True,
                                         scalemode='count',
-                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
+                                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten()
                                      ))
                 if pred is None:
                     fig.data[-1].points = points_param
@@ -441,16 +448,18 @@ class SmartPlotter:
         colorpoints = pred if self.explainer._case == "regression" else proba_values if \
             self.explainer._case == 'classification' else None
 
+        hovertemplate = '<b>%{hovertext}</b><br />' + hv_temp
         if colorpoints is not None:
             feature = feature_values.values.flatten()
-            customdata = np.stack((feature_values.values.flatten(), 
-                                    contributions.index.values), axis=-1)
+            customdata = np.stack((feature_values.values.flatten(),
+                                   contributions.index.values), axis=-1)
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
                 y=contributions.values.flatten(),
                 mode='markers',
                 showlegend=False,
-                hovertext=hv_text
+                hovertext=hv_text,
+                hovertemplate=hovertemplate
             ))
 
         fig.update_layout(
@@ -459,11 +468,11 @@ class SmartPlotter:
             violinmode='overlay',
             xaxis_type='category'
         )
-        
-        # To change ticktext when the label size is upper than 10
-        print(feature)
-        if (type(feature[0]) == str) & (zoom == False):
-            feature_val = [x.replace('<br />', '') for x in np.unique(feature_values.values.flatten())]
+
+        # To change ticktext when the x label size is upper than 10 and zoom is False
+        if (type(feature[0]) == str) & (not zoom):
+            feature_val = [x.replace('<br />', '') for x in np.unique(
+                feature_values.values.flatten())]
             feature_val = [
                 x.replace(x[3: len(x)-3], '...') if len(x) > 10 else x for x in feature_val]
             fig.update_xaxes(
@@ -476,8 +485,8 @@ class SmartPlotter:
             )
         else:
             fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
-            
-        hovertemplate='<b>%{hovertext}</b><br />' + hv_temp
+
+        # Update customdata and hovertemplate
         fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
         self._update_contributions_fig(fig=fig,
@@ -528,9 +537,12 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+        zoom: bool (default=False)
+            graph is currently zoomed
         """
         dict_t = copy.deepcopy(self._style_dict["dict_title"])
         topmargin = 80
+        # Add subtitle and / or addnote
         if subtitle or addnote:
             # title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             if subtitle and addnote:
@@ -578,9 +590,11 @@ class SmartPlotter:
                 'b': 50
             }
         )
-        
-        if (type(feature_imp1.index[0]) == str) & (zoom == False):
-            index_val = [y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
+        # To change ticktext when the x label size is upper than 30 and zoom is False
+        if (type(feature_imp1.index[0]) == str) & (not zoom):
+            # change index to abc...abc if its length is upper than 30
+            index_val = [
+                y.replace(y[24: len(y)-3], '...') if len(y) > 30 else y for y in feature_imp1.index]
         else:
             index_val = feature_imp1.index
         bar1 = go.Bar(
@@ -608,6 +622,7 @@ class SmartPlotter:
             data = bar1
 
         fig = go.Figure(data=data, layout=layout)
+        # Update ticktext
         fig.update_yaxes(ticktext=index_val,
                          tickvals=feature_imp1.index,
                          tickmode="array",
@@ -627,7 +642,8 @@ class SmartPlotter:
                        height=550,
                        file_name=None,
                        auto_open=False,
-                       zoom=False):
+                       zoom=False
+                       ):
         """
         Plotly bar plot of local explainers
         Parameters
@@ -652,6 +668,8 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+        zoom: bool (default=False)
+            graph is currently zoomed
         Returns
         -------
         plotly bar plot
@@ -668,8 +686,9 @@ class SmartPlotter:
             dict_t['text'] = "Local Explanation - <b>No Matching Entry</b>"
         else:
             title = f"Local Explanation - Id: <b>{index_value[0]}</b>"
+            # Add subtitle
             if subtitle:
-                title  += "<br><sup>" + subtitle + "</sup>"
+                title += "<br><sup>" + subtitle + "</sup>"
                 topmargin += 15
             dict_t['text'] = title
         dict_xaxis['text'] = 'Contribution'
@@ -681,8 +700,8 @@ class SmartPlotter:
             width=width,
             height=height,
             title=dict_t,
-            # xaxis_title=dict_xaxis,
-            # yaxis_title=dict_yaxis,
+            xaxis_title=dict_xaxis,
+            yaxis_title=dict_yaxis,
             yaxis_type='category',
             hovermode='closest',
             margin={
@@ -714,10 +733,12 @@ class SmartPlotter:
                         for f_name, f_value in feat_groups_values.to_dict().items()
                     ])
                 else:
-                    hoverlabel = '<b>{} :</b><br />{}'.format(add_line_break(expl[0], 40, maxlen=120),
-                                                          add_line_break(expl[1], 40, maxlen=160))     
+                    hoverlabel = '<b>{} :</b><br />{}'.format(
+                        add_line_break(expl[0], 40, maxlen=120),
+                        add_line_break(expl[1], 40, maxlen=160))
                 trunc_value = truncate_str(expl[0], 45)
-                if zoom == False:
+                if not zoom:
+                    # Truncate value if length is upper than 30 
                     trunc_new_value = trunc_value.replace(
                         trunc_value[24: len(trunc_value)-3], '...') if len(trunc_value) > 30 else trunc_value
                 else:
@@ -731,11 +752,11 @@ class SmartPlotter:
                             not in self.explainer.features_groups.keys()
                         )
                 ):
+                    # ylabel is based on trunc_new_value
                     ylabel = '<b>{} :</b><br />{}'.format(
                             trunc_new_value, truncate_str(expl[1], 45))
                 else:
                     ylabel = ('<b>{}</b>'.format(trunc_new_value))
-
             contrib_value = expl[2]
             # colors
             if contrib_value >= 0:
@@ -962,6 +983,8 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+        zoom: bool (default=False)
+            graph is currently zoomed
         Returns
         -------
         Plotly Figure Object
@@ -1119,6 +1142,8 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+        zoom: bool (default=False)
+            graph is currently zoomed
         Returns
         -------
         Plotly Figure Object
@@ -1234,16 +1259,16 @@ class SmartPlotter:
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count > violin_maxf:
-            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred, 
-                                    proba_values, col_value, col_scale, metadata, 
-                                    addnote, subtitle, width, height, file_name, 
+            fig = self.plot_scatter(feature_values, contrib, col_label, y_pred,
+                                    proba_values, col_value, col_scale, metadata,
+                                    addnote, subtitle, width, height, file_name,
                                     auto_open, zoom)
         else:
             fig = self.plot_violin(feature_values, contrib, col_label, y_pred,
                                    proba_values, col_value, col_scale, addnote,
                                    subtitle, width, height, file_name, auto_open,
-                                   zoom)   
-        
+                                   zoom)
+
         return fig
 
     def features_importance(self,
@@ -1272,7 +1297,7 @@ class SmartPlotter:
             this argument limit the number of hbar in features importance plot
             if max_features is 20, plot selects the 20 most important features
         selection: list (optional, default None)
-            This  argument allows to represent the importance calculated with a subset.
+            This argument allows to represent the importance calculated with a subset.
             Subset features importance is compared to global in the plot
             Argument must contains list of index, subset of the input DataFrame that we want to plot
         label: integer or string (default -1)
@@ -1297,6 +1322,8 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+        zoom: bool (default=False)
+            graph is currently zoomed
         Returns
         -------
         Plotly Figure Object
@@ -1304,12 +1331,10 @@ class SmartPlotter:
         --------
         >>> xpl.plot.features_importance()
         """
-
         self.explainer.compute_features_import(force=force)
         subtitle = None
         title = 'Features Importance'
         display_groups = self.explainer.features_groups is not None and display_groups
-
         if display_groups:
             if group_name:  # Case where we have groups of features and we want to display only features inside a group
                 if group_name not in self.explainer.features_groups.keys():
@@ -1381,7 +1406,6 @@ class SmartPlotter:
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
-
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
                     '<b>' + str(f) + '</b>'
@@ -1389,8 +1413,9 @@ class SmartPlotter:
                     else str(f) for f in subset_feat_imp.index
                 ]
 
-        fig = self.plot_features_import(global_feat_imp, subset_feat_imp, title, addnote,
-                                        subtitle, width, height, file_name, auto_open, zoom)
+        fig = self.plot_features_import(global_feat_imp, subset_feat_imp,
+                                        title, addnote, subtitle, width,
+                                        height, file_name, auto_open, zoom)
         return fig
 
     def plot_line_comparison(self,
@@ -3220,15 +3245,15 @@ class SmartPlotter:
                 random.seed(79)
                 list_ind = random.sample(
                     self.explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         elif isinstance(selection, list):
             if len(selection) <= max_points:
                 list_ind = selection
-                addnote = "Length of user-defined Subset : "
+                addnote = "Length of user-defined Subset: "
             else:
                 random.seed(79)
                 list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
+                addnote = "Length of random Subset: "
         else:
             raise ValueError('parameter selection must be a list')
         if addnote is not None:

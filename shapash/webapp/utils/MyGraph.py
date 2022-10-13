@@ -3,7 +3,6 @@ Class inherited from dcc.Graph. Add one method for updating graph layout.
 """
 
 from dash import dcc
-from math import floor
 import re
 
 
@@ -15,30 +14,47 @@ class MyGraph(dcc.Graph):
         self.style = style
         self.id = id
         # self.config = {'modeBarButtons': {'pan2d': True}}
-        self.config = {
-            'responsive': True,
-            'modeBarButtonsToRemove': ['lasso2d',
-                                       'zoomOut2d',
-                                       'zoomIn2d',
-                                       'resetScale2d',
-                                       'hoverClosestCartesian',
-                                       'hoverCompareCartesian',
-                                       'toggleSpikelines'],
+        if id == 'prediction_picking':
+            self.config = {
+                # Graph is responsive
+                'responsive': True,
+                'modeBarButtonsToRemove': ['lasso2d',
+                                           'zoomOut2d',
+                                           'zoomIn2d',
+                                           'resetScale2d',
+                                           'hoverClosestCartesian',
+                                           'hoverCompareCartesian',
+                                           'toggleSpikelines'],
+                'displaylogo': False
+                }
             # 'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
-
-            'displaylogo': False,
-
-        }
+        else:
+            self.config = {
+                # Graph is responsive
+                'responsive': True,
+                # Graph don't have select box button
+                'modeBarButtonsToRemove': ['lasso2d',
+                                           'zoomOut2d',
+                                           'zoomIn2d',
+                                           'resetScale2d',
+                                           'hoverClosestCartesian',
+                                           'hoverCompareCartesian',
+                                           'toggleSpikelines',
+                                           'select'],
+                'displaylogo': False
+                }
 
     def adjust_graph(self,
-                     subtitle=None,
-                     subset_graph=False,
                      x_ax="",
                      y_ax=""):
         """
         Override graph layout for app use
+        ----------------------------------------
+        x_ax: title of the x-axis
+        y_ax: title of the y-axis
+        ---------------------------------------
         """
-        new_title = update_title(self.figure.layout.title.text) 
+        new_title = update_title(self.figure.layout.title.text)
         self.figure.update_layout(
             autosize=True,
             margin=dict(
@@ -55,25 +71,19 @@ class MyGraph(dcc.Graph):
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top',
-                'text': '<span style="font-size: 1.2vw;">' + new_title + '</span>' 
-                # 'text': new_title,
-                # 'font': {'size': new_size_font}
-                #, 'family': 'verdana'}
+                # update title and font-size of the title
+                'text': '<span style="font-size: 1.2vw;">' + new_title + '</span>'
             }
         )
-        self.figure.update_xaxes(title='<span style="font-size: 1vw;">'  + x_ax + '</span>',
-                                 #title='<b>{}</b>'.format(x_ax),
-                                 automargin=True,
-                                 #tickfont='<span style="size: 1vw"></span>'
-                                 # title_font_size=17
+        # update x title and font-size of the title
+        self.figure.update_xaxes(title='<span style="font-size: 1vw;">' + x_ax + '</span>',
+                                 automargin=True
                                  )
-                                # title_font_family="verdana")
+        # update y title and font-size of the title
         self.figure.update_yaxes(title='<span style="font-size: 1vw;">' + y_ax + '</span>',
-                                 #title='<b>{}</b>'.format(y_ax),
-                                 automargin=True,
-                                 # title_font_size=17)
-                                 #title_font_family="verdana")
+                                 automargin=True
                                  )
+
 
 def update_title(title):
     """

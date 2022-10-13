@@ -11,19 +11,20 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from dash import dcc
 from dash import html
-from dash import MATCH, ALLSMALLER
+from dash import MATCH, ALL
 from dash.dependencies import Output, Input, State
 from flask import Flask
 import pandas as pd
 import plotly.graph_objs as go
 import random
 import numpy as np
+import datetime
 import re
 from math import log10
 from shapash.webapp.utils.utils import apply_filter, check_row, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
-from shapash.webapp.utils.explanations import Explanations 
+from shapash.webapp.utils.explanations import Explanations
 
 
 def create_input_modal(id, label, tooltip):
@@ -83,12 +84,13 @@ class SmartApp:
         }
         if settings is not None:
             for k, v in self.settings_ini.items():
-                self.settings_ini[k] = settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
-                
+                self.settings_ini[k] = settings[k] if k in settings and isinstance(
+                    settings[k], int) and 0 < settings[k] else v
         self.settings = self.settings_ini.copy()
 
         self.predict_col = ['_predict_']
-        self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
+        self.explainer.features_imp = self.explainer.state.compute_features_import(
+            self.explainer.contributions)
         if self.explainer._case == 'classification':
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, 'num')[1]
             self.selected_feature = self.explainer.features_imp[-1].idxmax()
@@ -97,13 +99,14 @@ class SmartApp:
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_k(x, k=1)).max().max())
+            self.max_threshold = int(self.explainer.contributions.applymap(
+                lambda x: round_to_k(x, k=1)).max().max())
         self.list_index = []
         self.subset = None
         self.last_click_data = None
 
         # DATA
-        self.explanations = Explanations()
+        self.explanations = Explanations()  # To get explanations of "?" buttons
         self.dataframe = pd.DataFrame()
         self.round_dataframe = pd.DataFrame()
         self.init_data()
@@ -141,9 +144,11 @@ class SmartApp:
                 self.predict_col = self.explainer.y_pred.columns.to_list()[0]
                 self.dataframe = self.dataframe.join(self.explainer.y_pred)
             elif isinstance(self.explainer.y_pred, list):
-                self.dataframe = self.dataframe.join(pd.DataFrame(data=self.explainer.y_pred,
-                                                                  columns=[self.predict_col],
-                                                                  index=self.explainer.x_init.index))
+                self.dataframe = self.dataframe.join(
+                    pd.DataFrame(data=self.explainer.y_pred,
+                                 columns=[self.predict_col],
+                                 index=self.explainer.x_init.index)
+                    )
             else:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
@@ -152,9 +157,11 @@ class SmartApp:
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
         col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
-        self.list_index = random.sample(population=self.dataframe.index.tolist(),
-                                        k=min(self.settings['rows'], len(self.dataframe.index.tolist()))
-                                        )
+        self.list_index = \
+            random.sample(
+                population=self.dataframe.index.tolist(),
+                k=min(self.settings['rows'], len(self.dataframe.index.tolist()))
+            )
         self.dataframe = self.dataframe[col_order].loc[self.list_index].sort_index()
         self.round_dataframe = self.dataframe.copy()
         for col in list(self.dataframe.columns):
@@ -163,7 +170,8 @@ class SmartApp:
                 std = self.dataframe[col].std()
                 if std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
-                    self.round_dataframe[col] = self.dataframe[col].map(f'{{:.{digit}f}}'.format).astype(float)
+                    self.round_dataframe[col] = \
+                        self.dataframe[col].map(f'{{:.{digit}f}}'.format).astype(float)
 
     def init_components(self):
         """
@@ -174,36 +182,41 @@ class SmartApp:
         self.components['settings']['input_rows'] = create_input_modal(
             id='rows',
             label="Number of rows for subset",
-            tooltip="Set max number of lines for subset (datatable).Filter will be apply on this subset."
+            tooltip="Set max number of lines for subset (datatable). \
+                     Filter will be apply on this subset."
         )
 
         self.components['settings']['input_points'] = create_input_modal(
             id='points',
             label="Number of points for plot",
-            tooltip="Set max number of points in feature contribution plots"
+            tooltip="Set max number of points in feature contribution plots."
         )
 
         self.components['settings']['input_features'] = create_input_modal(
             id='features',
             label="Number of features to plot",
-            tooltip="Set max number of features to plot in features importance and local explanation plots.",
+            tooltip="Set max number of features to plot in features \
+                     importance and local explanation plots."
         )
 
         self.components['settings']['input_violin'] = create_input_modal(
             id='violin',
             label="Max number of labels for violin plot",
-            tooltip="Set max number of labels to display a violin plot for feature contribution plot (otherwise a "
-                    "scatter plot is displayed)."
+            tooltip="Set max number of labels to display a violin plot \
+                     for feature contribution plot (otherwise a scatter \
+                                                    plot is displayed)."
         )
 
         self.components['settings']['name'] = dbc.Row(
             [
                 dbc.Checklist(
-                    options=[{"label": "Use domain name for features name.", "value": 1}], value=[], inline=True,
+                    options=[{"label": "Use domain name for \
+                              features name.", "value": 1}], value=[], inline=True,
                     id="name",
                     style={"margin-left": "20px"}
                 ),
-                dbc.Tooltip("Replace technical feature names by domain names if exists.",
+                dbc.Tooltip("Replace technical feature names by \
+                            domain names if exists.",
                             target='name', placement='bottom'),
             ], className="g-3",
         )
@@ -258,9 +271,9 @@ class SmartApp:
                 dbc.Col(
                     [
                         html.H4(
-                            [dbc.Badge("Regression", id='regression_badge', 
+                            [dbc.Badge("Regression", id='regression_badge',
                                        style={"margin-right": "5px",
-                                              "margin-left": "0px"}, 
+                                              "margin-left": "0px"},
                                        color=''),
                              dbc.Badge("Classification", id='classification_badge', color='')
                              ], style={"margin-right": "5px"}
@@ -276,32 +289,24 @@ class SmartApp:
                                     dbc.Label("Class:", style={'color': 'white', 'margin': '0px'}),
                                 ], align="center"),
                                 dbc.Col([
-                                dcc.Dropdown(
-                                    id="select_label",
-                                    options=[], value=None,
-                                    clearable=False, searchable=False,
-                                    style={"verticalAlign": "middle", "zIndex": '1010', "min-width": '90px',
-                                           'height':'100%'}
-                                )
-                                ],style={"margin-right": "17px", "padding": "0px"})
+                                    dcc.Dropdown(
+                                        id="select_label",
+                                        options=[], value=None,
+                                        clearable=False, searchable=False,
+                                        style={"verticalAlign": "middle",
+                                               "zIndex": '1010',
+                                               "min-width": '160px',
+                                               'height': '100%'}
+                                    )
+                                ], style={"margin-right": "17px",
+                                          "padding": "0px",
+                                          "width": "auto"})
                             ],
                             style={"margin": "0px"}
                         ),
                         is_open=True, id='select_collapse'
                     ),
                     width="auto", align="center", style={'padding': '0px'}
-                ),
-                dbc.Col([
-                    html.Div(
-                        [
-                            html.Img(id='clear_filter', title='clear_filter', alt='clear_filter',
-                                     src=self.app.get_asset_url('icon_reset.png'),
-                                     height='40px',
-                                     style={'cursor': 'pointer'}),
-                        ]
-                    )],
-                    align="center", width="auto", style={'padding': '0px',
-                                                         "margin-right": "15px"}
                 ),
                 dbc.Col([
                     html.Div(
@@ -331,7 +336,8 @@ class SmartApp:
                 } for row in self.dataframe.to_dict('rows')
             ], tooltip_duration=2000,
 
-            columns=[{"name": '_index_', "id": '_index_'}, {"name": '_predict_', "id": '_predict_'}] +
+            columns=[{"name": '_index_', "id": '_index_'},
+                     {"name": '_predict_', "id": '_predict_'}] +
                     [{"name": i, "id": i} for i in self.explainer.x_init],
             editable=False, row_deletable=False,
             style_as_list_view=True,
@@ -339,7 +345,6 @@ class SmartApp:
             page_action='none',
             fixed_rows={'headers': True, 'data': 0},
             fixed_columns={'headers': True, 'data': 0},
-            #filter_action='custom', filter_query='',
             sort_action='custom', sort_mode='multi', sort_by=[],
             active_cell={'row': 0, 'column': 0, 'column_id': '_index_'},
             style_table={'overflowY': 'auto', 'overflowX': 'auto'},
@@ -357,7 +362,7 @@ class SmartApp:
             figure=go.Figure(), id='feature_selector'
         )
 
-        # Component for prediction picking graph
+        # Component for the graph prediction picking
         self.components['graph']['prediction_picking'] = MyGraph(
             figure=go.Figure(), id='prediction_picking'
         )
@@ -366,19 +371,95 @@ class SmartApp:
             figure=go.Figure(), id='detail_feature'
         )
 
-        # component fo filter dataset
+        # Component create to filter the dataset
         self.components['filter']['filter_dataset'] = dbc.Col(
-            [ html.Div([
-                html.Div(id='dynamic-dropdown-container', children=[]),
-                html.Hr(),
-                html.Div([dbc.Button("Add Filter", id="dynamic-add-filter", n_clicks=0,
-                           color='warning', style={'margin-right': '20px'}),
-                          dbc.Button("Reset Filter", id="dynamic-reset-filter", n_clicks=0,
-                           color='warning', disabled=True)
-                          ])
-                ])
-                ], style={'maxheight': '22rem', 'height': '21rem', 'zIndex': 800},
-                className='filter'
+            [dbc.Row(
+                html.Div(
+                    id='main',
+                    children=[
+                        html.Div(
+                                id='filters',
+                                children=[
+                                    # Create Add Filter button
+                                    dbc.Button(
+                                        id='add_dropdown_button',
+                                        children='Add Filter',
+                                        color='warning',
+                                        size='sm',
+                                        style={'margin-right': '20px'}
+                                    ),
+                                    # Create reset Filter button (disabled of no filters applied)
+                                    dbc.Button(
+                                        id='reset_dropdown_button',
+                                        children='Reset all existing filters',
+                                        color='warning', disabled=True,
+                                        size='sm',
+                                        style={'margin-right': '20px'}
+                                    ),
+                                    # Create explanation button
+                                    dbc.Button(
+                                        "?",
+                                        id="open_filter",
+                                        size='sm',
+                                        color="warning",
+                                        ),
+                                    # Create popover on the explanation button
+                                    dbc.Popover(
+                                        "Click here to know how you can apply filters.",
+                                        target="open_filter",
+                                        body=True,
+                                        trigger="hover",
+                                    ),
+                                    # Modal associated to the explanation button
+                                    dbc.Modal(
+                                           [
+                                            dbc.ModalHeader(
+                                                dbc.ModalTitle("Filters explanation")
+                                                ),
+                                            dbc.ModalBody([
+                                                html.Div(
+                                                    dcc.Markdown(
+                                                        self.explanations.filter
+                                                        )
+                                                    )
+                                               ]),
+                                            dbc.ModalFooter(
+                                                dbc.Button(
+                                                    "Close",
+                                                    id="close_filter",
+                                                    color="warning"
+                                                    )
+                                               ),
+                                           ],
+                                           id="modal_filter",
+                                           centered=True,
+                                           size='lg'
+                                              ),
+                                    # Div which will contains the filters
+                                    html.Div(
+                                        id='dropdowns_container',
+                                        children=[]
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                ),
+                dbc.Row(
+                    html.Div([
+                        html.Br(),
+                        # Create Apply Filter button (Hidden if no filter to apply)
+                        dbc.Button(
+                                id='apply_filter',
+                                children='Apply filters',
+                                color='warning',
+                                size='sm',
+                                style={'display': 'none'}
+                                )
+                            ],
+                        )
+                    )
+                ], style={'maxheight': '22rem', 'height': '21rem', 'zIndex': 800}
             )
 
         self.components['filter']['index'] = dbc.Col(dbc.Row(
@@ -429,23 +510,26 @@ class SmartApp:
 
         self.components['filter']['positive_contrib'] = dbc.Col(
             [dbc.Row(
-                    [
-                dbc.Label("Contributions to display:", style={'font-size': '95%'}),
-               ]),
+                [
+                    dbc.Label("Contributions to display:", style={'font-size': '95%'}),
+                ]
+            ),
                 dbc.Row(
                     [
                         dbc.Col(
                             dbc.Checklist(
                                 options=[{"label": "Positive", "value": 1}], value=[1], inline=True,
                                 id="check_id_positive",
+                                # define the font-size style
                                 style={'font-size': '82%'}
-                            ),style={'display': 'inline-block'} 
+                            ), style={'display': 'inline-block'}
                         ),
                         dbc.Col(
                             dbc.Checklist(
                                 options=[{"label": "Negative", "value": 1}], value=[1], inline=True,
                                 id="check_id_negative",
-                                style={'font-size':'82%'}
+                                # define the font-size style
+                                style={'font-size': '82%'}
                                 ), style={'display': 'inline-block'}, align="center"
                             )
                     ], className="g-0", justify="center"
@@ -486,28 +570,31 @@ class SmartApp:
                                 ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             ),
+                            # Change md=3 to md=2
                             md=2, align="center", width="100%", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             html.A(
                                 dbc.Row([
                                         html.H3(truncate_str(self.explainer.title_story, maxlen=40),
-                                                id="shapash_title_story", style={'text-align': 'center'})]
-                                ),
+                                                id="shapash_title_story",
+                                                style={'text-align': 'center'})]
+                                        ),
                                 href="https://github.com/MAIF/shapash", target="_blank",
                             )],
+                            # Change md=3 to md=4
                             md=4, align="center", width="100%", style={'padding': 'auto'}
                         ),
                         dbc.Col([
                             self.components['menu']
                             ], align="end", md=6, width='100%'
                         )
-                    ],
-                    style={'padding': "5px 15px",
-                           "verticalAlign": "middle",
-                           "width": "auto",
-                           "justify": "end"}
-                )
+                        ],
+                        style={'padding': "5px 15px",
+                               "verticalAlign": "middle",
+                               "width": "auto",
+                               "justify": "end"}
+                        )
             ],
             fluid=True, style={'height': '100%', 'backgroundColor': self.bkg_color
                                }
@@ -521,39 +608,62 @@ class SmartApp:
                             [
                                 dbc.Card([
                                         html.Div(
+                                         # To drow the global_feature_importance graph
                                          self.draw_component('graph', 'global_feature_importance'),
-                                         #className="card",
                                          id="card_global_feature_importance",
-                                         #top=True,
+                                         # Position must be absolute to add the explanation button
                                          style={"position": 'absolute'}
                                          ),
-                                         html.Div([
-                                             dbc.Button("?", id="open_feature_importance", size='sm', 
-                                                        color="warning"),
-                                                dbc.Modal(
-                                                    [
-                                                        dbc.ModalHeader(dbc.ModalTitle("Feature importance")),
+                                        html.Div([
+                                             # Create explanation button on feature importance graph
+                                             dbc.Button(
+                                                 "?",
+                                                 id="open_feature_importance",
+                                                 size='sm',
+                                                 color="warning"
+                                                 ),
+                                             # Create popover for this button
+                                             dbc.Popover(
+                                                  "Click here to have more \
+                                                  information on Feature Importance graph.",
+                                                  target="open_feature_importance",
+                                                  body=True,
+                                                  trigger="hover",
+                                                     ),
+                                             # Create modal associated to this button
+                                             dbc.Modal([
+                                                        # Modal title
+                                                        dbc.ModalHeader(
+                                                            dbc.ModalTitle("Feature importance")
+                                                            ),
                                                         dbc.ModalBody([
                                                             html.Div(
-                                                                dcc.Markdown(self.explanations.feature_importance)
+                                                                # Add explanation
+                                                                dcc.Markdown(
+                                                                    self.explanations.feature_importance
+                                                                    )
                                                                     ),
-                                                           html.A('Click here for more details', href="https://github.com/MAIF/shapash",
-                                                                     style={'color': self.color[0]})
+                                                            # Here to add link in the modal
+                                                            html.A('Click here for more details',
+                                                                   href="https://github.com/MAIF/shapash",
+                                                                   style={'color': self.color[0]})
                                                         ]),
+                                                        # button to close the modal
                                                         dbc.ModalFooter(
                                                             dbc.Button(
-                                                                "Close", id="close_feature_importance",
+                                                                "Close",
+                                                                id="close_feature_importance",
                                                                 color="warning"
                                                             )
                                                         ),
                                                     ],
                                                     id="modal_feature_importance",
                                                     centered=True,
-                                                    #size='sm'
-                                                    size = 'lg'  
-                                                )   
-                                                # ],  style={'position': 'relative', 'left': 0, 'height': '2rem'})
-                                                ],  style={'position': 'relative', 'left': '96%'})
+                                                    size='lg'
+                                                )
+                                                ],
+                                                # position must be relative
+                                                style={'position': 'relative', 'left': '96%'})
                                     ])
                             ],
                             md=5,
@@ -561,89 +671,123 @@ class SmartApp:
                         ),
                         dbc.Col(
                             [
-                                # Tabs that contain 3 children tab (Dataset, Dataset Filters and True Value Vs Pedicted Values)
+                                # Tabs that contain 3 children tab (Dataset,
+                                # Dataset Filters and True Value Vs Pedicted Values)
                                 dbc.Tabs([
+                                    # Tab which contains the datatable component
                                     dbc.Tab(
-                                        # datatable component
+                                        # draw datatable component
                                         self.draw_component('table', 'dataset'),
+                                        # Tab name
                                         label='Dataset',
-                                        active_tab_class_name="fw-bold fst-italic",
                                         className="card",
                                         id='card_dataset',
+                                        # Style of the tab
                                         style={'cursor': 'pointer'},
-                                        #       'height': '24rem'},
                                         label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
+                                        # Style when the tab is activated
+                                        active_tab_class_name="fw-bold fst-italic",
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
                                                             }
                                         ),
+                                    # Tab which contains components to filter the dataset
                                     dbc.Tab(
-                                        # Card that contains components to filter the dataset
-                                        dbc.Card([
-                                            html.Div(
-                                            self.draw_component('filter', 'filter_dataset'), 
-                                            id='card_filter_dataset',
-                                            style={'overflow': "scroll"})
-                                            ]),
-                                       #className="card",
-                                        active_tab_class_name="fw-bold fst-italic",
-                                        style={'height': '24.1rem'},
+                                        dbc.Card(
+                                            dbc.CardBody(
+                                                html.Div(
+                                                    # draw the component
+                                                    self.draw_filter_table(),
+                                                    id='card_filter_dataset',
+                                                    # To add scroll in overflow y
+                                                    style={'overflow-y': "scroll",
+                                                           'overflow-x': 'hidden'})
+                                            ), style={'height': '24.1rem'},
+                                        ),
+                                        # Tab name
                                         label='Dataset Filters',
+                                        # Style of the tab
                                         label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
                                         tab_style={'border-left': '2px solid #ddd',
                                                    'border-right': '2px solid #ddd'},
+                                        # Style when the tab is activated
+                                        active_tab_class_name="fw-bold fst-italic",
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
                                                             }
                                          ),
+                                    # Tab which contains prediction picking graph
+                                    # and its explanation button
                                     dbc.Tab(
-                                        # Card that contains prediction pickingNo docu graph and "?" button and modal
                                         dbc.Card([
-                                        html.Div(
-                                         self.draw_component('graph', 'prediction_picking'),
-                                         # className="card",
-                                         id="card_prediction_picking",
-                                         style={"position": 'absolute'}
-                                         ),
-                                         html.Div([
-                                             dbc.Button("?", id="open_prediction_picking", size='sm',
-                                                        color="warning"),
-                                                dbc.Modal(
-                                                    [
-                                                        dbc.ModalHeader(dbc.ModalTitle("True values Vs Predicted values")),
-                                                        dbc.ModalBody([
-                                                            html.Div(
-                                                                dcc.Markdown(self.explanations.prediction_picking)
-                                                                    ),
-                                                                html.A('Click here for more details', href="https://github.com/MAIF/shapash",
-                                                                     style={'color': self.color[0]})
-                                                        ]),
-                                                        dbc.ModalFooter(
-                                                            dbc.Button(
-                                                                "Close", id="close_prediction_picking",
-                                                                color="warning"
-                                                            )
-                                                        ),
-                                                    ],
-                                                    id="modal_prediction_picking",
-                                                    centered=True,
-                                                    size = 'lg'
-                                                )   
-                                                # ],  style={'position': 'relative', 'left': 0})
+                                            html.Div(
+                                                # draw prediction picking graph
+                                                self.draw_component('graph', 'prediction_picking'),
+                                                id="card_prediction_picking",
+                                                # Position must be absolute to add
+                                                # the explanation button
+                                                style={"position": 'absolute'}
+                                            ),
+                                            html.Div([
+                                                 # Create explanation button
+                                                 dbc.Button(
+                                                     "?",
+                                                     id="open_prediction_picking",
+                                                     size='sm',
+                                                     color="warning"
+                                                     ),
+                                                 # Create popover for this button
+                                                 dbc.Popover(
+                                                         "Click here to have more \
+                                                         information on Prediction Picking graph.",
+                                                         target="open_prediction_picking",
+                                                         body=True,
+                                                         trigger="hover",
+                                                     ),
+                                                 # Create modal associated to this button
+                                                 dbc.Modal([
+                                                             # Modal title
+                                                             dbc.ModalHeader(
+                                                                dbc.ModalTitle("True values Vs Predicted values")
+                                                              ),
+                                                             dbc.ModalBody([
+                                                                    html.Div(
+                                                                        # explanation
+                                                                        dcc.Markdown(self.explanations.prediction_picking)
+                                                                        ),
+                                                                    # Here to add a link in the modal
+                                                                    html.A('Click here for more details', href="https://github.com/MAIF/shapash",
+                                                                         style={'color': self.color[0]})
+                                                                    ]),
+                                                             dbc.ModalFooter(
+                                                                 # button to close the modal
+                                                                 dbc.Button(
+                                                                     "Close",
+                                                                     id="close_prediction_picking",
+                                                                     color="warning"
+                                                                 )
+                                                              ),
+                                                        ],
+                                                        id="modal_prediction_picking",
+                                                        centered=True,
+                                                        size='lg'
+                                                    )
+                                                 # Position must be relative
                                                 ],  style={'position': 'relative', 'left': '97%'})
-                                    ]),
-                                        
-                                        active_tab_class_name="fw-bold fst-italic", 
+                                         ]),
+                                        # Tab name
                                         label='True Values Vs Predicted Values',
-                                        #style={'height': '24rem'},
+                                        # Style of the tab
                                         label_style={'color': "black", 'height': '30px',
                                                      'padding': '0px 5px'},
+                                        # Style when the tab is activated
+                                        active_tab_class_name="fw-bold fst-italic",
                                         active_label_style={'border-top': '3px solid',
                                                             'border-top-color': self.color[0]
                                                             }
-                                    )   
+                                    )
                                 ], id="tabs"
                                 )
                             ],
@@ -657,42 +801,66 @@ class SmartApp:
                     [
                         dbc.Col(
                             [
-                                # Card that contains feature selector graph and "?" button and modal
+                                # Card which contains feature selector graph
+                                # and explanation button
                                 dbc.Card([
                                         html.Div(
-                                         self.draw_component('graph', 'feature_selector'),
-                                         #className="card",
-                                         id='card_feature_selector',
-                                         #top=True,
-                                         style={"position": 'absolute'}
-                                         ),
+                                            # Draw feature selector graph
+                                            self.draw_component('graph', 'feature_selector'),
+                                            id='card_feature_selector',
+                                            # Position must be absolute to
+                                            # add explanation button
+                                            style={"position": 'absolute'}
+                                             ),
                                          html.Div([
-                                             dbc.Button("?", id="open_feature_selector", size='sm',
-                                                        color="warning"),
-                                                dbc.Modal(
-                                                    [
-                                                        dbc.ModalHeader(dbc.ModalTitle("Feature selector")),
+                                             # Create explanation button
+                                             dbc.Button(
+                                                 "?",
+                                                 id="open_feature_selector",
+                                                 size='sm',
+                                                 color="warning"
+                                                 ),
+                                             # popover of this button
+                                             dbc.Popover(
+                                                         "Click here to have more \
+                                                         information on Feature Selector graph.",
+                                                         target="open_feature_selector",
+                                                         body=True,
+                                                         trigger="hover",
+                                                     ),
+                                             # Modal of this button
+                                             dbc.Modal([
+                                                        dbc.ModalHeader(
+                                                            dbc.ModalTitle("Feature selector")
+                                                            ),
                                                         dbc.ModalBody([
                                                             html.Div(
+                                                                # explanations
                                                                 dcc.Markdown(self.explanations.feature_selector)
                                                                 ),
-                                                                html.A('Click here for more details', href="https://github.com/MAIF/shapash",
-                                                                     style={'color': self.color[0]})
-                                                        ]),
+                                                            # Here to add link
+                                                            html.A('Click here for more details',
+                                                                   href="https://github.com/MAIF/shapash",
+                                                                   style={'color': self.color[0]})
+                                                                ]),
                                                         dbc.ModalFooter(
+                                                            # Button to close modal
                                                             dbc.Button(
-                                                                "Close", id="close_feature_selector",
+                                                                "Close",
+                                                                id="close_feature_selector",
                                                                 color="warning"
                                                             )
                                                         ),
                                                     ],
                                                     id="modal_feature_selector",
                                                     centered=True,
-                                                    size = 'lg'
-                                                )   
-                                                # ],  style={'position': 'relative', 'left': 0})
-                                                ],  style={'position': 'relative', 'left': '96%'})
-                                    ])
+                                                    size='lg'
+                                                )
+                                                ],
+                                                 # position must be relative
+                                                 style={'position': 'relative',
+                                                        'left': '96%'})
+                                          ])
                             ],
                             md=5,
                             align="center",
@@ -703,47 +871,72 @@ class SmartApp:
                                 dbc.Row(
                                     [
                                         dbc.Col(
-                                            [ 
-                                                 # Card that contains detail feature graph and "?" button and modal
-                                                 dbc.Card([
-                                                    html.Div(
+                                            [
+                                             # Card that contains detail feature graph
+                                             # and explanation button
+                                             dbc.Card([
+                                                 html.Div(
+                                                     # draw detail_feature graph
                                                      self.draw_component('graph', 'detail_feature'),
-                                                     #className="card",
                                                      id='card_detail_feature',
-                                                     #top=True,
                                                      style={"position": 'absolute'}
+                                                 ),
+                                                 html.Div([
+                                                     # Create explanation button
+                                                     dbc.Button(
+                                                         "?",
+                                                         id="open_detail_feature",
+                                                         size='sm',
+                                                         color="warning"
+                                                         ),
+                                                     # Popover of this button
+                                                     dbc.Popover(
+                                                         "Click here to have more \
+                                                         information on Detail Feature graph.",
+                                                         target="open_detail_feature",
+                                                         body=True,
+                                                         trigger="hover",
                                                      ),
-                                                     html.Div([
-                                                         dbc.Button("?", id="open_detail_feature", size='sm',
-                                                                    color="warning"),
-                                                            dbc.Modal(
-                                                                [
-                                                                    dbc.ModalHeader(dbc.ModalTitle("Detail feature")),
-                                                                    dbc.ModalBody([
-                                                                        html.Div(
-                                                                            dcc.Markdown(self.explanations.detail_feature)
-                                                                            ),
-                                                                            html.A('Click here for more details', href="https://github.com/MAIF/shapash",
-                                                                                   style={'color': self.color[0]})
-                                                                        ]),
-                                                                    dbc.ModalFooter(
-                                                                        dbc.Button(
-                                                                            "Close", id="close_detail_feature",
-                                                                            color="warning"
-                                                                        )
-                                                                    ),
-                                                                ],
-                                                                id="modal_detail_feature",
-                                                                centered=True,
-                                                                size = 'lg'
-                                                            )   
-                                                            # ],  style={'position': 'relative', 'left': 0})
-                                                            ],  style={'position': 'relative', 'left': '96%'})
+                                                     # Modal of this button
+                                                     dbc.Modal(
+                                                            [
+                                                             dbc.ModalHeader(
+                                                                 dbc.ModalTitle("Detail feature")
+                                                                 ),
+                                                             dbc.ModalBody([
+                                                                 html.Div(
+                                                                     # explanations
+                                                                     dcc.Markdown(self.explanations.detail_feature)
+                                                                     ),
+                                                                 # Here to add link on the modal
+                                                                 html.A('Click here for more details',
+                                                                        href="https://github.com/MAIF/shapash",
+                                                                        style={'color': self.color[0]})
+                                                                ]),
+                                                             dbc.ModalFooter(
+                                                                 # Button to close the modal
+                                                                 dbc.Button(
+                                                                     "Close",
+                                                                     id="close_detail_feature",
+                                                                     color="warning"
+                                                                     )
+                                                                ),
+                                                            ],
+                                                            id="modal_detail_feature",
+                                                            centered=True,
+                                                            size='lg'
+                                                        )
+
+                                                        ],
+                                                          # Position must be relative
+                                                          style={
+                                                            'position': 'relative',
+                                                            'left': '96%'
+                                                            })
                                                 ])
                                             ],
                                             md=8,
                                             align="center",
-                                            # style={'height': '27rem'}
                                         ),
                                         dbc.Col(
                                             [
@@ -769,10 +962,10 @@ class SmartApp:
             ],
             className="mt-12",
             fluid=True,
-           # style={'position': 'relative'}
+            # To drop the x scroll-bar
+            style={'overflow-x': 'hidden'}
         )
 
-                              
     def adjust_menu(self):
         """
         Override menu from explainer object depending on
@@ -836,11 +1029,21 @@ class SmartApp:
                 id=f"ember_{component_id}",
                 className="dock-expand",
                 **{'data-component-type': component_type},
+                # Get components'id
                 **{'data-component-id': component_id}
             )
         )
         return component
-
+    
+    def draw_filter_table(self):
+        """
+        Method which returns the filter dataset components block.
+        Returns
+        -------
+            component
+        """
+        return self.components['filter']['filter_dataset']
+    
     def draw_filter(self):
         """
         Method which returns filter components block for local
@@ -917,35 +1120,38 @@ class SmartApp:
                       data_component_type,
                       data_component_id):
                 """
-                Function used to fix the size of graph and dataTable cards.
-                Because prediction picking card is in a tab, it's card not have
-                the same size of the other graph'cards.
+                Function used to set style of cards and components.
+                Prediction picking graph style is different than the other
+                graph because it is placed in a tab.
                 ---------------------------------------------------------------
-                click: click on the zoom button
-                data_component_type: the type of the component
-                data_component_id: the id of the component
+                click: click on zoom button
+                data_component_type: component type
+                data_component_id: component id
                 --------------------------------------------------------------
                 return style of cards and style of components
                 """
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
                 if toggle_on:
+                    # Style for graph
                     style_component = {
-                        'height': '21rem'
+                        'height': '21.6rem'
                     }
                     this_style_card = {
                         'height': '22rem', 'zIndex': 900,
                     }
+                    # Style for prediction picking graph
                     if data_component_id == 'prediction_picking':
                         style_component = {
-                            'height': '20.3rem',
+                            'height': '20.7rem',
                         }
                         this_style_card = {
                             'height': '20.8rem', 'zIndex': 901,
                         }
+                    # Style for the Dataset
                     if data_component_type == 'table':
                         style_component = {
-                            'maxHeight': '22rem',
+                            'maxHeight': '23rem',
                         }
                         this_style_card = {
                             'height': '24.1rem', 'zIndex': 900,
@@ -953,6 +1159,7 @@ class SmartApp:
                     return this_style_card, style_component
 
                 else:
+                    # Style when zoom button is clicked
                     this_style_card = {
                         'height': '70vh',
                         'width': 'auto',
@@ -961,7 +1168,7 @@ class SmartApp:
                         'bottom': 0, 'left': 0, 'right': 0,
                     }
                     style_component = {
-                        'height': '92vh', 'maxHeight': '92vh',
+                        'height': '89vh', 'maxHeight': '89vh',
                     }
                     return this_style_card, style_component
 
@@ -1039,24 +1246,83 @@ class SmartApp:
                 Output('dataset', 'active_cell'),
             ],
             [
-                Input('dataset', 'sort_by'),
-                Input('dataset', "filter_query"),
                 Input('prediction_picking', 'selectedData'),
-                Input('clear_filter', 'n_clicks'),
-                Input('modal', 'is_open')
+                Input('modal', 'is_open'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')
             ],
-            [State('rows', 'value'),
-             State('name', 'value')]
+            [
+                State('rows', 'value'),
+                State('name', 'value'),
+                State({'type': 'var_dropdown', 'index': ALL}, 'value'),
+                State({'type': 'var_dropdown', 'index': ALL}, 'id'),
+                State({'type': 'dynamic-str', 'index': ALL}, 'value'),
+                State({'type': 'dynamic-str', 'index': ALL}, 'id'),
+                State({'type': 'dynamic-bool', 'index': ALL}, 'value'),
+                State({'type': 'dynamic-bool', 'index': ALL}, 'id'),
+                State({'type': 'dynamic-date', 'index': ALL}, 'start_date'),
+                State({'type': 'dynamic-date', 'index': ALL}, 'end_date'),
+                State({'type': 'dynamic-date', 'index': ALL}, 'id'),
+                State({'type': 'lower', 'index': ALL}, 'value'),
+                State({'type': 'lower', 'index': ALL}, 'id'),
+                State({'type': 'upper', 'index': ALL}, 'value'),
+                State({'type': 'upper', 'index': ALL}, 'id'),
+                State('dropdowns_container', 'children')
+            ]
         )
-        def update_datatable(sort_by,
-                             filter_query,
-                             selected_data,
-                             clear_filter,
+        def update_datatable(selected_data,
                              is_open,
+                             nclicks_apply,
+                             nclicks_reset,
+                             nclicks_del,
                              rows,
-                             name):
+                             name,
+                             val_feature,
+                             id_feature,
+                             val_str_modality,
+                             id_str_modality,
+                             val_bool_modality,
+                             id_bool_modality,
+                             start_date,
+                             end_date,
+                             id_date,
+                             val_lower_modality,
+                             id_lower_modality,
+                             val_upper_modality,
+                             id_upper_modality,
+                             children):
             """
-            update datatable according to sorting, filtering and settings modifications
+            This function is used to update the datatable according to sorting,
+            filtering and settings modifications.
+            ------------------------------------------------------------------
+            selected_data: selected data in prediction picking graph
+            is_open: modal
+            nclicks_apply: click on Apply Filter button
+            nclicks_reset: click on Reset All Filter button
+            nclicks_del: click on delete button
+            rows: number of rows for subset
+            name: name for features name
+            val_feature: feature selected to filter
+            id_feature: id of feature selected to filter
+            val_str_modality: string modalities selected
+            id_str_modality: id of string modalities selected
+            val_bool_modality: boolean modalities selected
+            id_bool_modality: id of boolean modalities selected
+            start_date: start dates selected
+            end_date: end dates selected
+            id_date: id of dates selected
+            val_lower_modality: lower values of numeric filter
+            id_lower_modality: id of lower modalities of numeric filter
+            val_upper_modality: upper values of numeric filter
+            id_upper_modality: id of upper values of numeric filter
+            children: children of dropdown container
+            ------------------------------------------------------------------
+            return
+            data: available dataset
+            tooltip_data: tooltip of the dataset
+            columns: columns of the dataset
+            active_cell: activated cell
             """
             ctx = dash.callback_context
             active_cell = no_update
@@ -1075,28 +1341,80 @@ class SmartApp:
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
                             [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
+            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is not None)):
                 row_ids = []
-                if selected_data is not None:
+                # If some data have been selected in prediction picking graph
+                if len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
-                df = self.round_dataframe.loc[row_ids]
-
-            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                    df = self.round_dataframe.loc[row_ids]
+                else:
+                    df = self.round_dataframe
+            # If click on reset button
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 df = self.round_dataframe
-
-            if filter_query:
-                df = apply_filter(self.round_dataframe, filter_query)
-
-            if len(sort_by):
-                df = df.sort_values(
-                    [col['column_id'] for col in sort_by],
-                    ascending=[
-                        col['direction'] == 'asc'
-                        for col in sort_by
-                    ],
-                    inplace=False
-                )
+            # If click on Apply filter
+            elif ((ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks') | (
+                    (ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is None))):
+                # get list of ID
+                feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
+                str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
+                bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
+                lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
+                date_id = [id_date[i]['index'] for i in range(len(id_date))]
+                df = self.round_dataframe
+                # If there is some filters
+                if len(feature_id) > 0:
+                    for i in range(len(feature_id)):
+                        # String filter
+                        if feature_id[i] in str_id:
+                            position = np.where(np.array(str_id) == feature_id[i])[0][0]
+                            if ((position is not None) & (val_str_modality[position] is not None)):
+                                df = df[df[val_feature[i]].isin(val_str_modality[position])]
+                            else:
+                                df = df
+                        # Boolean filter
+                        elif feature_id[i] in bool_id:
+                            position = np.where(np.array(bool_id) == feature_id[i])[0][0]
+                            if ((position is not None) & (val_bool_modality[position] is not None)):
+                                df = df[df[val_feature[i]] == val_bool_modality[position]]
+                            else:
+                                df = df
+                        # Date filter
+                        elif feature_id[i] in date_id:
+                            position = np.where(np.array(date_id) == feature_id[i])[0][0]
+                            if((position is not None) &
+                               (start_date[position] < end_date[position])):
+                                df = df[((df[val_feature[i]] >= start_date[position]) &
+                                         (df[val_feature[i]] <= end_date[position]))]
+                            else:
+                                df = df
+                        # Numeric filter
+                        elif feature_id[i] in lower_id:
+                            position = np.where(np.array(lower_id) == feature_id[i])[0][0]
+                            if((position is not None) & (val_lower_modality[position] is not None) &
+                               (val_upper_modality[position] is not None)):
+                                if (val_lower_modality[position] < val_upper_modality[position]):
+                                    df = df[(df[val_feature[i]] >= val_lower_modality[position]) &
+                                            (df[val_feature[i]] <= val_upper_modality[position])]
+                                else:
+                                    df = df
+                            else:
+                                df = df
+                        else:
+                            df = df
+                else:
+                    df = df
+                if len(df) == 0:
+                    raise ValueError(
+                        "Your dataframe is empty. It must have at list one row"
+                         )
+            elif None not in nclicks_del:
+                df = self.round_dataframe
+            else:
+                raise dash.exceptions.PreventUpdate
             self.components['table']['dataset'].data = df.to_dict('records')
             self.components['table']['dataset'].tooltip_data = [
                 {
@@ -1104,7 +1422,6 @@ class SmartApp:
                     for column, value in row.items()
                 } for row in df.to_dict('rows')
             ]
-
             return (
                 self.components['table']['dataset'].data,
                 self.components['table']['dataset'].tooltip_data,
@@ -1121,7 +1438,9 @@ class SmartApp:
                 Input('select_label', 'value'),
                 Input('dataset', 'data'),
                 Input('prediction_picking', 'selectedData'),
-                Input('clear_filter', 'n_clicks'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
                 Input('bool_groups', 'on'),
@@ -1129,32 +1448,50 @@ class SmartApp:
             ],
             [
                 State('global_feature_importance', 'clickData'),
-                State('dataset', "filter_query"),
                 State('features', 'value')
             ]
         )
         def update_feature_importance(label,
                                       data,
                                       selected_data,
-                                      clear_filter,
+                                      apply_filters,
+                                      reset_filter,
+                                      nclicks_del,
                                       is_open,
                                       n_clicks,
                                       bool_group,
                                       click_zoom,
                                       clickData,
-                                      filter_query,
                                       features):
-           
             """
-            update feature importance plot according to selected label and dataset state.
+            update feature importance plot according label, click on graph,
+            filters applied and subset selected in prediction picking graph.
+            ------------------------------------------------------------
+            label: label of data
+            data: dataset
+            selected_data : data selected on prediction picking graph
+            apply_filters: click on apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click on del button
+            is_open: modal
+            n_clicks: click on features importance card
+            bool_group: display groups
+            click_zoom: click on zoom button
+            clickData: click on features importance graph
+            features: features value
+            -------------------------------------------------------------
+            return
+            figure of Features Importance graph
+            click on Features Importance graph
             """
+            ctx = dash.callback_context
+            # Zoom is False by Default. It becomes True if we click on it
             click = 2 if click_zoom is None else click_zoom
             if click % 2 == 0:
                 zoom_active = False
             else:
                 zoom_active = True
             selection = None
-            ctx = dash.callback_context
             selected_feature = self.explainer.inv_features_dict.get(
                 clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
             ) if clickData else None
@@ -1174,7 +1511,7 @@ class SmartApp:
                 if self.last_click_data == clickData:
                     selected_feature = None
                 list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                     for f in group_features]
+                                      for f in group_features]
                 if selected_feature in list_sub_features:
                     self.last_click_data = clickData
                     raise PreventUpdate
@@ -1182,28 +1519,51 @@ class SmartApp:
                     pass
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
                 clickData = None  # We reset the graph and clicks if we toggle the button
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
+            # If we have selected data on prediction picking graph
+            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is not None)):
                 row_ids = []
-                if selected_data is not None:
+                if len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
-                selection = row_ids
-            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                    selection = row_ids
+                else:
+                    selection = None
+            # If we have dubble click on prediction picking to remove the selected subset
+            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is None)):
+                # If there is some filters applied
+                if (len([d['_index_'] for d in data]) != len(self.list_index)):
+                    selection = [d['_index_'] for d in data]
+                else:
+                    selection = None
+            # If we click on reset filter button
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                selection = None
+            # If we click on Apply button
+            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                selection = [d['_index_'] for d in data]
+            # If we click on the last del button
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                  (None not in nclicks_del)):
                 selection = None
             else:
-                self.last_click_data = clickData
-                if zoom_active:
+                # Zoom management to generate graph which have global axis
+                if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
+                    selection = None
+                else:
                     row_ids = []
                     if selected_data is not None:
+                        # we plot prediction picking subset
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
                         selection = row_ids
-                else:
-                    raise PreventUpdate
+                    else:
+                        # we plot filter subset
+                        selection = [d['_index_'] for d in data]
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
-            selection = self.list_index if filter_query else selection
 
             self.components['graph']['global_feature_importance'].figure = \
                 self.explainer.plot.features_importance(
@@ -1214,6 +1574,7 @@ class SmartApp:
                     display_groups=bool_group,
                     zoom=zoom_active
                 )
+            # Adjust graph with adding x axis title
             self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             if selected_feature:
@@ -1237,7 +1598,10 @@ class SmartApp:
             [
                 Input('global_feature_importance', 'clickData'),
                 Input('prediction_picking', 'selectedData'),
-                Input('clear_filter', 'n_clicks'),
+                Input('dataset', 'data'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('modal', 'is_open'),
                 Input('ember_feature_selector', 'n_clicks')
@@ -1249,7 +1613,10 @@ class SmartApp:
         )
         def update_feature_selector(feature,
                                     selected_data,
-                                    clear_filter,
+                                    data,
+                                    apply_filters,
+                                    reset_filter,
+                                    nclicks_del,
                                     label,
                                     is_open,
                                     click_zoom,
@@ -1257,8 +1624,25 @@ class SmartApp:
                                     violin):
             """
             Update feature plot according to label, data,
-            selected feature and settings modifications
+            selected feature on features importance graph,
+            filters and settings modifications
+            --------------------------------------------
+            feature: click on feature importance graph
+            selected_data: Data selected on prediction picking graph
+            data: dataset
+            apply_filters: click on apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click del button
+            label: selected label
+            is_open: modal
+            click_zoom: click on zoom button
+            points: points value in setting
+            violin: violin value in setting
+            ---------------------------------------------
+            return
+            figure: feature selector graph
             """
+            # Zoom is False by Default. It becomes True if we click on it
             click = 2 if click_zoom is None else click_zoom
             if click % 2 == 0:
                 zoom_active = False
@@ -1277,59 +1661,68 @@ class SmartApp:
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
-                 if feature is not None:
+                if feature is not None:
                     # Removing bold
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
-                    # If we click on global sample in feature importance :
-                    print(self.components['graph']['global_feature_importance'].figure['data'][0]['name'])
-                    if self.components['graph']['global_feature_importance'].figure['data'][0]['name'] == 'Global':
-                        if feature['points'][0]['curveNumber'] == 0 and \
-                                len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                            self.subset = self.list_index
-                        else:
-                            self.subset = None
-                    # If we click on subset sample in feature importance
-                    else:
-                        if feature['points'][0]['curveNumber'] == 0 and \
-                                len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                    if feature['points'][0]['curveNumber'] == 0 and \
+                              len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                        if selected_data is not None:
                             row_ids = []
                             for p in selected_data['points']:
                                 row_ids.append(p['customdata'])
                             self.subset = row_ids
                         else:
-                            self.subset = None     
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData' and len(selected_data['points']) > 1:
+                            self.subset = [d['_index_'] for d in data]
+                    else:
+                        self.subset = self.list_index
+            # If we have selected data on prediction picking graph
+            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is not None)):
                 row_ids = []
-                if selected_data is not None:
+                if len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
-                self.subset = row_ids
-            elif ctx.triggered[0]['prop_id'] == 'clear_filter.n_clicks':
+                    self.subset = row_ids
+                else:
+                    self.subset = None
+            # if we have click on reset button
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                self.subset = None
+            # If we have clik on Apply filter button
+            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                self.subset = [d['_index_'] for d in data]
+            # If we have click on the last del button
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                  (None not in nclicks_del)):
                 self.subset = None
             else:
-                if zoom_active:
+                # Zoom management to generate graph which have global axis
+                if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
+                    self.subset = self.list_index
+                else:
                     row_ids = []
                     if selected_data is not None:
+                        # we plot prediction picking subset
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
                         self.subset = row_ids
-                else:
-                    zoom_active = zoom_active
-                    # raise PreventUpdate
+                    else:
+                        # we plot filter subset
+                        self.subset = [d['_index_'] for d in data]
 
-            self.components['graph']['feature_selector'].figure = self.explainer.plot.contribution_plot(
-                col=self.selected_feature,
-                selection=self.subset,
-                label=self.label,
-                violin_maxf=violin,
-                max_points=points,
-                zoom=zoom_active
-            )
+            self.components['graph']['feature_selector'].figure = \
+                self.explainer.plot.contribution_plot(
+                    col=self.selected_feature,
+                    selection=self.subset,
+                    label=self.label,
+                    violin_maxf=violin,
+                    max_points=points,
+                    zoom=zoom_active
+                )
 
             self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
-            subset_graph = True if self.subset is not None else False
+            # Adjust graph with adding x and y axis titles
             self.components['graph']['feature_selector'].adjust_graph(
-                subset_graph=subset_graph,
                 x_ax=truncate_str(self.selected_feature, 110),
                 y_ax='Contribution')
             return self.components['graph']['feature_selector'].figure
@@ -1342,7 +1735,10 @@ class SmartApp:
             [
                 Input('feature_selector', 'clickData'),
                 Input('prediction_picking', 'clickData'),
-                Input('dataset', 'active_cell')
+                Input('dataset', 'active_cell'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')
             ],
             [
                 State('dataset', 'data'),
@@ -1352,12 +1748,31 @@ class SmartApp:
         def update_index_id(click_data,
                             prediction_picking,
                             cell,
+                            apply_filters,
+                            reset_filter,
+                            nclicks_del,
                             data,
                             current_index_id):
             """
-            update index value according to active cell and click data on feature plot.
+            This function is used to update index value according to
+            active cell, filters and click data on feature plot or on
+            prediction picking graph.
+            ----------------------------------------------------------------
+            click_data: click on feature selector
+            prediction_picking: click on prediction picking graph
+            cell: selected sell on dataset
+            apply_filters: click on Apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click on del button
+            data: dataset
+            current_index_id: the current value of the index
+            ----------------------------------------------------------------
+            return
+            selected index id
+            boolean n_submit
             """
             ctx = dash.callback_context
+            selected = None
             if ctx.triggered[0]['prop_id'] != 'dataset.data':
                 if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
                     selected = click_data['points'][0]['customdata'][1]
@@ -1369,8 +1784,24 @@ class SmartApp:
                     if cell is not None:
                         selected = data[cell['row']]['_index_']
                     else:
-                        selected = current_index_id  # Get actual value in field to refresh the selected value
+                        # Get actual value in field to refresh the selected value
+                        selected = current_index_id
                 elif ctx.triggered[0]['prop_id'] == '.':
+                    selected = data[0]['_index_']
+                # If click on Reset apply button
+                elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                    # Get the row index value
+                    selected = data[cell['row']]['_index_']
+                # If click on Apply filter button
+                elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                    # get the first index on the dataset
+                    selected = data[0]['_index_']
+                # If click on the last del button
+                elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                      (None not in nclicks_del)):
+                    # Get the row index value
+                    selected = data[cell['row']]['_index_']
+                else:
                     selected = data[0]['_index_']
             else:
                 raise PreventUpdate
@@ -1448,7 +1879,7 @@ class SmartApp:
                 Input('prediction_picking', 'clickData'),
                 Input("validation", "n_clicks"),
                 Input('bool_groups', 'on'),
-                Input('ember_detail_feature', 'n_clicks')
+                Input('ember_detail_feature', 'n_clicks'),
             ],
             [
                 State('index_id', 'value'),
@@ -1471,9 +1902,27 @@ class SmartApp:
                                   data):
             """
             update local explanation plot according to app changes.
+            -------------------------------------------------------
+            threshold: threshold
+            max_contrib: max contribution
+            positive: boolean
+            negative: boolean
+            masked: feature(s) to mask
+            label: label
+            cell: selected cell
+            click_data: click on feature selector graph
+            prediction_picking: click on prediction picking graph
+            validation_click: click on validation
+            bool_group: boolean
+            click_zoom: click on zoom button
+            index: selected index
+            data: the dataset
+            --------------------------------------------------------
+            return
+            detail feature graph
             """
+            # Zoom is False by Default. It becomes True if we click on it
             click = 2 if click_zoom is None else click_zoom
-            print(click_zoom)
             if click % 2 == 0:
                 zoom_active = False
             else:
@@ -1492,16 +1941,13 @@ class SmartApp:
                 else:
                     zoom_active = zoom_active
                     # raise PreventUpdate
-
-            if selected is None:
+            else:
                 selected = index
-
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
                 sign = (None if negative == [1] else True)
             else:
                 sign = (False if negative == [1] else None)
-
             self.explainer.filter(threshold=threshold,
                                   features_to_hide=masked,
                                   positive=sign,
@@ -1517,6 +1963,7 @@ class SmartApp:
                 display_groups=bool_group,
                 zoom=zoom_active
             )
+            # Adjust graph with adding x axis titles
             self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
             # font size can be adapted to screen size
             list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
@@ -1594,6 +2041,10 @@ class SmartApp:
             Output(component_id='prediction_picking', component_property='figure'),
             [
                 Input('global_feature_importance', 'clickData'),
+                Input('dataset', 'data'),
+                Input('apply_filter', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('modal', 'is_open'),
                 Input('ember_prediction_picking', 'n_clicks')
@@ -1604,6 +2055,10 @@ class SmartApp:
             ]
         )
         def update_prediction_picking(feature,
+                                      data,
+                                      apply_filters,
+                                      reset_filter,
+                                      nclicks_del,
                                       label,
                                       is_open,
                                       click_zoom,
@@ -1612,13 +2067,26 @@ class SmartApp:
             """
             Update feature plot according to label, data,
             selected feature and settings modifications
+            ------------------------------------------------
+            feature: click on features importance graph
+            data: the dataset
+            apply_filters: click on apply filter button
+            reset_filter: click on reset filter button
+            nclicks_del: click on del button
+            label: selected label
+            is_open: modal
+            click_zoom: click on zoom button
+            points: number of points
+            violin: number of violin plot
+            -------------------------------------------------
+            return
+            prediction picking graph
             """
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True  # To knoow il click zoom is activate
             ctx = dash.callback_context
+            # Filter subset
+            filter_subset = None
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
@@ -1627,9 +2095,18 @@ class SmartApp:
                     self.settings_ini['points'] = self.settings['points']
                     self.settings['violin'] = violin
                     self.settings_ini['violin'] = self.settings['violin']
-
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
+            # If we have clicked on reset button
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                self.subset = None
+            # If we have clicked on Apply filter button
+            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+                self.subset = [d['_index_'] for d in data]
+            # If we have clicked on the last delete button (X)
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                  (None not in nclicks_del)):
+                self.subset = None
             else:
                 raise PreventUpdate
 
@@ -1756,300 +2233,327 @@ class SmartApp:
                 return not is_open
             return is_open
 
-        @app.callback([Output('dynamic-add-filter', 'n_clicks'),
-                      Output('dynamic-reset-filter', 'n_clicks')],
-                      [Input('dynamic-reset-filter', 'n_clicks')])
-        def update_add_click(n_clicks):
-            """
-            Function used to reset the number of clicks on add filter button
-            to 0 if we click on reset filter button.
-            ---------------------------------------------------------------
-            n_clicks: click on reset filter
-            ---------------------------------------------------------------
-            return 0
-            """
-            return 0, 0
-
         @app.callback(
-            Output('dynamic-dropdown-container', 'children'),
-            [Input('dynamic-add-filter', 'n_clicks'),
-             Input('dynamic-reset-filter', 'n_clicks')],
-            [State('dynamic-dropdown-container', 'children')])
-        def display_dropdowns(n_clicks_add,
-                              n_clicks_reset,
-                              children):
-            """
-            Function used to create new children component when we click on
-            add Filter. This children contains a div for output label,
-            a dropdown button to select variable to filter and an other div
-            that will contain modalities choices.
-            ---------------------------------------------------------------
-            n_click_add: number of click on Add filter button
-            children : list of elements of dynamic dropdown container
-            ---------------------------------------------------------------
-            return children
-            """
-            ctx = dash.callback_context
-            new_element = html.Div([
-                html.Br(),
-                html.Div(
-                    id={
-                        'type': 'dynamic-output-label',
-                        'index': n_clicks_add
-                    }
-                ),
-                html.Div([
-                    html.Div(dcc.Dropdown(
-                        [{'label': i, 'value': i} for i in self.round_dataframe.columns],
-                        id={
-                            'type': 'dynamic-dropdown',
-                            'index': n_clicks_add
-                        },
-                        ),
-                        id={
-                            'type': 'div_dynamic-dropdown',
-                            'index': n_clicks_add
-                        },
-                        style={"width": "50%"}
-                        ),
-                    html.Div(id={
-                                'type': 'dynamic-output',
-                                'index': n_clicks_add
-                                },
-                             style={'width': '100%'}
-                             ),
-                    html.Div(id={
-                            'type': 'dynamic-reset-output',
-                            'index': n_clicks_add
-                        }, style={'width': '50%'})
-                ], style={'display': 'flex'})
-            ]) 
-            if ctx.triggered[0]['prop_id'] == 'dynamic-reset-filter.n_clicks':
-                children = [new_element]
-            else:
-                children.append(new_element)
-            return children
-
-        # @app.callback(
-        #     Output({'type': 'div_dynamic-dropdown', 'index': MATCH}, 'children'),
-        #     [Input({'type': 'dynamic-reset-output', 'index': MATCH}, 'n_clicks'),
-        #      Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'id')],
-        #     [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')]
-        #     )
-        # def display_dropdowns_with_reset(clicks, id, value): 
-        #     ctx = dash.callback_context
-        #     print(ctx.triggered[0])
-        #     if clicks != None:
-        #         if clicks > 0:
-        #             return html.Div()
-        #         else:
-        #             element = dcc.Dropdown(
-        #                 [{'label': i, 'value': i} for i in self.round_dataframe.columns],
-        #                 id={
-        #                     'type': 'dynamic-dropdown',
-        #                     'index': id['index']
-        #                 },
-        #                 value=value
-        #                 )
-        #             return element
-        #     else:
-        #         element = dcc.Dropdown(
-        #                 [{'label': i, 'value': i} for i in self.round_dataframe.columns],
-        #                 id={
-        #                     'type': 'dynamic-dropdown',
-        #                     'index': id['index']
-        #                 },
-        #                 value=value
-        #                 )
-        #         return element
-
-        @app.callback(
-            Output('dynamic-reset-filter', 'disabled'),
-            [Input('dynamic-add-filter', 'n_clicks')]
+            Output("modal_filter", "is_open"),
+            [Input("open_filter", "n_clicks"),
+             Input("close_filter", "n_clicks")],
+            [State("modal_filter", "is_open")],
         )
-        def update_reset_button(n_click):
+        def toggle_modal_filters(n1,
+                                 n2,
+                                 is_open):
+            """
+            Function used to open and close modal explication when we click
+            on "?" button on Dataset Filters Tab
+            ---------------------------------------------------------------
+            n1: click on "?" button
+            n2: click on close button in modal
+            ---------------------------------------------------------------
+            return modal
+            """
+            if n1 or n2:
+                return not is_open
+            return is_open
+
+        # Add or remove plot blocs in the 'dropdowns_container'
+        @app.callback(
+            Output('dropdowns_container', 'children'),
+            [
+                Input('add_dropdown_button', 'n_clicks'),
+                Input('reset_dropdown_button', 'n_clicks'),
+                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')
+            ],
+            [
+                 State('dropdowns_container', 'children'),
+                 State('name', 'value')
+            ]
+        )
+        def layout_filter(n_clicks_add,
+                          n_clicks_rm,
+                          n_clicks_reset,
+                          currents_filters,
+                          name
+                          ):
+            """
+            Function used to create filter blocs in the dropdowns_container.
+            Each bloc will contains:
+                -label
+                -dropdown button to select feature to filter
+                -div which will contains modalities
+                -delete button
+            ---------------------------------------------------------------
+            n_clicks_add: click on add filter
+            n_clicks_reset: click on reset filter button
+            n_click_del: click on delete button
+            children: information on dropdown container
+            name: name for feature name
+            ---------------------------------------------------------------
+            return
+                filter blocs
+            """
+            # Context and init handling (no action)
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+            # If we use domain name for feature name
+            if name == [1]:
+                dict_name = [self.explainer.features_dict[i]
+                             for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+                dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+                # Create dataframe to sort it by feature_name
+                df_feature_name = pd.DataFrame({'feature_name': dict_name,
+                                                'feature_id': dict_id})
+                df_feature_name = df_feature_name.sort_values(
+                    by='feature_name').reset_index(drop=True)
+                # Options are sorted by feature_name
+                options = [
+                    {"label": '_index_', "value": '_index_'},
+                    {"label": '_predict_', "value": '_predict_'}] + \
+                    [{"label": df_feature_name.loc[i, 'feature_name'],
+                      "value": df_feature_name.loc[i, 'feature_id']}
+                     for i in range(len(df_feature_name))]
+            else:
+                options = [
+                    {"label": '_index_', "value": '_index_'},
+                    {"label": '_predict_', "value": '_predict_'}] + \
+                    [{"label": i, "value": i} for i in np.sort(
+                        self.dataframe.drop(['_index_', '_predict_'], axis=1).columns)]
+
+            # Creation of a new graph
+            if button_id == 'add_dropdown_button':
+                # ID index definition
+                if n_clicks_add is None:
+                    index_id = 0
+                else:
+                    index_id = n_clicks_add
+                # Appending a dropdown block to 'dropdowns_container'children
+                subset_filter = html.Div(
+                    id={'type': 'bloc_div',
+                        'index': index_id},
+                    children=[
+                        html.Div([
+                            html.Br(),
+                            # div which will contains label
+                            html.Div(
+                                    id={'type': 'dynamic-output-label',
+                                        'index': index_id},
+                                    )
+                            ]),
+                        html.Div([
+                            # div with dopdown button to select feature to filter
+                            html.Div(dcc.Dropdown(
+                                id={'type': 'var_dropdown',
+                                    'index': index_id},
+                                options=options,
+                                placeholder="Variable"
+                            ), style={"width": "30%"}),
+                            # div which will contains modalities
+                            html.Div(
+                                 id={'type': 'dynamic-output',
+                                     'index': index_id},
+                                 style={"width": "50%"}
+                                ),
+                            # Button to delete bloc
+                            dbc.Button(
+                                id={'type': 'del_dropdown_button',
+                                    'index': index_id},
+                                children='X',
+                                color='warning',
+                                size='sm'
+                            )
+                        ], style={'display': 'flex'})
+                    ]
+                )
+                return currents_filters + [subset_filter]
+            # Removal of all existing filters
+            elif button_id == 'reset_dropdown_button':
+                return [html.Div(
+                    id={'type': 'bloc_div',
+                        'index': 0},
+                    children=[])]
+            # Removal of an existing filter
+            else:
+                filter_id_to_remove = eval(button_id)['index']
+                return [gr for gr in currents_filters
+                        if gr['props']['id']['index'] != filter_id_to_remove]
+
+        @app.callback(
+            Output('reset_dropdown_button', 'disabled'),
+            [Input('add_dropdown_button', 'n_clicks'),
+             Input('reset_dropdown_button', 'n_clicks'),
+             Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')]
+        )
+        def update_disabled_reset_button(n_click_add,
+                                         n_click_reset,
+                                         n_click_del):
             """
             Function used to disabled or not the reset filter button.
             This button is disabled if there is no filter added.
             ---------------------------------------------------------------
-            n_clicks: click on add filter
+            n_click_add: click on add filter button
+            n_click_reset: click on reset filter button
+            n_click_del: click on delete button
             ---------------------------------------------------------------
-            return boolean
+            return disabled style
             """
-            if n_click > 0:
-                return False
+            ctx = dash.callback_context
+            if ctx.triggered[0]['prop_id'] == 'add_dropdown_button.n_clicks':
+                disabled = False
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                disabled = True
+            elif None not in n_click_del:
+                disabled = True
             else:
-                return True
+                disabled = False
+            return disabled
+
+        @app.callback(
+            Output('apply_filter', 'style'),
+            [Input('add_dropdown_button', 'n_clicks'),
+             Input('reset_dropdown_button', 'n_clicks'),
+             Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')]
+        )
+        def update_style_apply_filter_button(n_click_add,
+                                             n_click_reset,
+                                             n_click_del):
+            """
+            Function used to display or not the apply filter button.
+            This button is only display if almost one filter was added.
+            ---------------------------------------------------------------
+            n_click_add: click on add filter button
+            n_click_reset: click on reset filter button
+            n_click_del: click on delete button
+            ---------------------------------------------------------------
+            return style of apply filter button
+            """
+            ctx = dash.callback_context
+            if ctx.triggered[0]['prop_id'] == 'add_dropdown_button.n_clicks':
+                return {'display': 'block'}
+            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
+                return {'display': 'none'}
+            elif None not in n_click_del:
+                return {'display': 'none'}
+            else:
+                return {'display': 'block'}
 
         @app.callback(
             Output({'type': 'dynamic-output-label', 'index': MATCH}, 'children'),
-            Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
-            State({'type': 'dynamic-dropdown', 'index': MATCH}, 'id'),
+            Input({'type': 'var_dropdown', 'index': MATCH}, 'value'),
         )
-        def update_label_filter(value, id):
+        def update_label_filter(value):
             """
-            Function used to disabled or not the reset filter button.
-            This button is disabled if there is no filter added.
+            Function used to add label to the filters. Label is updated
+            when value is not None
             ---------------------------------------------------------------
-            n_clicks: click on add filter
+            value: value selected on the var dropdown button
             ---------------------------------------------------------------
-            return boolean
+            return label
             """
             if value is not None:
                 return html.Label("Variable {} is filtered".format(value))
             else:
-                return html.Label('select variable to filter')
+                return html.Label('Select variable to filter')
 
-        @app.callback(
-            Output({'type': 'dynamic-reset-output', 'index': MATCH}, 'children'),
-            [Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')],
-            [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'id')]
-        )
-        def display_reset_output(value, id):
-            """
-            Function used to create matching reset button (one button by filter)
-            ---------------------------------------------------------------
-            value: value selected on the dynamic dropdown button
-            id: id of the dynamic dropdown button
-            ---------------------------------------------------------------
-            return button if the value is not None else an empty Div
-            """
-            if (value is not None):
-                new_element = dbc.Button("X",
-                                         id={
-                                             'type': 'reset_id_filter',
-                                             'index': id['index']
-                                             },
-                                         color='warning',
-                                         size='sm')
-            else:
-                new_element = html.Div()
-            return new_element
-        
-        @app.callback(
-            [Output({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
-             Output({'type': 'dynamic-reset-output', 'index': MATCH}, 'style')],
-            [Input({'type': 'dynamic-reset-output', 'index': MATCH}, 'n_clicks')],
-            [State({'type': 'dynamic-dropdown', 'index': MATCH}, 'value')]
-            )
-        def display_dropdowns_with_reset(clicks, value):
-            if clicks is not None:
-                if clicks > 0:
-                    print('oui')
-                    return None, 0
-                else:
-                    return value, clicks
-            else:
-                return value,  clicks
-        
-        # @app.callback(
-        #     Output({'type': 'dynamic-str', 'index': MATCH}, 'value'),
-        #     [ Input({'type': 'dynamic-str', 'index': MATCH}, 'value'),
-        #       Input({'type': 'dynamic-str', 'index': ALLSMALLER}, 'value')]
-        #     )
-        # def update_str_component(val, previous_value):
-        #     print('previous_value {}'.format(previous_value))
-        #     return val
-        
         @app.callback(
             Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
-            [Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'value'),
-             Input({'type': 'dynamic-dropdown', 'index': MATCH}, 'id'),
-             Input('dynamic-add-filter', 'n_clicks'),
-             Input({'type': 'dynamic-output', 'index': MATCH}, 'children')]
-            )
-        def display_output(value, id, add_click, children):
+            [Input({'type': 'var_dropdown', 'index': MATCH}, 'value'),
+             Input({'type': 'var_dropdown', 'index': MATCH}, 'id'),
+             Input('add_dropdown_button', 'n_clicks')],
+        )
+        def display_output(value,
+                           id,
+                           add_click):
             """
             Function used to create modalities choices. Componenents are different
-            according to the type of the selected variable. 
+            according to the type of the selected variable.
             For string variable: component is a dropdown button
             For boolean variable: component is a RadioItems button
-            For Integer variable that have less than 10 modalitues : component 
+            For Integer variable that have less than 20 modalities: component
             is a dropdown button.
+            For date variable: component is a DatePickerRange
             Else: components are lower and upper values
             ---------------------------------------------------------------
-            value: value selected on the dynamic dropdown button
-            id: id of the dynamic dropdown button
-            children: list of elements of dynamic output
+            value: value selected on the var dropdown button
+            id: id of the var dropdown button
+            add_click: click on add_dropdown_button
             ---------------------------------------------------------------
-            return modalities components
+            return modalities components. If the component is new, value
+            is empty by default.
             """
+            # Context and init handling (no action)
             ctx = dash.callback_context
-            print('create_output')
-
-            if value is not None:
-                if type(self.round_dataframe[value].iloc[0]) == bool:
-                    # if ctx.triggered[0]['prop_id'] == 'dynamic-add-filter.n_clicks':
-                    #         bool_value = children['props']['children']['props']['value']
-                    # else:
-                    if id['index'] != add_click:
-                        bool_value = children['props']['children']['props']['value']
-                    else:
-                        bool_value = self.round_dataframe[value].iloc[0]
-                    new_element = html.Div(dcc.RadioItems(
-                        [{'label': val, 'value': val} for val in self.round_dataframe[value].unique()],
-                        id={'type': 'dynamic-bool',
-                            'index': id['index']},
-                        value=bool_value,
-                        # value=self.round_dataframe[value].iloc[0],
-                        inline=False
-                        ), style={"width": "50%", 'margin-left': '20px'})
-                elif (type(self.round_dataframe[value].iloc[0]) == str) | ((type(self.round_dataframe[value].iloc[0]) == np.int64) & (len(self.round_dataframe[value].unique()) <= 10)):
-                    # if ctx.triggered[0]['prop_id'] == 'dynamic-add-filter.n_clicks':
-                    #      print('ouiiiiiii')
-                    #      str_values = children['props']['children']['props']['value']
-                    #      print(str_values)
-                    # else:
-                    #     print('aussi')
-                    if id['index'] != add_click:
-                        str_values = children['props']['children']['props']['value']
-                    else:
-                        str_values = []
-                    new_element = html.Div(dcc.Dropdown(
-                        id={
-                           'type': 'dynamic-str',
-                           'index': id['index']
-                        },
-                        options=[{'label': i, 'value': i} for i in self.round_dataframe[value].unique()],
-                        multi=True,
-                        #value=str_values
-                        ), style={"width": "50%", 'margin-left': '20px'})
-                else:
-                    # if ctx.triggered[0]['prop_id'] == 'dynamic-add-filter.n_clicks':
-                    #     lower_value = children['props']['children'][0]['props']['value']
-                    #     upper_value = children['props']['children'][2]['props']['value']
-                    # else:
-                    if id['index'] != add_click:
-                        lower_value = children['props']['children'][0]['props']['value']
-                        upper_value = children['props']['children'][2]['props']['value']
-                    else:
-                        lower_value = 0.0
-                        upper_value = 0.0
-                    new_element = html.Div([
-                                    dcc.Input(
-                                        id={
-                                        'type': 'lower',
-                                        'index': id['index']
-                                        },
-                                        value=lower_value,
-                                        type="number",
-                                        style={'width': '50px'}),
-                                    '  {}  '.format(value),
-                                    dcc.Input(
-                                        id={
-                                        'type': 'upper',
-                                        'index': id['index']
-                                        },
-                                        value=upper_value,
-                                        type="number",
-                                        style={'width': '50px'}
-                                    )
-                    ], style={'margin-left': '20px'})
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
+            # No update last modalities values if we click on add button
+            if ctx.triggered[0]['prop_id'] == 'add_dropdown_button.n_clicks':
+                raise dash.exceptions.PreventUpdate
+            # Creation on modalities dropdown button
             else:
-                new_element = html.Div()
-            return new_element
-        
-        
+                if value is not None:
+                    if type(self.round_dataframe[value].iloc[0]) == bool:
+                        new_element = html.Div(dcc.RadioItems(
+                            [{'label': val, 'value': val} for
+                             val in self.round_dataframe[value].unique()],
+                            id={'type': 'dynamic-bool',
+                                'index': id['index']},
+                            value=self.round_dataframe[value].iloc[0],
+                            inline=False
+                            ), style={"width": "65%", 'margin-left': '20px'})
+                    elif (type(self.round_dataframe[value].iloc[0]) == str) | \
+                         ((type(self.round_dataframe[value].iloc[0]) == np.int64) &
+                          (len(self.round_dataframe[value].unique()) <= 20)):
+                        new_element = html.Div(dcc.Dropdown(
+                            id={
+                               'type': 'dynamic-str',
+                               'index': id['index']
+                            },
+                            options=[{'label': i, 'value': i} for
+                                    i in np.sort(self.round_dataframe[value].unique())],
+                            multi=True,
+                            ), style={"width": "65%", 'margin-left': '20px'})
+                    elif ((type(self.round_dataframe[value].iloc[0]) is pd.Timestamp) |
+                          (type(self.round_dataframe[value].iloc[0]) is datetime.datetime)):
+                        new_element = html.Div(
+                            dcc.DatePickerRange(
+                                id={
+                                   'type': 'dynamic-date',
+                                   'index': id['index']
+                                },
+                                min_date_allowed=self.round_dataframe[value].min(),
+                                max_date_allowed=self.round_dataframe[value].max(),
+                                start_date=self.round_dataframe[value].min(),
+                                end_date=self.round_dataframe[value].max()
+                               ), style={'width': '65%', 'margin-left': '20px'}),
+                    else:
+                        lower_value = 0
+                        upper_value = 0
+                        new_element = html.Div([
+                                            dcc.Input(
+                                                id={
+                                                    'type': 'lower',
+                                                    'index': id['index']
+                                                },
+                                                value=lower_value,
+                                                type="number",
+                                                style={'width': '60px'}),
+                                            ' <= {} in [{}, {}]<= '.format(
+                                                value,
+                                                self.round_dataframe[value].min(),
+                                                self.round_dataframe[value].max()),
+                                            dcc.Input(
+                                                id={
+                                                    'type': 'upper',
+                                                    'index': id['index']
+                                                },
+                                                value=upper_value,
+                                                type="number",
+                                                style={'width': '60px'}
+                                            )
+                        ], style={'margin-left': '20px'})
+                else:
+                    new_element = html.Div()
+                return new_element
 
     def hl_tab_rows(selectedData: dict):
         row_ids = []
