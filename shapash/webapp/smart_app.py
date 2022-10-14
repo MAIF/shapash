@@ -2128,8 +2128,8 @@ class SmartApp:
 
                 self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
                 self.components['graph']['prediction_picking'].adjust_graph(
-                    x_ax="Target",
-                    y_ax="Prediction")
+                    x_ax="True Values",
+                    y_ax="Predicted Values")
             else:
                 fig = go.Figure()
                 fig.update_layout(
