@@ -645,7 +645,7 @@ class SmartApp:
                                                                     ),
                                                             # Here to add link in the modal
                                                             html.A('Click here for more details',
-                                                                   href="https://github.com/MAIF/shapash",
+                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot03-features-importance.ipynb",
                                                                    style={'color': self.color[0]})
                                                         ]),
                                                         # button to close the modal
@@ -758,7 +758,8 @@ class SmartApp:
                                                                         dcc.Markdown(self.explanations.prediction_picking)
                                                                         ),
                                                                     # Here to add a link in the modal
-                                                                    html.A('Click here for more details', href="https://github.com/MAIF/shapash",
+                                                                    html.A('Click here for more details',
+                                                                         href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb",
                                                                          style={'color': self.color[0]})
                                                                     ]),
                                                              dbc.ModalFooter(
@@ -840,7 +841,7 @@ class SmartApp:
                                                                 ),
                                                             # Here to add link
                                                             html.A('Click here for more details',
-                                                                   href="https://github.com/MAIF/shapash",
+                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot02-contribution_plot.ipynb",
                                                                    style={'color': self.color[0]})
                                                                 ]),
                                                         dbc.ModalFooter(
@@ -910,7 +911,7 @@ class SmartApp:
                                                                      ),
                                                                  # Here to add link on the modal
                                                                  html.A('Click here for more details',
-                                                                        href="https://github.com/MAIF/shapash",
+                                                                        href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb",
                                                                         style={'color': self.color[0]})
                                                                 ]),
                                                              dbc.ModalFooter(
@@ -2128,7 +2129,7 @@ class SmartApp:
                 yaxis = { "visible": False },
                 annotations = [
                     {
-                        "text": "Fill y_target on method compile() to display this plot",
+                        "text": "Provide the y_target argument in the compile() method to display this plot.",
                         "xref": "paper",
                         "yref": "paper",
                         "showarrow": False,

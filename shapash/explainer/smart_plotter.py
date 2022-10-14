@@ -3038,12 +3038,12 @@ class SmartPlotter:
             yaxis = { "visible": False },
             annotations = [
                 {
-                    "text": "Fill y_target on method compile() to display this plot",
+                    "text": "Provide the y_target argument in the compile() method to display this plot.",
                     "xref": "paper",
                     "yref": "paper",
                     "showarrow": False,
                     "font": {
-                        "size": 28
+                        "size": 14
                     }
                 }
             ]

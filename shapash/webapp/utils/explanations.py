@@ -15,17 +15,18 @@ class Explanations:
 
 
     def __init__(self):
-        self.detail_feature = """**Local interpretability:** the understanding of the decision
+        self.detail_feature = """
+                        **Local interpretability:** the understanding of the decision
                         process for a single sample
                         is provided by displaying each most important feature's contributions
                         for this specific sample.
                         It is possible to select the sample by indicating its index or by clicking
                         on a point displayed
-                        on the contribution_plot or clicking on the table.\n
+                        on the contribution_plot or clicking on the table. \n
+
                         The *hidden contributions* bar represents the
                         sum of the contributions of the remaining features. Each of these remaining
-                        features
-                        have lower contribution than the one displayed.\n
+                        features have lower contribution than the one displayed. \n
                         To decrease the *hidden contributions* bar,
                         just increase the number of features to display, and mechanically,
                         the sum of the remaining contribution will decrease.
