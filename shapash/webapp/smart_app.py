@@ -2127,6 +2127,7 @@ class SmartApp:
                 )
 
                 self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
+                # Adjust graph with adding x and y axis titles
                 self.components['graph']['prediction_picking'].adjust_graph(
                     x_ax="True Values",
                     y_ax="Predicted Values")

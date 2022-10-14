@@ -2952,7 +2952,6 @@ class SmartPlotter:
                                 height=600,
                                 file_name=None,
                                 auto_open=False,
-                                zoom=False
                                 ):
         """
         scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
