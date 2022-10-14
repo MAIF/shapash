@@ -646,6 +646,8 @@ class SmartApp:
                                                             # Here to add link in the modal
                                                             html.A('Click here for more details',
                                                                    href="https://github.com/MAIF/shapash",
+                                                                   # open new brother tab
+                                                                   target="_blank",
                                                                    style={'color': self.color[0]})
                                                         ]),
                                                         # button to close the modal
@@ -758,8 +760,11 @@ class SmartApp:
                                                                         dcc.Markdown(self.explanations.prediction_picking)
                                                                         ),
                                                                     # Here to add a link in the modal
-                                                                    html.A('Click here for more details', href="https://github.com/MAIF/shapash",
-                                                                         style={'color': self.color[0]})
+                                                                    html.A('Click here for more details',
+                                                                           href="https://github.com/MAIF/shapash",
+                                                                           # open new brother tab
+                                                                           target="_blank",
+                                                                           style={'color': self.color[0]})
                                                                     ]),
                                                              dbc.ModalFooter(
                                                                  # button to close the modal
@@ -841,6 +846,8 @@ class SmartApp:
                                                             # Here to add link
                                                             html.A('Click here for more details',
                                                                    href="https://github.com/MAIF/shapash",
+                                                                   # open new brother tab
+                                                                   target="_blank",
                                                                    style={'color': self.color[0]})
                                                                 ]),
                                                         dbc.ModalFooter(
@@ -911,6 +918,8 @@ class SmartApp:
                                                                  # Here to add link on the modal
                                                                  html.A('Click here for more details',
                                                                         href="https://github.com/MAIF/shapash",
+                                                                        # open new brother tab
+                                                                        target="_blank",
                                                                         style={'color': self.color[0]})
                                                                 ]),
                                                              dbc.ModalFooter(
@@ -1143,7 +1152,7 @@ class SmartApp:
                     # Style for prediction picking graph
                     if data_component_id == 'prediction_picking':
                         style_component = {
-                            'height': '20.7rem',
+                            'height': '20.6rem',
                         }
                         this_style_card = {
                             'height': '20.8rem', 'zIndex': 901,
@@ -2296,29 +2305,23 @@ class SmartApp:
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-            # If we use domain name for feature name
-            if name == [1]:
-                dict_name = [self.explainer.features_dict[i]
-                             for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
-                dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
-                # Create dataframe to sort it by feature_name
-                df_feature_name = pd.DataFrame({'feature_name': dict_name,
-                                                'feature_id': dict_id})
-                df_feature_name = df_feature_name.sort_values(
-                    by='feature_name').reset_index(drop=True)
-                # Options are sorted by feature_name
-                options = [
-                    {"label": '_index_', "value": '_index_'},
-                    {"label": '_predict_', "value": '_predict_'}] + \
-                    [{"label": df_feature_name.loc[i, 'feature_name'],
-                      "value": df_feature_name.loc[i, 'feature_id']}
-                     for i in range(len(df_feature_name))]
-            else:
-                options = [
-                    {"label": '_index_', "value": '_index_'},
-                    {"label": '_predict_', "value": '_predict_'}] + \
-                    [{"label": i, "value": i} for i in np.sort(
-                        self.dataframe.drop(['_index_', '_predict_'], axis=1).columns)]
+
+            # We use domain name for feature name
+            dict_name = [self.explainer.features_dict[i]
+                         for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+            dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+            # Create dataframe to sort it by feature_name
+            df_feature_name = pd.DataFrame({'feature_name': dict_name,
+                                            'feature_id': dict_id})
+            df_feature_name = df_feature_name.sort_values(
+                by='feature_name').reset_index(drop=True)
+            # Options are sorted by feature_name
+            options = [
+                {"label": '_index_', "value": '_index_'},
+                {"label": '_predict_', "value": '_predict_'}] + \
+                [{"label": df_feature_name.loc[i, 'feature_name'],
+                  "value": df_feature_name.loc[i, 'feature_id']}
+                 for i in range(len(df_feature_name))]
 
             # Creation of a new graph
             if button_id == 'add_dropdown_button':
