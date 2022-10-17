@@ -53,7 +53,10 @@ class Explanations:
                                 If a sub-population is selected using the "box" or "lasso" tool,
                                 the global explainability is updated.\n
                                 It allows the comparison of the global feature contribution
-                                displaying this sub-population (grey) vs the full dataset (yellow).
+                                displaying this sub-population (grey) vs the full dataset (yellow).\n
+                                To reset the select, double click on the figure.\n
+                                ![select subset]("https://github.com/ThomasBouche/shapash/blob/add_png/docs/_static/shapash-webapp-demo.gif")
+                                ![select subset]("https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-webapp-demo.gif")
                                 """
         self.feature_importance = """
                                 **Global feature importance** is by default the sum of
