@@ -18,8 +18,7 @@ class MyGraph(dcc.Graph):
             self.config = {
                 # Graph is responsive
                 'responsive': True,
-                'modeBarButtonsToRemove': ['lasso2d',
-                                           'zoomOut2d',
+                'modeBarButtonsToRemove': ['zoomOut2d',
                                            'zoomIn2d',
                                            'resetScale2d',
                                            'hoverClosestCartesian',
