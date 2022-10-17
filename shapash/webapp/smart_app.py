@@ -759,6 +759,8 @@ class SmartApp:
                                                                         # explanation
                                                                         dcc.Markdown(self.explanations.prediction_picking)
                                                                         ),
+                                                                    # Here to add link in the modal
+                                                                    html.Div(html.Img(src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true")),
                                                                     # Here to add a link in the modal
                                                                     html.A('Click here for more details',
                                                                            href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb",
