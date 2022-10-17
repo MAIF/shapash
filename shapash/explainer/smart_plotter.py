@@ -2958,7 +2958,7 @@ class SmartPlotter:
         This plot represents Trues Values versus Predicted Values.
 
         This plot allows the user to understand the distribution of predictions in comparison to the target variable.
-        With the web app, it is possible to select the bad predictions or a subset of predictions.
+        With the web app, it is possible to select the wrong or correct predictions or a subset of predictions.
 
         Parameters
         ----------
@@ -3059,7 +3059,7 @@ class SmartPlotter:
         This plot represents Trues Values versus Predicted Values.
 
         This plot allows the user to understand the distribution of predictions in comparison to the target variable.
-        With the web app, it is possible to select the bad predictions or a subset of predictions.
+        With the web app, it is possible to select the wrong or correct predictions or a subset of predictions.
 
         Parameters
         ----------
@@ -3091,8 +3091,8 @@ class SmartPlotter:
                 target.reset_index(drop=True)], axis=1)
             df_pred.set_index(df_pred.columns[0], inplace=True)
             df_pred.columns = ["proba_values", "predict_class", "target"]
-            df_pred['bad_predict'] = 1
-            df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'bad_predict'] = 0
+            df_pred['wrong_predict'] = 1
+            df_pred.loc[(df_pred['predict_class'] == df_pred['target']), 'wrong_predict'] = 0
             subtitle = f"Response: <b>{label_value}</b>"
 
         # Plot distribution
@@ -3100,7 +3100,7 @@ class SmartPlotter:
             x=df_pred['target'].values.flatten(),
             y=df_pred['proba_values'].values.flatten(),
             points=False,
-            legendgroup='M', scalegroup='M', name='Good Prediction',
+            legendgroup='M', scalegroup='M', name='Correct Prediction',
             line_color=self._style_dict["violin_area_classif"][1],
             pointpos=-0.1,
             showlegend=False,
@@ -3111,38 +3111,38 @@ class SmartPlotter:
             scalemode='count',
             ))
 
-        # Plot points depending if bad or good prediction
-        df_good_predict = df_pred[(df_pred['bad_predict'] == 0)]
-        df_bad_predict = df_pred[(df_pred['bad_predict'] == 1)]
-        hv_text_good_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
-        x, y, w, z in zip(df_good_predict.index, df_good_predict.proba_values.values.round(3).flatten(),
-        df_good_predict.predict_class.values.flatten(), df_good_predict.target.values.flatten())]
-        hv_text_bad_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
-        x, y, w, z in zip(df_bad_predict.index, df_bad_predict.proba_values.values.round(3).flatten(),
-        df_bad_predict.predict_class.values.flatten(), df_bad_predict.target.values.flatten())]
+        # Plot points depending if wrong or correct prediction
+        df_correct_predict = df_pred[(df_pred['wrong_predict'] == 0)]
+        df_wrong_predict = df_pred[(df_pred['wrong_predict'] == 1)]
+        hv_text_correct_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+        x, y, w, z in zip(df_correct_predict.index, df_correct_predict.proba_values.values.round(3).flatten(),
+        df_correct_predict.predict_class.values.flatten(), df_correct_predict.target.values.flatten())]
+        hv_text_wrong_predict = [f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />" for
+        x, y, w, z in zip(df_wrong_predict.index, df_wrong_predict.proba_values.values.round(3).flatten(),
+        df_wrong_predict.predict_class.values.flatten(), df_wrong_predict.target.values.flatten())]
 
         fig.add_trace(go.Scatter(
-            x=df_good_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_good_predict)),
-            y=df_good_predict['proba_values'].values.flatten(),
+            x=df_correct_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_correct_predict)),
+            y=df_correct_predict['proba_values'].values.flatten(),
             mode='markers',
             marker_color=self._style_dict["prediction_plot"][0],
             showlegend=True,
-            name="Good Prediction",
-            hovertext=hv_text_good_predict,
+            name="Correct Prediction",
+            hovertext=hv_text_correct_predict,
             hovertemplate='<b>%{hovertext}</b><br />',
-            customdata=df_good_predict['proba_values'].index.values,
+            customdata=df_correct_predict['proba_values'].index.values,
         ))
 
         fig.add_trace(go.Scatter(
-            x=df_bad_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_bad_predict)),
-            y=df_bad_predict['proba_values'].values.flatten(),
+            x=df_wrong_predict['target'].values.flatten() + np.random.normal(0, 0.02, len(df_wrong_predict)),
+            y=df_wrong_predict['proba_values'].values.flatten(),
             mode='markers',
             marker_color=self._style_dict["prediction_plot"][1],
             showlegend=True,
-            name="Bad Prediction",
-            hovertext=hv_text_bad_predict,
+            name="Wrong Prediction",
+            hovertext=hv_text_wrong_predict,
             hovertemplate='<b>%{hovertext}</b><br />',
-            customdata=df_bad_predict['proba_values'].index.values,
+            customdata=df_wrong_predict['proba_values'].index.values,
         ))
 
         fig.update_layout(violingap=0, violinmode='overlay')
@@ -3162,7 +3162,7 @@ class SmartPlotter:
         This plot represents Trues Values versus Predicted Values.
 
         This plot allows the user to understand the distribution of predictions in comparison to the target variable.
-        With the web app, it is possible to select the bad predictions or a subset of predictions.
+        With the web app, it is possible to select the wrong or correct predictions or a subset of predictions.
 
         Parameters
         ----------
