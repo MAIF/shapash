@@ -55,7 +55,7 @@ class Explanations:
                                 It allows the comparison of the global feature contribution
                                 displaying this sub-population (grey) vs the full dataset (yellow).\n
                                 To reset the select, double click on the figure.\n
-                                ![select subset]("https://github.com/ThomasBouche/shapash/blob/add_png/docs/_static/shapash-webapp-demo.gif")
+                                ![select subset]("https://github.com/ThomasBouche/shapash/blob/add_png/docs/_static/shapash-webapp-demo.gif?raw=true")                                
                                 ![select subset]("https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-webapp-demo.gif")
                                 """
         self.feature_importance = """
