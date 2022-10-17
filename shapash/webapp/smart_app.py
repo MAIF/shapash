@@ -285,6 +285,7 @@ class SmartApp:
                     dbc.Collapse(
                         dbc.Row(
                             [
+                                # 2 columns to have class beside the dropdown buttons
                                 dbc.Col([
                                     dbc.Label("Class:", style={'color': 'white', 'margin': '0px'}),
                                 ], align="center"),

@@ -63,7 +63,7 @@ y_target = pd.DataFrame(data=y_test,
                         columns=y.columns.to_list(),
                         index=X_test.index)
 
-response_dict = {0: 'Death', 1: 'Survivalethdgtu'}
+response_dict = {0: 'Death', 1: 'Survival'}
 xpl = SmartExplainer(
     model,
     preprocessing=encoder,
