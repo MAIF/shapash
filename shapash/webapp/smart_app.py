@@ -645,7 +645,7 @@ class SmartApp:
                                                                     ),
                                                             # Here to add link in the modal
                                                             html.A('Click here for more details',
-                                                                   href="https://github.com/MAIF/shapash",
+                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot03-features-importance.ipynb",
                                                                    # open new brother tab
                                                                    target="_blank",
                                                                    style={'color': self.color[0]})
@@ -761,7 +761,7 @@ class SmartApp:
                                                                         ),
                                                                     # Here to add a link in the modal
                                                                     html.A('Click here for more details',
-                                                                           href="https://github.com/MAIF/shapash",
+                                                                           href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb",
                                                                            # open new brother tab
                                                                            target="_blank",
                                                                            style={'color': self.color[0]})
@@ -845,7 +845,7 @@ class SmartApp:
                                                                 ),
                                                             # Here to add link
                                                             html.A('Click here for more details',
-                                                                   href="https://github.com/MAIF/shapash",
+                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot02-contribution_plot.ipynb",
                                                                    # open new brother tab
                                                                    target="_blank",
                                                                    style={'color': self.color[0]})
@@ -917,7 +917,7 @@ class SmartApp:
                                                                      ),
                                                                  # Here to add link on the modal
                                                                  html.A('Click here for more details',
-                                                                        href="https://github.com/MAIF/shapash",
+                                                                        href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb",
                                                                         # open new brother tab
                                                                         target="_blank",
                                                                         style={'color': self.color[0]})
@@ -2119,17 +2119,36 @@ class SmartApp:
             else:
                 raise PreventUpdate
 
-            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
-                selection=self.subset,
-                max_points=points,
-                label=self.label
-            )
+            if self.explainer.y_target is not None:
+                self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
+                    selection=self.subset,
+                    max_points=points,
+                    label=self.label
+                )
 
-            self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
-            # Adjust graph with adding x and y axis titles
-            self.components['graph']['prediction_picking'].adjust_graph(
-                x_ax="Target",
-                y_ax="Prediction")
+                self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
+                # Adjust graph with adding x and y axis titles
+                self.components['graph']['prediction_picking'].adjust_graph(
+                    x_ax="True Values",
+                    y_ax="Predicted Values")
+            else:
+                fig = go.Figure()
+                fig.update_layout(
+                xaxis =  { "visible": False },
+                yaxis = { "visible": False },
+                annotations = [
+                    {
+                        "text": "Provide the y_target argument in the compile() method to display this plot.",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {
+                            "size": 14
+                        }
+                    }
+                ]
+            )
+                self.components['graph']['prediction_picking'].figure = fig
 
             return self.components['graph']['prediction_picking'].figure
 

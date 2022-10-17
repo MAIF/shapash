@@ -343,8 +343,7 @@ class TestSmartPlotter(unittest.TestCase):
         for part in list(zip(output.data, expected_output.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
-        tit = "Local Explanation - Id: <b>B</b><span style='font-size: 12px;'><br />" + \
-              "Response: <b>1</b> - Proba: <b>0.5800</b></span>"
+        tit = "Local Explanation - Id: <b>B</b><br><sup>Response: <b>1</b> - Proba: <b>0.5800</b></sup>"
         assert output.layout.title.text == tit
 
     @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
@@ -486,8 +485,7 @@ class TestSmartPlotter(unittest.TestCase):
         for part in list(zip(output.data, expected_output.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
-        tit = "Local Explanation - Id: <b>B</b><span style='font-size: 12px;'><br />" + \
-                          "Response: <b>1</b> - Proba: <b>0.5800</b></span>"
+        tit = "Local Explanation - Id: <b>B</b><br><sup>Response: <b>1</b> - Proba: <b>0.5800</b></sup>"
         assert output.layout.title.text == tit
 
         output2 = smart_explainer_mi.plot.local_plot(query=condition, show_masked=False)
@@ -2333,3 +2331,73 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
         assert f"True Values" in output.data[1].hovertext[0]
+
+    def test_subset_sampling_1(self):
+        """
+        test _subset_sampling
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        list_ind, addnote = xpl.plot._subset_sampling(max_points=10)
+        assert len(list_ind) == 10
+        assert addnote == 'Length of random Subset: 10 (33%)'
+
+    def test_subset_sampling_2(self):
+        """
+        test _subset_sampling
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        list_ind, addnote = xpl.plot._subset_sampling(max_points=50)
+        assert len(list_ind) == 30
+        assert addnote is None
+
+    def test_subset_sampling_3(self):
+        """
+        test _subset_sampling
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        selection = list(range(10, 20))
+        list_ind, addnote = xpl.plot._subset_sampling(selection=selection)
+        assert len(list_ind) == 10
+        assert addnote == 'Length of user-defined Subset: 10 (33%)'
+        assert list_ind == selection
+
+    def test_subset_sampling_4(self):
+        """
+        test _subset_sampling
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        selection = list(range(10, 20))
+        list_ind, addnote = xpl.plot._subset_sampling(selection=selection, max_points=50)
+        assert len(list_ind) == 10
+        assert addnote == 'Length of user-defined Subset: 10 (33%)'
+        assert list_ind == selection
+
+    def test_subset_sampling_5(self):
+        """
+        test _subset_sampling
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        selection = np.array(list(range(10, 20)))
+        with self.assertRaises(ValueError):
+            list_ind, addnote = xpl.plot._subset_sampling(selection=selection, max_points=50)
+
