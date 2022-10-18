@@ -1099,9 +1099,8 @@ class TestSmartPlotter(unittest.TestCase):
         total_row = 0
         for data in output.data:
             total_row = total_row + data.x.shape[0]
-        assert total_row == 39
-        expected_title = "<b>Education</b> - Feature Contribution<span style='font-size: 12px;'><br />Response: <b>3</b>" \
-                + " - Length of random Subset : 39 (98%)</span>"
+        assert total_row == 78
+        expected_title = "<b>Education</b> - Feature Contribution<br><sup>Response: <b>3</b> - Length of random Subset: 39 (98%)</sup>"
         assert output.layout.title['text'] == expected_title
 
     def test_contribution_plot_10(self):
@@ -1131,8 +1130,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(np.unique(output.data[0].marker.color)) >= 2
         assert np.array_equal(output.data[0].hovertext, expected_output.hovertext)
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
-        expected_title = "<b>Age</b> - Feature Contribution<span style='font-size: 12px;'><br />" \
-            + "Length of user-defined Subset : 4 (50%)</span>"
+        expected_title = "<b>Age</b> - Feature Contribution<br><sup>Length of user-defined Subset: 4 (50%)</sup>"
         assert output.layout.title['text'] == expected_title
 
     def test_contribution_plot_11(self):
@@ -2191,16 +2189,16 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Regression
         """
-        df_train = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X_train = df_train.iloc[:, :-1]
         y_train = df_train.iloc[:, -1]
-        df_test = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X_test = df_test.iloc[:, :-1]
         y_test = df_test.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X_train, y_train)
 
         xpl = SmartExplainer(model=model)
-        xpl.compile(x=X_test,y_target=y_test)
+        xpl.compile(x=X_test, y_target=y_test)
 
         output = xpl.plot.scatter_plot_prediction()
         actual_shape = len(output.data[0].x)
@@ -2215,15 +2213,15 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Regression
         """
-        df_train = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X_train = df_train.iloc[:, :-1]
         y_train = df_train.iloc[:, -1]
-        df_test = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X_test = df_test.iloc[:, :-1]
         y_test = df_test.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
-        xpl.compile(x=X_test,y_target=y_test)
+        xpl.compile(x=X_test, y_target=y_test)
 
         selection = list(range(6))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
@@ -2239,13 +2237,13 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Classification
         """
-        X_train = pd.DataFrame(np.random.randint(0, 100, size=(15, 3)), columns=list('ABC'))
-        y_train = pd.DataFrame(np.random.randint(0, 2, size=(15, 1)))
-        X_test = pd.DataFrame(np.random.randint(0, 100, size=(15, 3)), columns=list('ABC'))
-        y_test = pd.DataFrame(np.random.randint(0, 2, size=(15, 1)))
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list('ABC'))
+        y_test = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
-        xpl.compile(x=X_test,y_target=y_test)
+        xpl.compile(x=X_test, y_target=y_test)
 
         output = xpl.plot.scatter_plot_prediction()
         actual_shape = len(output.data[0].x)
@@ -2262,13 +2260,13 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Classification
         """
-        X_train = pd.DataFrame(np.random.randint(0, 100, size=(15, 3)), columns=list('ABC'))
-        y_train = pd.DataFrame(np.random.randint(0, 2, size=(15, 1)))
-        X_test = pd.DataFrame(np.random.randint(0, 100, size=(15, 3)), columns=list('ABC'))
-        y_test = pd.DataFrame(np.random.randint(0, 2, size=(15, 1)))
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list('ABC'))
+        y_test = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
-        xpl.compile(x=X_test,y_target=y_test)
+        xpl.compile(x=X_test, y_target=y_test)
 
         selection = list(range(6))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
@@ -2287,13 +2285,13 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Classification Multiclass
         """
-        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
-        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
-        X_test = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
-        y_test = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(100, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list('ABC'))
+        y_test = pd.DataFrame(np.random.randint(0, 3, size=(100, 1)))
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
-        xpl.compile(x=X_test,y_target=y_test)
+        xpl.compile(x=X_test, y_target=y_test)
 
         output = xpl.plot.scatter_plot_prediction()
         actual_shape = len(output.data[0].x)
@@ -2311,13 +2309,13 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Classification Multiclass
         """
-        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
-        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
-        X_test = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list('ABC'))
-        y_test = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list('ABC'))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(100, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list('ABC'))
+        y_test = pd.DataFrame(np.random.randint(0, 3, size=(100, 1)))
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
-        xpl.compile(x=X_test,y_target=y_test)
+        xpl.compile(x=X_test, y_target=y_test)
 
         selection = list(range(6))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
