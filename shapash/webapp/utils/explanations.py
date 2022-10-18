@@ -53,7 +53,8 @@ class Explanations:
                                 If a sub-population is selected using the "box" or "lasso" tool,
                                 the global explainability is updated.\n
                                 It allows the comparison of the global feature contribution
-                                displaying this sub-population (grey) vs the full dataset (yellow).
+                                displaying this sub-population (grey) vs the full dataset (yellow).\n
+                                To reset the select, double click on the figure.
                                 """
         self.feature_importance = """
                                 **Global feature importance** is by default the sum of
