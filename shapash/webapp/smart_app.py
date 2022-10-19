@@ -2558,10 +2558,3 @@ class SmartApp:
                 else:
                     new_element = html.Div()
                 return new_element
-
-    def hl_tab_rows(selectedData: dict):
-        row_ids = []
-        if selectedData is not None:
-            for p in selectedData['points']:
-                row_ids.append(p['customdata'][0])
-        return row_ids
