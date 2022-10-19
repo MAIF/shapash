@@ -35,7 +35,6 @@ class SmartExplainer:
     results more understandable :
     linking encoders, models, predictions, label dict and datasets.
     SmartExplainer users have several methods which are described below.
-
     Parameters
     ----------
     model : model object
@@ -47,7 +46,6 @@ class SmartExplainer:
         It is also possible to pass a backend class inherited from shpash.backend.BaseBackend.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
         --> Differents types of preprocessing are available:
-
         - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
         - A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
         - A list with multiple category_encoders with optional (dict, list of dict)
@@ -58,7 +56,6 @@ class SmartExplainer:
         Dictionnary of postprocessing modifications to apply in x_init dataframe.
         Dictionnary with feature names as keys (or number, or well labels referencing to features names),
         which modifies dataset features by features.
-
         --> Different types of postprocessing are available, but the syntax is this one:
         One key by features, 5 different types of modifications:
             features_groups : dict, optional (default: None)
@@ -97,17 +94,14 @@ class SmartExplainer:
         any color of the graphs.
     **kwargs : dict
         Keyword parameters to be passed to the backend.
-
     Attributes
     ----------
-
     data: dict
         Data dictionary has 3 entries. Each key returns a pd.DataFrame (regression) or a list of pd.DataFrame
         (classification - The length of the lists is equivalent to the number of labels).
         All pd.DataFrame have she same shape (n_samples, n_features).
         For the regression case, data that should be regarded as a single array
         of size (n_samples, n_features, 3).
-
         data['contrib_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             Contains local contributions of the prediction set, with common line index.
             Columns are 'contrib_1', 'contrib_2', ... and contains the top contributions
@@ -121,7 +115,6 @@ class SmartExplainer:
         data['x_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
-
     x_encoded: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_init: pandas.DataFrame
@@ -161,11 +154,13 @@ class SmartExplainer:
         The processing apply to the original data.
     postprocessing : dict
         Dictionnary of postprocessing modifications to apply in x_init dataframe.
+    y_target : pandas.Series or pandas.DataFrame, optional (default: None)
+        Target values
 
     Example
     --------
     >>> xpl = SmartExplainer(model, features_dict=featd,label_dict=labeld)
-    >>> xpl.compile(x=x_pred)
+    >>> xpl.compile(x=x_encoded, y_target=y)
     >>> xpl.plot.features_importance()
     """
 
@@ -198,7 +193,8 @@ class SmartExplainer:
         self.model = model
         if isinstance(backend, str):
             backend_cls = get_backend_cls_from_name(backend)
-            self.backend = backend_cls(model=self.model, preprocessing=preprocessing, **kwargs)
+            self.backend = backend_cls(
+                model=self.model, preprocessing=preprocessing, **kwargs)
         elif isinstance(backend, BaseBackend):
             self.backend = backend
             if backend.preprocessing is None and preprocessing is not None:
@@ -212,7 +208,8 @@ class SmartExplainer:
         self.plot = SmartPlotter(self)
         self.title_story = title_story if title_story is not None else ''
         self.palette_name = palette_name if palette_name else 'default'
-        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
+        self.colors_dict = copy.deepcopy(
+            select_palette(colors_loading(), self.palette_name))
         if colors_dict is not None:
             self.colors_dict.update(colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
@@ -231,38 +228,48 @@ class SmartExplainer:
         self.explain_data = None
         self.features_imp = None
 
-    def compile(self, x, contributions=None, y_pred=None):
+    def compile(self,
+                x,
+                contributions=None,
+                y_pred=None,
+                y_target=None):
         """
-        The compile method is the first step to understand model and prediction. It performs the sorting
-        of contributions, the reverse preprocessing steps and performs all the calculations necessary for
-        a quick display of plots and efficient display of summary of explanation.
-
-        This step can last a few moments with large datasets.
-
+        The compile method is the first step to understand model and
+        prediction. It performs the sorting of contributions, the reverse
+        preprocessing steps and performs all the calculations necessary for
+        a quick display of plots and efficient display of summary of
+        explanation. This step can last a few moments with large datasets.
         Parameters
         ----------
         x : pandas.DataFrame
             Prediction set.
-            IMPORTANT: this should be the raw prediction set, whose values are seen by the end user.
+            IMPORTANT: this should be the raw prediction set,
+            whose values are seen by the end user.
             x is a preprocessed dataset: Shapash can apply the model to it
         contributions : pandas.DataFrame, np.ndarray or list
             single or multiple contributions (multi-class) to handle.
-            if pandas.Dataframe, the index and columns should be share with the prediction set.
-            if np.ndarray, index and columns will be generated according to x dataset
+            if pandas.Dataframe, the index and columns should be share with
+            the prediction set. if np.ndarray, index and columns will be
+            generated according to x dataset
         y_pred : pandas.Series or pandas.DataFrame, optional (default: None)
             Prediction values (1 column only).
             The index must be identical to the index of x_init.
-            This is an interesting parameter for more explicit outputs. Shapash lets users define their own predict,
+            This is an interesting parameter for more explicit outputs.
+            Shapash lets users define their own predict,
             as they may wish to set their own threshold (classification)
+        y_target : pandas.Series or pandas.DataFrame, optional (default: None)
+            Target values (1 column only).
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for outputs on prediction
 
         Example
         --------
         >>> xpl.compile(x=x_test)
-
         """
         self.x_encoded = x
         self.x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.y_pred = check_ypred(self.x_init, y_pred)
+        self.y_target = check_ypred(self.x_init, y_target)
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
@@ -282,11 +289,15 @@ class SmartExplainer:
         if self.features_groups is not None:
             self._compile_features_groups(self.features_groups)
 
-    def _get_contributions_from_backend_or_user(self, x, contributions):
+    def _get_contributions_from_backend_or_user(self,
+                                                x,
+                                                contributions):
         # Computing contributions using backend
         if contributions is None:
             self.explain_data = self.backend.run_explainer(x=x)
-            self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
+            self.contributions = self.backend.get_local_contributions(
+                x=x,
+                explain_data=self.explain_data)
         else:
             self.explain_data = contributions
             self.contributions = self.backend.format_and_aggregate_local_contributions(
@@ -304,7 +315,8 @@ class SmartExplainer:
             self.x_contrib_plot = copy.deepcopy(self.x_init)
         self.x_init = self.apply_postprocessing(postprocessing)
 
-    def _compile_features_groups(self, features_groups):
+    def _compile_features_groups(self,
+                                 features_groups):
         """
         Performs required computations for groups of features.
         """
@@ -314,16 +326,18 @@ class SmartExplainer:
                 f'does not support groups of features.'
             )
         # Compute contributions for groups of features
-        self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
+        self.contributions_groups = self.state.compute_grouped_contributions(
+            self.contributions, features_groups)
         self.features_imp_groups = None
         # Update features dict with groups names
         self._update_features_dict_with_groups(features_groups=features_groups)
         # Compute t-sne projections for groups of features
-        self.x_init_groups = create_grouped_features_values(x_init=self.x_init, x_encoded=self.x_encoded,
-                                                            preprocessing=self.preprocessing,
-                                                            features_groups=self.features_groups,
-                                                            features_dict=self.features_dict,
-                                                            how='dict_of_values')
+        self.x_init_groups = create_grouped_features_values(
+            x_init=self.x_init, x_encoded=self.x_encoded,
+            preprocessing=self.preprocessing,
+            features_groups=self.features_groups,
+            features_dict=self.features_dict,
+            how='dict_of_values')
         # Compute data attribute for groups of features
         self.data_groups = self.state.assign_contributions(
             self.state.rank_contributions(
@@ -331,26 +345,34 @@ class SmartExplainer:
                 self.x_init_groups
             )
         )
-        self.columns_dict_groups = {i: col for i, col in enumerate(self.x_init_groups.columns)}
+        self.columns_dict_groups = {
+            i: col for i, col in enumerate(self.x_init_groups.columns)}
 
-    def define_style(self, palette_name=None, colors_dict=None):
+    def define_style(self,
+                     palette_name=None,
+                     colors_dict=None):
         if palette_name is None and colors_dict is None:
             raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
         new_palette_name = palette_name or self.palette_name
-        new_colors_dict = copy.deepcopy(select_palette(colors_loading(), new_palette_name))
+        new_colors_dict = copy.deepcopy(
+            select_palette(colors_loading(), new_palette_name))
         if colors_dict is not None:
             new_colors_dict.update(colors_dict)
         self.colors_dict.update(new_colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
-    def add(self, y_pred=None, label_dict=None, features_dict=None, title_story: str = None):
+    def add(self,
+            y_pred=None,
+            y_target=None,
+            label_dict=None,
+            features_dict=None,
+            title_story: str = None):
         """
         add method allows the user to add a label_dict, features_dict
         or y_pred without compiling again (and it can last a few moments).
         y_pred can be used in the plot to color scatter.
         y_pred is needed in the to_pandas method.
         label_dict and features_dict displays allow to display clearer results.
-
         Parameters
         ----------
         y_pred : pandas.Series, optional (default: None)
@@ -363,9 +385,15 @@ class SmartExplainer:
         title_story: str (default: None)
             The default title is empty. You can specify a custom title
             which can be used the webapp, or other methods
+        y_target : pandas.Series or pandas.DataFrame, optional (default: None)
+            Target values (1 column only).
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for outputs on prediction
         """
         if y_pred is not None:
             self.y_pred = check_ypred(self.x_init, y_pred)
+        if y_target is not None:
+            self.y_target = check_ypred(self.x_init, y_target)
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(
@@ -394,14 +422,12 @@ class SmartExplainer:
         Compute shap interaction values for each row of x_encoded.
         This function is only available for explainer of type TreeExplainer (used for tree based models).
         Please refer to the official tree shap paper for more information : https://arxiv.org/pdf/1802.03888.pdf
-
         Parameters
         ----------
         n_samples_max : int, optional
             Limit the number of points for which we compute the interactions.
         selection : list, optional
             Contains list of index, subset of the input DataFrame that we want to plot
-
         Returns
         -------
         np.ndarray
@@ -424,12 +450,10 @@ class SmartExplainer:
         """
         Check if any modification of postprocessing will convert numeric values into strings values.
         If so, return True, otherwise False.
-
         Parameters
         ----------
         postprocessing: dict
             Dict of postprocessing modifications to apply.
-
         Returns
         -------
         modif: bool
@@ -449,17 +473,14 @@ class SmartExplainer:
         Modifies postprocessing parameter, to change only keys, with features name,
         in case of parameters are not real feature names (with columns_dict,
         or inv_features_dict).
-
         Parameters
         ----------
         postprocessing : Dict
             Dictionnary of postprocessing to modify.
-
         Returns
         -------
         Dict
             Modified dictionnary, with same values but keys directly referencing to feature names.
-
         """
         if postprocessing:
             new_dic = dict()
@@ -481,12 +502,10 @@ class SmartExplainer:
     def apply_postprocessing(self, postprocessing=None):
         """
         Modifies x_init Dataframe according to postprocessing modifications, if exists.
-
         Parameters
         ----------
         postprocessing: Dict
             Dictionnary of postprocessing modifications to apply in x_init.
-
         Returns
         -------
         pandas.Dataframe
@@ -539,14 +558,12 @@ class SmartExplainer:
         """
         Convert a string label in integer. If the label is already
         an integer nothing is done. In all other cases an error is raised.
-
         Parameters
         ----------
         label: int or string
             Integer (id) or string (business names)
         origin: None, 'num', 'code', 'value' (default: None)
             Kind of the label used in parameter
-
         Returns
         -------
         tuple
@@ -588,14 +605,12 @@ class SmartExplainer:
         """
         Convert a list of feature names (string) or features ids into features ids.
         Features names can be part of columns_dict or features_dict.
-
         Parameters
         ----------
         features : List
             List of ints (columns ids) or of strings (business names)
         use_groups : bool
             Whether or not features parameter includes groups of features
-
         Returns
         -------
         list of ints
@@ -607,12 +622,10 @@ class SmartExplainer:
     def check_attributes(self, attribute):
         """
         Check that explainer has the attribute precised
-
         Parameters
         ----------
         attribute: string
             the label of the attribute to test
-
         Returns
         -------
         Object content of the attribute specified from SmartExplainer instance
@@ -638,9 +651,7 @@ class SmartExplainer:
         by using the user defined parameters which correspond to its use case.
         Filter method is used with the local_plot method of Smarplotter to see the concrete result of this summary
         with a local contribution barchart
-
         Please, watch the local_plot tutorial to see how these two methods are combined with a concrete example
-
         Parameters
         ----------
         features_to_hide : list, optional (default: None)
@@ -704,12 +715,10 @@ class SmartExplainer:
         using a pickle file.
         Save method can be useful: you don't have to recompile to display
         results later
-
         Parameters
         ----------
         path : str
             File path to store the pickle file
-
         Example
         --------
         >>> xpl.save('path_to_pkl/xpl.pkl')
@@ -724,12 +733,10 @@ class SmartExplainer:
         Load method allows Shapash user to use pickled SmartExplainer.
         To use this method you must first declare your SmartExplainer object
         Watch the following example
-
         Parameters
         ----------
         path : str
             File path of the pickle file.
-
         Example
         --------
         >>> xpl = SmartExplainer.load('path_to_pkl/xpl.pkl')
@@ -770,7 +777,6 @@ class SmartExplainer:
         This method proposes a set of parameters to summarize the explainability of each point.
         If the user does not specify any, the to_pandas method uses the parameter specified during
         the last execution of the filter method.
-
         In classification case, The method to_pandas summarizes the explicability which corresponds
         to the predicted values specified by the user (with compile or add method).
         the proba parameter displays the corresponding predict proba value for each point
@@ -778,9 +784,7 @@ class SmartExplainer:
         - Provide a real prediction set to explain
         - Focus on a constant target value and look at the proba and explainability corresponding to each point.
         (in that case, specify a constant pd.Series with add or compile method)
-
         Examples are presented in the tutorial local_plot (please check tutorial part of this doc)
-
         Parameters
         ----------
         features_to_hide : list, optional (default: None)
@@ -796,13 +800,10 @@ class SmartExplainer:
         use_groups : bool (optional)
             Whether or not to use groups of features contributions (only available if features_groups
             parameter was not empty when calling compile method).
-
         Returns
         -------
         pandas.DataFrame
             - selected explanation of each row for classification case
-
-
         Examples
         --------
         >>> summary_df = xpl.to_pandas(max_contrib=2,proba=True)
@@ -874,13 +875,11 @@ class SmartExplainer:
         Compute a relative features importance, sum of absolute values
         of the contributions for each.
         Features importance compute in base 100
-
         Parameters
         ----------
         force: bool (default: False)
             True to force de compute if features importance is
             already calculated
-
         Returns
         -------
         pd.Serie (Regression)
@@ -905,12 +904,10 @@ class SmartExplainer:
         of instance and corresponding neighbors.
         - If selection represents multiple instances, the method returns the average (normalized) contribution values
         of instances and neighbors (=amplitude), as well as the variability of those values in the neighborhood (=variability)
-
         Parameters
         ----------
         selection: list
             Indices of rows to be displayed on the stability plot
-
         Returns
         -------
         Dictionary
@@ -938,11 +935,9 @@ class SmartExplainer:
     def compute_features_compacity(self, selection, distance, nb_features):
         """
         For a selection of instances, compute features compacity metrics used in method `compacity_plot`.
-
         The method returns :
         * the minimum number of features needed for a given approximation level
         * conversely, the approximation reached with a given number of features
-
         Parameters
         ----------
         selection: list
@@ -981,9 +976,7 @@ class SmartExplainer:
         run_app method can be used directly in a Jupyter notebook
         The link to the webapp is directly mentioned in the Jupyter output
         Use object.kill() method to kill the current instance
-
         Examples are presented in the web_app tutorial (please check tutorial part of this doc)
-
         Parameters
         ----------
         port: int (default: None)
@@ -999,12 +992,10 @@ class SmartExplainer:
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
-
         Returns
         -------
         CustomThread
             Return the thread instance of your server.
-
         Example
         --------
         >>> app = xpl.run_app()
@@ -1040,7 +1031,6 @@ class SmartExplainer:
         """
         Create a SmartPredictor object designed from the following attributes
         needed from the SmartExplainer Object :
-
         features_dict: dict
             Dictionary mapping technical feature names to domain names.
         label_dict: dict
@@ -1094,14 +1084,12 @@ class SmartExplainer:
     def check_x_y_attributes(self, x_str, y_str):
         """
         Check if x_str and y_str are attributes of the SmartExplainer
-
         Parameters
         ----------
         x_str: string
             label of the attribute x
         y_str: string
             label of the attribute y
-
         Returns
         -------
         list of object detained by attributes x and y.
@@ -1136,12 +1124,9 @@ class SmartExplainer:
                         kernel_name=None):
         """
         This method will generate an HTML report containing different information about the project.
-
         It analyzes the data and the model used in order to provide interesting
         insights that can be shared using the HTML format.
-
         It requires a project info yml file on which can figure different information about the project.
-
         Parameters
         ----------
         output_file : str
@@ -1178,7 +1163,6 @@ class SmartExplainer:
             Name of the kernel used to generate the report. This parameter can be usefull if
             you have multiple jupyter kernels and that the method does not use the right kernel
             by default.
-
         Examples
         --------
         >>> xpl.generate_report(
@@ -1239,4 +1223,3 @@ class SmartExplainer:
             if rm_working_dir:
                 shutil.rmtree(working_dir)
             raise e
-

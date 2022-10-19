@@ -39,7 +39,7 @@ if __name__ == "__main__":
         preprocessing=encoder,  # Optional: compile step can use inverse_transform method
         features_dict=house_dict
     )
-    xpl.compile(x=Xtest, y_pred=y_pred)
+    xpl.compile(x=Xtest, y_pred=y_pred, y_target=ytest)
 
     xpl.generate_report(
         output_file=os.path.join(cur_dir, 'output', 'report.html'),

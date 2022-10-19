@@ -32,18 +32,11 @@
 
 ## 🎉 What's new ?
 
----
-
-:warning: **Starting from Shapash v2.0.0: '.compile()' parameters must be provided in the SmartExplainer init:**   :warning:
-
-For clearer initiation, method's parameters must be provided at the init:
-`xpl = SmartExplainer(model, backend, preprocessing, postprocessing, features_groups)` **_instead of_** `xpl.compile(x, model, backend, preprocessing, postprocessing, features_groups)`
-
----
-
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
+| 2.2.x         |  Picking samples <br>                                                                   | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values".            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb)
+| 2.2.x         |  Dataset Filter <br>                                                                   | New tab in the webapp to filter data. And several improvements in the webapp: subtitles, labels, screen adjustments                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webapp.png" width="50" title="webapp">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 | 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](https://github.com/MAIF/shapash/blob/master/tutorial/backend/tuto-backend-01.ipynb)
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
 | 1.6.x         |  Explainability Quality Metrics <br> [article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb) 
@@ -77,6 +70,7 @@ Shapash also contributes to data science auditing by displaying usefull informat
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%" />
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" /> 
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" /> 
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%" /> 
   </div>
 </div>
 
@@ -180,25 +174,27 @@ If you encounter **compatibility issues** you may check the corresponding sectio
 The 4 steps to display results:
 
 - Step 1: Declare SmartExplainer Object
+  > There 1 mandatory parameter in compile method: Model
   > You can declare features dict here to specify the labels to display
 
 ```
 from shapash import SmartExplainer
 xpl = SmartExplainer(
-  features_dict=house_dict,  # Optional parameter
   model=regressor,
+  features_dict=house_dict,  # Optional parameter
   preprocessing=encoder, # Optional: compile step can use inverse_transform method
   postprocessing=postprocess # Optional: see tutorial postprocessing
 )
 ```
 
-- Step 2: Compile Model, Dataset, Encoders, ...
-  > There are 2 mandatory parameters in compile method: Model and Dataset
+- Step 2: Compile  Dataset, ...
+  > There 1 mandatory parameter in compile method: Dataset
  
 ```
 xpl.compile(
     x=Xtest,    
-    y_pred=y_pred, # Optional    
+    y_pred=y_pred, # Optional: for your own prediction (by default: model.predict)
+    y_target=yTest, # Optional: allows to display True Values vs Predicted Values
 )
 ```  
 

@@ -11,7 +11,6 @@ def colors_loading():
     """
     colors_loading allows shapash to load a json file which contains different 
     palettes of colors that can be used in the plot
-
     Returns
     -------
     dict: 
@@ -28,14 +27,12 @@ def select_palette(colors_dic, palette_name):
     """
     colors_loading allows shapash to load a json file which contains different 
     palettes of colors that can be used in the plot
-
     Parameters
     ----------
     colors_dic : dict
         dictionnary with every palettes
     palette_name : String
         name of the palette
-
     Returns
     -------
     dict: 
@@ -49,21 +46,17 @@ def select_palette(colors_dic, palette_name):
 def convert_str_color_to_plt_format(txt):
     """
     Converts an rgb string format to a tuple of float (used by matplotlib format)
-
     Parameters
     ----------
     txt : str
         a string representation of an rgb color (used by plotly)
-
     Returns
     -------
     A tuple of float used by matplotlib format
-
     Example
     --------
     >>> convert_str_color_to_plt_format(txt="rgba(244, 192, 0, 1)")
     (0.96, 0.75, 0.0, 1.0)
-
     """
     txt = txt.replace('rgba', '').replace('rgb', '').replace('(', '').replace(')', '')
     list_txt = txt.split(',')
@@ -78,12 +71,10 @@ def define_style(palette):
     the define_style function is a function that uses a palette 
     to define the different styles used in the different outputs 
     of Shapash
-
     Parameters
     ----------
     palette : dict
         contains colors of one palette
-
     Returns
     -------
     dict : 
@@ -128,6 +119,7 @@ def define_style(palette):
     style_dict['featureimp_groups'] = list(palette["featureimp_groups"].values())
     style_dict['init_contrib_colorscale'] = palette["contrib_colorscale"]
     style_dict['violin_area_classif']  = list(palette["violin_area_classif"].values())
+    style_dict['prediction_plot']  = list(palette["prediction_plot"].values())
     style_dict['violin_default'] = palette["violin_default"]
     style_dict['dict_title_compacity'] = {
         'font': {
@@ -197,12 +189,10 @@ def define_style(palette):
 def get_palette(palette_name):
     """
     Returns a specific palette linked to the input palette_name
-
     Parameters
     ----------
     palette_name : str
         name of the palette
-
     Returns
     -------
     dict:
@@ -216,12 +206,10 @@ def get_palette(palette_name):
 def get_pyplot_color(colors):
     """
     Returns the color(s) of the color_name key in the palette in matplotlib format.
-
     Parameters
     ----------
     colors :  str or dict
         Colors used as a dict or string object
-
     Returns
     -------
     dict or tuple
