@@ -2223,7 +2223,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X_test, y_target=y_test)
 
-        selection = list(range(6))
+        selection = list(range(20))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
         actual_shape = len(output.data[0].x)
         expected_shape = len(selection)
@@ -2268,7 +2268,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X_test, y_target=y_test)
 
-        selection = list(range(6))
+        selection = list(range(20))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
         actual_shape = len(output.data[0].x)
         expected_shape = len(selection)
@@ -2317,7 +2317,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X_test, y_target=y_test)
 
-        selection = list(range(6))
+        selection = list(range(20))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
         actual_shape = len(output.data[0].x)
         expected_shape = len(selection)
