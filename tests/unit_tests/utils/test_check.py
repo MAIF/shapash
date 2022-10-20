@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
-                                check_mask_params, check_ypred, check_contribution_object,\
+                                check_mask_params, check_y, check_contribution_object,\
                                 check_preprocessing_options, check_postprocessing, \
                                 check_consistency_model_features, check_consistency_model_label
 from sklearn.compose import ColumnTransformer
@@ -186,16 +186,16 @@ class TestCheck(unittest.TestCase):
             check_mask_params(wrong_mask_params_3)
         check_mask_params(wright_mask_params)
 
-    def test_check_ypred_1(self):
+    def test_check_y_1(self):
         """
-        Unit test check y pred
+        Unit test check y
         """
         y_pred = None
-        check_ypred(ypred=y_pred)
+        check_y(y=y_pred)
 
-    def test_check_ypred_2(self):
+    def test_check_y_2(self):
         """
-        Unit test check y pred 2
+        Unit test check y 2
         """
         x_init = pd.DataFrame(
             data=np.array([[1, 2], [3, 4]]),
@@ -206,11 +206,11 @@ class TestCheck(unittest.TestCase):
             columns=['Y']
         )
         with self.assertRaises(ValueError):
-            check_ypred(x_init, y_pred)
+            check_y(x_init, y_pred)
 
-    def test_check_ypred_3(self):
+    def test_check_y_3(self):
         """
-        Unit test check y pred 3
+        Unit test check y 3
         """
         x_init = pd.DataFrame(
             data=np.array([[1, 2], [3, 4]]),
@@ -221,19 +221,19 @@ class TestCheck(unittest.TestCase):
             columns=['Y']
         )
         with self.assertRaises(ValueError):
-            check_ypred(x_init, y_pred)
+            check_y(x_init, y_pred)
 
-    def test_check_y_pred_4(self):
+    def test_check_y_4(self):
         """
-        Unit test check y pred 4
+        Unit test check y 4
         """
         y_pred = [0, 1]
         with self.assertRaises(ValueError):
-            check_ypred(ypred=y_pred)
+            check_y(y=y_pred)
 
-    def test_check_y_pred_5(self):
+    def test_check_y_5(self):
         """
-        Unit test check y pred 5
+        Unit test check y 5
         """
         x_init = pd.DataFrame(
             data=np.array([[1, 2], [3, 4]]),
@@ -243,7 +243,22 @@ class TestCheck(unittest.TestCase):
             data=np.array(['0'])
         )
         with self.assertRaises(ValueError):
-            check_ypred(x_init, y_pred)
+            check_y(x_init, y_pred)
+
+    def test_check_y_6(self):
+        """
+        Unit test check y 6
+        """
+        x_init = pd.DataFrame(
+            data=np.array([[1, 2], [3, 4]]),
+            columns=['Col1', 'Col2']
+        )
+        y_pred = pd.Series(
+            data=np.array(['0'])
+        )
+        with self.assertRaises(ValueError) as exc_info:
+            check_y(x_init, y_pred, y_name="y_pred")
+        assert str(exc_info.value) == 'y_pred must contain int or float only'
 
     def test_check_contribution_object_1(self):
         """

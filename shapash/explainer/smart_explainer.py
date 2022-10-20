@@ -14,7 +14,7 @@ from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.check import check_model, check_label_dict, check_ypred, check_postprocessing, check_features_name
+from shapash.utils.check import check_model, check_label_dict, check_y, check_postprocessing, check_features_name
 from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.report import check_report_requirements
@@ -268,8 +268,8 @@ class SmartExplainer:
         """
         self.x_encoded = x
         self.x_init = inverse_transform(self.x_encoded, self.preprocessing)
-        self.y_pred = check_ypred(self.x_init, y_pred)
-        self.y_target = check_ypred(self.x_init, y_target)
+        self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
+        self.y_target = check_y(self.x_init, y_target, y_name="y_target")
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
@@ -391,9 +391,9 @@ class SmartExplainer:
             This is an interesting parameter for outputs on prediction
         """
         if y_pred is not None:
-            self.y_pred = check_ypred(self.x_init, y_pred)
+            self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
         if y_target is not None:
-            self.y_target = check_ypred(self.x_init, y_target)
+            self.y_target = check_y(self.x_init, y_target, y_name="y_target")
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(

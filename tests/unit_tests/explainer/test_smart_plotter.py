@@ -2059,7 +2059,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_stability_plot_1(self):
         np.random.seed(42)
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2076,12 +2076,12 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_stability_plot_2(self):
         np.random.seed(42)
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
 
-        selection = list(range(6))
+        selection = list(range(40))
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X)
 
@@ -2096,7 +2096,8 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_stability_plot_3(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        np.random.seed(79)
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2111,11 +2112,12 @@ class TestSmartPlotter(unittest.TestCase):
             expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
 
             assert actual_shape == expected_shape
-            assert len(output.data[0].x) == 15
+            assert len(output.data[0].x) == 50
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_stability_plot_4(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        np.random.seed(79)
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2135,7 +2137,8 @@ class TestSmartPlotter(unittest.TestCase):
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_stability_plot_5(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        np.random.seed(79)
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list('ABCD'))
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
         model = DecisionTreeRegressor().fit(X, y)
@@ -2150,7 +2153,7 @@ class TestSmartPlotter(unittest.TestCase):
             expected_shape = X.shape[1] if X.shape[1] < max_features else max_features
 
             assert actual_shape == expected_shape
-            assert len(output.data[0].x) == 15
+            assert len(output.data[0].x) == 50
             assert np.array(list(output.data[0].x)).dtype == "float"
 
     def test_local_neighbors_plot(self):

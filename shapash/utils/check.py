@@ -114,34 +114,36 @@ def check_mask_params(mask_params):
             """
             )
 
-def check_ypred(x=None, ypred=None):
+def check_y(x=None, y=None, y_name="y_target"):
     """
     Check that ypred given has the right shape and expected value.
 
     Parameters
     ----------
-    ypred: pandas.DataFrame (optional)
+    y: pandas.DataFrame (optional)
         User-specified prediction values.
     x: pandas.DataFrame
         Dataset used by the model to perform the prediction (preprocessed or not).
+    y_name: str
+        Name of y ("y_target" or "y_pred")
     """
-    if ypred is not None:
-        if not isinstance(ypred, (pd.DataFrame, pd.Series)):
-            raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-        if not ypred.index.equals(x.index):
-            raise ValueError("x and y_pred should have the same index.")
-        if isinstance(ypred, pd.DataFrame):
-            if ypred.shape[1] > 1:
-                raise ValueError("y_pred must be a one column pd.Dataframe or pd.Series.")
-            if not (ypred.dtypes[0] in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
-                raise ValueError("y_pred must contain int or float only")
-        if isinstance(ypred, pd.Series):
-            if not (ypred.dtype in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
-                raise ValueError("y_pred must contain int or float only")
-            ypred = ypred.to_frame()
-            if isinstance(ypred.columns[0], (np.int, np.float)):
-                ypred.columns = ["ypred"]
-    return ypred
+    if y is not None:
+        if not isinstance(y, (pd.DataFrame, pd.Series)):
+            raise ValueError(f"{y_name} must be a one column pd.Dataframe or pd.Series.")
+        if not y.index.equals(x.index):
+            raise ValueError(f"x and {y_name} should have the same index.")
+        if isinstance(y, pd.DataFrame):
+            if y.shape[1] > 1:
+                raise ValueError(f"{y_name} must be a one column pd.Dataframe or pd.Series.")
+            if not (y.dtypes[0] in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
+                raise ValueError(f"{y_name} must contain int or float only")
+        if isinstance(y, pd.Series):
+            if not (y.dtype in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
+                raise ValueError(f"{y_name} must contain int or float only")
+            y = y.to_frame()
+            if isinstance(y.columns[0], (np.int, np.float)):
+                y.columns = [y_name]
+    return y
 
 def check_contribution_object(case, classes, contributions):
     """

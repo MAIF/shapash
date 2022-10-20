@@ -1589,11 +1589,9 @@ class SmartApp:
                     selection = [d['_index_'] for d in data]
                 else:
                     selection = None
-                print("selection", selection)
                 # When we click twice on the same bar this will reset the graph
                 if self.last_click_data == clickData:
                     selected_feature = None
-                print("selected", selected_feature)
                 list_sub_features = [f for group_features in self.explainer.features_groups.values()
                                       for f in group_features]
                 if selected_feature in list_sub_features:
