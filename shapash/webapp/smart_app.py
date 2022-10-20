@@ -1517,18 +1517,6 @@ class SmartApp:
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
                 self.list_index = [d['_index_'] for d in data]
-            elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
-                  and self.explainer.features_groups):
-                # When we click twice on the same bar this will reset the graph
-                if self.last_click_data == clickData:
-                    selected_feature = None
-                list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                if selected_feature in list_sub_features:
-                    self.last_click_data = clickData
-                    raise PreventUpdate
-                else:
-                    pass
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
                 clickData = None  # We reset the graph and clicks if we toggle the button
             # If we have selected data on prediction picking graph
@@ -1541,6 +1529,12 @@ class SmartApp:
                     selection = row_ids
                 else:
                     selection = None
+                #when group
+                if self.explainer.features_groups and bool_group:
+                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                      for f in group_features]
+                    if selected_feature not in list_sub_features:
+                        selected_feature = None
             # If we have dubble click on prediction picking to remove the selected subset
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is None)):
@@ -1549,16 +1543,64 @@ class SmartApp:
                     selection = [d['_index_'] for d in data]
                 else:
                     selection = None
+                #when group
+                if self.explainer.features_groups and bool_group:
+                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                      for f in group_features]
+                    if selected_feature not in list_sub_features:
+                        selected_feature = None
             # If we click on reset filter button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 selection = None
+                #when group
+                if self.explainer.features_groups and bool_group:
+                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                      for f in group_features]
+                    if selected_feature not in list_sub_features:
+                        selected_feature = None
             # If we click on Apply button
             elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
                 selection = [d['_index_'] for d in data]
+                #when group
+                if self.explainer.features_groups and bool_group:
+                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                      for f in group_features]
+                    if selected_feature not in list_sub_features:
+                        selected_feature = None
             # If we click on the last del button
             elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
                   (None not in nclicks_del)):
                 selection = None
+                #when group
+                if self.explainer.features_groups and bool_group:
+                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                      for f in group_features]
+                    if selected_feature not in list_sub_features:
+                        selected_feature = None
+            elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
+                  and self.explainer.features_groups and bool_group):
+                row_ids = []
+                if selected_data is not None:
+                    # we plot prediction picking subset
+                    for p in selected_data['points']:
+                        row_ids.append(p['customdata'])
+                    selection = row_ids
+                elif (len([d['_index_'] for d in data]) != len(self.list_index)):
+                    selection = [d['_index_'] for d in data]
+                else:
+                    selection = None
+                print("selection", selection)
+                # When we click twice on the same bar this will reset the graph
+                if self.last_click_data == clickData:
+                    selected_feature = None
+                print("selected", selected_feature)
+                list_sub_features = [f for group_features in self.explainer.features_groups.values()
+                                      for f in group_features]
+                if selected_feature in list_sub_features:
+                    self.last_click_data = clickData
+                    raise PreventUpdate
+                else:
+                    pass
             else:
                 # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
@@ -1573,6 +1615,8 @@ class SmartApp:
                     else:
                         # we plot filter subset
                         selection = [d['_index_'] for d in data]
+                self.last_click_data = clickData
+                raise PreventUpdate
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
@@ -1601,7 +1645,7 @@ class SmartApp:
             self.components['graph']['global_feature_importance'].figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
-            
+
             self.last_click_data = clickData
             return self.components['graph']['global_feature_importance'].figure, clickData
 

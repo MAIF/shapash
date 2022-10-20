@@ -278,7 +278,7 @@ class SmartPlotter:
         fig.add_scatter(
             x=feature_values.values.flatten(),
             y=contributions.values.flatten(),
-            mode='markers + text',
+            mode='markers',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
             text=text_groups_features,
