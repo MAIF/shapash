@@ -278,7 +278,7 @@ class SmartPlotter:
         fig.add_scatter(
             x=feature_values.values.flatten(),
             y=contributions.values.flatten(),
-            mode='markers + text',
+            mode='markers',
             hovertext=hv_text,
             hovertemplate=hovertemplate,
             text=text_groups_features,
@@ -627,6 +627,7 @@ class SmartPlotter:
                          tickvals=feature_imp1.index,
                          tickmode="array",
                          dtick=1)
+        fig.update_yaxes(automargin=True)
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
         return fig
@@ -786,7 +787,7 @@ class SmartPlotter:
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
         fig.update_yaxes(dtick=1)
-        # fig.update_yaxes(automargin=True)
+        fig.update_yaxes(automargin=True)
         # fig.update_xaxes(automargin=True)
 
         if file_name:
@@ -1234,10 +1235,11 @@ class SmartPlotter:
                 for f_name in top_features_of_group
             }
             text_group = "Features values were projected on the x axis using t-SNE"
-            if addnote is not None:
-                addnote = add_text([addnote, text_group], sep=' - ')
-            else:
-                addnote = text_group
+            # if group don't show addnote, if not, it's too long
+            # if addnote is not None:
+            #    addnote = add_text([addnote, text_group], sep=' - ')
+            # else:
+            addnote = text_group
         else:
             contrib = subcontrib.loc[list_ind, col_name].to_frame()
             metadata = None
@@ -1402,13 +1404,13 @@ class SmartPlotter:
         if display_groups:
             # Bold font for groups of features
             global_feat_imp.index = [
-                '<b>' + str(f) + '</b>'
+                '<b>' + str(f)
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
-                    '<b>' + str(f) + '</b>'
+                    '<b>' + str(f)
                     if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                     else str(f) for f in subset_feat_imp.index
                 ]

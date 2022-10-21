@@ -3,7 +3,7 @@ Smart predictor module
 """
 from shapash.utils.check import check_consistency_model_features, check_consistency_model_label
 from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
-from shapash.utils.check import check_label_dict, check_mask_params, check_ypred, check_contribution_object,\
+from shapash.utils.check import check_label_dict, check_mask_params, check_y, check_contribution_object,\
                                 check_features_name
 import pandas as pd
 from shapash.utils.transform import adapt_contributions
@@ -335,7 +335,7 @@ class SmartPredictor :
         ypred: pandas.DataFrame (optional)
             User-specified prediction values.
         """
-        return check_ypred(self.data["x"],ypred)
+        return check_y(self.data["x"], ypred)
 
     def adapt_contributions(self, contributions):
         """
