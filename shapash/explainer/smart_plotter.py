@@ -1235,10 +1235,11 @@ class SmartPlotter:
                 for f_name in top_features_of_group
             }
             text_group = "Features values were projected on the x axis using t-SNE"
-            if addnote is not None:
-                addnote = add_text([addnote, text_group], sep=' - ')
-            else:
-                addnote = text_group
+            # if group don't show addnote, if not, it's too long
+            # if addnote is not None:
+            #    addnote = add_text([addnote, text_group], sep=' - ')
+            # else:
+            addnote = text_group
         else:
             contrib = subcontrib.loc[list_ind, col_name].to_frame()
             metadata = None
