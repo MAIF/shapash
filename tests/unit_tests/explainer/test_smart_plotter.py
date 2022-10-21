@@ -1450,7 +1450,7 @@ class TestSmartPlotter(unittest.TestCase):
 
         data1 = go.Bar(
             x=np.array([0.1682, 0.8318]),
-            y=np.array(['X3', '<b>group0</b>']),
+            y=np.array(['X3', '<b>group0']),
             name='Global',
             orientation='h')
         expected_output = go.Figure(data=[data1])
