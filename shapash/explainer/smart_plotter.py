@@ -627,6 +627,7 @@ class SmartPlotter:
                          tickvals=feature_imp1.index,
                          tickmode="array",
                          dtick=1)
+        fig.update_yaxes(automargin=True)
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
         return fig
@@ -786,7 +787,7 @@ class SmartPlotter:
         bars.sort()
         fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
         fig.update_yaxes(dtick=1)
-        # fig.update_yaxes(automargin=True)
+        fig.update_yaxes(automargin=True)
         # fig.update_xaxes(automargin=True)
 
         if file_name:
