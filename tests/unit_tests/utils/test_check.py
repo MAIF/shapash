@@ -2,6 +2,7 @@
 Unit test of Check
 """
 import unittest
+import pytest
 import pandas as pd
 import numpy as np
 import category_encoders as ce
@@ -256,9 +257,9 @@ class TestCheck(unittest.TestCase):
         y_pred = pd.Series(
             data=np.array(['0'])
         )
-        with self.assertRaises(ValueError) as exc_info:
+        with pytest.raises(Exception) as exc_info:
             check_y(x_init, y_pred, y_name="y_pred")
-        assert str(exc_info.value) == 'y_pred must contain int or float only'
+        assert str(exc_info.value) == 'x and y_pred should have the same index.'
 
     def test_check_contribution_object_1(self):
         """
