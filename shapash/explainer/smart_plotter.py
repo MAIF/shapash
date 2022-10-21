@@ -1403,13 +1403,13 @@ class SmartPlotter:
         if display_groups:
             # Bold font for groups of features
             global_feat_imp.index = [
-                '<b>' + str(f) + '</b>'
+                '<b>' + str(f)
                 if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                 else str(f) for f in global_feat_imp.index
             ]
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
-                    '<b>' + str(f) + '</b>'
+                    '<b>' + str(f)
                     if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
                     else str(f) for f in subset_feat_imp.index
                 ]
