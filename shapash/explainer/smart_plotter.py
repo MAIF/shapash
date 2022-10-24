@@ -446,10 +446,11 @@ class SmartPlotter:
             self.explainer._case == 'classification' else None
 
         hovertemplate = '<b>%{hovertext}</b><br />' + hv_temp
+        feature = feature_values.values.flatten()
+        customdata = np.stack((feature_values.values.flatten(),
+                                contributions.index.values), axis=-1)
+
         if colorpoints is not None:
-            feature = feature_values.values.flatten()
-            customdata = np.stack((feature_values.values.flatten(),
-                                   contributions.index.values), axis=-1)
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
                 y=contributions.values.flatten(),

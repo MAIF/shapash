@@ -1047,7 +1047,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 10, ignore_index=True)
         xpl.contributions[0].index = xpl.x_init.index
         xpl.contributions[1].index = xpl.x_init.index
-        xpl.y_pred = pd.DataFrame([0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+        xpl.y_pred = pd.DataFrame([3, 1, 1, 3, 3, 3, 1, 3, 1, 1, 1, 3, 3, 1, 1, 1, 1, 3, 3, 3],
                                   columns=['pred'], index=xpl.x_init.index)
         model = lambda: None
         model.classes_ = np.array([0, 1])
@@ -1082,7 +1082,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.contributions[1] = pd.concat([xpl.contributions[1]] * 20, ignore_index=True)
         xpl.contributions[0].index = xpl.x_init.index
         xpl.contributions[1].index = xpl.x_init.index
-        xpl.y_pred = pd.DataFrame([0, 1, 1, 0, 0]*8,
+        xpl.y_pred = pd.DataFrame([3, 1, 1, 3, 3]*8,
                                   columns=['pred'], index=xpl.x_init.index)
         model = lambda: None
         model.classes_ = np.array([0, 1])
@@ -1099,7 +1099,7 @@ class TestSmartPlotter(unittest.TestCase):
         total_row = 0
         for data in output.data:
             total_row = total_row + data.x.shape[0]
-        assert total_row == 78
+        assert total_row == 39
         expected_title = "<b>Education</b> - Feature Contribution<br><sup>Response: <b>3</b> - Length of random Subset: 39 (98%)</sup>"
         assert output.layout.title['text'] == expected_title
 
