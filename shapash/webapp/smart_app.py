@@ -1522,7 +1522,7 @@ class SmartApp:
                 clickData = None  # We reset the graph and clicks if we toggle the button
             # If we have selected data on prediction picking graph
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None)):
+                  (selected_data is not None) and (len(selected_data) > 1)):
                 row_ids = []
                 if len(selected_data) > 1:
                     for p in selected_data['points']:
@@ -1721,7 +1721,7 @@ class SmartApp:
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     if feature['points'][0]['curveNumber'] == 0 and \
                               len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                        if selected_data is not None:
+                        if selected_data is not None and len(selected_data) > 1:
                             row_ids = []
                             for p in selected_data['points']:
                                 row_ids.append(p['customdata'])
@@ -1756,7 +1756,7 @@ class SmartApp:
                     self.subset = self.list_index
                 else:
                     row_ids = []
-                    if selected_data is not None:
+                    if selected_data is not None and len(selected_data) > 1:
                         # we plot prediction picking subset
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
