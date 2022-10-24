@@ -1714,8 +1714,10 @@ class SmartApp:
                     self.settings_ini['violin'] = self.settings['violin']
 
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
+                print("condition1")
                 self.label = label
             elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
+                print("condition2")
                 if feature is not None:
                     # Removing bold
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
@@ -1738,8 +1740,7 @@ class SmartApp:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                     self.subset = row_ids
-                else:
-                    self.subset = None
+                    print("condition3")
             # if we have click on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 self.subset = None
@@ -1754,6 +1755,7 @@ class SmartApp:
                 # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
                     self.subset = self.list_index
+                    print("condition6")
                 else:
                     row_ids = []
                     if selected_data is not None and len(selected_data) > 1:
@@ -1761,9 +1763,11 @@ class SmartApp:
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
                         self.subset = row_ids
+                        print("condition7")
                     else:
                         # we plot filter subset
                         self.subset = [d['_index_'] for d in data]
+                        print("condition8")
 
             self.components['graph']['feature_selector'].figure = \
                 self.explainer.plot.contribution_plot(
