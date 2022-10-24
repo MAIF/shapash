@@ -157,6 +157,7 @@ class SmartApp:
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
         col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
+        random.seed(79)
         self.list_index = \
             random.sample(
                 population=self.dataframe.index.tolist(),
