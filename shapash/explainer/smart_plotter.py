@@ -391,18 +391,13 @@ class SmartPlotter:
 
         for i in uniq_l:
             if pred is not None and self.explainer._case == 'classification':
-                feature = feature_values.loc[(pred.iloc[:, 0] != col_modality) &
-                                                              (feature_values.iloc[:, 0] == i)].values.flatten()
-                customdata = np.stack((feature,
-                                       contributions.loc[(pred.iloc[:, 0] != col_modality) &
-                                                                     (feature_values.iloc[:, 0] == i)].index.values), axis=-1)
-
-                contribution = contributions.loc[(pred.iloc[:, 0] != col_modality) &
+                contribution_neg = contributions.loc[(pred.iloc[:, 0] != col_modality) &
                                                             (feature_values.iloc[:, 0] == i)].values.flatten()
                 # Check if contribution is not empty
-                if len(contribution) != 0:
-                    fig.add_trace(go.Violin(x=feature,
-                                            y=contribution,
+                if len(contribution_neg) != 0:
+                    fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] != col_modality) &
+                                                              (feature_values.iloc[:, 0] == i)].values.flatten(),
+                                            y=contribution_neg,
                                             points=points_param,
                                             pointpos=-0.1,
                                             side='negative',
@@ -414,8 +409,12 @@ class SmartPlotter:
                                                                       (feature_values.iloc[:, 0] == i)].values.flatten()
                                             ))
 
-                    fig.add_trace(go.Violin(x=feature,
-                                            y=contribution,
+                contribution_pos = contributions.loc[(pred.iloc[:, 0] == col_modality) &
+                                                            (feature_values.iloc[:, 0] == i)].values.flatten()
+                if len(contribution_pos) != 0:
+                    fig.add_trace(go.Violin(x=feature_values.loc[(pred.iloc[:, 0] == col_modality) &
+                                                              (feature_values.iloc[:, 0] == i)].values.flatten(),
+                                            y=contribution_pos,
                                             points=points_param,
                                             pointpos=0.1,
                                             side='positive',
@@ -430,8 +429,6 @@ class SmartPlotter:
 
             else:
                 feature = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
-                customdata = np.stack((feature,
-                                        contributions.loc[feature_values.iloc[:, 0] == i].index.values), axis=-1)
                 fig.add_trace(go.Violin(x=feature,
                                         y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
                                         line_color=self._style_dict["violin_default"],
@@ -449,10 +446,11 @@ class SmartPlotter:
             self.explainer._case == 'classification' else None
 
         hovertemplate = '<b>%{hovertext}</b><br />' + hv_temp
+        feature = feature_values.values.flatten()
+        customdata = np.stack((feature_values.values.flatten(),
+                                contributions.index.values), axis=-1)
+
         if colorpoints is not None:
-            feature = feature_values.values.flatten()
-            customdata = np.stack((feature_values.values.flatten(),
-                                   contributions.index.values), axis=-1)
             fig.add_trace(go.Scatter(
                 x=feature_values.values.flatten(),
                 y=contributions.values.flatten(),
