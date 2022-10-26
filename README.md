@@ -62,11 +62,10 @@ Shapash also contributes to data science auditing by displaying usefull informat
   - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
   - [Building confidence on explainability - Towards DS](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)
 
-<a href="https://shapash-demo.ossbymaif.fr/">
-  <p align="center">
-    <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash_global.gif" width="800" title="shapash_gif">
-  </p>
-</a>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash_global.gif" width="800">
+</p>
 
 ## 🤝 Contributors
 
@@ -132,11 +131,9 @@ Shapash also contributes to data science auditing by displaying usefull informat
 Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. 
 This document can be easily shared across teams (internal audit, DPO, risk, compliance...).
 
-<a href="https://shapash.readthedocs.io/en/latest/report.html">
-  <p align="center">
-    <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800" title="report-demo">
-  </p>
-</a>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800">
+</p>
 
 ## ⚙️ How Shapash works 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
