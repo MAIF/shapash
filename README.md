@@ -35,8 +35,8 @@
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
-| 2.2.x         |  Picking samples <br>                                                                   | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values".            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb)
-| 2.2.x         |  Dataset Filter <br>                                                                   | New tab in the webapp to filter data. And several improvements in the webapp: subtitles, labels, screen adjustments                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webapp.png" width="50" title="webapp">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
+| 2.2.x         |  Picking samples <br> [New demo](https://shapash-demo.ossbymaif.fr/)                                                                | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values".            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb)
+| 2.2.x         |  Dataset Filter <br> [New demo](https://shapash-demo.ossbymaif.fr/)                                                                  | New tab in the webapp to filter data. And several improvements in the webapp: subtitles, labels, screen adjustments                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webapp.png" width="50" title="webapp">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 | 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](https://github.com/MAIF/shapash/blob/master/tutorial/backend/tuto-backend-01.ipynb)
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
 | 1.6.x         |  Explainability Quality Metrics <br> [article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb) 
@@ -61,6 +61,11 @@ Shapash also contributes to data science auditing by displaying usefull informat
   - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
   - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
   - [Building confidence on explainability - Towards DS](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)
+
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash_global.gif" width="800">
+</p>
 
 ## 🤝 Contributors
 
@@ -111,12 +116,6 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - Allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
-<a href="https://shapash-demo.ossbymaif.fr/">
-  <p align="center">
-    <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-webapp-demo.gif" width="800" title="contrib">
-  </p>
-</a>
-
 - **Summarize and export** the local explanation
 > **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data background, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
 
@@ -132,11 +131,9 @@ Shapash also contributes to data science auditing by displaying usefull informat
 Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. 
 This document can be easily shared across teams (internal audit, DPO, risk, compliance...).
 
-<a href="https://shapash.readthedocs.io/en/latest/report.html">
-  <p align="center">
-    <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800" title="report-demo">
-  </p>
-</a>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800">
+</p>
 
 ## ⚙️ How Shapash works 
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
