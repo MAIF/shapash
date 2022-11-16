@@ -1616,7 +1616,6 @@ class SmartApp:
                         # we plot filter subset
                         selection = [d['_index_'] for d in data]
                 self.last_click_data = clickData
-                raise PreventUpdate
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
