@@ -1721,15 +1721,19 @@ class SmartApp:
                     self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
                     if feature['points'][0]['curveNumber'] == 0 and \
                               len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                        print("condition1")
                         if selected_data is not None and len(selected_data) > 1:
                             row_ids = []
                             for p in selected_data['points']:
                                 row_ids.append(p['customdata'])
                             self.subset = row_ids
+                            print("condition2")
                         else:
                             self.subset = [d['_index_'] for d in data]
+                            print("condition3")
                     else:
                         self.subset = self.list_index
+                        print("condition4")
             # If we have selected data on prediction picking graph
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None)):
@@ -1752,6 +1756,21 @@ class SmartApp:
                 # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
                     self.subset = self.list_index
+                    print("condition5")
+                elif len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                    if feature['points'][0]['curveNumber'] == 0:
+                        if selected_data is not None and len(selected_data) > 1:
+                            row_ids = []
+                            for p in selected_data['points']:
+                                row_ids.append(p['customdata'])
+                            self.subset = row_ids
+                            print("condition12")
+                        else:
+                            self.subset = [d['_index_'] for d in data]
+                            print("condition13")
+                    else:
+                        self.subset = self.list_index
+                        print("condition14")
                 else:
                     row_ids = []
                     if selected_data is not None and len(selected_data) > 1:
@@ -1759,9 +1778,12 @@ class SmartApp:
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
                         self.subset = row_ids
+                        print("condition6")
                     else:
                         # we plot filter subset
                         self.subset = [d['_index_'] for d in data]
+                        print("condition7")
+                        print(self.components['graph']['global_feature_importance'].figure['data'])
 
             self.components['graph']['feature_selector'].figure = \
                 self.explainer.plot.contribution_plot(
