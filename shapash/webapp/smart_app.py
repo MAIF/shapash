@@ -1358,7 +1358,7 @@ class SmartApp:
                   (selected_data is not None)):
                 row_ids = []
                 # If some data have been selected in prediction picking graph
-                if len(selected_data) > 1:
+                if selected_data is not None and len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                     df = self.round_dataframe.loc[row_ids]
@@ -1525,7 +1525,7 @@ class SmartApp:
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
                 row_ids = []
-                if len(selected_data) > 1:
+                if selected_data is not None and len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                     selection = row_ids
@@ -1537,6 +1537,10 @@ class SmartApp:
                                       for f in group_features]
                     if selected_feature not in list_sub_features:
                         selected_feature = None
+            # If click on a single point on prediction picking, do nothing
+            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is not None) and (len(selected_data) == 1)):
+                  pass
             # If we have dubble click on prediction picking to remove the selected subset
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is None)):
@@ -1582,7 +1586,7 @@ class SmartApp:
             elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
                   and self.explainer.features_groups and bool_group):
                 row_ids = []
-                if selected_data is not None:
+                if selected_data is not None and len(selected_data) > 1:
                     # we plot prediction picking subset
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
@@ -1607,7 +1611,7 @@ class SmartApp:
                     selection = None
                 else:
                     row_ids = []
-                    if selected_data is not None:
+                    if selected_data is not None and len(selected_data) > 1:
                         # we plot prediction picking subset
                         for p in selected_data['points']:
                             row_ids.append(p['customdata'])
@@ -1734,7 +1738,7 @@ class SmartApp:
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None)):
                 row_ids = []
-                if len(selected_data) > 1:
+                if selected_data is not None and len(selected_data) > 1:
                     for p in selected_data['points']:
                         row_ids.append(p['customdata'])
                     self.subset = row_ids
