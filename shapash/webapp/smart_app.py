@@ -1756,6 +1756,17 @@ class SmartApp:
                 # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
                     self.subset = self.list_index
+                elif len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
+                    if feature['points'][0]['curveNumber'] == 0:
+                        if selected_data is not None and len(selected_data) > 1:
+                            row_ids = []
+                            for p in selected_data['points']:
+                                row_ids.append(p['customdata'])
+                            self.subset = row_ids
+                        else:
+                            self.subset = [d['_index_'] for d in data]
+                    else:
+                        self.subset = self.list_index
                 else:
                     row_ids = []
                     if selected_data is not None and len(selected_data) > 1:
