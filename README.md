@@ -61,6 +61,7 @@ Shapash also contributes to data science auditing by displaying usefull informat
   - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
   - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
   - [Building confidence on explainability - Towards DS](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)
+  - [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
 
 
 <p align="center">
