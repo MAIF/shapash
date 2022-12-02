@@ -1,8 +1,6 @@
 """
 Main class of Web application Shapash
 """
-from pydoc import classname
-from turtle import width
 import dash
 from dash import dash_table
 import dash_daq as daq
@@ -21,7 +19,7 @@ import numpy as np
 import datetime
 import re
 from math import log10
-from shapash.webapp.utils.utils import apply_filter, check_row, round_to_k
+from shapash.webapp.utils.utils import check_row, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.explanations import Explanations
