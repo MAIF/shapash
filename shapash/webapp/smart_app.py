@@ -1353,7 +1353,7 @@ class SmartApp:
                             {"name": '_predict_', "id": '_predict_'}] + \
                             [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None)):
+                  (selected_data is not None) and (len(selected_data) > 1)):
                 row_ids = []
                 # If some data have been selected in prediction picking graph
                 if selected_data is not None and len(selected_data) > 1:
@@ -1368,8 +1368,12 @@ class SmartApp:
             # If click on Apply filter
             elif ((ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks') | (
                     (ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is None))):
+                  ((selected_data is None))) | (
+                    (ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
+                  (selected_data is not None and len(selected_data) == 1 and selected_data['points'][0]['curveNumber'] > 0)
+                  )):
                 # get list of ID
+                # If some data have b
                 feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
                 str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
                 bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
@@ -1538,7 +1542,11 @@ class SmartApp:
             # If click on a single point on prediction picking, do nothing
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) == 1)):
-                  pass
+                # If there is some filters applied
+                if (len([d['_index_'] for d in data]) != len(self.list_index)):
+                    selection = [d['_index_'] for d in data]
+                else:
+                    selection = None
             # If we have dubble click on prediction picking to remove the selected subset
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is None)):
@@ -1754,17 +1762,20 @@ class SmartApp:
                 # Zoom management to generate graph which have global axis
                 if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
                     self.subset = self.list_index
-                elif len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                    if feature['points'][0]['curveNumber'] == 0:
-                        if selected_data is not None and len(selected_data) > 1:
-                            row_ids = []
-                            for p in selected_data['points']:
-                                row_ids.append(p['customdata'])
-                            self.subset = row_ids
+                elif (len(self.components['graph']['global_feature_importance'].figure['data']) == 2):
+                    if feature is not None:
+                        if feature['points'][0]['curveNumber'] == 0:
+                            if selected_data is not None and len(selected_data) > 1:
+                                row_ids = []
+                                for p in selected_data['points']:
+                                    row_ids.append(p['customdata'])
+                                self.subset = row_ids
+                            else:
+                                self.subset = [d['_index_'] for d in data]
                         else:
-                            self.subset = [d['_index_'] for d in data]
+                            self.subset = self.list_index
                     else:
-                        self.subset = self.list_index
+                        self.subset = [d['_index_'] for d in data]
                 else:
                     row_ids = []
                     if selected_data is not None and len(selected_data) > 1:
