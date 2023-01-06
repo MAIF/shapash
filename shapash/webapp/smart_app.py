@@ -1373,7 +1373,6 @@ class SmartApp:
                   (selected_data is not None and len(selected_data) == 1 and selected_data['points'][0]['curveNumber'] > 0)
                   )):
                 # get list of ID
-                # If some data have b
                 feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
                 str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
                 bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
