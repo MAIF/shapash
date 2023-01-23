@@ -62,6 +62,36 @@ We recommand to use a convention of naming branch.
 - **feature/your_feature_name** if you are creating a feature
 - **hotfix/your_bug_fix** if you are fixing a bug
 
+
+## Creating a development environment
+Install the development dependencies :
+```
+pip install requirements.dev.txt
+```
+The webapp tests use Selenium that requires to install a chromedriver that is compatible with your current installation of chrome.
+More info [can be found here](https://dash.plotly.com/testing).  
+In order to install the chromedriver please [follow the steps listed here (Chrome Driver)](https://chromedriver.chromium.org/getting-started).
+
+As explained in the link, you should include the folder that contains the chromedriver in your PATH environment variable.  
+One other simple way to do this is to add the chromedriver in the `/usr/local/bin` or `/usr/bin` folder that should already be in your PATH variable. 
+
+But if you do not want to run the webapp integration tests :
+```
+pytest -m "not selenium"
+```
+
+An other possibility is running all the tests without creating an environment and installing a chromedriver through Docker. 
+```
+docker build -t ... .
+docker run ...
+```
+Do not forget to declare your proxies and pip configuration environment variables when building your image if you need some. 
+However the webapp integration tests will likely not work in this case.
+```
+docker build -t ... . --build-arg http_proxy=... --build-arg https_proxy=... --build-arg no_proxy=... --build-arg PIP_INDEX_URL=... --build-arg PIP_TRUSTED_HOST=...
+```
+
+
 ## Commit your changes
 
 Before committing your modifications, we have some recommendations :
@@ -69,6 +99,10 @@ Before committing your modifications, we have some recommendations :
 - Execute pytest to check that all tests pass
 ```
 pytest
+```
+*Or if you do not have chromedriver installed*
+```
+pytest -m "not selenium"
 ```
 - Try to build Shapash 
 ```
