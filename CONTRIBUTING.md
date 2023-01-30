@@ -77,18 +77,18 @@ One other simple way to do this is to add the chromedriver in the `/usr/local/bi
 
 But if you do not want to run the webapp integration tests :
 ```
-pytest -m "not selenium"
+python -m pytest -m "not selenium"
 ```
 
 An other possibility is running all the tests without creating an environment and installing a chromedriver through Docker. 
 ```
-docker build -t ... .
-docker run ...
+docker build -t name_docker .
+docker run name_docker
 ```
 Do not forget to declare your proxies and pip configuration environment variables when building your image if you need some. 
 However the webapp integration tests will likely not work in this case.
 ```
-docker build -t ... . --build-arg http_proxy=... --build-arg https_proxy=... --build-arg no_proxy=... --build-arg PIP_INDEX_URL=... --build-arg PIP_TRUSTED_HOST=...
+docker build -t name_docker . --build-arg http_proxy=... --build-arg https_proxy=... --build-arg no_proxy=... --build-arg PIP_INDEX_URL=... --build-arg PIP_TRUSTED_HOST=...
 ```
 
 
@@ -98,11 +98,11 @@ Before committing your modifications, we have some recommendations :
 
 - Execute pytest to check that all tests pass
 ```
-pytest
+python -m pytest
 ```
 *Or if you do not have chromedriver installed*
 ```
-pytest -m "not selenium"
+python -m pytest -m "not selenium"
 ```
 - Try to build Shapash 
 ```
