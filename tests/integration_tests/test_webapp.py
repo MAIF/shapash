@@ -290,6 +290,9 @@ class TestInteractions:
         all_tabs[2].click()
 
         dash_duo.wait_for_element_by_id("prediction_picking", timeout=30)
+
+        time.sleep(3)  # If we don't wait graphs don't have time to display properly
+
         graph_picking = dash_duo.find_element("#prediction_picking")
         title = graph_picking.find_element(By.CSS_SELECTOR, ".gtitle")
         assert "True Values Vs Predicted Values" in title.text, f"{title.text} is not the expected title text"
