@@ -635,7 +635,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
                                  'other': ['A', 'B', 'C']})
 
         result = pd.DataFrame(enc.transform(test))
-        result.columns = ['col1', 'col2', 'other']
+        result.columns = ['num1', 'num2', 'other']
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
@@ -663,7 +663,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
                                  'quantile_num2': [0.0, 2.0, 2.0]})
 
         result = pd.DataFrame(enc.transform(test))
-        result.columns = ['col1', 'col2']
+        result.columns = ['num1', 'num2']
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
@@ -692,7 +692,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
                                  'other': ['A', 'B', 'C']})
 
         result = pd.DataFrame(enc.transform(test))
-        result.columns = ['col1', 'col2', 'other']
+        result.columns = ['num1', 'num2', 'other']
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
@@ -720,7 +720,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
                                  'power_num2': [0.0, 2.0, 2.0]})
 
         result = pd.DataFrame(enc.transform(test))
-        result.columns = ['col1', 'col2']
+        result.columns = ['num1', 'num2']
         original = inverse_transform(result, enc)
         pd.testing.assert_frame_equal(original, expected)
 
