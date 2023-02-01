@@ -44,14 +44,14 @@ extras['report'] = [
     'papermill>=2.0.0',
     'seaborn<=0.11.2',
     'notebook',
-    'Jinja2>=2.11.0,<3.1.0',
+    'Jinja2>=2.11.0',
     'phik'
 ]
 
 extras['xgboost'] = ['xgboost>=1.0.0']
 extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=1.0.1']
-extras['acv'] = ['acv-exp>=1.2.0', 'skranger>=0.8.0']
+extras['acv'] = ['acv-exp>=1.2.0']
 extras['lime'] = ['lime>=0.2.0.0']
 
 setup_requirements = ['pytest-runner', ]
@@ -61,7 +61,7 @@ test_requirements = ['pytest', ]
 setup(
     name="shapash",
     version=version_d['__version__'],
-    python_requires='>3.6, <3.11',
+    python_requires='>3.7, <3.11',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -70,7 +70,6 @@ setup(
     long_description_content_type='text/markdown',
     classifiers=[
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
