@@ -31,8 +31,8 @@ requirements = [
     'dash-table>=5.0.0',
     'nbformat>4.2.0',
     'numba>=0.53.1',
-    'scikit-learn>=0.24.0,<1.2.0',
-    'category_encoders>=2.2.2,<2.6.0',
+    'scikit-learn>=1.0.1',
+    'category_encoders>=2.6.0',
     'scipy>=0.19.1',
 ]
 
@@ -42,9 +42,10 @@ extras = dict()
 extras['report'] = [
     'nbconvert==6.0.7',
     'papermill>=2.0.0',
+    'jupyter-client<8.0.0',
     'seaborn<=0.11.2',
     'notebook',
-    'Jinja2>=2.11.0,<3.1.0',
+    'Jinja2>=2.11.0',
     'phik'
 ]
 
@@ -61,7 +62,7 @@ test_requirements = ['pytest', ]
 setup(
     name="shapash",
     version=version_d['__version__'],
-    python_requires='>3.6, <3.11',
+    python_requires='>3.7, <3.11',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -70,7 +71,6 @@ setup(
     long_description_content_type='text/markdown',
     classifiers=[
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
