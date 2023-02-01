@@ -552,7 +552,7 @@ class SmartPlotter:
             topmargin = topmargin + 15
         dict_t.update(text=title)
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
-        dict_xaxis.update(text='Contribution')
+        dict_xaxis.update(text='Mean absolute Contribution')
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_yaxis.update(text=None)
         dict_style_bar1 = self._style_dict["dict_featimp_colors"][1]

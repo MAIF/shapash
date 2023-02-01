@@ -984,10 +984,9 @@ class SmartApp:
         """
         on_style = {'backgroundColor': self.color[0],
                     'color': self.bkg_color,
+                    'margin-top': '0.5rem',
                     'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': self.color[1],
-                     'color': self.bkg_color,
-                     'margin-right': '0.5rem'}
+        off_style = {'display': 'none'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -1640,7 +1639,7 @@ class SmartApp:
                     zoom=zoom_active
                 )
             # Adjust graph with adding x axis title
-            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
+            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Mean absolute Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             if selected_feature:
                 if self.explainer.features_groups is None:
