@@ -256,7 +256,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 raise ValueError("Features of columns_dict and model must have the same length")
 
     if str(type(preprocessing)) in supported_category_encoder and isinstance(feature_expected_model, list):
-        if set(preprocessing.feature_names) != set(feature_expected_model):
+        if set(preprocessing.feature_names_out_) != set(feature_expected_model):
             raise ValueError("""
                                 One of features returned by the Category_Encoders preprocessing doesn't
                                 match the model's expected features.

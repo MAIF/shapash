@@ -134,7 +134,7 @@ def inv_transform_ce_in_ct(x_in, init, name_encoding, col_encoding, ct_encoding)
         Index of the last column use to make the transformation.
     """
     colname_output = [name_encoding + '_' + val for val in col_encoding]
-    colname_input = ct_encoding.get_feature_names()
+    colname_input = ct_encoding.get_feature_names_out()
     nb_col = len(colname_input)
     x_to_inverse = x_in.iloc[:, init:init + nb_col].copy()
     x_to_inverse.columns = colname_input
@@ -170,7 +170,7 @@ def inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_enco
     """
     colname_output = [name_encoding + '_' + val for val in col_encoding]
     if str(type(ct_encoding)) in dummies_sklearn:
-        colname_input = ct_encoding.get_feature_names(col_encoding)
+        colname_input = ct_encoding.get_feature_names_out(col_encoding)
         nb_col = len(colname_input)
     else:
         nb_col = len(colname_output)
@@ -344,13 +344,13 @@ def get_names(name, trans, column, column_transformer):
         else:
             indices = np.arange(column_transformer._n_features)
             return ['x%d' % i for i in indices[column]]
-    if not hasattr(trans, 'get_feature_names'):
+    if not hasattr(trans, 'get_feature_names_out'):
         if column is None:
             return []
         else:
             return [name + "__" + f for f in column]
 
-    return [name + "__" + f for f in trans.get_feature_names()]
+    return [name + "__" + f for f in trans.get_feature_names_out()]
 
 
 def get_feature_names(column_transformer):
@@ -397,7 +397,7 @@ def get_list_features_names(list_preprocessing, columns_dict):
 
     for enc in list_preprocessing:
         if str(type(enc)) in supported_category_encoder:
-            feature_expected = enc.feature_names
+            feature_expected = enc.feature_names_out_
 
         elif str(type(enc)) in columntransformer:
             feature_expected = get_feature_names(enc)
@@ -410,10 +410,12 @@ def get_list_features_names(list_preprocessing, columns_dict):
 
 def get_feature_out(estimator, feature_in):
     """
-    Returns estimator features out if it has get_feature_names method, else features_in
+    Returns estimator features out if it has get_feature_names_out method, else features_in
     """
-    if hasattr(estimator, 'get_feature_names'):
-        return estimator.get_feature_names(), estimator.categories_
+    if hasattr(estimator, 'get_feature_names_out') and hasattr(estimator, 'categories_'):
+        return estimator.get_feature_names_out(), estimator.categories_
+    elif hasattr(estimator, 'get_feature_names_out'):
+        return estimator.get_feature_names_out(), []
     else:
         return feature_in, []
 
