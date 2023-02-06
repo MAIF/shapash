@@ -1999,6 +1999,8 @@ class SmartApp:
                     # raise PreventUpdate
             else:
                 selected = index
+            if check_row(data, selected) is None:
+                selected = None
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
                 sign = (None if negative == [1] else True)
