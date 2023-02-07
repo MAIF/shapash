@@ -464,7 +464,6 @@ class SmartApp:
 
         self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
-                dbc.Label("Index", align="center", width=4),
                 dbc.Col([
                     dbc.Input(
                         id="index_id", type="text", size="s", placeholder="Id must exist",
@@ -476,10 +475,43 @@ class SmartApp:
                     html.Img(id='validation', alt='Validate', title='Validate index',
                              src=self.app.get_asset_url('reload.png'),
                              height='30px', style={'cursor': 'pointer'},
-                             )], width={"size": 2},
+                             )], width={"size": 1},
                         style={'padding': "0px"}, align="center"
-                        )
-            ])
+                        ),
+                dbc.Col([
+                    dbc.Button(
+                        "ID Card",
+                        id="id_card",
+                        color='warning',
+                        style={"display":"none"},
+                    ),
+                    dbc.Popover(
+                        "Click here to visualize the identity card of the selected index.",
+                        target="id_card",
+                        body=True,
+                        trigger="hover",
+                    ),
+                    dbc.Modal(
+                        [
+                        dbc.ModalHeader(
+                            dbc.ModalTitle("Identity Card")
+                            ),
+                        dbc.ModalBody(id="id_card_body"),
+                        dbc.ModalFooter(
+                            dbc.Button(
+                                "Close",
+                                id="close_id_card",
+                                color="warning"
+                                )
+                            ),
+                        ],
+                        id="modal_id_card",
+                        centered=True,
+                        size='lg',
+                        scrollable=True,
+                    ),
+                ], width=5),
+            ], justify='center')
         )
 
         self.components['filter']['threshold'] = dbc.Col(
@@ -2067,6 +2099,70 @@ class SmartApp:
                 return 1
             else:
                 raise PreventUpdate
+        
+        @app.callback(
+            Output('id_card', 'style'), 
+            Output('id_card_body', 'children'),
+            [
+                Input('index_id', 'n_submit')
+            ],
+            [
+                State('dataset', 'data'),
+                State('index_id', 'value'),
+            ],
+        )
+        def update_id_card(n_submit, data, index):
+            """
+            Update identity card and display button.
+            Parameters
+            ----------
+            n_submit : boolean
+            data : the dataset
+            index : selected index
+            Returns
+            -------
+            style to display button and children body for modal.
+            """
+            selected = check_row(data, index)
+            if n_submit and selected is not None:
+                selected_row = data[selected]
+                children = []
+                for key in selected_row.keys():
+                    children.append(
+                        dbc.Row([
+                            dbc.Col(dbc.Label(key), width=4, style={'fontWeight': 'bold'}), 
+                            dbc.Col(dbc.Label(selected_row[key]), width=7, className="id_card_solid")
+                        ])
+                    )
+                return {"display":"flex", "margin-left":"auto", "margin-right":0}, children
+            else:
+                return {"display":"none"}, []
+        
+        @app.callback(
+            Output("modal_id_card", "is_open"),
+            [
+                Input("id_card", "n_clicks"),
+                Input("close_id_card", "n_clicks")
+            ],
+            [
+                State("modal_id_card", "is_open")
+            ],
+        )
+        def toggle_modal_id_card(n1, n2, is_open):
+            """
+            Open and close identity card modal.
+            Parameters
+            ----------
+            n1 : click on button to open
+            n2 : click on button to close
+            is_open : True if open else False
+            Returns
+            -------
+            boolean True if open else False
+            """
+            if n1 or n2:
+                return not is_open
+            return is_open
 
         @app.callback(
             [
