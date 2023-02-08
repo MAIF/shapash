@@ -339,8 +339,11 @@ class SmartApp:
             columns=[{"name": '_index_', "id": '_index_'},
                      {"name": '_predict_', "id": '_predict_'}] +
                     [{"name": i, "id": i} for i in self.explainer.x_init],
+            tooltip_header={
+                column: self.explainer.features_dict[column] for column in self.explainer.x_init
+                if column not in ["_index_", "_predict_"]
+            },
             editable=False, row_deletable=False,
-            style_as_list_view=True,
             virtualization=True,
             page_action='none',
             fixed_rows={'headers': True, 'data': 0},
@@ -350,7 +353,7 @@ class SmartApp:
             style_table={'overflowY': 'auto', 'overflowX': 'auto'},
             style_header={'height': '30px'},
             style_cell={
-                'minWidth': '70px', 'width': '120px', 'maxWidth': '200px',
+                'minWidth': '70px', 'width': '120px', 'maxWidth': '200px', 'textOverflow':'ellipsis',
             },
         )
 
