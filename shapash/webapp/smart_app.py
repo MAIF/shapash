@@ -466,7 +466,7 @@ class SmartApp:
             [
                 dbc.Col([
                     dbc.Input(
-                        id="index_id", type="text", size="s", placeholder="Id must exist",
+                        id="index_id", type="text", size="s", placeholder="_index_",
                         debounce=True, persistence=True, style={'textAlign': 'right'}
                     )], width={"size": 5},
                     style={'padding': "0px"}
@@ -2125,13 +2125,20 @@ class SmartApp:
             """
             selected = check_row(data, index)
             if n_submit and selected is not None:
-                selected_row = data[selected]
+                selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
+                selected_row["feature_name"] = selected_row.index.map(
+                    lambda x: x if x in ["_index_", "_predict_"] else self.explainer.features_dict[x]
+                )
+                selected_row = pd.concat([
+                    selected_row.loc[["_index_", "_predict_"]], 
+                    selected_row.drop(index=["_index_", "_predict_"]).sort_values("feature_name")
+                ])
                 children = []
-                for key in selected_row.keys():
+                for _, row in selected_row.iterrows():
                     children.append(
                         dbc.Row([
-                            dbc.Col(dbc.Label(key), width=4, style={'fontWeight': 'bold'}), 
-                            dbc.Col(dbc.Label(selected_row[key]), width=7, className="id_card_solid")
+                            dbc.Col(dbc.Label(row["feature_name"]), width=4, style={'fontWeight': 'bold'}), 
+                            dbc.Col(dbc.Label(row["feature_value"]), width=7, className="id_card_solid")
                         ])
                     )
                 return {"display":"flex", "margin-left":"auto", "margin-right":0}, children
