@@ -1,6 +1,7 @@
 """
 Main class of Web application Shapash
 """
+import copy
 import dash
 from dash import dash_table
 import dash_daq as daq
@@ -107,6 +108,7 @@ class SmartApp:
         self.explanations = Explanations()  # To get explanations of "?" buttons
         self.dataframe = pd.DataFrame()
         self.round_dataframe = pd.DataFrame()
+        self.features_dict = copy.deepcopy(self.explainer.features_dict)
         self.init_data()
 
         # COMPONENTS
@@ -151,6 +153,10 @@ class SmartApp:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
             raise ValueError('y_pred must be set when calling compile function.')
+
+        if self.explainer.additional_data is not None:
+            self.dataframe = self.dataframe.join(self.explainer.additional_data)
+            self.features_dict.update(self.explainer.additional_features_dict)
 
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
@@ -336,9 +342,7 @@ class SmartApp:
                 } for row in self.dataframe.to_dict('rows')
             ], tooltip_duration=2000,
 
-            columns=[{"name": '_index_', "id": '_index_'},
-                     {"name": '_predict_', "id": '_predict_'}] +
-                    [{"name": i, "id": i} for i in self.explainer.x_init],
+            columns=[{"name": i, "id": i} for i in self.dataframe.columns],
             editable=False, row_deletable=False,
             style_as_list_view=True,
             virtualization=True,
@@ -500,8 +504,8 @@ class SmartApp:
                 dbc.Label(
                     "Features to display: ", id='max_contrib_label'),
                 dcc.Slider(
-                    min=1, max=min(self.settings['features'], len(self.dataframe.columns) - 2),
-                    step=1, value=min(self.settings['features'], len(self.dataframe.columns) - 2),
+                    min=1, max=min(self.settings['features'], len(self.explainer.x_init.columns)),
+                    step=1, value=min(self.settings['features'], len(self.explainer.x_init.columns)),
                     id="max_contrib_id",
                 )
             ],
@@ -1351,7 +1355,7 @@ class SmartApp:
                         columns = [
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
+                            [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(['_index_', '_predict_'])]
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
@@ -1921,7 +1925,7 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    max = min(features, len(self.dataframe.columns) - 2)
+                    max = min(features, len(self.explainer.x_init.columns))
                     if max // 5 == max / 5:
                         nb_marks = min(int(max // 5), 10)
                     elif max // 4 == max / 4:
@@ -2374,7 +2378,7 @@ class SmartApp:
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
             # We use domain name for feature name
-            dict_name = [self.explainer.features_dict[i]
+            dict_name = [self.features_dict[i]
                          for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
             dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
             # Create dataframe to sort it by feature_name

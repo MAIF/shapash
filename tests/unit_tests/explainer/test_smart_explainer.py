@@ -340,6 +340,24 @@ class TestSmartExplainer(unittest.TestCase):
         assert_frame_equal(xpl.y_target, df[['y']])
         self.assertListEqual(xpl._classes, [0, 1])
 
+    def test_compile_7(self):
+        """
+        Unit test compile 5
+        checking compile method with additional_data
+        """
+        np.random.seed(1)
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['x3'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        xpl = SmartExplainer(clf)
+        xpl.compile(x=df[['x1', 'x2']], additional_data=df[['x3']])
+        assert len(xpl.additional_features_dict)==1
+
     def test_filter_0(self):
         """
         Unit test filter 0
