@@ -497,8 +497,45 @@ class SmartApp:
                     dbc.Modal(
                         [
                         dbc.ModalHeader(
-                            dbc.ModalTitle("Identity Card")
-                            ),
+                            dbc.Col([
+                                dbc.ModalTitle("Identity Card"),
+                                dbc.Row([
+                                    dbc.Label("Sort by:", align="center", width="auto"),
+                                    dbc.Col([
+                                        dcc.Dropdown(
+                                            id="select_id_card_sorting",
+                                            options=[
+                                                {"label": "Label", "value": "feature_name"}, 
+                                                {"label": "Contribution", "value": "feature_contrib"}
+                                            ], 
+                                            value="feature_name",
+                                            clearable=False, 
+                                            searchable=False,
+                                        ),
+                                    ], width=3),
+                                    dbc.Label("Order:", align="center", width="auto"),
+                                    dbc.Col([
+                                        dcc.Dropdown(
+                                            id="select_id_card_order",
+                                            options=[
+                                                {"label": "Ascending", "value": True}, 
+                                                {"label": "Descending", "value": False}
+                                            ], 
+                                            value=True,
+                                            clearable=False, 
+                                            searchable=False,
+                                        ),
+                                    ], width=3),
+                                ], style={"margin-top":"0.5rem"}),
+                                dbc.Row([
+                                    dbc.Col(width=3),
+                                    dbc.Label("Value", width=5, style={'fontWeight': 'bold'}),
+                                    dbc.Col(width=1),
+                                    dbc.Label("Contribution", width=3, style={'fontWeight': 'bold'}),
+                                ], style={"margin-top":"0.5rem", "margin-bottom":"-1rem"}),
+                            ]),
+                            close_button=False,
+                        ),
                         dbc.ModalBody(id="id_card_body"),
                         dbc.ModalFooter(
                             dbc.Button(
@@ -510,7 +547,7 @@ class SmartApp:
                         ],
                         id="modal_id_card",
                         centered=True,
-                        size='lg',
+                        size='xl',
                         scrollable=True,
                     ),
                 ], width=5),
@@ -2107,14 +2144,17 @@ class SmartApp:
             Output('id_card', 'style'), 
             Output('id_card_body', 'children'),
             [
-                Input('index_id', 'n_submit')
+                Input('index_id', 'n_submit'),
+                Input('select_label', 'value'),
+                Input('select_id_card_sorting', 'value'),
+                Input('select_id_card_order', 'value'),
             ],
             [
                 State('dataset', 'data'),
                 State('index_id', 'value'),
             ],
         )
-        def update_id_card(n_submit, data, index):
+        def update_id_card(n_submit, label, sort_by, order, data, index):
             """
             Update identity card and display button.
             Parameters
@@ -2132,16 +2172,39 @@ class SmartApp:
                 selected_row["feature_name"] = selected_row.index.map(
                     lambda x: x if x in ["_index_", "_predict_"] else self.explainer.features_dict[x]
                 )
-                selected_row = pd.concat([
-                    selected_row.loc[["_index_", "_predict_"]], 
-                    selected_row.drop(index=["_index_", "_predict_"]).sort_values("feature_name")
+                if self.explainer._case == 'classification':
+                    if label is None:
+                        label = -1
+                    label_num, _, _ = self.explainer.check_label_name(label)
+                    contrib = self.explainer.data['contrib_sorted'][label_num].loc[index, :].values
+                    var_dict = self.explainer.data['var_dict'][label_num].loc[index, :].values
+                else:
+                    contrib = self.explainer.data['contrib_sorted'].loc[index, :].values
+                    var_dict = self.explainer.data['var_dict'].loc[index, :].values
+                var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
+                selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
+                selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
+                selected_data = selected_row.merge(selected_contrib, how="left", on="feature_name")
+                selected_data.index = selected_row.index
+                selected_data = pd.concat([
+                    selected_data.loc[["_index_", "_predict_"]], 
+                    selected_data.drop(index=["_index_", "_predict_"]).sort_values(sort_by, ascending=order)
                 ])
                 children = []
-                for _, row in selected_row.iterrows():
+                for _, row in selected_data.iterrows():
                     children.append(
                         dbc.Row([
-                            dbc.Col(dbc.Label(row["feature_name"]), width=4, style={'fontWeight': 'bold'}), 
-                            dbc.Col(dbc.Label(row["feature_value"]), width=7, className="id_card_solid")
+                            dbc.Col(dbc.Label(row["feature_name"]), width=3, style={'fontWeight': 'bold'}), 
+                            dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
+                            dbc.Col(width=1),
+                            dbc.Col(
+                                dbc.Row(
+                                    dbc.Label(format(row["feature_contrib"], '.4f'), width="auto", style={"padding-top":0}), 
+                                    justify="end"
+                                ), 
+                                width=2, 
+                                className="id_card_solid",
+                            ) if row["feature_contrib"]==row["feature_contrib"] else None,
                         ])
                     )
                 return {"display":"flex", "margin-left":"auto", "margin-right":0}, children
