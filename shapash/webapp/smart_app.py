@@ -531,7 +531,7 @@ class SmartApp:
                                     dbc.Col(width=3),
                                     dbc.Label("Value", width=5, style={'fontWeight': 'bold'}),
                                     dbc.Col(width=1),
-                                    dbc.Label("Contribution", width=3, style={'fontWeight': 'bold'}),
+                                    dbc.Label("Contribution", id="id_card_title_contrib",width=3, style={'fontWeight': 'bold'}),
                                 ], style={"margin-top":"0.5rem", "margin-bottom":"-1rem"}),
                             ]),
                             close_button=False,
@@ -2143,6 +2143,7 @@ class SmartApp:
         @app.callback(
             Output('id_card', 'style'), 
             Output('id_card_body', 'children'),
+            Output('id_card_title_contrib', 'children'),
             [
                 Input('index_id', 'n_submit'),
                 Input('select_label', 'value'),
@@ -2175,12 +2176,17 @@ class SmartApp:
                 if self.explainer._case == 'classification':
                     if label is None:
                         label = -1
-                    label_num, _, _ = self.explainer.check_label_name(label)
+                    label_num, _, label_value = self.explainer.check_label_name(label)
                     contrib = self.explainer.data['contrib_sorted'][label_num].loc[index, :].values
                     var_dict = self.explainer.data['var_dict'][label_num].loc[index, :].values
+                    proba = self.explainer.plot.local_pred(index, label_num)
+                    title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
+                    _, _, predicted_label_value = self.explainer.check_label_name(selected_row.loc["_predict_", "feature_value"])
+                    selected_row.loc["_predict_", "feature_value"] = predicted_label_value
                 else:
                     contrib = self.explainer.data['contrib_sorted'].loc[index, :].values
                     var_dict = self.explainer.data['var_dict'].loc[index, :].values
+                    title_contrib = "Contribution"
                 var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
                 selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
                 selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
@@ -2207,7 +2213,7 @@ class SmartApp:
                             ) if row["feature_contrib"]==row["feature_contrib"] else None,
                         ])
                     )
-                return {"display":"flex", "margin-left":"auto", "margin-right":0}, children
+                return {"display":"flex", "margin-left":"auto", "margin-right":0}, children, title_contrib
             else:
                 return {"display":"none"}, []
         
