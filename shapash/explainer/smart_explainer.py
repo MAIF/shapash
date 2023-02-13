@@ -378,6 +378,10 @@ class SmartExplainer:
         """
         if additional_data is not None:
             check_additional_data(self.x_init, additional_data)
+            for feature in additional_data.columns:
+                if feature in self.features_dict.keys():
+                    self.additional_features_dict[f"_{feature}"] = f"_{self.features_dict[feature]}"
+                    del self.features_dict[feature]
             additional_data = additional_data.add_prefix("_")
             for feature in set(list(additional_data.columns)) - set(self.additional_features_dict):
                 self.additional_features_dict[feature] = feature
