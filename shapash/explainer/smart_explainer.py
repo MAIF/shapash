@@ -379,7 +379,7 @@ class SmartExplainer:
         if additional_data is not None:
             check_additional_data(self.x_init, additional_data)
             for feature in additional_data.columns:
-                if feature in self.features_dict.keys():
+                if feature in self.features_dict.keys() and feature not in self.columns_dict.values():
                     self.additional_features_dict[f"_{feature}"] = f"_{self.features_dict[feature]}"
                     del self.features_dict[feature]
             additional_data = additional_data.add_prefix("_")
