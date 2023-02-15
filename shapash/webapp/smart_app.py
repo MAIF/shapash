@@ -87,6 +87,11 @@ class SmartApp:
         self.settings = self.settings_ini.copy()
 
         self.predict_col = ['_predict_']
+        self.special_cols =['_index_', '_predict_']
+        if self.explainer.y_target is not None:
+            self.special_cols.append('_target_')
+            if self.explainer._case == 'regression':
+                self.special_cols.append('_error_')
         self.explainer.features_imp = self.explainer.state.compute_features_import(
             self.explainer.contributions)
         if self.explainer._case == 'classification':
@@ -154,7 +159,17 @@ class SmartApp:
 
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
-        col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
+        if self.explainer.y_target is not None:
+            self.dataframe = self.dataframe.join(
+                self.explainer.y_target.rename(columns={self.explainer.y_target.columns[0]:"_target_"}), 
+            )
+            if self.explainer._case == 'regression':
+                if (self.explainer.y_target == 0).any()[0]:
+                    self.dataframe["_error_"] = (self.dataframe['_target_']-self.dataframe['_predict_']).abs()
+                else:
+                    self.dataframe["_error_"] = ((self.dataframe['_target_']-self.dataframe['_predict_'])/self.dataframe['_target_']).abs()
+
+        col_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
         random.seed(79)
         self.list_index = \
             random.sample(
@@ -336,9 +351,7 @@ class SmartApp:
                 } for row in self.dataframe.to_dict('rows')
             ], tooltip_duration=2000,
 
-            columns=[{"name": '_index_', "id": '_index_'},
-                     {"name": '_predict_', "id": '_predict_'}] +
-                    [{"name": i, "id": i} for i in self.explainer.x_init],
+            columns=[{"name": i, "id": i} for i in self.dataframe.columns],
             editable=False, row_deletable=False,
             style_as_list_view=True,
             virtualization=True,
@@ -1348,9 +1361,7 @@ class SmartApp:
                     active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
                     self.settings_ini['rows'] = self.settings['rows']
                     if name == [1]:
-                        columns = [
-                            {"name": '_index_', "id": '_index_'},
-                            {"name": '_predict_', "id": '_predict_'}] + \
+                        columns = [{"name": i, "id": i} for i in self.special_cols] + \
                             [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
@@ -2101,11 +2112,11 @@ class SmartApp:
             style_filter_conditional = []
             style_header_conditional = [
                 {'if': {'column_id': c}, 'fontWeight': 'bold'}
-                for c in ['_index_', '_predict_']
+                for c in self.special_cols
             ]
             style_cell_conditional = [
                 {'if': {'column_id': c},
-                 'width': '70px', 'fontWeight': 'bold'} for c in ['_index_', '_predict_']
+                 'width': '70px', 'fontWeight': 'bold'} for c in self.special_cols
             ]
 
             selected = check_row(data, index)
@@ -2375,17 +2386,15 @@ class SmartApp:
 
             # We use domain name for feature name
             dict_name = [self.explainer.features_dict[i]
-                         for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
-            dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+                         for i in self.dataframe.drop(self.special_cols, axis=1).columns]
+            dict_id = [i for i in self.dataframe.drop(self.special_cols, axis=1).columns]
             # Create dataframe to sort it by feature_name
             df_feature_name = pd.DataFrame({'feature_name': dict_name,
                                             'feature_id': dict_id})
             df_feature_name = df_feature_name.sort_values(
                 by='feature_name').reset_index(drop=True)
             # Options are sorted by feature_name
-            options = [
-                {"label": '_index_', "value": '_index_'},
-                {"label": '_predict_', "value": '_predict_'}] + \
+            options = [{"label": i, "value": i} for i in self.special_cols] + \
                 [{"label": df_feature_name.loc[i, 'feature_name'],
                   "value": df_feature_name.loc[i, 'feature_id']}
                  for i in range(len(df_feature_name))]
