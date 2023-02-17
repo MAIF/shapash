@@ -2026,11 +2026,12 @@ class SmartApp:
                 list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
                             range(len(self.components['graph']['detail_feature'].figure.data))]
                 # exclude new line with labels of y axis
-                list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
-                nb_car = max([len(x) for x in list_yaxis])
-                self.components['graph']['detail_feature'].figure.update_layout(
-                    yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
-                )
+                if list_yaxis != []:
+                    list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
+                    nb_car = max([len(x) for x in list_yaxis])
+                    self.components['graph']['detail_feature'].figure.update_layout(
+                        yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
+                    )
             return self.components['graph']['detail_feature'].figure
 
         @app.callback(
