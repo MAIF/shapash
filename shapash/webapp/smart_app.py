@@ -2019,7 +2019,7 @@ class SmartApp:
                 display_groups=bool_group,
                 zoom=zoom_active
             )
-            if selected:
+            if selected is not None:
                 # Adjust graph with adding x axis titles
                 self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
                 # font size can be adapted to screen size
