@@ -1262,6 +1262,7 @@ class SmartApp:
                 Output('dataset', 'columns'),
                 Output('dataset', 'active_cell'),
                 Output('filtered_subset_info', 'children'),
+                Output('filtered_subset_info', 'color'),
             ],
             [
                 Input('prediction_picking', 'selectedData'),
@@ -1347,6 +1348,7 @@ class SmartApp:
             df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
             filtered_subset_info = None
+            filtered_subset_color = None
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
@@ -1432,6 +1434,8 @@ class SmartApp:
                 else:
                     df = df
                 filtered_subset_info = f"Subset length: {len(df)} ({int(round(100*len(df)/self.explainer.x_init.shape[0]))}%)"
+                if len(df)==0:
+                    filtered_subset_color="danger"
                 
             elif None not in nclicks_del:
                 df = self.round_dataframe
@@ -1450,6 +1454,7 @@ class SmartApp:
                 columns,
                 active_cell,
                 filtered_subset_info,
+                filtered_subset_color,
             )
 
         @app.callback(
