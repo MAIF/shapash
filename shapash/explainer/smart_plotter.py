@@ -794,7 +794,7 @@ class SmartPlotter:
                 yaxis = { "visible": False },
                 annotations = [
                     {
-                        "text": "Select a valid index or point to display<br />Local Explanation plot.",
+                        "text": "Select a valid single sample to display<br />Local Explanation plot.",
                         "xref": "paper",
                         "yref": "paper",
                         "showarrow": False,
