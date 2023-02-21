@@ -222,7 +222,7 @@ class TestSmartPlotter(unittest.TestCase):
         output = self.smart_explainer.plot.local_plot(query=condition)
         expected_output = go.Figure()
         assert output.data == expected_output.data
-        assert output.layout.annotations[0].text == "Select a valid index or point to display<br />Local Explanation plot."
+        assert output.layout.annotations[0].text == "Select a valid single sample to display<br />Local Explanation plot."
 
     @patch('shapash.explainer.smart_explainer.SmartExplainer.filter')
     @patch('shapash.explainer.smart_plotter.select_lines')
