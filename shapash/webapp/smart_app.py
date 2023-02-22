@@ -19,7 +19,7 @@ import numpy as np
 import datetime
 import re
 from math import log10
-from shapash.webapp.utils.utils import check_row, round_to_k
+from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.explanations import Explanations
@@ -346,7 +346,6 @@ class SmartApp:
             fixed_rows={'headers': True, 'data': 0},
             fixed_columns={'headers': True, 'data': 0},
             sort_action='custom', sort_mode='multi', sort_by=[],
-            active_cell={'row': 0, 'column': 0, 'column_id': '_index_'},
             style_table={'overflowY': 'auto', 'overflowX': 'auto'},
             style_header={'height': '30px'},
             style_cell={
@@ -467,7 +466,7 @@ class SmartApp:
                 dbc.Label("Index", align="center", width=4),
                 dbc.Col([
                     dbc.Input(
-                        id="index_id", type="text", size="s", placeholder="Id must exist",
+                        id="index_id", type=get_index_type(self.dataframe), size="s", placeholder="Id must exist",
                         debounce=True, persistence=True, style={'textAlign': 'right'}
                     )], width={"size": 5},
                     style={'padding': "0px"}
@@ -984,10 +983,9 @@ class SmartApp:
         """
         on_style = {'backgroundColor': self.color[0],
                     'color': self.bkg_color,
+                    'margin-top': '0.5rem',
                     'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': self.color[1],
-                     'color': self.bkg_color,
-                     'margin-right': '0.5rem'}
+        off_style = {'display': 'none'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -1254,7 +1252,6 @@ class SmartApp:
                 Output('dataset', 'data'),
                 Output('dataset', 'tooltip_data'),
                 Output('dataset', 'columns'),
-                Output('dataset', 'active_cell'),
             ],
             [
                 Input('prediction_picking', 'selectedData'),
@@ -1333,10 +1330,8 @@ class SmartApp:
             data: available dataset
             tooltip_data: tooltip of the dataset
             columns: columns of the dataset
-            active_cell: activated cell
             """
             ctx = dash.callback_context
-            active_cell = no_update
             df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
@@ -1345,7 +1340,6 @@ class SmartApp:
                 else:
                     self.settings['rows'] = rows
                     self.init_data()
-                    active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
                     self.settings_ini['rows'] = self.settings['rows']
                     if name == [1]:
                         columns = [
@@ -1441,7 +1435,6 @@ class SmartApp:
                 self.components['table']['dataset'].data,
                 self.components['table']['dataset'].tooltip_data,
                 columns,
-                active_cell,
             )
 
         @app.callback(
@@ -1640,7 +1633,7 @@ class SmartApp:
                     zoom=zoom_active
                 )
             # Adjust graph with adding x axis title
-            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
+            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Mean absolute Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             if selected_feature:
                 if self.explainer.features_groups is None:
@@ -1863,23 +1856,9 @@ class SmartApp:
                     else:
                         # Get actual value in field to refresh the selected value
                         selected = current_index_id
-                elif ctx.triggered[0]['prop_id'] == '.':
-                    selected = data[0]['_index_']
-                # If click on Reset apply button
-                elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                    # Get the row index value
-                    selected = data[cell['row']]['_index_']
-                # If click on Apply filter button
-                elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                    # get the first index on the dataset
-                    selected = data[0]['_index_']
-                # If click on the last del button
                 elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                      (None not in nclicks_del)):
-                    # Get the row index value
-                    selected = data[cell['row']]['_index_']
-                else:
-                    selected = data[0]['_index_']
+                      (None in nclicks_del)):
+                    selected = current_index_id
             else:
                 raise PreventUpdate
             return selected, True
@@ -2020,6 +1999,8 @@ class SmartApp:
                     # raise PreventUpdate
             else:
                 selected = index
+            if check_row(data, selected) is None:
+                selected = None
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
                 sign = (None if negative == [1] else True)
@@ -2030,8 +2011,6 @@ class SmartApp:
                                   positive=sign,
                                   max_contrib=max_contrib,
                                   display_groups=bool_group)
-            if np.issubdtype(type(self.explainer.x_init.index[0]), np.dtype(int).type):
-                selected = int(selected)
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
                 index=selected,
                 label=label,
@@ -2040,17 +2019,19 @@ class SmartApp:
                 display_groups=bool_group,
                 zoom=zoom_active
             )
-            # Adjust graph with adding x axis titles
-            self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
-            # font size can be adapted to screen size
-            list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
-                          range(len(self.components['graph']['detail_feature'].figure.data))]
-            # exclude new line with labels of y axis
-            list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
-            nb_car = max([len(x) for x in list_yaxis])
-            self.components['graph']['detail_feature'].figure.update_layout(
-                yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
-            )
+            if selected is not None:
+                # Adjust graph with adding x axis titles
+                self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
+                # font size can be adapted to screen size
+                list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
+                            range(len(self.components['graph']['detail_feature'].figure.data))]
+                # exclude new line with labels of y axis
+                if list_yaxis != []:
+                    list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
+                    nb_car = max([len(x) for x in list_yaxis])
+                    self.components['graph']['detail_feature'].figure.update_layout(
+                        yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
+                    )
             return self.components['graph']['detail_feature'].figure
 
         @app.callback(
@@ -2096,6 +2077,11 @@ class SmartApp:
                 {
                     'if': {'row_index': 'odd'},
                     'backgroundColor': 'rgb(248, 248, 248)'
+                },
+                {
+                    "if": {"state": "selected"}, 
+                    "border-bottom": f"1px solid {self.color[0]}",
+                    "border-top": f"1px solid {self.color[0]}",
                 }
             ]
             style_filter_conditional = []
@@ -2188,36 +2174,17 @@ class SmartApp:
             else:
                 raise PreventUpdate
 
-            if self.explainer.y_target is not None:
-                self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
+            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                     selection=self.subset,
                     max_points=points,
                     label=self.label
                 )
-
+            if self.explainer.y_target is not None:
                 self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
                 # Adjust graph with adding x and y axis titles
                 self.components['graph']['prediction_picking'].adjust_graph(
                     x_ax="True Values",
                     y_ax="Predicted Values")
-            else:
-                fig = go.Figure()
-                fig.update_layout(
-                xaxis =  { "visible": False },
-                yaxis = { "visible": False },
-                annotations = [
-                    {
-                        "text": "Provide the y_target argument in the compile() method to display this plot.",
-                        "xref": "paper",
-                        "yref": "paper",
-                        "showarrow": False,
-                        "font": {
-                            "size": 14
-                        }
-                    }
-                ]
-            )
-                self.components['graph']['prediction_picking'].figure = fig
 
             return self.components['graph']['prediction_picking'].figure
 

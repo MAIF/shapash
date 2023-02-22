@@ -25,6 +25,25 @@ def round_to_k(x, k):
         return new_x
 
 
+def get_index_type(data):
+    """
+    Identify the type of the dataframe index.
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Dataset of the features
+
+    Returns
+    -------
+    str
+        Type numeric or text of the dataset index
+    """
+    if data.index.is_numeric():
+        return "number"
+    else:
+        return "text"
+
+
 def check_row(data, index):
     """
     Identify the row number of datatable for a specific index
@@ -41,8 +60,6 @@ def check_row(data, index):
         row number corresponding to index
     """
     df = pd.DataFrame.from_records(data, index='_index_')
-    if np.issubdtype(type(df.index[0]), np.dtype(int).type):
-        index = int(index)
     row = df.index.get_loc(index) if index in list(df.index) else None
     return row
 
