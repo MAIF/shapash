@@ -489,7 +489,7 @@ class SmartApp:
                         style={"display":"none"},
                     ),
                     dbc.Popover(
-                        "Click here to visualize the identity card of the selected index.",
+                        "Click here to visualize the identity card of the selected sample.",
                         target="id_card",
                         body=True,
                         trigger="hover",
@@ -528,7 +528,7 @@ class SmartApp:
                                     ], width=3),
                                 ], style={"margin-top":"0.5rem"}),
                                 dbc.Row([
-                                    dbc.Col(width=3),
+                                    dbc.Label("Label", width=3, style={'fontWeight': 'bold'}),
                                     dbc.Label("Value", width=5, style={'fontWeight': 'bold'}),
                                     dbc.Col(width=1),
                                     dbc.Label("Contribution", id="id_card_title_contrib",width=3, style={'fontWeight': 'bold'}),
