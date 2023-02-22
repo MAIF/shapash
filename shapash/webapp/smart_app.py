@@ -2106,6 +2106,9 @@ class SmartApp:
             style_header_conditional = [
                 {'if': {'column_id': c}, 'fontWeight': 'bold'}
                 for c in ['_index_', '_predict_']
+            ] + [
+                {'if': {'column_id': c}, 'font-style': 'italic'}
+                for c in self.dataframe if c not in ['_index_', '_predict_'] and c.startswith('_')
             ]
             style_cell_conditional = [
                 {'if': {'column_id': c},
