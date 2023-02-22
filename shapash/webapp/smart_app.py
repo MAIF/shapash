@@ -2162,6 +2162,9 @@ class SmartApp:
             ----------
             n_submit : boolean
             data : the dataset
+            label : selected label for classification
+            sort_by : identity card column to sort by, data column labels or contribution
+            order : order to sort by, ascending or descending
             index : selected index
             Returns
             -------
