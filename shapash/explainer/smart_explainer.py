@@ -1020,6 +1020,8 @@ class SmartExplainer:
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
         """
+        if self.y_pred is None:
+            self.predict()
         self.smartapp = SmartApp(self, settings)
 
     def run_app(self, port: int = None, host: str = None, title_story: str = None, settings: dict = None) -> CustomThread:
