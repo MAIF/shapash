@@ -1,6 +1,7 @@
 """
 Main class of Web application Shapash
 """
+import copy
 import dash
 from dash import dash_table
 import dash_daq as daq
@@ -19,7 +20,7 @@ import numpy as np
 import datetime
 import re
 from math import log10
-from shapash.webapp.utils.utils import check_row, round_to_k
+from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.explanations import Explanations
@@ -112,6 +113,7 @@ class SmartApp:
         self.explanations = Explanations()  # To get explanations of "?" buttons
         self.dataframe = pd.DataFrame()
         self.round_dataframe = pd.DataFrame()
+        self.features_dict = copy.deepcopy(self.explainer.features_dict)
         self.init_data()
 
         # COMPONENTS
@@ -156,6 +158,10 @@ class SmartApp:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
             raise ValueError('y_pred must be set when calling compile function.')
+
+        if self.explainer.additional_data is not None:
+            self.dataframe = self.dataframe.join(self.explainer.additional_data)
+            self.features_dict.update(self.explainer.additional_features_dict)
 
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
@@ -352,18 +358,20 @@ class SmartApp:
             ], tooltip_duration=2000,
 
             columns=[{"name": i, "id": i} for i in self.dataframe.columns],
+            tooltip_header={
+                column: self.features_dict[column] for column in self.dataframe.columns
+                if column not in self.special_cols
+            },
             editable=False, row_deletable=False,
-            style_as_list_view=True,
             virtualization=True,
             page_action='none',
             fixed_rows={'headers': True, 'data': 0},
             fixed_columns={'headers': True, 'data': 0},
             sort_action='custom', sort_mode='multi', sort_by=[],
-            active_cell={'row': 0, 'column': 0, 'column_id': '_index_'},
             style_table={'overflowY': 'auto', 'overflowX': 'auto'},
             style_header={'height': '30px'},
             style_cell={
-                'minWidth': '70px', 'width': '120px', 'maxWidth': '200px',
+                'minWidth': '70px', 'width': '120px', 'maxWidth': '200px', 'textOverflow':'ellipsis',
             },
         )
 
@@ -477,10 +485,9 @@ class SmartApp:
 
         self.components['filter']['index'] = dbc.Col(dbc.Row(
             [
-                dbc.Label("Index", align="center", width=4),
                 dbc.Col([
                     dbc.Input(
-                        id="index_id", type="text", size="s", placeholder="Id must exist",
+                        id="index_id", type=get_index_type(self.dataframe), size="s", placeholder="_index_",
                         debounce=True, persistence=True, style={'textAlign': 'right'}
                     )], width={"size": 5},
                     style={'padding': "0px"}
@@ -489,10 +496,80 @@ class SmartApp:
                     html.Img(id='validation', alt='Validate', title='Validate index',
                              src=self.app.get_asset_url('reload.png'),
                              height='30px', style={'cursor': 'pointer'},
-                             )], width={"size": 2},
+                             )], width={"size": 1},
                         style={'padding': "0px"}, align="center"
-                        )
-            ])
+                        ),
+                dbc.Col([
+                    dbc.Button(
+                        "ID Card",
+                        id="id_card",
+                        color='warning',
+                        style={"display":"none"},
+                    ),
+                    dbc.Popover(
+                        "Click here to visualize the identity card of the selected sample.",
+                        target="id_card",
+                        body=True,
+                        trigger="hover",
+                    ),
+                    dbc.Modal(
+                        [
+                        dbc.ModalHeader(
+                            dbc.Col([
+                                dbc.ModalTitle("Identity Card"),
+                                dbc.Row([
+                                    dbc.Label("Sort by:", align="center", width="auto"),
+                                    dbc.Col([
+                                        dcc.Dropdown(
+                                            id="select_id_card_sorting",
+                                            options=[
+                                                {"label": "Label", "value": "feature_name"}, 
+                                                {"label": "Contribution", "value": "feature_contrib"}
+                                            ], 
+                                            value="feature_name",
+                                            clearable=False, 
+                                            searchable=False,
+                                        ),
+                                    ], width=3),
+                                    dbc.Label("Order:", align="center", width="auto"),
+                                    dbc.Col([
+                                        dcc.Dropdown(
+                                            id="select_id_card_order",
+                                            options=[
+                                                {"label": "Ascending", "value": True}, 
+                                                {"label": "Descending", "value": False}
+                                            ], 
+                                            value=True,
+                                            clearable=False, 
+                                            searchable=False,
+                                        ),
+                                    ], width=3),
+                                ], style={"margin-top":"0.5rem"}),
+                                dbc.Row([
+                                    dbc.Label("Label", width=3, style={'fontWeight': 'bold'}),
+                                    dbc.Label("Value", width=5, style={'fontWeight': 'bold'}),
+                                    dbc.Col(width=1),
+                                    dbc.Label("Contribution", id="id_card_title_contrib",width=3, style={'fontWeight': 'bold'}),
+                                ], style={"margin-top":"0.5rem", "margin-bottom":"-1rem"}),
+                            ]),
+                            close_button=False,
+                        ),
+                        dbc.ModalBody(id="id_card_body"),
+                        dbc.ModalFooter(
+                            dbc.Button(
+                                "Close",
+                                id="close_id_card",
+                                color="warning"
+                                )
+                            ),
+                        ],
+                        id="modal_id_card",
+                        centered=True,
+                        size='xl',
+                        scrollable=True,
+                    ),
+                ], width=5),
+            ], justify='center')
         )
 
         self.components['filter']['threshold'] = dbc.Col(
@@ -513,8 +590,8 @@ class SmartApp:
                 dbc.Label(
                     "Features to display: ", id='max_contrib_label'),
                 dcc.Slider(
-                    min=1, max=min(self.settings['features'], len(self.dataframe.columns) - 2),
-                    step=1, value=min(self.settings['features'], len(self.dataframe.columns) - 2),
+                    min=1, max=min(self.settings['features'], len(self.explainer.x_init.columns)),
+                    step=1, value=min(self.settings['features'], len(self.explainer.x_init.columns)),
                     id="max_contrib_id",
                 )
             ],
@@ -997,10 +1074,9 @@ class SmartApp:
         """
         on_style = {'backgroundColor': self.color[0],
                     'color': self.bkg_color,
+                    'margin-top': '0.5rem',
                     'margin-right': '0.5rem'}
-        off_style = {'backgroundColor': self.color[1],
-                     'color': self.bkg_color,
-                     'margin-right': '0.5rem'}
+        off_style = {'display': 'none'}
         if self.explainer._case == 'classification':
             self.components['menu']['select_label'].options = \
                 [
@@ -1267,7 +1343,6 @@ class SmartApp:
                 Output('dataset', 'data'),
                 Output('dataset', 'tooltip_data'),
                 Output('dataset', 'columns'),
-                Output('dataset', 'active_cell'),
             ],
             [
                 Input('prediction_picking', 'selectedData'),
@@ -1346,10 +1421,8 @@ class SmartApp:
             data: available dataset
             tooltip_data: tooltip of the dataset
             columns: columns of the dataset
-            active_cell: activated cell
             """
             ctx = dash.callback_context
-            active_cell = no_update
             df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
@@ -1358,11 +1431,10 @@ class SmartApp:
                 else:
                     self.settings['rows'] = rows
                     self.init_data()
-                    active_cell = {'row': 0, 'column': 0, 'column_id': '_index_'}
                     self.settings_ini['rows'] = self.settings['rows']
                     if name == [1]:
                         columns = [{"name": i, "id": i} for i in self.special_cols] + \
-                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
+                            [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(self.special_cols)]
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
@@ -1452,7 +1524,6 @@ class SmartApp:
                 self.components['table']['dataset'].data,
                 self.components['table']['dataset'].tooltip_data,
                 columns,
-                active_cell,
             )
 
         @app.callback(
@@ -1651,7 +1722,7 @@ class SmartApp:
                     zoom=zoom_active
                 )
             # Adjust graph with adding x axis title
-            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Contribution')
+            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Mean absolute Contribution')
             self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
             if selected_feature:
                 if self.explainer.features_groups is None:
@@ -1874,23 +1945,9 @@ class SmartApp:
                     else:
                         # Get actual value in field to refresh the selected value
                         selected = current_index_id
-                elif ctx.triggered[0]['prop_id'] == '.':
-                    selected = data[0]['_index_']
-                # If click on Reset apply button
-                elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                    # Get the row index value
-                    selected = data[cell['row']]['_index_']
-                # If click on Apply filter button
-                elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                    # get the first index on the dataset
-                    selected = data[0]['_index_']
-                # If click on the last del button
                 elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                      (None not in nclicks_del)):
-                    # Get the row index value
-                    selected = data[cell['row']]['_index_']
-                else:
-                    selected = data[0]['_index_']
+                      (None in nclicks_del)):
+                    selected = current_index_id
             else:
                 raise PreventUpdate
             return selected, True
@@ -1932,7 +1989,7 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    max = min(features, len(self.dataframe.columns) - 2)
+                    max = min(features, len(self.explainer.x_init.columns))
                     if max // 5 == max / 5:
                         nb_marks = min(int(max // 5), 10)
                     elif max // 4 == max / 4:
@@ -2031,6 +2088,8 @@ class SmartApp:
                     # raise PreventUpdate
             else:
                 selected = index
+            if check_row(data, selected) is None:
+                selected = None
             threshold = threshold if threshold != 0 else None
             if positive == [1]:
                 sign = (None if negative == [1] else True)
@@ -2041,8 +2100,6 @@ class SmartApp:
                                   positive=sign,
                                   max_contrib=max_contrib,
                                   display_groups=bool_group)
-            if np.issubdtype(type(self.explainer.x_init.index[0]), np.dtype(int).type):
-                selected = int(selected)
             self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
                 index=selected,
                 label=label,
@@ -2051,17 +2108,19 @@ class SmartApp:
                 display_groups=bool_group,
                 zoom=zoom_active
             )
-            # Adjust graph with adding x axis titles
-            self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
-            # font size can be adapted to screen size
-            list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
-                          range(len(self.components['graph']['detail_feature'].figure.data))]
-            # exclude new line with labels of y axis
-            list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
-            nb_car = max([len(x) for x in list_yaxis])
-            self.components['graph']['detail_feature'].figure.update_layout(
-                yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
-            )
+            if selected is not None:
+                # Adjust graph with adding x axis titles
+                self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
+                # font size can be adapted to screen size
+                list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
+                            range(len(self.components['graph']['detail_feature'].figure.data))]
+                # exclude new line with labels of y axis
+                if list_yaxis != []:
+                    list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
+                    nb_car = max([len(x) for x in list_yaxis])
+                    self.components['graph']['detail_feature'].figure.update_layout(
+                        yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
+                    )
             return self.components['graph']['detail_feature'].figure
 
         @app.callback(
@@ -2078,6 +2137,117 @@ class SmartApp:
                 return 1
             else:
                 raise PreventUpdate
+        
+        @app.callback(
+            Output('id_card', 'style'), 
+            Output('id_card_body', 'children'),
+            Output('id_card_title_contrib', 'children'),
+            [
+                Input('index_id', 'n_submit'),
+                Input('select_label', 'value'),
+                Input('select_id_card_sorting', 'value'),
+                Input('select_id_card_order', 'value'),
+            ],
+            [
+                State('dataset', 'data'),
+                State('index_id', 'value'),
+            ],
+        )
+        def update_id_card(n_submit, label, sort_by, order, data, index):
+            """
+            Update identity card and display button.
+            Parameters
+            ----------
+            n_submit : boolean
+            data : the dataset
+            label : selected label for classification
+            sort_by : identity card column to sort by, data column labels or contribution
+            order : order to sort by, ascending or descending
+            index : selected index
+            Returns
+            -------
+            style to display button and children body for modal.
+            """
+            selected = check_row(data, index)
+            title_contrib = "Contribution"
+            if n_submit and selected is not None:
+                selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
+                selected_row["feature_name"] = selected_row.index.map(
+                    lambda x: x if x in self.special_cols else self.features_dict[x]
+                )
+                if self.explainer._case == 'classification':
+                    if label is None:
+                        label = -1
+                    label_num, _, label_value = self.explainer.check_label_name(label)
+                    contrib = self.explainer.data['contrib_sorted'][label_num].loc[index, :].values
+                    var_dict = self.explainer.data['var_dict'][label_num].loc[index, :].values
+                    proba = self.explainer.plot.local_pred(index, label_num)
+                    title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
+                    _, _, predicted_label_value = self.explainer.check_label_name(selected_row.loc["_predict_", "feature_value"])
+                    selected_row.loc["_predict_", "feature_value"] = predicted_label_value
+                else:
+                    contrib = self.explainer.data['contrib_sorted'].loc[index, :].values
+                    var_dict = self.explainer.data['var_dict'].loc[index, :].values
+                var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
+                selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
+                selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
+                selected_data = selected_row.merge(selected_contrib, how="left", on="feature_name")
+                selected_data.index = selected_row.index
+                selected_data = pd.concat([
+                    selected_data.loc[self.special_cols], 
+                    selected_data.drop(index=self.special_cols+list(self.explainer.additional_features_dict.keys())).sort_values(sort_by, ascending=order),
+                    selected_data.loc[list(self.explainer.additional_features_dict.keys())].sort_values(sort_by, ascending=order)
+                ])
+                children = []
+                for _, row in selected_data.iterrows():
+                    label_style = {
+                        'fontWeight': 'bold', 
+                        'font-style': 'italic'
+                    } if row["feature_name"] in self.explainer.additional_features_dict.values() else {'fontWeight': 'bold'}
+                    children.append(
+                        dbc.Row([
+                            dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style), 
+                            dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
+                            dbc.Col(width=1),
+                            dbc.Col(
+                                dbc.Row(
+                                    dbc.Label(format(row["feature_contrib"], '.4f'), width="auto", style={"padding-top":0}), 
+                                    justify="end"
+                                ), 
+                                width=2, 
+                                className="id_card_solid",
+                            ) if row["feature_contrib"]==row["feature_contrib"] else None,
+                        ])
+                    )
+                return {"display":"flex", "margin-left":"auto", "margin-right":0}, children, title_contrib
+            else:
+                return {"display":"none"}, [], title_contrib
+        
+        @app.callback(
+            Output("modal_id_card", "is_open"),
+            [
+                Input("id_card", "n_clicks"),
+                Input("close_id_card", "n_clicks")
+            ],
+            [
+                State("modal_id_card", "is_open")
+            ],
+        )
+        def toggle_modal_id_card(n1, n2, is_open):
+            """
+            Open and close identity card modal.
+            Parameters
+            ----------
+            n1 : click on button to open
+            n2 : click on button to close
+            is_open : True if open else False
+            Returns
+            -------
+            boolean True if open else False
+            """
+            if n1 or n2:
+                return not is_open
+            return is_open
 
         @app.callback(
             [
@@ -2107,12 +2277,20 @@ class SmartApp:
                 {
                     'if': {'row_index': 'odd'},
                     'backgroundColor': 'rgb(248, 248, 248)'
+                },
+                {
+                    "if": {"state": "selected"}, 
+                    "border-bottom": f"1px solid {self.color[0]}",
+                    "border-top": f"1px solid {self.color[0]}",
                 }
             ]
             style_filter_conditional = []
             style_header_conditional = [
                 {'if': {'column_id': c}, 'fontWeight': 'bold'}
                 for c in self.special_cols
+            ] + [
+                {'if': {'column_id': c}, 'font-style': 'italic'}
+                for c in self.dataframe if c in self.explainer.additional_features_dict
             ]
             style_cell_conditional = [
                 {'if': {'column_id': c},
@@ -2199,36 +2377,17 @@ class SmartApp:
             else:
                 raise PreventUpdate
 
-            if self.explainer.y_target is not None:
-                self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
+            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
                     selection=self.subset,
                     max_points=points,
                     label=self.label
                 )
-
+            if self.explainer.y_target is not None:
                 self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
                 # Adjust graph with adding x and y axis titles
                 self.components['graph']['prediction_picking'].adjust_graph(
                     x_ax="True Values",
                     y_ax="Predicted Values")
-            else:
-                fig = go.Figure()
-                fig.update_layout(
-                xaxis =  { "visible": False },
-                yaxis = { "visible": False },
-                annotations = [
-                    {
-                        "text": "Provide the y_target argument in the compile() method to display this plot.",
-                        "xref": "paper",
-                        "yref": "paper",
-                        "showarrow": False,
-                        "font": {
-                            "size": 14
-                        }
-                    }
-                ]
-            )
-                self.components['graph']['prediction_picking'].figure = fig
 
             return self.components['graph']['prediction_picking'].figure
 
@@ -2385,7 +2544,7 @@ class SmartApp:
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
             # We use domain name for feature name
-            dict_name = [self.explainer.features_dict[i]
+            dict_name = [self.features_dict[i]
                          for i in self.dataframe.drop(self.special_cols, axis=1).columns]
             dict_id = [i for i in self.dataframe.drop(self.special_cols, axis=1).columns]
             # Create dataframe to sort it by feature_name
