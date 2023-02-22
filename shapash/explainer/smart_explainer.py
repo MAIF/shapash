@@ -14,7 +14,7 @@ from shapash.utils.io import load_pickle
 from shapash.utils.transform import inverse_transform, apply_postprocessing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
-from shapash.utils.check import check_model, check_label_dict, check_y, check_postprocessing, check_features_name
+from shapash.utils.check import check_model, check_label_dict, check_y, check_postprocessing, check_features_name, check_additional_data
 from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.report import check_report_requirements
@@ -232,7 +232,9 @@ class SmartExplainer:
                 x,
                 contributions=None,
                 y_pred=None,
-                y_target=None):
+                y_target=None,
+                additional_data=None,
+                additional_features_dict=None):
         """
         The compile method is the first step to understand model and
         prediction. It performs the sorting of contributions, the reverse
@@ -261,6 +263,13 @@ class SmartExplainer:
             Target values (1 column only).
             The index must be identical to the index of x_init.
             This is an interesting parameter for outputs on prediction
+        additional_data : pandas.DataFrame, optional (default: None)
+            Additional dataset of features outsite the model.
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for visualisation and filtering
+            in Shapash SmartApp.
+        additional_features_dict : dict
+            Dictionary mapping technical feature names to domain names for additional data.
 
         Example
         --------
@@ -288,6 +297,8 @@ class SmartExplainer:
         self.features_desc = dict(self.x_init.nunique())
         if self.features_groups is not None:
             self._compile_features_groups(self.features_groups)
+        self.additional_features_dict = dict() if additional_features_dict is None else self._compile_additional_features_dict(additional_features_dict)
+        self.additional_data = self._compile_additional_data(additional_data)
 
     def _get_contributions_from_backend_or_user(self,
                                                 x,
@@ -348,6 +359,34 @@ class SmartExplainer:
         self.columns_dict_groups = {
             i: col for i, col in enumerate(self.x_init_groups.columns)}
 
+    def _compile_additional_features_dict(self, additional_features_dict):
+        """
+        Performs required computations for additional features dict.
+        """
+        if not isinstance(additional_features_dict, dict):
+            raise ValueError(
+                """
+                additional_features_dict must be a dict
+                """
+            )
+        additional_features_dict = {f"_{key}": f"_{value}" for key, value in additional_features_dict.items()}
+        return additional_features_dict
+
+    def _compile_additional_data(self, additional_data):
+        """
+        Performs required computations for additional data.
+        """
+        if additional_data is not None:
+            check_additional_data(self.x_init, additional_data)
+            for feature in additional_data.columns:
+                if feature in self.features_dict.keys() and feature not in self.columns_dict.values():
+                    self.additional_features_dict[f"_{feature}"] = f"_{self.features_dict[feature]}"
+                    del self.features_dict[feature]
+            additional_data = additional_data.add_prefix("_")
+            for feature in set(list(additional_data.columns)) - set(self.additional_features_dict):
+                self.additional_features_dict[feature] = feature
+        return additional_data
+
     def define_style(self,
                      palette_name=None,
                      colors_dict=None):
@@ -366,7 +405,9 @@ class SmartExplainer:
             y_target=None,
             label_dict=None,
             features_dict=None,
-            title_story: str = None):
+            title_story: str = None,
+            additional_data=None,
+            additional_features_dict=None):
         """
         add method allows the user to add a label_dict, features_dict
         or y_pred without compiling again (and it can last a few moments).
@@ -389,6 +430,13 @@ class SmartExplainer:
             Target values (1 column only).
             The index must be identical to the index of x_init.
             This is an interesting parameter for outputs on prediction
+        additional_data : pandas.DataFrame, optional (default: None)
+            Additional dataset of features outsite the model.
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for visualisation and filtering
+            in Shapash SmartApp.
+        additional_features_dict : dict
+            Dictionary mapping technical feature names to domain names for additional data.
         """
         if y_pred is not None:
             self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
@@ -416,6 +464,10 @@ class SmartExplainer:
             self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         if title_story is not None:
             self.title_story = title_story
+        if additional_features_dict is not None:
+            self.additional_features_dict = self._compile_additional_features_dict(additional_features_dict)
+        if additional_data is not None:
+            self.additional_data = self._compile_additional_data(additional_data)
 
     def get_interaction_values(self, n_samples_max=None, selection=None):
         """

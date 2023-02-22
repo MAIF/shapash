@@ -439,6 +439,8 @@ def check_features_name(columns_dict, features_dict, features):
         )
     return features_ids
 
-
-
-
+def check_additional_data(x, additional_data):
+    if not isinstance(additional_data, pd.DataFrame):
+        raise ValueError(f"additional_data must be a pd.Dataframe.")
+    if not additional_data.index.equals(x.index):
+        raise ValueError(f"x and additional_data should have the same index.")

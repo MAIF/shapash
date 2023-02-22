@@ -1,6 +1,7 @@
 """
 Main class of Web application Shapash
 """
+import copy
 import dash
 from dash import dash_table
 import dash_daq as daq
@@ -107,6 +108,7 @@ class SmartApp:
         self.explanations = Explanations()  # To get explanations of "?" buttons
         self.dataframe = pd.DataFrame()
         self.round_dataframe = pd.DataFrame()
+        self.features_dict = copy.deepcopy(self.explainer.features_dict)
         self.init_data()
 
         # COMPONENTS
@@ -151,6 +153,10 @@ class SmartApp:
                 raise TypeError('y_pred must be of type pd.Series, pd.DataFrame or list')
         else:
             raise ValueError('y_pred must be set when calling compile function.')
+
+        if self.explainer.additional_data is not None:
+            self.dataframe = self.dataframe.join(self.explainer.additional_data)
+            self.features_dict.update(self.explainer.additional_features_dict)
 
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
@@ -336,11 +342,9 @@ class SmartApp:
                 } for row in self.dataframe.to_dict('rows')
             ], tooltip_duration=2000,
 
-            columns=[{"name": '_index_', "id": '_index_'},
-                     {"name": '_predict_', "id": '_predict_'}] +
-                    [{"name": i, "id": i} for i in self.explainer.x_init],
+            columns=[{"name": i, "id": i} for i in self.dataframe.columns],
             tooltip_header={
-                column: self.explainer.features_dict[column] for column in self.explainer.x_init
+                column: self.features_dict[column] for column in self.dataframe.columns
                 if column not in ["_index_", "_predict_"]
             },
             editable=False, row_deletable=False,
@@ -571,8 +575,8 @@ class SmartApp:
                 dbc.Label(
                     "Features to display: ", id='max_contrib_label'),
                 dcc.Slider(
-                    min=1, max=min(self.settings['features'], len(self.dataframe.columns) - 2),
-                    step=1, value=min(self.settings['features'], len(self.dataframe.columns) - 2),
+                    min=1, max=min(self.settings['features'], len(self.explainer.x_init.columns)),
+                    step=1, value=min(self.settings['features'], len(self.explainer.x_init.columns)),
                     id="max_contrib_id",
                 )
             ],
@@ -1417,7 +1421,7 @@ class SmartApp:
                         columns = [
                             {"name": '_index_', "id": '_index_'},
                             {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.explainer.features_dict[i], "id": i} for i in self.explainer.x_init]
+                            [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(['_index_', '_predict_'])]
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
@@ -1972,7 +1976,7 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    max = min(features, len(self.dataframe.columns) - 2)
+                    max = min(features, len(self.explainer.x_init.columns))
                     if max // 5 == max / 5:
                         nb_marks = min(int(max // 5), 10)
                     elif max // 4 == max / 4:
@@ -2152,10 +2156,11 @@ class SmartApp:
             style to display button and children body for modal.
             """
             selected = check_row(data, index)
+            title_contrib = "Contribution"
             if n_submit and selected is not None:
                 selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
                 selected_row["feature_name"] = selected_row.index.map(
-                    lambda x: x if x in ["_index_", "_predict_"] else self.explainer.features_dict[x]
+                    lambda x: x if x in ["_index_", "_predict_"] else self.features_dict[x]
                 )
                 if self.explainer._case == 'classification':
                     if label is None:
@@ -2170,7 +2175,6 @@ class SmartApp:
                 else:
                     contrib = self.explainer.data['contrib_sorted'].loc[index, :].values
                     var_dict = self.explainer.data['var_dict'].loc[index, :].values
-                    title_contrib = "Contribution"
                 var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
                 selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
                 selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
@@ -2178,13 +2182,18 @@ class SmartApp:
                 selected_data.index = selected_row.index
                 selected_data = pd.concat([
                     selected_data.loc[["_index_", "_predict_"]], 
-                    selected_data.drop(index=["_index_", "_predict_"]).sort_values(sort_by, ascending=order)
+                    selected_data.drop(index=["_index_", "_predict_"]+list(self.explainer.additional_features_dict.keys())).sort_values(sort_by, ascending=order),
+                    selected_data.loc[list(self.explainer.additional_features_dict.keys())].sort_values(sort_by, ascending=order)
                 ])
                 children = []
                 for _, row in selected_data.iterrows():
+                    label_style = {
+                        'fontWeight': 'bold', 
+                        'font-style': 'italic'
+                    } if row["feature_name"] in self.explainer.additional_features_dict.values() else {'fontWeight': 'bold'}
                     children.append(
                         dbc.Row([
-                            dbc.Col(dbc.Label(row["feature_name"]), width=3, style={'fontWeight': 'bold'}), 
+                            dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style), 
                             dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
                             dbc.Col(width=1),
                             dbc.Col(
@@ -2199,7 +2208,7 @@ class SmartApp:
                     )
                 return {"display":"flex", "margin-left":"auto", "margin-right":0}, children, title_contrib
             else:
-                return {"display":"none"}, []
+                return {"display":"none"}, [], title_contrib
         
         @app.callback(
             Output("modal_id_card", "is_open"),
@@ -2266,6 +2275,9 @@ class SmartApp:
             style_header_conditional = [
                 {'if': {'column_id': c}, 'fontWeight': 'bold'}
                 for c in ['_index_', '_predict_']
+            ] + [
+                {'if': {'column_id': c}, 'font-style': 'italic'}
+                for c in self.dataframe if c in self.explainer.additional_features_dict
             ]
             style_cell_conditional = [
                 {'if': {'column_id': c},
@@ -2519,7 +2531,7 @@ class SmartApp:
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
             # We use domain name for feature name
-            dict_name = [self.explainer.features_dict[i]
+            dict_name = [self.features_dict[i]
                          for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
             dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
             # Create dataframe to sort it by feature_name

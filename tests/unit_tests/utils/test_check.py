@@ -9,7 +9,8 @@ import category_encoders as ce
 from shapash.utils.check import check_preprocessing, check_model, check_label_dict,\
                                 check_mask_params, check_y, check_contribution_object,\
                                 check_preprocessing_options, check_postprocessing, \
-                                check_consistency_model_features, check_consistency_model_label
+                                check_consistency_model_features, check_consistency_model_label, \
+                                check_additional_data
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import types
@@ -568,4 +569,29 @@ class TestCheck(unittest.TestCase):
         assert drop_option_1 == expected_dict
         assert drop_option_2 == expected_dict_2
 
+    def test_check_additional_data_raises_index(self):
+        x_init = pd.DataFrame(
+            data=np.array([[1, 2], [3, 4]]),
+            columns=['Col1', 'Col2']
+        )
+        additional_data = pd.DataFrame(
+            data=np.array([[5]]),
+            columns=['Col3']
+        )
+        with pytest.raises(Exception) as exc_info:
+            check_additional_data(x_init, additional_data)
+        assert str(exc_info.value) == 'x and additional_data should have the same index.'
+
+    def test_check_additional_data_raises_type(self):
+        x_init = pd.DataFrame(
+            data=np.array([[1, 2], [3, 4]]),
+            columns=['Col1', 'Col2']
+        )
+        additional_data = pd.Series(
+            data=np.array([5, 6]),
+            name='Col3'
+        )
+        with pytest.raises(Exception) as exc_info:
+            check_additional_data(x_init, additional_data)
+        assert str(exc_info.value) == 'additional_data must be a pd.Dataframe.'
 
