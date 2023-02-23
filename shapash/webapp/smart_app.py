@@ -170,10 +170,7 @@ class SmartApp:
                 self.explainer.y_target.rename(columns={self.explainer.y_target.columns[0]:"_target_"}), 
             )
             if self.explainer._case == 'regression':
-                if (self.explainer.y_target == 0).any()[0]:
-                    self.dataframe["_error_"] = (self.dataframe['_target_']-self.dataframe['_predict_']).abs()
-                else:
-                    self.dataframe["_error_"] = ((self.dataframe['_target_']-self.dataframe['_predict_'])/self.dataframe['_target_']).abs()
+                self.dataframe = self.dataframe.join(self.explainer.prediction_error)
 
         col_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
         random.seed(79)

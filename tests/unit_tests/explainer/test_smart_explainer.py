@@ -758,6 +758,19 @@ class TestSmartExplainer(unittest.TestCase):
 
         pd.testing.assert_frame_equal(xpl.y_pred, y_true, check_dtype=False)
 
+    def test_predict_3(self):
+        """
+        Test predict method 3
+        """
+        X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        y_target = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
+        model = DecisionTreeRegressor().fit(X, y_target)
+        xpl = SmartExplainer(model)
+        xpl.compile(x=X, y_target=y_target)
+        xpl.predict() # prediction errors should be computed
+
+        assert xpl.prediction_error is not None
+
     def test_add_1(self):
         xpl = SmartExplainer(self.model)
         dataframe_yp = pd.Series([1, 3, 1], name='pred', index=[0, 1, 2])
