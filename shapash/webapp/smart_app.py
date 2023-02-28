@@ -473,6 +473,12 @@ class SmartApp:
                                 color='warning',
                                 size='sm',
                                 style={'display': 'none'}
+                                ),
+                        dbc.Label(
+                                id='filtered_subset_info',
+                                children='Test',
+                                width='auto',
+                                style={'display': 'none'}
                                 )
                             ],
                         )
@@ -1340,6 +1346,8 @@ class SmartApp:
                 Output('dataset', 'data'),
                 Output('dataset', 'tooltip_data'),
                 Output('dataset', 'columns'),
+                Output('filtered_subset_info', 'children'),
+                Output('filtered_subset_info', 'color'),
             ],
             [
                 Input('prediction_picking', 'selectedData'),
@@ -1422,6 +1430,8 @@ class SmartApp:
             ctx = dash.callback_context
             df = self.round_dataframe
             columns = self.components['table']['dataset'].columns
+            filtered_subset_info = None
+            filtered_subset_color = None
             if ctx.triggered[0]['prop_id'] == 'modal.is_open':
                 if is_open:
                     raise PreventUpdate
@@ -1451,7 +1461,8 @@ class SmartApp:
                     (ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   ((selected_data is None))) | (
                     (ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None and len(selected_data) == 1 and selected_data['points'][0]['curveNumber'] > 0)
+                  (selected_data is not None and len(selected_data) == 1 and 
+                   len(selected_data['points'])!=0 and selected_data['points'][0]['curveNumber'] > 0)
                   )):
                 # get list of ID
                 feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
@@ -1502,10 +1513,10 @@ class SmartApp:
                             df = df
                 else:
                     df = df
-                if len(df) == 0:
-                    raise ValueError(
-                        "Your dataframe is empty. It must have at list one row"
-                         )
+                filtered_subset_info = f"Subset length: {len(df)} ({int(round(100*len(df)/self.explainer.x_init.shape[0]))}%)"
+                if len(df)==0:
+                    filtered_subset_color="danger"
+                
             elif None not in nclicks_del:
                 df = self.round_dataframe
             else:
@@ -1521,6 +1532,8 @@ class SmartApp:
                 self.components['table']['dataset'].data,
                 self.components['table']['dataset'].tooltip_data,
                 columns,
+                filtered_subset_info,
+                filtered_subset_color,
             )
 
         @app.callback(
@@ -1597,7 +1610,7 @@ class SmartApp:
                     self.settings_ini['features'] = self.settings['features']
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
-                selection = None
+                selection = [d['_index_'] for d in data]
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
                 self.list_index = [d['_index_'] for d in data]
             elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
@@ -1705,6 +1718,8 @@ class SmartApp:
                         # we plot filter subset
                         selection = [d['_index_'] for d in data]
                 self.last_click_data = clickData
+            if selection is not None and len(selection)==0:
+                selection=None
 
             group_name = selected_feature if (self.explainer.features_groups is not None
                                               and selected_feature in self.explainer.features_groups.keys()) else None
@@ -1801,6 +1816,7 @@ class SmartApp:
                     self.settings_ini['points'] = self.settings['points']
                     self.settings['violin'] = violin
                     self.settings_ini['violin'] = self.settings['violin']
+                    self.subset = None
 
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
@@ -1865,11 +1881,14 @@ class SmartApp:
                     else:
                         # we plot filter subset
                         self.subset = [d['_index_'] for d in data]
+            subset = self.subset
+            if subset is not None and len(subset)==0:
+                subset = None
 
             self.components['graph']['feature_selector'].figure = \
                 self.explainer.plot.contribution_plot(
                     col=self.selected_feature,
-                    selection=self.subset,
+                    selection=subset,
                     label=self.label,
                     violin_maxf=violin,
                     max_points=points,
@@ -2277,8 +2296,7 @@ class SmartApp:
                 },
                 {
                     "if": {"state": "selected"}, 
-                    "border-bottom": f"1px solid {self.color[0]}",
-                    "border-top": f"1px solid {self.color[0]}",
+                    "border": f"1px solid {self.color[0]}",
                 }
             ]
             style_filter_conditional = []
@@ -2358,9 +2376,9 @@ class SmartApp:
                     self.settings_ini['points'] = self.settings['points']
                     self.settings['violin'] = violin
                     self.settings_ini['violin'] = self.settings['violin']
+                    self.subset = None
             elif ctx.triggered[0]['prop_id'] == 'select_label.value':
                 self.label = label
-                self.subset = None
             # If we have clicked on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 self.subset = None
@@ -2645,6 +2663,7 @@ class SmartApp:
 
         @app.callback(
             Output('apply_filter', 'style'),
+            Output('filtered_subset_info', 'style'),
             [Input('add_dropdown_button', 'n_clicks'),
              Input('reset_dropdown_button', 'n_clicks'),
              Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks')]
@@ -2664,13 +2683,13 @@ class SmartApp:
             """
             ctx = dash.callback_context
             if ctx.triggered[0]['prop_id'] == 'add_dropdown_button.n_clicks':
-                return {'display': 'block'}
+                return {}, {'margin-left': '20px'}
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                return {'display': 'none'}
+                return {'display': 'none'}, {'display': 'none'}
             elif None not in n_click_del:
-                return {'display': 'none'}
+                return {'display': 'none'}, {'display': 'none'}
             else:
-                return {'display': 'block'}
+                return {}, {'margin-left': '20px'}
 
         @app.callback(
             Output({'type': 'dynamic-output-label', 'index': MATCH}, 'children'),

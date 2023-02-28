@@ -59,8 +59,11 @@ def check_row(data, index):
     int:
         row number corresponding to index
     """
-    df = pd.DataFrame.from_records(data, index='_index_')
-    row = df.index.get_loc(index) if index in list(df.index) else None
+    if index is not None:
+        df = pd.DataFrame.from_records(data, index='_index_')
+        row = df.index.get_loc(index) if index in list(df.index) else None
+    else:
+        row = None
     return row
 
 
