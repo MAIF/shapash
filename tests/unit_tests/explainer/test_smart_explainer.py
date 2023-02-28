@@ -340,6 +340,24 @@ class TestSmartExplainer(unittest.TestCase):
         assert_frame_equal(xpl.y_target, df[['y']])
         self.assertListEqual(xpl._classes, [0, 1])
 
+    def test_compile_7(self):
+        """
+        Unit test compile 5
+        checking compile method with additional_data
+        """
+        np.random.seed(1)
+        df = pd.DataFrame(range(0, 5), columns=['id'])
+        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
+        df['x1'] = np.random.randint(1, 123, df.shape[0])
+        df['x2'] = np.random.randint(1, 3, df.shape[0])
+        df['x3'] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index('id')
+        clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
+
+        xpl = SmartExplainer(clf)
+        xpl.compile(x=df[['x1', 'x2']], additional_data=df[['x3']])
+        assert len(xpl.additional_features_dict)==1
+
     def test_filter_0(self):
         """
         Unit test filter 0
@@ -739,6 +757,19 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.predict()
 
         pd.testing.assert_frame_equal(xpl.y_pred, y_true, check_dtype=False)
+
+    def test_predict_3(self):
+        """
+        Test predict method 3
+        """
+        X = pd.DataFrame([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        y_target = pd.DataFrame(data=np.array([1, 2, 3]), columns=['pred'])
+        model = DecisionTreeRegressor().fit(X, y_target)
+        xpl = SmartExplainer(model)
+        xpl.compile(x=X, y_target=y_target)
+        xpl.predict() # prediction errors should be computed
+
+        assert xpl.prediction_error is not None
 
     def test_add_1(self):
         xpl = SmartExplainer(self.model)

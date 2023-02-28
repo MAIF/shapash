@@ -552,7 +552,7 @@ class SmartPlotter:
             topmargin = topmargin + 15
         dict_t.update(text=title)
         dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
-        dict_xaxis.update(text='Contribution')
+        dict_xaxis.update(text='Mean absolute Contribution')
         dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
         dict_yaxis.update(text=None)
         dict_style_bar1 = self._style_dict["dict_featimp_colors"][1]
@@ -675,121 +675,135 @@ class SmartPlotter:
             A bar plot with selected contributions and
             associated feature values for one observation.
         """
-        dict_t = copy.deepcopy(self._style_dict["dict_title"])
-        topmargin = 80
-        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
-        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
-        dict_local_plot_colors = copy.deepcopy(self._style_dict["dict_local_plot_colors"])
-        if len(index_value) == 0:
-            warnings.warn('Only one line/observation must match the condition', UserWarning)
-            dict_t['text'] = "Local Explanation - <b>No Matching Entry</b>"
-        else:
+        if len(index_value) != 0:
+            dict_t = copy.deepcopy(self._style_dict["dict_title"])
+            topmargin = 80
+            dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
+            dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
+            dict_local_plot_colors = copy.deepcopy(self._style_dict["dict_local_plot_colors"])
             title = f"Local Explanation - Id: <b>{index_value[0]}</b>"
             # Add subtitle
             if subtitle:
                 title += "<br><sup>" + subtitle + "</sup>"
                 topmargin += 15
             dict_t['text'] = title
-        dict_xaxis['text'] = 'Contribution'
-        dict_yaxis['text'] = None
+            dict_xaxis['text'] = 'Contribution'
+            dict_yaxis['text'] = None
 
-        layout = go.Layout(
-            barmode='group',
-            template='none',
-            width=width,
-            height=height,
-            title=dict_t,
-            xaxis_title=dict_xaxis,
-            yaxis_title=dict_yaxis,
-            yaxis_type='category',
-            hovermode='closest',
-            margin={
-                'l': 150,
-                'r': 20,
-                't': topmargin,
-                'b': 70
-            }
-        )
-        bars = []
-        for num, expl in enumerate(list(zip(var_dict, x_val, contrib))):
-            group_name = None
-            if expl[1] == '':
-                ylabel = '<i>{}</i>'.format(expl[0])
-                hoverlabel = '<b>{}</b>'.format(expl[0])
-            else:
-                # If bar is a group of features, hovertext includes the values of the features of the group
-                # And color changes
-                if (self.explainer.features_groups is not None
-                        and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
-                        and len(index_value) > 0):
-                    group_name = self.explainer.inv_features_dict.get(expl[0])
-                    feat_groups_values = self.explainer.x_init[self.explainer.features_groups[group_name]]\
-                                                       .loc[index_value[0]]
-                    hoverlabel = '<br />'.join([
-                        '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
-                                                              40, maxlen=120),
-                                               add_line_break(f_value, 40, maxlen=160))
-                        for f_name, f_value in feat_groups_values.to_dict().items()
-                    ])
-                else:
-                    hoverlabel = '<b>{} :</b><br />{}'.format(
-                        add_line_break(expl[0], 40, maxlen=120),
-                        add_line_break(expl[1], 40, maxlen=160))
-                trunc_value = truncate_str(expl[0], 45)
-                if not zoom:
-                    # Truncate value if length is upper than 30 
-                    trunc_new_value = trunc_value.replace(
-                        trunc_value[24: len(trunc_value)-3], '...') if len(trunc_value) > 30 else trunc_value
-                else:
-                    trunc_new_value = trunc_value
-                if len(contrib) <= yaxis_max_label and (
-                        self.explainer.features_groups is None
-                        # We don't want to display label values for t-sne projected values of groups of features.
-                        or (
-                            self.explainer.features_groups is not None
-                            and self.explainer.inv_features_dict.get(expl[0])
-                            not in self.explainer.features_groups.keys()
-                        )
-                ):
-                    # ylabel is based on trunc_new_value
-                    ylabel = '<b>{} :</b><br />{}'.format(
-                            trunc_new_value, truncate_str(expl[1], 45))
-                else:
-                    ylabel = ('<b>{}</b>'.format(trunc_new_value))
-            contrib_value = expl[2]
-            # colors
-            if contrib_value >= 0:
-                color = 1 if expl[1] != '' else 0
-            else:
-                color = -1 if expl[1] != '' else -2
-
-            # If the bar is a group of features we modify the color
-            if group_name is not None:
-                bar_color = self._style_dict["featureimp_groups"][0] if color == 1 else self._style_dict["featureimp_groups"][1]
-            else:
-                bar_color = dict_local_plot_colors[color]['color']
-
-            barobj = go.Bar(
-                x=[contrib_value],
-                y=[ylabel],
-                customdata=[hoverlabel],
-                orientation='h',
-                marker=dict_local_plot_colors[color],
-                marker_color=bar_color,
-                showlegend=False,
-                hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
+            layout = go.Layout(
+                barmode='group',
+                template='none',
+                width=width,
+                height=height,
+                title=dict_t,
+                xaxis_title=dict_xaxis,
+                yaxis_title=dict_yaxis,
+                yaxis_type='category',
+                hovermode='closest',
+                margin={
+                    'l': 150,
+                    'r': 20,
+                    't': topmargin,
+                    'b': 70
+                }
             )
+            bars = []
+            for num, expl in enumerate(list(zip(var_dict, x_val, contrib))):
+                group_name = None
+                if expl[1] == '':
+                    ylabel = '<i>{}</i>'.format(expl[0])
+                    hoverlabel = '<b>{}</b>'.format(expl[0])
+                else:
+                    # If bar is a group of features, hovertext includes the values of the features of the group
+                    # And color changes
+                    if (self.explainer.features_groups is not None
+                            and self.explainer.inv_features_dict.get(expl[0]) in self.explainer.features_groups.keys()
+                            and len(index_value) > 0):
+                        group_name = self.explainer.inv_features_dict.get(expl[0])
+                        feat_groups_values = self.explainer.x_init[self.explainer.features_groups[group_name]]\
+                                                        .loc[index_value[0]]
+                        hoverlabel = '<br />'.join([
+                            '<b>{} :</b>{}'.format(add_line_break(self.explainer.features_dict.get(f_name, f_name),
+                                                                40, maxlen=120),
+                                                add_line_break(f_value, 40, maxlen=160))
+                            for f_name, f_value in feat_groups_values.to_dict().items()
+                        ])
+                    else:
+                        hoverlabel = '<b>{} :</b><br />{}'.format(
+                            add_line_break(expl[0], 40, maxlen=120),
+                            add_line_break(expl[1], 40, maxlen=160))
+                    trunc_value = truncate_str(expl[0], 45)
+                    if not zoom:
+                        # Truncate value if length is upper than 30 
+                        trunc_new_value = trunc_value.replace(
+                            trunc_value[24: len(trunc_value)-3], '...') if len(trunc_value) > 30 else trunc_value
+                    else:
+                        trunc_new_value = trunc_value
+                    if len(contrib) <= yaxis_max_label and (
+                            self.explainer.features_groups is None
+                            # We don't want to display label values for t-sne projected values of groups of features.
+                            or (
+                                self.explainer.features_groups is not None
+                                and self.explainer.inv_features_dict.get(expl[0])
+                                not in self.explainer.features_groups.keys()
+                            )
+                    ):
+                        # ylabel is based on trunc_new_value
+                        ylabel = '<b>{} :</b><br />{}'.format(
+                                trunc_new_value, truncate_str(expl[1], 45))
+                    else:
+                        ylabel = ('<b>{}</b>'.format(trunc_new_value))
+                contrib_value = expl[2]
+                # colors
+                if contrib_value >= 0:
+                    color = 1 if expl[1] != '' else 0
+                else:
+                    color = -1 if expl[1] != '' else -2
 
-            bars.append([color, contrib_value, num, barobj])
+                # If the bar is a group of features we modify the color
+                if group_name is not None:
+                    bar_color = self._style_dict["featureimp_groups"][0] if color == 1 else self._style_dict["featureimp_groups"][1]
+                else:
+                    bar_color = dict_local_plot_colors[color]['color']
 
-        bars.sort()
-        fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
-        fig.update_yaxes(dtick=1)
-        fig.update_yaxes(automargin=True)
-        # fig.update_xaxes(automargin=True)
+                barobj = go.Bar(
+                    x=[contrib_value],
+                    y=[ylabel],
+                    customdata=[hoverlabel],
+                    orientation='h',
+                    marker=dict_local_plot_colors[color],
+                    marker_color=bar_color,
+                    showlegend=False,
+                    hovertemplate='%{customdata}<br />Contribution: %{x:.4f}<extra></extra>'
+                )
 
-        if file_name:
-            plot(fig, filename=file_name, auto_open=auto_open)
+                bars.append([color, contrib_value, num, barobj])
+
+            bars.sort()
+            fig = go.Figure(data=[x[-1] for x in bars], layout=layout)
+            fig.update_yaxes(dtick=1)
+            fig.update_yaxes(automargin=True)
+            # fig.update_xaxes(automargin=True)
+
+            if file_name:
+                plot(fig, filename=file_name, auto_open=auto_open)
+        else:
+            fig = go.Figure()
+            fig.update_layout(
+                xaxis =  { "visible": False },
+                yaxis = { "visible": False },
+                annotations = [
+                    {
+                        "text": "Select a valid single sample to display<br />Local Explanation plot.",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {
+                            "size": 14
+                        }
+                    }
+                ]
+            )
         return fig
 
     def get_selection(self, line, var_dict, x_val, contrib):
@@ -997,11 +1011,6 @@ class SmartPlotter:
             data = self.explainer.data_groups
         else:
             data = self.explainer.data
-        # checking args
-        if sum(arg is not None for arg in [query, row_num, index]) != 1:
-            raise ValueError(
-                "You have to specify just one of these arguments: query, nrow, index"
-            )
 
         if index is not None:
             if index in self.explainer.x_init.index:
@@ -1012,6 +1021,8 @@ class SmartPlotter:
             line = [self.explainer.x_init.index[row_num]]
         elif query is not None:
             line = select_lines(self.explainer.x_init, query)
+        else:
+            line = []
 
         subtitle = ""
 
@@ -3171,57 +3182,56 @@ class SmartPlotter:
         """
         fig = go.Figure()
 
-        prediction_error = None
+        subtitle = None
         if self.explainer.y_pred is None:
             if hasattr(self.explainer.model, "predict"):
                 self.explainer.predict()
-        if self.explainer.y_pred is not None:
+        prediction_error = self.explainer.prediction_error
+        if prediction_error is not None:
             if (self.explainer.y_target == 0).any()[0]:
-                prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values))
                 subtitle = "Prediction Error = abs(True Values - Predicted Values)"
             else:
-                prediction_error = abs((self.explainer.y_target.values-self.explainer.y_pred.values)/self.explainer.y_target.values)
                 subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
-        df_equal_bins = pd.DataFrame(prediction_error).describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
-        equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
-        self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error],
-        bins=[i[0] for i in equal_bins], labels=False)))
-        col_scale = self.pred_colorscale
+            df_equal_bins = prediction_error.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+            equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
+            self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error.values],
+            bins=[i[0] for i in equal_bins], labels=False)))
+            col_scale = self.pred_colorscale
 
-        y_pred = self.explainer.y_pred.loc[list_ind]
-        y_target = self.explainer.y_target.loc[list_ind]
-        prediction_error = np.array(pd.DataFrame(prediction_error, index=self.explainer.y_target.index).loc[list_ind])
-        # round predict
-        if self.round_digit is None:
-            self.tuning_round_digit()
-        y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+            y_pred = self.explainer.y_pred.loc[list_ind]
+            y_target = self.explainer.y_target.loc[list_ind]
+            prediction_error = np.array(prediction_error.loc[list_ind])
+            # round predict
+            if self.round_digit is None:
+                self.tuning_round_digit()
+            y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
 
-        hv_text = [f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}" for x, y, z, w in
-        zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
+            hv_text = [f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}" for x, y, z, w in
+            zip(y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten())]
 
-        fig.add_scatter(
-            x=y_target.values.flatten(),
-            y=y_pred.values.flatten(),
-            mode='markers',
-            hovertext=hv_text,
-            hovertemplate='<b>%{hovertext}</b><br />',
-            customdata=y_pred.index.values
-        )
+            fig.add_scatter(
+                x=y_target.values.flatten(),
+                y=y_pred.values.flatten(),
+                mode='markers',
+                hovertext=hv_text,
+                hovertemplate='<b>%{hovertext}</b><br />',
+                customdata=y_pred.index.values
+            )
 
-        colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
-        colorbar_title = 'Prediction Error'
-        fig.data[-1].marker.color = colorpoints.flatten()
-        fig.data[-1].marker.coloraxis = 'coloraxis'
-        fig.layout.coloraxis.colorscale = col_scale
-        fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
-        "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
-        "yanchor": "top", "y": 1.1}
-        range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
-        max(y_pred.values.flatten()))]
-        fig.update_xaxes(range=range_axis)
-        fig.update_yaxes(range=range_axis)
-        fig.update_layout(shapes=[{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1,
-        'x0': 0, 'x1': 1, 'line': dict(color="grey", width=1, dash="dot")}])
+            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
+            colorbar_title = 'Prediction Error'
+            fig.data[-1].marker.color = colorpoints.flatten()
+            fig.data[-1].marker.coloraxis = 'coloraxis'
+            fig.layout.coloraxis.colorscale = col_scale
+            fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
+            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
+            "yanchor": "top", "y": 1.1}
+            range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
+            max(y_pred.values.flatten()))]
+            fig.update_xaxes(range=range_axis)
+            fig.update_yaxes(range=range_axis)
+            fig.update_layout(shapes=[{'type': 'line', 'yref': 'y domain', 'xref': 'x domain', 'y0': 0, 'y1': 1,
+            'x0': 0, 'x1': 1, 'line': dict(color="grey", width=1, dash="dot")}])
 
         return fig, subtitle
 

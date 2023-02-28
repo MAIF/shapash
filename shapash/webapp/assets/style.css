@@ -167,3 +167,11 @@
     background-color: var(--bkg-color);
     text-align: left;
 }
+
+/* ID CARD */
+.id_card_solid {
+    border-bottom-color: silver;
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    margin-bottom: 0.5rem;
+}
