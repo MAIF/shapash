@@ -21,7 +21,7 @@ from shapash.report import check_report_requirements
 from shapash.manipulation.summarize import create_grouped_features_values
 from .smart_plotter import SmartPlotter
 import shapash.explainer.smart_predictor
-from shapash.utils.model import predict_proba, predict
+from shapash.utils.model import predict_proba, predict, predict_error
 from shapash.utils.explanation_metrics import find_neighbors, shap_neighbors, get_min_nb_features, get_distance
 from shapash.style.style_utils import colors_loading, select_palette
 
@@ -279,6 +279,7 @@ class SmartExplainer:
         self.x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
         self.y_target = check_y(self.x_init, y_target, y_name="y_target")
+        self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
@@ -440,8 +441,12 @@ class SmartExplainer:
         """
         if y_pred is not None:
             self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
+            if hasattr(self, 'y_target'):
+                self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
         if y_target is not None:
             self.y_target = check_y(self.x_init, y_target, y_name="y_target")
+            if hasattr(self, 'y_pred'):
+                self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(
@@ -814,6 +819,8 @@ class SmartExplainer:
         The predict method computes the model output for each x_encoded row and stores it in y_pred attribute
         """
         self.y_pred = predict(self.model, self.x_encoded)
+        if hasattr(self, 'y_target'):
+            self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
 
     def to_pandas(
             self,
@@ -1020,6 +1027,8 @@ class SmartExplainer:
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
         """
+        if self.y_pred is None:
+            self.predict()
         self.smartapp = SmartApp(self, settings)
 
     def run_app(self, port: int = None, host: str = None, title_story: str = None, settings: dict = None) -> CustomThread:

@@ -88,6 +88,11 @@ class SmartApp:
         self.settings = self.settings_ini.copy()
 
         self.predict_col = ['_predict_']
+        self.special_cols =['_index_', '_predict_']
+        if self.explainer.y_target is not None:
+            self.special_cols.append('_target_')
+            if self.explainer._case == 'regression':
+                self.special_cols.append('_error_')
         self.explainer.features_imp = self.explainer.state.compute_features_import(
             self.explainer.contributions)
         if self.explainer._case == 'classification':
@@ -160,7 +165,14 @@ class SmartApp:
 
         self.dataframe['_index_'] = self.explainer.x_init.index
         self.dataframe.rename(columns={f'{self.predict_col}': '_predict_'}, inplace=True)
-        col_order = ['_index_', '_predict_'] + self.dataframe.columns.drop(['_index_', '_predict_']).tolist()
+        if self.explainer.y_target is not None:
+            self.dataframe = self.dataframe.join(
+                self.explainer.y_target.rename(columns={self.explainer.y_target.columns[0]:"_target_"}), 
+            )
+            if self.explainer._case == 'regression':
+                self.dataframe = self.dataframe.join(self.explainer.prediction_error)
+
+        col_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
         random.seed(79)
         self.list_index = \
             random.sample(
@@ -345,7 +357,7 @@ class SmartApp:
             columns=[{"name": i, "id": i} for i in self.dataframe.columns],
             tooltip_header={
                 column: self.features_dict[column] for column in self.dataframe.columns
-                if column not in ["_index_", "_predict_"]
+                if column not in self.special_cols
             },
             editable=False, row_deletable=False,
             virtualization=True,
@@ -1418,10 +1430,8 @@ class SmartApp:
                     self.init_data()
                     self.settings_ini['rows'] = self.settings['rows']
                     if name == [1]:
-                        columns = [
-                            {"name": '_index_', "id": '_index_'},
-                            {"name": '_predict_', "id": '_predict_'}] + \
-                            [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(['_index_', '_predict_'])]
+                        columns = [{"name": i, "id": i} for i in self.special_cols] + \
+                            [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(self.special_cols)]
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
@@ -2160,7 +2170,7 @@ class SmartApp:
             if n_submit and selected is not None:
                 selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
                 selected_row["feature_name"] = selected_row.index.map(
-                    lambda x: x if x in ["_index_", "_predict_"] else self.features_dict[x]
+                    lambda x: x if x in self.special_cols else self.features_dict[x]
                 )
                 if self.explainer._case == 'classification':
                     if label is None:
@@ -2181,8 +2191,8 @@ class SmartApp:
                 selected_data = selected_row.merge(selected_contrib, how="left", on="feature_name")
                 selected_data.index = selected_row.index
                 selected_data = pd.concat([
-                    selected_data.loc[["_index_", "_predict_"]], 
-                    selected_data.drop(index=["_index_", "_predict_"]+list(self.explainer.additional_features_dict.keys())).sort_values(sort_by, ascending=order),
+                    selected_data.loc[self.special_cols], 
+                    selected_data.drop(index=self.special_cols+list(self.explainer.additional_features_dict.keys())).sort_values(sort_by, ascending=order),
                     selected_data.loc[list(self.explainer.additional_features_dict.keys())].sort_values(sort_by, ascending=order)
                 ])
                 children = []
@@ -2274,14 +2284,14 @@ class SmartApp:
             style_filter_conditional = []
             style_header_conditional = [
                 {'if': {'column_id': c}, 'fontWeight': 'bold'}
-                for c in ['_index_', '_predict_']
+                for c in self.special_cols
             ] + [
                 {'if': {'column_id': c}, 'font-style': 'italic'}
                 for c in self.dataframe if c in self.explainer.additional_features_dict
             ]
             style_cell_conditional = [
                 {'if': {'column_id': c},
-                 'width': '70px', 'fontWeight': 'bold'} for c in ['_index_', '_predict_']
+                 'width': '70px', 'fontWeight': 'bold'} for c in self.special_cols
             ]
 
             selected = check_row(data, index)
@@ -2532,17 +2542,15 @@ class SmartApp:
 
             # We use domain name for feature name
             dict_name = [self.features_dict[i]
-                         for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
-            dict_id = [i for i in self.dataframe.drop(['_index_', '_predict_'], axis=1).columns]
+                         for i in self.dataframe.drop(self.special_cols, axis=1).columns]
+            dict_id = [i for i in self.dataframe.drop(self.special_cols, axis=1).columns]
             # Create dataframe to sort it by feature_name
             df_feature_name = pd.DataFrame({'feature_name': dict_name,
                                             'feature_id': dict_id})
             df_feature_name = df_feature_name.sort_values(
                 by='feature_name').reset_index(drop=True)
             # Options are sorted by feature_name
-            options = [
-                {"label": '_index_', "value": '_index_'},
-                {"label": '_predict_', "value": '_predict_'}] + \
+            options = [{"label": i, "value": i} for i in self.special_cols] + \
                 [{"label": df_feature_name.loc[i, 'feature_name'],
                   "value": df_feature_name.loc[i, 'feature_id']}
                  for i in range(len(df_feature_name))]
