@@ -2296,8 +2296,7 @@ class SmartApp:
                 },
                 {
                     "if": {"state": "selected"}, 
-                    "border-bottom": f"1px solid {self.color[0]}",
-                    "border-top": f"1px solid {self.color[0]}",
+                    "border": f"1px solid {self.color[0]}",
                 }
             ]
             style_filter_conditional = []
