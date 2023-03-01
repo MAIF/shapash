@@ -81,6 +81,7 @@ The project was developed by **MAIF** Data Scientists.
 - Compatible with category_encoders & Sklearn ColumnTransformer
 - Visualizations of global and local explainability
 - Webapp to easily navigate from global to local
+- Select subsets for further analysis of explainability by filtering on explanatory and additional features, correct or wrong predictions
 - Summarizes local explanation
 - Offers several parameters in order to sum up in the most suitable way for your use case
 - Exports your local summaries to Pandas DataFrames

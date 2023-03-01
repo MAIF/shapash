@@ -35,7 +35,9 @@
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
-| 2.2.x         |  Picking samples <br> [New demo](https://shapash-demo.ossbymaif.fr/)                                                                | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values".            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb)
+| 2.3.x         |  Additional dataset columns <br> Demo coming soon                                                                | In Webapp: Target and error columns added to dataset and possibility to add features outside the model for more filtering options            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/add_column_icon.png" width="50" title="add_column">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
+| 2.3.x         |  Identity card <br> Demo coming soon                                                                  | In webapp: New identity card to summarize the information of the selected sample                  |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/identity_card.png" width="50" title="identity">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
+| 2.2.x         |  Picking samples <br> [New demo](https://shapash-demo.ossbymaif.fr/)                                                                | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values"            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb)
 | 2.2.x         |  Dataset Filter <br> [New demo](https://shapash-demo.ossbymaif.fr/)                                                                  | New tab in the webapp to filter data. And several improvements in the webapp: subtitles, labels, screen adjustments                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webapp.png" width="50" title="webapp">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 | 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](https://github.com/MAIF/shapash/blob/master/tutorial/backend/tuto-backend-01.ipynb)
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
@@ -125,6 +127,8 @@ Shapash also contributes to data science auditing by displaying usefull informat
 
 - Easily share and discuss results with non-Data users
 
+- Select subsets for further analysis of explainability by filtering on explanatory and additional features, correct or wrong predictions. [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
+
 - Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
 - Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects. [Report Example](https://shapash.readthedocs.io/en/latest/report.html) 
@@ -181,7 +185,7 @@ xpl = SmartExplainer(
   model=regressor,
   features_dict=house_dict,  # Optional parameter
   preprocessing=encoder, # Optional: compile step can use inverse_transform method
-  postprocessing=postprocess # Optional: see tutorial postprocessing
+  postprocessing=postprocess, # Optional: see tutorial postprocessing  
 )
 ```
 
@@ -193,6 +197,8 @@ xpl.compile(
     x=Xtest,    
     y_pred=y_pred, # Optional: for your own prediction (by default: model.predict)
     y_target=yTest, # Optional: allows to display True Values vs Predicted Values
+    additional_data=X_additional, # Optional: additional dataset of features outsite the model for filter in Webapp
+    additional_features_dict=features_dict_additional, # Optional: dict additional data    
 )
 ```  
 
@@ -295,4 +301,5 @@ This github repository offers many tutorials to allow you to easily get started 
 - [Generate a standalone HTML report of your project with generate_report](tutorial/report/tuto-shapash-report01.ipynb)
 
 </details>
+
 
