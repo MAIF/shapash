@@ -78,7 +78,7 @@ The 4 steps to display results:
         x=Xtest,
         y_pred=y_pred, # Optional: for your own prediction (by default: model.predict)
         y_target=yTest, # Optional: allows to display True Values vs Predicted Values
-        additional_data=X_additional, # Optional: additional dataset of features outsite the model for filter in Webapp
+        additional_data=X_additional, # Optional: additional dataset of features for Webapp
         additional_features_dict=features_dict_additional, # Optional: dict additional data
     )
 
