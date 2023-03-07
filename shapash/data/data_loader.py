@@ -2,9 +2,39 @@
 Data loader module
 """
 import os
+from pathlib import Path
 import json
 import pandas as pd
-from urllib.request import urlretrieve
+from urllib.request import urlopen
+from urllib.error import URLError
+
+
+def _find_file(data_path, github_data_url, filename):
+    """
+    Finds file path on disk if it exists or gets file path on github.
+
+    Parameters
+    ----------
+    data_path : str
+        Data folder path
+    github_data_url : str
+        Github data url
+    filename : str
+        Name of the file
+
+    Returns
+    -------
+    str
+        Founded file path.
+    """
+    file = os.path.join(data_path, filename)
+    if os.path.isfile(file) is False:
+        file = github_data_url+filename
+        try:
+            urlopen(file)
+        except URLError:
+            raise Exception(f"Internet connection is required to download: {file}")
+    return file
 
 
 def data_loading(dataset):
@@ -32,36 +62,36 @@ def data_loading(dataset):
     dict : (Dictionnary, Optional)
         If exist, columns labels dictionnary associated to the dataset.
     """
-    current_path = os.path.dirname(os.path.abspath(__file__))
+    data_path = str(Path(__file__).parents[2] / "data")
     if dataset == 'house_prices':
-        if os.path.isfile(current_path+'/house_prices_dataset.csv') is False:
-            github_data_url = 'https://github.com/MAIF/shapash/raw/master/shapash/data/'
-            urlretrieve(github_data_url + "house_prices_dataset.csv", filename=current_path + "/house_prices_dataset.csv")
-            urlretrieve(github_data_url + "house_prices_labels.json", filename=current_path + "/house_prices_labels.json")
-        data_house_prices_path = os.path.join(current_path, "house_prices_dataset.csv")
-        dict_house_prices_path = os.path.join(current_path, "house_prices_labels.json")
+        github_data_url = 'https://github.com/MAIF/shapash/raw/master/data/'
+        data_house_prices_path = _find_file(data_path, github_data_url, "house_prices_dataset.csv")
+        dict_house_prices_path = _find_file(data_path, github_data_url, "house_prices_labels.json")
         data = pd.read_csv(data_house_prices_path, header=0, index_col=0, engine='python')
-        with open(dict_house_prices_path, 'r') as openfile2:
-            dic = json.load(openfile2)
+        if github_data_url in dict_house_prices_path:
+            with urlopen(dict_house_prices_path) as openfile:
+                dic = json.load(openfile)
+        else:
+            with open(dict_house_prices_path, 'r') as openfile:
+                dic = json.load(openfile)
         return data, dic
 
     elif dataset == 'titanic':
-        if os.path.isfile(current_path + '/titanicdata.csv') is False:
-            github_data_url = 'https://github.com/MAIF/shapash/raw/master/shapash/data/'
-            urlretrieve(github_data_url + "titanicdata.csv", filename=current_path + "/titanicdata.csv")
-            urlretrieve(github_data_url + "titaniclabels.json", filename=current_path + "/titaniclabels.json")
-        data_titanic_path = os.path.join(current_path, "titanicdata.csv")
-        dict_titanic_path = os.path.join(current_path, 'titaniclabels.json')
+        github_data_url = 'https://github.com/MAIF/shapash/raw/master/data/'
+        data_titanic_path = _find_file(data_path, github_data_url, "titanicdata.csv")
+        dict_titanic_path = _find_file(data_path, github_data_url, 'titaniclabels.json')
         data = pd.read_csv(data_titanic_path, header=0, index_col=0, engine='python')
-        with open(dict_titanic_path, 'r') as openfile:
-            dic = json.load(openfile)
+        if github_data_url in dict_titanic_path:
+            with urlopen(dict_titanic_path) as openfile:
+                dic = json.load(openfile)
+        else:
+            with open(dict_titanic_path, 'r') as openfile:
+                dic = json.load(openfile)
         return data, dic
 
     elif dataset == 'telco_customer_churn':
-        if os.path.isfile(current_path + '/telco_customer_churn.csv') is False:
-            github_data_url = 'https://github.com/IBM/telco-customer-churn-on-icp4d/raw/master/data/'
-            urlretrieve(github_data_url + "Telco-Customer-Churn.csv", filename=current_path + "/telco_customer_churn.csv")
-        data_telco_path = os.path.join(current_path, "telco_customer_churn.csv")
+        github_data_url = 'https://github.com/IBM/telco-customer-churn-on-icp4d/raw/master/data/'
+        data_telco_path = _find_file(data_path, github_data_url, "Telco-Customer-Churn.csv")
         data = pd.read_csv(data_telco_path, header=0, index_col=0, engine='python')
         return data
 
