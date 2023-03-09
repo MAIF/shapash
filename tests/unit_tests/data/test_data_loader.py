@@ -30,3 +30,10 @@ class Test_load_data(unittest.TestCase):
         """
         telco_df = data_loading('telco_customer_churn')
         assert isinstance(telco_df, pd.DataFrame)
+
+    def test_load_accidents(self):
+        """
+        Unit test us_car_accident
+        """
+        accidents_df = data_loading('us_car_accident')
+        assert isinstance(accidents_df, pd.DataFrame)

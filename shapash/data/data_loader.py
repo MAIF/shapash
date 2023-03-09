@@ -95,5 +95,11 @@ def data_loading(dataset):
         data = pd.read_csv(data_telco_path, header=0, index_col=0, engine='python')
         return data
 
+    elif dataset == 'us_car_accident':
+        github_data_url = 'https://github.com/MAIF/shapash/raw/master/data/'
+        data_accidents_path = _find_file(data_path, github_data_url, "US_Accidents_extract.csv")
+        data = pd.read_csv(data_accidents_path, header=0, engine='python')
+        return data
+
     else:
         raise ValueError("Dataset not found. Check the docstring for available values")
