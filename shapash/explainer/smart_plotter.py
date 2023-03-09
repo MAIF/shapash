@@ -3194,8 +3194,9 @@ class SmartPlotter:
                 subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
             df_equal_bins = prediction_error.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
             equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(['count', 'mean', 'std'])].values
+            equal_bins = np.unique(equal_bins)
             self.pred_colorscale = self.tuning_colorscale(pd.DataFrame(pd.cut([val[0] for val in prediction_error.values],
-            bins=[i[0] for i in equal_bins], labels=False)))
+            bins=[i for i in equal_bins], labels=False)))
             col_scale = self.pred_colorscale
 
             y_pred = self.explainer.y_pred.loc[list_ind]
@@ -3218,13 +3219,13 @@ class SmartPlotter:
                 customdata=y_pred.index.values
             )
 
-            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i[0] for i in equal_bins], labels=False)/10
+            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i for i in equal_bins], labels=False)/10
             colorbar_title = 'Prediction Error'
             fig.data[-1].marker.color = colorpoints.flatten()
             fig.data[-1].marker.coloraxis = 'coloraxis'
             fig.layout.coloraxis.colorscale = col_scale
             fig.layout.coloraxis.colorbar = {'title': {'text': colorbar_title}, "tickvals": [col_scale[0][0], col_scale[-1][0]-0.15],
-            "ticktext":[float('{:0.3f}'.format(equal_bins[0][0])), float('{:0.3f}'.format(equal_bins[-2][0]))], "tickformat": ".2s",
+            "ticktext":[float('{:0.3f}'.format(equal_bins[0])), float('{:0.3f}'.format(equal_bins[-2]))], "tickformat": ".2s",
             "yanchor": "top", "y": 1.1}
             range_axis = [min(min(y_target.values.flatten()), min(y_pred.values.flatten())), max(max(y_target.values.flatten()),
             max(y_pred.values.flatten()))]
