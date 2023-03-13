@@ -302,4 +302,8 @@ This github repository offers many tutorials to allow you to easily get started 
 
 </details>
 
+<details><summary><b>Analysing your model via Shapash WebApp</b> </summary>
 
+- [Add features outside of the model for more exploration options](tutorial/webapp/tuto-webapp01-additional-data.ipynb)
+
+</details>
