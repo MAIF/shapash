@@ -351,7 +351,7 @@ class SmartApp:
                 {
                     column: {'value': str(value), 'type': 'text'}
                     for column, value in row.items()
-                } for row in self.dataframe.to_dict('rows')
+                } for row in self.dataframe.to_dict('index').values()
             ], tooltip_duration=2000,
 
             columns=[{"name": i, "id": i} for i in self.dataframe.columns],
