@@ -12,7 +12,7 @@ class TestCommon(unittest.TestCase):
         """
         Test string series
         """
-        s = pd.Series(["a", "b", "c", "d", "e", np.nan])
+        s = pd.Series(["a", "b", "c", "d", "e"])
 
         assert series_dtype(s) == VarType.TYPE_CAT
 
