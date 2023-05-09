@@ -1403,7 +1403,6 @@ class SmartApp:
             filtering and settings modifications.
             ------------------------------------------------------------------
             selected_data: selected data in prediction picking graph
-            is_open: modal
             nclicks_apply: click on Apply Filter button
             nclicks_reset: click on Reset All Filter button
             nclicks_del: click on delete button
@@ -1585,7 +1584,6 @@ class SmartApp:
             apply_filters: click on apply filter button
             reset_filter: click on reset filter button
             nclicks_del: click on del button
-            is_open: modal
             n_clicks: click on features importance card
             bool_group: display groups
             click_zoom: click on zoom button
@@ -1793,7 +1791,6 @@ class SmartApp:
             reset_filter: click on reset filter button
             nclicks_del: click del button
             label: selected label
-            is_open: modal
             click_zoom: click on zoom button
             points: points value in setting
             violin: violin value in setting
@@ -2319,6 +2316,7 @@ class SmartApp:
                 Input('reset_dropdown_button', 'n_clicks'),
                 Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
+                Input('modal', 'is_open'),
                 Input('ember_prediction_picking', 'n_clicks')
             ],
             [
@@ -2331,6 +2329,7 @@ class SmartApp:
                                       reset_filter,
                                       nclicks_del,
                                       label,
+                                      is_open,
                                       click_zoom,
                                       points,
                                       violin):
@@ -2363,7 +2362,7 @@ class SmartApp:
                   (None not in nclicks_del)):
                 subset = None
             elif ctx.triggered[0]['prop_id'] not in [
-                'dataset.data', 
+                'modal.is_open',
                 'select_label.value', 
                 'reset_dropdown_button.n_clicks'
             ]:
