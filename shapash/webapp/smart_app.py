@@ -139,7 +139,7 @@ class SmartApp:
         self.init_callback_settings()
         self.callback_generator()
 
-    def init_data(self):
+    def init_data(self, rows = None):
         """
         Method which initializes data from explainer object
         """
@@ -174,10 +174,12 @@ class SmartApp:
 
         col_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
         random.seed(79)
+        if rows is None:
+            rows = self.settings['rows']
         self.list_index = \
             random.sample(
                 population=self.dataframe.index.tolist(),
-                k=min(self.settings['rows'], len(self.dataframe.index.tolist()))
+                k=min(rows, len(self.dataframe.index.tolist()))
             )
         self.dataframe = self.dataframe[col_order].loc[self.list_index].sort_index()
         self.round_dataframe = self.dataframe.copy()
@@ -1438,9 +1440,7 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    self.settings['rows'] = rows
-                    self.init_data()
-                    self.settings_ini['rows'] = self.settings['rows']
+                    self.init_data(rows = rows)
                     if name == [1]:
                         columns = [{"name": i, "id": i} for i in self.special_cols] + \
                             [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(self.special_cols)]
@@ -1551,7 +1551,6 @@ class SmartApp:
                 Input('apply_filter', 'n_clicks'),
                 Input('reset_dropdown_button', 'n_clicks'),
                 Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
-                Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
                 Input('bool_groups', 'on'),
                 Input('ember_global_feature_importance', 'n_clicks')
@@ -1569,7 +1568,6 @@ class SmartApp:
                                       apply_filters,
                                       reset_filter,
                                       nclicks_del,
-                                      is_open,
                                       n_clicks,
                                       bool_group,
                                       click_zoom,
@@ -1613,14 +1611,7 @@ class SmartApp:
             selected_feature = self.explainer.inv_features_dict.get(
                 clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
             ) if clickData else None
-            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
-                    raise PreventUpdate
-                else:
-                    self.settings['features'] = features
-                    self.settings_ini['features'] = self.settings['features']
-            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
-                self.label = label
+            if ctx.triggered[0]['prop_id'] == 'select_label.value':
                 selection = [d['_index_'] for d in data]
             elif ctx.triggered[0]['prop_id'] == 'dataset.data':
                 list_index = [d['_index_'] for d in data]
@@ -1738,7 +1729,7 @@ class SmartApp:
             figure = self.explainer.plot.features_importance(
                 max_features=features,
                 selection=selection,
-                label=self.label,
+                label=label,
                 group_name=group_name,
                 display_groups=bool_group,
                 zoom=zoom_active
@@ -1771,7 +1762,6 @@ class SmartApp:
                 Input('reset_dropdown_button', 'n_clicks'),
                 Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
-                Input('modal', 'is_open'),
                 Input('ember_feature_selector', 'n_clicks')
             ],
             [
@@ -1787,7 +1777,6 @@ class SmartApp:
                                     reset_filter,
                                     nclicks_del,
                                     label,
-                                    is_open,
                                     click_zoom,
                                     points,
                                     violin,
@@ -1826,16 +1815,7 @@ class SmartApp:
             else:
                 selected_feature = self.selected_feature
             ctx = dash.callback_context
-            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
-                    raise PreventUpdate
-                else:
-                    self.settings['points'] = points
-                    self.settings_ini['points'] = self.settings['points']
-                    self.settings['violin'] = violin
-                    self.settings_ini['violin'] = self.settings['violin']
-
-            elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
+            if ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
                 if feature is not None:
                     # Removing bold
                     selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
@@ -2339,7 +2319,6 @@ class SmartApp:
                 Input('reset_dropdown_button', 'n_clicks'),
                 Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
-                Input('modal', 'is_open'),
                 Input('ember_prediction_picking', 'n_clicks')
             ],
             [
@@ -2352,7 +2331,6 @@ class SmartApp:
                                       reset_filter,
                                       nclicks_del,
                                       label,
-                                      is_open,
                                       click_zoom,
                                       points,
                                       violin):
@@ -2378,33 +2356,23 @@ class SmartApp:
             subset = None
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
-            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
-                    raise PreventUpdate
-                else:
-                    self.settings['points'] = points
-                    self.settings_ini['points'] = self.settings['points']
-                    self.settings['violin'] = violin
-                    self.settings_ini['violin'] = self.settings['violin']
-            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
-                self.label = label
-            # If we have clicked on reset button
-            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                subset = None
-            # If we have clicked on Apply filter button
-            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+            if ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
                 subset = [d['_index_'] for d in data]
             # If we have clicked on the last delete button (X)
             elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
                   (None not in nclicks_del)):
                 subset = None
-            else:
+            elif ctx.triggered[0]['prop_id'] not in [
+                'dataset.data', 
+                'select_label.value', 
+                'reset_dropdown_button.n_clicks'
+            ]:
                 raise PreventUpdate
 
             figure = self.explainer.plot.scatter_plot_prediction(
-                    selection=self.subset,
+                    selection=subset,
                     max_points=points,
-                    label=self.label
+                    label=label
                 )
             if self.explainer.y_target is not None:
                 figure['layout'].clickmode = 'event+select'
