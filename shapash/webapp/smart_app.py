@@ -2309,7 +2309,8 @@ class SmartApp:
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional
 
         @app.callback(
-            Output(component_id='prediction_picking', component_property='figure'),
+            Output('prediction_picking', 'figure'),
+            Output('prediction_picking', 'selectedData'),
             [
                 Input('dataset', 'data'),
                 Input('apply_filter', 'n_clicks'),
@@ -2321,7 +2322,8 @@ class SmartApp:
             ],
             [
                 State('points', 'value'),
-                State('violin', 'value')
+                State('violin', 'value'),
+                State('prediction_picking','selectedData')
             ]
         )
         def update_prediction_picking(data,
@@ -2332,7 +2334,8 @@ class SmartApp:
                                       is_open,
                                       click_zoom,
                                       points,
-                                      violin):
+                                      violin,
+                                      selectedData):
             """
             Update feature plot according to label, data,
             selected feature and settings modifications
@@ -2353,20 +2356,14 @@ class SmartApp:
             ctx = dash.callback_context
             # Filter subset
             subset = None
-            if not ctx.triggered:
-                raise dash.exceptions.PreventUpdate
-            if ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                subset = [d['_index_'] for d in data]
-            # If we have clicked on the last delete button (X)
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                  (None not in nclicks_del)):
-                subset = None
-            elif ctx.triggered[0]['prop_id'] not in [
-                'modal.is_open',
-                'select_label.value', 
-                'reset_dropdown_button.n_clicks'
-            ]:
+            if (ctx.triggered[0]['prop_id']=='reset_dropdown_button.n_clicks' or 
+                ('del_dropdown_button' in ctx.triggered[0]['prop_id'] and
+                None not in nclicks_del)):
+                selectedData = None
+            if selectedData is not None and len(selectedData['points'])>0:
                 raise PreventUpdate
+            else:
+                subset = [d['_index_'] for d in data]
 
             figure = self.explainer.plot.scatter_plot_prediction(
                     selection=subset,
@@ -2380,7 +2377,7 @@ class SmartApp:
                     x_ax="True Values",
                     y_ax="Predicted Values")
 
-            return figure
+            return figure, selectedData
 
         @app.callback(
             Output("modal_feature_importance", "is_open"),
