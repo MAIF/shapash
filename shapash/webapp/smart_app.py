@@ -1606,119 +1606,37 @@ class SmartApp:
                 zoom_active = True
             selection = None
             list_index = self.list_index
+            if clickData is not None and (ctx.triggered[0]['prop_id'] in [
+                'apply_filter.n_clicks',
+                'reset_dropdown_button.n_clicks',
+                'dataset.data'
+            ] or ('del_dropdown_button' in ctx.triggered[0]['prop_id'] and
+                None not in nclicks_del)):
+                point = clickData['points'][0]
+                point['curveNumber'] = 0
+                clickData = {'points':[point]}
+
             selected_feature = self.explainer.inv_features_dict.get(
                 clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
             ) if clickData else None
-            if ctx.triggered[0]['prop_id'] == 'select_label.value':
-                selection = [d['_index_'] for d in data]
-            elif ctx.triggered[0]['prop_id'] == 'dataset.data':
-                list_index = [d['_index_'] for d in data]
-            elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
-                clickData = None  # We reset the graph and clicks if we toggle the button
-            # If we have selected data on prediction picking graph
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None) and (len(selected_data) > 1)):
-                row_ids = []
-                if selected_data is not None and len(selected_data) > 1:
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    selection = row_ids
-                else:
-                    selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If click on a single point on prediction picking, do nothing
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None) and (len(selected_data) == 1)):
-                # If there is some filters applied
-                if (len([d['_index_'] for d in data]) != len(list_index)):
-                    selection = [d['_index_'] for d in data]
-                else:
-                    selection = None
-            # If we have dubble click on prediction picking to remove the selected subset
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is None)):
-                # If there is some filters applied
-                if (len([d['_index_'] for d in data]) != len(list_index)):
-                    selection = [d['_index_'] for d in data]
-                else:
-                    selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If we click on reset filter button
-            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If we click on Apply button
-            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                selection = [d['_index_'] for d in data]
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If we click on the last del button
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                  (None not in nclicks_del)):
-                selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
-                  and self.explainer.features_groups and bool_group):
-                row_ids = []
-                if selected_data is not None and len(selected_data) > 1:
-                    # we plot prediction picking subset
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    selection = row_ids
-                elif (len([d['_index_'] for d in data]) != len(list_index)):
-                    selection = [d['_index_'] for d in data]
-                else:
-                    selection = None
-                # When we click twice on the same bar this will reset the graph
-                if clickData_store == clickData:
-                    selected_feature = None
+
+            if self.explainer.features_groups and bool_group:
                 list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                if selected_feature in list_sub_features:
-                    for k, v in self.explainer.features_groups.items():
-                        if selected_feature in v:
-                            selected_feature = k
+                    for f in group_features]
+                if ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks':
+                    # When we click twice on the same bar this will reset the graph
+                    if clickData_store == clickData:
+                        selected_feature = None
+                    if selected_feature in list_sub_features:
+                        for k, v in self.explainer.features_groups.items():
+                            if selected_feature in v:
+                                selected_feature = k
                 else:
-                    pass
-            else:
-                # Zoom management to generate graph which have global axis
-                if len(figure['data']) == 1:
-                    selection = None
-                else:
-                    row_ids = []
-                    if selected_data is not None and len(selected_data) > 1:
-                        # we plot prediction picking subset
-                        for p in selected_data['points']:
-                            row_ids.append(p['customdata'])
-                        selection = row_ids
-                    else:
-                        # we plot filter subset
-                        selection = [d['_index_'] for d in data]
-            if selection is not None and len(selection)==0:
+                    selected_feature = None
+                
+
+            selection = [d['_index_'] for d in data]
+            if len(selection)==len(list_index) or len(selection)==0:
                 selection=None
 
             group_name = selected_feature if (self.explainer.features_groups is not None
@@ -1736,10 +1654,7 @@ class SmartApp:
             MyGraph.adjust_graph_static(figure, x_ax='Mean absolute Contribution')
             figure.layout.clickmode = 'event+select'
             if selected_feature:
-                if self.explainer.features_groups is None:
-                    self.select_point(figure, clickData)
-                elif selected_feature not in self.explainer.features_groups.keys():
-                    self.select_point(figure, clickData)
+                self.select_point(figure, clickData)
 
             # font size can be adapted to screen size
             nb_car = max([len(figure.data[0].y[i]) for i in
@@ -1754,11 +1669,7 @@ class SmartApp:
             Output(component_id='feature_selector', component_property='figure'),
             [
                 Input('global_feature_importance', 'clickData'),
-                Input('prediction_picking', 'selectedData'),
                 Input('dataset', 'data'),
-                Input('apply_filter', 'n_clicks'),
-                Input('reset_dropdown_button', 'n_clicks'),
-                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
                 Input('ember_feature_selector', 'n_clicks')
             ],
@@ -1769,11 +1680,7 @@ class SmartApp:
             ]
         )
         def update_feature_selector(feature,
-                                    selected_data,
                                     data,
-                                    apply_filters,
-                                    reset_filter,
-                                    nclicks_del,
                                     label,
                                     click_zoom,
                                     points,
@@ -1785,11 +1692,7 @@ class SmartApp:
             filters and settings modifications
             --------------------------------------------
             feature: click on feature importance graph
-            selected_data: Data selected on prediction picking graph
             data: dataset
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click del button
             label: selected label
             click_zoom: click on zoom button
             points: points value in setting
@@ -1811,69 +1714,13 @@ class SmartApp:
                 selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
             else:
                 selected_feature = self.selected_feature
-            ctx = dash.callback_context
-            if ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
-                if feature is not None:
-                    # Removing bold
-                    selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
-                    if feature['points'][0]['curveNumber'] == 0 and \
-                              len(gfi_figure['data']) == 2:
-                        if selected_data is not None and len(selected_data) > 1:
-                            row_ids = []
-                            for p in selected_data['points']:
-                                row_ids.append(p['customdata'])
-                            subset = row_ids
-                        else:
-                            subset = [d['_index_'] for d in data]
-                    else:
-                        subset = list_index
-            # If we have selected data on prediction picking graph
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None)):
-                row_ids = []
-                if selected_data is not None and len(selected_data) > 1:
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    subset = row_ids
-            # if we have click on reset button
-            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                subset = None
-            # If we have clik on Apply filter button
-            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
+
+            if feature is not None and feature['points'][0]['curveNumber'] == 0 and \
+                len(gfi_figure['data']) == 2:
                 subset = [d['_index_'] for d in data]
-            # If we have click on the last del button
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                  (None not in nclicks_del)):
-                subset = None
             else:
-                # Zoom management to generate graph which have global axis
-                if len(gfi_figure['data']) == 1:
-                    subset = list_index
-                elif (len(gfi_figure['data']) == 2):
-                    if feature is not None:
-                        if feature['points'][0]['curveNumber'] == 0:
-                            if selected_data is not None and len(selected_data) > 1:
-                                row_ids = []
-                                for p in selected_data['points']:
-                                    row_ids.append(p['customdata'])
-                                subset = row_ids
-                            else:
-                                subset = [d['_index_'] for d in data]
-                        else:
-                            subset = list_index
-                    else:
-                        subset = [d['_index_'] for d in data]
-                else:
-                    row_ids = []
-                    if selected_data is not None and len(selected_data) > 1:
-                        # we plot prediction picking subset
-                        for p in selected_data['points']:
-                            row_ids.append(p['customdata'])
-                        subset = row_ids
-                    else:
-                        # we plot filter subset
-                        subset = [d['_index_'] for d in data]
-            if subset is not None and len(subset)==0:
+                subset = None
+            if subset is not None and (len(subset)==len(list_index) or len(subset)==0):
                 subset = None
 
             fs_figure = self.explainer.plot.contribution_plot(
