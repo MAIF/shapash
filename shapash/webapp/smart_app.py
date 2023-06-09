@@ -2203,7 +2203,8 @@ class SmartApp:
             ctx = dash.callback_context
             # Filter subset
             subset = None
-            if (ctx.triggered[0]['prop_id']=='reset_dropdown_button.n_clicks' or 
+            if  (ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks' or
+                ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks' or 
                 ('del_dropdown_button' in ctx.triggered[0]['prop_id'] and
                 None not in nclicks_del)):
                 selectedData = None
