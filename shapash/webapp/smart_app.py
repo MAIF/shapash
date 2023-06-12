@@ -24,6 +24,10 @@ from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.explanations import Explanations
+from shapash.webapp.utils.callbacks import (
+    select_data_from_prediction_picking, 
+    select_data_from_filters,
+)
 
 
 def create_input_modal(id, label, tooltip):
@@ -1446,14 +1450,7 @@ class SmartApp:
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
-                row_ids = []
-                # If some data have been selected in prediction picking graph
-                if selected_data is not None and len(selected_data) > 1:
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    df = self.round_dataframe.loc[row_ids]
-                else:
-                    df = self.round_dataframe
+                df = select_data_from_prediction_picking(self.round_dataframe, selected_data)
             # If click on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 df = self.round_dataframe
@@ -1465,55 +1462,21 @@ class SmartApp:
                   (selected_data is not None and len(selected_data) == 1 and 
                    len(selected_data['points'])!=0 and selected_data['points'][0]['curveNumber'] > 0)
                   )):
-                # get list of ID
-                feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
-                str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
-                bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
-                lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
-                date_id = [id_date[i]['index'] for i in range(len(id_date))]
-                df = self.round_dataframe
-                # If there is some filters
-                if len(feature_id) > 0:
-                    for i in range(len(feature_id)):
-                        # String filter
-                        if feature_id[i] in str_id:
-                            position = np.where(np.array(str_id) == feature_id[i])[0][0]
-                            if ((position is not None) & (val_str_modality[position] is not None)):
-                                df = df[df[val_feature[i]].isin(val_str_modality[position])]
-                            else:
-                                df = df
-                        # Boolean filter
-                        elif feature_id[i] in bool_id:
-                            position = np.where(np.array(bool_id) == feature_id[i])[0][0]
-                            if ((position is not None) & (val_bool_modality[position] is not None)):
-                                df = df[df[val_feature[i]] == val_bool_modality[position]]
-                            else:
-                                df = df
-                        # Date filter
-                        elif feature_id[i] in date_id:
-                            position = np.where(np.array(date_id) == feature_id[i])[0][0]
-                            if((position is not None) &
-                               (start_date[position] < end_date[position])):
-                                df = df[((df[val_feature[i]] >= start_date[position]) &
-                                         (df[val_feature[i]] <= end_date[position]))]
-                            else:
-                                df = df
-                        # Numeric filter
-                        elif feature_id[i] in lower_id:
-                            position = np.where(np.array(lower_id) == feature_id[i])[0][0]
-                            if((position is not None) & (val_lower_modality[position] is not None) &
-                               (val_upper_modality[position] is not None)):
-                                if (val_lower_modality[position] < val_upper_modality[position]):
-                                    df = df[(df[val_feature[i]] >= val_lower_modality[position]) &
-                                            (df[val_feature[i]] <= val_upper_modality[position])]
-                                else:
-                                    df = df
-                            else:
-                                df = df
-                        else:
-                            df = df
-                else:
-                    df = df
+                df = select_data_from_filters(
+                    self.round_dataframe,
+                    id_feature, 
+                    id_str_modality, 
+                    id_bool_modality, 
+                    id_lower_modality, 
+                    id_date, 
+                    val_feature, 
+                    val_str_modality,
+                    val_bool_modality,
+                    val_lower_modality,
+                    val_upper_modality,
+                    start_date,
+                    end_date,
+                )
                 filtered_subset_info = f"Subset length: {len(df)} ({int(round(100*len(df)/self.explainer.x_init.shape[0]))}%)"
                 if len(df)==0:
                     filtered_subset_color="danger"
