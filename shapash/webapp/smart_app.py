@@ -27,6 +27,12 @@ from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.callbacks import (
     select_data_from_prediction_picking, 
     select_data_from_filters,
+    get_feature_from_clicked_data,
+    get_feature_from_features_groups,
+    get_group_name,
+    get_indexes_from_datatable,
+    update_click_data_on_subset_changes,
+    get_figure_zoom
 )
 
 
@@ -1562,11 +1568,7 @@ class SmartApp:
             """
             ctx = dash.callback_context
             # Zoom is False by Default. It becomes True if we click on it
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True
+            zoom_active = get_figure_zoom(click_zoom)
             selection = None
             list_index = self.list_index
             if clickData is not None and (ctx.triggered[0]['prop_id'] in [
@@ -1575,35 +1577,26 @@ class SmartApp:
                 'dataset.data'
             ] or ('del_dropdown_button' in ctx.triggered[0]['prop_id'] and
                 None not in nclicks_del)):
-                point = clickData['points'][0]
-                point['curveNumber'] = 0
-                clickData = {'points':[point]}
+                clickData = update_click_data_on_subset_changes(clickData)
 
             selected_feature = self.explainer.inv_features_dict.get(
-                clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
+                get_feature_from_clicked_data(clickData)
             ) if clickData else None
 
             if self.explainer.features_groups and bool_group:
-                list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                    for f in group_features]
                 if ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks':
                     # When we click twice on the same bar this will reset the graph
                     if clickData_store == clickData:
                         selected_feature = None
-                    if selected_feature in list_sub_features:
-                        for k, v in self.explainer.features_groups.items():
-                            if selected_feature in v:
-                                selected_feature = k
+                    selected_feature = get_feature_from_features_groups(selected_feature, self.explainer.features_groups)
+                elif ctx.triggered[0]['prop_id'] == 'ember_global_feature_importance.n_clicks':
+                    selected_feature = get_feature_from_features_groups(selected_feature, self.explainer.features_groups)
                 else:
                     selected_feature = None
                 
+            selection = get_indexes_from_datatable(data, list_index)
 
-            selection = [d['_index_'] for d in data]
-            if len(selection)==len(list_index) or len(selection)==0:
-                selection=None
-
-            group_name = selected_feature if (self.explainer.features_groups is not None
-                                              and selected_feature in self.explainer.features_groups.keys()) else None
+            group_name = get_group_name(selected_feature, self.explainer.features_groups)
 
             figure = self.explainer.plot.features_importance(
                 max_features=features,
@@ -1666,24 +1659,18 @@ class SmartApp:
             fs_figure: feature selector graph
             """
             # Zoom is False by Default. It becomes True if we click on it
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True  # To check if zoom is activated
+            zoom_active = get_figure_zoom(click_zoom)
             subset = None
             list_index = self.list_index
             if feature is not None:
-                selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
+                selected_feature = get_feature_from_clicked_data(feature)
             else:
                 selected_feature = self.selected_feature
 
             if feature is not None and feature['points'][0]['curveNumber'] == 0 and \
                 len(gfi_figure['data']) == 2:
-                subset = [d['_index_'] for d in data]
+                subset = get_indexes_from_datatable(data, list_index)
             else:
-                subset = None
-            if subset is not None and (len(subset)==len(list_index) or len(subset)==0):
                 subset = None
 
             fs_figure = self.explainer.plot.contribution_plot(
@@ -1883,11 +1870,7 @@ class SmartApp:
             detail feature graph
             """
             # Zoom is False by Default. It becomes True if we click on it
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True
+            zoom_active = get_figure_zoom(click_zoom)
             ctx = dash.callback_context
             selected = None
             if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
@@ -2174,7 +2157,7 @@ class SmartApp:
             if selectedData is not None and len(selectedData['points'])>0:
                 raise PreventUpdate
             else:
-                subset = [d['_index_'] for d in data]
+                subset = get_indexes_from_datatable(data)
 
             figure = self.explainer.plot.scatter_plot_prediction(
                     selection=subset,

@@ -4,7 +4,16 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from shapash import SmartExplainer
 from shapash.webapp.smart_app import SmartApp
-from shapash.webapp.utils.callbacks import select_data_from_prediction_picking, select_data_from_filters
+from shapash.webapp.utils.callbacks import (
+    select_data_from_prediction_picking, 
+    select_data_from_filters, 
+    get_feature_from_clicked_data,
+    get_feature_from_features_groups,
+    get_group_name,
+    get_indexes_from_datatable,
+    update_click_data_on_subset_changes,
+    get_figure_zoom
+)
 
 
 class TestCallbacks(unittest.TestCase):
@@ -36,6 +45,24 @@ class TestCallbacks(unittest.TestCase):
             additional_features_dict=additional_features_dict
         )
         self.smart_app = SmartApp(self.xpl)
+
+        self.click_data = {
+            'points': [
+                {
+                    'curveNumber': 0, 
+                    'pointNumber': 3, 
+                    'pointIndex': 3, 
+                    'x': 0.4649, 
+                    'y': 'Sex', 
+                    'label': 'Sex', 
+                    'value': 0.4649, 
+                    'customdata': 'Sex', 
+                    'marker.color': 'rgba(244, 192, 0, 1.0)', 
+                    'bbox': {'x0': 717.3, 'x1': 717.3, 'y0': 82.97, 'y1': 130.78}
+                }
+            ]
+        }
+
         super(TestCallbacks, self).__init__(*args, **kwargs)
 
     def test_default_init_data(self):
@@ -280,3 +307,70 @@ class TestCallbacks(unittest.TestCase):
             end_date,
         )
         pd.testing.assert_frame_equal(expected_result, result)
+    
+    def test_get_feature_from_clicked_data(self):
+        feature = get_feature_from_clicked_data(self.click_data)
+        assert feature == "Sex"
+    
+    def test_get_feature_from_features_groups(self):
+        features_groups = {"A": ["column1", "column3"]}
+        feature = get_feature_from_features_groups("column3", features_groups)
+        assert feature == "A"
+
+        feature = get_feature_from_features_groups("A", features_groups)
+        assert feature == "A"
+
+        feature = get_feature_from_features_groups("column2", features_groups)
+        assert feature == "column2"
+    
+    def test_get_group_name(self):
+        features_groups = {"A": ["column1", "column3"]}
+        feature = get_group_name("A", features_groups)
+        assert feature == "A"
+
+        feature = get_group_name("column3", features_groups)
+        assert feature == None
+    
+    def test_get_indexes_from_datatable(self):
+        data = self.smart_app.components['table']['dataset'].data 
+        subset = get_indexes_from_datatable(data)
+        assert subset == [0, 1, 2, 3, 4]
+    
+    def test_get_indexes_from_datatable_no_subset(self):
+        data = self.smart_app.components['table']['dataset'].data 
+        subset = get_indexes_from_datatable(data, [0, 1, 2, 3, 4])
+        assert subset == None
+    
+    def test_get_indexes_from_datatable_empty(self):
+        subset = get_indexes_from_datatable([], [0, 1, 2, 3, 4])
+        assert subset == None
+    
+    def test_update_click_data_on_subset_changes(self):
+        click_data = {
+            'points': [
+                {
+                    'curveNumber': 1, 
+                    'pointNumber': 3, 
+                    'pointIndex': 3, 
+                    'x': 0.4649, 
+                    'y': 'Sex', 
+                    'label': 'Sex', 
+                    'value': 0.4649, 
+                    'customdata': 'Sex', 
+                    'marker.color': 'rgba(244, 192, 0, 1.0)', 
+                    'bbox': {'x0': 717.3, 'x1': 717.3, 'y0': 82.97, 'y1': 130.78}
+                }
+            ]
+        }
+        click_data = update_click_data_on_subset_changes(click_data)
+        assert click_data == self.click_data
+    
+    def test_get_figure_zoom(self):
+        zoom_active = get_figure_zoom(None)
+        assert zoom_active == False
+
+        zoom_active = get_figure_zoom(1)
+        assert zoom_active == True
+
+        zoom_active = get_figure_zoom(4)
+        assert zoom_active == False
