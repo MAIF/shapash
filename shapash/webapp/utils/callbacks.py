@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
-
+import dash_bootstrap_components as dbc
 
 
 def select_data_from_prediction_picking(round_dataframe: pd.DataFrame, selected_data: dict) -> pd.DataFrame:
@@ -29,19 +29,19 @@ def select_data_from_prediction_picking(round_dataframe: pd.DataFrame, selected_
 
 
 def select_data_from_filters(
-        round_dataframe: pd.DataFrame,
-        id_feature: list, 
-        id_str_modality: list, 
-        id_bool_modality: list, 
-        id_lower_modality: list, 
-        id_date: list, 
-        val_feature: list, 
-        val_str_modality: list,
-        val_bool_modality: list,
-        val_lower_modality: list,
-        val_upper_modality: list,
-        start_date: list,
-        end_date: list,
+    round_dataframe: pd.DataFrame,
+    id_feature: list, 
+    id_str_modality: list, 
+    id_bool_modality: list, 
+    id_lower_modality: list, 
+    id_date: list, 
+    val_feature: list, 
+    val_str_modality: list,
+    val_bool_modality: list,
+    val_lower_modality: list,
+    val_upper_modality: list,
+    start_date: list,
+    end_date: list,
 ) -> pd.DataFrame:
     """Create a subset dataframe from filters.
 
@@ -240,3 +240,210 @@ def get_figure_zoom(click_zoom: int) -> bool :
     else:
         zoom_active = True
     return zoom_active
+
+
+def get_feature_contributions_sign_to_show(positive: list, negative: list) -> Optional[bool]:
+    """Get the feature contributions sign to show on plot.
+
+    Parameters
+    ----------
+    positive : list
+        Click on positive contributions
+    negative : list
+        Click on negative contributions
+
+    Returns
+    -------
+    Optional[bool]
+        Sign to show on plot
+    """
+    if positive == [1]:
+        sign = (None if negative == [1] else True)
+    else:
+        sign = (False if negative == [1] else None)
+    return sign
+
+
+def update_features_to_display(features: int, nb_columns: int, value: int) -> Tuple[int, int, dict]:
+    """Update features to display slider.
+
+    Parameters
+    ----------
+    features : int
+        Number of features to plot from the settings
+    nb_columns : int
+        Number of columns in the data
+    value : int
+        Number of columns to plot
+
+    Returns
+    -------
+    Tuple[int, int, dict]
+        Number of columns to plot, Number max of columns to plot, Marks in the slider
+    """
+    max = min(features, nb_columns)
+    if max % 5 == 0:
+        nb_marks = min(int(max // 5), 10)
+    elif max % 4 == 0:
+        nb_marks = min(int(max // 4), 10)
+    elif max % 3 == 0:
+        nb_marks = min(int(max // 3), 10)
+    elif max % 7 == 0:
+        nb_marks = min(int(max // 7), 10)
+    else:
+        nb_marks = 2
+    marks = {f'{round(max * feat / nb_marks)}': f'{round(max * feat / nb_marks)}'
+                for feat in range(1, nb_marks + 1)}
+    marks['1'] = '1'
+    if max < value:
+        value = max
+
+    return value, max, marks
+
+
+def get_id_card_features(data: list, selected: int, special_cols: list, features_dict: dict) -> pd.DataFrame:
+    """Get the features of the selected index for the identity card.
+
+    Parameters
+    ----------
+    data : list
+        Data from the table
+    selected : int
+        Row number of the selected index
+    special_cols : list
+        Sepcial columns about the index, the prediction...
+    features_dict : dict
+        Dictionary mapping technical feature names to domain names
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe of the features
+    """
+    selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
+    selected_row["feature_name"] = selected_row.index.map(
+        lambda x: x if x in special_cols else features_dict[x]
+    )
+    return selected_row
+
+
+def get_id_card_contrib(
+    data: dict, 
+    index: int, 
+    features_dict: dict, 
+    columns_dict: dict, 
+    label_num: int = None
+) -> pd.DataFrame:
+    """Get the contributions of the selected index for the identity card.
+
+    Parameters
+    ----------
+    data : dict
+        Data from the smart explainer
+    index : int
+        Index selected
+    features_dict : dict
+        Dictionary mapping technical feature names to domain names
+    columns_dict : dict
+        Dictionary mapping integer column number to technical feature names
+    label_num : int, optional
+        Label num, by default None
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe of the contributions
+    """
+    if label_num is not None:
+        contrib = data['contrib_sorted'][label_num].loc[index, :].values
+        var_dict = data['var_dict'][label_num].loc[index, :].values
+    else:
+        contrib = data['contrib_sorted'].loc[index, :].values
+        var_dict = data['var_dict'].loc[index, :].values
+
+    var_dict = [features_dict[columns_dict[x]] for x in var_dict]
+    selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
+    selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
+
+    return selected_contrib
+
+
+def create_id_card_data(
+    selected_row: pd.DataFrame,
+    selected_contrib: pd.DataFrame, 
+    sort_by: str, 
+    order: bool,
+    special_cols: list, 
+    additional_features_dict: dict
+) -> pd.DataFrame:
+    """Merge and sort features and contributions dataframes for the identity card.
+
+    Parameters
+    ----------
+    selected_row : pd.DataFrame
+        Dataframe of the features
+    selected_contrib : pd.DataFrame
+        Dataframe of the contributions
+    sort_by : str
+        Column to sort by
+    order : bool
+        Ascending or descending order
+    special_cols : list
+        Sepcial columns about the index, the prediction...
+    additional_features_dict : dict
+        Dictionary mapping technical feature names to domain names for additional data
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe of the data for the identity card
+    """
+    selected_data = selected_row.merge(selected_contrib, how="left", on="feature_name")
+    selected_data.index = selected_row.index
+    selected_data = pd.concat([
+        selected_data.loc[special_cols], 
+        selected_data.drop(index=special_cols+list(additional_features_dict.keys())).sort_values(sort_by, ascending=order),
+        selected_data.loc[list(additional_features_dict.keys())].sort_values(sort_by, ascending=order)
+    ])
+
+    return selected_data
+
+
+def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict: dict) -> list:
+    """Create the layout of the identity card
+
+    Parameters
+    ----------
+    selected_data : pd.DataFrame
+        Dataframe of the data for the identity card
+    additional_features_dict : dict
+        Dictionary mapping technical feature names to domain names for additional data
+
+    Returns
+    -------
+    list
+        Layout of the identity card
+    """
+    children = []
+    for _, row in selected_data.iterrows():
+        label_style = {
+            'fontWeight': 'bold', 
+            'font-style': 'italic'
+        } if row["feature_name"] in additional_features_dict.values() else {'fontWeight': 'bold'}
+        children.append(
+            dbc.Row([
+                dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style), 
+                dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
+                dbc.Col(width=1),
+                dbc.Col(
+                    dbc.Row(
+                        dbc.Label(format(row["feature_contrib"], '.4f'), width="auto", style={"padding-top":0}), 
+                        justify="end"
+                    ), 
+                    width=2, 
+                    className="id_card_solid",
+                ) if row["feature_contrib"]==row["feature_contrib"] else None,
+            ])
+        )
+    
+    return children

@@ -1,4 +1,5 @@
 import unittest
+import copy
 import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
@@ -12,7 +13,13 @@ from shapash.webapp.utils.callbacks import (
     get_group_name,
     get_indexes_from_datatable,
     update_click_data_on_subset_changes,
-    get_figure_zoom
+    get_figure_zoom,
+    get_feature_contributions_sign_to_show,
+    update_features_to_display,
+    get_id_card_features,
+    get_id_card_contrib,
+    create_id_card_data,
+    create_id_card_layout,
 )
 
 
@@ -31,7 +38,7 @@ class TestCallbacks(unittest.TestCase):
         self.df = df
 
         dataframe_x = df[['column1','column3']].copy()
-        y_target = pd.DataFrame(data=np.array([1, 2, 3, 4, 5]), columns=['pred'])
+        y_target = pd.DataFrame(data=np.array([0, 0, 0, 1, 1]), columns=['pred'])
         model = DecisionTreeClassifier().fit(dataframe_x, y_target)
         features_dict = {'column3': 'Useless col'}
         additional_data = df[['column2']].copy()
@@ -62,6 +69,7 @@ class TestCallbacks(unittest.TestCase):
                 }
             ]
         }
+        self.special_cols = ['_index_', '_predict_', '_target_']
 
         super(TestCallbacks, self).__init__(*args, **kwargs)
 
@@ -69,8 +77,8 @@ class TestCallbacks(unittest.TestCase):
         expected_result = pd.DataFrame(
             {
                 '_index_': [0, 1, 2, 3, 4],
-                '_predict_': [1, 2, 3, 4, 5],
-                '_target_': [1, 2, 3, 4, 5],
+                '_predict_': [0, 0, 0, 1, 1],
+                '_target_': [0, 0, 0, 1, 1],
                 'column1': [1, 2, 3, 4, 5],
                 'column3': [1.1, 3.3, 2.2, 4.4, 5.5],
                 '_column2': ['a', 'b', 'c', 'd', 'e'],
@@ -374,3 +382,93 @@ class TestCallbacks(unittest.TestCase):
 
         zoom_active = get_figure_zoom(4)
         assert zoom_active == False
+    
+    def test_get_feature_contributions_sign_to_show(self):
+        sign = get_feature_contributions_sign_to_show([1], [1])
+        assert sign == None
+
+        sign = get_feature_contributions_sign_to_show([1], [])
+        assert sign == True
+
+        sign = get_feature_contributions_sign_to_show([], [])
+        assert sign == None
+
+        sign = get_feature_contributions_sign_to_show([], [1])
+        assert sign == False
+
+    def test_update_features_to_display(self):
+        value, max, marks = update_features_to_display(20, 40, 22)
+        assert value==20
+        assert max==20
+        assert marks=={'1': '1', '5': '5', '10': '10', '15': '15', '20': '20'}
+
+        value, max, marks = update_features_to_display(7, 40, 6)
+        assert value==6
+        assert max==7
+        assert marks=={'1': '1', '7': '7'}
+    
+    def test_get_id_card_features(self):
+        data = self.smart_app.components['table']['dataset'].data
+        features_dict = copy.deepcopy(self.xpl.features_dict)
+        features_dict.update(self.xpl.additional_features_dict)
+        selected_row = get_id_card_features(data, 3, self.special_cols, features_dict)
+        expected_result = pd.DataFrame(
+            {
+                'feature_value': [3, 1, 1, 4, 4.4, 'd'],
+                'feature_name': ['_index_', '_predict_', '_target_', 'column1', 'Useless col', '_Additional col'],
+            },
+            index = ['_index_', '_predict_', '_target_', 'column1', 'column3', '_column2']
+        )
+        pd.testing.assert_frame_equal(selected_row, expected_result)
+    
+    def test_get_id_card_contrib(self):
+        data = self.xpl.data
+        selected_contrib = get_id_card_contrib(data, 3, self.xpl.features_dict, self.xpl.columns_dict, 0)
+        assert set(selected_contrib['feature_name']) == {'Useless col', 'column1'}
+        assert selected_contrib.columns.tolist() == ['feature_name', 'feature_contrib']
+
+    def test_create_id_card_data(self):
+        selected_row = pd.DataFrame(
+            {
+                'feature_value': [3, 1, 1, 4, 4.4, 'd'],
+                'feature_name': ['_index_', '_predict_', '_target_', 'column1', 'Useless col', '_Additional col'],
+            },
+            index = ['_index_', '_predict_', '_target_', 'column1', 'column3', '_column2']
+        )
+
+        selected_contrib = pd.DataFrame(
+            {
+                'feature_name': ['column1', 'Useless col'],
+                'feature_contrib': [-0.6, 0],
+            }
+        )
+
+        selected_data = create_id_card_data(
+            selected_row, 
+            selected_contrib, 
+            'feature_name', 
+            True, 
+            self.special_cols, 
+            self.xpl.additional_features_dict
+        )
+        expected_result = pd.DataFrame(
+            {
+                'feature_value': [3, 1, 1, 4.4, 4, 'd'],
+                'feature_name': ['_index_', '_predict_', '_target_', 'Useless col', 'column1', '_Additional col'],
+                'feature_contrib': [np.nan, np.nan, np.nan, 0.0, -0.6, np.nan]
+            },
+            index = ['_index_', '_predict_', '_target_', 'column3', 'column1', '_column2']
+        )
+        pd.testing.assert_frame_equal(selected_data, expected_result)
+    
+    def test_create_id_card_layout(self):
+        selected_data = pd.DataFrame(
+            {
+                'feature_value': [3, 1, 1, 4.4, 4, 'd'],
+                'feature_name': ['_index_', '_predict_', '_target_', 'Useless col', 'column1', '_Additional col'],
+                'feature_contrib': [np.nan, np.nan, np.nan, 0.0, -0.6, np.nan]
+            },
+            index = ['_index_', '_predict_', '_target_', 'column3', 'column1', '_column2']
+        )
+        children = create_id_card_layout(selected_data, self.xpl.additional_features_dict)
+        assert len(children)==6

@@ -32,7 +32,13 @@ from shapash.webapp.utils.callbacks import (
     get_group_name,
     get_indexes_from_datatable,
     update_click_data_on_subset_changes,
-    get_figure_zoom
+    get_figure_zoom,
+    get_feature_contributions_sign_to_show,
+    update_features_to_display,
+    get_id_card_features,
+    get_id_card_contrib,
+    create_id_card_data,
+    create_id_card_layout
 )
 
 
@@ -1736,22 +1742,15 @@ class SmartApp:
             """
             ctx = dash.callback_context
             selected = None
-            if ctx.triggered[0]['prop_id'] != 'dataset.data':
-                if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                    selected = click_data['points'][0]['customdata'][1]
-                elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
-                    selected = prediction_picking['points'][0]['customdata']
-                elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
-                    if cell is not None:
-                        selected = data[cell['row']]['_index_']
-                    else:
-                        # Get actual value in field to refresh the selected value
-                        selected = current_index_id
-                elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                      (None in nclicks_del)):
-                    selected = current_index_id
-            else:
-                raise PreventUpdate
+            if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
+                selected = click_data['points'][0]['customdata'][1]
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
+                selected = prediction_picking['points'][0]['customdata']
+            elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
+                selected = data[cell['row']]['_index_']
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                    (None in nclicks_del)):
+                selected = current_index_id
             return selected, True
 
         @app.callback(
@@ -1792,25 +1791,11 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    max = min(features, len(self.explainer.x_init.columns))
-                    if max // 5 == max / 5:
-                        nb_marks = min(int(max // 5), 10)
-                    elif max // 4 == max / 4:
-                        nb_marks = min(int(max // 4), 10)
-                    elif max // 3 == max / 3:
-                        nb_marks = min(int(max // 3), 10)
-                    elif max // 7 == max / 7:
-                        nb_marks = min(int(max // 6), 10)
-                    else:
-                        nb_marks = 2
-                    marks = {f'{round(max * feat / nb_marks)}': f'{round(max * feat / nb_marks)}'
-                             for feat in range(1, nb_marks + 1)}
-                    marks['1'] = '1'
-                    if max < value:
-                        value = max
-                    else:
-                        value = no_update
-
+                    value, max, marks = update_features_to_display(
+                        features, 
+                        len(self.explainer.x_init.columns), 
+                        value
+                    )
                     return value, max, marks
 
         @app.callback(
@@ -1822,9 +1807,6 @@ class SmartApp:
                 Input('check_id_negative', 'value'),
                 Input('masked_contrib_id', 'value'),
                 Input('select_label', 'value'),
-                Input('dataset', 'active_cell'),
-                Input('feature_selector', 'clickData'),
-                Input('prediction_picking', 'clickData'),
                 Input("validation", "n_clicks"),
                 Input('bool_groups', 'on'),
                 Input('ember_detail_feature', 'n_clicks'),
@@ -1840,9 +1822,6 @@ class SmartApp:
                                   negative,
                                   masked,
                                   label,
-                                  cell,
-                                  click_data,
-                                  prediction_picking,
                                   validation_click,
                                   bool_group,
                                   click_zoom,
@@ -1871,29 +1850,11 @@ class SmartApp:
             """
             # Zoom is False by Default. It becomes True if we click on it
             zoom_active = get_figure_zoom(click_zoom)
-            ctx = dash.callback_context
-            selected = None
-            if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                selected = click_data['points'][0]['customdata'][1]
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
-                selected = prediction_picking['points'][0]['customdata']
-            elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
-                selected = index
-            elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
-                if cell:
-                    selected = data[cell['row']]['_index_']
-                else:
-                    zoom_active = zoom_active
-                    # raise PreventUpdate
-            else:
-                selected = index
+            selected = index
             if check_row(data, selected) is None:
                 selected = None
             threshold = threshold if threshold != 0 else None
-            if positive == [1]:
-                sign = (None if negative == [1] else True)
-            else:
-                sign = (False if negative == [1] else None)
+            sign = get_feature_contributions_sign_to_show(positive, negative)
             self.explainer.filter(threshold=threshold,
                                   features_to_hide=masked,
                                   positive=sign,
@@ -1970,54 +1931,43 @@ class SmartApp:
             selected = check_row(data, index)
             title_contrib = "Contribution"
             if n_submit and selected is not None:
-                selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
-                selected_row["feature_name"] = selected_row.index.map(
-                    lambda x: x if x in self.special_cols else self.features_dict[x]
-                )
+                selected_row = get_id_card_features(data, selected, self.special_cols, self.features_dict)
                 if self.explainer._case == 'classification':
                     if label is None:
                         label = -1
                     label_num, _, label_value = self.explainer.check_label_name(label)
-                    contrib = self.explainer.data['contrib_sorted'][label_num].loc[index, :].values
-                    var_dict = self.explainer.data['var_dict'][label_num].loc[index, :].values
+                    selected_contrib = get_id_card_contrib(
+                        self.explainer.data, 
+                        index,
+                        self.explainer.features_dict,
+                        self.explainer.columns_dict,
+                        label_num
+                    )
                     proba = self.explainer.plot.local_pred(index, label_num)
                     title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
-                    _, _, predicted_label_value = self.explainer.check_label_name(selected_row.loc["_predict_", "feature_value"])
+                    _, _, predicted_label_value = self.explainer.check_label_name(
+                        selected_row.loc["_predict_", "feature_value"]
+                    )
                     selected_row.loc["_predict_", "feature_value"] = predicted_label_value
                 else:
-                    contrib = self.explainer.data['contrib_sorted'].loc[index, :].values
-                    var_dict = self.explainer.data['var_dict'].loc[index, :].values
-                var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
-                selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
-                selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
-                selected_data = selected_row.merge(selected_contrib, how="left", on="feature_name")
-                selected_data.index = selected_row.index
-                selected_data = pd.concat([
-                    selected_data.loc[self.special_cols], 
-                    selected_data.drop(index=self.special_cols+list(self.explainer.additional_features_dict.keys())).sort_values(sort_by, ascending=order),
-                    selected_data.loc[list(self.explainer.additional_features_dict.keys())].sort_values(sort_by, ascending=order)
-                ])
-                children = []
-                for _, row in selected_data.iterrows():
-                    label_style = {
-                        'fontWeight': 'bold', 
-                        'font-style': 'italic'
-                    } if row["feature_name"] in self.explainer.additional_features_dict.values() else {'fontWeight': 'bold'}
-                    children.append(
-                        dbc.Row([
-                            dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style), 
-                            dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
-                            dbc.Col(width=1),
-                            dbc.Col(
-                                dbc.Row(
-                                    dbc.Label(format(row["feature_contrib"], '.4f'), width="auto", style={"padding-top":0}), 
-                                    justify="end"
-                                ), 
-                                width=2, 
-                                className="id_card_solid",
-                            ) if row["feature_contrib"]==row["feature_contrib"] else None,
-                        ])
+                    selected_contrib = get_id_card_contrib(
+                        self.explainer.data, 
+                        index,
+                        self.explainer.features_dict,
+                        self.explainer.columns_dict,
                     )
+                
+                selected_data = create_id_card_data(
+                    selected_row,
+                    selected_contrib,
+                    sort_by,
+                    order,
+                    self.special_cols,
+                    self.explainer.additional_features_dict
+                )
+
+                children = create_id_card_layout(selected_data, self.explainer.additional_features_dict)
+
                 return {"display":"flex", "margin-left":"auto", "margin-right":0}, children, title_contrib
             else:
                 return {"display":"none"}, [], title_contrib
