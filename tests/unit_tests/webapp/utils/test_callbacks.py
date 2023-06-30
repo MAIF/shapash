@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
+from dash import dcc
 from shapash import SmartExplainer
 from shapash.webapp.smart_app import SmartApp
 from shapash.webapp.utils.callbacks import (
@@ -20,6 +21,8 @@ from shapash.webapp.utils.callbacks import (
     get_id_card_contrib,
     create_id_card_data,
     create_id_card_layout,
+    get_feature_filter_options,
+    create_filter_modalities_selection
 )
 
 
@@ -472,3 +475,16 @@ class TestCallbacks(unittest.TestCase):
         )
         children = create_id_card_layout(selected_data, self.xpl.additional_features_dict)
         assert len(children)==6
+    
+    def test_get_feature_filter_options(self):
+        features_dict = copy.deepcopy(self.xpl.features_dict)
+        features_dict.update(self.xpl.additional_features_dict)
+        options = get_feature_filter_options(self.smart_app.dataframe, features_dict, self.special_cols)
+        assert [option["label"] for option in options]==['_index_', '_predict_', '_target_', 'Useless col', '_Additional col', 'column1']
+    
+    def test_create_filter_modalities_selection(self):
+        new_element = create_filter_modalities_selection("column3", {'type': 'var_dropdown', 'index': 1}, self.smart_app.round_dataframe)
+        assert type(new_element.children[0])==dcc.Input
+
+        new_element = create_filter_modalities_selection("_column2", {'type': 'var_dropdown', 'index': 1}, self.smart_app.round_dataframe)
+        assert type(new_element.children)==dcc.Dropdown

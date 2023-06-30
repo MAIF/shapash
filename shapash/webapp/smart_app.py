@@ -38,7 +38,10 @@ from shapash.webapp.utils.callbacks import (
     get_id_card_features,
     get_id_card_contrib,
     create_id_card_data,
-    create_id_card_layout
+    create_id_card_layout,
+    get_feature_filter_options,
+    create_dropdown_feature_filter,
+    create_filter_modalities_selection
 )
 
 
@@ -2275,66 +2278,11 @@ class SmartApp:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-            # We use domain name for feature name
-            dict_name = [self.features_dict[i]
-                         for i in self.dataframe.drop(self.special_cols, axis=1).columns]
-            dict_id = [i for i in self.dataframe.drop(self.special_cols, axis=1).columns]
-            # Create dataframe to sort it by feature_name
-            df_feature_name = pd.DataFrame({'feature_name': dict_name,
-                                            'feature_id': dict_id})
-            df_feature_name = df_feature_name.sort_values(
-                by='feature_name').reset_index(drop=True)
-            # Options are sorted by feature_name
-            options = [{"label": i, "value": i} for i in self.special_cols] + \
-                [{"label": df_feature_name.loc[i, 'feature_name'],
-                  "value": df_feature_name.loc[i, 'feature_id']}
-                 for i in range(len(df_feature_name))]
+            options = get_feature_filter_options(self.dataframe, self.features_dict, self.special_cols)
 
             # Creation of a new graph
             if button_id == 'add_dropdown_button':
-                # ID index definition
-                if n_clicks_add is None:
-                    index_id = 0
-                else:
-                    index_id = n_clicks_add
-                # Appending a dropdown block to 'dropdowns_container'children
-                subset_filter = html.Div(
-                    id={'type': 'bloc_div',
-                        'index': index_id},
-                    children=[
-                        html.Div([
-                            html.Br(),
-                            # div which will contains label
-                            html.Div(
-                                    id={'type': 'dynamic-output-label',
-                                        'index': index_id},
-                                    )
-                            ]),
-                        html.Div([
-                            # div with dopdown button to select feature to filter
-                            html.Div(dcc.Dropdown(
-                                id={'type': 'var_dropdown',
-                                    'index': index_id},
-                                options=options,
-                                placeholder="Variable"
-                            ), style={"width": "30%"}),
-                            # div which will contains modalities
-                            html.Div(
-                                 id={'type': 'dynamic-output',
-                                     'index': index_id},
-                                 style={"width": "50%"}
-                                ),
-                            # Button to delete bloc
-                            dbc.Button(
-                                id={'type': 'del_dropdown_button',
-                                    'index': index_id},
-                                children='X',
-                                color='warning',
-                                size='sm'
-                            )
-                        ], style={'display': 'flex'})
-                    ]
-                )
+                subset_filter = create_dropdown_feature_filter(n_clicks_add, options)
                 return currents_filters + [subset_filter]
             # Removal of all existing filters
             elif button_id == 'reset_dropdown_button':
@@ -2455,73 +2403,14 @@ class SmartApp:
             # Context and init handling (no action)
             ctx = dash.callback_context
             if not ctx.triggered:
-                raise dash.exceptions.PreventUpdate
+                raise PreventUpdate
             # No update last modalities values if we click on add button
             if ctx.triggered[0]['prop_id'] == 'add_dropdown_button.n_clicks':
-                raise dash.exceptions.PreventUpdate
+                raise PreventUpdate
             # Creation on modalities dropdown button
             else:
                 if value is not None:
-                    if type(self.round_dataframe[value].iloc[0]) == bool:
-                        new_element = html.Div(dcc.RadioItems(
-                            [{'label': val, 'value': val} for
-                             val in self.round_dataframe[value].unique()],
-                            id={'type': 'dynamic-bool',
-                                'index': id['index']},
-                            value=self.round_dataframe[value].iloc[0],
-                            inline=False
-                            ), style={"width": "65%", 'margin-left': '20px'})
-                    elif (type(self.round_dataframe[value].iloc[0]) == str) | \
-                         ((type(self.round_dataframe[value].iloc[0]) == np.int64) &
-                          (len(self.round_dataframe[value].unique()) <= 20)):
-                        new_element = html.Div(dcc.Dropdown(
-                            id={
-                               'type': 'dynamic-str',
-                               'index': id['index']
-                            },
-                            options=[{'label': i, 'value': i} for
-                                    i in np.sort(self.round_dataframe[value].unique())],
-                            multi=True,
-                            ), style={"width": "65%", 'margin-left': '20px'})
-                    elif ((type(self.round_dataframe[value].iloc[0]) is pd.Timestamp) |
-                          (type(self.round_dataframe[value].iloc[0]) is datetime.datetime)):
-                        new_element = html.Div(
-                            dcc.DatePickerRange(
-                                id={
-                                   'type': 'dynamic-date',
-                                   'index': id['index']
-                                },
-                                min_date_allowed=self.round_dataframe[value].min(),
-                                max_date_allowed=self.round_dataframe[value].max(),
-                                start_date=self.round_dataframe[value].min(),
-                                end_date=self.round_dataframe[value].max()
-                               ), style={'width': '65%', 'margin-left': '20px'}),
-                    else:
-                        lower_value = 0
-                        upper_value = 0
-                        new_element = html.Div([
-                                            dcc.Input(
-                                                id={
-                                                    'type': 'lower',
-                                                    'index': id['index']
-                                                },
-                                                value=lower_value,
-                                                type="number",
-                                                style={'width': '60px'}),
-                                            ' <= {} in [{}, {}]<= '.format(
-                                                value,
-                                                self.round_dataframe[value].min(),
-                                                self.round_dataframe[value].max()),
-                                            dcc.Input(
-                                                id={
-                                                    'type': 'upper',
-                                                    'index': id['index']
-                                                },
-                                                value=upper_value,
-                                                type="number",
-                                                style={'width': '60px'}
-                                            )
-                        ], style={'margin-left': '20px'})
+                    new_element = create_filter_modalities_selection(value, id, self.round_dataframe)
                 else:
                     new_element = html.Div()
                 return new_element

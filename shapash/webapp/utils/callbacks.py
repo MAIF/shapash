@@ -2,6 +2,8 @@ from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
+import datetime
+from dash import dcc, html
 import dash_bootstrap_components as dbc
 
 
@@ -447,3 +449,181 @@ def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict:
         )
     
     return children
+
+
+def get_feature_filter_options(dataframe: pd.DataFrame, features_dict: dict, special_cols: list) -> list:
+    """Get the columns names options for the filter.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        Dataframe
+    features_dict : dict
+        Dictionary mapping technical feature names to domain names
+    special_cols : list
+        Sepcial columns about the index, the prediction...
+
+    Returns
+    -------
+    list
+        Options for the filter
+    """
+    # We use domain name for feature name
+    dict_name = [features_dict[i]
+                    for i in dataframe.drop(special_cols, axis=1).columns]
+    dict_id = [i for i in dataframe.drop(special_cols, axis=1).columns]
+    # Create dataframe to sort it by feature_name
+    df_feature_name = pd.DataFrame({'feature_name': dict_name,
+                                    'feature_id': dict_id})
+    df_feature_name = df_feature_name.sort_values(
+        by='feature_name').reset_index(drop=True)
+    # Options are sorted by feature_name
+    options = [{"label": i, "value": i} for i in special_cols] + \
+        [{"label": df_feature_name.loc[i, 'feature_name'],
+            "value": df_feature_name.loc[i, 'feature_id']}
+            for i in range(len(df_feature_name))]
+
+    return options
+
+
+def create_dropdown_feature_filter(n_clicks_add: Optional[int], options: list) -> html.Div:
+    """Create a new dropdown for the filter feature selection.
+
+    Parameters
+    ----------
+    n_clicks_add : Optional[int]
+        Number of clicks on the add filter button
+    options : list
+        Options for the selection
+
+    Returns
+    -------
+    html.Div
+        Div containing the dropdown
+    """
+    # ID index definition
+    if n_clicks_add is None:
+        index_id = 0
+    else:
+        index_id = n_clicks_add
+    # Appending a dropdown block to 'dropdowns_container'children
+    subset_filter = html.Div(
+        id={'type': 'bloc_div',
+            'index': index_id},
+        children=[
+            html.Div([
+                html.Br(),
+                # div which will contains label
+                html.Div(
+                        id={'type': 'dynamic-output-label',
+                            'index': index_id},
+                        )
+                ]),
+            html.Div([
+                # div with dopdown button to select feature to filter
+                html.Div(dcc.Dropdown(
+                    id={'type': 'var_dropdown',
+                        'index': index_id},
+                    options=options,
+                    placeholder="Variable"
+                ), style={"width": "30%"}),
+                # div which will contains modalities
+                html.Div(
+                        id={'type': 'dynamic-output',
+                            'index': index_id},
+                        style={"width": "50%"}
+                    ),
+                # Button to delete bloc
+                dbc.Button(
+                    id={'type': 'del_dropdown_button',
+                        'index': index_id},
+                    children='X',
+                    color='warning',
+                    size='sm'
+                )
+            ], style={'display': 'flex'})
+        ]
+    )
+
+    return subset_filter
+
+
+def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd.DataFrame) -> html.Div:
+    """Create the modalities filter according to the feature type.
+
+    Parameters
+    ----------
+    value : str
+        feature name
+    id : dict
+        id of the filter
+    round_dataframe : pd.DataFrame
+        Dataframe
+
+    Returns
+    -------
+    html.Div
+        Div containing the modalities selection options
+    """
+    if type(round_dataframe[value].iloc[0]) == bool:
+        new_element = html.Div(dcc.RadioItems(
+            [{'label': val, 'value': val} for
+                val in round_dataframe[value].unique()],
+            id={'type': 'dynamic-bool',
+                'index': id['index']},
+            value=round_dataframe[value].iloc[0],
+            inline=False
+            ), style={"width": "65%", 'margin-left': '20px'})
+    elif (type(round_dataframe[value].iloc[0]) == str) | \
+            ((type(round_dataframe[value].iloc[0]) == np.int64) &
+            (len(round_dataframe[value].unique()) <= 20)):
+        new_element = html.Div(dcc.Dropdown(
+            id={
+                'type': 'dynamic-str',
+                'index': id['index']
+            },
+            options=[{'label': i, 'value': i} for
+                    i in np.sort(round_dataframe[value].unique())],
+            multi=True,
+            ), style={"width": "65%", 'margin-left': '20px'})
+    elif ((type(round_dataframe[value].iloc[0]) is pd.Timestamp) |
+            (type(round_dataframe[value].iloc[0]) is datetime.datetime)):
+        new_element = html.Div(
+            dcc.DatePickerRange(
+                id={
+                    'type': 'dynamic-date',
+                    'index': id['index']
+                },
+                min_date_allowed=round_dataframe[value].min(),
+                max_date_allowed=round_dataframe[value].max(),
+                start_date=round_dataframe[value].min(),
+                end_date=round_dataframe[value].max()
+                ), style={'width': '65%', 'margin-left': '20px'}),
+    else:
+        lower_value = 0
+        upper_value = 0
+        new_element = html.Div([
+                            dcc.Input(
+                                id={
+                                    'type': 'lower',
+                                    'index': id['index']
+                                },
+                                value=lower_value,
+                                type="number",
+                                style={'width': '60px'}),
+                            ' <= {} in [{}, {}]<= '.format(
+                                value,
+                                round_dataframe[value].min(),
+                                round_dataframe[value].max()),
+                            dcc.Input(
+                                id={
+                                    'type': 'upper',
+                                    'index': id['index']
+                                },
+                                value=upper_value,
+                                type="number",
+                                style={'width': '60px'}
+                            )
+        ], style={'margin-left': '20px'})
+
+    return new_element
