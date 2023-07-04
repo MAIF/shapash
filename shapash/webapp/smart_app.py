@@ -16,8 +16,6 @@ from flask import Flask
 import pandas as pd
 import plotly.graph_objs as go
 import random
-import numpy as np
-import datetime
 import re
 from math import log10
 from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
