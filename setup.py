@@ -19,8 +19,8 @@ with open(os.path.join(here, 'shapash', "__version__.py")) as f:
 requirements = [
     'plotly>=5.0.0',
     'matplotlib>=3.2.0',
-    'numpy>1.18.0,<1.24.0',
-    'pandas>1.0.2,<2.0.0',
+    'numpy>1.18.0',
+    'pandas>1.0.2',
     'shap>=0.38.1',
     'Flask<2.3.0',
     'dash>=2.3.1',
