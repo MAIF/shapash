@@ -175,7 +175,7 @@ def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str,  nb_cat_ma
     df_cat_other = df_cat.loc[df_cat[col].isin(list_cat_to_merge)] \
         .groupby(hue, as_index=False)[["count", "Percent"]].sum()
     df_cat_other[col] = "Other"
-    return df_cat.loc[~df_cat[col].isin(list_cat_to_merge)].append(df_cat_other)
+    return pd.concat([df_cat.loc[~df_cat[col].isin(list_cat_to_merge)],df_cat_other], axis=0)
 
 
 def generate_confusion_matrix_plot(

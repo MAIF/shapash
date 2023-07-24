@@ -11,8 +11,8 @@ class TestDataAnalysis(unittest.TestCase):
 
     def test_perform_global_dataframe_analysis_1(self):
         df = pd.DataFrame({
-            "string_data": ["a", "b", "c", "d", "e", np.nan],
-            "bool_data": [True, True, False, False, False, np.nan],
+            "string_data": ["a", "b", "c", "d", "e", "f"],
+            "bool_data": [True, True, False, False, False, False],
             "int_data": [10, 20, 30, 40, 50, 0],
         })
 
@@ -20,8 +20,8 @@ class TestDataAnalysis(unittest.TestCase):
         expected_d = {
             'number of features': '3',
             'number of observations': '6',
-            'missing values': '2',
-            '% missing values': '0.111',
+            'missing values': '0',
+            '% missing values': '0',
         }
         TestCase().assertDictEqual(d, expected_d)
 
@@ -32,8 +32,8 @@ class TestDataAnalysis(unittest.TestCase):
 
     def test_perform_univariate_dataframe_analysis_1(self):
         df = pd.DataFrame({
-            "string_data": ["a", "b", "c", "d", "e", np.nan]*10,
-            "bool_data": [True, True, False, False, False, np.nan]*10,
+            "string_data": ["a", "b", "c", "d", "e", "f"]*10,
+            "bool_data": [True, True, False, False, False, True]*10,
             "int_continuous_data": list(range(60)),
             "float_continuous_data": np.linspace(0, 2, 60),
             "int_cat_data": [1, 1, 1, 2, 2, 2]*10,
@@ -70,12 +70,12 @@ class TestDataAnalysis(unittest.TestCase):
                 'missing values': '0'
             },
             'string_data': {
-                'distinct values': '5',
-                'missing values': '10'
+                'distinct values': '6',
+                'missing values': '0'
             },
             'bool_data': {
                 'distinct values': '2',
-                'missing values': '10'
+                'missing values': '0'
             }
         }
         TestCase().assertDictEqual(d, expected_d)

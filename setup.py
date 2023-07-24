@@ -22,6 +22,7 @@ requirements = [
     'numpy>1.18.0',
     'pandas>1.0.2',
     'shap>=0.38.1',
+    'Flask<2.3.0',
     'dash>=2.3.1',
     'dash-bootstrap-components>=1.1.0',
     'dash-core-components>=2.0.0',
@@ -43,7 +44,7 @@ extras['report'] = [
     'nbconvert==6.0.7',
     'papermill>=2.0.0',
     'jupyter-client<8.0.0',
-    'seaborn<=0.11.2',
+    'seaborn>=0.12.2',
     'notebook',
     'Jinja2>=2.11.0',
     'phik'

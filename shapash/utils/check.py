@@ -135,13 +135,13 @@ def check_y(x=None, y=None, y_name="y_target"):
         if isinstance(y, pd.DataFrame):
             if y.shape[1] > 1:
                 raise ValueError(f"{y_name} must be a one column pd.Dataframe or pd.Series.")
-            if not (y.dtypes[0] in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
+            if not (y.dtypes[0] in [float, int, np.int32, np.float32, np.int64, np.float64]):
                 raise ValueError(f"{y_name} must contain int or float only")
         if isinstance(y, pd.Series):
-            if not (y.dtype in [np.float, np.int, np.int32, np.float32, np.int64, np.float64]):
+            if not (y.dtype in [float, int, np.int32, np.float32, np.int64, np.float64]):
                 raise ValueError(f"{y_name} must contain int or float only")
             y = y.to_frame()
-            if isinstance(y.columns[0], (np.int, np.float)):
+            if isinstance(y.columns[0], (int, float)):
                 y.columns = [y_name]
     return y
 
