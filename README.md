@@ -35,16 +35,16 @@
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
-| 2.3.x         |  Additional dataset columns <br> [New demo](https://shapash-demo.ossbymaif.fr/) <br> [Article](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)                                                                | In Webapp: Target and error columns added to dataset and possibility to add features outside the model for more filtering options            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/add_column_icon.png" width="50" title="add_column">](https://github.com/MAIF/shapash/blob/master/tutorial/webapp/tuto-webapp01-additional-data.ipynb)
-| 2.3.x         |  Identity card <br> [New demo](https://shapash-demo.ossbymaif.fr/) <br> [Article](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)                                                                  | In Webapp: New identity card to summarize the information of the selected sample                  |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/identity_card.png" width="50" title="identity">](https://github.com/MAIF/shapash/blob/master/tutorial/webapp/tuto-webapp01-additional-data.ipynb)
-| 2.2.x         |  Picking samples <br> [Article](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)                                                                | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values"            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb)
+| 2.3.x         |  Additional dataset columns <br> [New demo](https://shapash-demo.ossbymaif.fr/) <br> [Article](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)                                                                | In Webapp: Target and error columns added to dataset and possibility to add features outside the model for more filtering options            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/add_column_icon.png" width="50" title="add_column">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_webapp/tuto-webapp01-additional-data.ipynb)
+| 2.3.x         |  Identity card <br> [New demo](https://shapash-demo.ossbymaif.fr/) <br> [Article](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)                                                                  | In Webapp: New identity card to summarize the information of the selected sample                  |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/identity_card.png" width="50" title="identity">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_webapp/tuto-webapp01-additional-data.ipynb)
+| 2.2.x         |  Picking samples <br> [Article](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)                                                                | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values"            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb)
 | 2.2.x         |  Dataset Filter <br>                                                              | New tab in the webapp to filter data. And several improvements in the webapp: subtitles, labels, screen adjustments                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webapp.png" width="50" title="webapp">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
-| 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](https://github.com/MAIF/shapash/blob/master/tutorial/backend/tuto-backend-01.ipynb)
+| 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](/home/78257d/shapash/tutorial/explainer_and_backend/tuto-expl06-Shapash-custom-backend.ipynb)
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
 | 1.6.x         |  Explainability Quality Metrics <br> [Article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb) 
-| 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://towardsdatascience.com/the-right-way-to-compute-your-shapley-values-cfea30509254).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)    |
+| 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://towardsdatascience.com/the-right-way-to-compute-your-shapley-values-cfea30509254).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer_and_backend/tuto-expl03-Shapash-acv-backend.ipynb)    |
 | 1.4.x         |  Groups of features <br> [Demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
-| 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/report/tuto-shapash-report01.ipynb)    | 
+| 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-report01.ipynb)    | 
 
 
 ## 🔍 Overview
@@ -253,26 +253,27 @@ This github repository offers many tutorials to allow you to easily get started 
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
 - [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
 - [Use groups of features](tutorial/common/tuto-common01-groups_of_features.ipynb)
-- [Deploy local explainability in production with SmartPredictor](tutorial/predictor/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
+- [Deploy local explainability in production with SmartPredictor](tutorial/predictor_to_production/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
 
 </details>
 
 <details><summary><b>Charts and plots</b> </summary>
 
-- [**Shapash** Features Importance](tutorial/plot/tuto-plot03-features-importance.ipynb)
-- [Contribution plot to understand how one feature affects a prediction](tutorial/plot/tuto-plot02-contribution_plot.ipynb)
-- [Summarize, display and export local contribution using filter and local_plot method](tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb)
-- [Contributions Comparing plot to understand why predictions on several individuals are different](tutorial/plot/tuto-plot04-compare_plot.ipynb)
-- [Visualize interactions between couple of variables](tutorial/plot/tuto-plot05-interactions-plot.ipynb)
+- [**Shapash** Features Importance](tutorial/plots_and_charts/tuto-plot03-features-importance.ipynb)
+- [Contribution plot to understand how one feature affects a prediction](tutorial/plot_and_charts/tuto-plot02-contribution_plot.ipynb)
+- [Summarize, display and export local contribution using filter and local_plot method](tutorial/plot_and_charts/tuto-plot01-local_plot-and-to_pandas.ipynb)
+- [Contributions Comparing plot to understand why predictions on several individuals are different](tutorial/plot_and_charts/tuto-plot04-compare_plot.ipynb)
+- [Visualize interactions between couple of variables](tutorial/plot_and_charts/tuto-plot05-interactions-plot.ipynb)
+- [Display True Values Vs Predicted Values](tutorial/plot_and_charts/tuto-plot06-prediction_plot.ipynb)
 - [Customize colors in Webapp, plots and report](tutorial/common/tuto-common02-colors.ipynb)
 
 </details>
 
 <details><summary><b>Different ways to use Encoders and Dictionaries</b> </summary>
 
-- [Use Category_Encoder & inverse transformation](tutorial/encoder/tuto-encoder01-using-category_encoder.ipynb)
-- [Use ColumnTransformers](tutorial/encoder/tuto-encoder02-using-columntransformer.ipynb)
-- [Use Simple Python Dictionnaries](tutorial/encoder/tuto-encoder03-using-dict.ipynb)
+- [Use Category_Encoder & inverse transformation](tutorial/use_encoders/tuto-encoder01-using-category_encoder.ipynb)
+- [Use ColumnTransformers](tutorial/use_encoders/tuto-encoder02-using-columntransformer.ipynb)
+- [Use Simple Python Dictionnaries](tutorial/use_encoders/tuto-encoder03-using-dict.ipynb)
 
 </details>
 
@@ -284,10 +285,12 @@ This github repository offers many tutorials to allow you to easily get started 
 
 <details><summary><b>Using different backends</b> </summary>
 
-- [Compute Shapley Contributions using **Shap**](tutorial/explainer/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
-- [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
-- [Use **ACV backend** to compute Active Shapley Values and SDP global importance](tutorial/explainer/tuto-expl03-Shapash-acv-backend.ipynb)
-- [Compile faster Lime and consistency of contributions](tutorial/explainer/tuto-expl04-Shapash-compute-Lime-faster.ipynb)
+- [Compute Shapley Contributions using **Shap**](tutorial/explainer_and_backend/tuto-expl01-Shapash-Viz-using-Shap-contributions.ipynb)
+- [Use **Lime** to compute local explanation, Summarize-it with **Shapash**](tutorial/explainer_and_backend/tuto-expl02-Shapash-Viz-using-Lime-contributions.ipynb)
+- [Use **ACV backend** to compute Active Shapley Values and SDP global importance](tutorial/explainer_and_backend/tuto-expl03-Shapash-acv-backend.ipynb)
+- [Compile faster Lime and consistency of contributions](tutorial/explainer_and_backend/tuto-expl04-Shapash-compute-Lime-faster.ipynb)
+- [Use **FastTreeSHAP** or add contributions from another backend](tutorial/explainer_and_backend/tuto-expl05-Shapash-using-Fasttreeshap.ipynb)
+- [Use Class Shapash Backend](tutorial/explainer_and_backend/tuto-expl06-Shapash-custom-backend.ipynb)
 
 </details>
 
@@ -299,12 +302,12 @@ This github repository offers many tutorials to allow you to easily get started 
 
 <details><summary><b>Generate a report of your project</b> </summary>
 
-- [Generate a standalone HTML report of your project with generate_report](tutorial/report/tuto-shapash-report01.ipynb)
+- [Generate a standalone HTML report of your project with generate_report](tutorial/generate_report/tuto-shapash-report01.ipynb)
 
 </details>
 
 <details><summary><b>Analysing your model via Shapash WebApp</b> </summary>
 
-- [Add features outside of the model for more exploration options](tutorial/webapp/tuto-webapp01-additional-data.ipynb)
+- [Add features outside of the model for more exploration options](tutorial/generate_webapp/tuto-webapp01-additional-data.ipynb)
 
 </details>
