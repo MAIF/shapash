@@ -260,11 +260,11 @@ This github repository offers many tutorials to allow you to easily get started 
 <details><summary><b>Charts and plots</b> </summary>
 
 - [**Shapash** Features Importance](tutorial/plots_and_charts/tuto-plot03-features-importance.ipynb)
-- [Contribution plot to understand how one feature affects a prediction](tutorial/plot_and_charts/tuto-plot02-contribution_plot.ipynb)
-- [Summarize, display and export local contribution using filter and local_plot method](tutorial/plot_and_charts/tuto-plot01-local_plot-and-to_pandas.ipynb)
-- [Contributions Comparing plot to understand why predictions on several individuals are different](tutorial/plot_and_charts/tuto-plot04-compare_plot.ipynb)
-- [Visualize interactions between couple of variables](tutorial/plot_and_charts/tuto-plot05-interactions-plot.ipynb)
-- [Display True Values Vs Predicted Values](tutorial/plot_and_charts/tuto-plot06-prediction_plot.ipynb)
+- [Contribution plot to understand how one feature affects a prediction](tutorial/plots_and_charts/tuto-plot02-contribution_plot.ipynb)
+- [Summarize, display and export local contribution using filter and local_plot method](tutorial/plots_and_charts/tuto-plot01-local_plot-and-to_pandas.ipynb)
+- [Contributions Comparing plot to understand why predictions on several individuals are different](tutorial/plots_and_charts/tuto-plot04-compare_plot.ipynb)
+- [Visualize interactions between couple of variables](tutorial/plots_and_charts/tuto-plot05-interactions-plot.ipynb)
+- [Display True Values Vs Predicted Values](tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb)
 - [Customize colors in Webapp, plots and report](tutorial/common/tuto-common02-colors.ipynb)
 
 </details>
