@@ -226,7 +226,7 @@ xpl.generate_report(
     title_story="House prices report",
     title_description="""This document is a data science report of the kaggle house prices tutorial project.
         It was generated using the Shapash library.""",
-    metrics=[{‘name’: ‘MSE’, ‘path’: ‘sklearn.metrics.mean_squared_error’}]
+    metrics=[{'name': 'MSE', 'path': 'sklearn.metrics.mean_squared_error'}]
 )
 ```
 
