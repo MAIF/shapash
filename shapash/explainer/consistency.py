@@ -352,7 +352,7 @@ class Consistency():
         mean_distances : DataFrame
             DataFrame storing all pairwise distances between methods
         """
-        font = {"family": "Arial", "color": '#{:02x}{:02x}{:02x}'.format(50, 50, 50)}
+        font = {"color": '#{:02x}{:02x}{:02x}'.format(50, 50, 50)}
 
         fig, ax = plt.subplots(ncols=1, figsize=(10, 6))
 
