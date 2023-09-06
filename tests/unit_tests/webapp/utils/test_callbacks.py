@@ -8,7 +8,10 @@ from shapash import SmartExplainer
 from shapash.webapp.smart_app import SmartApp
 from shapash.webapp.utils.callbacks import (
     select_data_from_prediction_picking, 
-    select_data_from_filters, 
+    select_data_from_str_filters,
+    select_data_from_bool_filters,
+    select_data_from_numeric_filters,
+    select_data_from_date_filters,
     get_feature_from_clicked_data,
     get_feature_from_features_groups,
     get_group_name,
@@ -111,20 +114,13 @@ class TestCallbacks(unittest.TestCase):
         result = select_data_from_prediction_picking(self.df, selected_data)
         pd.testing.assert_frame_equal(expected_result, result)
     
-    def test_select_data_from_filters_string(self):
+    def test_select_data_from_str_filters(self):
         round_dataframe = self.df
         id_feature = [{'type': 'var_dropdown', 'index': 1}]
+        feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
         id_str_modality = [{'type': 'dynamic-str', 'index': 1}]
-        id_bool_modality = []
-        id_lower_modality = []
-        id_date = []
         val_feature = ['column2'] 
         val_str_modality = [['a', 'c']]
-        val_bool_modality = []
-        val_lower_modality = []
-        val_upper_modality = []
-        start_date = []
-        end_date = []
 
         expected_result = pd.DataFrame(
             {
@@ -136,37 +132,22 @@ class TestCallbacks(unittest.TestCase):
             },
             index=[0, 2]
         )
-        result = select_data_from_filters(
+        result = select_data_from_str_filters(
             round_dataframe,
-            id_feature, 
+            feature_id, 
             id_str_modality, 
-            id_bool_modality, 
-            id_lower_modality, 
-            id_date, 
             val_feature, 
             val_str_modality,
-            val_bool_modality,
-            val_lower_modality,
-            val_upper_modality,
-            start_date,
-            end_date,
         )
         pd.testing.assert_frame_equal(expected_result, result)
     
-    def test_select_data_from_filters_bool(self):
+    def test_select_data_from_bool_filters(self):
         round_dataframe = self.df
         id_feature = [{'type': 'var_dropdown', 'index': 2}]
-        id_str_modality = []
+        feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
         id_bool_modality = [{'type': 'dynamic-bool', 'index': 2}]
-        id_lower_modality = []
-        id_date = []
         val_feature = ['column4']
-        val_str_modality = []
         val_bool_modality = [True]
-        val_lower_modality = []
-        val_upper_modality = []
-        start_date = []
-        end_date = []
 
         expected_result = pd.DataFrame(
             {
@@ -178,35 +159,21 @@ class TestCallbacks(unittest.TestCase):
             },
             index=[0, 2]
         )
-        result = select_data_from_filters(
+        result = select_data_from_bool_filters(
             round_dataframe,
-            id_feature, 
-            id_str_modality, 
-            id_bool_modality, 
-            id_lower_modality, 
-            id_date, 
+            feature_id, 
+            id_bool_modality,
             val_feature, 
-            val_str_modality,
             val_bool_modality,
-            val_lower_modality,
-            val_upper_modality,
-            start_date,
-            end_date,
         )
         pd.testing.assert_frame_equal(expected_result, result)
     
-    def test_select_data_from_filters_date(self):
+    def test_select_data_from_date_filters(self):
         round_dataframe = self.df
         id_feature = [{'type': 'var_dropdown', 'index': 1}]
-        id_str_modality = []
-        id_bool_modality = []
-        id_lower_modality = []
+        feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
         id_date = [{'type': 'dynamic-date', 'index': 1}]
         val_feature = ['column5']
-        val_str_modality = []
-        val_bool_modality = []
-        val_lower_modality = []
-        val_upper_modality = []
         start_date = [pd.Timestamp('2023-01-01')]
         end_date = [pd.Timestamp('2023-01-03')]
 
@@ -220,37 +187,24 @@ class TestCallbacks(unittest.TestCase):
             },
             index=[0, 1, 2]
         )
-        result = select_data_from_filters(
+        result = select_data_from_date_filters(
             round_dataframe,
-            id_feature, 
-            id_str_modality, 
-            id_bool_modality, 
-            id_lower_modality, 
+            feature_id,
             id_date, 
-            val_feature, 
-            val_str_modality,
-            val_bool_modality,
-            val_lower_modality,
-            val_upper_modality,
+            val_feature,
             start_date,
             end_date,
         )
         pd.testing.assert_frame_equal(expected_result, result)
     
-    def test_select_data_from_filters_numeric(self):
+    def test_select_data_from_numeric_filters(self):
         round_dataframe = self.df
         id_feature = [{'type': 'var_dropdown', 'index': 1}, {'type': 'var_dropdown', 'index': 2}]
-        id_str_modality = []
-        id_bool_modality = []
+        feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
         id_lower_modality = [{'type': 'lower', 'index': 1}, {'type': 'lower', 'index': 2}]
-        id_date = []
         val_feature = ['column1', 'column3']
-        val_str_modality = []
-        val_bool_modality = []
         val_lower_modality = [0, 0]
         val_upper_modality = [3, 3]
-        start_date = []
-        end_date = []
 
         expected_result = pd.DataFrame(
             {
@@ -262,62 +216,13 @@ class TestCallbacks(unittest.TestCase):
             },
             index=[0, 2]
         )
-        result = select_data_from_filters(
+        result = select_data_from_numeric_filters(
             round_dataframe,
-            id_feature, 
-            id_str_modality, 
-            id_bool_modality, 
-            id_lower_modality, 
-            id_date, 
-            val_feature, 
-            val_str_modality,
-            val_bool_modality,
+            feature_id,
+            id_lower_modality,
+            val_feature,
             val_lower_modality,
             val_upper_modality,
-            start_date,
-            end_date,
-        )
-        pd.testing.assert_frame_equal(expected_result, result)
-    
-    def test_select_data_from_filters_multi_types(self):
-        round_dataframe = self.df
-        id_feature = [{'type': 'var_dropdown', 'index': 1}, {'type': 'var_dropdown', 'index': 2}]
-        id_str_modality = [{'type': 'dynamic-str', 'index': 2}]
-        id_bool_modality = []
-        id_lower_modality = [{'type': 'lower', 'index': 1}]
-        id_date = []
-        val_feature = ['column1', 'column2']
-        val_str_modality = [['a', 'c', 'd', 'e']]
-        val_bool_modality = []
-        val_lower_modality = [0]
-        val_upper_modality = [3]
-        start_date = []
-        end_date = []
-
-        expected_result = pd.DataFrame(
-            {
-                'column1': [1, 3],
-                'column2': ['a', 'c'],
-                'column3': [1.1, 2.2],
-                'column4': [True, True],
-                'column5': [pd.Timestamp('2023-01-01'), pd.Timestamp('2023-01-03')],
-            },
-            index=[0, 2]
-        )
-        result = select_data_from_filters(
-            round_dataframe,
-            id_feature, 
-            id_str_modality, 
-            id_bool_modality, 
-            id_lower_modality, 
-            id_date, 
-            val_feature, 
-            val_str_modality,
-            val_bool_modality,
-            val_lower_modality,
-            val_upper_modality,
-            start_date,
-            end_date,
         )
         pd.testing.assert_frame_equal(expected_result, result)
     

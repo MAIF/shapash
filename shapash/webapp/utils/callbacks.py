@@ -30,18 +30,137 @@ def select_data_from_prediction_picking(round_dataframe: pd.DataFrame, selected_
     return df
 
 
-def select_data_from_filters(
-    round_dataframe: pd.DataFrame,
-    id_feature: list, 
+def select_data_from_str_filters(
+    df: pd.DataFrame,
+    feature_id: list, 
     id_str_modality: list, 
-    id_bool_modality: list, 
-    id_lower_modality: list, 
-    id_date: list, 
     val_feature: list, 
     val_str_modality: list,
+) -> pd.DataFrame:
+    """Create a subset dataframe from filters.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data to sample
+    feature_id : list
+        features ids
+    id_str_modality : list
+        string features ids
+    val_feature : list
+        features names
+    val_str_modality : list
+        string modalities selected
+
+    Returns
+    -------
+    pd.DataFrame
+        Subset dataframe
+    """
+    # get list of ID
+    str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
+    # If there is some filters
+    if len(str_id) > 0:
+        for i in range(len(feature_id)):
+            if feature_id[i] in str_id:
+                position = np.where(np.array(str_id) == feature_id[i])[0][0]
+                if ((position is not None) & (val_str_modality[position] is not None)):
+                    df = df[df[val_feature[i]].isin(val_str_modality[position])]
+    
+    return df
+
+
+def select_data_from_bool_filters(
+    df: pd.DataFrame,
+    feature_id: list, 
+    id_bool_modality: list, 
+    val_feature: list, 
     val_bool_modality: list,
+) -> pd.DataFrame:
+    """Create a subset dataframe from filters.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data to sample
+    feature_id : list
+        features ids
+    id_bool_modality : list
+        boolean features ids
+    val_feature : list
+        features names
+    val_bool_modality : list
+        boolean modalities selected
+
+    Returns
+    -------
+    pd.DataFrame
+        Subset dataframe
+    """
+    # get list of ID
+    bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
+    # If there is some filters
+    if len(bool_id) > 0:
+        for i in range(len(feature_id)):
+            if feature_id[i] in bool_id:
+                position = np.where(np.array(bool_id) == feature_id[i])[0][0]
+                if ((position is not None) & (val_bool_modality[position] is not None)):
+                    df = df[df[val_feature[i]] == val_bool_modality[position]]
+    
+    return df
+
+
+def select_data_from_numeric_filters(
+    df: pd.DataFrame,
+    feature_id: list, 
+    id_lower_modality: list, 
+    val_feature: list, 
     val_lower_modality: list,
     val_upper_modality: list,
+) -> pd.DataFrame:
+    """Create a subset dataframe from filters.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data to sample
+    feature_id : list
+        features ids
+    id_lower_modality : list
+        numeric features ids
+    val_feature : list
+        features names
+    val_lower_modality : list
+        lower values of numeric filter
+    val_upper_modality : list
+        upper values of numeric filter
+
+    Returns
+    -------
+    pd.DataFrame
+        Subset dataframe
+    """
+    # get list of ID
+    lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
+    # If there is some filters
+    if len(lower_id) > 0:
+        for i in range(len(feature_id)):
+            if feature_id[i] in lower_id:
+                position = np.where(np.array(lower_id) == feature_id[i])[0][0]
+                if((position is not None) & (val_lower_modality[position] is not None) &
+                    (val_upper_modality[position] is not None)):
+                    if (val_lower_modality[position] < val_upper_modality[position]):
+                        df = df[(df[val_feature[i]] >= val_lower_modality[position]) &
+                                (df[val_feature[i]] <= val_upper_modality[position])]
+    
+    return df
+
+
+def select_data_from_date_filters(
+    df: pd.DataFrame,
+    feature_id: list, 
+    id_date: list, 
+    val_feature: list, 
     start_date: list,
     end_date: list,
 ) -> pd.DataFrame:
@@ -53,24 +172,10 @@ def select_data_from_filters(
         Data to sample
     id_feature : list
         features ids
-    id_str_modality : list
-        string features ids
-    id_bool_modality : list
-        boolean features ids
-    id_lower_modality : list
-        numeric features ids
     id_date : list
         date features ids
     val_feature : list
         features names
-    val_str_modality : list
-        string modalities selected
-    val_bool_modality : list
-        boolean modalities selected
-    val_lower_modality : list
-        lower values of numeric filter
-    val_upper_modality : list
-        upper values of numeric filter
     start_date : list
         start dates selected
     end_date : list
@@ -82,41 +187,17 @@ def select_data_from_filters(
         Subset dataframe
     """
     # get list of ID
-    feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
-    str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
-    bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
-    lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
     date_id = [id_date[i]['index'] for i in range(len(id_date))]
-    df = round_dataframe
     # If there is some filters
-    if len(feature_id) > 0:
+    if len(date_id) > 0:
         for i in range(len(feature_id)):
-            # String filter
-            if feature_id[i] in str_id:
-                position = np.where(np.array(str_id) == feature_id[i])[0][0]
-                if ((position is not None) & (val_str_modality[position] is not None)):
-                    df = df[df[val_feature[i]].isin(val_str_modality[position])]
-            # Boolean filter
-            elif feature_id[i] in bool_id:
-                position = np.where(np.array(bool_id) == feature_id[i])[0][0]
-                if ((position is not None) & (val_bool_modality[position] is not None)):
-                    df = df[df[val_feature[i]] == val_bool_modality[position]]
-            # Date filter
-            elif feature_id[i] in date_id:
+            if feature_id[i] in date_id:
                 position = np.where(np.array(date_id) == feature_id[i])[0][0]
                 if((position is not None) &
                     (start_date[position] < end_date[position])):
                     df = df[((df[val_feature[i]] >= start_date[position]) &
                                 (df[val_feature[i]] <= end_date[position]))]
-            # Numeric filter
-            elif feature_id[i] in lower_id:
-                position = np.where(np.array(lower_id) == feature_id[i])[0][0]
-                if((position is not None) & (val_lower_modality[position] is not None) &
-                    (val_upper_modality[position] is not None)):
-                    if (val_lower_modality[position] < val_upper_modality[position]):
-                        df = df[(df[val_feature[i]] >= val_lower_modality[position]) &
-                                (df[val_feature[i]] <= val_upper_modality[position])]
-    
+                    
     return df
 
 
@@ -283,24 +364,24 @@ def update_features_to_display(features: int, nb_columns: int, value: int) -> Tu
     Tuple[int, int, dict]
         Number of columns to plot, Number max of columns to plot, Marks in the slider
     """
-    max = min(features, nb_columns)
-    if max % 5 == 0:
-        nb_marks = min(int(max // 5), 10)
-    elif max % 4 == 0:
-        nb_marks = min(int(max // 4), 10)
-    elif max % 3 == 0:
-        nb_marks = min(int(max // 3), 10)
-    elif max % 7 == 0:
-        nb_marks = min(int(max // 7), 10)
+    max_value = min(features, nb_columns)
+    if max_value % 5 == 0:
+        nb_marks = min(int(max_value // 5), 10)
+    elif max_value % 4 == 0:
+        nb_marks = min(int(max_value // 4), 10)
+    elif max_value % 3 == 0:
+        nb_marks = min(int(max_value // 3), 10)
+    elif max_value % 7 == 0:
+        nb_marks = min(int(max_value // 7), 10)
     else:
         nb_marks = 2
-    marks = {f'{round(max * feat / nb_marks)}': f'{round(max * feat / nb_marks)}'
+    marks = {f'{round(max_value * feat / nb_marks)}': f'{round(max_value * feat / nb_marks)}'
                 for feat in range(1, nb_marks + 1)}
     marks['1'] = '1'
-    if max < value:
-        value = max
+    if max_value < value:
+        value = max_value
 
-    return value, max, marks
+    return value, max_value, marks
 
 
 def get_id_card_features(data: list, selected: int, special_cols: list, features_dict: dict) -> pd.DataFrame:
@@ -444,7 +525,7 @@ def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict:
                     ), 
                     width=2, 
                     className="id_card_solid",
-                ) if row["feature_contrib"]==row["feature_contrib"] else None,
+                ) if not np.isnan(row["feature_contrib"]) else None,
             ])
         )
     

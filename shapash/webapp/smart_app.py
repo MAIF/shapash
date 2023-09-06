@@ -24,7 +24,10 @@ from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.callbacks import (
     select_data_from_prediction_picking, 
-    select_data_from_filters,
+    select_data_from_str_filters,
+    select_data_from_bool_filters,
+    select_data_from_numeric_filters,
+    select_data_from_date_filters,
     get_feature_from_clicked_data,
     get_feature_from_features_groups,
     get_group_name,
@@ -1390,8 +1393,6 @@ class SmartApp:
                 State({'type': 'lower', 'index': ALL}, 'value'),
                 State({'type': 'lower', 'index': ALL}, 'id'),
                 State({'type': 'upper', 'index': ALL}, 'value'),
-                State({'type': 'upper', 'index': ALL}, 'id'),
-                State('dropdowns_container', 'children')
             ]
         )
         def update_datatable(selected_data,
@@ -1412,9 +1413,8 @@ class SmartApp:
                              id_date,
                              val_lower_modality,
                              id_lower_modality,
-                             val_upper_modality,
-                             id_upper_modality,
-                             children):
+                             val_upper_modality
+                             ):
             """
             This function is used to update the datatable according to sorting,
             filtering and settings modifications.
@@ -1437,8 +1437,6 @@ class SmartApp:
             val_lower_modality: lower values of numeric filter
             id_lower_modality: id of lower modalities of numeric filter
             val_upper_modality: upper values of numeric filter
-            id_upper_modality: id of upper values of numeric filter
-            children: children of dropdown container
             ------------------------------------------------------------------
             return
             data: available dataset
@@ -1475,18 +1473,35 @@ class SmartApp:
                   (selected_data is not None and len(selected_data) == 1 and 
                    len(selected_data['points'])!=0 and selected_data['points'][0]['curveNumber'] > 0)
                   )):
-                df = select_data_from_filters(
-                    self.round_dataframe,
-                    id_feature, 
+                df = self.round_dataframe.copy()
+                feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
+                df = select_data_from_str_filters(
+                    df,
+                    feature_id, 
                     id_str_modality, 
-                    id_bool_modality, 
-                    id_lower_modality, 
-                    id_date, 
                     val_feature, 
                     val_str_modality,
+                )
+                df = select_data_from_bool_filters(
+                    df,
+                    feature_id,
+                    id_bool_modality,
+                    val_feature,
                     val_bool_modality,
+                )
+                df = select_data_from_numeric_filters(
+                    df,
+                    feature_id,
+                    id_lower_modality,
+                    val_feature,
                     val_lower_modality,
                     val_upper_modality,
+                )
+                df = select_data_from_date_filters(
+                    df,
+                    feature_id,
+                    id_date, 
+                    val_feature,
                     start_date,
                     end_date,
                 )
