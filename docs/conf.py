@@ -113,7 +113,7 @@ todo_include_todos = True
 # -- Additional html pages  -------------------------------------------------
 import subprocess
 # Generates the report example in the documentation
-subprocess.call(['python', '../tutorial/report/shapash_report_example.py'])
+subprocess.call(['python', '../tutorial/generate_report/shapash_report_example.py'])
 html_extra_path = ['../tutorial/report/output/report.html']
 
 
