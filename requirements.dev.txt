@@ -39,6 +39,6 @@ jupyter-client<8.0.0
 Jinja2>=2.11.0
 phik>=0.12.0
 skranger>=0.8.0
-acv-exp>=1.1.2
+acv-exp>=1.2.3
 lime>=0.2.0.0
 regex
