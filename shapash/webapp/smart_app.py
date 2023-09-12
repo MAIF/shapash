@@ -1526,7 +1526,7 @@ class SmartApp:
                 {
                     column: {'value': str(value), 'type': 'text'}
                     for column, value in row.items()
-                } for row in df.to_dict('rows')
+                } for row in df.to_dict('index').values()
             ]
             return (
                 self.components['table']['dataset'].data,
