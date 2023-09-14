@@ -39,7 +39,7 @@ Data Scientists can understand their models easily and share their results. End 
 
 Shapash also contributes to data science auditing by displaying usefull information about any model and data in a unique report.
 
-Shapash works for Regression, Binary Classification or Multiclass problem. It is compatible with many models: Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, SVM. For other models, solutions for using Shapash are possible, more details [here](#how_sapash_works).
+Shapash works for Regression, Binary Classification or Multiclass problem. It is compatible with many models: Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, SVM. For other models, solutions for using Shapash are possible, more details [here](#how_shapash_works).
 
 > [!NOTE]
 > If you want to give us feedbacks : [Feedbacks form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
