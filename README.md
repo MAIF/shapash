@@ -30,8 +30,38 @@
   </a>
 </p>
 
-## 🎉 What's new ?
+## 🔍 Overview
 
+**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone.
+It provides several types of visualization that display explicit labels that everyone can understand.
+
+Data Scientists can understand their models easily and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+
+Shapash also contributes to data science auditing by displaying usefull information about any model and data in a unique report.
+
+Shapash works for Regression, Binary Classification or Multiclass problem. It is compatible with many models: Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, SVM. For other models, solutions for using Shapash are possible, more details [here](#how_sapash_works).
+
+> [!NOTE]
+> If you want to give us feedbacks : [Feedbacks form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash_global.gif" width="800">
+</p>
+
+## 🌱 Documentation and resources
+
+- Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
+- [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
+- Medium:
+  - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
+  - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
+  - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
+  - [Building confidence on explainability - Towards DS](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)
+  - [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
+  - [Enhancing Webapp Built-In Features for Comprehensive Machine Learning Model Interpretation](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)
+
+
+## 🎉 What's new ?
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
@@ -45,31 +75,6 @@
 | 1.5.x         |  ACV Backend <br>                                                                     | A new way of estimating Shapley values using ACV. [More info about ACV here](https://towardsdatascience.com/the-right-way-to-compute-your-shapley-values-cfea30509254).                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/wheel.png" width="50" title="wheel-acv-backend">](tutorial/explainer_and_backend/tuto-expl03-Shapash-acv-backend.ipynb)    |
 | 1.4.x         |  Groups of features <br> [Demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
 | 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-report01.ipynb)    | 
-
-
-## 🔍 Overview
-
-**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone.
-It provides several types of visualization that display explicit labels that everyone can understand. 
-
-Data Scientists can understand their models easily and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
-
-Shapash also contributes to data science auditing by displaying usefull information about any model and data in a unique report. 
-
-- Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
-- [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
-- Medium:
-  - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3) 
-  - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
-  - [Group of features - Towards AI](https://pub.towardsai.net/machine-learning-6011d5d9a444)
-  - [Building confidence on explainability - Towards DS](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)
-  - [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
-  - [Enhancing Webapp Built-In Features for Comprehensive Machine Learning Model Interpretation](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)
-
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash_global.gif" width="800">
-</p>
 
 ## 🤝 Contributors
 
@@ -141,7 +146,8 @@ This document can be easily shared across teams (internal audit, DPO, risk, comp
   <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800">
 </p>
 
-## ⚙️ How Shapash works 
+<a name="how_shapash_works"></a>
+## ⚙️ How Shapash works
 **Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
 to compute contributions.
 **Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
@@ -152,6 +158,9 @@ to compute contributions.
 
 **Shapash** works for Regression, Binary Classification or Multiclass problem. <br />
 It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*. <br />
+
+If your model is not in the list of compatible models, it is possible to provide Shapash with local contributions calculated with shap or another method. [Here's](https://github.com/MAIF/shapash/blob/master/tutorial/explainer_and_backend/tuto-expl05-Shapash-using-Fasttreeshap.ipynb) an example of how to provide contributions to Shapash. An [issue](https://github.com/MAIF/shapash/issues/488) is created to improve this use case.
+
 Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary. <br />
 - Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
 - Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer*, *PowerTransformer*
