@@ -3,6 +3,7 @@ Unit test of transform module.
 """
 import unittest
 import pandas as pd
+import numpy as np
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import category_encoders as ce
