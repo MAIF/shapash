@@ -11,7 +11,7 @@ from shapash.webapp.smart_app import SmartApp
 from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.utils.io import save_pickle
 from shapash.utils.io import load_pickle
-from shapash.utils.transform import inverse_transform, apply_postprocessing
+from shapash.utils.transform import inverse_transform, apply_postprocessing, handle_categorical_missing
 from shapash.utils.utils import get_host_name
 from shapash.utils.threading import CustomThread
 from shapash.utils.check import check_model, check_label_dict, check_y, check_postprocessing, check_features_name, check_additional_data
@@ -275,8 +275,9 @@ class SmartExplainer:
         --------
         >>> xpl.compile(x=x_test)
         """
-        self.x_encoded = x
-        self.x_init = inverse_transform(self.x_encoded, self.preprocessing)
+        self.x_encoded = handle_categorical_missing(x)
+        x_init = inverse_transform(self.x_encoded, self.preprocessing)
+        self.x_init = handle_categorical_missing(x_init)
         self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
         self.y_target = check_y(self.x_init, y_target, y_name="y_target")
         self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
@@ -1247,6 +1248,8 @@ class SmartExplainer:
             )
         """
         check_report_requirements()
+        if x_train is not None:
+            x_train = handle_categorical_missing(x_train)
         # Avoid Import Errors with requirements specific to the Shapash Report
         from shapash.report.generation import execute_report, export_and_save_report
 
@@ -1279,7 +1282,7 @@ class SmartExplainer:
 
             if rm_working_dir:
                 shutil.rmtree(working_dir)
-        
+
         except Exception as e:
             if rm_working_dir:
                 shutil.rmtree(working_dir)
