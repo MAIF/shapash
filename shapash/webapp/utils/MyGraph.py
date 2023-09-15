@@ -43,7 +43,8 @@ class MyGraph(dcc.Graph):
                 'displaylogo': False
                 }
 
-    def adjust_graph(self,
+    @staticmethod
+    def adjust_graph_static(figure,
                      x_ax="",
                      y_ax=""):
         """
@@ -53,8 +54,8 @@ class MyGraph(dcc.Graph):
         y_ax: title of the y-axis
         ---------------------------------------
         """
-        new_title = update_title(self.figure.layout.title.text)
-        self.figure.update_layout(
+        new_title = update_title(figure.layout.title.text)
+        figure.update_layout(
             autosize=True,
             margin=dict(
                 l=50,
@@ -75,11 +76,11 @@ class MyGraph(dcc.Graph):
             }
         )
         # update x title and font-size of the title
-        self.figure.update_xaxes(title='<span style="font-size: 1vw;">' + x_ax + '</span>',
+        figure.update_xaxes(title='<span style="font-size: 1vw;">' + x_ax + '</span>',
                                  automargin=True
                                  )
         # update y title and font-size of the title
-        self.figure.update_yaxes(title='<span style="font-size: 1vw;">' + y_ax + '</span>',
+        figure.update_yaxes(title='<span style="font-size: 1vw;">' + y_ax + '</span>',
                                  automargin=True
                                  )
 

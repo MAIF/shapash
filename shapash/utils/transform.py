@@ -374,3 +374,16 @@ def get_features_transform_mapping(x_init, x_encoded, preprocessing=None):
             dict_all_cols_mapping[col_name] = [col_name]
     return dict_all_cols_mapping
 
+def handle_categorical_missing(df : pd.DataFrame)-> pd.DataFrame:
+    """
+    Replace missing values for categorical columns
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Pandas dataframe on which we will replace the missing values
+    """
+    categorical_cols = df.select_dtypes(include=['object']).columns
+    df_handle_missing = df.copy()
+    df_handle_missing[categorical_cols] = df_handle_missing[categorical_cols].fillna("missing")
+    return df_handle_missing

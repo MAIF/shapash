@@ -4,7 +4,7 @@ from numbers import Number
 
 import pandas as pd
 import os
-from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype, is_categorical_dtype
+from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
 class VarType(Enum):
@@ -36,7 +36,7 @@ def series_dtype(s: pd.Series) -> VarType:
         return VarType.TYPE_CAT
     elif is_string_dtype(s):
         return VarType.TYPE_CAT
-    elif is_categorical_dtype(s):
+    elif s.dtype.name == 'object':
         return VarType.TYPE_CAT
     elif is_numeric_dtype(s):
         if numeric_is_continuous(s):

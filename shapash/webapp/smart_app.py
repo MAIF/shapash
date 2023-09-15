@@ -16,14 +16,34 @@ from flask import Flask
 import pandas as pd
 import plotly.graph_objs as go
 import random
-import numpy as np
-import datetime
 import re
 from math import log10
 from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.explanations import Explanations
+from shapash.webapp.utils.callbacks import (
+    select_data_from_prediction_picking, 
+    select_data_from_str_filters,
+    select_data_from_bool_filters,
+    select_data_from_numeric_filters,
+    select_data_from_date_filters,
+    get_feature_from_clicked_data,
+    get_feature_from_features_groups,
+    get_group_name,
+    get_indexes_from_datatable,
+    update_click_data_on_subset_changes,
+    get_figure_zoom,
+    get_feature_contributions_sign_to_show,
+    update_features_to_display,
+    get_id_card_features,
+    get_id_card_contrib,
+    create_id_card_data,
+    create_id_card_layout,
+    get_feature_filter_options,
+    create_dropdown_feature_filter,
+    create_filter_modalities_selection
+)
 
 
 def create_input_modal(id, label, tooltip):
@@ -139,7 +159,7 @@ class SmartApp:
         self.init_callback_settings()
         self.callback_generator()
 
-    def init_data(self):
+    def init_data(self, rows = None):
         """
         Method which initializes data from explainer object
         """
@@ -174,10 +194,12 @@ class SmartApp:
 
         col_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
         random.seed(79)
+        if rows is None:
+            rows = self.settings['rows']
         self.list_index = \
             random.sample(
                 population=self.dataframe.index.tolist(),
-                k=min(self.settings['rows'], len(self.dataframe.index.tolist()))
+                k=min(rows, len(self.dataframe.index.tolist()))
             )
         self.dataframe = self.dataframe[col_order].loc[self.list_index].sort_index()
         self.round_dataframe = self.dataframe.copy()
@@ -707,6 +729,7 @@ class SmartApp:
                                          # Position must be absolute to add the explanation button
                                          style={"position": 'absolute'}
                                          ),
+                                        dcc.Store(id="clickdata-store"),
                                         html.Div([
                                              # Create explanation button on feature importance graph
                                              dbc.Button(
@@ -1178,8 +1201,8 @@ class SmartApp:
         ]
         return filter
 
-    def select_point(self,
-                     graph,
+    @staticmethod
+    def select_point(figure,
                      click_data):
         """
         Method which set the selected point in graph component
@@ -1188,9 +1211,8 @@ class SmartApp:
         if click_data:
             curve_id = click_data['points'][0]['curveNumber']
             point_id = click_data['points'][0]['pointIndex']
-            for curve in range(
-                    len(self.components['graph'][graph].figure['data'])):
-                self.components['graph'][graph].figure['data'][curve].selectedpoints = \
+            for curve in range(len(figure['data'])):
+                figure['data'][curve].selectedpoints = \
                     [point_id] if curve == curve_id else []
 
     def callback_fullscreen_buttons(self):
@@ -1371,8 +1393,6 @@ class SmartApp:
                 State({'type': 'lower', 'index': ALL}, 'value'),
                 State({'type': 'lower', 'index': ALL}, 'id'),
                 State({'type': 'upper', 'index': ALL}, 'value'),
-                State({'type': 'upper', 'index': ALL}, 'id'),
-                State('dropdowns_container', 'children')
             ]
         )
         def update_datatable(selected_data,
@@ -1393,15 +1413,13 @@ class SmartApp:
                              id_date,
                              val_lower_modality,
                              id_lower_modality,
-                             val_upper_modality,
-                             id_upper_modality,
-                             children):
+                             val_upper_modality
+                             ):
             """
             This function is used to update the datatable according to sorting,
             filtering and settings modifications.
             ------------------------------------------------------------------
             selected_data: selected data in prediction picking graph
-            is_open: modal
             nclicks_apply: click on Apply Filter button
             nclicks_reset: click on Reset All Filter button
             nclicks_del: click on delete button
@@ -1419,13 +1437,13 @@ class SmartApp:
             val_lower_modality: lower values of numeric filter
             id_lower_modality: id of lower modalities of numeric filter
             val_upper_modality: upper values of numeric filter
-            id_upper_modality: id of upper values of numeric filter
-            children: children of dropdown container
             ------------------------------------------------------------------
             return
             data: available dataset
             tooltip_data: tooltip of the dataset
             columns: columns of the dataset
+            filtered_subset_info: subset size
+            filtered_subset_color: subset warning color
             """
             ctx = dash.callback_context
             df = self.round_dataframe
@@ -1436,23 +1454,14 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    self.settings['rows'] = rows
-                    self.init_data()
-                    self.settings_ini['rows'] = self.settings['rows']
+                    self.init_data(rows = rows)
                     if name == [1]:
                         columns = [{"name": i, "id": i} for i in self.special_cols] + \
                             [{"name": self.features_dict[i], "id": i} for i in self.dataframe.columns.drop(self.special_cols)]
                     df = self.round_dataframe
             elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
                   (selected_data is not None) and (len(selected_data) > 1)):
-                row_ids = []
-                # If some data have been selected in prediction picking graph
-                if selected_data is not None and len(selected_data) > 1:
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    df = self.round_dataframe.loc[row_ids]
-                else:
-                    df = self.round_dataframe
+                df = select_data_from_prediction_picking(self.round_dataframe, selected_data)
             # If click on reset button
             elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
                 df = self.round_dataframe
@@ -1464,55 +1473,38 @@ class SmartApp:
                   (selected_data is not None and len(selected_data) == 1 and 
                    len(selected_data['points'])!=0 and selected_data['points'][0]['curveNumber'] > 0)
                   )):
-                # get list of ID
+                df = self.round_dataframe.copy()
                 feature_id = [id_feature[i]['index'] for i in range(len(id_feature))]
-                str_id = [id_str_modality[i]['index'] for i in range(len(id_str_modality))]
-                bool_id = [id_bool_modality[i]['index'] for i in range(len(id_bool_modality))]
-                lower_id = [id_lower_modality[i]['index'] for i in range(len(id_lower_modality))]
-                date_id = [id_date[i]['index'] for i in range(len(id_date))]
-                df = self.round_dataframe
-                # If there is some filters
-                if len(feature_id) > 0:
-                    for i in range(len(feature_id)):
-                        # String filter
-                        if feature_id[i] in str_id:
-                            position = np.where(np.array(str_id) == feature_id[i])[0][0]
-                            if ((position is not None) & (val_str_modality[position] is not None)):
-                                df = df[df[val_feature[i]].isin(val_str_modality[position])]
-                            else:
-                                df = df
-                        # Boolean filter
-                        elif feature_id[i] in bool_id:
-                            position = np.where(np.array(bool_id) == feature_id[i])[0][0]
-                            if ((position is not None) & (val_bool_modality[position] is not None)):
-                                df = df[df[val_feature[i]] == val_bool_modality[position]]
-                            else:
-                                df = df
-                        # Date filter
-                        elif feature_id[i] in date_id:
-                            position = np.where(np.array(date_id) == feature_id[i])[0][0]
-                            if((position is not None) &
-                               (start_date[position] < end_date[position])):
-                                df = df[((df[val_feature[i]] >= start_date[position]) &
-                                         (df[val_feature[i]] <= end_date[position]))]
-                            else:
-                                df = df
-                        # Numeric filter
-                        elif feature_id[i] in lower_id:
-                            position = np.where(np.array(lower_id) == feature_id[i])[0][0]
-                            if((position is not None) & (val_lower_modality[position] is not None) &
-                               (val_upper_modality[position] is not None)):
-                                if (val_lower_modality[position] < val_upper_modality[position]):
-                                    df = df[(df[val_feature[i]] >= val_lower_modality[position]) &
-                                            (df[val_feature[i]] <= val_upper_modality[position])]
-                                else:
-                                    df = df
-                            else:
-                                df = df
-                        else:
-                            df = df
-                else:
-                    df = df
+                df = select_data_from_str_filters(
+                    df,
+                    feature_id, 
+                    id_str_modality, 
+                    val_feature, 
+                    val_str_modality,
+                )
+                df = select_data_from_bool_filters(
+                    df,
+                    feature_id,
+                    id_bool_modality,
+                    val_feature,
+                    val_bool_modality,
+                )
+                df = select_data_from_numeric_filters(
+                    df,
+                    feature_id,
+                    id_lower_modality,
+                    val_feature,
+                    val_lower_modality,
+                    val_upper_modality,
+                )
+                df = select_data_from_date_filters(
+                    df,
+                    feature_id,
+                    id_date, 
+                    val_feature,
+                    start_date,
+                    end_date,
+                )
                 filtered_subset_info = f"Subset length: {len(df)} ({int(round(100*len(df)/self.explainer.x_init.shape[0]))}%)"
                 if len(df)==0:
                     filtered_subset_color="danger"
@@ -1521,16 +1513,16 @@ class SmartApp:
                 df = self.round_dataframe
             else:
                 raise dash.exceptions.PreventUpdate
-            self.components['table']['dataset'].data = df.to_dict('records')
-            self.components['table']['dataset'].tooltip_data = [
+            data = df.to_dict('records')
+            tooltip_data = [
                 {
                     column: {'value': str(value), 'type': 'text'}
                     for column, value in row.items()
-                } for row in df.to_dict('rows')
+                } for row in df.to_dict('index').values()
             ]
             return (
-                self.components['table']['dataset'].data,
-                self.components['table']['dataset'].tooltip_data,
+                data,
+                tooltip_data,
                 columns,
                 filtered_subset_info,
                 filtered_subset_color,
@@ -1539,7 +1531,8 @@ class SmartApp:
         @app.callback(
             [
                 Output('global_feature_importance', 'figure'),
-                Output('global_feature_importance', 'clickData')
+                Output('global_feature_importance', 'clickData'),
+                Output('clickdata-store', 'data')
             ],
             [
                 Input('select_label', 'value'),
@@ -1548,14 +1541,15 @@ class SmartApp:
                 Input('apply_filter', 'n_clicks'),
                 Input('reset_dropdown_button', 'n_clicks'),
                 Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
-                Input('modal', 'is_open'),
                 Input('card_global_feature_importance', 'n_clicks'),
                 Input('bool_groups', 'on'),
                 Input('ember_global_feature_importance', 'n_clicks')
             ],
             [
                 State('global_feature_importance', 'clickData'),
-                State('features', 'value')
+                State('global_feature_importance', 'figure'),
+                State('features', 'value'),
+                State('clickdata-store', 'data')
             ]
         )
         def update_feature_importance(label,
@@ -1564,12 +1558,13 @@ class SmartApp:
                                       apply_filters,
                                       reset_filter,
                                       nclicks_del,
-                                      is_open,
                                       n_clicks,
                                       bool_group,
                                       click_zoom,
                                       clickData,
-                                      features):
+                                      figure,
+                                      features,
+                                      clickData_store):
             """
             update feature importance plot according label, click on graph,
             filters applied and subset selected in prediction picking graph.
@@ -1580,327 +1575,142 @@ class SmartApp:
             apply_filters: click on apply filter button
             reset_filter: click on reset filter button
             nclicks_del: click on del button
-            is_open: modal
             n_clicks: click on features importance card
             bool_group: display groups
             click_zoom: click on zoom button
             clickData: click on features importance graph
+            figure: figure of Features Importance graph
             features: features value
+            clickData_store: previous click on features importance graph
             -------------------------------------------------------------
             return
             figure of Features Importance graph
             click on Features Importance graph
+            previous click on Features Importance graph
             """
             ctx = dash.callback_context
             # Zoom is False by Default. It becomes True if we click on it
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True
+            zoom_active = get_figure_zoom(click_zoom)
             selection = None
+            list_index = self.list_index
+            if clickData is not None and (ctx.triggered[0]['prop_id'] in [
+                'apply_filter.n_clicks',
+                'reset_dropdown_button.n_clicks',
+                'dataset.data'
+            ] or ('del_dropdown_button' in ctx.triggered[0]['prop_id'] and
+                None not in nclicks_del)):
+                clickData = update_click_data_on_subset_changes(clickData)
+
             selected_feature = self.explainer.inv_features_dict.get(
-                clickData['points'][0]['label'].replace('<b>', '').replace('</b>', '')
+                get_feature_from_clicked_data(clickData)
             ) if clickData else None
-            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
-                    raise PreventUpdate
-                else:
-                    self.settings['features'] = features
-                    self.settings_ini['features'] = self.settings['features']
-            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
-                self.label = label
-                selection = [d['_index_'] for d in data]
-            elif ctx.triggered[0]['prop_id'] == 'dataset.data':
-                self.list_index = [d['_index_'] for d in data]
-            elif ctx.triggered[0]['prop_id'] == 'bool_groups.on':
-                clickData = None  # We reset the graph and clicks if we toggle the button
-            # If we have selected data on prediction picking graph
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None) and (len(selected_data) > 1)):
-                row_ids = []
-                if selected_data is not None and len(selected_data) > 1:
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    selection = row_ids
-                else:
-                    selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
+
+            if self.explainer.features_groups and bool_group:
+                if ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks':
+                    # When we click twice on the same bar this will reset the graph
+                    if clickData_store == clickData:
                         selected_feature = None
-            # If click on a single point on prediction picking, do nothing
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None) and (len(selected_data) == 1)):
-                # If there is some filters applied
-                if (len([d['_index_'] for d in data]) != len(self.list_index)):
-                    selection = [d['_index_'] for d in data]
+                    selected_feature = get_feature_from_features_groups(selected_feature, self.explainer.features_groups)
+                elif ctx.triggered[0]['prop_id'] == 'ember_global_feature_importance.n_clicks':
+                    selected_feature = get_feature_from_features_groups(selected_feature, self.explainer.features_groups)
                 else:
-                    selection = None
-            # If we have dubble click on prediction picking to remove the selected subset
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is None)):
-                # If there is some filters applied
-                if (len([d['_index_'] for d in data]) != len(self.list_index)):
-                    selection = [d['_index_'] for d in data]
-                else:
-                    selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If we click on reset filter button
-            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If we click on Apply button
-            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                selection = [d['_index_'] for d in data]
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            # If we click on the last del button
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                  (None not in nclicks_del)):
-                selection = None
-                #when group
-                if self.explainer.features_groups and bool_group:
-                    list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                    if selected_feature not in list_sub_features:
-                        selected_feature = None
-            elif (ctx.triggered[0]['prop_id'] == 'card_global_feature_importance.n_clicks'
-                  and self.explainer.features_groups and bool_group):
-                row_ids = []
-                if selected_data is not None and len(selected_data) > 1:
-                    # we plot prediction picking subset
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    selection = row_ids
-                elif (len([d['_index_'] for d in data]) != len(self.list_index)):
-                    selection = [d['_index_'] for d in data]
-                else:
-                    selection = None
-                # When we click twice on the same bar this will reset the graph
-                if self.last_click_data == clickData:
                     selected_feature = None
-                list_sub_features = [f for group_features in self.explainer.features_groups.values()
-                                      for f in group_features]
-                if selected_feature in list_sub_features:
-                    self.last_click_data = clickData
-                    raise PreventUpdate
-                else:
-                    pass
-            else:
-                # Zoom management to generate graph which have global axis
-                if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
-                    selection = None
-                else:
-                    row_ids = []
-                    if selected_data is not None and len(selected_data) > 1:
-                        # we plot prediction picking subset
-                        for p in selected_data['points']:
-                            row_ids.append(p['customdata'])
-                        selection = row_ids
-                    else:
-                        # we plot filter subset
-                        selection = [d['_index_'] for d in data]
-                self.last_click_data = clickData
-            if selection is not None and len(selection)==0:
-                selection=None
+                
+            selection = get_indexes_from_datatable(data, list_index)
 
-            group_name = selected_feature if (self.explainer.features_groups is not None
-                                              and selected_feature in self.explainer.features_groups.keys()) else None
+            group_name = get_group_name(selected_feature, self.explainer.features_groups)
 
-            self.components['graph']['global_feature_importance'].figure = \
-                self.explainer.plot.features_importance(
-                    max_features=features,
-                    selection=selection,
-                    label=self.label,
-                    group_name=group_name,
-                    display_groups=bool_group,
-                    zoom=zoom_active
-                )
+            figure = self.explainer.plot.features_importance(
+                max_features=features,
+                selection=selection,
+                label=label,
+                group_name=group_name,
+                display_groups=bool_group,
+                zoom=zoom_active
+            )
             # Adjust graph with adding x axis title
-            self.components['graph']['global_feature_importance'].adjust_graph(x_ax='Mean absolute Contribution')
-            self.components['graph']['global_feature_importance'].figure.layout.clickmode = 'event+select'
+            MyGraph.adjust_graph_static(figure, x_ax='Mean absolute Contribution')
+            figure.layout.clickmode = 'event+select'
             if selected_feature:
-                if self.explainer.features_groups is None:
-                    self.select_point('global_feature_importance', clickData)
-                elif selected_feature not in self.explainer.features_groups.keys():
-                    self.select_point('global_feature_importance', clickData)
+                self.select_point(figure, clickData)
 
             # font size can be adapted to screen size
-            nb_car = max([len(self.components['graph']['global_feature_importance'].figure.data[0].y[i]) for i in
-                          range(len(self.components['graph']['global_feature_importance'].figure.data[0].y))])
-            self.components['graph']['global_feature_importance'].figure.update_layout(
+            nb_car = max([len(figure.data[0].y[i]) for i in
+                          range(len(figure.data[0].y))])
+            figure.update_layout(
                 yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
             )
-
-            self.last_click_data = clickData
-            return self.components['graph']['global_feature_importance'].figure, clickData
+            clickData_store = clickData.copy() if clickData is not None else None
+            return figure, clickData, clickData_store
 
         @app.callback(
             Output(component_id='feature_selector', component_property='figure'),
             [
                 Input('global_feature_importance', 'clickData'),
-                Input('prediction_picking', 'selectedData'),
                 Input('dataset', 'data'),
-                Input('apply_filter', 'n_clicks'),
-                Input('reset_dropdown_button', 'n_clicks'),
-                Input({'type': 'del_dropdown_button', 'index': ALL}, 'n_clicks'),
                 Input('select_label', 'value'),
-                Input('modal', 'is_open'),
                 Input('ember_feature_selector', 'n_clicks')
             ],
             [
                 State('points', 'value'),
-                State('violin', 'value')
+                State('violin', 'value'),
+                State('global_feature_importance', 'figure'),
             ]
         )
         def update_feature_selector(feature,
-                                    selected_data,
                                     data,
-                                    apply_filters,
-                                    reset_filter,
-                                    nclicks_del,
                                     label,
-                                    is_open,
                                     click_zoom,
                                     points,
-                                    violin):
+                                    violin,
+                                    gfi_figure):
             """
             Update feature plot according to label, data,
             selected feature on features importance graph,
             filters and settings modifications
             --------------------------------------------
             feature: click on feature importance graph
-            selected_data: Data selected on prediction picking graph
             data: dataset
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click del button
             label: selected label
-            is_open: modal
             click_zoom: click on zoom button
             points: points value in setting
             violin: violin value in setting
+            gfi_figure: figure of Features Importance graph
             ---------------------------------------------
             return
-            figure: feature selector graph
+            fs_figure: feature selector graph
             """
             # Zoom is False by Default. It becomes True if we click on it
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
+            zoom_active = get_figure_zoom(click_zoom)
+            subset = None
+            list_index = self.list_index
+            if feature is not None:
+                selected_feature = get_feature_from_clicked_data(feature)
             else:
-                zoom_active = True  # To check if zoom is activated
-            ctx = dash.callback_context
-            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
-                    raise PreventUpdate
-                else:
-                    self.settings['points'] = points
-                    self.settings_ini['points'] = self.settings['points']
-                    self.settings['violin'] = violin
-                    self.settings_ini['violin'] = self.settings['violin']
-                    self.subset = None
+                selected_feature = self.selected_feature
 
-            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
-                self.label = label
-            elif ctx.triggered[0]['prop_id'] == 'global_feature_importance.clickData':
-                if feature is not None:
-                    # Removing bold
-                    self.selected_feature = feature['points'][0]['label'].replace('<b>', '').replace('</b>', '')
-                    if feature['points'][0]['curveNumber'] == 0 and \
-                              len(self.components['graph']['global_feature_importance'].figure['data']) == 2:
-                        if selected_data is not None and len(selected_data) > 1:
-                            row_ids = []
-                            for p in selected_data['points']:
-                                row_ids.append(p['customdata'])
-                            self.subset = row_ids
-                        else:
-                            self.subset = [d['_index_'] for d in data]
-                    else:
-                        self.subset = self.list_index
-            # If we have selected data on prediction picking graph
-            elif ((ctx.triggered[0]['prop_id'] == 'prediction_picking.selectedData') and
-                  (selected_data is not None)):
-                row_ids = []
-                if selected_data is not None and len(selected_data) > 1:
-                    for p in selected_data['points']:
-                        row_ids.append(p['customdata'])
-                    self.subset = row_ids
-            # if we have click on reset button
-            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                self.subset = None
-            # If we have clik on Apply filter button
-            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                self.subset = [d['_index_'] for d in data]
-            # If we have click on the last del button
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                  (None not in nclicks_del)):
-                self.subset = None
+            if feature is not None and feature['points'][0]['curveNumber'] == 0 and \
+                len(gfi_figure['data']) == 2:
+                subset = get_indexes_from_datatable(data, list_index)
             else:
-                # Zoom management to generate graph which have global axis
-                if len(self.components['graph']['global_feature_importance'].figure['data']) == 1:
-                    self.subset = self.list_index
-                elif (len(self.components['graph']['global_feature_importance'].figure['data']) == 2):
-                    if feature is not None:
-                        if feature['points'][0]['curveNumber'] == 0:
-                            if selected_data is not None and len(selected_data) > 1:
-                                row_ids = []
-                                for p in selected_data['points']:
-                                    row_ids.append(p['customdata'])
-                                self.subset = row_ids
-                            else:
-                                self.subset = [d['_index_'] for d in data]
-                        else:
-                            self.subset = self.list_index
-                    else:
-                        self.subset = [d['_index_'] for d in data]
-                else:
-                    row_ids = []
-                    if selected_data is not None and len(selected_data) > 1:
-                        # we plot prediction picking subset
-                        for p in selected_data['points']:
-                            row_ids.append(p['customdata'])
-                        self.subset = row_ids
-                    else:
-                        # we plot filter subset
-                        self.subset = [d['_index_'] for d in data]
-            subset = self.subset
-            if subset is not None and len(subset)==0:
                 subset = None
 
-            self.components['graph']['feature_selector'].figure = \
-                self.explainer.plot.contribution_plot(
-                    col=self.selected_feature,
+            fs_figure = self.explainer.plot.contribution_plot(
+                    col=selected_feature,
                     selection=subset,
-                    label=self.label,
+                    label=label,
                     violin_maxf=violin,
                     max_points=points,
                     zoom=zoom_active
                 )
 
-            self.components['graph']['feature_selector'].figure['layout'].clickmode = 'event+select'
+            fs_figure['layout'].clickmode = 'event+select'
             # Adjust graph with adding x and y axis titles
-            self.components['graph']['feature_selector'].adjust_graph(
-                x_ax=truncate_str(self.selected_feature, 110),
+            MyGraph.adjust_graph_static(fs_figure,
+                #x_ax=truncate_str(self.layout.selected_feature, 110),
+                x_ax=truncate_str(selected_feature, 110),
                 y_ax='Contribution')
-            return self.components['graph']['feature_selector'].figure
+            return fs_figure
 
         @app.callback(
             [
@@ -1948,24 +1758,15 @@ class SmartApp:
             """
             ctx = dash.callback_context
             selected = None
-            if ctx.triggered[0]['prop_id'] != 'dataset.data':
-                if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                    selected = click_data['points'][0]['customdata'][1]
-                    self.click_graph = True
-                elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
-                    selected = prediction_picking['points'][0]['customdata']
-                    self.click_graph = True
-                elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
-                    if cell is not None:
-                        selected = data[cell['row']]['_index_']
-                    else:
-                        # Get actual value in field to refresh the selected value
-                        selected = current_index_id
-                elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                      (None in nclicks_del)):
-                    selected = current_index_id
-            else:
-                raise PreventUpdate
+            if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
+                selected = click_data['points'][0]['customdata'][1]
+            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
+                selected = prediction_picking['points'][0]['customdata']
+            elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
+                selected = data[cell['row']]['_index_']
+            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
+                    (None in nclicks_del)):
+                selected = current_index_id
             return selected, True
 
         @app.callback(
@@ -1984,7 +1785,6 @@ class SmartApp:
             """
             update max_contrib label
             """
-            self.components['filter']['max_contrib']['max_contrib_id'].value = value
             return f'Features to display: {value}'
 
         @app.callback(
@@ -1993,10 +1793,12 @@ class SmartApp:
              Output('max_contrib_id', 'marks')
              ],
             [Input('modal', 'is_open')],
-            [State('features', 'value')]
+            [State('features', 'value'),
+             State('max_contrib_id', 'value')]
         )
         def update_max_contrib_id(is_open,
-                                  features):
+                                  features,
+                                  value):
             """
             update max contrib component layout after settings modifications
             """
@@ -2005,25 +1807,11 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    max = min(features, len(self.explainer.x_init.columns))
-                    if max // 5 == max / 5:
-                        nb_marks = min(int(max // 5), 10)
-                    elif max // 4 == max / 4:
-                        nb_marks = min(int(max // 4), 10)
-                    elif max // 3 == max / 3:
-                        nb_marks = min(int(max // 3), 10)
-                    elif max // 7 == max / 7:
-                        nb_marks = min(int(max // 6), 10)
-                    else:
-                        nb_marks = 2
-                    marks = {f'{round(max * feat / nb_marks)}': f'{round(max * feat / nb_marks)}'
-                             for feat in range(1, nb_marks + 1)}
-                    marks['1'] = '1'
-                    if max < self.components['filter']['max_contrib']['max_contrib_id'].value:
-                        value = max
-                    else:
-                        value = no_update
-
+                    value, max, marks = update_features_to_display(
+                        features, 
+                        len(self.explainer.x_init.columns), 
+                        value
+                    )
                     return value, max, marks
 
         @app.callback(
@@ -2035,9 +1823,6 @@ class SmartApp:
                 Input('check_id_negative', 'value'),
                 Input('masked_contrib_id', 'value'),
                 Input('select_label', 'value'),
-                Input('dataset', 'active_cell'),
-                Input('feature_selector', 'clickData'),
-                Input('prediction_picking', 'clickData'),
                 Input("validation", "n_clicks"),
                 Input('bool_groups', 'on'),
                 Input('ember_detail_feature', 'n_clicks'),
@@ -2053,9 +1838,6 @@ class SmartApp:
                                   negative,
                                   masked,
                                   label,
-                                  cell,
-                                  click_data,
-                                  prediction_picking,
                                   validation_click,
                                   bool_group,
                                   click_zoom,
@@ -2083,40 +1865,18 @@ class SmartApp:
             detail feature graph
             """
             # Zoom is False by Default. It becomes True if we click on it
-            click = 2 if click_zoom is None else click_zoom
-            if click % 2 == 0:
-                zoom_active = False
-            else:
-                zoom_active = True
-            ctx = dash.callback_context
-            selected = None
-            if ctx.triggered[0]['prop_id'] == 'feature_selector.clickData':
-                selected = click_data['points'][0]['customdata'][1]
-            elif ctx.triggered[0]['prop_id'] == 'prediction_picking.clickData':
-                selected = prediction_picking['points'][0]['customdata']
-            elif ctx.triggered[0]['prop_id'] in ['threshold_id.value', 'validation.n_clicks']:
-                selected = index
-            elif ctx.triggered[0]['prop_id'] == 'dataset.active_cell':
-                if cell:
-                    selected = data[cell['row']]['_index_']
-                else:
-                    zoom_active = zoom_active
-                    # raise PreventUpdate
-            else:
-                selected = index
+            zoom_active = get_figure_zoom(click_zoom)
+            selected = index
             if check_row(data, selected) is None:
                 selected = None
             threshold = threshold if threshold != 0 else None
-            if positive == [1]:
-                sign = (None if negative == [1] else True)
-            else:
-                sign = (False if negative == [1] else None)
+            sign = get_feature_contributions_sign_to_show(positive, negative)
             self.explainer.filter(threshold=threshold,
                                   features_to_hide=masked,
                                   positive=sign,
                                   max_contrib=max_contrib,
                                   display_groups=bool_group)
-            self.components['graph']['detail_feature'].figure = self.explainer.plot.local_plot(
+            figure = self.explainer.plot.local_plot(
                 index=selected,
                 label=label,
                 show_masked=True,
@@ -2126,18 +1886,18 @@ class SmartApp:
             )
             if selected is not None:
                 # Adjust graph with adding x axis titles
-                self.components['graph']['detail_feature'].adjust_graph(x_ax='Contribution')
+                MyGraph.adjust_graph_static(figure, x_ax='Contribution')
                 # font size can be adapted to screen size
-                list_yaxis = [self.components['graph']['detail_feature'].figure.data[i].y[0] for i in
-                            range(len(self.components['graph']['detail_feature'].figure.data))]
+                list_yaxis = [figure.data[i].y[0] for i in
+                            range(len(figure.data))]
                 # exclude new line with labels of y axis
                 if list_yaxis != []:
                     list_yaxis = [x.split('<br />')[0] for x in list_yaxis]
                     nb_car = max([len(x) for x in list_yaxis])
-                    self.components['graph']['detail_feature'].figure.update_layout(
+                    figure.update_layout(
                         yaxis=dict(tickfont={'size': min(round(500 / nb_car), 12)})
                     )
-            return self.components['graph']['detail_feature'].figure
+            return figure
 
         @app.callback(
             Output("validation", "n_clicks"),
@@ -2187,54 +1947,43 @@ class SmartApp:
             selected = check_row(data, index)
             title_contrib = "Contribution"
             if n_submit and selected is not None:
-                selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
-                selected_row["feature_name"] = selected_row.index.map(
-                    lambda x: x if x in self.special_cols else self.features_dict[x]
-                )
+                selected_row = get_id_card_features(data, selected, self.special_cols, self.features_dict)
                 if self.explainer._case == 'classification':
                     if label is None:
                         label = -1
                     label_num, _, label_value = self.explainer.check_label_name(label)
-                    contrib = self.explainer.data['contrib_sorted'][label_num].loc[index, :].values
-                    var_dict = self.explainer.data['var_dict'][label_num].loc[index, :].values
+                    selected_contrib = get_id_card_contrib(
+                        self.explainer.data, 
+                        index,
+                        self.explainer.features_dict,
+                        self.explainer.columns_dict,
+                        label_num
+                    )
                     proba = self.explainer.plot.local_pred(index, label_num)
                     title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
-                    _, _, predicted_label_value = self.explainer.check_label_name(selected_row.loc["_predict_", "feature_value"])
+                    _, _, predicted_label_value = self.explainer.check_label_name(
+                        selected_row.loc["_predict_", "feature_value"]
+                    )
                     selected_row.loc["_predict_", "feature_value"] = predicted_label_value
                 else:
-                    contrib = self.explainer.data['contrib_sorted'].loc[index, :].values
-                    var_dict = self.explainer.data['var_dict'].loc[index, :].values
-                var_dict = [self.explainer.features_dict[self.explainer.columns_dict[x]] for x in var_dict]
-                selected_contrib = pd.DataFrame([var_dict, contrib], index=["feature_name", "feature_contrib"]).T
-                selected_contrib["feature_contrib"] = selected_contrib["feature_contrib"].apply(lambda x: round(x, 4))
-                selected_data = selected_row.merge(selected_contrib, how="left", on="feature_name")
-                selected_data.index = selected_row.index
-                selected_data = pd.concat([
-                    selected_data.loc[self.special_cols], 
-                    selected_data.drop(index=self.special_cols+list(self.explainer.additional_features_dict.keys())).sort_values(sort_by, ascending=order),
-                    selected_data.loc[list(self.explainer.additional_features_dict.keys())].sort_values(sort_by, ascending=order)
-                ])
-                children = []
-                for _, row in selected_data.iterrows():
-                    label_style = {
-                        'fontWeight': 'bold', 
-                        'font-style': 'italic'
-                    } if row["feature_name"] in self.explainer.additional_features_dict.values() else {'fontWeight': 'bold'}
-                    children.append(
-                        dbc.Row([
-                            dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style), 
-                            dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
-                            dbc.Col(width=1),
-                            dbc.Col(
-                                dbc.Row(
-                                    dbc.Label(format(row["feature_contrib"], '.4f'), width="auto", style={"padding-top":0}), 
-                                    justify="end"
-                                ), 
-                                width=2, 
-                                className="id_card_solid",
-                            ) if row["feature_contrib"]==row["feature_contrib"] else None,
-                        ])
+                    selected_contrib = get_id_card_contrib(
+                        self.explainer.data, 
+                        index,
+                        self.explainer.features_dict,
+                        self.explainer.columns_dict,
                     )
+                
+                selected_data = create_id_card_data(
+                    selected_row,
+                    selected_contrib,
+                    sort_by,
+                    order,
+                    self.special_cols,
+                    self.explainer.additional_features_dict
+                )
+
+                children = create_id_card_layout(selected_data, self.explainer.additional_features_dict)
+
                 return {"display":"flex", "margin-left":"auto", "margin-right":0}, children, title_contrib
             else:
                 return {"display":"none"}, [], title_contrib
@@ -2319,9 +2068,9 @@ class SmartApp:
             return style_data_conditional, style_filter_conditional, style_header_conditional, style_cell_conditional
 
         @app.callback(
-            Output(component_id='prediction_picking', component_property='figure'),
+            Output('prediction_picking', 'figure'),
+            Output('prediction_picking', 'selectedData'),
             [
-                Input('global_feature_importance', 'clickData'),
                 Input('dataset', 'data'),
                 Input('apply_filter', 'n_clicks'),
                 Input('reset_dropdown_button', 'n_clicks'),
@@ -2332,11 +2081,11 @@ class SmartApp:
             ],
             [
                 State('points', 'value'),
-                State('violin', 'value')
+                State('violin', 'value'),
+                State('prediction_picking','selectedData')
             ]
         )
-        def update_prediction_picking(feature,
-                                      data,
+        def update_prediction_picking(data,
                                       apply_filters,
                                       reset_filter,
                                       nclicks_del,
@@ -2344,12 +2093,12 @@ class SmartApp:
                                       is_open,
                                       click_zoom,
                                       points,
-                                      violin):
+                                      violin,
+                                      selectedData):
             """
             Update feature plot according to label, data,
             selected feature and settings modifications
             ------------------------------------------------
-            feature: click on features importance graph
             data: the dataset
             apply_filters: click on apply filter button
             reset_filter: click on reset filter button
@@ -2365,46 +2114,30 @@ class SmartApp:
             """
             ctx = dash.callback_context
             # Filter subset
-            filter_subset = None
-            if not ctx.triggered:
-                raise dash.exceptions.PreventUpdate
-            if ctx.triggered[0]['prop_id'] == 'modal.is_open':
-                if is_open:
-                    raise PreventUpdate
-                else:
-                    self.settings['points'] = points
-                    self.settings_ini['points'] = self.settings['points']
-                    self.settings['violin'] = violin
-                    self.settings_ini['violin'] = self.settings['violin']
-                    self.subset = None
-            elif ctx.triggered[0]['prop_id'] == 'select_label.value':
-                self.label = label
-            # If we have clicked on reset button
-            elif ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks':
-                self.subset = None
-            # If we have clicked on Apply filter button
-            elif ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks':
-                self.subset = [d['_index_'] for d in data]
-            # If we have clicked on the last delete button (X)
-            elif (('del_dropdown_button' in ctx.triggered[0]['prop_id']) &
-                  (None not in nclicks_del)):
-                self.subset = None
-            else:
+            subset = None
+            if  (ctx.triggered[0]['prop_id'] == 'apply_filter.n_clicks' or
+                ctx.triggered[0]['prop_id'] == 'reset_dropdown_button.n_clicks' or 
+                ('del_dropdown_button' in ctx.triggered[0]['prop_id'] and
+                None not in nclicks_del)):
+                selectedData = None
+            if selectedData is not None and len(selectedData['points'])>0:
                 raise PreventUpdate
+            else:
+                subset = get_indexes_from_datatable(data)
 
-            self.components['graph']['prediction_picking'].figure = self.explainer.plot.scatter_plot_prediction(
-                    selection=self.subset,
+            figure = self.explainer.plot.scatter_plot_prediction(
+                    selection=subset,
                     max_points=points,
-                    label=self.label
+                    label=label
                 )
             if self.explainer.y_target is not None:
-                self.components['graph']['prediction_picking'].figure['layout'].clickmode = 'event+select'
+                figure['layout'].clickmode = 'event+select'
                 # Adjust graph with adding x and y axis titles
-                self.components['graph']['prediction_picking'].adjust_graph(
+                MyGraph.adjust_graph_static(figure,
                     x_ax="True Values",
                     y_ax="Predicted Values")
 
-            return self.components['graph']['prediction_picking'].figure
+            return figure, selectedData
 
         @app.callback(
             Output("modal_feature_importance", "is_open"),
@@ -2558,66 +2291,11 @@ class SmartApp:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-            # We use domain name for feature name
-            dict_name = [self.features_dict[i]
-                         for i in self.dataframe.drop(self.special_cols, axis=1).columns]
-            dict_id = [i for i in self.dataframe.drop(self.special_cols, axis=1).columns]
-            # Create dataframe to sort it by feature_name
-            df_feature_name = pd.DataFrame({'feature_name': dict_name,
-                                            'feature_id': dict_id})
-            df_feature_name = df_feature_name.sort_values(
-                by='feature_name').reset_index(drop=True)
-            # Options are sorted by feature_name
-            options = [{"label": i, "value": i} for i in self.special_cols] + \
-                [{"label": df_feature_name.loc[i, 'feature_name'],
-                  "value": df_feature_name.loc[i, 'feature_id']}
-                 for i in range(len(df_feature_name))]
+            options = get_feature_filter_options(self.dataframe, self.features_dict, self.special_cols)
 
             # Creation of a new graph
             if button_id == 'add_dropdown_button':
-                # ID index definition
-                if n_clicks_add is None:
-                    index_id = 0
-                else:
-                    index_id = n_clicks_add
-                # Appending a dropdown block to 'dropdowns_container'children
-                subset_filter = html.Div(
-                    id={'type': 'bloc_div',
-                        'index': index_id},
-                    children=[
-                        html.Div([
-                            html.Br(),
-                            # div which will contains label
-                            html.Div(
-                                    id={'type': 'dynamic-output-label',
-                                        'index': index_id},
-                                    )
-                            ]),
-                        html.Div([
-                            # div with dopdown button to select feature to filter
-                            html.Div(dcc.Dropdown(
-                                id={'type': 'var_dropdown',
-                                    'index': index_id},
-                                options=options,
-                                placeholder="Variable"
-                            ), style={"width": "30%"}),
-                            # div which will contains modalities
-                            html.Div(
-                                 id={'type': 'dynamic-output',
-                                     'index': index_id},
-                                 style={"width": "50%"}
-                                ),
-                            # Button to delete bloc
-                            dbc.Button(
-                                id={'type': 'del_dropdown_button',
-                                    'index': index_id},
-                                children='X',
-                                color='warning',
-                                size='sm'
-                            )
-                        ], style={'display': 'flex'})
-                    ]
-                )
+                subset_filter = create_dropdown_feature_filter(n_clicks_add, options)
                 return currents_filters + [subset_filter]
             # Removal of all existing filters
             elif button_id == 'reset_dropdown_button':
@@ -2738,73 +2416,14 @@ class SmartApp:
             # Context and init handling (no action)
             ctx = dash.callback_context
             if not ctx.triggered:
-                raise dash.exceptions.PreventUpdate
+                raise PreventUpdate
             # No update last modalities values if we click on add button
             if ctx.triggered[0]['prop_id'] == 'add_dropdown_button.n_clicks':
-                raise dash.exceptions.PreventUpdate
+                raise PreventUpdate
             # Creation on modalities dropdown button
             else:
                 if value is not None:
-                    if type(self.round_dataframe[value].iloc[0]) == bool:
-                        new_element = html.Div(dcc.RadioItems(
-                            [{'label': val, 'value': val} for
-                             val in self.round_dataframe[value].unique()],
-                            id={'type': 'dynamic-bool',
-                                'index': id['index']},
-                            value=self.round_dataframe[value].iloc[0],
-                            inline=False
-                            ), style={"width": "65%", 'margin-left': '20px'})
-                    elif (type(self.round_dataframe[value].iloc[0]) == str) | \
-                         ((type(self.round_dataframe[value].iloc[0]) == np.int64) &
-                          (len(self.round_dataframe[value].unique()) <= 20)):
-                        new_element = html.Div(dcc.Dropdown(
-                            id={
-                               'type': 'dynamic-str',
-                               'index': id['index']
-                            },
-                            options=[{'label': i, 'value': i} for
-                                    i in np.sort(self.round_dataframe[value].unique())],
-                            multi=True,
-                            ), style={"width": "65%", 'margin-left': '20px'})
-                    elif ((type(self.round_dataframe[value].iloc[0]) is pd.Timestamp) |
-                          (type(self.round_dataframe[value].iloc[0]) is datetime.datetime)):
-                        new_element = html.Div(
-                            dcc.DatePickerRange(
-                                id={
-                                   'type': 'dynamic-date',
-                                   'index': id['index']
-                                },
-                                min_date_allowed=self.round_dataframe[value].min(),
-                                max_date_allowed=self.round_dataframe[value].max(),
-                                start_date=self.round_dataframe[value].min(),
-                                end_date=self.round_dataframe[value].max()
-                               ), style={'width': '65%', 'margin-left': '20px'}),
-                    else:
-                        lower_value = 0
-                        upper_value = 0
-                        new_element = html.Div([
-                                            dcc.Input(
-                                                id={
-                                                    'type': 'lower',
-                                                    'index': id['index']
-                                                },
-                                                value=lower_value,
-                                                type="number",
-                                                style={'width': '60px'}),
-                                            ' <= {} in [{}, {}]<= '.format(
-                                                value,
-                                                self.round_dataframe[value].min(),
-                                                self.round_dataframe[value].max()),
-                                            dcc.Input(
-                                                id={
-                                                    'type': 'upper',
-                                                    'index': id['index']
-                                                },
-                                                value=upper_value,
-                                                type="number",
-                                                style={'width': '60px'}
-                                            )
-                        ], style={'margin-left': '20px'})
+                    new_element = create_filter_modalities_selection(value, id, self.round_dataframe)
                 else:
                     new_element = html.Div()
                 return new_element

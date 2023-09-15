@@ -8,6 +8,7 @@ from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import category_encoders as ce
 from shapash.utils.transform import get_preprocessing_mapping, get_features_transform_mapping
+from pandas.testing import assert_frame_equal
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
@@ -212,3 +213,19 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
                             'other': ['other']}
 
         self.assertDictEqual(mapping, expected_mapping)
+
+    def handle_categorical_missing(self):
+        """
+        test handle_categorical_missing
+        """
+        df_test = pd.DataFrame({'city': [np.nan, 'paris', 'chicago'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': [np.nan, 'B', 'B']})
+
+        df_test = handle_categorical_missing(df_test)
+
+        df_expected = pd.DataFrame({'city': ['missing', 'paris', 'chicago'],
+                             'state': ['US', 'FR', 'FR'],
+                             'other': ['missing', 'B', 'B']})
+
+        assert_frame_equal(df_test, df_expected)
