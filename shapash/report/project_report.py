@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import plotly
 
-from shapash.utils.transform import inverse_transform, apply_postprocessing
+from shapash.utils.transform import inverse_transform, apply_postprocessing, handle_categorical_missing
 from shapash import SmartExplainer
 from shapash.utils.io import load_yml
 from shapash.utils.utils import get_project_root, truncate_str
@@ -72,7 +72,9 @@ class ProjectReport:
         self.metadata = load_yml(path=project_info_file)
         self.x_train_init = x_train
         if x_train is not None:
-            self.x_train_pre = inverse_transform(x_train, self.explainer.preprocessing)
+            x_train_pre = inverse_transform(x_train, self.explainer.preprocessing)
+            self.x_train_pre = handle_categorical_missing(x_train_pre)
+
             if self.explainer.postprocessing:
                 self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
         else:

@@ -50,7 +50,7 @@ def generate_fig_univariate(
     elif type == VarType.TYPE_CAT:
         fig = generate_fig_univariate_categorical(df_all, col, hue=hue, colors_dict=colors_dict)
     else:
-        raise NotImplemented("Series dtype not supported")
+        raise NotImplementedError("Series dtype not supported")
     return fig
 
 
