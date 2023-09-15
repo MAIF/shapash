@@ -41,7 +41,7 @@ Additionally, Shapash contributes to data science auditing by presenting valuabl
 Shapash is suitable for Regression, Binary Classification, and Multiclass problems. It is compatible with numerous models, including Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, and SVM. For other models, solutions to integrate Shapash are available; more details can be found [here](#how_shapash_works).
 
 > [!NOTE]
-> If you want to give us feedbacks : [Feedbacks form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
+> If you want to give us feedback : [Feedback form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
 
 [Shapash App Demo](https://shapash-demo.ossbymaif.fr/)
 
@@ -52,7 +52,7 @@ Shapash is suitable for Regression, Binary Classification, and Multiclass proble
 ## 🌱 Documentation and resources
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=latest)](https://shapash.readthedocs.io/en/latest/)
-- [Presentation video for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
+- [Video presentation for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
 - Medium:
   - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
   - [Model auditability - Towards DS](https://towardsdatascience.com/shapash-1-3-2-announcing-new-features-for-more-auditable-ai-64a6db71c919)
