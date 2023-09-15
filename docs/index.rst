@@ -10,8 +10,9 @@ Welcome to Shapash's documentation !
    :width: 300px
    :align: center
 
-**Shapash** is a Python library which aims to make machine learning interpretable and understandable to everyone. **Shapash** provides several types of visualization which displays explicit labels that everyone can understand. Data Scientists can more easily understand their models and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
-The project was developed by **MAIF** Data Scientists.
+**Shapash** is a Python library designed to make machine learning interpretable and accessible to everyone.
+It offers various visualization types with clear and explicit labels that are easy to understand. This enables Data Scientists to better comprehend their models and share their findings, while end users can grasp the decisions made by a model through a summary of the most influential factors.
+Shapash was developed by **MAIF** Data Scientists.
 
 +---------------------------------+----------------------------------------------------------+-----------------------------------------+
 | Company                         | GitHub Account                                           | Website                                 |
@@ -24,20 +25,20 @@ The project was developed by **MAIF** Data Scientists.
 **The objectives of Shapash:**
 ------------------------------
 
-- To display clear and understandable results: Plots and outputs use explicit labels for each feature and its modalities:
+- Provide clear and understandable results: Plots and outputs use explicit labels for each feature and its modalities:
 
 .. image:: ./_static/shapash-contribution_plot-example.png
    :width: 500px
    :align: center
 
-- To allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: `Live Demo shapash-monitor <https://shapash-demo.ossbymaif.fr/>`__
+- Enable Data Scientists to quickly comprehend their models using a **web app** for seamless navigation between global and local explainability, and to understand how different features contribute: `Live Demo shapash-monitor <https://shapash-demo.ossbymaif.fr/>`__
 
 .. image:: ./_static/shapash-webapp-demo.gif
    :width: 700px
    :align: center
    :target: https://shapash-demo.ossbymaif.fr/
 
-- To **Summarize and export** the local explanation: **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data backround is, to understand a local prediction of a supervised model, thanks to a summarized and straightforward explanation
+- **Summarize and export** local explanations: **Shapash** offers concise and transparent local explanations, allowing users of any data background to understand a local prediction of a supervised model through a simplified and straightforward explanation.
 
 .. image:: ./_static/shapash-local_plot-example.png
    :width: 600px
@@ -63,7 +64,7 @@ The project was developed by **MAIF** Data Scientists.
     |Cheap               |0.8524|Ground living area square feet|   1188|        0.9421|Remodel date                  |          1959|        0.4234|Overall material and finish of the house|      5|        0.3785|Full bathrooms above grade|      1|        0.3738|Number of fireplaces                      |            0|        0.1687|Rating of basement finished area        |Average Rec Room|        0.1302|Wood deck area in square feet|                         0|        0.1225|
     +--------------------+------+------------------------------+-------+--------------+------------------------------+--------------+--------------+----------------------------------------+-------+--------------+--------------------------+-------+--------------+------------------------------------------+-------------+--------------+----------------------------------------+----------------+--------------+-----------------------------+--------------------------+--------------+
 
-- To freeze different aspects of a data science project as a basis of an audit report
+- Establish a foundation for **audit reports** by freezing various aspects of a data science project.
 
 .. image:: ./_static/shapash-report-demo.gif
    :width: 700px
@@ -75,27 +76,26 @@ The project was developed by **MAIF** Data Scientists.
 **Shapash** features:
 ---------------------
 
-- Compatible with Shap & Lime
+- Compatibility with Shap & Lime
 - Uses Shap backend to display results in a few lines of code
 - Encoders objects and features dictionaries used for clear results
-- Compatible with category_encoders & Sklearn ColumnTransformer
-- Visualizations of global and local explainability
-- Webapp to easily navigate from global to local
-- Select subsets for further analysis of explainability by filtering on explanatory and additional features, correct or wrong predictions
-- Summarizes local explanation
+- Compatibility with category_encoders & Sklearn ColumnTransformer
+- Global and local explainability visualizations
+- Web app for easy navigation from global to local
+- Subset selection for in-depth explainability analysis by filtering explanatory and additional features, as well as correct or wrong predictions
+- Local explanation summarization
 - Offers several parameters in order to sum up in the most suitable way for your use case
 - Exports your local summaries to Pandas DataFrames
-- Usable for Regression, Binary Classification or Multiclass
+- Applicable for Regression, Binary Classification or Multiclass
 - Compatible with most of sklearn, lightgbm, catboost, xgboost models
-- Relevant for exploration and **also** deployment (through an API or in Batch mode) for operational use
-- Freeze different aspects of a data science project as a basis of an audit report
+- Suitable for exploration and **also** deployment (through an API or in Batch mode) for operational use
+- Freezes various aspects of a data science project as a basis for audit reports
 
 
-**Shapash** is easy to install and use:
-It provides a SmartExplainer class to understand your model and summarize explanation with a simple syntax.
+**Shapash** is easy to install and use, offering a SmartExplainer class to understand your model and summarize explanations with simple syntax.
 
 High adaptability:
-Very few arguments are required to display results. But the more you work on cleaning and documenting the data, the clearer the results will be for the end user.
+Although only a few arguments are needed to display results, the more effort you put into cleaning and documenting the data, the clearer the results will be for the end user.
 
 
 .. toctree::

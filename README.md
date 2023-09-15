@@ -32,17 +32,18 @@
 
 ## 🔍 Overview
 
-**Shapash** is a Python library which aims to make machine learning interpretable and understandable by everyone.
-It provides several types of visualization that display explicit labels that everyone can understand.
+**Shapash** is a Python library designed to make machine learning interpretable and comprehensible for everyone. It offers various visualizations with clear and explicit labels that are easily understood by all.
 
-Data Scientists can understand their models easily and share their results. End users can understand the decision proposed by a model using a summary of the most influential criteria.
+This library enables Data Scientists to effortlessly comprehend their models and share their findings. End users can grasp the decisions made by a model through a concise summary of the most influential factors.
 
-Shapash also contributes to data science auditing by displaying usefull information about any model and data in a unique report.
+Additionally, Shapash contributes to data science auditing by presenting valuable information about any model and data in a comprehensive report.
 
-Shapash works for Regression, Binary Classification or Multiclass problem. It is compatible with many models: Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, SVM. For other models, solutions for using Shapash are possible, more details [here](#how_shapash_works).
+Shapash is suitable for Regression, Binary Classification, and Multiclass problems. It is compatible with numerous models, including Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, and SVM. For other models, solutions to integrate Shapash are available; more details can be found [here](#how_shapash_works).
 
 > [!NOTE]
 > If you want to give us feedbacks : [Feedbacks form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
+
+[Shapash App Demo](https://shapash-demo.ossbymaif.fr/)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash_global.gif" width="800">
@@ -123,24 +124,24 @@ Shapash works for Regression, Binary Classification or Multiclass problem. It is
 </p>
 
 
-- Allow Data Scientists to quickly understand their models by using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
+- Allow Data Scientists to quickly understand their models using a **webapp** to easily navigate between global and local explainability, and understand how the different features contribute: [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
-- **Summarize and export** the local explanation
-> **Shapash** proposes a short and clear local explanation. It allows each user, whatever their Data background, to understand a local prediction of a supervised model thanks to a summarized and explicit explanation
+- **Summarize and export** local explanation
+> **Shapash** provides concise and clear local explanations, It allows each user, enabling users of any Data background to understand a local prediction of a supervised model through a summarized and explicit explanation
 
 
-- **Evaluate** the quality of your explainability using different metrics
+- **Evaluate** the quality of your explainability with various metrics
 
-- Easily share and discuss results with non-Data users
+- Effortlessly share and discuss results with non-Data users
 
-- Select subsets for further analysis of explainability by filtering on explanatory and additional features, correct or wrong predictions. [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
+- Select subsets for in-depth analysis of explainability by filtering based on explanatory and additional features, as well as correct or wrong predictions. [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
 
 - Deploy interpretability part of your project: From model training to deployment (API or Batch Mode)
 
-- Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects. [Report Example](https://shapash.readthedocs.io/en/latest/report.html) 
->We hope that this report will bring a valuable support to auditing models and data related to a better AI governance. 
-Data Scientists can now deliver to anyone who is interested in their project **a document that freezes different aspects of their work as a basis of an audit report**. 
-This document can be easily shared across teams (internal audit, DPO, risk, compliance...).
+- Contribute to the **auditability of your model** by generating a **standalone HTML report** of your projects. [Report Example](https://shapash.readthedocs.io/en/latest/report.html)
+>We believe that this report will offer valuable support for auditing models and data, leading to improved AI governance.
+Data Scientists can now provide anyone interested in their project with **a document that captures various aspects of their work as the foundation for an audit report**.
+This document can be easily shared among teams (internal audit, DPO, risk, compliance...).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-report-demo.gif" width="800">
@@ -148,18 +149,18 @@ This document can be easily shared across teams (internal audit, DPO, risk, comp
 
 <a name="how_shapash_works"></a>
 ## ⚙️ How Shapash works
-**Shapash** is an overlay package for libraries dedicated to the interpretability of models. It uses Shap or Lime backend
+**Shapash** is an overlay package for libraries focused on model interpretability. It uses Shap or Lime backend
 to compute contributions.
-**Shapash** builds on the different steps necessary to build a machine learning model to make the results understandable
+**Shapash** builds upon the various steps required to create a machine learning model, making the results more understandable.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-diagram.png" width="700" title="diagram">
 </p>
 
-**Shapash** works for Regression, Binary Classification or Multiclass problem. <br />
-It is compatible with many models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*. <br />
+**Shapash** is suitable for Regression, Binary Classification or Multiclass problem. <br />
+It is compatible with numerous models: *Catboost*, *Xgboost*, *LightGBM*, *Sklearn Ensemble*, *Linear models*, *SVM*. <br />
 
-If your model is not in the list of compatible models, it is possible to provide Shapash with local contributions calculated with shap or another method. [Here's](https://github.com/MAIF/shapash/blob/master/tutorial/explainer_and_backend/tuto-expl05-Shapash-using-Fasttreeshap.ipynb) an example of how to provide contributions to Shapash. An [issue](https://github.com/MAIF/shapash/issues/488) is created to improve this use case.
+If your model is not in the list of compatible models, it is possible to provide Shapash with local contributions calculated with shap or another method. [Here's](https://github.com/MAIF/shapash/blob/master/tutorial/explainer_and_backend/tuto-expl05-Shapash-using-Fasttreeshap.ipynb) an example of how to provide contributions to Shapash. An [issue](https://github.com/MAIF/shapash/issues/488) has been created to enhance this use case.
 
 Shapash can use category-encoders object, sklearn ColumnTransformer or simply features dictionary. <br />
 - Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
