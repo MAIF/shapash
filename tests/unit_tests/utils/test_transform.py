@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.compose import ColumnTransformer
 import sklearn.preprocessing as skp
 import category_encoders as ce
-from shapash.utils.transform import get_preprocessing_mapping, get_features_transform_mapping
+from shapash.utils.transform import get_preprocessing_mapping, get_features_transform_mapping, handle_categorical_missing
 from pandas.testing import assert_frame_equal
 
 
