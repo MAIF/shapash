@@ -41,9 +41,9 @@ extras = dict()
 
 # This list should be identical to the list in shapash/report/__init__.py
 extras['report'] = [
-    'nbconvert==6.0.7',
+    'nbconvert>=6.0.7',
     'papermill>=2.0.0',
-    'jupyter-client<8.0.0',
+    'jupyter-client>=7.4.0',
     'seaborn>=0.12.2',
     'notebook',
     'Jinja2>=2.11.0',
