@@ -53,7 +53,6 @@ extras['report'] = [
 extras['xgboost'] = ['xgboost>=1.0.0']
 extras['lightgbm'] = ['lightgbm>=2.3.0']
 extras['catboost'] = ['catboost>=1.0.1']
-extras['acv'] = ['acv-exp>=1.2.0']
 extras['lime'] = ['lime>=0.2.0.0']
 
 setup_requirements = ['pytest-runner', ]

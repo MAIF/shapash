@@ -293,23 +293,6 @@ class TestSmartExplainer(unittest.TestCase):
     def test_compile_4(self):
         """
         Unit test compile 4
-        checking compile method with acv backend
-        """
-        np.random.seed(0)
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-
-        xpl = SmartExplainer(clf, backend='acv', data=df[['x1', 'x2']])
-        xpl.compile(x=df[['x1', 'x2']])
-        assert xpl.backend.__class__.__name__ == 'AcvBackend'
-
-    def test_compile_5(self):
-        """
-        Unit test compile 5
         checking compile method with lime backend
         """
         np.random.seed(1)
@@ -323,9 +306,9 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(clf, data=df[['x1', 'x2']], backend="lime")
         xpl.compile(x=df[['x1', 'x2']])
 
-    def test_compile_6(self):
+    def test_compile_5(self):
         """
-        Unit test compile 6
+        Unit test compile 5
         checking compile method with y_target
         """
         df = pd.DataFrame(range(0, 21), columns=['id'])
@@ -340,9 +323,9 @@ class TestSmartExplainer(unittest.TestCase):
         assert_frame_equal(xpl.y_target, df[['y']])
         self.assertListEqual(xpl._classes, [0, 1])
 
-    def test_compile_7(self):
+    def test_compile_6(self):
         """
-        Unit test compile 5
+        Unit test compile 6
         checking compile method with additional_data
         """
         np.random.seed(1)

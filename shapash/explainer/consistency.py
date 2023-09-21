@@ -33,18 +33,19 @@ class Consistency():
         color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
         return color_scale
 
-    def compile(self, x=None, model=None, preprocessing=None, contributions=None, methods=["shap", "acv", "lime"]):
-        """If not provided, compute contributions according to provided methods (default are shap, acv, lime).
-        If provided, check whether they respect the correct format:
+    def compile(self, contributions, x=None, preprocessing=None):
+        """Check whether the contributions respect the correct format:
         contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
         where each contrib_i is a pandas DataFrame
 
         Parameters
         ----------
+        contributions : dict
+            Contributions provided by the user if no compute is required.
+            Format must be {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
+            where each contrib_i is a pandas DataFrame. By default None
         x : DataFrame, optional
             Dataset on which to compute consistency metrics, by default None
-        model : model object, optional
-            Model used to compute contributions, by default None
         preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
             --> Differents types of preprocessing are available:
 
@@ -54,71 +55,16 @@ class Consistency():
             - A list with a single ColumnTransformer with optional (dict, list of dict)
             - A dict
             - A list of dict
-        contributions : dict, optional
-            Contributions provided by the user if no compute is required.
-            Format must be {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
-            where each contrib_i is a pandas DataFrame. By default None
-        methods : list
-            Methods used to compute contributions, by default ["shap", "acv", "lime"]
         """
         self.x = x
         self.preprocessing = preprocessing
-        if contributions is None:
-            if (self.x is None) or (model is None):
-                raise ValueError('If no contributions are provided, parameters "x" and "model" must be defined')
-            contributions = self.compute_contributions(self.x, model, methods, self.preprocessing)
-        else:
-            if not isinstance(contributions, dict):
-                raise ValueError('Contributions must be a dictionary')
+        if not isinstance(contributions, dict):
+            raise ValueError('Contributions must be a dictionary')
         self.methods = list(contributions.keys())
         self.weights = list(contributions.values())
 
         self.check_consistency_contributions(self.weights)
         self.index = self.weights[0].index
-
-    def compute_contributions(self, x, model, methods, preprocessing):
-        """
-        Compute contributions based on specified methods
-
-        Parameters
-        ----------
-        x : pandas.DataFrame
-            Prediction set.
-            IMPORTANT: this should be the raw prediction set, whose values are seen by the end user.
-            x is a preprocessed dataset: Shapash can apply the model to it
-        model : model object
-            Model used to consistency check. model object can also be used by some method to compute
-            predict and predict_proba values
-        methods : list, optional
-            When contributions is None, list of methods to use to calculate contributions, by default ["shap", "acv"]
-        preprocessing : category_encoders, ColumnTransformer, list, dict
-                --> Differents types of preprocessing are available:
-
-                - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
-                - A single ColumnTransformer with scikit-learn encoding or category_encoders transformers
-                - A list with multiple category_encoders with optional (dict, list of dict)
-                - A list with a single ColumnTransformer with optional (dict, list of dict)
-                - A dict
-                - A list of dict
-
-        Returns
-        -------
-        contributions : dict
-            Dict whose keys are method names and values are the corresponding contributions
-        """
-        contributions = {}
-
-        for backend in methods:
-            xpl = SmartExplainer(model=model, preprocessing=preprocessing, backend=backend)
-            xpl.compile(x=x)
-            if xpl._case == "classification" and len(xpl._classes) == 2:
-                contributions[backend] = xpl.contributions[1]
-            elif xpl._case == "classification" and len(xpl._classes) > 2:
-                raise AssertionError("Multi-class classification is not supported")
-            else:
-                contributions[backend] = xpl.contributions
-
-        return contributions
 
     def check_consistency_contributions(self, weights):
         """
