@@ -42,3 +42,4 @@ skranger>=0.8.0
 acv-exp>=1.2.3
 lime>=0.2.0.0
 regex
+pillow>=10.0.1 # not directly required, pinned by Snyk to avoid a vulnerability
