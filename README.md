@@ -32,13 +32,13 @@
 
 ## 🔍 Overview
 
-**Shapash** is a Python library designed to make machine learning interpretable and comprehensible for everyone. It offers various visualizations with clear and explicit labels that are easily understood by all.
+Shapash is a Python library designed to **make machine learning interpretable and comprehensible for everyone**. It offers various visualizations with clear and explicit labels that are easily understood by all.
 
-This library enables Data Scientists to effortlessly comprehend their models and share their findings. End users can grasp the decisions made by a model through a concise summary of the most influential factors.
+With Shapash, you can generate a **Webapp** that simplifies the comprehension of **interactions between the model's features**, and allows **seamless navigation between local and global explainability**. This Webapp enables Data Scientists to effortlessly understand their models and **share their results with both data scientists and non-data experts**.
 
-Additionally, Shapash contributes to data science auditing by presenting valuable information about any model and data in a comprehensive report.
+Additionally, Shapash contributes to data science auditing by **presenting valuable information** about any model and data **in a comprehensive report**.
 
-Shapash is suitable for Regression, Binary Classification, and Multiclass problems. It is compatible with numerous models, including Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, and SVM. For other models, solutions to integrate Shapash are available; more details can be found [here](#how_shapash_works).
+Shapash is suitable for Regression, Binary Classification, and Multiclass problems. It is **compatible with numerous models**, including Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, and SVM. For other models, solutions to integrate Shapash are available; more details can be found [here](#how_shapash_works).
 
 > [!NOTE]
 > If you want to give us feedback : [Feedback form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
@@ -170,13 +170,13 @@ Shapash can use category-encoders object, sklearn ColumnTransformer or simply fe
 
 Shapash is intended to work with Python versions 3.8 to 3.10. Installation can be done with pip:
 
-```
+```python
 pip install shapash
 ```
 
 In order to generate the Shapash Report some extra requirements are needed.
 You can install these using the following command :  
-```
+```python
 pip install shapash[report]
 ```
 
@@ -190,7 +190,7 @@ The 4 steps to display results:
   > There 1 mandatory parameter in compile method: Model
   > You can declare features dict here to specify the labels to display
 
-```
+```python
 from shapash import SmartExplainer
 xpl = SmartExplainer(
   model=regressor,
@@ -203,12 +203,12 @@ xpl = SmartExplainer(
 - Step 2: Compile  Dataset, ...
   > There 1 mandatory parameter in compile method: Dataset
  
-```
+```python
 xpl.compile(
-    x=Xtest,    
+    x=xtest,    
     y_pred=y_pred, # Optional: for your own prediction (by default: model.predict)
     y_target=yTest, # Optional: allows to display True Values vs Predicted Values
-    additional_data=X_additional, # Optional: additional dataset of features for Webapp
+    additional_data=xadditional, # Optional: additional dataset of features for Webapp
     additional_features_dict=features_dict_additional, # Optional: dict additional data    
 )
 ```  
@@ -216,7 +216,7 @@ xpl.compile(
 - Step 3: Display output
   > There are several outputs and plots available. for example, you can launch the web app:
 
-```
+```python
 app = xpl.run_app()
 ``` 
 
@@ -226,11 +226,11 @@ app = xpl.run_app()
   > This step allows to generate a standalone html report of your project using the different splits
   of your dataset and also the metrics you used:
 
-```
+```python
 xpl.generate_report(
     output_file='path/to/output/report.html',
     project_info_file='path/to/project_info.yml',
-    x_train=Xtrain,
+    x_train=xtrain,
     y_train=ytrain,
     y_test=ytest,
     title_story="House prices report",
@@ -248,7 +248,7 @@ xpl.generate_report(
   SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local 
   explainability using appropriate wording.
   
-```
+```python
 predictor = xpl.to_smartpredictor()
 ```
 See the tutorial part to know how to use the SmartPredictor object
