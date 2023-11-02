@@ -44,7 +44,7 @@ extras['report'] = [
     'nbconvert>=6.0.7',
     'papermill>=2.0.0',
     'jupyter-client>=7.4.0',
-    'seaborn>=0.12.2',
+    'seaborn==0.12.2',
     'notebook',
     'Jinja2>=2.11.0',
     'phik'
