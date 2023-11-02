@@ -232,7 +232,7 @@ def compute_sorted_variables_interactions_list_indices(interaction_values):
     for i in range(tmp.shape[0]):
         tmp[i, i:] = 0
 
-    interaction_contrib_sorted_indices = np.dstack(np.unravel_index(np.argsort(tmp.ravel()), tmp.shape))[0][::-1]
+    interaction_contrib_sorted_indices = np.dstack(np.unravel_index(np.argsort(tmp.ravel(), kind="stable"), tmp.shape))[0][::-1]
     return interaction_contrib_sorted_indices
 
 
