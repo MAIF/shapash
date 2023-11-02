@@ -62,10 +62,6 @@ class SmartState:
             Single step of preprocessing, typically a category encoder.
         agg_columns : str (default: 'sum')
             Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
-            For ACV we want to take any value as ACV computes contributions of coalition of variables (like
-            one hot encoded variables) differently from Shap and then give the same value to each variable of the
-            coalition. As a result we just need to take the value of one of these variables to get the contribution
-            value of the group.
 
         Returns
         -------

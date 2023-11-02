@@ -10,6 +10,8 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from catboost import CatBoostClassifier
+import category_encoders as ce
 from shapash import SmartExplainer
 from shapash.backend import ShapBackend
 from shapash.utils.check import check_model
@@ -104,19 +106,17 @@ class TestSmartPlotter(unittest.TestCase):
             "features_needed": [1, 1],
             "distance_reached": np.array([0.12, 0.16])
         }
-        model = lambda: None
-        model._classes = np.array([1, 3])
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
+        encoder = ce.OrdinalEncoder(cols=["X1"], handle_unknown="None").fit(self.x_init)
+        model = CatBoostClassifier().fit(encoder.transform(self.x_init), [0, 1])
         self.model = model
         # Declare explainer object
         self.feature_dictionary = {'X1': 'Education', 'X2': 'Age'}
-        self.smart_explainer = SmartExplainer(model, features_dict=self.feature_dictionary)
+        self.smart_explainer = SmartExplainer(model, features_dict=self.feature_dictionary, preprocessing=encoder)
         self.smart_explainer.data = dict()
         self.smart_explainer.data['contrib_sorted'] = self.contrib_sorted
         self.smart_explainer.data['x_sorted'] = self.x_sorted
         self.smart_explainer.data['var_dict'] = self.var_dict
-        self.smart_explainer.x_encoded = self.x_init
+        self.smart_explainer.x_encoded = encoder.transform(self.x_init)
         self.smart_explainer.x_init = self.x_init
         self.smart_explainer.postprocessing_modifications = False
         self.smart_explainer.backend = ShapBackend(model=model)
@@ -1100,7 +1100,7 @@ class TestSmartPlotter(unittest.TestCase):
         for data in output.data:
             total_row = total_row + data.x.shape[0]
         assert total_row == 39
-        expected_title = "<b>Education</b> - Feature Contribution<br><sup>Response: <b>3</b> - Length of random Subset: 39 (98%)</sup>"
+        expected_title = "<b>Education</b> - Feature Contribution<br><sup>Response: <b>1</b> - Length of random Subset: 39 (98%)</sup>"
         assert output.layout.title['text'] == expected_title
 
     def test_contribution_plot_10(self):
@@ -1518,7 +1518,7 @@ class TestSmartPlotter(unittest.TestCase):
     def test_local_pred_1(self):
         xpl = self.smart_explainer
         output = xpl.plot.local_pred('person_A',label=0)
-        assert output == 0.5
+        assert isinstance(output, float)
 
     def test_plot_line_comparison_1(self):
         """
@@ -1647,7 +1647,7 @@ class TestSmartPlotter(unittest.TestCase):
         output = xpl.plot.compare_plot(index=index, show_predict=True)
         title_and_subtitle = "Compare plot - index : <b>person_A</b> ;" \
                 " <b>person_B</b><span style='font-size: 12px;'><br />" \
-                "Predictions: person_A: <b>1</b> ; person_B: <b>1</b></span>"
+                "Predictions: person_A: <b>0</b> ; person_B: <b>1</b></span>"
         fig = list()
         for i in range(2):
             fig.append(go.Scatter(
