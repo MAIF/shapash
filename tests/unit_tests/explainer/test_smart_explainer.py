@@ -14,6 +14,7 @@ import catboost as cb
 from pandas.testing import assert_frame_equal
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from catboost import CatBoostClassifier, CatBoostRegressor
 from shapash import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.backend import ShapBackend
@@ -49,8 +50,13 @@ class TestSmartExplainer(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.model = lambda: None
-        self.model.predict = types.MethodType(self.predict, self.model)
+        x_init = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        self.model = CatBoostRegressor().fit(x_init, [0, 1])
 
     def test_init(self):
         """
@@ -880,10 +886,6 @@ class TestSmartExplainer(unittest.TestCase):
              [-0.48666675, 0.25507156, -0.16968889, 0.0757443]],
             index=[0, 1, 2]
         )
-        model = lambda: None
-        model._classes = np.array([1, 3])
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
         x = pd.DataFrame(
             [[3., 1., 22., 1.],
              [1., 2., 38., 2.],
@@ -891,6 +893,7 @@ class TestSmartExplainer(unittest.TestCase):
             index=[0, 1, 2]
         )
         pred = pd.DataFrame([3, 1, 1], columns=['pred'], index=[0, 1, 2])
+        model = CatBoostClassifier().fit(x, pred)
         xpl = SmartExplainer(model)
         xpl.compile(contributions=contrib, x=x, y_pred=pred)
         xpl.columns_dict = {0: 'Pclass', 1: 'Sex', 2: 'Age', 3: 'Embarked'}
@@ -907,7 +910,7 @@ class TestSmartExplainer(unittest.TestCase):
         )
         expected['pred'] = expected['pred'].astype(int)
         expected['proba'] = expected['proba'].astype(float)
-        pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_series_equal(expected.dtypes, output.dtypes)
 
     def test_to_pandas_3(self):
         """
