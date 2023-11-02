@@ -75,6 +75,7 @@ Shapash also contributes to data science auditing by displaying usefull informat
 <div align="left">
   <div style="display: flex; align-items: flex-start;">
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%" />
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" /> 
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" /> 
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%" /> 
