@@ -1798,7 +1798,7 @@ class TestSmartPlotter(unittest.TestCase):
                                      color=self.x_init[col1])
 
         assert np.array_equal(output.data[0].x, expected_output.data[0].x)
-        assert np.array_equal(output.data[1].y, expected_output.data[1].y)
+        assert np.array_equal(output.data[1].y, expected_output.data[1].y * 2)
         assert output.data[0].showlegend is True
         assert len(output.data) == 2
 
@@ -1819,8 +1819,8 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.x_encoded['X2'] = smart_explainer.x_encoded['X2'].astype(float)
 
         interaction_values = np.array([
-            [[0.1, -0.7], [-0.6, 0.3]],
-            [[0.2, -0.1], [-0.2, 0.1]]
+            [[0.1, -0.7], [-0.7, 0.3]],
+            [[0.2, -0.1], [-0.1, 0.1]]
         ])
 
         smart_explainer.interaction_values = interaction_values
@@ -1829,7 +1829,7 @@ class TestSmartPlotter(unittest.TestCase):
         output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
 
         assert np.array_equal(output.data[0].x, ['PhD', 'Master'])
-        assert np.array_equal(output.data[0].y, [-0.7, -0.1])
+        assert np.array_equal(output.data[0].y, [-1.4, -0.2])
         assert np.array_equal(output.data[0].marker.color, [34., 27.])
         assert len(output.data) == 1
 
@@ -1852,8 +1852,8 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.x_encoded['X2'] = smart_explainer.x_encoded['X2'].astype(float)
 
         interaction_values = np.array([
-            [[0.1, -0.7], [-0.6, 0.3]],
-            [[0.2, -0.1], [-0.2, 0.1]]
+            [[0.1, -0.7], [-0.7, 0.3]],
+            [[0.2, -0.1], [-0.1, 0.1]]
         ])
 
         smart_explainer.interaction_values = interaction_values
@@ -1862,7 +1862,7 @@ class TestSmartPlotter(unittest.TestCase):
         output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0)
 
         assert np.array_equal(output.data[0].x, [34.])
-        assert np.array_equal(output.data[0].y, [-0.6])
+        assert np.array_equal(output.data[0].y, [-1.4])
         assert output.data[0].name == 'PhD'
 
         assert np.array_equal(output.data[1].x, [27.])
@@ -1892,8 +1892,8 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.x_encoded['X2'] = smart_explainer.x_encoded['X2'].astype(float)
 
         interaction_values = np.array([
-            [[0.1, -0.7], [-0.6, 0.3]],
-            [[0.2, -0.1], [-0.2, 0.1]]
+            [[0.1, -0.7], [-0.7, 0.3]],
+            [[0.2, -0.1], [-0.1, 0.1]]
         ])
 
         smart_explainer.interaction_values = interaction_values
@@ -1902,7 +1902,7 @@ class TestSmartPlotter(unittest.TestCase):
         output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
 
         assert np.array_equal(output.data[0].x, [520, 12800])
-        assert np.array_equal(output.data[0].y, [-0.7, -0.1])
+        assert np.array_equal(output.data[0].y, [-1.4, -0.2])
         assert np.array_equal(output.data[0].marker.color, [34., 27.])
 
         assert len(output.data) == 1
@@ -1926,8 +1926,8 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.x_encoded['X2'] = smart_explainer.x_encoded['X2'].astype(float)
 
         interaction_values = np.array([
-            [[0.1, -0.7], [-0.6, 0.3]],
-            [[0.2, -0.1], [-0.2, 0.1]]
+            [[0.1, -0.7], [-0.7, 0.3]],
+            [[0.2, -0.1], [-0.1, 0.1]]
         ])
 
         smart_explainer.interaction_values = interaction_values
@@ -1942,7 +1942,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[2].type == 'scatter'
 
         assert np.array_equal(output.data[2].x, ['PhD', 'Master'])
-        assert np.array_equal(output.data[2].y, [-0.7, -0.1])
+        assert np.array_equal(output.data[2].y, [-1.4, -0.2])
         assert np.array_equal(output.data[2].marker.color, [34., 27.])
 
         self.setUp()
