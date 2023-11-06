@@ -42,7 +42,7 @@ class SmartExplainer:
         predict and predict_proba values
     backend : str or shpash.backend object (default: 'shap')
         Select which computation method to use in order to compute contributions
-        and feature importance. Possible values are 'shap', 'acv' or 'lime'. Default is 'shap'.
+        and feature importance. Possible values are 'shap' or 'lime'. Default is 'shap'.
         It is also possible to pass a backend class inherited from shpash.backend.BaseBackend.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
         --> Differents types of preprocessing are available:
