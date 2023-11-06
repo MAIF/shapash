@@ -175,8 +175,7 @@ class SmartExplainer:
             label_dict=None,
             title_story: str = None,
             palette_name=None,
-            colors_dict=None,
-            **kwargs
+            colors_dict=None
     ):
         if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
@@ -191,17 +190,15 @@ class SmartExplainer:
                 """
             )
         self.model = model
+        self.preprocessing = preprocessing
         if isinstance(backend, str):
-            backend_cls = get_backend_cls_from_name(backend)
-            self.backend = backend_cls(
-                model=self.model, preprocessing=preprocessing, **kwargs)
+            self.backend_name = backend
         elif isinstance(backend, BaseBackend):
             self.backend = backend
-            if backend.preprocessing is None and preprocessing is not None:
-                self.backend.preprocessing = preprocessing
+            if backend.preprocessing is None and self.preprocessing is not None:
+                self.backend.preprocessing = self.preprocessing
         else:
             raise NotImplementedError(f'Unknown backend : {backend}')
-        self.preprocessing = self.backend.preprocessing
 
         self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
         self.label_dict = label_dict
@@ -230,11 +227,13 @@ class SmartExplainer:
 
     def compile(self,
                 x,
+                backend=None,
                 contributions=None,
                 y_pred=None,
                 y_target=None,
                 additional_data=None,
-                additional_features_dict=None):
+                additional_features_dict=None,
+                **kwargs):
         """
         The compile method is the first step to understand model and
         prediction. It performs the sorting of contributions, the reverse
@@ -248,6 +247,8 @@ class SmartExplainer:
             IMPORTANT: this should be the raw prediction set,
             whose values are seen by the end user.
             x is a preprocessed dataset: Shapash can apply the model to it
+        backend: str or backend object
+            backend (explainer) used to compute contributions
         contributions : pandas.DataFrame, np.ndarray or list
             single or multiple contributions (multi-class) to handle.
             if pandas.Dataframe, the index and columns should be share with
@@ -275,6 +276,18 @@ class SmartExplainer:
         --------
         >>> xpl.compile(x=x_test)
         """
+        if isinstance(backend, str):
+            backend_cls = get_backend_cls_from_name(backend)
+            self.backend = backend_cls(
+                model=self.model, preprocessing=self.preprocessing, masker=x, **kwargs)
+        elif isinstance(backend, BaseBackend):
+            self.backend = backend
+            if backend.preprocessing is None and self.preprocessing is not None:
+                self.backend.preprocessing = self.preprocessing
+        elif isinstance(self.backend_name, str):
+            backend_cls = get_backend_cls_from_name(self.backend_name)
+            self.backend = backend_cls(
+                model=self.model, preprocessing=self.preprocessing, masker=x, **kwargs)
         self.x_encoded = handle_categorical_missing(x)
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)
