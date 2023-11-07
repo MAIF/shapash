@@ -25,20 +25,15 @@ class ShapBackend(BaseBackend):
                 self.explainer = shap.Explainer(**self.explainer_args)
         else:
             if shap.explainers.Linear.supports_model_with_masker(model, self.masker):
-                print("linear")
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
             elif shap.explainers.Tree.supports_model_with_masker(model, self.masker):
-                print("tree")
                 self.explainer = shap.Explainer(model=model)
             elif shap.explainers.Additive.supports_model_with_masker(model, self.masker):
-                print("additive")
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
             # otherwise use a model agnostic method
             elif hasattr(model, 'predict_proba'):
-                print("predict_proba")
                 self.explainer = shap.Explainer(model=model.predict_proba, masker=self.masker)
             elif hasattr(model, 'predict'):
-                print("predict")
                 self.explainer = shap.Explainer(model=model.predict, masker=self.masker)
             # if we get here then we don't know how to handle what was given to us
             else:
@@ -59,6 +54,7 @@ class ShapBackend(BaseBackend):
         explain_data : pd.DataFrame or list of pd.DataFrame
             local contributions
         """
+        print("INFO: Shap explainer type -", self.explainer)
         contributions = self.explainer(x, **self.explainer_compute_args)
         explain_data = dict(contributions=contributions.values)
         return explain_data
