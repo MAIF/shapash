@@ -191,7 +191,7 @@ class SmartExplainer:
             )
         self.model = model
         self.preprocessing = preprocessing
-        self.backend_name = ''
+        self.backend_name = None
         if isinstance(backend, str):
             self.backend_name = backend
         elif isinstance(backend, BaseBackend):
