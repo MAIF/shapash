@@ -37,7 +37,7 @@ class ShapBackend(BaseBackend):
                 self.explainer = shap.Explainer(model=model.predict, masker=self.masker)
             # if we get here then we don't know how to handle what was given to us
             else:
-                raise ValueError("The passed model is not callable and cannot be analyzed directly with the given masker! Model: " + str(model))
+                raise ValueError("The model is not recognized by Shapash! Model: " + str(model))
 
 
     def run_explainer(self, x: pd.DataFrame) -> dict:
