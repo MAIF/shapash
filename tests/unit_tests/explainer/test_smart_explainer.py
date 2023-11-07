@@ -309,7 +309,7 @@ class TestSmartExplainer(unittest.TestCase):
         df = df.set_index('id')
         clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
 
-        xpl = SmartExplainer(clf, data=df[['x1', 'x2']], backend="lime")
+        xpl = SmartExplainer(clf, backend="lime")
         xpl.compile(x=df[['x1', 'x2']])
 
     def test_compile_5(self):
@@ -1139,7 +1139,10 @@ class TestSmartExplainer(unittest.TestCase):
         clf = RandomForestClassifier(n_estimators=5).fit(df[['a', 'b']], df['y'])
 
         xpl = SmartExplainer(clf)
-        xpl.compile(x=df.drop('y', axis=1))
+        xpl.compile(x=df.drop('y', axis=1),
+                    backend='shap',
+                    explainer_args={'explainer': shap.explainers.TreeExplainer, 
+                                    'model': clf})
 
         shap_interaction_values = xpl.get_interaction_values(n_samples_max=10)
         assert shap_interaction_values.shape[0] == 10
