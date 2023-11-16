@@ -116,7 +116,8 @@ class SmartExplainer:
         data['x_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
-    backend_name: backend name if backend passed is a string 
+    backend_name:
+        backend name if backend passed is a string 
     x_encoded: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_init: pandas.DataFrame
