@@ -1138,7 +1138,10 @@ class TestSmartExplainer(unittest.TestCase):
 
         clf = RandomForestClassifier(n_estimators=5).fit(df[['a', 'b']], df['y'])
 
-        xpl = SmartExplainer(clf)
+        xpl = SmartExplainer(clf,
+                    backend='shap',
+                    explainer_args={'explainer': shap.explainers.TreeExplainer, 
+                                    'model': clf})
         xpl.compile(x=df.drop('y', axis=1))
 
         shap_interaction_values = xpl.get_interaction_values(n_samples_max=10)

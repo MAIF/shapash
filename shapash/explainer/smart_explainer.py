@@ -40,7 +40,7 @@ class SmartExplainer:
     model : model object
         model used to consistency check. model object can also be used by some method to compute
         predict and predict_proba values
-    backend : str or shpash.backend object (default: 'shap')
+    backend : str or shapash.backend object (default: 'shap')
         Select which computation method to use in order to compute contributions
         and feature importance. Possible values are 'shap' or 'lime'. Default is 'shap'.
         It is also possible to pass a backend class inherited from shpash.backend.BaseBackend.
@@ -92,8 +92,9 @@ class SmartExplainer:
     colors_dic : dict
         dictionnary contaning every palettes of colors. You can use this parameter to change
         any color of the graphs.
-    **kwargs : dict
+    **backend_kwargs : dict
         Keyword parameters to be passed to the backend.
+
     Attributes
     ----------
     data: dict
@@ -115,6 +116,8 @@ class SmartExplainer:
         data['x_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
+    backend_name:
+        backend name if backend passed is a string 
     x_encoded: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_init: pandas.DataFrame
@@ -176,7 +179,7 @@ class SmartExplainer:
             title_story: str = None,
             palette_name=None,
             colors_dict=None,
-            **kwargs
+            **backend_kwargs
     ):
         if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
@@ -191,18 +194,18 @@ class SmartExplainer:
                 """
             )
         self.model = model
+        self.preprocessing = preprocessing
+        self.backend_name = None
         if isinstance(backend, str):
-            backend_cls = get_backend_cls_from_name(backend)
-            self.backend = backend_cls(
-                model=self.model, preprocessing=preprocessing, **kwargs)
+            self.backend_name = backend
         elif isinstance(backend, BaseBackend):
             self.backend = backend
-            if backend.preprocessing is None and preprocessing is not None:
-                self.backend.preprocessing = preprocessing
+            if backend.preprocessing is None and self.preprocessing is not None:
+                self.backend.preprocessing = self.preprocessing
         else:
             raise NotImplementedError(f'Unknown backend : {backend}')
-        self.preprocessing = self.backend.preprocessing
 
+        self.backend_kwargs = backend_kwargs
         self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
@@ -275,6 +278,10 @@ class SmartExplainer:
         --------
         >>> xpl.compile(x=x_test)
         """
+        if isinstance(self.backend_name, str):
+            backend_cls = get_backend_cls_from_name(self.backend_name)
+            self.backend = backend_cls(
+                model=self.model, preprocessing=self.preprocessing, masker=x, **self.backend_kwargs)
         self.x_encoded = handle_categorical_missing(x)
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)

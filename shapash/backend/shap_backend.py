@@ -11,11 +11,34 @@ class ShapBackend(BaseBackend):
     column_aggregation = 'sum'
     name = 'shap'
 
-    def __init__(self, model, preprocessing=None, explainer_args=None, explainer_compute_args=None):
+    def __init__(self, model, preprocessing=None, masker=None, explainer_args=None, explainer_compute_args=None):
         super(ShapBackend, self).__init__(model, preprocessing)
+        self.masker = masker
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
-        self.explainer = shap.Explainer(model=model, **self.explainer_args)
+
+        if self.explainer_args:
+            if "explainer" in self.explainer_args.keys():
+                shap_parameters = {k: v for k, v in self.explainer_args.items() if k != 'explainer'}
+                self.explainer = self.explainer_args["explainer"](**shap_parameters)
+            else:
+                self.explainer = shap.Explainer(**self.explainer_args)
+        else:
+            if shap.explainers.Linear.supports_model_with_masker(model, self.masker):
+                self.explainer = shap.Explainer(model=model, masker=self.masker)
+            elif shap.explainers.Tree.supports_model_with_masker(model, self.masker):
+                self.explainer = shap.Explainer(model=model)
+            elif shap.explainers.Additive.supports_model_with_masker(model, self.masker):
+                self.explainer = shap.Explainer(model=model, masker=self.masker)
+            # otherwise use a model agnostic method
+            elif hasattr(model, 'predict_proba'):
+                self.explainer = shap.Explainer(model=model.predict_proba, masker=self.masker)
+            elif hasattr(model, 'predict'):
+                self.explainer = shap.Explainer(model=model.predict, masker=self.masker)
+            # if we get here then we don't know how to handle what was given to us
+            else:
+                raise ValueError("The model is not recognized by Shapash! Model: " + str(model))
+
 
     def run_explainer(self, x: pd.DataFrame) -> dict:
         """
@@ -31,6 +54,7 @@ class ShapBackend(BaseBackend):
         explain_data : pd.DataFrame or list of pd.DataFrame
             local contributions
         """
+        print("INFO: Shap explainer type -", self.explainer)
         contributions = self.explainer(x, **self.explainer_compute_args)
         explain_data = dict(contributions=contributions.values)
         return explain_data
