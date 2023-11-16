@@ -302,16 +302,16 @@ This github repository offers many tutorials to allow you to easily get started 
 
 <div align="left">
   <div style="display: flex; align-items: flex-start;">
-    <a href="https://maif.github.io/projets.html" width="18%">
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" />
+    <a href="https://maif.github.io/projets.html" >
+      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
     </a>
-    <a href="https://www.quantmetry.com/" width="18%">
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png"  />
+    <a href="https://www.quantmetry.com/" >
+      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%"/>
     </a>
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" />
     <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" />
-    <a href="https://www.sixfoissept.com/en/" width="18%">
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" />
+    <a href="https://www.sixfoissept.com/en/" >
+      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%"/>
     </a>
   </div>
 </div>
