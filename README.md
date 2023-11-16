@@ -77,30 +77,6 @@ Shapash is suitable for Regression, Binary Classification, and Multiclass proble
 | 1.4.x         |  Groups of features <br> [Demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
 | 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-report01.ipynb)    | 
 
-## 🤝 Contributors
-
-<div align="left">
-  <div style="display: flex; align-items: flex-start;">
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%" />
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" /> 
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" /> 
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%" /> 
-  </div>
-</div>
-
-
-## 🏆 Awards
-
-<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" />
-</a>
-
-<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
-  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" />
-</a>  
-
-
 ## 🔥 Features
 
 - Display clear and understandable results: plots and outputs use **explicit labels** for each feature and its values
@@ -321,3 +297,32 @@ This github repository offers many tutorials to allow you to easily get started 
 - [Add features outside of the model for more exploration options](tutorial/generate_webapp/tuto-webapp01-additional-data.ipynb)
 
 </details>
+
+## 🤝 Contributors
+
+<div align="left">
+  <div style="display: flex; align-items: flex-start;">
+    <a href="https://maif.github.io/projets.html" width="18%">
+      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" />
+    </a>
+    <a href="https://www.quantmetry.com/" width="18%">
+      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png"  />
+    </a>
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" />
+    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" />
+    <a href="https://www.sixfoissept.com/en/" width="18%">
+      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" />
+    </a>
+  </div>
+</div>
+
+
+## 🏆 Awards
+
+<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
+  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" />
+</a>
+
+<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
+  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" />
+</a>

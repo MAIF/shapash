@@ -761,7 +761,7 @@ class SmartApp:
                                                                     ),
                                                             # Here to add link in the modal
                                                             html.A('Click here for more details',
-                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot03-features-importance.ipynb",
+                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot03-features-importance.ipynb",
                                                                    # open new brother tab
                                                                    target="_blank",
                                                                    style={'color': self.color[0]})
@@ -879,7 +879,7 @@ class SmartApp:
                                                                     html.Div(html.Img(src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true")),
                                                                     # Here to add a link in the modal
                                                                     html.A('Click here for more details',
-                                                                           href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot06-prediction_plot.ipynb",
+                                                                           href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
                                                                            # open new brother tab
                                                                            target="_blank",
                                                                            style={'color': self.color[0]})
@@ -963,7 +963,7 @@ class SmartApp:
                                                                 ),
                                                             # Here to add link
                                                             html.A('Click here for more details',
-                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot02-contribution_plot.ipynb",
+                                                                   href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot02-contribution_plot.ipynb",
                                                                    # open new brother tab
                                                                    target="_blank",
                                                                    style={'color': self.color[0]})
