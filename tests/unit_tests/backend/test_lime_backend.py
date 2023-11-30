@@ -1,5 +1,5 @@
 """
-Unit tests acv backend.
+Unit tests lime backend.
 """
 
 import unittest
@@ -11,7 +11,7 @@ import category_encoders as ce
 from shapash.backend.lime_backend import LimeBackend
 
 
-class TestAcvBackend(unittest.TestCase):
+class TestLimeBackend(unittest.TestCase):
     def setUp(self):
         self.model_list = [
             xgb.XGBClassifier(n_estimators=1),

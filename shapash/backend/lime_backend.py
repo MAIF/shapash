@@ -16,7 +16,7 @@ class LimeBackend(BaseBackend):
     name = 'lime'
     support_groups = False
 
-    def __init__(self, model, preprocessing=None, data=None):
+    def __init__(self, model, preprocessing=None, data=None, **kwargs):
         super(LimeBackend, self).__init__(model, preprocessing)
         self.explainer = None
         self.data = data

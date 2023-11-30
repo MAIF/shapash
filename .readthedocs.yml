@@ -17,10 +17,12 @@ sphinx:
 # formats:
 #   - pdf
 
+build:
+  os: ubuntu-20.04
+  tools:
+    python: "3.10"
+    
 # Optionally set the version of Python and requirements required to build your docs
 python:
-  version: 3.8
-  install:
-    - method: pip
-      path: .
-    - requirements: requirements.dev.txt
+   install:
+     - requirements: requirements.dev.txt

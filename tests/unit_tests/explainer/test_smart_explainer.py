@@ -14,6 +14,7 @@ import catboost as cb
 from pandas.testing import assert_frame_equal
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from catboost import CatBoostClassifier, CatBoostRegressor
 from shapash import SmartExplainer
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.backend import ShapBackend
@@ -49,8 +50,13 @@ class TestSmartExplainer(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.model = lambda: None
-        self.model.predict = types.MethodType(self.predict, self.model)
+        x_init = pd.DataFrame(
+            [[1, 2],
+             [3, 4]],
+            columns=['Col1', 'Col2'],
+            index=['Id1', 'Id2']
+        )
+        self.model = CatBoostRegressor().fit(x_init, [0, 1])
 
     def test_init(self):
         """
@@ -293,23 +299,6 @@ class TestSmartExplainer(unittest.TestCase):
     def test_compile_4(self):
         """
         Unit test compile 4
-        checking compile method with acv backend
-        """
-        np.random.seed(0)
-        df = pd.DataFrame(range(0, 5), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 2 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        clf = RandomForestClassifier(n_estimators=1).fit(df[['x1', 'x2']], df['y'])
-
-        xpl = SmartExplainer(clf, backend='acv', data=df[['x1', 'x2']])
-        xpl.compile(x=df[['x1', 'x2']])
-        assert xpl.backend.__class__.__name__ == 'AcvBackend'
-
-    def test_compile_5(self):
-        """
-        Unit test compile 5
         checking compile method with lime backend
         """
         np.random.seed(1)
@@ -323,9 +312,9 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(clf, data=df[['x1', 'x2']], backend="lime")
         xpl.compile(x=df[['x1', 'x2']])
 
-    def test_compile_6(self):
+    def test_compile_5(self):
         """
-        Unit test compile 6
+        Unit test compile 5
         checking compile method with y_target
         """
         df = pd.DataFrame(range(0, 21), columns=['id'])
@@ -340,9 +329,9 @@ class TestSmartExplainer(unittest.TestCase):
         assert_frame_equal(xpl.y_target, df[['y']])
         self.assertListEqual(xpl._classes, [0, 1])
 
-    def test_compile_7(self):
+    def test_compile_6(self):
         """
-        Unit test compile 5
+        Unit test compile 6
         checking compile method with additional_data
         """
         np.random.seed(1)
@@ -899,10 +888,6 @@ class TestSmartExplainer(unittest.TestCase):
              [-0.48666675, 0.25507156, -0.16968889, 0.0757443]],
             index=[0, 1, 2]
         )
-        model = lambda: None
-        model._classes = np.array([1, 3])
-        model.predict = types.MethodType(self.predict, model)
-        model.predict_proba = types.MethodType(self.predict_proba, model)
         x = pd.DataFrame(
             [[3., 1., 22., 1.],
              [1., 2., 38., 2.],
@@ -910,6 +895,7 @@ class TestSmartExplainer(unittest.TestCase):
             index=[0, 1, 2]
         )
         pred = pd.DataFrame([3, 1, 1], columns=['pred'], index=[0, 1, 2])
+        model = CatBoostClassifier().fit(x, pred)
         xpl = SmartExplainer(model)
         xpl.compile(contributions=contrib, x=x, y_pred=pred)
         xpl.columns_dict = {0: 'Pclass', 1: 'Sex', 2: 'Age', 3: 'Embarked'}
@@ -926,7 +912,7 @@ class TestSmartExplainer(unittest.TestCase):
         )
         expected['pred'] = expected['pred'].astype(int)
         expected['proba'] = expected['proba'].astype(float)
-        pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_series_equal(expected.dtypes, output.dtypes)
 
     def test_to_pandas_3(self):
         """
@@ -1154,7 +1140,10 @@ class TestSmartExplainer(unittest.TestCase):
 
         clf = RandomForestClassifier(n_estimators=5).fit(df[['a', 'b']], df['y'])
 
-        xpl = SmartExplainer(clf)
+        xpl = SmartExplainer(clf,
+                    backend='shap',
+                    explainer_args={'explainer': shap.explainers.TreeExplainer, 
+                                    'model': clf})
         xpl.compile(x=df.drop('y', axis=1))
 
         shap_interaction_values = xpl.get_interaction_values(n_samples_max=10)

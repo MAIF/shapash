@@ -1,5 +1,5 @@
 pip>=23.2.0
-numpy==1.21.6
+numpy>1.18.0
 dash==2.3.1
 catboost>=1.0.1
 category-encoders>=2.6.0
@@ -32,13 +32,12 @@ numba>=0.53.1
 nbconvert>=6.0.7
 papermill>=2.0.0
 matplotlib>=3.3.0
-seaborn>=0.12.2
+seaborn==0.12.2
 scipy>=0.19.1
 notebook>=6.0.0
 jupyter-client<8.0.0
 Jinja2>=2.11.0
 phik>=0.12.0
 skranger>=0.8.0
-acv-exp>=1.2.3
 lime>=0.2.0.0
 regex

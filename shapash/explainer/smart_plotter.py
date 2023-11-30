@@ -1896,12 +1896,12 @@ class SmartPlotter:
                 list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
                 addnote = "Length of random Subset : "
         elif isinstance(selection, list):
-            if hasattr(self, 'interaction_selection'):
-                if set(self.interaction_selection).issubset(set(selection)):
-                    list_ind = self.interaction_selection
-            elif len(selection) <= max_points:
+            if len(selection) <= max_points:
                 list_ind = selection
                 addnote = "Length of user-defined Subset : "
+            elif hasattr(self, 'interaction_selection'):
+                if set(selection).issubset(set(self.interaction_selection)):
+                    list_ind = self.interaction_selection
             else:
                 list_ind = random.sample(selection, max_points)
                 addnote = "Length of random Subset : "
@@ -1985,6 +1985,8 @@ class SmartPlotter:
             feature_values2 = self.explainer.x_init.loc[list_ind, col_name2].to_frame()
 
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
+        if col_id1 != col_id2:
+            interaction_values = interaction_values * 2
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
