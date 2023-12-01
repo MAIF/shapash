@@ -62,7 +62,7 @@ test_requirements = ['pytest', ]
 setup(
     name="shapash",
     version=version_d['__version__'],
-    python_requires='>3.7, <3.11',
+    python_requires='>3.7, <3.12',
     url='https://github.com/MAIF/shapash',
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -74,6 +74,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],

@@ -30,6 +30,8 @@ class Test_load_smartpredictor(unittest.TestCase):
             pkl_file = path.join(current, 'data/predictor_to_load_38.pkl')
         elif str(sys.version)[0:3] == '3.9':
             pkl_file = path.join(current, 'data/predictor_to_load_39.pkl')
+        elif str(sys.version)[0:4] == '3.11':
+            pkl_file = path.join(current, 'data/predictor_to_load_311.pkl')
         else:
             raise NotImplementedError
 
