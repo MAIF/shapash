@@ -26,7 +26,7 @@ class ShapBackend(BaseBackend):
         else:
             if shap.explainers.Linear.supports_model_with_masker(model, self.masker):
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
-            elif shap.explainers.Tree.supports_model_with_masker(model, self.masker):
+            elif shap.explainers.Tree.supports_model_with_masker(model, None):
                 self.explainer = shap.Explainer(model=model)
             elif shap.explainers.Additive.supports_model_with_masker(model, self.masker):
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
