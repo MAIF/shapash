@@ -204,7 +204,8 @@ def compute_corr(df, compute_method):
         from phik import phik_matrix
         return phik_matrix(df, verbose=False)
     elif compute_method == 'pearson':
-        return df.corr()
+        # remove columns with constant values that lead to NaNs
+        return df.loc[:, (df != df.iloc[0]).any()].corr()
     else:
         raise NotImplementedError(f'Not implemented correlation method : {compute_method}')
 
