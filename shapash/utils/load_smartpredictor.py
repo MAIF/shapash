@@ -22,6 +22,4 @@ def load_smartpredictor(path):
     if isinstance(predictor, SmartPredictor):
         return predictor
     else:
-        raise ValueError(
-            f"{predictor} is not an instance of type SmartPredictor"
-        )
+        raise ValueError(f"{predictor} is not an instance of type SmartPredictor")
