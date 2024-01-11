@@ -17,6 +17,7 @@ repos:
         exclude: ^(docs/|gdocs/)
     -   id: pretty-format-json
         args: ['--autofix']
+        exclude: .ipynb
     -   id: trailing-whitespace
         args: ['--markdown-linebreak-ext=md']
         exclude: ^(docs/|gdocs/)
