@@ -1,22 +1,25 @@
 """
 Unit test smart predictor
 """
-import unittest
 import sys
+import unittest
 from os import path
 from pathlib import Path
-from shapash.utils.load_smartpredictor import load_smartpredictor
-from shapash import SmartExplainer
-import pandas as pd
-import numpy as np
+
 import catboost as cb
+import numpy as np
+import pandas as pd
+
+from shapash import SmartExplainer
+from shapash.utils.load_smartpredictor import load_smartpredictor
+
 
 class Test_load_smartpredictor(unittest.TestCase):
     def test_load_smartpredictor_1(self):
         """
         Unit test load_smartpredictor 1
         """
-        y_pred = pd.DataFrame(data=np.array([1, 2]), columns=['pred'])
+        y_pred = pd.DataFrame(data=np.array([1, 2]), columns=["pred"])
         dataframe_x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
         clf = cb.CatBoostClassifier(n_estimators=1).fit(dataframe_x, y_pred)
         xpl = SmartExplainer(model=clf, features_dict={})
@@ -24,14 +27,14 @@ class Test_load_smartpredictor(unittest.TestCase):
         predictor = xpl.to_smartpredictor()
 
         current = Path(path.abspath(__file__)).parent.parent.parent
-        if str(sys.version)[0:4] == '3.10':
-            pkl_file = path.join(current, 'data/predictor_to_load_310.pkl')
-        elif str(sys.version)[0:3] == '3.8':
-            pkl_file = path.join(current, 'data/predictor_to_load_38.pkl')
-        elif str(sys.version)[0:3] == '3.9':
-            pkl_file = path.join(current, 'data/predictor_to_load_39.pkl')
-        elif str(sys.version)[0:4] == '3.11':
-            pkl_file = path.join(current, 'data/predictor_to_load_311.pkl')
+        if str(sys.version)[0:4] == "3.10":
+            pkl_file = path.join(current, "data/predictor_to_load_310.pkl")
+        elif str(sys.version)[0:3] == "3.8":
+            pkl_file = path.join(current, "data/predictor_to_load_38.pkl")
+        elif str(sys.version)[0:3] == "3.9":
+            pkl_file = path.join(current, "data/predictor_to_load_39.pkl")
+        elif str(sys.version)[0:4] == "3.11":
+            pkl_file = path.join(current, "data/predictor_to_load_311.pkl")
         else:
             raise NotImplementedError
 

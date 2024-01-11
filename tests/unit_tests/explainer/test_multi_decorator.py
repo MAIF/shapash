@@ -2,9 +2,11 @@
 Unit test for multi decorator
 """
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pandas as pd
+
 from shapash.explainer.multi_decorator import MultiDecorator
 
 
@@ -32,7 +34,7 @@ class DummyState:
         [type]
             [description]
         """
-        return '+'.join([str(xparam), str(yparam)])
+        return "+".join([str(xparam), str(yparam)])
 
 
 class TestMultiDecorator(unittest.TestCase):
@@ -40,13 +42,14 @@ class TestMultiDecorator(unittest.TestCase):
     Unit test multi decorator Class
     TODO: Docstring
     """
+
     def test_delegate_1(self):
         """
         Unit test delegate 1
         """
         state = MultiDecorator(DummyState())
-        output = state.delegate('dummy_function', [1, 2, 3], 9)
-        expected = ['1+9', '2+9', '3+9']
+        output = state.delegate("dummy_function", [1, 2, 3], 9)
+        expected = ["1+9", "2+9", "3+9"]
         self.assertListEqual(output, expected)
 
     def test_delegate_2(self):
@@ -55,7 +58,7 @@ class TestMultiDecorator(unittest.TestCase):
         """
         state = MultiDecorator(DummyState())
         with self.assertRaises(ValueError):
-            state.delegate('dummy_function')
+            state.delegate("dummy_function")
 
     def test_delegate_3(self):
         """
@@ -63,7 +66,7 @@ class TestMultiDecorator(unittest.TestCase):
         """
         state = MultiDecorator(DummyState())
         with self.assertRaises(AttributeError):
-            state.delegate('non_existing_function', [1, 2, 3], 9)
+            state.delegate("non_existing_function", [1, 2, 3], 9)
 
     def test_delegate_4(self):
         """
@@ -71,7 +74,7 @@ class TestMultiDecorator(unittest.TestCase):
         """
         state = MultiDecorator(DummyState())
         with self.assertRaises(ValueError):
-            state.delegate('dummy_member', [1, 2, 3], 9)
+            state.delegate("dummy_member", [1, 2, 3], 9)
 
     def test_delegate_5(self):
         """
@@ -79,7 +82,7 @@ class TestMultiDecorator(unittest.TestCase):
         """
         state = MultiDecorator(DummyState())
         with self.assertRaises(ValueError):
-            state.delegate('dummy_function', 1, 9)
+            state.delegate("dummy_function", 1, 9)
 
     def test_assign_contributions(self):
         """
@@ -88,17 +91,14 @@ class TestMultiDecorator(unittest.TestCase):
         backend = Mock()
         backend.assign_contributions = Mock(
             side_effect=[
-                {'a': 1, 'b': 2},
-                {'a': 3, 'b': 4},
-                {'a': 5, 'b': 6},
+                {"a": 1, "b": 2},
+                {"a": 3, "b": 4},
+                {"a": 5, "b": 6},
             ]
         )
         state = MultiDecorator(backend)
         output = state.assign_contributions([1, 2, 3])
-        expected = {
-            'a': [1, 3, 5],
-            'b': [2, 4, 6]
-        }
+        expected = {"a": [1, 3, 5], "b": [2, 4, 6]}
         self.assertDictEqual(output, expected)
 
     def test_check_contributions_1(self):
@@ -121,7 +121,7 @@ class TestMultiDecorator(unittest.TestCase):
         output = state.check_contributions([1, 2, 3], Mock())
         assert not output
 
-    @patch('shapash.explainer.multi_decorator.MultiDecorator.delegate')
+    @patch("shapash.explainer.multi_decorator.MultiDecorator.delegate")
     def test_combine_masks(self, mock_delegate):
         """
         Unit test combine masks
@@ -143,7 +143,7 @@ class TestMultiDecorator(unittest.TestCase):
         backend.combine_masks = Mock()
         state = MultiDecorator(backend)
         state.combine_masks(masks)
-        mock_delegate.assert_called_with('combine_masks', transposed_masks)
+        mock_delegate.assert_called_with("combine_masks", transposed_masks)
 
     def test_compute_masked_contributions(self):
         """
@@ -174,12 +174,12 @@ class TestMultiDecorator(unittest.TestCase):
         var_dict1 = pd.DataFrame([[1, 0, 2, 3], [1, 0, 3, 2]])
         var_dict2 = pd.DataFrame([[1, 0, 2, 3], [1, 0, 3, 2]])
         var_dict = [var_dict1, var_dict2]
-        x_sorted1 = pd.DataFrame([[1., 3., 22., 1.], [2., 1., 2., 38.]])
-        x_sorted2 = pd.DataFrame([[1., 3., 22., 1.], [2., 1., 2., 38.]])
+        x_sorted1 = pd.DataFrame([[1.0, 3.0, 22.0, 1.0], [2.0, 1.0, 2.0, 38.0]])
+        x_sorted2 = pd.DataFrame([[1.0, 3.0, 22.0, 1.0], [2.0, 1.0, 2.0, 38.0]])
         x_sorted = [x_sorted1, x_sorted2]
         mask = pd.DataFrame([[True, True, False, False], [True, True, False, False]])
-        columns_dict = {0: 'Pclass', 1: 'Sex', 2: 'Age', 3: 'Embarked'}
-        features_dict = {'Pclass': 'Pclass', 'Sex': 'Sex', 'Age': 'Age (years)', 'Embarked': 'emb'}
+        columns_dict = {0: "Pclass", 1: "Sex", 2: "Age", 3: "Embarked"}
+        features_dict = {"Pclass": "Pclass", "Sex": "Sex", "Age": "Age (years)", "Embarked": "emb"}
         state = MultiDecorator(backend)
         state.summarize(contrib_sorted, var_dict, x_sorted, mask, columns_dict, features_dict)
         assert backend.summarize.call_count == 2

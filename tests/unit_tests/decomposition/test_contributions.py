@@ -2,11 +2,13 @@
 Unit test of contributions
 """
 import unittest
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+
 from shapash.decomposition.contributions import rank_contributions
 
-    
+
 class TestContributions(unittest.TestCase):
     """
     Unit test class of contributions
@@ -22,38 +24,29 @@ class TestContributions(unittest.TestCase):
         Unit test rank contributions 1
         """
         dataframe_s = pd.DataFrame(
-            [[3.4, 1, -9, 4],
-             [-45, 3, 43, -9]],
-            columns=["Phi_" + str(i) for i in range(4)],
-            index=['raw_1', 'raw_2']
+            [[3.4, 1, -9, 4], [-45, 3, 43, -9]], columns=["Phi_" + str(i) for i in range(4)], index=["raw_1", "raw_2"]
         )
 
         dataframe_x = pd.DataFrame(
-            [['Male', 'House', 'Married', 'PhD'],
-             ['Female', 'Flat', 'Married', 'Master']],
+            [["Male", "House", "Married", "PhD"], ["Female", "Flat", "Married", "Master"]],
             columns=["X" + str(i) for i in range(4)],
-            index=['raw_1', 'raw_2']
+            index=["raw_1", "raw_2"],
         )
 
         expected_s_ord = pd.DataFrame(
-            data=[[-9, 4, 3.4, 1],
-                  [-45, 43, -9, 3]],
-            columns=['contribution_' + str(i) for i in range(4)],
-            index=['raw_1', 'raw_2']
+            data=[[-9, 4, 3.4, 1], [-45, 43, -9, 3]],
+            columns=["contribution_" + str(i) for i in range(4)],
+            index=["raw_1", "raw_2"],
         )
 
         expected_x_ord = pd.DataFrame(
-            data=[['Married', 'PhD', 'Male', 'House'],
-                  ['Female', 'Married', 'Master', 'Flat']],
-            columns=['feature_' + str(i) for i in range(4)],
-            index=['raw_1', 'raw_2']
+            data=[["Married", "PhD", "Male", "House"], ["Female", "Married", "Master", "Flat"]],
+            columns=["feature_" + str(i) for i in range(4)],
+            index=["raw_1", "raw_2"],
         )
 
         expected_s_dict = pd.DataFrame(
-            data=[[2, 3, 0, 1],
-                  [0, 2, 3, 1]],
-            columns=['feature_' + str(i) for i in range(4)],
-            index=['raw_1', 'raw_2']
+            data=[[2, 3, 0, 1], [0, 2, 3, 1]], columns=["feature_" + str(i) for i in range(4)], index=["raw_1", "raw_2"]
         )
 
         s_ord, x_ord, s_dict = rank_contributions(dataframe_s, dataframe_x)
