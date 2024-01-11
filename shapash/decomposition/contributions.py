@@ -2,14 +2,15 @@
 Contributions
 """
 
-import pandas as pd
 import numpy as np
-from shapash.utils.transform import preprocessing_tolist
-from shapash.utils.transform import check_transformers
+import pandas as pd
+
 from shapash.utils.category_encoder_backend import calc_inv_contrib_ce
 from shapash.utils.columntransformer_backend import calc_inv_contrib_ct
+from shapash.utils.transform import check_transformers, preprocessing_tolist
 
-def inverse_transform_contributions(contributions, preprocessing=None, agg_columns='sum'):
+
+def inverse_transform_contributions(contributions, preprocessing=None, agg_columns="sum"):
     """
     Reverse contribution giving a preprocessing.
 
@@ -38,12 +39,12 @@ def inverse_transform_contributions(contributions, preprocessing=None, agg_colum
     """
 
     if not isinstance(contributions, pd.DataFrame):
-        raise Exception('Shap values must be a pandas dataframe.')
+        raise Exception("Shap values must be a pandas dataframe.")
 
     if preprocessing is None:
         return contributions
     else:
-        #Transform preprocessing into a list
+        # Transform preprocessing into a list
         list_encoding = preprocessing_tolist(preprocessing)
 
         # check supported inverse
@@ -58,6 +59,7 @@ def inverse_transform_contributions(contributions, preprocessing=None, agg_colum
             for encoding in list_encoding:
                 x_contrib_invers = calc_inv_contrib_ce(x_contrib_invers, encoding, agg_columns)
         return x_contrib_invers
+
 
 def rank_contributions(s_df, x_df):
     """
@@ -85,13 +87,14 @@ def rank_contributions(s_df, x_df):
     sorted_contrib = np.take_along_axis(s_df.values, argsort, axis=1)
     sorted_features = np.take_along_axis(x_df.values, argsort, axis=1)
 
-    contrib_col = ['contribution_' + str(i) for i in range(s_df.shape[1])]
-    col = ['feature_' + str(i) for i in range(s_df.shape[1])]
+    contrib_col = ["contribution_" + str(i) for i in range(s_df.shape[1])]
+    col = ["feature_" + str(i) for i in range(s_df.shape[1])]
 
     s_dict = pd.DataFrame(data=argsort, columns=col, index=x_df.index)
     s_ord = pd.DataFrame(data=sorted_contrib, columns=contrib_col, index=x_df.index)
     x_ord = pd.DataFrame(data=sorted_features, columns=col, index=x_df.index)
     return [s_ord, x_ord, s_dict]
+
 
 def assign_contributions(ranked):
     """
@@ -114,11 +117,7 @@ def assign_contributions(ranked):
     """
     if len(ranked) != 3:
         raise ValueError(
-            'Expected lenght : 3, observed lenght : {},'
-            'please check the outputs of rank_contributions.'.format(len(ranked))
+            "Expected lenght : 3, observed lenght : {},"
+            "please check the outputs of rank_contributions.".format(len(ranked))
         )
-    return {
-        'contrib_sorted': ranked[0],
-        'x_sorted': ranked[1],
-        'var_dict': ranked[2]
-    }
+    return {"contrib_sorted": ranked[0], "x_sorted": ranked[1], "var_dict": ranked[2]}
