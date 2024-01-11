@@ -390,6 +390,9 @@ class SmartExplainer:
         return additional_data
 
     def define_style(self, palette_name=None, colors_dict=None):
+        """
+        Set the color set to use in plots.
+        """
         if palette_name is None and colors_dict is None:
             raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
         new_palette_name = palette_name or self.palette_name

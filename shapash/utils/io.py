@@ -7,7 +7,7 @@ try:
     import yaml
 
     _is_yaml_available = True
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     _is_yaml_available = False
 
 

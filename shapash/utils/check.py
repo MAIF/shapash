@@ -1,23 +1,10 @@
-"""
-Check Module
-"""
 import copy
 
 import numpy as np
 import pandas as pd
 
-from shapash.utils.category_encoder_backend import (
-    dummies_category_encoder,
-    no_dummies_category_encoder,
-    supported_category_encoder,
-)
-from shapash.utils.columntransformer_backend import (
-    columntransformer,
-    get_feature_names,
-    get_list_features_names,
-    no_dummies_sklearn,
-    supported_sklearn,
-)
+from shapash.utils.category_encoder_backend import supported_category_encoder
+from shapash.utils.columntransformer_backend import columntransformer, get_list_features_names
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import check_transformers, preprocessing_tolist
@@ -172,7 +159,7 @@ def check_contribution_object(case, classes, contributions):
         List of labels if the model used is for classification problem, None otherwise.
     contributions : pandas.DataFrame, np.ndarray or list
     """
-    if case == "regression" and isinstance(contributions, (np.ndarray, pd.DataFrame)) == False:
+    if (case == "regression") and (not isinstance(contributions, (np.ndarray, pd.DataFrame))):
         raise ValueError(
             """
             Type of contributions parameter specified is not compatible with
@@ -473,7 +460,8 @@ def check_features_name(columns_dict, features_dict, features):
 
 
 def check_additional_data(x, additional_data):
+    """Checks if additional_data is a pandas DataFrame and has the same index as x"""
     if not isinstance(additional_data, pd.DataFrame):
-        raise ValueError(f"additional_data must be a pd.Dataframe.")
+        raise ValueError("additional_data must be a pd.Dataframe.")
     if not additional_data.index.equals(x.index):
-        raise ValueError(f"x and additional_data should have the same index.")
+        raise ValueError("x and additional_data should have the same index.")

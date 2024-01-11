@@ -5,14 +5,14 @@ try:
 except ImportError:
     is_lime_available = False
 
-from typing import Any, List, Optional, Union
-
 import pandas as pd
 
 from shapash.backend.base_backend import BaseBackend
 
 
 class LimeBackend(BaseBackend):
+    """The Lime Backend"""
+
     column_aggregation = "sum"
     name = "lime"
     support_groups = False

@@ -1,17 +1,15 @@
-"""
-Class inherited from dcc.Graph. Add one method for updating graph layout.
-"""
-
 import re
 
 from dash import dcc
 
 
 class MyGraph(dcc.Graph):
-    def __init__(self, figure, id, style={}, **kwds):
+    """Class inherited from dcc.Graph. Add one method for updating graph layout."""
+
+    def __init__(self, figure, id, style=None, **kwds):
         super().__init__(**kwds)
         self.figure = figure
-        self.style = style
+        self.style = style if style is not None else {}
         self.id = id
         # self.config = {'modeBarButtons': {'pan2d': True}}
         if id == "prediction_picking":
@@ -92,6 +90,6 @@ def update_title(title):
     try:
         list_non_empty_str_matches = [x for x in patt.findall(title)[0] if x != ""]
         updated = " - ".join(map(str, list_non_empty_str_matches))
-    except:
+    except Exception:
         updated = title
     return updated

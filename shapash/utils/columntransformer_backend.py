@@ -227,7 +227,7 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
                         elif str(type(ct_encoding)) == category_encoder_binary:
                             try:
                                 col_origin = ct_encoding.base_n_encoder.mapping[i_enc].get("mapping").columns.tolist()
-                            except:
+                            except Exception:
                                 col_origin = ct_encoding.mapping[i_enc].get("mapping").columns.tolist()
                         else:
                             col_origin = ct_encoding.mapping[i_enc].get("mapping").columns.tolist()
@@ -466,7 +466,7 @@ def get_col_mapping_ct(encoder, x_encoded):
         elif estimator == "passthrough":
             try:
                 features_out = encoder.feature_names_in_[features]
-            except:
+            except Exception:
                 features_out = encoder._feature_names_in[features]  # for oldest sklearn version
             for f_name in features_out:
                 dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]

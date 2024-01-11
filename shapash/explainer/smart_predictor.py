@@ -20,7 +20,6 @@ from shapash.manipulation.summarize import create_grouped_features_values, group
 from shapash.utils.check import (
     check_consistency_model_features,
     check_consistency_model_label,
-    check_contribution_object,
     check_features_name,
     check_label_dict,
     check_mask_params,
@@ -115,13 +114,12 @@ class SmartPredictor:
         preprocessing=None,
         postprocessing=None,
         features_groups=None,
-        mask_params={"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None},
+        mask_params=None,
     ):
-
         params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 
         for params in params_dict:
-            if params is not None and isinstance(params, dict) == False:
+            if (params is not None) and (not isinstance(params, dict)):
                 raise ValueError(
                     """
                     {} must be a dict.
@@ -140,7 +138,11 @@ class SmartPredictor:
         self.label_dict = label_dict
         self.check_label_dict()
         self.columns_dict = columns_dict
-        self.mask_params = mask_params
+        self.mask_params = (
+            mask_params
+            if mask_params is not None
+            else {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
+        )
         self.check_mask_params()
         self.postprocessing = postprocessing
         self.features_groups = features_groups

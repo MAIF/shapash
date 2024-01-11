@@ -285,7 +285,7 @@ def get_min_nb_features(selection, contributions, mode, distance):
         output_value = np.sum(contributions[i, :])
 
         score = 0
-        for j, idx in enumerate(ids):
+        for j, idx in enumerate(ids):  # noqa: B007
             # j : number of features needed
             # idx : positions of the j top shap values
             score += contributions[i, idx]
