@@ -2,10 +2,12 @@
 Summarize Module
 """
 import warnings
+
 import numpy as np
 import pandas as pd
 from pandas.core.common import flatten
 from sklearn.manifold import TSNE
+
 from shapash.utils.transform import get_features_transform_mapping
 
 
@@ -29,17 +31,14 @@ def summarize_el(dataframe, mask, prefix):
         Result of the summarize step
     """
     matrix = dataframe.where(mask.to_numpy()).values.tolist()
-    summarized_matrix = [[x for x in l if str(x) != 'nan'] for l in matrix]
+    summarized_matrix = [[x for x in l if str(x) != "nan"] for l in matrix]
     # Padding to create pd.DataFrame
     max_length = max(len(l) for l in summarized_matrix)
     for elem in summarized_matrix:
         elem.extend([np.nan] * (max_length - len(elem)))
     # Create DataFrame
     col_list = [prefix + str(x + 1) for x in list(range(max_length))]
-    df_summarized_matrix = pd.DataFrame(summarized_matrix,
-                                        index=list(dataframe.index),
-                                        columns=col_list,
-                                        dtype=object)
+    df_summarized_matrix = pd.DataFrame(summarized_matrix, index=list(dataframe.index), columns=col_list, dtype=object)
 
     return df_summarized_matrix
 
@@ -63,6 +62,7 @@ def compute_features_import(dataframe):
     feat_imp = dataframe.abs().sum().sort_values(ascending=True)
     tot = feat_imp.sum()
     return feat_imp / tot
+
 
 def summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
     """
@@ -88,10 +88,11 @@ def summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
     pd.DataFrame
         Result of the summarize step
     """
-    contrib_sum = summarize_el(s_contrib, mask, 'contribution_')
-    var_dict_sum = summarize_el(var_dict, mask, 'feature_').applymap(
-        lambda x: features_dict[columns_dict[x]] if not np.isnan(x) else x)
-    x_sorted_sum = summarize_el(x_sorted, mask, 'value_')
+    contrib_sum = summarize_el(s_contrib, mask, "contribution_")
+    var_dict_sum = summarize_el(var_dict, mask, "feature_").applymap(
+        lambda x: features_dict[columns_dict[x]] if not np.isnan(x) else x
+    )
+    x_sorted_sum = summarize_el(x_sorted, mask, "value_")
 
     # Concatenate pd.DataFrame
     summary = pd.concat([contrib_sum, var_dict_sum, x_sorted_sum], axis=1)
@@ -130,7 +131,7 @@ def group_contributions(contributions, features_groups):
     return new_contributions
 
 
-def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocessing, features_dict, how='tsne'):
+def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocessing, features_dict, how="tsne"):
     """
     Project feature values of a group of features in 1 dimension.
     If feature_values contains categorical features, use preprocessing to get
@@ -167,19 +168,20 @@ def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocess
         col_names_in_xinit.extend(encoding_mapping.get(c, [c]))
     feature_values = x_encoded.loc[feature_values.index, col_names_in_xinit]
     # Project in 1D the feature values
-    if how == 'tsne':
+    if how == "tsne":
         try:
             feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
             feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
         except Exception as e:
-            warnings.warn(f'Could not project group features values : {e}', UserWarning)
+            warnings.warn(f"Could not project group features values : {e}", UserWarning)
             feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
-    elif how == 'dict_of_values':
+    elif how == "dict_of_values":
         feature_values.columns = [features_dict.get(x, x) for x in feature_values.columns]
-        feature_values = pd.Series(feature_values.apply(lambda x: x.to_dict(), axis=1), name=col,
-                                   index=feature_values.index)
+        feature_values = pd.Series(
+            feature_values.apply(lambda x: x.to_dict(), axis=1), name=col, index=feature_values.index
+        )
     else:
-        raise NotImplementedError(f'Unknown method : {how}')
+        raise NotImplementedError(f"Unknown method : {how}")
     return feature_values
 
 
@@ -200,22 +202,18 @@ def compute_corr(df, compute_method):
     """
     # Remove user warnings (when not enough values to compute correlation).
     warnings.filterwarnings("ignore")
-    if compute_method == 'phik':
+    if compute_method == "phik":
         from phik import phik_matrix
+
         return phik_matrix(df, verbose=False)
-    elif compute_method == 'pearson':
+    elif compute_method == "pearson":
         return df.corr()
     else:
-        raise NotImplementedError(f'Not implemented correlation method : {compute_method}')
+        raise NotImplementedError(f"Not implemented correlation method : {compute_method}")
 
 
 def create_grouped_features_values(
-        x_init,
-        x_encoded,
-        preprocessing,
-        features_groups,
-        features_dict,
-        how='tsne'
+    x_init, x_encoded, preprocessing, features_groups, features_dict, how="tsne"
 ) -> pd.DataFrame:
     """
     Compute projections of groups of features using t-sne.
@@ -243,7 +241,7 @@ def create_grouped_features_values(
     df = x_init.copy()
     for group in features_groups.keys():
         if not isinstance(features_groups[group], list):
-            raise ValueError(f'features_groups[{group}] should be a list of features')
+            raise ValueError(f"features_groups[{group}] should be a list of features")
         features_values = x_init[features_groups[group]]
         df[group] = project_feature_values_1d(
             features_values,
@@ -252,7 +250,7 @@ def create_grouped_features_values(
             x_encoded=x_encoded,
             preprocessing=preprocessing,
             features_dict=features_dict,
-            how=how
+            how=how,
         )
         for f in features_groups[group]:
             if f in df.columns:

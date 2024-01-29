@@ -1,30 +1,41 @@
 """
 Smart predictor module
 """
-from shapash.utils.check import check_consistency_model_features, check_consistency_model_label
-from shapash.utils.check import check_model, check_preprocessing, check_preprocessing_options
-from shapash.utils.check import check_label_dict, check_mask_params, check_y, check_contribution_object,\
-                                check_features_name
-import pandas as pd
-from shapash.utils.transform import adapt_contributions
-from shapash.manipulation.select_lines import keep_right_contributions
-from shapash.utils.model import predict_proba
-from shapash.utils.io import save_pickle
-from shapash.utils.transform import apply_preprocessing, apply_postprocessing, preprocessing_tolist
-from shapash.manipulation.filters import hide_contributions
-from shapash.manipulation.filters import cap_contributions
-from shapash.manipulation.filters import sign_contributions
-from shapash.manipulation.filters import cutoff_contributions
-from shapash.manipulation.filters import combine_masks
-from shapash.manipulation.mask import init_mask
-from shapash.manipulation.mask import compute_masked_contributions
-from shapash.manipulation.summarize import summarize, create_grouped_features_values, group_contributions
-from shapash.decomposition.contributions import rank_contributions, assign_contributions
-from shapash.utils.columntransformer_backend import columntransformer
 import copy
-import shapash.explainer.smart_explainer
 
-class SmartPredictor :
+import pandas as pd
+
+import shapash.explainer.smart_explainer
+from shapash.decomposition.contributions import assign_contributions, rank_contributions
+from shapash.manipulation.filters import (
+    cap_contributions,
+    combine_masks,
+    cutoff_contributions,
+    hide_contributions,
+    sign_contributions,
+)
+from shapash.manipulation.mask import compute_masked_contributions, init_mask
+from shapash.manipulation.select_lines import keep_right_contributions
+from shapash.manipulation.summarize import create_grouped_features_values, group_contributions, summarize
+from shapash.utils.check import (
+    check_consistency_model_features,
+    check_consistency_model_label,
+    check_contribution_object,
+    check_features_name,
+    check_label_dict,
+    check_mask_params,
+    check_model,
+    check_preprocessing,
+    check_preprocessing_options,
+    check_y,
+)
+from shapash.utils.columntransformer_backend import columntransformer
+from shapash.utils.io import save_pickle
+from shapash.utils.model import predict_proba
+from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
+
+
+class SmartPredictor:
     """
     The SmartPredictor class is an object lighter than SmartExplainer Object with
     additionnal consistency checks.
@@ -93,17 +104,19 @@ class SmartPredictor :
         SmartExplainer instance to point to.
     """
 
-    def __init__(self, features_dict, model,
-                 columns_dict, backend, features_types,
-                 label_dict=None, preprocessing=None,
-                 postprocessing=None,
-                 features_groups=None,
-                 mask_params = {"features_to_hide": None,
-                                "threshold": None,
-                                "positive": None,
-                                "max_contrib": None
-                                }
-                 ):
+    def __init__(
+        self,
+        features_dict,
+        model,
+        columns_dict,
+        backend,
+        features_types,
+        label_dict=None,
+        preprocessing=None,
+        postprocessing=None,
+        features_groups=None,
+        mask_params={"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None},
+    ):
 
         params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 
@@ -111,8 +124,10 @@ class SmartPredictor :
             if params is not None and isinstance(params, dict) == False:
                 raise ValueError(
                     """
-                    {0} must be a dict.
-                    """.format(str(params))
+                    {} must be a dict.
+                    """.format(
+                        str(params)
+                    )
                 )
 
         self.model = model
@@ -130,9 +145,17 @@ class SmartPredictor :
         self.postprocessing = postprocessing
         self.features_groups = features_groups
         list_preprocessing = preprocessing_tolist(self.preprocessing)
-        check_consistency_model_features(self.features_dict, self.model, self.columns_dict,
-                                         self.features_types, self.mask_params, self.preprocessing,
-                                         self.postprocessing, list_preprocessing, self.features_groups)
+        check_consistency_model_features(
+            self.features_dict,
+            self.model,
+            self.columns_dict,
+            self.features_types,
+            self.mask_params,
+            self.preprocessing,
+            self.postprocessing,
+            list_preprocessing,
+            self.features_groups,
+        )
         check_consistency_model_label(self.columns_dict, self.label_dict)
         self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing, list_preprocessing)
 
@@ -200,25 +223,24 @@ class SmartPredictor :
             x = self.check_dataset_features(self.check_dataset_type(x))
             self.data = self.clean_data(x)
             self.data["x_postprocessed"] = self.apply_postprocessing()
-            try :
+            try:
                 self.data["x_preprocessed"] = self.apply_preprocessing()
-            except BaseException :
+            except BaseException:
                 raise ValueError(
                     """
                     Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
                     """
                 )
         else:
-            if not hasattr(self,"data"):
-                raise ValueError ("No dataset x specified.")
+            if not hasattr(self, "data"):
+                raise ValueError("No dataset x specified.")
 
         if ypred is not None:
             self.data["ypred_init"] = self.check_ypred(ypred)
 
         if contributions is not None:
             self.data["ypred"], self.data["contributions"] = self.compute_contributions(
-                contributions=contributions,
-                use_groups=False
+                contributions=contributions, use_groups=False
             )
         else:
             self.data["ypred"], self.data["contributions"] = self.compute_contributions(use_groups=False)
@@ -232,18 +254,18 @@ class SmartPredictor :
         and stores it in data_groups attribute
         """
         self.data_groups = dict()
-        self.data_groups['x_postprocessed'] = create_grouped_features_values(x_init=self.data["x_postprocessed"],
-                                                                             x_encoded=self.data["x_preprocessed"],
-                                                                             preprocessing=self.preprocessing,
-                                                                             features_groups=self.features_groups,
-                                                                             features_dict=self.features_dict,
-                                                                             how='dict_of_values')
-        self.data_groups['ypred'] = self.data["ypred"]
-        self.data_groups['contributions'] = group_contributions(
-            contributions=self.data['contributions'],
-            features_groups=self.features_groups
+        self.data_groups["x_postprocessed"] = create_grouped_features_values(
+            x_init=self.data["x_postprocessed"],
+            x_encoded=self.data["x_preprocessed"],
+            preprocessing=self.preprocessing,
+            features_groups=self.features_groups,
+            features_dict=self.features_dict,
+            how="dict_of_values",
         )
-
+        self.data_groups["ypred"] = self.data["ypred"]
+        self.data_groups["contributions"] = group_contributions(
+            contributions=self.data["contributions"], features_groups=self.features_groups
+        )
 
     def check_dataset_type(self, x=None):
         """
@@ -266,7 +288,7 @@ class SmartPredictor :
                 x must be a dict or a pandas.DataFrame.
                 """
             )
-        else :
+        else:
             x = self.convert_dict_dataset(x)
         return x
 
@@ -286,9 +308,11 @@ class SmartPredictor :
         """
         if type(x) == dict:
             if not all([column in self.features_types.keys() for column in x.keys()]):
-                raise ValueError("""
+                raise ValueError(
+                    """
                 All features from dataset x must be in the features_types dict initialized.
-                """)
+                """
+                )
             try:
                 x = pd.DataFrame.from_dict(x, orient="index").T
                 for feature, type_feature in self.features_types.items():
@@ -320,10 +344,12 @@ class SmartPredictor :
 
         assert all(column in self.features_types.keys() for column in x.columns)
         if not all([str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns]):
-            raise ValueError("""
+            raise ValueError(
+                """
                   Types of features in x doesn't match with the expected one in features_types.
                   x input must be initial dataset without preprocessing applied.
-                  """)
+                  """
+            )
         return x
 
     def check_ypred(self, ypred=None):
@@ -385,13 +411,14 @@ class SmartPredictor :
         -------
             dict of data stored
         """
-        return {"x" : x,
-                "ypred_init": None,
-                "ypred" : None,
-                "contributions" : None,
-                "x_preprocessed": None,
-                "x_postprocessed": None
-                }
+        return {
+            "x": x,
+            "ypred_init": None,
+            "ypred": None,
+            "contributions": None,
+            "x_preprocessed": None,
+            "x_postprocessed": None,
+        }
 
     def predict_proba(self):
         """
@@ -446,19 +473,17 @@ class SmartPredictor :
         if contributions is None:
             explain_data = self.backend.run_explainer(x=self.data["x_preprocessed"])
             contributions = self.backend.get_local_contributions(
-                explain_data=explain_data,
-                x=self.data["x_preprocessed"]
+                explain_data=explain_data, x=self.data["x_preprocessed"]
             )
         else:
             contributions = self.backend.format_and_aggregate_local_contributions(
-                x=self.data["x_preprocessed"],
-                contributions=contributions
+                x=self.data["x_preprocessed"], contributions=contributions
             )
         self.check_contributions(contributions)
         proba_values = self.predict_proba() if self._case == "classification" else None
-        y_pred, match_contrib = keep_right_contributions(self.data["ypred_init"], contributions,
-                                 self._case, self._classes,
-                                 self.label_dict, proba_values)
+        y_pred, match_contrib = keep_right_contributions(
+            self.data["ypred_init"], contributions, self._case, self._classes, self.label_dict, proba_values
+        )
         if use_groups:
             match_contrib = group_contributions(match_contrib, features_groups=self.features_groups)
 
@@ -523,35 +548,22 @@ class SmartPredictor :
         The filter method is an important method which allows to summarize the local explainability
         by using the user defined mask_params parameters which correspond to its use case.
         """
-        mask = [init_mask(self.summary['contrib_sorted'], True)]
+        mask = [init_mask(self.summary["contrib_sorted"], True)]
         if self.mask_params["features_to_hide"] is not None:
             mask.append(
                 hide_contributions(
-                    self.summary['var_dict'],
-                    features_list=self.check_features_name(self.mask_params["features_to_hide"])
+                    self.summary["var_dict"],
+                    features_list=self.check_features_name(self.mask_params["features_to_hide"]),
                 )
             )
         if self.mask_params["threshold"] is not None:
-            mask.append(
-                cap_contributions(
-                    self.summary['contrib_sorted'],
-                    threshold=self.mask_params["threshold"]
-                )
-            )
+            mask.append(cap_contributions(self.summary["contrib_sorted"], threshold=self.mask_params["threshold"]))
         if self.mask_params["positive"] is not None:
-            mask.append(
-                sign_contributions(
-                    self.summary['contrib_sorted'],
-                    positive=self.mask_params["positive"]
-                )
-            )
+            mask.append(sign_contributions(self.summary["contrib_sorted"], positive=self.mask_params["positive"]))
         self.mask = combine_masks(mask)
         if self.mask_params["max_contrib"] is not None:
             self.mask = cutoff_contributions(mask=self.mask, k=self.mask_params["max_contrib"])
-        self.masked_contributions = compute_masked_contributions(
-            self.summary['contrib_sorted'],
-            self.mask
-        )
+        self.masked_contributions = compute_masked_contributions(self.summary["contrib_sorted"], self.mask)
 
     def summarize(self, use_groups=None):
         """
@@ -580,7 +592,7 @@ class SmartPredictor :
         --------
         >>> summary_df = predictor.summarize()
         >>> summary_df
-        	pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
+                pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
         0	0	    0.756416	Sex	        1.0	        0.322308	    Pclass	    3.0	        0.155069
         1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
         2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
@@ -588,7 +600,7 @@ class SmartPredictor :
         >>> predictor.modify_mask(max_contrib=1)
         >>> summary_df = predictor.summarize()
         >>> summary_df
-        	pred	proba	    feature_1	value_1	    contribution_1
+                pred	proba	    feature_1	value_1	    contribution_1
         0	0	    0.756416	Sex	        1.0	        0.322308
         1	3	    0.628911	Sex	        2.0	        0.585475
         2	0	    0.543308	Sex	        2.0	        -0.486667
@@ -605,8 +617,9 @@ class SmartPredictor :
             data = self.data
 
         if self._drop_option is not None:
-            columns_to_keep = [x for x in self._drop_option["columns_dict_op"].values()
-                               if x in data["x_postprocessed"].columns]
+            columns_to_keep = [
+                x for x in self._drop_option["columns_dict_op"].values() if x in data["x_postprocessed"].columns
+            ]
             if use_groups:
                 columns_to_keep += list(self.features_groups.keys())
             x_preprocessed = data["x_postprocessed"][columns_to_keep]
@@ -616,33 +629,24 @@ class SmartPredictor :
         columns_dict = {i: col for i, col in enumerate(x_preprocessed.columns)}
         features_dict = {k: v for k, v in self.features_dict.items() if k in x_preprocessed.columns}
 
-        self.summary = assign_contributions(
-            rank_contributions(
-                data["contributions"],
-                x_preprocessed
-            )
-        )
+        self.summary = assign_contributions(rank_contributions(data["contributions"], x_preprocessed))
         # Apply filter method with mask_params attributes parameters
         self.filter()
 
         # Summarize information
-        data['summary'] = summarize(self.summary['contrib_sorted'],
-                                         self.summary['var_dict'],
-                                         self.summary['x_sorted'],
-                                         self.mask,
-                                         columns_dict,
-                                         features_dict)
+        data["summary"] = summarize(
+            self.summary["contrib_sorted"],
+            self.summary["var_dict"],
+            self.summary["x_sorted"],
+            self.mask,
+            columns_dict,
+            features_dict,
+        )
 
         # Matching with y_pred
-        return pd.concat([data["ypred"], data['summary']], axis=1)
+        return pd.concat([data["ypred"], data["summary"]], axis=1)
 
-    def modify_mask(
-            self,
-            features_to_hide=None,
-            threshold=None,
-            positive=None,
-            max_contrib=None
-    ):
+    def modify_mask(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None):
         """
         This method allows the users to modify the mask_params values.
         Each parameter is optional, modify_mask method modifies only the values specified in parameters.
@@ -666,17 +670,19 @@ class SmartPredictor :
         >>> predictor.modify_mask(max_contrib=1)
         >>> summary_df = predictor.summarize()
         >>> summary_df
-        	pred	proba	    feature_1	value_1	    contribution_1
+                pred	proba	    feature_1	value_1	    contribution_1
         0	0	    0.756416	Sex	        1.0	        0.322308
         1	3	    0.628911	Sex	        2.0	        0.585475
         2	0	    0.543308	Sex	        2.0	        -0.486667
 
         """
-        Attributes = {"features_to_hide": features_to_hide,
-                      "threshold": threshold,
-                      "positive": positive,
-                      "max_contrib": max_contrib}
-        for label, attribute in Attributes.items() :
+        Attributes = {
+            "features_to_hide": features_to_hide,
+            "threshold": threshold,
+            "positive": positive,
+            "max_contrib": max_contrib,
+        }
+        for label, attribute in Attributes.items():
             if attribute is not None:
                 self.mask_params[label] = attribute
 
@@ -704,11 +710,12 @@ class SmartPredictor :
                 x must be specified in an add_input method to apply predict.
                 """
             )
-        if hasattr(self.model, 'predict'):
+        if hasattr(self.model, "predict"):
             self.data["ypred_init"] = pd.DataFrame(
                 self.model.predict(self.data["x_preprocessed"]),
-                columns=['ypred'],
-                index=self.data["x_preprocessed"].index)
+                columns=["ypred"],
+                index=self.data["x_preprocessed"].index,
+            )
         else:
             raise ValueError("model has no predict method")
 
@@ -777,7 +784,7 @@ class SmartPredictor :
             postprocessing=self.postprocessing,
             features_groups=self.features_groups,
             features_dict=copy.deepcopy(self.features_dict),
-            label_dict=copy.deepcopy(self.label_dict)
+            label_dict=copy.deepcopy(self.label_dict),
         )
         xpl.compile(x=copy.deepcopy(self.data["x_preprocessed"]), y_pred=copy.deepcopy(self.data["ypred_init"]))
         return xpl

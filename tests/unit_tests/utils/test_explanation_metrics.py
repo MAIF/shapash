@@ -1,14 +1,22 @@
 import unittest
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from shapash.utils.explanation_metrics import _df_to_array, \
-    _compute_distance, _compute_similarities, _get_radius, find_neighbors, \
-    shap_neighbors, get_min_nb_features, get_distance
+
+from shapash.utils.explanation_metrics import (
+    _compute_distance,
+    _compute_similarities,
+    _df_to_array,
+    _get_radius,
+    find_neighbors,
+    get_distance,
+    get_min_nb_features,
+    shap_neighbors,
+)
 
 
 class TestExplanationMetrics(unittest.TestCase):
-
     def test_df_to_array(self):
         df = pd.DataFrame([1, 2, 3], columns=["col"])
         expected = np.array([[1], [2], [3]])
@@ -25,7 +33,7 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t == expected
 
     def test_compute_similarities(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(5, 4)), columns=list('ABCD')).values
+        df = pd.DataFrame(np.random.randint(0, 100, size=(5, 4)), columns=list("ABCD")).values
         instance = df[0, :]
         expected_len = 5
         expected_dist = 0
@@ -34,12 +42,12 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t[0] == expected_dist
 
     def test_get_radius(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(5, 4)), columns=list('ABCD')).values
+        df = pd.DataFrame(np.random.randint(0, 100, size=(5, 4)), columns=list("ABCD")).values
         t = _get_radius(df, n_neighbors=3)
         assert t > 0
 
     def test_find_neighbors(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
@@ -50,8 +58,8 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t[0].shape[1] == X.shape[1] + 2
 
     def test_shap_neighbors(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list('ABCD'))
-        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list('EFGH'))
+        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list("ABCD"))
+        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list("EFGH"))
         instance = df.values[:2, :]
         extra_cols = np.repeat(np.array([0, 0]), 2).reshape(2, -1)
         instance = np.append(instance, extra_cols, axis=1)
@@ -62,7 +70,7 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t[2].shape == (len(df.columns),)
 
     def test_get_min_nb_features(self):
-        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list('ABCD'))
+        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]
         distance = 0.1
         mode = "regression"
@@ -72,7 +80,7 @@ class TestExplanationMetrics(unittest.TestCase):
         assert len(t) == len(selection)
 
     def test_get_distance(self):
-        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list('ABCD'))
+        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]
         nb_features = 2
         mode = "regression"

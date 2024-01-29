@@ -2,7 +2,9 @@
 Model Module
 """
 from inspect import ismethod
+
 import pandas as pd
+
 
 def extract_features_model(model, model_attribute):
     """
@@ -14,7 +16,7 @@ def extract_features_model(model, model_attribute):
     model_attribute: String or List
         if model can give features, attributes to access features, if not 'length'
     """
-    if model_attribute[0] == 'length':
+    if model_attribute[0] == "length":
         return model.n_features_in_
     else:
         if ismethod(getattr(model, model_attribute[0])):
@@ -45,11 +47,10 @@ def predict_proba(model, x_encoded, classes):
     pandas.DataFrame
             dataset of predicted proba for each label.
     """
-    if hasattr(model, 'predict_proba'):
+    if hasattr(model, "predict_proba"):
         proba_values = pd.DataFrame(
-            model.predict_proba(x_encoded),
-            columns=['class_' + str(x) for x in classes],
-            index=x_encoded.index)
+            model.predict_proba(x_encoded), columns=["class_" + str(x) for x in classes], index=x_encoded.index
+        )
     else:
         raise ValueError("model has no predict_proba method")
 
@@ -72,8 +73,8 @@ def predict(model, x_encoded):
     pandas.DataFrame
             1-column dataframe containing the predictions.
     """
-    if hasattr(model, 'predict'):
-        y_pred = pd.DataFrame(model.predict(x_encoded), columns=['pred'], index=x_encoded.index)
+    if hasattr(model, "predict"):
+        y_pred = pd.DataFrame(model.predict(x_encoded), columns=["pred"], index=x_encoded.index)
     else:
         raise ValueError("model has no predict method")
 
@@ -100,10 +101,10 @@ def predict_error(y_target, y_pred, case):
         1-column dataframe containing the prediction errors.
     """
     prediction_error = None
-    if y_target is not None and y_pred is not None and case=="regression":
+    if y_target is not None and y_pred is not None and case == "regression":
         if (y_target == 0).any()[0]:
-            prediction_error = abs(y_target.values-y_pred.values)
+            prediction_error = abs(y_target.values - y_pred.values)
         else:
-            prediction_error = abs((y_target.values-y_pred.values)/y_target.values)
+            prediction_error = abs((y_target.values - y_pred.values) / y_target.values)
         prediction_error = pd.DataFrame(prediction_error, index=y_target.index, columns=["_error_"])
     return prediction_error

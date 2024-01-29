@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Oct  3 15:12:08 2022
 
 @author: Florine
 """
 
+
 class Explanations:
     """
-        Contains the explanations of all "?" buttons in the app.
-        ----------
-        explanations: object
-            SmartApp instance to point to.
+    Contains the explanations of all "?" buttons in the app.
+    ----------
+    explanations: object
+        SmartApp instance to point to.
     """
-
 
     def __init__(self):
         self.detail_feature = """

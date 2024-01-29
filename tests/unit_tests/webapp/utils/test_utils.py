@@ -1,9 +1,9 @@
 import unittest
+
 from shapash.webapp.utils.utils import round_to_k
 
 
 class TestUtils(unittest.TestCase):
-
     def test_round_to_k_1(self):
         x = 123456789
         expected_r_x = 123000000

@@ -1,26 +1,29 @@
 """
 Transform Module
 """
+import re
+
+import numpy as np
+import pandas as pd
+
+from shapash.utils.category_encoder_backend import (
+    get_col_mapping_ce,
+    inv_transform_ce,
+    supported_category_encoder,
+    transform_ce,
+)
 from shapash.utils.columntransformer_backend import (
     columntransformer,
+    get_col_mapping_ct,
     inv_transform_ct,
     supported_sklearn,
     transform_ct,
-    get_col_mapping_ct
 )
-from shapash.utils.category_encoder_backend import (
-    transform_ce,
-    inv_transform_ce,
-    supported_category_encoder,
-    get_col_mapping_ce
-)
-import re
-import numpy as np
-import pandas as pd
 
 # TODO
 # encode targeted variable ? from sklearn.preprocessing import LabelEncoder
 # make an easy version for dict, not writing all mapping
+
 
 def inverse_transform(x_init, preprocessing=None):
     """
@@ -72,6 +75,7 @@ def inverse_transform(x_init, preprocessing=None):
                 x_inverse = inv_transform_ce(x_inverse, encoding)
         return x_inverse
 
+
 def apply_preprocessing(x_init, model, preprocessing=None):
     """
     Apply preprocessing on a raw dataset giving a preprocessing.
@@ -120,6 +124,7 @@ def apply_preprocessing(x_init, model, preprocessing=None):
                 x_init = transform_ce(x_init, encoding)
         return x_init
 
+
 def preprocessing_tolist(preprocess):
     """
     Transform preprocess into a list, if preprocess contains a dict, transform the dict into a list of dict.
@@ -137,6 +142,7 @@ def preprocessing_tolist(preprocess):
     list_encoding = preprocess if isinstance(preprocess, list) else [preprocess]
     list_encoding = [[x] if isinstance(x, dict) else x for x in list_encoding]
     return list_encoding
+
 
 def check_transformers(list_encoding):
     """
@@ -176,9 +182,10 @@ def check_transformers(list_encoding):
             use_ct = True
             for encoding in enc.transformers_:
                 ct_encoding = encoding[1]
-                if (str(type(ct_encoding)) not in supported_sklearn) \
-                        and (str(type(ct_encoding)) not in supported_category_encoder):
-                    if str(type(ct_encoding)) != "<class 'str'>" :
+                if (str(type(ct_encoding)) not in supported_sklearn) and (
+                    str(type(ct_encoding)) not in supported_category_encoder
+                ):
+                    if str(type(ct_encoding)) != "<class 'str'>":
                         raise ValueError("One of the encoders used in ColumnTransformers isn't supported.")
 
         elif str(type(enc)) in supported_category_encoder:
@@ -189,31 +196,31 @@ def check_transformers(list_encoding):
             for enc_dict in enc:
                 if isinstance(enc_dict, dict):
                     # Check dict structure : col - mapping - data_type
-                    if not all(struct in enc_dict for struct in ('col', 'mapping', 'data_type')):
-                        raise Exception(f'{enc_dict} should have col, mapping and data_type as keys.')
+                    if not all(struct in enc_dict for struct in ("col", "mapping", "data_type")):
+                        raise Exception(f"{enc_dict} should have col, mapping and data_type as keys.")
                 else:
-                    raise Exception(f'{enc} is not a list of dict.')
+                    raise Exception(f"{enc} is not a list of dict.")
         else:
-            raise Exception(f'{enc} is not supported yet.')
+            raise Exception(f"{enc} is not supported yet.")
 
     # check that encoding don't use ColumnTransformer and Category encoding at the same time
     if use_ct and use_ce:
         raise Exception(
             f"Can't support ColumnTransformer and Category encoding at the same time. "
-            f"Use Category encoding in ColumnTransformer")
+            f"Use Category encoding in ColumnTransformer"
+        )
 
     # check that Category encoding is apply on different columns
     col = []
     for enc in list_encoding:
-        if not str(type(enc)) in ("<class 'list'>",
-                                  "<class 'dict'>",
-                                  columntransformer):
+        if not str(type(enc)) in ("<class 'list'>", "<class 'dict'>", columntransformer):
             col += enc.cols
-    duplicate = set([x for x in col if col.count(x) > 1])
+    duplicate = {x for x in col if col.count(x) > 1}
     if duplicate:
-        raise Exception('Columns ' + str(duplicate) + ' is used in multiple category encoding')
+        raise Exception("Columns " + str(duplicate) + " is used in multiple category encoding")
 
     return use_ct, use_ce
+
 
 def apply_postprocessing(x_init, postprocessing):
     """
@@ -237,36 +244,38 @@ def apply_postprocessing(x_init, postprocessing):
         data_modif = new_preds[feature_name]
         new_datai = list()
 
-        if dict_postprocessing['type'] == 'prefix':
+        if dict_postprocessing["type"] == "prefix":
             for value in data_modif.values:
-                new_datai.append(dict_postprocessing['rule'] + str(value))
+                new_datai.append(dict_postprocessing["rule"] + str(value))
             new_preds[feature_name] = new_datai
 
-        elif dict_postprocessing['type'] == 'suffix':
+        elif dict_postprocessing["type"] == "suffix":
             for value in data_modif.values:
-                new_datai.append(str(value) + dict_postprocessing['rule'])
+                new_datai.append(str(value) + dict_postprocessing["rule"])
             new_preds[feature_name] = new_datai
 
-        elif dict_postprocessing['type'] == 'transcoding':
+        elif dict_postprocessing["type"] == "transcoding":
             unique_values = x_init[feature_name].unique().tolist()
-            unique_values = [value for value in unique_values if value not in dict_postprocessing['rule'].keys()]
+            unique_values = [value for value in unique_values if value not in dict_postprocessing["rule"].keys()]
             for value in unique_values:
-                dict_postprocessing['rule'][value] = value
-            new_preds[feature_name] = new_preds[feature_name].map(dict_postprocessing['rule'])
+                dict_postprocessing["rule"][value] = value
+            new_preds[feature_name] = new_preds[feature_name].map(dict_postprocessing["rule"])
 
-        elif dict_postprocessing['type'] == 'regex':
+        elif dict_postprocessing["type"] == "regex":
             new_preds[feature_name] = new_preds[feature_name].apply(
-                lambda x: re.sub(dict_postprocessing["rule"]['in'], dict_postprocessing["rule"]['out'], x))
+                lambda x: re.sub(dict_postprocessing["rule"]["in"], dict_postprocessing["rule"]["out"], x)
+            )
 
-        elif dict_postprocessing['type'] == 'case':
-            if dict_postprocessing['rule'] == 'lower':
+        elif dict_postprocessing["type"] == "case":
+            if dict_postprocessing["rule"] == "lower":
                 new_preds[feature_name] = new_preds[feature_name].apply(lambda x: x.lower())
-            elif dict_postprocessing['rule'] == 'upper':
+            elif dict_postprocessing["rule"] == "upper":
                 new_preds[feature_name] = new_preds[feature_name].apply(lambda x: x.upper())
 
     return new_preds
 
-def adapt_contributions(case,contributions):
+
+def adapt_contributions(case, contributions):
     """
     If _case is "classification" and contributions a np.array or pd.DataFrame
     this function transform contributions matrix in a list of 2 contributions
@@ -288,12 +297,8 @@ def adapt_contributions(case,contributions):
     # So that we have the following format : [contributions_class_0, contributions_class_1, ...]
     if isinstance(contributions, np.ndarray) and contributions.ndim == 3:
         contributions = [contributions[:, :, i] for i in range(contributions.shape[-1])]
-    if (
-            (isinstance(contributions, pd.DataFrame) and case == 'classification')
-            or (
-            isinstance(contributions, (np.ndarray, list))
-            and case == 'classification'
-            and np.array(contributions).ndim == 2)
+    if (isinstance(contributions, pd.DataFrame) and case == "classification") or (
+        isinstance(contributions, (np.ndarray, list)) and case == "classification" and np.array(contributions).ndim == 2
     ):
         return [contributions * -1, contributions]
     else:
@@ -374,7 +379,8 @@ def get_features_transform_mapping(x_init, x_encoded, preprocessing=None):
             dict_all_cols_mapping[col_name] = [col_name]
     return dict_all_cols_mapping
 
-def handle_categorical_missing(df : pd.DataFrame)-> pd.DataFrame:
+
+def handle_categorical_missing(df: pd.DataFrame) -> pd.DataFrame:
     """
     Replace missing values for categorical columns
 
@@ -383,7 +389,7 @@ def handle_categorical_missing(df : pd.DataFrame)-> pd.DataFrame:
     df : pd.DataFrame
         Pandas dataframe on which we will replace the missing values
     """
-    categorical_cols = df.select_dtypes(include=['object']).columns
+    categorical_cols = df.select_dtypes(include=["object"]).columns
     df_handle_missing = df.copy()
     df_handle_missing[categorical_cols] = df_handle_missing[categorical_cols].fillna("missing")
     return df_handle_missing

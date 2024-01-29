@@ -3,11 +3,13 @@ Unit tests lime backend.
 """
 
 import unittest
+
+import category_encoders as ce
 import numpy as np
 import pandas as pd
 import sklearn.ensemble as ske
 import xgboost as xgb
-import category_encoders as ce
+
 from shapash.backend.lime_backend import LimeBackend
 
 
@@ -17,29 +19,29 @@ class TestLimeBackend(unittest.TestCase):
             xgb.XGBClassifier(n_estimators=1),
             ske.RandomForestClassifier(n_estimators=1),
             ske.RandomForestRegressor(n_estimators=1),
-            ske.GradientBoostingRegressor(n_estimators=1)
+            ske.GradientBoostingRegressor(n_estimators=1),
         ]
 
-        df = pd.DataFrame(range(0, 4), columns=['id'])
-        df['y'] = df['id'].apply(lambda x: 1 if x < 3 else 0)
-        df['x1'] = np.random.randint(1, 123, df.shape[0])
-        df['x2'] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index('id')
-        self.x_df = df[['x1', 'x2']]
-        self.y_df = df['y'].to_frame()
+        df = pd.DataFrame(range(0, 4), columns=["id"])
+        df["y"] = df["id"].apply(lambda x: 1 if x < 3 else 0)
+        df["x1"] = np.random.randint(1, 123, df.shape[0])
+        df["x2"] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index("id")
+        self.x_df = df[["x1", "x2"]]
+        self.y_df = df["y"].to_frame()
 
     def test_init(self):
         for model in self.model_list:
             print(type(model))
             model.fit(self.x_df, self.y_df)
             backend_xpl = LimeBackend(model)
-            assert hasattr(backend_xpl, 'explainer')
+            assert hasattr(backend_xpl, "explainer")
 
             backend_xpl = LimeBackend(model, data=self.x_df)
-            assert hasattr(backend_xpl, 'data')
+            assert hasattr(backend_xpl, "data")
 
             backend_xpl = LimeBackend(model, preprocessing=ce.OrdinalEncoder())
-            assert hasattr(backend_xpl, 'preprocessing')
+            assert hasattr(backend_xpl, "preprocessing")
             assert isinstance(backend_xpl.preprocessing, ce.OrdinalEncoder)
 
     def test_get_global_contributions(self):

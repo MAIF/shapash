@@ -2,15 +2,25 @@
 Check Module
 """
 import copy
+
 import numpy as np
 import pandas as pd
-from shapash.utils.category_encoder_backend import no_dummies_category_encoder, supported_category_encoder,\
-                                                   dummies_category_encoder
-from shapash.utils.columntransformer_backend import no_dummies_sklearn, supported_sklearn
+
+from shapash.utils.category_encoder_backend import (
+    dummies_category_encoder,
+    no_dummies_category_encoder,
+    supported_category_encoder,
+)
+from shapash.utils.columntransformer_backend import (
+    columntransformer,
+    get_feature_names,
+    get_list_features_names,
+    no_dummies_sklearn,
+    supported_sklearn,
+)
 from shapash.utils.model import extract_features_model
 from shapash.utils.model_synoptic import dict_model_feature
-from shapash.utils.transform import preprocessing_tolist, check_transformers
-from shapash.utils.columntransformer_backend import columntransformer, get_feature_names, get_list_features_names
+from shapash.utils.transform import check_transformers, preprocessing_tolist
 
 
 def check_preprocessing(preprocessing=None):
@@ -26,6 +36,7 @@ def check_preprocessing(preprocessing=None):
         list_preprocessing = preprocessing_tolist(preprocessing)
         use_ct, use_ce = check_transformers(list_preprocessing)
         return use_ct, use_ce
+
 
 def check_model(model):
     """
@@ -43,25 +54,25 @@ def check_model(model):
         'regression' or 'classification' according to the attributes of the model
     """
     _classes = None
-    if hasattr(model, 'predict'):
-        if hasattr(model, 'predict_proba') or \
-                any(hasattr(model, attrib) for attrib in ['classes_', '_classes']):
-            if hasattr(model, '_classes'): _classes = model._classes
-            if hasattr(model, 'classes_'): _classes = model.classes_
-            if isinstance(_classes, np.ndarray): _classes = _classes.tolist()
-            if hasattr(model, 'predict_proba') and _classes == []: _classes = [0, 1]  # catboost binary
-            if hasattr(model, 'predict_proba') and _classes is None:
-                raise ValueError(
-                    "No attribute _classes, classification model not supported"
-                )
+    if hasattr(model, "predict"):
+        if hasattr(model, "predict_proba") or any(hasattr(model, attrib) for attrib in ["classes_", "_classes"]):
+            if hasattr(model, "_classes"):
+                _classes = model._classes
+            if hasattr(model, "classes_"):
+                _classes = model.classes_
+            if isinstance(_classes, np.ndarray):
+                _classes = _classes.tolist()
+            if hasattr(model, "predict_proba") and _classes == []:
+                _classes = [0, 1]  # catboost binary
+            if hasattr(model, "predict_proba") and _classes is None:
+                raise ValueError("No attribute _classes, classification model not supported")
         if _classes not in (None, []):
-            return 'classification', _classes
+            return "classification", _classes
         else:
-            return 'regression', None
+            return "regression", None
     else:
-        raise ValueError(
-            "No method predict in the specified model. Please, check model parameter"
-        )
+        raise ValueError("No method predict in the specified model. Please, check model parameter")
+
 
 def check_label_dict(label_dict, case, classes=None):
     """
@@ -76,13 +87,14 @@ def check_label_dict(label_dict, case, classes=None):
     classes: list, None
         List of labels if the model used is for classification problem, None otherwise.
     """
-    if label_dict is not None and case == 'classification':
+    if label_dict is not None and case == "classification":
         if set(classes) != set(list(label_dict.keys())):
             raise ValueError(
-                "label_dict and don't match: \n" +
-                f"label_dict keys: {str(list(label_dict.keys()))}\n" +
-                f"Classes model values {str(classes)}"
+                "label_dict and don't match: \n"
+                + f"label_dict keys: {str(list(label_dict.keys()))}\n"
+                + f"Classes model values {str(classes)}"
             )
+
 
 def check_mask_params(mask_params):
     """
@@ -96,23 +108,23 @@ def check_mask_params(mask_params):
     if not isinstance(mask_params, dict):
         raise ValueError(
             """
-            mask_params must be a dict  
+            mask_params must be a dict
             """
         )
     else:
         conform_arguments = ["features_to_hide", "threshold", "positive", "max_contrib"]
-        mask_arguments_not_conform = [argument for argument in mask_params.keys()
-                                      if argument not in conform_arguments]
+        mask_arguments_not_conform = [argument for argument in mask_params.keys() if argument not in conform_arguments]
         if len(mask_arguments_not_conform) != 0:
             raise ValueError(
-            """
+                """
             mask_params must only have the following key arguments:
             -feature_to_hide
             -threshold
             -positive
-            -max_contrib 
+            -max_contrib
             """
             )
+
 
 def check_y(x=None, y=None, y_name="y_target"):
     """
@@ -135,15 +147,16 @@ def check_y(x=None, y=None, y_name="y_target"):
         if isinstance(y, pd.DataFrame):
             if y.shape[1] > 1:
                 raise ValueError(f"{y_name} must be a one column pd.Dataframe or pd.Series.")
-            if (y.dtypes.iloc[0] not in [float, int, np.int32, np.float32, np.int64, np.float64]):
+            if y.dtypes.iloc[0] not in [float, int, np.int32, np.float32, np.int64, np.float64]:
                 raise ValueError(f"{y_name} must contain int or float only")
         if isinstance(y, pd.Series):
-            if (y.dtype not in [float, int, np.int32, np.float32, np.int64, np.float64]):
+            if y.dtype not in [float, int, np.int32, np.float32, np.int64, np.float64]:
                 raise ValueError(f"{y_name} must contain int or float only")
             y = y.to_frame()
             if isinstance(y.columns[0], (int, float)):
                 y.columns = [y_name]
     return y
+
 
 def check_contribution_object(case, classes, contributions):
     """
@@ -162,9 +175,9 @@ def check_contribution_object(case, classes, contributions):
     if case == "regression" and isinstance(contributions, (np.ndarray, pd.DataFrame)) == False:
         raise ValueError(
             """
-            Type of contributions parameter specified is not compatible with 
+            Type of contributions parameter specified is not compatible with
             regression model.
-            Please check model and contributions parameters.  
+            Please check model and contributions parameters.
             """
         )
     elif case == "classification":
@@ -180,15 +193,24 @@ def check_contribution_object(case, classes, contributions):
         else:
             raise ValueError(
                 """
-                Type of contributions parameter specified is not compatible with 
+                Type of contributions parameter specified is not compatible with
                 classification model.
                 Please check model and contributions parameters.
                 """
             )
 
-def check_consistency_model_features(features_dict, model, columns_dict, features_types,
-                                     mask_params=None, preprocessing=None, postprocessing=None,
-                                     list_preprocessing=None, features_groups=None):
+
+def check_consistency_model_features(
+    features_dict,
+    model,
+    columns_dict,
+    features_types,
+    mask_params=None,
+    preprocessing=None,
+    postprocessing=None,
+    list_preprocessing=None,
+    features_groups=None,
+):
     """
     Check the matching between attributes, features names are same, or include
 
@@ -229,8 +251,8 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
         raise ValueError("features of features_types and columns_dict must be the same")
 
     if mask_params is not None:
-        if mask_params['features_to_hide'] is not None:
-            if not all(feature in set(features_types) for feature in mask_params['features_to_hide']):
+        if mask_params["features_to_hide"] is not None:
+            if not all(feature in set(features_types) for feature in mask_params["features_to_hide"]):
                 raise ValueError("All features of mask_params must be in model")
 
     if preprocessing is not None and str(type(preprocessing)) in (supported_category_encoder):
@@ -252,22 +274,26 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
                 if set(columns_dict_feature) != set(feature_expected_model):
                     raise ValueError("Features of columns_dict and model must be the same.")
         else:
-            if len(set(columns_dict.values())) != model_expected :
+            if len(set(columns_dict.values())) != model_expected:
                 raise ValueError("Features of columns_dict and model must have the same length")
 
     if str(type(preprocessing)) in supported_category_encoder and isinstance(feature_expected_model, list):
         if set(preprocessing.feature_names_out_) != set(feature_expected_model):
-            raise ValueError("""
+            raise ValueError(
+                """
                                 One of features returned by the Category_Encoders preprocessing doesn't
                                 match the model's expected features.
-                            """)
+                            """
+            )
     elif preprocessing is not None:
         feature_encoded = get_list_features_names(list_preprocessing, columns_dict)
         if model_expected != len(feature_encoded):
-            raise ValueError("""
+            raise ValueError(
+                """
                 Number of features returned by the preprocessing step doesn't
                 match the model's expected features.
-                        """)
+                        """
+            )
 
     if postprocessing:
         if not isinstance(postprocessing, dict):
@@ -278,6 +304,7 @@ def check_consistency_model_features(features_dict, model, columns_dict, feature
             if feature not in columns_dict.values():
                 raise ValueError("Postprocessing and columns_dict must have the same features names.")
         check_postprocessing(features_types, postprocessing)
+
 
 def check_preprocessing_options(columns_dict, features_dict, preprocessing=None, list_preprocessing=None):
     """
@@ -309,8 +336,7 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None,
 
     if len(feature_to_drop) != 0:
         feature_to_drop = [columns_dict[index] for index in feature_to_drop]
-        features_dict_op = {key: value for key, value in features_dict.items()
-                            if key not in feature_to_drop}
+        features_dict_op = {key: value for key, value in features_dict.items() if key not in feature_to_drop}
 
         i = 0
         columns_dict_op = dict()
@@ -319,12 +345,15 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None,
                 columns_dict_op[i] = value
                 i += 1
 
-        return {"features_to_drop": feature_to_drop,
-                "features_dict_op": features_dict_op,
-                "columns_dict_op": columns_dict_op}
+        return {
+            "features_to_drop": feature_to_drop,
+            "features_dict_op": features_dict_op,
+            "columns_dict_op": columns_dict_op,
+        }
 
     else:
         return None
+
 
 def check_consistency_model_label(columns_dict, label_dict=None):
     """
@@ -341,6 +370,7 @@ def check_consistency_model_label(columns_dict, label_dict=None):
     if label_dict is not None:
         if not all(feat in columns_dict for feat in label_dict):
             raise ValueError("All features of label_dict must be in model")
+
 
 def check_postprocessing(x, postprocessing=None):
     """
@@ -359,21 +389,22 @@ def check_postprocessing(x, postprocessing=None):
             raise ValueError("Postprocessing parameter must be a dictionnary")
 
         for key in postprocessing.keys():
-
             dict_post = postprocessing[key]
 
             if not isinstance(dict_post, dict):
                 raise ValueError(f"{key} values must be a dict")
 
-            if not list(dict_post.keys()) == ['type', 'rule']:
+            if list(dict_post.keys()) != ["type", "rule"]:
                 raise ValueError("Wrong postprocessing keys, you need 'type' and 'rule' keys")
 
-            if not dict_post['type'] in ['prefix', 'suffix', 'transcoding', 'regex', 'case']:
-                raise ValueError("Wrong postprocessing method. \n"
-                                 "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'")
+            if dict_post["type"] not in ["prefix", "suffix", "transcoding", "regex", "case"]:
+                raise ValueError(
+                    "Wrong postprocessing method. \n"
+                    "The available methods are: 'prefix', 'suffix', 'transcoding', 'regex', or 'case'"
+                )
 
-            if dict_post['type'] == 'case':
-                if dict_post['rule'] not in ['lower', 'upper']:
+            if dict_post["type"] == "case":
+                if dict_post["rule"] not in ["lower", "upper"]:
                     raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
 
                 if isinstance(x, dict):
@@ -383,16 +414,19 @@ def check_postprocessing(x, postprocessing=None):
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
 
-            if dict_post['type'] == 'regex':
-                if not set(dict_post['rule'].keys()) == {'in', 'out'}:
-                    raise ValueError(f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
-                                     f" must be 'in' and 'out'.")
-                if isinstance(x,dict):
+            if dict_post["type"] == "regex":
+                if set(dict_post["rule"].keys()) != {"in", "out"}:
+                    raise ValueError(
+                        f"Regex modifications for {key} are not possible, the keys in 'rule' dict"
+                        f" must be 'in' and 'out'."
+                    )
+                if isinstance(x, dict):
                     if x[key] != "object":
                         raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+
 
 def check_features_name(columns_dict, features_dict, features):
     """
@@ -426,9 +460,7 @@ def check_features_name(columns_dict, features_dict, features):
         elif inv_columns_dict and all(f in columns_dict.values() for f in features):
             features_ids = [inv_columns_dict[f] for f in features]
         else:
-            raise ValueError(
-                'All features must came from the same dict of features (technical names or domain names).'
-            )
+            raise ValueError("All features must came from the same dict of features (technical names or domain names).")
 
     else:
         raise ValueError(
@@ -438,6 +470,7 @@ def check_features_name(columns_dict, features_dict, features):
             """
         )
     return features_ids
+
 
 def check_additional_data(x, additional_data):
     if not isinstance(additional_data, pd.DataFrame):
