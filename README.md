@@ -38,7 +38,7 @@ With Shapash, you can generate a **Webapp** that simplifies the comprehension of
 
 Additionally, Shapash contributes to data science auditing by **presenting valuable information** about any model and data **in a comprehensive report**.
 
-Shapash is suitable for Regression, Binary Classification, and Multiclass problems. It is **compatible with numerous models**, including Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, and SVM. For other models, solutions to integrate Shapash are available; more details can be found [here](#how_shapash_works).
+Shapash is suitable for Regression, Binary Classification and Multiclass problems. It is **compatible with numerous models**, including Catboost, Xgboost, LightGBM, Sklearn Ensemble, Linear models, and SVM. For other models, solutions to integrate Shapash are available; more details can be found [here](#how_shapash_works).
 
 > [!NOTE]
 > If you want to give us feedback : [Feedback form](https://framaforms.org/shapash-collecting-your-feedback-and-use-cases-1687456776)
