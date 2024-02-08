@@ -11,7 +11,7 @@ import dash_bootstrap_components as dbc
 import dash_daq as daq
 import pandas as pd
 import plotly.graph_objs as go
-from dash import ALL, MATCH, dash_table, dcc, html, no_update
+from dash import ALL, MATCH, dash_table, dcc, html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask
@@ -44,7 +44,7 @@ from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 
 
-def create_input_modal(id, label, tooltip):
+def _create_input_modal(id, label, tooltip):
     return dbc.Row(
         [
             dbc.Label(label, id=f"{id}_label", html_for=id, width=8),
@@ -203,27 +203,27 @@ class SmartApp:
         components containers which are created by init_skeleton
         """
 
-        self.components["settings"]["input_rows"] = create_input_modal(
+        self.components["settings"]["input_rows"] = _create_input_modal(
             id="rows",
             label="Number of rows for subset",
             tooltip="Set max number of lines for subset (datatable). \
                      Filter will be apply on this subset.",
         )
 
-        self.components["settings"]["input_points"] = create_input_modal(
+        self.components["settings"]["input_points"] = _create_input_modal(
             id="points",
             label="Number of points for plot",
             tooltip="Set max number of points in feature contribution plots.",
         )
 
-        self.components["settings"]["input_features"] = create_input_modal(
+        self.components["settings"]["input_features"] = _create_input_modal(
             id="features",
             label="Number of features to plot",
             tooltip="Set max number of features to plot in features \
                      importance and local explanation plots.",
         )
 
-        self.components["settings"]["input_violin"] = create_input_modal(
+        self.components["settings"]["input_violin"] = _create_input_modal(
             id="violin",
             label="Max number of labels for violin plot",
             tooltip="Set max number of labels to display a violin plot \
@@ -1384,6 +1384,7 @@ class SmartApp:
                     return this_style_card, style_component
 
     def init_callback_settings(self):
+        """Callback settings initialization"""
         app = self.app
         self.components["settings"]["input_rows"]["rows"].value = self.settings["rows"]
         self.components["settings"]["input_points"]["points"].value = self.settings["points"]
@@ -1437,6 +1438,7 @@ class SmartApp:
             return False
 
     def callback_generator(self):
+        """Generates all the app callbacks"""
         app = self.app
 
         @app.callback(

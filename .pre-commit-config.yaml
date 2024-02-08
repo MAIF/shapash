@@ -40,13 +40,13 @@ repos:
 #    -   id: mypy
 #        args: [--ignore-missing-imports, --disallow-untyped-defs, --show-error-codes, --no-site-packages]
 #        files: src
-# -   repo: https://github.com/PyCQA/flake8
-#     rev: 6.0.0
-#     hooks:
-#     -   id: flake8
-#         exclude: ^tests/
-#         args: ['--ignore=E501,D2,D3,D4,D104,D100,D106,D107,W503,D105,E203']
-#         additional_dependencies: [ flake8-docstrings, "flake8-bugbear==22.8.23" ]
+-   repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
+    hooks:
+    -   id: flake8
+        exclude: ^tests/
+        args: ['--ignore=E501,D2,D3,D4,D104,D100,D106,D107,W503,D105,E203', '--per-file-ignores=__init__.py:F401']
+        additional_dependencies: [ flake8-docstrings, "flake8-bugbear==22.8.23" ]
 -   repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.4.2
     hooks:

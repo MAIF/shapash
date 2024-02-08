@@ -206,8 +206,8 @@ def check_transformers(list_encoding):
     # check that encoding don't use ColumnTransformer and Category encoding at the same time
     if use_ct and use_ce:
         raise Exception(
-            f"Can't support ColumnTransformer and Category encoding at the same time. "
-            f"Use Category encoding in ColumnTransformer"
+            "Can't support ColumnTransformer and Category encoding at the same time. "
+            "Use Category encoding in ColumnTransformer"
         )
 
     # check that Category encoding is apply on different columns
@@ -263,7 +263,7 @@ def apply_postprocessing(x_init, postprocessing):
 
         elif dict_postprocessing["type"] == "regex":
             new_preds[feature_name] = new_preds[feature_name].apply(
-                lambda x: re.sub(dict_postprocessing["rule"]["in"], dict_postprocessing["rule"]["out"], x)
+                lambda x, d=dict_postprocessing: re.sub(d["rule"]["in"], d["rule"]["out"], x)
             )
 
         elif dict_postprocessing["type"] == "case":

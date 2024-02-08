@@ -11,7 +11,7 @@ import pandas as pd
 import plotly
 
 from shapash import SmartExplainer
-from shapash.report.common import VarType, compute_col_types, display_value, get_callable, series_dtype
+from shapash.report.common import compute_col_types, display_value, get_callable, series_dtype
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.plots import generate_confusion_matrix_plot, generate_fig_univariate
 from shapash.report.visualisation import (
@@ -218,7 +218,7 @@ class ProjectReport:
 
         print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
 
-        for name, module in sorted(sys.modules.items()):
+        for _, module in sorted(sys.modules.items()):
             if (
                 hasattr(module, "__version__")
                 and self.explainer.model.__class__.__module__.split(".")[0] == module.__name__

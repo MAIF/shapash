@@ -25,6 +25,7 @@ def print_html(text: str):
 
 
 def print_css_style():
+    """Print the CSS"""
     print_html(
         """
     <style type="text/css">
@@ -89,6 +90,7 @@ def print_css_style():
 
 
 def print_javascript_misc():
+    """Print the JS"""
     print_html(
         """
     <script>
@@ -130,6 +132,7 @@ def convert_fig_to_html(fig):
 
 
 def html_str_df_and_image(df: pd.DataFrame, fig: plt.Figure) -> str:
+    """Convert dataframe to HTML display"""
     return f"""
     <div class="row-fluid" style="margin-top:5px;">
       <div class="col-sm-6">{df.to_html(classes="greyGridTable")}</div>
@@ -139,4 +142,5 @@ def html_str_df_and_image(df: pd.DataFrame, fig: plt.Figure) -> str:
 
 
 def print_figure(fig):
+    """Print a figure as HTML"""
     print_html(convert_fig_to_html(fig))

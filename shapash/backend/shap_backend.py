@@ -6,6 +6,8 @@ from shapash.backend.base_backend import BaseBackend
 
 
 class ShapBackend(BaseBackend):
+    """The Shap Backend"""
+
     # When grouping features contributions together, Shap uses the sum of the contributions
     # of the features that belong to the group
     column_aggregation = "sum"

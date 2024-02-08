@@ -10,11 +10,12 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 from sklearn.manifold import MDS
 
-from shapash import SmartExplainer
 from shapash.style.style_utils import colors_loading, define_style, select_palette
 
 
 class Consistency:
+    """Consistency class"""
+
     def __init__(self):
         self._palette_name = list(colors_loading().keys())[0]
         self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))

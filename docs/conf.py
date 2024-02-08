@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, "..")
 
-import shapash
+import shapash  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 
@@ -106,7 +106,7 @@ html_static_path = ["_static"]
 todo_include_todos = True
 
 # -- Additional html pages  -------------------------------------------------
-import subprocess
+import subprocess  # noqa: E402
 
 # Generates the report example in the documentation
 subprocess.call(["python", "../tutorial/generate_report/shapash_report_example.py"])
@@ -114,6 +114,7 @@ html_extra_path = ["../tutorial/report/output/report.html"]
 
 
 def setup_tutorials():
+    """Set up the tutorials"""
     import pathlib
     import shutil
 

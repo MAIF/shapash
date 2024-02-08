@@ -21,6 +21,7 @@ class CustomThread(threading.Thread):
         self.__run_backup = None
 
     def start(self):
+        """Starts the thread"""
         self.__run_backup = self.run
         self.run = self.__run
         threading.Thread.start(self)

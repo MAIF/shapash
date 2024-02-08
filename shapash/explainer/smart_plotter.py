@@ -14,10 +14,9 @@ import scipy.cluster.hierarchy as sch
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
-from scipy.optimize import fsolve
 
 from shapash.manipulation.select_lines import select_lines
-from shapash.manipulation.summarize import compute_corr, compute_features_import, project_feature_values_1d
+from shapash.manipulation.summarize import compute_corr, project_feature_values_1d
 from shapash.style.style_utils import colors_loading, define_style, select_palette
 from shapash.utils.utils import (
     add_line_break,
@@ -2377,17 +2376,7 @@ class SmartPlotter:
         if facet_col:
             features_to_hide += [facet_col]
 
-        # We use phik by default as it is a convenient method for numeric and categorical data
-        if how == "phik":
-            try:
-                from phik import phik_matrix
-
-                compute_method = "phik"
-            except (ImportError, ModuleNotFoundError):
-                warnings.warn('Cannot compute phik correlations. Install phik using "pip install phik".', UserWarning)
-                compute_method = "pearson"
-        else:
-            compute_method = how
+        compute_method = how
 
         hovertemplate = "<b>%{text}<br />Correlation: %{z}</b><extra></extra>"
 

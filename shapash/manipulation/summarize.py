@@ -1,6 +1,7 @@
 """
 Summarize Module
 """
+
 import warnings
 
 import numpy as np
@@ -31,9 +32,9 @@ def summarize_el(dataframe, mask, prefix):
         Result of the summarize step
     """
     matrix = dataframe.where(mask.to_numpy()).values.tolist()
-    summarized_matrix = [[x for x in l if str(x) != "nan"] for l in matrix]
+    summarized_matrix = [[x for x in ll if str(x) != "nan"] for ll in matrix]
     # Padding to create pd.DataFrame
-    max_length = max(len(l) for l in summarized_matrix)
+    max_length = max(len(ll) for ll in summarized_matrix)
     for elem in summarized_matrix:
         elem.extend([np.nan] * (max_length - len(elem)))
     # Create DataFrame
@@ -203,9 +204,17 @@ def compute_corr(df, compute_method):
     # Remove user warnings (when not enough values to compute correlation).
     warnings.filterwarnings("ignore")
     if compute_method == "phik":
-        from phik import phik_matrix
+        try:
+            from phik import phik_matrix
 
-        return phik_matrix(df, verbose=False)
+            return phik_matrix(df, verbose=False)
+        except ImportError:
+            warnings.warn(
+                'Cannot compute phik correlations. Falling back to pearson. Install phik using "pip install phik".',
+                UserWarning,
+            )
+            return df.corr()
+
     elif compute_method == "pearson":
         return df.corr()
     else:

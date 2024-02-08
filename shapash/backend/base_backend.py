@@ -48,6 +48,20 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def run_explainer(self, x: pd.DataFrame) -> dict:
+        """
+        Computes local contributions.
+        Must be implemented by a child class
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            The observations dataframe used by the model
+
+        Returns
+        -------
+        explain_data : dict
+            dict containing local contributions
+        """
         raise NotImplementedError(
             f"`{self.__class__.__name__}` is a subclass of BaseBackend and "
             f"must implement the `_run_explainer` method"

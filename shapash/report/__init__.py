@@ -13,7 +13,7 @@ def check_report_requirements():
         pkg = req.split("=")[0]
         try:
             importlib.import_module(pkg.lower())
-        except (ModuleNotFoundError, ImportError):
+        except ImportError:
             raise ModuleNotFoundError(
                 f"The following package is necessary to generate the Shapash Report : {pkg}. "
                 f"Try 'pip install shapash[report]' to install all required packages."
