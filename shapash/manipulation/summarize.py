@@ -1,6 +1,7 @@
 """
 Summarize Module
 """
+
 import warnings
 
 import numpy as np
@@ -206,7 +207,6 @@ def compute_corr(df, compute_method):
         try:
             from phik import phik_matrix
 
-            compute_method = "phik"
             return phik_matrix(df, verbose=False)
         except ImportError:
             warnings.warn(

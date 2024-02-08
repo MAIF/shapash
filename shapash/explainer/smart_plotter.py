@@ -2376,16 +2376,6 @@ class SmartPlotter:
         if facet_col:
             features_to_hide += [facet_col]
 
-        # We use phik by default as it is a convenient method for numeric and categorical data
-        # if how == "phik":
-        #     try:
-        #         from phik import phik_matrix
-
-        #         compute_method = "phik"
-        #     except ImportError:
-        #         warnings.warn('Cannot compute phik correlations. Install phik using "pip install phik".', UserWarning)
-        #         compute_method = "pearson"
-        # else:
         compute_method = how
 
         hovertemplate = "<b>%{text}<br />Correlation: %{z}</b><extra></extra>"
