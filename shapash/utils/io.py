@@ -2,10 +2,12 @@
 IO module
 """
 import pickle
+
 try:
     import yaml
+
     _is_yaml_available = True
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     _is_yaml_available = False
 
 
@@ -87,7 +89,7 @@ def load_yml(path):
             """
         )
 
-    with open(path, "r") as f:
+    with open(path) as f:
         d = yaml.full_load(f)
 
     return d

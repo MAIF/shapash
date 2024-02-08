@@ -3,16 +3,21 @@ Smart State Module
 """
 import numpy as np
 import pandas as pd
-from shapash.decomposition.contributions import inverse_transform_contributions
-from shapash.decomposition.contributions import rank_contributions, assign_contributions
-from shapash.manipulation.filters import hide_contributions
-from shapash.manipulation.filters import cap_contributions
-from shapash.manipulation.filters import sign_contributions
-from shapash.manipulation.filters import cutoff_contributions
-from shapash.manipulation.filters import combine_masks
-from shapash.manipulation.mask import compute_masked_contributions
-from shapash.manipulation.mask import init_mask
-from shapash.manipulation.summarize import summarize, compute_features_import, group_contributions
+
+from shapash.decomposition.contributions import (
+    assign_contributions,
+    inverse_transform_contributions,
+    rank_contributions,
+)
+from shapash.manipulation.filters import (
+    cap_contributions,
+    combine_masks,
+    cutoff_contributions,
+    hide_contributions,
+    sign_contributions,
+)
+from shapash.manipulation.mask import compute_masked_contributions, init_mask
+from shapash.manipulation.summarize import compute_features_import, group_contributions, summarize
 
 
 class SmartState:
@@ -38,19 +43,13 @@ class SmartState:
             Local contributions on the original feature space (no encoding).
         """
         if not isinstance(contributions, (np.ndarray, pd.DataFrame)):
-            raise ValueError(
-                'Type of contributions must be pd.DataFrame or np.ndarray'
-            )
+            raise ValueError("Type of contributions must be pd.DataFrame or np.ndarray")
         if isinstance(contributions, np.ndarray):
-            return pd.DataFrame(
-                contributions,
-                columns=x_init.columns,
-                index=x_init.index
-            )
+            return pd.DataFrame(contributions, columns=x_init.columns, index=x_init.index)
         else:
             return contributions
 
-    def inverse_transform_contributions(self, contributions, preprocessing, agg_columns='sum'):
+    def inverse_transform_contributions(self, contributions, preprocessing, agg_columns="sum"):
         """
         Compute local contributions in the original feature space, despite category encoding.
 

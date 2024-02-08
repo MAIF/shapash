@@ -104,7 +104,7 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# DS Store 
+# DS Store
 .DS_Store
 
 # for installation purposes

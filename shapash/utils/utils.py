@@ -1,12 +1,15 @@
 """
 Utils is a group of function for the library
 """
+import math
+import socket
+
 import numpy as np
 import pandas as pd
-import socket
-import math
-from shapash.explainer.smart_state import SmartState
+
 from shapash.explainer.multi_decorator import MultiDecorator
+from shapash.explainer.smart_state import SmartState
+
 
 def get_host_name():
     """
@@ -68,6 +71,7 @@ def is_nested_list(object_param):
     """
     return any(isinstance(elem, list) for elem in object_param)
 
+
 def add_line_break(text, nbchar, maxlen=150):
     """
     adding line break in string if necessary
@@ -86,7 +90,7 @@ def add_line_break(text, nbchar, maxlen=150):
     string
         original text + line break
     """
-    if isinstance(text,str):
+    if isinstance(text, str):
         length = 0
         tot_length = 0
         input_word = text.split()
@@ -97,20 +101,21 @@ def add_line_break(text, nbchar, maxlen=150):
             if tot_length <= maxlen:
                 if length >= nbchar:
                     length = 0
-                    final_sep.append('<br />')
+                    final_sep.append("<br />")
                 else:
-                    final_sep.append(' ')
+                    final_sep.append(" ")
         if len(final_sep) == len(input_word) - 1:
-            last_char=''
-        else :
-            last_char=('...')
+            last_char = ""
+        else:
+            last_char = "..."
 
-        new_string = "".join(sum(zip(input_word, final_sep+['']), ())[:-1]) + last_char
+        new_string = "".join(sum(zip(input_word, final_sep + [""]), ())[:-1]) + last_char
         return new_string
     else:
         return text
 
-def truncate_str(text, maxlen= 40):
+
+def truncate_str(text, maxlen=40):
     """
     truncate a string
 
@@ -137,8 +142,9 @@ def truncate_str(text, maxlen= 40):
 
         text = " ".join(output_words)
         if len(input_words) > len(output_words):
-            text = text + '...'
+            text = text + "..."
     return text
+
 
 def compute_digit_number(value):
     """
@@ -155,14 +161,15 @@ def compute_digit_number(value):
         number of digits
     """
     # fix for 0 value
-    if(value == 0):
+    if value == 0:
         first_nz = 1
     else:
         first_nz = int(math.log10(abs(value)))
     digit = abs(min(3, first_nz) - 3)
     return digit
 
-def add_text(text_list,sep):
+
+def add_text(text_list, sep):
     """
     return int, number of digits to display
 
@@ -178,8 +185,9 @@ def add_text(text_list,sep):
     int
         number of digits
     """
-    clean_list = [x for x in text_list if x not in ['', None]]
+    clean_list = [x for x in text_list if x not in ["", None]]
     return sep.join(clean_list)
+
 
 def maximum_difference_sort_value(contributions):
     """
@@ -232,7 +240,9 @@ def compute_sorted_variables_interactions_list_indices(interaction_values):
     for i in range(tmp.shape[0]):
         tmp[i, i:] = 0
 
-    interaction_contrib_sorted_indices = np.dstack(np.unravel_index(np.argsort(tmp.ravel(), kind="stable"), tmp.shape))[0][::-1]
+    interaction_contrib_sorted_indices = np.dstack(np.unravel_index(np.argsort(tmp.ravel(), kind="stable"), tmp.shape))[
+        0
+    ][::-1]
     return interaction_contrib_sorted_indices
 
 
@@ -295,7 +305,7 @@ def choose_state(contributions):
         return SmartState()
 
 
-def convert_string_to_int_keys(input_dict: dict) -> dict:    
+def convert_string_to_int_keys(input_dict: dict) -> dict:
     """
     Returns the dict with integer keys instead of string keys
 
@@ -307,4 +317,4 @@ def convert_string_to_int_keys(input_dict: dict) -> dict:
     -------
     dict
     """
-    return {int(k): v for k,v in input_dict.items()}
+    return {int(k): v for k, v in input_dict.items()}

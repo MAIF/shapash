@@ -1,6 +1,8 @@
 """
 Translate Module
 """
+
+
 def translate(elements, mapping):
     """
     Map a dictionary to a list of elements.

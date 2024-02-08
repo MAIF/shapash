@@ -1,12 +1,13 @@
 """
 Data loader module
 """
+import json
 import os
 from pathlib import Path
-import json
-import pandas as pd
-from urllib.request import urlopen
 from urllib.error import URLError
+from urllib.request import urlopen
+
+import pandas as pd
 
 
 def _find_file(data_path, github_data_url, filename):
@@ -29,7 +30,7 @@ def _find_file(data_path, github_data_url, filename):
     """
     file = os.path.join(data_path, filename)
     if os.path.isfile(file) is False:
-        file = github_data_url+filename
+        file = github_data_url + filename
         try:
             urlopen(file)
         except URLError:
@@ -63,42 +64,42 @@ def data_loading(dataset):
         If exist, columns labels dictionnary associated to the dataset.
     """
     data_path = str(Path(__file__).parents[2] / "data")
-    if dataset == 'house_prices':
-        github_data_url = 'https://github.com/MAIF/shapash/raw/master/data/'
+    if dataset == "house_prices":
+        github_data_url = "https://github.com/MAIF/shapash/raw/master/data/"
         data_house_prices_path = _find_file(data_path, github_data_url, "house_prices_dataset.csv")
         dict_house_prices_path = _find_file(data_path, github_data_url, "house_prices_labels.json")
-        data = pd.read_csv(data_house_prices_path, header=0, index_col=0, engine='python')
+        data = pd.read_csv(data_house_prices_path, header=0, index_col=0, engine="python")
         if github_data_url in dict_house_prices_path:
             with urlopen(dict_house_prices_path) as openfile:
                 dic = json.load(openfile)
         else:
-            with open(dict_house_prices_path, 'r') as openfile:
+            with open(dict_house_prices_path) as openfile:
                 dic = json.load(openfile)
         return data, dic
 
-    elif dataset == 'titanic':
-        github_data_url = 'https://github.com/MAIF/shapash/raw/master/data/'
+    elif dataset == "titanic":
+        github_data_url = "https://github.com/MAIF/shapash/raw/master/data/"
         data_titanic_path = _find_file(data_path, github_data_url, "titanicdata.csv")
-        dict_titanic_path = _find_file(data_path, github_data_url, 'titaniclabels.json')
-        data = pd.read_csv(data_titanic_path, header=0, index_col=0, engine='python')
+        dict_titanic_path = _find_file(data_path, github_data_url, "titaniclabels.json")
+        data = pd.read_csv(data_titanic_path, header=0, index_col=0, engine="python")
         if github_data_url in dict_titanic_path:
             with urlopen(dict_titanic_path) as openfile:
                 dic = json.load(openfile)
         else:
-            with open(dict_titanic_path, 'r') as openfile:
+            with open(dict_titanic_path) as openfile:
                 dic = json.load(openfile)
         return data, dic
 
-    elif dataset == 'telco_customer_churn':
-        github_data_url = 'https://github.com/IBM/telco-customer-churn-on-icp4d/raw/master/data/'
+    elif dataset == "telco_customer_churn":
+        github_data_url = "https://github.com/IBM/telco-customer-churn-on-icp4d/raw/master/data/"
         data_telco_path = _find_file(data_path, github_data_url, "Telco-Customer-Churn.csv")
-        data = pd.read_csv(data_telco_path, header=0, index_col=0, engine='python')
+        data = pd.read_csv(data_telco_path, header=0, index_col=0, engine="python")
         return data
 
-    elif dataset == 'us_car_accident':
-        github_data_url = 'https://github.com/MAIF/shapash/raw/master/data/'
+    elif dataset == "us_car_accident":
+        github_data_url = "https://github.com/MAIF/shapash/raw/master/data/"
         data_accidents_path = _find_file(data_path, github_data_url, "US_Accidents_extract.csv")
-        data = pd.read_csv(data_accidents_path, header=0, engine='python')
+        data = pd.read_csv(data_accidents_path, header=0, engine="python")
         return data
 
     else:

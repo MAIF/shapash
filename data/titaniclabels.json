@@ -1,1 +1,13 @@
-{"PassengerID": "PassengerID", "Survival": "Has survived ?", "Pclass": "Ticket class", "Name": "Name, First name", "Sex": "Sex", "Age": "Age", "SibSp": "Relatives such as brother or wife", "Parch": "Relatives like children or parents", "Fare": "Passenger fare", "Embarked": "Port of embarkation", "Title": "Title of passenger"}
+{
+  "Age": "Age",
+  "Embarked": "Port of embarkation",
+  "Fare": "Passenger fare",
+  "Name": "Name, First name",
+  "Parch": "Relatives like children or parents",
+  "PassengerID": "PassengerID",
+  "Pclass": "Ticket class",
+  "Sex": "Sex",
+  "SibSp": "Relatives such as brother or wife",
+  "Survival": "Has survived ?",
+  "Title": "Title of passenger"
+}

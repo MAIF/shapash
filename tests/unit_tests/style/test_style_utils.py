@@ -1,14 +1,15 @@
 """
 Unit test of style_utils
 """
-import unittest
 import re
+import unittest
+
 from shapash.style.style_utils import (
     colors_loading,
-    select_palette,
-    define_style,
     convert_str_color_to_plt_format,
-    get_pyplot_color
+    define_style,
+    get_pyplot_color,
+    select_palette,
 )
 
 
@@ -25,7 +26,7 @@ class TestStyle_utils(unittest.TestCase):
         """
         check rgb() or rgba() format of a str variable
         """
-        matching = re.match(r"^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$",string_val)
+        matching = re.match(r"^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$", string_val)
         matching = False if matching is None else True
         return matching
 
@@ -71,9 +72,9 @@ class TestStyle_utils(unittest.TestCase):
     def test_get_pyplot_color(self):
         available_palettes = colors_loading()
         for palette_name in available_palettes.keys():
-            palette = colors_loading()[palette_name]['report_feature_distribution']
+            palette = colors_loading()[palette_name]["report_feature_distribution"]
             colors = get_pyplot_color(colors=palette)
             assert isinstance(colors, dict)
-            col1 = colors_loading()[palette_name]['title_color']
+            col1 = colors_loading()[palette_name]["title_color"]
             color = get_pyplot_color(col1)
             assert isinstance(color, list)

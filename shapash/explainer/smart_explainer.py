@@ -1,29 +1,38 @@
 """
 Smart explainer module
 """
-import logging
 import copy
-import tempfile
+import logging
 import shutil
+import tempfile
+
 import numpy as np
 import pandas as pd
-from shapash.webapp.smart_app import SmartApp
+
+import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend, get_backend_cls_from_name
-from shapash.utils.io import save_pickle
-from shapash.utils.io import load_pickle
-from shapash.utils.transform import inverse_transform, apply_postprocessing, handle_categorical_missing
-from shapash.utils.utils import get_host_name
-from shapash.utils.threading import CustomThread
-from shapash.utils.check import check_model, check_label_dict, check_y, check_postprocessing, check_features_name, check_additional_data
 from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.select_lines import keep_right_contributions
-from shapash.report import check_report_requirements
 from shapash.manipulation.summarize import create_grouped_features_values
-from .smart_plotter import SmartPlotter
-import shapash.explainer.smart_predictor
-from shapash.utils.model import predict_proba, predict, predict_error
-from shapash.utils.explanation_metrics import find_neighbors, shap_neighbors, get_min_nb_features, get_distance
+from shapash.report import check_report_requirements
 from shapash.style.style_utils import colors_loading, select_palette
+from shapash.utils.check import (
+    check_additional_data,
+    check_features_name,
+    check_label_dict,
+    check_model,
+    check_postprocessing,
+    check_y,
+)
+from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
+from shapash.utils.io import load_pickle, save_pickle
+from shapash.utils.model import predict, predict_error, predict_proba
+from shapash.utils.threading import CustomThread
+from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
+from shapash.utils.utils import get_host_name
+from shapash.webapp.smart_app import SmartApp
+
+from .smart_plotter import SmartPlotter
 
 logging.basicConfig(level=logging.INFO)
 
@@ -117,7 +126,7 @@ class SmartExplainer:
             It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
     backend_name:
-        backend name if backend passed is a string 
+        backend name if backend passed is a string
     x_encoded: pandas.DataFrame
         preprocessed dataset used by the model to perform the prediction.
     x_init: pandas.DataFrame
@@ -168,18 +177,18 @@ class SmartExplainer:
     """
 
     def __init__(
-            self,
-            model,
-            backend='shap',
-            preprocessing=None,
-            postprocessing=None,
-            features_groups=None,
-            features_dict=None,
-            label_dict=None,
-            title_story: str = None,
-            palette_name=None,
-            colors_dict=None,
-            **backend_kwargs
+        self,
+        model,
+        backend="shap",
+        preprocessing=None,
+        postprocessing=None,
+        features_groups=None,
+        features_dict=None,
+        label_dict=None,
+        title_story: str = None,
+        palette_name=None,
+        colors_dict=None,
+        **backend_kwargs,
     ):
         if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
@@ -203,16 +212,15 @@ class SmartExplainer:
             if backend.preprocessing is None and self.preprocessing is not None:
                 self.backend.preprocessing = self.preprocessing
         else:
-            raise NotImplementedError(f'Unknown backend : {backend}')
+            raise NotImplementedError(f"Unknown backend : {backend}")
 
         self.backend_kwargs = backend_kwargs
         self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
         self.label_dict = label_dict
         self.plot = SmartPlotter(self)
-        self.title_story = title_story if title_story is not None else ''
-        self.palette_name = palette_name if palette_name else 'default'
-        self.colors_dict = copy.deepcopy(
-            select_palette(colors_loading(), self.palette_name))
+        self.title_story = title_story if title_story is not None else ""
+        self.palette_name = palette_name if palette_name else "default"
+        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
         if colors_dict is not None:
             self.colors_dict.update(colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
@@ -231,13 +239,9 @@ class SmartExplainer:
         self.explain_data = None
         self.features_imp = None
 
-    def compile(self,
-                x,
-                contributions=None,
-                y_pred=None,
-                y_target=None,
-                additional_data=None,
-                additional_features_dict=None):
+    def compile(
+        self, x, contributions=None, y_pred=None, y_target=None, additional_data=None, additional_features_dict=None
+    ):
         """
         The compile method is the first step to understand model and
         prediction. It performs the sorting of contributions, the reverse
@@ -281,7 +285,8 @@ class SmartExplainer:
         if isinstance(self.backend_name, str):
             backend_cls = get_backend_cls_from_name(self.backend_name)
             self.backend = backend_cls(
-                model=self.model, preprocessing=self.preprocessing, masker=x, **self.backend_kwargs)
+                model=self.model, preprocessing=self.preprocessing, masker=x, **self.backend_kwargs
+            )
         self.x_encoded = handle_categorical_missing(x)
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)
@@ -297,27 +302,22 @@ class SmartExplainer:
         self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         self._apply_all_postprocessing_modifications()
 
-        self.data = self.state.assign_contributions(
-            self.state.rank_contributions(
-                self.contributions,
-                self.x_init
-            )
-        )
+        self.data = self.state.assign_contributions(self.state.rank_contributions(self.contributions, self.x_init))
         self.features_desc = dict(self.x_init.nunique())
         if self.features_groups is not None:
             self._compile_features_groups(self.features_groups)
-        self.additional_features_dict = dict() if additional_features_dict is None else self._compile_additional_features_dict(additional_features_dict)
+        self.additional_features_dict = (
+            dict()
+            if additional_features_dict is None
+            else self._compile_additional_features_dict(additional_features_dict)
+        )
         self.additional_data = self._compile_additional_data(additional_data)
 
-    def _get_contributions_from_backend_or_user(self,
-                                                x,
-                                                contributions):
+    def _get_contributions_from_backend_or_user(self, x, contributions):
         # Computing contributions using backend
         if contributions is None:
             self.explain_data = self.backend.run_explainer(x=x)
-            self.contributions = self.backend.get_local_contributions(
-                x=x,
-                explain_data=self.explain_data)
+            self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
         else:
             self.explain_data = contributions
             self.contributions = self.backend.format_and_aggregate_local_contributions(
@@ -335,38 +335,31 @@ class SmartExplainer:
             self.x_contrib_plot = copy.deepcopy(self.x_init)
         self.x_init = self.apply_postprocessing(postprocessing)
 
-    def _compile_features_groups(self,
-                                 features_groups):
+    def _compile_features_groups(self, features_groups):
         """
         Performs required computations for groups of features.
         """
         if self.backend.support_groups is False:
-            raise AssertionError(
-                f'Selected backend ({self.backend.name}) '
-                f'does not support groups of features.'
-            )
+            raise AssertionError(f"Selected backend ({self.backend.name}) " f"does not support groups of features.")
         # Compute contributions for groups of features
-        self.contributions_groups = self.state.compute_grouped_contributions(
-            self.contributions, features_groups)
+        self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
         self.features_imp_groups = None
         # Update features dict with groups names
         self._update_features_dict_with_groups(features_groups=features_groups)
         # Compute t-sne projections for groups of features
         self.x_init_groups = create_grouped_features_values(
-            x_init=self.x_init, x_encoded=self.x_encoded,
+            x_init=self.x_init,
+            x_encoded=self.x_encoded,
             preprocessing=self.preprocessing,
             features_groups=self.features_groups,
             features_dict=self.features_dict,
-            how='dict_of_values')
+            how="dict_of_values",
+        )
         # Compute data attribute for groups of features
         self.data_groups = self.state.assign_contributions(
-            self.state.rank_contributions(
-                self.contributions_groups,
-                self.x_init_groups
-            )
+            self.state.rank_contributions(self.contributions_groups, self.x_init_groups)
         )
-        self.columns_dict_groups = {
-            i: col for i, col in enumerate(self.x_init_groups.columns)}
+        self.columns_dict_groups = {i: col for i, col in enumerate(self.x_init_groups.columns)}
 
     def _compile_additional_features_dict(self, additional_features_dict):
         """
@@ -396,27 +389,29 @@ class SmartExplainer:
                 self.additional_features_dict[feature] = feature
         return additional_data
 
-    def define_style(self,
-                     palette_name=None,
-                     colors_dict=None):
+    def define_style(self, palette_name=None, colors_dict=None):
+        """
+        Set the color set to use in plots.
+        """
         if palette_name is None and colors_dict is None:
             raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
         new_palette_name = palette_name or self.palette_name
-        new_colors_dict = copy.deepcopy(
-            select_palette(colors_loading(), new_palette_name))
+        new_colors_dict = copy.deepcopy(select_palette(colors_loading(), new_palette_name))
         if colors_dict is not None:
             new_colors_dict.update(colors_dict)
         self.colors_dict.update(new_colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
 
-    def add(self,
-            y_pred=None,
-            y_target=None,
-            label_dict=None,
-            features_dict=None,
-            title_story: str = None,
-            additional_data=None,
-            additional_features_dict=None):
+    def add(
+        self,
+        y_pred=None,
+        y_target=None,
+        label_dict=None,
+        features_dict=None,
+        title_story: str = None,
+        additional_data=None,
+        additional_features_dict=None,
+    ):
         """
         add method allows the user to add a label_dict, features_dict
         or y_pred without compiling again (and it can last a few moments).
@@ -449,11 +444,11 @@ class SmartExplainer:
         """
         if y_pred is not None:
             self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
-            if hasattr(self, 'y_target'):
+            if hasattr(self, "y_target"):
                 self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
         if y_target is not None:
             self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-            if hasattr(self, 'y_pred'):
+            if hasattr(self, "y_pred"):
                 self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
@@ -503,7 +498,7 @@ class SmartExplainer:
         if selection:
             x = x.loc[selection]
 
-        if hasattr(self, 'x_interaction'):
+        if hasattr(self, "x_interaction"):
             if self.x_interaction.equals(x[:n_samples_max]):
                 return self.interaction_values
 
@@ -528,8 +523,7 @@ class SmartExplainer:
         if postprocessing is not None:
             for key in postprocessing.keys():
                 dict_postprocess = postprocessing[key]
-                if dict_postprocess['type'] in {'prefix', 'suffix'} \
-                        and pd.api.types.is_numeric_dtype(self.x_init[key]):
+                if dict_postprocess["type"] in {"prefix", "suffix"} and pd.api.types.is_numeric_dtype(self.x_init[key]):
                     modif = True
         return modif
 
@@ -593,7 +587,7 @@ class SmartExplainer:
         Check the features_dict and add the necessary keys if all the
         input X columns are not present
         """
-        for feature in (set(list(self.columns_dict.values())) - set(list(self.features_dict))):
+        for feature in set(list(self.columns_dict.values())) - set(list(self.features_dict)):
             self.features_dict[feature] = feature
 
     def _update_features_dict_with_groups(self, features_groups):
@@ -636,22 +630,22 @@ class SmartExplainer:
         """
         if origin is None:
             if label in self._classes:
-                origin = 'code'
+                origin = "code"
             elif self.label_dict is not None and label in self.label_dict.values():
-                origin = 'value'
+                origin = "value"
             elif isinstance(label, int) and label in range(-1, len(self._classes)):
-                origin = 'num'
+                origin = "num"
 
         try:
-            if origin == 'num':
+            if origin == "num":
                 label_num = label
                 label_code = self._classes[label]
                 label_value = self.label_dict[label_code] if self.label_dict else label_code
-            elif origin == 'code':
+            elif origin == "code":
                 label_code = label
                 label_num = self._classes.index(label)
                 label_value = self.label_dict[label_code] if self.label_dict else label_code
-            elif origin == 'value':
+            elif origin == "value":
                 label_code = self.inv_label_dict[label]
                 label_num = self._classes.index(label_code)
                 label_value = label
@@ -698,19 +692,15 @@ class SmartExplainer:
         if not hasattr(self, attribute):
             raise ValueError(
                 """
-                attribute {0} isn't an attribute of the explainer precised.
-                """.format(attribute))
+                attribute {} isn't an attribute of the explainer precised.
+                """.format(
+                    attribute
+                )
+            )
 
         return self.__dict__[attribute]
 
-    def filter(
-            self,
-            features_to_hide=None,
-            threshold=None,
-            positive=None,
-            max_contrib=None,
-            display_groups=None
-    ):
+    def filter(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, display_groups=None):
         """
         The filter method is an important method which allows to summarize the local explainability
         by using the user defined parameters which correspond to its use case.
@@ -738,40 +728,27 @@ class SmartExplainer:
             data = self.data_groups
         else:
             data = self.data
-        mask = [self.state.init_mask(data['contrib_sorted'], True)]
+        mask = [self.state.init_mask(data["contrib_sorted"], True)]
         if features_to_hide:
             mask.append(
                 self.state.hide_contributions(
-                    data['var_dict'],
-                    features_list=self.check_features_name(features_to_hide, use_groups=display_groups)
+                    data["var_dict"],
+                    features_list=self.check_features_name(features_to_hide, use_groups=display_groups),
                 )
             )
         if threshold:
-            mask.append(
-                self.state.cap_contributions(
-                    data['contrib_sorted'],
-                    threshold=threshold
-                )
-            )
+            mask.append(self.state.cap_contributions(data["contrib_sorted"], threshold=threshold))
         if positive is not None:
-            mask.append(
-                self.state.sign_contributions(
-                    data['contrib_sorted'],
-                    positive=positive
-                )
-            )
+            mask.append(self.state.sign_contributions(data["contrib_sorted"], positive=positive))
         self.mask = self.state.combine_masks(mask)
         if max_contrib:
             self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
-        self.masked_contributions = self.state.compute_masked_contributions(
-            data['contrib_sorted'],
-            self.mask
-        )
+        self.masked_contributions = self.state.compute_masked_contributions(data["contrib_sorted"], self.mask)
         self.mask_params = {
-            'features_to_hide': features_to_hide,
-            'threshold': threshold,
-            'positive': positive,
-            'max_contrib': max_contrib
+            "features_to_hide": features_to_hide,
+            "threshold": threshold,
+            "positive": positive,
+            "max_contrib": max_contrib,
         }
 
     def save(self, path):
@@ -788,7 +765,7 @@ class SmartExplainer:
         --------
         >>> xpl.save('path_to_pkl/xpl.pkl')
         """
-        if hasattr(self, 'smartapp'):
+        if hasattr(self, "smartapp"):
             self.smartapp = None
         save_pickle(self, path)
 
@@ -812,9 +789,7 @@ class SmartExplainer:
             smart_explainer.__dict__.update(xpl.__dict__)
             return smart_explainer
         else:
-            raise ValueError(
-                "File is not a SmartExplainer object"
-            )
+            raise ValueError("File is not a SmartExplainer object")
 
     def predict_proba(self):
         """
@@ -827,17 +802,11 @@ class SmartExplainer:
         The predict method computes the model output for each x_encoded row and stores it in y_pred attribute
         """
         self.y_pred = predict(self.model, self.x_encoded)
-        if hasattr(self, 'y_target'):
+        if hasattr(self, "y_target"):
             self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
 
     def to_pandas(
-            self,
-            features_to_hide=None,
-            threshold=None,
-            positive=None,
-            max_contrib=None,
-            proba=False,
-            use_groups=None
+        self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, proba=False, use_groups=None
     ):
         """
         The to_pandas method allows to export the summary of local explainability.
@@ -888,41 +857,41 @@ class SmartExplainer:
 
         # Classification: y_pred is needed
         if self.y_pred is None:
-            raise ValueError(
-                "You have to specify y_pred argument. Please use add() or compile() method"
-            )
+            raise ValueError("You have to specify y_pred argument. Please use add() or compile() method")
 
         # Apply filter method if necessary
-        if all(var is None for var in [features_to_hide, threshold, positive, max_contrib]) \
-                and hasattr(self, 'mask_params') \
-                and (
+        if (
+            all(var is None for var in [features_to_hide, threshold, positive, max_contrib])
+            and hasattr(self, "mask_params")
+            and (
                 # if the already computed mask does not have the right shape (this can happen when
                 # we use groups of features once and then use method without groups)
-                (isinstance(data['contrib_sorted'], pd.DataFrame)
-                    and len(data["contrib_sorted"].columns) == len(self.mask.columns))
-                or
-                (isinstance(data['contrib_sorted'], list)
-                    and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns))
-                ):
-            print('to_pandas params: ' + str(self.mask_params))
+                (
+                    isinstance(data["contrib_sorted"], pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) == len(self.mask.columns)
+                )
+                or (
+                    isinstance(data["contrib_sorted"], list)
+                    and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns)
+                )
+            )
+        ):
+            print("to_pandas params: " + str(self.mask_params))
         else:
-            self.filter(features_to_hide=features_to_hide,
-                        threshold=threshold,
-                        positive=positive,
-                        max_contrib=max_contrib,
-                        display_groups=use_groups)
+            self.filter(
+                features_to_hide=features_to_hide,
+                threshold=threshold,
+                positive=positive,
+                max_contrib=max_contrib,
+                display_groups=use_groups,
+            )
         if use_groups:
             columns_dict = {i: col for i, col in enumerate(self.x_init_groups.columns)}
         else:
             columns_dict = self.columns_dict
         # Summarize information
-        data['summary'] = self.state.summarize(
-            data['contrib_sorted'],
-            data['var_dict'],
-            data['x_sorted'],
-            self.mask,
-            columns_dict,
-            self.features_dict
+        data["summary"] = self.state.summarize(
+            data["contrib_sorted"], data["var_dict"], data["x_sorted"], self.mask, columns_dict, self.features_dict
         )
         # Matching with y_pred
         if proba:
@@ -931,9 +900,9 @@ class SmartExplainer:
         else:
             proba_values = None
 
-        y_pred, summary = keep_right_contributions(self.y_pred, data['summary'],
-                                                   self._case, self._classes,
-                                                   self.label_dict, proba_values)
+        y_pred, summary = keep_right_contributions(
+            self.y_pred, data["summary"], self._case, self._classes, self.label_dict, proba_values
+        )
 
         return pd.concat([y_pred, summary], axis=1)
 
@@ -955,9 +924,7 @@ class SmartExplainer:
             index of the serie = contributions.columns
         """
         self.features_imp = self.backend.get_global_features_importance(
-            contributions=self.contributions,
-            explain_data=self.explain_data,
-            subset=None
+            contributions=self.contributions, explain_data=self.explain_data, subset=None
         )
 
         if self.features_groups is not None and self.features_imp_groups is None:
@@ -996,7 +963,11 @@ class SmartExplainer:
             variability = np.zeros((numb_expl, self.x_init.shape[1]))
             # For each instance (+ neighbors), compute explanation
             for i in range(numb_expl):
-                (_, variability[i, :], amplitude[i, :],) = shap_neighbors(all_neighbors[i], self.x_encoded, self.contributions, self._case)
+                (
+                    _,
+                    variability[i, :],
+                    amplitude[i, :],
+                ) = shap_neighbors(all_neighbors[i], self.x_encoded, self.contributions, self._case)
             self.features_stability = {"variability": variability, "amplitude": amplitude}
 
     def compute_features_compacity(self, selection, distance, nb_features):
@@ -1027,7 +998,7 @@ class SmartExplainer:
     def init_app(self, settings: dict = None):
         """
         Simple init of SmartApp in case of host smartapp by another way
-        
+
         Parameters
         ----------
         settings : dict (default: None)
@@ -1039,7 +1010,9 @@ class SmartExplainer:
             self.predict()
         self.smartapp = SmartApp(self, settings)
 
-    def run_app(self, port: int = None, host: str = None, title_story: str = None, settings: dict = None) -> CustomThread:
+    def run_app(
+        self, port: int = None, host: str = None, title_story: str = None, settings: dict = None
+    ) -> CustomThread:
         """
         run_app method launches the interpretability web app associated with the shapash object.
         run_app method can be used directly in a Jupyter notebook
@@ -1075,7 +1048,7 @@ class SmartExplainer:
             self.title_story = title_story
         if self.y_pred is None:
             self.predict()
-        if hasattr(self, '_case'):
+        if hasattr(self, "_case"):
             self.smartapp = SmartApp(self, settings)
             if host is None:
                 host = "0.0.0.0"
@@ -1083,7 +1056,8 @@ class SmartExplainer:
                 port = 8050
             host_name = get_host_name()
             server_instance = CustomThread(
-                target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port))
+                target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port)
+            )
             if host_name is None:
                 host_name = host
             elif host != "0.0.0.0":
@@ -1134,18 +1108,22 @@ class SmartExplainer:
 
         self.features_types = {features: str(self.x_init[features].dtypes) for features in self.x_init.columns}
 
-        listattributes = ["features_dict", "model", "columns_dict", "backend", "features_types",
-                          "label_dict", "preprocessing", "postprocessing", "features_groups"]
+        listattributes = [
+            "features_dict",
+            "model",
+            "columns_dict",
+            "backend",
+            "features_types",
+            "label_dict",
+            "preprocessing",
+            "postprocessing",
+            "features_groups",
+        ]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
 
         if not hasattr(self, "mask_params"):
-            self.mask_params = {
-                "features_to_hide": None,
-                "threshold": None,
-                "positive": None,
-                "max_contrib": None
-            }
+            self.mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
         params_smartpredictor.append(self.mask_params)
 
         return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
@@ -1179,18 +1157,20 @@ class SmartExplainer:
                 params_checkypred.append(None)
         return params_checkypred
 
-    def generate_report(self,
-                        output_file,
-                        project_info_file,
-                        x_train=None,
-                        y_train=None,
-                        y_test=None,
-                        title_story=None,
-                        title_description=None,
-                        metrics=None,
-                        working_dir=None,
-                        notebook_path=None,
-                        kernel_name=None):
+    def generate_report(
+        self,
+        output_file,
+        project_info_file,
+        x_train=None,
+        y_train=None,
+        y_test=None,
+        title_story=None,
+        title_description=None,
+        metrics=None,
+        working_dir=None,
+        notebook_path=None,
+        kernel_name=None,
+    ):
         """
         This method will generate an HTML report containing different information about the project.
         It analyzes the data and the model used in order to provide interesting
@@ -1265,9 +1245,11 @@ class SmartExplainer:
             working_dir = tempfile.mkdtemp()
             rm_working_dir = True
 
-        if not hasattr(self, 'model'):
-            raise AssertionError("Explainer object was not compiled. Please compile the explainer "
-                                 "object using .compile(...) method before generating the report.")
+        if not hasattr(self, "model"):
+            raise AssertionError(
+                "Explainer object was not compiled. Please compile the explainer "
+                "object using .compile(...) method before generating the report."
+            )
 
         try:
             execute_report(
@@ -1283,7 +1265,7 @@ class SmartExplainer:
                     metrics=metrics,
                 ),
                 notebook_path=notebook_path,
-                kernel_name=kernel_name
+                kernel_name=kernel_name,
             )
             export_and_save_report(working_dir=working_dir, output_file=output_file)
 

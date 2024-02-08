@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Union
-import pandas as pd
-import numpy as np
 
-from shapash.utils.check import check_model, check_contribution_object
+import numpy as np
+import pandas as pd
+
+from shapash.utils.check import check_contribution_object, check_model
 from shapash.utils.transform import adapt_contributions, get_preprocessing_mapping
 from shapash.utils.utils import choose_state
 
@@ -19,13 +20,13 @@ class BaseBackend(ABC):
     # `column_aggregation` defines a way to aggregate local contributions.
     # Default is sum, possible values are 'sum' or 'first'.
     # It allows to compute (column-wise) aggregation of local contributions.
-    column_aggregation = 'sum'
+    column_aggregation = "sum"
 
     # `name` defines the string name of the backend allowing to identify and
     # construct the backend from it.
-    name = 'base'
+    name = "base"
     support_groups = True
-    supported_cases = ['classification', 'regression']
+    supported_cases = ["classification", "regression"]
 
     def __init__(self, model: Any, preprocessing: Optional[Any] = None):
         """Create a backend instance using a given implementation.
@@ -43,20 +44,31 @@ class BaseBackend(ABC):
         self.state = None
         self._case, self._classes = check_model(model)
         if self._case not in self.supported_cases:
-            raise ValueError(f'Model not supported by the backend as it does not cover {self._case} case')
+            raise ValueError(f"Model not supported by the backend as it does not cover {self._case} case")
 
     @abstractmethod
     def run_explainer(self, x: pd.DataFrame) -> dict:
+        """
+        Computes local contributions.
+        Must be implemented by a child class
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            The observations dataframe used by the model
+
+        Returns
+        -------
+        explain_data : dict
+            dict containing local contributions
+        """
         raise NotImplementedError(
             f"`{self.__class__.__name__}` is a subclass of BaseBackend and "
             f"must implement the `_run_explainer` method"
         )
 
     def get_local_contributions(
-            self,
-            x: pd.DataFrame,
-            explain_data: Any,
-            subset: Optional[List[int]] = None
+        self, x: pd.DataFrame, explain_data: Any, subset: Optional[List[int]] = None
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         """Get local contributions using the explainer data computed in the `run_explainer`
         method.
@@ -81,24 +93,21 @@ class BaseBackend(ABC):
             The local contributions computed by the backend.
         """
         assert isinstance(explain_data, dict), "The _run_explainer method should return a dict"
-        if 'contributions' not in explain_data.keys():
+        if "contributions" not in explain_data.keys():
             raise ValueError(
-                'The _run_explainer method should return a dict'
-                ' with at least `contributions` key containing '
-                'the local contributions'
+                "The _run_explainer method should return a dict"
+                " with at least `contributions` key containing "
+                "the local contributions"
             )
 
-        local_contributions = explain_data['contributions']
+        local_contributions = explain_data["contributions"]
         if subset is not None:
             local_contributions = local_contributions.loc[subset]
         local_contributions = self.format_and_aggregate_local_contributions(x, local_contributions)
         return local_contributions
 
     def get_global_features_importance(
-            self,
-            contributions: pd.DataFrame,
-            explain_data: Optional[dict] = None,
-            subset: Optional[List[int]] = None
+        self, contributions: pd.DataFrame, explain_data: Optional[dict] = None, subset: Optional[List[int]] = None
     ) -> Union[pd.Series, List[pd.Series]]:
         """Get global contributions using the explainer data computed in the `run_explainer`
         method.
@@ -126,9 +135,9 @@ class BaseBackend(ABC):
         return state.compute_features_import(contributions)
 
     def format_and_aggregate_local_contributions(
-            self,
-            x: pd.DataFrame,
-            contributions: Union[pd.DataFrame, np.array, List[pd.DataFrame], List[np.array]],
+        self,
+        x: pd.DataFrame,
+        contributions: Union[pd.DataFrame, np.array, List[pd.DataFrame], List[np.array]],
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         """
         This function allows to format and aggregate contributions in the right format
@@ -153,7 +162,8 @@ class BaseBackend(ABC):
         check_contribution_object(self._case, self._classes, contributions)
         contributions = self.state.validate_contributions(contributions, x)
         contributions_cols = (
-            contributions.columns.to_list() if isinstance(contributions, pd.DataFrame)
+            contributions.columns.to_list()
+            if isinstance(contributions, pd.DataFrame)
             else contributions[0].columns.to_list()
         )
         if _needs_preprocessing(contributions_cols, x, self.preprocessing):
@@ -161,8 +171,7 @@ class BaseBackend(ABC):
         return contributions
 
     def _apply_preprocessing(
-            self,
-            contributions: Union[pd.DataFrame, List[pd.DataFrame]]
+        self, contributions: Union[pd.DataFrame, List[pd.DataFrame]]
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         """
         Reconstruct contributions for original features, taken into account a preprocessing.
@@ -179,9 +188,7 @@ class BaseBackend(ABC):
         """
         if self.preprocessing:
             return self.state.inverse_transform_contributions(
-                contributions,
-                self.preprocessing,
-                agg_columns=self.column_aggregation
+                contributions, self.preprocessing, agg_columns=self.column_aggregation
             )
         else:
             return contributions

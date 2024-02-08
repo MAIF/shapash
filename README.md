@@ -72,9 +72,9 @@ Shapash is suitable for Regression, Binary Classification and Multiclass problem
 | 2.2.x         |  Dataset Filter <br>                                                              | New tab in the webapp to filter data. And several improvements in the webapp: subtitles, labels, screen adjustments                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/webapp.png" width="50" title="webapp">](https://github.com/MAIF/shapash/blob/master/tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 | 2.0.x         |  Refactoring Shapash <br>                                                                   | Refactoring attributes of compile methods and init. Refactoring implementation for new backends                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/modular.png" width="50" title="modular">](https://github.com/MAIF/shapash/blob/master/tutorial/explainer_and_backend/tuto-expl06-Shapash-custom-backend.ipynb)
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
-| 1.6.x         |  Explainability Quality Metrics <br> [Article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb) 
-| 1.4.x         |  Groups of features <br> [Demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    | 
-| 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-report01.ipynb)    | 
+| 1.6.x         |  Explainability Quality Metrics <br> [Article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb)
+| 1.4.x         |  Groups of features <br> [Demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    |
+| 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-report01.ipynb)    |
 
 ## 🔥 Features
 
@@ -83,19 +83,19 @@ Shapash is suitable for Regression, Binary Classification and Multiclass problem
 <p align="center">
   <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-02.png?raw=true" width="28%"/>
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-06.png?raw=true" width="28%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-04.png?raw=true" width="28%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-04.png?raw=true" width="28%" />
 </p>
 
 <p align="center">
   <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-01.png?raw=true" width="28%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-resize.png?raw=true" width="18%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-13.png?raw=true" width="28%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-13.png?raw=true" width="28%" />
 </p>
 
 <p align="center">
   <img align="left" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-12.png?raw=true" width="33%" />
   <img src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-03.png?raw=true" width="28%" />
-  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-10.png?raw=true" width="25%" /> 
+  <img align="right" src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-grid-images-10.png?raw=true" width="25%" />
 </p>
 
 
@@ -145,13 +145,13 @@ Shapash can use category-encoders object, sklearn ColumnTransformer or simply fe
 
 Shapash is intended to work with Python versions 3.8 to 3.11. Installation can be done with pip:
 
-```python
+```bash
 pip install shapash
 ```
 
 In order to generate the Shapash Report some extra requirements are needed.
 You can install these using the following command :  
-```python
+```bash
 pip install shapash[report]
 ```
 
@@ -167,24 +167,25 @@ The 4 steps to display results:
 
 ```python
 from shapash import SmartExplainer
+
 xpl = SmartExplainer(
-  model=regressor,
-  features_dict=house_dict,  # Optional parameter
-  preprocessing=encoder, # Optional: compile step can use inverse_transform method
-  postprocessing=postprocess, # Optional: see tutorial postprocessing  
+    model=regressor,
+    features_dict=house_dict,  # Optional parameter
+    preprocessing=encoder,  # Optional: compile step can use inverse_transform method
+    postprocessing=postprocess,  # Optional: see tutorial postprocessing
 )
 ```
 
 - Step 2: Compile  Dataset, ...
   > There 1 mandatory parameter in compile method: Dataset
- 
+
 ```python
 xpl.compile(
-    x=xtest,    
-    y_pred=y_pred, # Optional: for your own prediction (by default: model.predict)
-    y_target=yTest, # Optional: allows to display True Values vs Predicted Values
-    additional_data=xadditional, # Optional: additional dataset of features for Webapp
-    additional_features_dict=features_dict_additional, # Optional: dict additional data    
+    x=xtest,
+    y_pred=y_pred,  # Optional: for your own prediction (by default: model.predict)
+    y_target=yTest,  # Optional: allows to display True Values vs Predicted Values
+    additional_data=xadditional,  # Optional: additional dataset of features for Webapp
+    additional_features_dict=features_dict_additional,  # Optional: dict additional data
 )
 ```  
 
@@ -193,7 +194,7 @@ xpl.compile(
 
 ```python
 app = xpl.run_app()
-``` 
+```
 
 [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
@@ -203,15 +204,15 @@ app = xpl.run_app()
 
 ```python
 xpl.generate_report(
-    output_file='path/to/output/report.html',
-    project_info_file='path/to/project_info.yml',
+    output_file="path/to/output/report.html",
+    project_info_file="path/to/project_info.yml",
     x_train=xtrain,
     y_train=ytrain,
     y_test=ytest,
     title_story="House prices report",
     title_description="""This document is a data science report of the kaggle house prices tutorial project.
         It was generated using the Shapash library.""",
-    metrics=[{'name': 'MSE', 'path': 'sklearn.metrics.mean_squared_error'}]
+    metrics=[{"name": "MSE", "path": "sklearn.metrics.mean_squared_error"}],
 )
 ```
 
@@ -220,9 +221,9 @@ xpl.generate_report(
 - Step 5: From training to deployment : SmartPredictor Object
   > Shapash provides a SmartPredictor object to deploy the summary of local explanation for the operational needs.
   It is an object dedicated to deployment, lighter than SmartExplainer with additional consistency checks.
-  SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local 
+  SmartPredictor can be used with an API or in batch mode. It provides predictions, detailed or summarized local
   explainability using appropriate wording.
-  
+
 ```python
 predictor = xpl.to_smartpredictor()
 ```

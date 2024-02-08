@@ -2,12 +2,14 @@
 Unit test contributions multiclass
 """
 import unittest
-import shap
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+
 import numpy as np
 import pandas as pd
+import shap
+from sklearn.datasets import load_iris
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+
 from shapash.decomposition.contributions import rank_contributions
 
 
@@ -24,6 +26,7 @@ class TestContributions(unittest.TestCase):
     [type]
         [description]
     """
+
     def setUp(self):
         """
         Setup
@@ -31,11 +34,7 @@ class TestContributions(unittest.TestCase):
         iris = load_iris()
         x_df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
         y_df = pd.DataFrame(data=iris.target, columns=["target"])
-        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
-            x_df,
-            y_df,
-            random_state=1
-        )
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(x_df, y_df, random_state=1)
 
     def check_compute_contributions(self, slist, blist, x_test):
         """
@@ -103,7 +102,4 @@ class TestContributions(unittest.TestCase):
         for i in range(3):
             s_ord, x_ord, s_dict = rank_contributions(slist[i], pd.DataFrame(data=self.x_test))
             assert np.all(np.diff(np.abs(s_ord), axis=1) <= 0) == 1
-            assert np.array_equal(
-                x_ord.values,
-                np.take_along_axis(self.x_test.values, s_dict.values, axis=1)
-            )
+            assert np.array_equal(x_ord.values, np.take_along_axis(self.x_test.values, s_dict.values, axis=1))
