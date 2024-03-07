@@ -739,18 +739,11 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(test, y)
 
         mapping = get_col_mapping_ce(enc)
-        if ce.__version__ <= "2.2.2":
-            expected_mapping = {
-                "city": ["city_0", "city_1", "city_2"],
-                "state": ["state_0", "state_1"],
-                "other": ["other_0", "other_1"],
-            }
-        else:
-            expected_mapping = {
-                "city": ["city_0", "city_1"],
-                "state": ["state_0", "state_1"],
-                "other": ["other_0", "other_1"],
-            }
+        expected_mapping = {
+            "city": ["city_0", "city_1"],
+            "state": ["state_0", "state_1"],
+            "other": ["other_0", "other_1"],
+        }
 
         self.assertDictEqual(mapping, expected_mapping)
 
