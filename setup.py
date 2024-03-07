@@ -32,7 +32,7 @@ requirements = [
     "dash-table>=5.0.0",
     "nbformat>4.2.0",
     "numba>=0.53.1",
-    "scikit-learn>=1.0.1,<1.4",
+    "scikit-learn>=1.4.0",
     "category_encoders>=2.6.0",
     "scipy>=0.19.1",
 ]
