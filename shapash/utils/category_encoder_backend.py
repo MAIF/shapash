@@ -2,7 +2,6 @@
 Category_encoder
 """
 
-import category_encoders as ce
 import numpy as np
 import pandas as pd
 
@@ -54,12 +53,8 @@ def inv_transform_ce(x_in, encoding):
         rst = inv_transform_ordinal(x, encoding.ordinal_encoder.mapping)
 
     elif str(type(encoding)) == category_encoder_binary:
-        if ce.__version__ <= "2.2.2":
-            x = reverse_basen(x_in, encoding.base_n_encoder)
-            rst = inv_transform_ordinal(x, encoding.base_n_encoder.ordinal_encoder.mapping)
-        else:
-            x = reverse_basen(x_in, encoding)
-            rst = inv_transform_ordinal(x, encoding.ordinal_encoder.mapping)
+        x = reverse_basen(x_in, encoding)
+        rst = inv_transform_ordinal(x, encoding.ordinal_encoder.mapping)
 
     elif str(type(encoding)) == category_encoder_targetencoder:
         rst = inv_transform_target(x_in, encoding)
@@ -206,8 +201,6 @@ def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
         The aggregate contributions depending on which processing is apply.
     """
     if str(type(encoding)) in dummies_category_encoder:
-        if str(type(encoding)) in category_encoder_binary and ce.__version__ <= "2.2.2":
-            encoding = encoding.base_n_encoder
         drop_col = []
         for switch in encoding.mapping:
             col_in = switch.get("col")
@@ -312,10 +305,7 @@ def get_col_mapping_ce(encoder):
     ]:
         encoder_mapping = encoder.mapping
     elif str(type(encoder)) == category_encoder_binary:
-        if ce.__version__ <= "2.2.2":
-            encoder_mapping = encoder.base_n_encoder.mapping
-        else:
-            encoder_mapping = encoder.mapping
+        encoder_mapping = encoder.mapping
     else:
         raise NotImplementedError(f"{encoder} not supported.")
 
