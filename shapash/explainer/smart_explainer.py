@@ -291,6 +291,15 @@ class SmartExplainer:
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)
         self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
+        if not hasattr(self, "y_pred") or self.y_pred is None:
+            if hasattr(self.model, "predict"):
+                self.predict()
+        if self._case == "classification":
+            if hasattr(self.model, "predict_proba"):
+                self.predict_proba()
+            else:
+                self.proba_values = None
+
         self.y_target = check_y(self.x_init, y_target, y_name="y_target")
         self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
 
@@ -895,7 +904,6 @@ class SmartExplainer:
         )
         # Matching with y_pred
         if proba:
-            self.predict_proba() if proba else None
             proba_values = self.proba_values
         else:
             proba_values = None
@@ -1006,8 +1014,6 @@ class SmartExplainer:
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
         """
-        if self.y_pred is None:
-            self.predict()
         self.smartapp = SmartApp(self, settings)
 
     def run_app(
@@ -1046,8 +1052,6 @@ class SmartExplainer:
 
         if title_story is not None:
             self.title_story = title_story
-        if self.y_pred is None:
-            self.predict()
         if hasattr(self, "_case"):
             self.smartapp = SmartApp(self, settings)
             if host is None:
