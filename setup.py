@@ -21,7 +21,7 @@ requirements = [
     "matplotlib>=3.2.0",
     "numpy>1.18.0",
     "pandas>1.0.2",
-    "shap>=0.38.1",
+    "shap>=0.38.1,<0.45.0",
     "Flask<2.3.0",
     "dash>=2.3.1",
     "dash-bootstrap-components>=1.1.0",
