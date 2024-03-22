@@ -11,7 +11,7 @@ from category_encoders import OrdinalEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
-sys.path.insert(0, "../../..")
+sys.path.insert(0, "..")
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
