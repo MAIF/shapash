@@ -13,7 +13,7 @@ dash-table==5.0.0
 lightgbm==2.3.1
 pandas>1.0.2
 plotly==5.6.0
-shap>=0.38.1
+shap>=0.38.1,<0.45.0
 Sphinx==4.5.0
 sphinxcontrib-applehelp==1.0.2
 sphinxcontrib-devhelp==1.0.2
