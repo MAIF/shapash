@@ -240,7 +240,14 @@ class SmartExplainer:
         self.features_imp = None
 
     def compile(
-        self, x, contributions=None, y_pred=None, y_target=None, additional_data=None, additional_features_dict=None
+        self,
+        x,
+        contributions=None,
+        y_pred=None,
+        proba_values=None,
+        y_target=None,
+        additional_data=None,
+        additional_features_dict=None,
     ):
         """
         The compile method is the first step to understand model and
@@ -266,6 +273,11 @@ class SmartExplainer:
             This is an interesting parameter for more explicit outputs.
             Shapash lets users define their own predict,
             as they may wish to set their own threshold (classification)
+        proba_values : pandas.Series or pandas.DataFrame, optional (default: None)
+            Probability values (1 column only).
+            The index must be identical to the index of x_init.
+            This is an interesting parameter for more explicit outputs.
+            Shapash lets users define their own probability values
         y_target : pandas.Series or pandas.DataFrame, optional (default: None)
             Target values (1 column only).
             The index must be identical to the index of x_init.
@@ -291,6 +303,13 @@ class SmartExplainer:
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)
         self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
+        if (self.y_pred is None) and (hasattr(self.model, "predict")):
+            self.predict()
+
+        self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
+        if (self._case == "classification") and (self.proba_values is None) and (hasattr(self.model, "predict_proba")):
+            self.predict_proba()
+
         self.y_target = check_y(self.x_init, y_target, y_name="y_target")
         self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
 
@@ -405,6 +424,7 @@ class SmartExplainer:
     def add(
         self,
         y_pred=None,
+        proba_values=None,
         y_target=None,
         label_dict=None,
         features_dict=None,
@@ -422,6 +442,9 @@ class SmartExplainer:
         ----------
         y_pred : pandas.Series, optional (default: None)
             Prediction values (1 column only).
+            The index must be identical to the index of x_init.
+        proba_values : pandas.Series, optional (default: None)
+            Probability values (1 column only).
             The index must be identical to the index of x_init.
         label_dict: dict, optional (default: None)
             Dictionary mapping integer labels to domain names.
@@ -446,6 +469,8 @@ class SmartExplainer:
             self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
             if hasattr(self, "y_target"):
                 self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+        if proba_values is not None:
+            self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
         if y_target is not None:
             self.y_target = check_y(self.x_init, y_target, y_name="y_target")
             if hasattr(self, "y_pred"):
@@ -895,7 +920,7 @@ class SmartExplainer:
         )
         # Matching with y_pred
         if proba:
-            self.predict_proba() if proba else None
+            self.predict_proba()
             proba_values = self.proba_values
         else:
             proba_values = None
@@ -1006,8 +1031,6 @@ class SmartExplainer:
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
             Values should be positive ints
         """
-        if self.y_pred is None:
-            self.predict()
         self.smartapp = SmartApp(self, settings)
 
     def run_app(
@@ -1046,8 +1069,6 @@ class SmartExplainer:
 
         if title_story is not None:
             self.title_story = title_story
-        if self.y_pred is None:
-            self.predict()
         if hasattr(self, "_case"):
             self.smartapp = SmartApp(self, settings)
             if host is None:

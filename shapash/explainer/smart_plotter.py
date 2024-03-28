@@ -949,9 +949,7 @@ class SmartPlotter:
         float: Predict or predict_proba value
         """
         if self.explainer._case == "classification":
-            if hasattr(self.explainer.model, "predict_proba"):
-                if not hasattr(self.explainer, "proba_values"):
-                    self.explainer.predict_proba()
+            if self.explainer.proba_values is not None:
                 value = self.explainer.proba_values.iloc[:, [label]].loc[index].values[0]
             else:
                 value = None
@@ -1237,9 +1235,7 @@ class SmartPlotter:
                 col_value = self.explainer._classes[label_num]
             subtitle = f"Response: <b>{label_value}</b>"
             # predict proba Color scale
-            if proba and hasattr(self.explainer.model, "predict_proba"):
-                if not hasattr(self.explainer, "proba_values"):
-                    self.explainer.predict_proba()
+            if proba and self.explainer.proba_values is not None:
                 proba_values = self.explainer.proba_values.iloc[:, [label_num]]
                 if not hasattr(self, "pred_colorscale"):
                     self.pred_colorscale = {}
@@ -3209,12 +3205,7 @@ class SmartPlotter:
 
         label_num, _, label_value = self.explainer.check_label_name(label)
         # predict proba Color scale
-        if hasattr(self.explainer.model, "predict_proba"):
-            if not hasattr(self.explainer, "proba_values"):
-                self.explainer.predict_proba()
-            if hasattr(self.explainer.model, "predict"):
-                if not hasattr(self.explainer, "y_pred") or self.explainer.y_pred is None:
-                    self.explainer.predict()
+        if self.explainer.proba_values is not None:
             # Assign proba values of the target
             df_proba_target = self.explainer.proba_values.copy()
             df_proba_target["proba_target"] = df_proba_target.iloc[:, label_num]
@@ -3333,9 +3324,6 @@ class SmartPlotter:
         fig = go.Figure()
 
         subtitle = None
-        if self.explainer.y_pred is None:
-            if hasattr(self.explainer.model, "predict"):
-                self.explainer.predict()
         prediction_error = self.explainer.prediction_error
         if prediction_error is not None:
             if (self.explainer.y_target == 0).any()[0]:
