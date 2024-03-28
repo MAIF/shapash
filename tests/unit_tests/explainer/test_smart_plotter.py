@@ -1267,6 +1267,9 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_local_pred_1(self):
         xpl = self.smart_explainer
+        xpl.proba_values = pd.DataFrame(
+            data=np.array([[0.4, 0.6], [0.3, 0.7]]), columns=["class_1", "class_2"], index=xpl.x_encoded.index.values
+        )
         output = xpl.plot.local_pred("person_A", label=0)
         assert isinstance(output, float)
 
