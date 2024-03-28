@@ -1,10 +1,12 @@
 """
 Transform Module
 """
+
 import re
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import FunctionTransformer
 
 from shapash.utils.category_encoder_backend import (
     get_col_mapping_ce,
@@ -185,7 +187,7 @@ def check_transformers(list_encoding):
                 if (str(type(ct_encoding)) not in supported_sklearn) and (
                     str(type(ct_encoding)) not in supported_category_encoder
                 ):
-                    if str(type(ct_encoding)) != "<class 'str'>":
+                    if not isinstance(ct_encoding, str) and not isinstance(ct_encoding, FunctionTransformer):
                         raise ValueError("One of the encoders used in ColumnTransformers isn't supported.")
 
         elif str(type(enc)) in supported_category_encoder:
