@@ -1178,10 +1178,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
 
         test_encoded = pd.DataFrame(enc.fit_transform(test, y))
         mapping = get_col_mapping_ct(enc, test_encoded)
-        if ce.__version__ <= "2.2.2":
-            expected_mapping = {"basen_city": [0, 1, 2], "basen_state": [3, 4]}
-        else:
-            expected_mapping = {"basen_city": [0, 1], "basen_state": [2, 3]}
+        expected_mapping = {"basen_city": [0, 1], "basen_state": [2, 3]}
 
         self.assertDictEqual(mapping, expected_mapping)
 
