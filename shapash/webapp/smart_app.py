@@ -121,7 +121,7 @@ class SmartApp:
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_k(x, k=1)).max().max())
+            self.max_threshold = int(self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max())
         self.list_index = []
         self.subset = None
         self.last_click_data = None
@@ -1778,7 +1778,7 @@ class SmartApp:
             if feature is not None and feature["points"][0]["curveNumber"] == 0 and len(gfi_figure["data"]) == 2:
                 subset = get_indexes_from_datatable(data, list_index)
             else:
-                subset = None
+                subset = self.list_index
 
             fs_figure = self.explainer.plot.contribution_plot(
                 col=selected_feature,
@@ -1834,13 +1834,16 @@ class SmartApp:
             """
             ctx = dash.callback_context
             selected = None
-            if ctx.triggered[0]["prop_id"] == "feature_selector.clickData":
-                selected = click_data["points"][0]["customdata"][1]
-            elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData":
-                selected = prediction_picking["points"][0]["customdata"]
-            elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
-                selected = data[cell["row"]]["_index_"]
-            elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
+            try:
+                if ctx.triggered[0]["prop_id"] == "feature_selector.clickData":
+                    selected = click_data["points"][0]["customdata"][1]
+                elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData":
+                    selected = prediction_picking["points"][0]["customdata"]
+                elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
+                    selected = data[cell["row"]]["_index_"]
+                elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
+                    selected = current_index_id
+            except KeyError:
                 selected = current_index_id
             return selected, True
 

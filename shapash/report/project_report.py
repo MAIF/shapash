@@ -56,7 +56,7 @@ class ProjectReport:
         Information about the project (author, description, ...).
     x_train : pd.DataFrame
         DataFrame used for training the model.
-    y_test : pd.Series or pd.DataFrame
+    y_train : pd.Series or pd.DataFrame
         Series of labels in the train set.
     y_test : pd.Series or pd.DataFrame
         Series of labels in the test set.

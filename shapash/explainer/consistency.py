@@ -25,7 +25,7 @@ class Consistency:
         Parameters
         ----------
         values: 1 column pd.DataFrame
-            values ​​whose quantiles must be calculated
+            values whose quantiles must be calculated
         """
         desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
         min_pred, max_init = list(desc_df.loc[["min", "max"]].values)
