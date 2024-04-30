@@ -108,6 +108,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer._case, self.smart_explainer._classes = check_model(model)
         self.smart_explainer.state = MultiDecorator(SmartState())
         self.smart_explainer.y_pred = None
+        self.smart_explainer.proba_values = None
         self.smart_explainer.features_desc = dict(self.x_init.nunique())
         self.smart_explainer.features_compacity = self.features_compacity
 
@@ -863,7 +864,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.model = model
         np_hv = [f"Id: {x}<br />Predict: {y}" for x, y in zip(xpl.x_init.index, xpl.y_pred.iloc[:, 0].tolist())]
         np_hv.sort()
-        output = xpl.plot.contribution_plot(col)
+        output = xpl.plot.contribution_plot(col, proba=False)
         annot_list = []
         for data_plot in output.data:
             annot_list.extend(data_plot.hovertext.tolist())
@@ -895,7 +896,7 @@ class TestSmartPlotter(unittest.TestCase):
         model = lambda: None
         model.classes_ = np.array([0, 1])
         xpl.model = model
-        output = xpl.plot.contribution_plot(col, max_points=39)
+        output = xpl.plot.contribution_plot(col, max_points=39, proba=False)
         assert len(output.data) == 4
         for elem in output.data:
             assert elem.type == "violin"
@@ -1266,6 +1267,9 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_local_pred_1(self):
         xpl = self.smart_explainer
+        xpl.proba_values = pd.DataFrame(
+            data=np.array([[0.4, 0.6], [0.3, 0.7]]), columns=["class_1", "class_2"], index=xpl.x_encoded.index.values
+        )
         output = xpl.plot.local_pred("person_A", label=0)
         assert isinstance(output, float)
 

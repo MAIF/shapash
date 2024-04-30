@@ -32,7 +32,7 @@ requirements = [
     "dash-table>=5.0.0",
     "nbformat>4.2.0",
     "numba>=0.53.1",
-    "scikit-learn>=1.0.1,<1.4",
+    "scikit-learn>=1.4.0",
     "category_encoders>=2.6.0",
     "scipy>=0.19.1",
 ]
@@ -66,7 +66,7 @@ test_requirements = [
 setup(
     name="shapash",
     version=version_d["__version__"],
-    python_requires=">3.7, <3.12",
+    python_requires=">3.8, <3.13",
     url="https://github.com/MAIF/shapash",
     author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
     author_email="yann.golhen@maif.fr",
@@ -75,10 +75,10 @@ setup(
     long_description_content_type="text/markdown",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],

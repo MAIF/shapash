@@ -1,6 +1,7 @@
 """
 Unit test of Inverse Transform
 """
+
 import unittest
 
 import catboost as cb
@@ -959,25 +960,25 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         enc_4.fit(train)
 
         feature_names_1 = []
-        l_transformers = list(enc_1._iter(fitted=True))
+        l_transformers = list(enc_1._iter(fitted=True, column_as_labels=False, skip_drop=True, skip_empty_columns=True))
 
         for name, trans, column, _ in l_transformers:
             feature_names_1.extend(get_names(name, trans, column, enc_1))
 
         feature_names_2 = []
-        l_transformers = list(enc_2._iter(fitted=True))
+        l_transformers = list(enc_2._iter(fitted=True, column_as_labels=False, skip_drop=True, skip_empty_columns=True))
 
         for name, trans, column, _ in l_transformers:
             feature_names_2.extend(get_names(name, trans, column, enc_2))
 
         feature_names_3 = []
-        l_transformers = list(enc_3._iter(fitted=True))
+        l_transformers = list(enc_3._iter(fitted=True, column_as_labels=False, skip_drop=True, skip_empty_columns=True))
 
         for name, trans, column, _ in l_transformers:
             feature_names_3.extend(get_names(name, trans, column, enc_3))
 
         feature_names_4 = []
-        l_transformers = list(enc_4._iter(fitted=True))
+        l_transformers = list(enc_4._iter(fitted=True, column_as_labels=False, skip_drop=True, skip_empty_columns=True))
 
         for name, trans, column, _ in l_transformers:
             feature_names_4.extend(get_names(name, trans, column, enc_4))
