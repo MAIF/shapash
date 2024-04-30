@@ -375,14 +375,13 @@ class SmartPlotter:
             y_lower = np.full_like(y_upper, contributions_min)
 
         # Create the density plot
-        # density_plot = go.Scatter(x=xs.flatten(), y=ys, mode='lines', name='Density', line=dict(color='red'))
         density_plot = go.Scatter(
             x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
             y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
             fill="toself",
             hoverinfo="none",
             showlegend=False,
-            line={"color": "lightgrey"},
+            line={"color": self._style_dict["contrib_distribution"]},
         )
         # Add density plot
         fig.add_trace(density_plot)
@@ -749,7 +748,7 @@ class SmartPlotter:
                         pattern_shape="+",
                         pattern_size=6,
                         pattern_fillmode="replace",
-                        pattern_bgcolor="lightgrey",
+                        pattern_bgcolor=self._style_dict["contrib_distribution"],
                         color="white",
                     ),
                 )
@@ -3731,7 +3730,7 @@ class SmartPlotter:
                 fill="toself",
                 hoverinfo="none",
                 showlegend=False,
-                line={"color": "lightgrey"},
+                line={"color": self._style_dict["contrib_distribution"]},
             )
             # Add density plot
             fig.add_trace(density_plot)
