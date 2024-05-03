@@ -57,7 +57,7 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
             dtype=object,
         )
         if label_dict is not None:
-            y_pred = y_pred.applymap(lambda x: label_dict[x])
+            y_pred = y_pred.map(lambda x: label_dict[x])
         if proba_values is not None:
             y_proba = pd.DataFrame(
                 [proba[ind] for ind, proba in zip(indexclas, proba_values.values)],

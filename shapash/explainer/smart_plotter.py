@@ -96,7 +96,9 @@ class SmartPlotter:
             # Calculate quantiles to exclude the extreme 10% of values
             lower_quantile = data.quantile(0.05)
             upper_quantile = data.quantile(0.95)
-            data = data[(data > lower_quantile) & (data < upper_quantile)]
+            data_tmp = data[(data >= lower_quantile) & (data <= upper_quantile)]
+            if len(data_tmp) > 200:
+                data = data_tmp
             cmin, cmax = data.min(), data.max()
 
         # Describe the data to get basic statistics
@@ -629,18 +631,21 @@ class SmartPlotter:
                 contributions.loc[feature_cond].iloc[:, 0], bins=20
             )
             x = self._create_jittered_points(x, percentage_series, side=side)
-            colorpoints_selected = colorpoints.loc[feature_cond].values.flatten()
+            if colorpoints is not None:
+                colorpoints_selected = colorpoints.loc[feature_cond].values.flatten()
             customdata = np.stack(
                 (feature_values.loc[feature_cond].values.flatten(), contributions.loc[feature_cond].index.values),
                 axis=-1,
             )
-            marker = {
-                "color": colorpoints_selected,
-                "colorscale": col_scale,
-                "opacity": 0.7,
-                "cmin": cmin,
-                "cmax": cmax,
-            }
+            marker = None
+            if colorpoints is not None:
+                marker = {
+                    "color": colorpoints_selected,
+                    "colorscale": col_scale,
+                    "opacity": 0.7,
+                    "cmin": cmin,
+                    "cmax": cmax,
+                }
 
             self._add_scatter_trace(fig, x, y, c, marker, hovertext, hovertemplate, customdata, secondary_y)
 
@@ -737,7 +742,7 @@ class SmartPlotter:
             colorpoints = None
 
         for i, c in enumerate(xs):
-            # Ajout d'un plot de densité
+            # Add Density Plot
             fig.add_trace(
                 go.Bar(
                     x=[i],
@@ -755,7 +760,7 @@ class SmartPlotter:
             )
 
             if pred is not None and self.explainer._case == "classification":
-                # Cas négatif
+                # Negative case
                 feature_cond_neg = (pred.iloc[:, 0] != col_modality) & (feature_values.iloc[:, 0] == c)
                 self._add_violin_and_scatter(
                     fig,
@@ -775,7 +780,7 @@ class SmartPlotter:
                     side="negative",
                 )
 
-                # Cas positif
+                # Positive case
                 feature_cond_pos = (pred.iloc[:, 0] == col_modality) & (feature_values.iloc[:, 0] == c)
                 self._add_violin_and_scatter(
                     fig,
@@ -795,7 +800,7 @@ class SmartPlotter:
                     side="positive",
                 )
             else:
-                # Autres cas
+                # General case
                 feature_cond_other = feature_values.iloc[:, 0] == c
                 self._add_violin_and_scatter(
                     fig,
@@ -1569,6 +1574,8 @@ class SmartPlotter:
         proba_values = None
         subtitle = None
         col_scale = None
+        cmin = None
+        cmax = None
 
         # Classification Case
         if self.explainer._case == "classification":
@@ -1582,6 +1589,11 @@ class SmartPlotter:
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 col_scale, cmin, cmax = self.tuning_colorscale(proba_values, keep_90_pct=True)
+            elif self.explainer.y_pred is not None:
+                pred_values = self.explainer.y_pred.iloc[:, [label_num]]
+                # Prediction subset:
+                pred_values = pred_values.loc[list_ind, :]
+                col_scale, cmin, cmax = self.tuning_colorscale(pred_values, keep_90_pct=True)
 
         # Regression Case - color scale
         elif self.explainer._case == "regression":
@@ -3684,11 +3696,12 @@ class SmartPlotter:
             col_scale, _, _ = self.tuning_colorscale(values, keep_90_pct=False)
 
             y_target = self.explainer.y_target.loc[list_ind]
-            lower_quantile = y_target.iloc[:, 0].quantile(0.005)
-            upper_quantile = y_target.iloc[:, 0].quantile(0.995)
-            y_target = y_target.iloc[:, 0][
-                (y_target.iloc[:, 0] > lower_quantile) & (y_target.iloc[:, 0] < upper_quantile)
-            ]
+            if len(y_target) > 200:
+                lower_quantile = y_target.iloc[:, 0].quantile(0.005)
+                upper_quantile = y_target.iloc[:, 0].quantile(0.995)
+                y_target = y_target.iloc[:, 0][
+                    (y_target.iloc[:, 0] > lower_quantile) & (y_target.iloc[:, 0] < upper_quantile)
+                ]
 
             y_pred = self.explainer.y_pred.loc[y_target.index]
             prediction_error = np.array(prediction_error.loc[y_target.index])
@@ -3845,13 +3858,13 @@ class SmartPlotter:
         """
         Handles sampling when a specific list of indices is provided.
         """
-        subset = self.explainer.x_init.loc[selection]
         if len(selection) <= max_points:
             return selection, "Length of user-defined Subset: "
         elif col is None:
             selected_indices = random.sample(selection, max_points)
             return selected_indices, "Length of random Subset: "
         else:
+            subset = self.explainer.x_init.loc[selection]
             selected_indices = self._intelligent_sampling(subset, max_points, col, col_value_count, random_seed)
             return selected_indices, "Length of smart Subset: "
 
