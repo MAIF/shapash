@@ -110,7 +110,7 @@ import subprocess  # noqa: E402
 
 # Generates the report example in the documentation
 subprocess.call(["python", "../tutorial/generate_report/shapash_report_example.py"])
-html_extra_path = ["../tutorial/report/output/report.html"]
+html_extra_path = ["../tutorial/generate_report/output/report.html"]
 
 
 def setup_tutorials():
