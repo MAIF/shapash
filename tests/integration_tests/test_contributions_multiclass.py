@@ -97,7 +97,10 @@ class TestContributions(unittest.TestCase):
         model.fit(self.x_train, self.y_train)
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(self.x_test)
-        slist = [pd.DataFrame(data=tab, index=self.x_test.index, columns=self.x_test.columns) for tab in shap_values]
+        slist = [
+            pd.DataFrame(data=shap_values[:, :, i], index=self.x_test.index, columns=self.x_test.columns)
+            for i in range(3)
+        ]
 
         for i in range(3):
             s_ord, x_ord, s_dict = rank_contributions(slist[i], pd.DataFrame(data=self.x_test))
