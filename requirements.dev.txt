@@ -11,7 +11,7 @@ dash-html-components==2.0.0
 dash-renderer==1.8.3
 dash-table==5.0.0
 lightgbm==2.3.1
-pandas>1.0.2
+pandas>=2.1.0
 plotly==5.6.0
 shap>=0.38.1
 Sphinx==4.5.0

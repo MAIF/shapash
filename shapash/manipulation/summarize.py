@@ -90,7 +90,7 @@ def summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
         Result of the summarize step
     """
     contrib_sum = summarize_el(s_contrib, mask, "contribution_")
-    var_dict_sum = summarize_el(var_dict, mask, "feature_").applymap(
+    var_dict_sum = summarize_el(var_dict, mask, "feature_").map(
         lambda x: features_dict[columns_dict[x]] if not np.isnan(x) else x
     )
     x_sorted_sum = summarize_el(x_sorted, mask, "value_")

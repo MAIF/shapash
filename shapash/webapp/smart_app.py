@@ -116,12 +116,12 @@ class SmartApp:
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, "num")[1]
             self.selected_feature = self.explainer.features_imp[-1].idxmax()
             self.max_threshold = int(
-                max([x.applymap(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions])
+                max([x.map(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions])
             )
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.applymap(lambda x: round_to_k(x, k=1)).max().max())
+            self.max_threshold = int(self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max())
         self.list_index = []
         self.subset = None
         self.last_click_data = None
