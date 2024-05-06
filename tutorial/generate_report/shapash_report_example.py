@@ -4,11 +4,14 @@ For more information, please refer to the tutorial 'tuto-shapash-report01.ipynb'
 that generates the same report.
 """
 import os
+import sys
 
 import pandas as pd
 from category_encoders import OrdinalEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
+
+sys.path.insert(0, "..")
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading

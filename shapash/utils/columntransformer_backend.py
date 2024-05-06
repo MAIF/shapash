@@ -4,6 +4,7 @@ sklearn columntransformer
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import FunctionTransformer
 
 from shapash.utils.category_encoder_backend import (
     category_encoder_binary,
@@ -91,7 +92,7 @@ def inv_transform_ct(x_in, encoding):
 
             # columns not encode
             elif name_encoding == "remainder":
-                if ct_encoding == "passthrough":
+                if isinstance(ct_encoding, FunctionTransformer):
                     nb_col = len(col_encoding)
                     frame = x_in.iloc[:, init : init + nb_col]
                 else:
@@ -249,7 +250,7 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
                     init += nb_col
 
             elif name_encoding == "remainder":
-                if ct_encoding == "passthrough":
+                if isinstance(ct_encoding, FunctionTransformer):
                     nb_col = len(col_encoding)
                     frame = x_contrib.iloc[:, init : init + nb_col]
                     rst = pd.concat([rst, frame], axis=1)
@@ -366,7 +367,9 @@ def get_feature_names(column_transformer):
         List of returned features names when ColumnTransformer is applied.
     """
     feature_names = []
-    l_transformers = list(column_transformer._iter(fitted=True))
+    l_transformers = list(
+        column_transformer._iter(fitted=True, column_as_labels=False, skip_drop=True, skip_empty_columns=True)
+    )
 
     for name, trans, column, _ in l_transformers:
         feature_names.extend(get_names(name, trans, column, column_transformer))
@@ -463,11 +466,8 @@ def get_col_mapping_ct(encoder, x_encoded):
             else:
                 raise NotImplementedError(f"Estimator not supported : {estimator}")
 
-        elif estimator == "passthrough":
-            try:
-                features_out = encoder.feature_names_in_[features]
-            except Exception:
-                features_out = encoder._feature_names_in[features]  # for oldest sklearn version
+        elif isinstance(estimator, FunctionTransformer):
+            features_out = encoder.feature_names_in_[features]
             for f_name in features_out:
                 dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
                 idx_encoded += 1

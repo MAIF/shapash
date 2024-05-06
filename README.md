@@ -143,7 +143,7 @@ Shapash can use category-encoders object, sklearn ColumnTransformer or simply fe
 
 ## 🛠 Installation
 
-Shapash is intended to work with Python versions 3.8 to 3.11. Installation can be done with pip:
+Shapash is intended to work with Python versions 3.9 to 3.12. Installation can be done with pip:
 
 ```bash
 pip install shapash
