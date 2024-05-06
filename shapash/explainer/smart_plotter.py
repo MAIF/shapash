@@ -1297,13 +1297,13 @@ class SmartPlotter:
             y_pred = self.explainer.y_pred.loc[list_ind]
             # Add labels if exist
             if self.explainer._case == "classification" and self.explainer.label_dict is not None:
-                y_pred = y_pred.applymap(lambda x: self.explainer.label_dict[x])
+                y_pred = y_pred.map(lambda x: self.explainer.label_dict[x])
                 col_value = self.explainer.label_dict[col_value]
             # round predict
             elif self.explainer._case == "regression":
                 if self.round_digit is None:
                     self.tuning_round_digit()
-                y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+                y_pred = y_pred.map(lambda x: round(x, self.round_digit))
         else:
             y_pred = None
 
@@ -3346,7 +3346,7 @@ class SmartPlotter:
             # round predict
             if self.round_digit is None:
                 self.tuning_round_digit()
-            y_pred = y_pred.applymap(lambda x: round(x, self.round_digit))
+            y_pred = y_pred.map(lambda x: round(x, self.round_digit))
 
             hv_text = [
                 f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}"
