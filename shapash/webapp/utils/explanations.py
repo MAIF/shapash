@@ -41,7 +41,10 @@ class Explanations:
                                 feature positively impacts the prediction. \n
                                 Positive impact means that the variable favors a higher probability
                                 returned by the model or
-                                increases the predicted value (in case of regression problem).
+                                increases the predicted value (in case of regression problem).\n
+                                In gray, the distribution of feature values is represented, either
+                                by a curve if the values are considered continuous or by bars if
+                                they are considered discrete.
                                 """
         self.prediction_picking = """
                                 **What are the samples with correct or wrong predictions?**
