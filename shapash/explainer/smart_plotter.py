@@ -493,13 +493,13 @@ class SmartPlotter:
         - A numpy array of the percentage of points in the interval corresponding to each original data point.
         """
         # Binning data into intervals and calculating the percentage of points in each interval
-        intervals = pd.cut(data, bins)
+        intervals = pd.cut(data, bins, duplicates="drop")
         points_per_interval = intervals.value_counts()
         total_points = len(data)
         percentage_per_interval = (points_per_interval / total_points).sort_index().to_dict()
 
         # Mapping those percentages to the original data points
-        percentage_series = intervals.map(percentage_per_interval).values
+        percentage_series = intervals.map(percentage_per_interval).to_numpy()
 
         return percentage_series
 
@@ -522,6 +522,8 @@ class SmartPlotter:
         """
         # Creating jittered points
         jitter = np.random.normal(mean, std, len(percentages))
+        if np.isnan(percentages).any():
+            percentages.fill(1)
 
         if side in ["negative", "positive"]:
             jitter = np.abs(jitter)
