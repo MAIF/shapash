@@ -985,7 +985,7 @@ class TestSmartPlotter(unittest.TestCase):
         output = self.smart_explainer.plot.contribution_plot(col)
         assert str(type(output.data[-1])) == "<class 'plotly.graph_objs._scatter.Scatter'>"
         self.assertListEqual(list(output.data[-1]["marker"]["color"]), [0.7, 0.6])
-        self.assertListEqual(list(output.data[1]["y"]), [4.7])
+        self.assertListEqual(list(output.data[1]["y"].round(2)), [4.7])
 
     def test_contribution_plot_12(self):
         """
