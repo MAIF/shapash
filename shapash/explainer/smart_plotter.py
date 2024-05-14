@@ -569,6 +569,8 @@ class SmartPlotter:
 
     def _add_violin_trace(self, fig, name, x, y, side, line_color, hovertext, secondary_y=True):
         """Adds a Violin trace to the figure."""
+        # Violin plot has a problem if for one violin all the points have the same contribution value
+        y = y + np.random.normal(size=y.shape) * (max(y.max(), 0) - min(y.min(), 0)) / 10 ** 8
         violin_trace = go.Violin(
             name=name,
             x=x,
