@@ -60,6 +60,8 @@ Shapash is suitable for Regression, Binary Classification and Multiclass problem
   - [Building confidence on explainability - Towards DS](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)
   - [Picking Examples to Understand Machine Learning Model](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)
   - [Enhancing Webapp Built-In Features for Comprehensive Machine Learning Model Interpretation](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)
+- [What is Machine Learning? Definition, Types, and Easy Examples - Scaler Blogs](https://www.scaler.com/blog/machine-learning/)
+
 
 
 ## 🎉 What's new ?
