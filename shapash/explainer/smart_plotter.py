@@ -92,6 +92,17 @@ class SmartPlotter:
         # Initialize variables for min and max values
         cmin, cmax = None, None
 
+        # Check if there is only one unique value
+        if data.nunique() == 1:
+            unique_value = data.iloc[0]
+            cmin, cmax = unique_value, unique_value
+            # Create a color scale where all values map to the unique value
+            color_scale = [
+                (i / (len(self._style_dict["init_contrib_colorscale"]) - 1), color)
+                for i, color in enumerate(self._style_dict["init_contrib_colorscale"])
+            ]
+            return color_scale, cmin, cmax
+
         if keep_90_pct:
             # Calculate quantiles to exclude the extreme 10% of values
             lower_quantile = data.quantile(0.05)
@@ -354,39 +365,40 @@ class SmartPlotter:
 
         feature_values_array = feature_values.values.flatten()
 
-        contributions_min = contributions.values.flatten().min()
-        h = contributions.values.flatten().max() - contributions_min
+        if len(feature_values_array) > 2:
+            contributions_min = contributions.values.flatten().min()
+            h = contributions.values.flatten().max() - contributions_min
 
-        if feature_values.iloc[:, 0].dtype.kind in "biufc":
-            val_inter = feature_values_array.max() - feature_values_array.min()
-            from sklearn.neighbors import KernelDensity
+            if feature_values.iloc[:, 0].dtype.kind in "biufc":
+                val_inter = feature_values_array.max() - feature_values_array.min()
+                from sklearn.neighbors import KernelDensity
 
-            kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(
-                np.array(feature_values_array)[:, None]
+                kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(
+                    np.array(feature_values_array)[:, None]
+                )
+                xs = np.linspace(min(feature_values_array), max(feature_values_array), 1000)
+                log_dens = kde.score_samples(xs[:, None])
+                y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + contributions_min
+                y_lower = np.full_like(y_upper, contributions_min)
+            else:
+                feature_values_counts = feature_values.value_counts()
+                xs = feature_values_counts.index.get_level_values(0).sort_values()
+                y_upper = (
+                    feature_values_counts.loc[xs] / feature_values_counts.sum()
+                ).values.flatten() / 3 + contributions_min
+                y_lower = np.full_like(y_upper, contributions_min)
+
+            # Create the density plot
+            density_plot = go.Scatter(
+                x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
+                y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
+                fill="toself",
+                hoverinfo="none",
+                showlegend=False,
+                line={"color": self._style_dict["contrib_distribution"]},
             )
-            xs = np.linspace(min(feature_values_array), max(feature_values_array), 1000)
-            log_dens = kde.score_samples(xs[:, None])
-            y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + contributions_min
-            y_lower = np.full_like(y_upper, contributions_min)
-        else:
-            feature_values_counts = feature_values.value_counts()
-            xs = feature_values_counts.index.get_level_values(0).sort_values()
-            y_upper = (
-                feature_values_counts.loc[xs] / feature_values_counts.sum()
-            ).values.flatten() / 3 + contributions_min
-            y_lower = np.full_like(y_upper, contributions_min)
-
-        # Create the density plot
-        density_plot = go.Scatter(
-            x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
-            y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
-            fill="toself",
-            hoverinfo="none",
-            showlegend=False,
-            line={"color": self._style_dict["contrib_distribution"]},
-        )
-        # Add density plot
-        fig.add_trace(density_plot)
+            # Add density plot
+            fig.add_trace(density_plot)
 
         fig.add_scatter(
             x=feature_values_array,
@@ -3700,7 +3712,7 @@ class SmartPlotter:
             col_scale, _, _ = self.tuning_colorscale(values, keep_90_pct=False)
 
             y_target = self.explainer.y_target.loc[list_ind]
-            if len(y_target) > 200:
+            if len(y_target) > 500:
                 lower_quantile = y_target.iloc[:, 0].quantile(0.005)
                 upper_quantile = y_target.iloc[:, 0].quantile(0.995)
                 y_target = y_target.iloc[:, 0][
@@ -3711,34 +3723,35 @@ class SmartPlotter:
             prediction_error = np.array(prediction_error.loc[y_target.index])
 
             feature_values_array = y_target.values.flatten()
-            y_pred_flatten = y_pred.values.flatten()
-            y_pred_flatten_min = y_pred_flatten.min()
+            if len(feature_values_array) > 2:
+                y_pred_flatten = y_pred.values.flatten()
+                y_pred_flatten_min = y_pred_flatten.min()
 
-            h = y_pred_flatten.max() - y_pred_flatten_min
+                h = y_pred_flatten.max() - y_pred_flatten_min
 
-            val_inter = feature_values_array.max() - feature_values_array.min()
-            from sklearn.neighbors import KernelDensity
+                val_inter = feature_values_array.max() - feature_values_array.min()
+                from sklearn.neighbors import KernelDensity
 
-            kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(
-                np.array(feature_values_array)[:, None]
-            )
-            xs = np.linspace(min(feature_values_array), max(feature_values_array), 1000)
-            log_dens = kde.score_samples(xs[:, None])
-            y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + y_pred_flatten_min
-            y_lower = np.full_like(y_upper, y_pred_flatten_min)
+                kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(
+                    np.array(feature_values_array)[:, None]
+                )
+                xs = np.linspace(min(feature_values_array), max(feature_values_array), 1000)
+                log_dens = kde.score_samples(xs[:, None])
+                y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + y_pred_flatten_min
+                y_lower = np.full_like(y_upper, y_pred_flatten_min)
 
-            # Create the density plot
-            # density_plot = go.Scatter(x=xs.flatten(), y=ys, mode='lines', name='Density', line=dict(color='red'))
-            density_plot = go.Scatter(
-                x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
-                y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
-                fill="toself",
-                hoverinfo="none",
-                showlegend=False,
-                line={"color": self._style_dict["contrib_distribution"]},
-            )
-            # Add density plot
-            fig.add_trace(density_plot)
+                # Create the density plot
+                # density_plot = go.Scatter(x=xs.flatten(), y=ys, mode='lines', name='Density', line=dict(color='red'))
+                density_plot = go.Scatter(
+                    x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
+                    y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
+                    fill="toself",
+                    hoverinfo="none",
+                    showlegend=False,
+                    line={"color": self._style_dict["contrib_distribution"]},
+                )
+                # Add density plot
+                fig.add_trace(density_plot)
 
             # round predict
             if self.round_digit is None:
