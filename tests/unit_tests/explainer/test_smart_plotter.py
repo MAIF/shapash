@@ -697,9 +697,9 @@ class TestSmartPlotter(unittest.TestCase):
             mode="markers",
             hovertext=[f"Id: {x}<br />" for x in feature_values.index],
         )
-        assert np.array_equal(output.data[1].x, expected_output.x)
-        assert np.array_equal(output.data[1].y, expected_output.y)
-        assert len(np.unique(output.data[1].marker.color)) == 1
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert len(np.unique(output.data[-1].marker.color)) == 1
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_2(self):
@@ -721,10 +721,10 @@ class TestSmartPlotter(unittest.TestCase):
             hovertext=[f"Id: {x}" for x in feature_values.index],
         )
 
-        assert np.array_equal(output.data[1].x, expected_output.x)
-        assert np.array_equal(output.data[1].y, expected_output.y)
-        assert np.array_equal(output.data[1].hovertext, expected_output.hovertext)
-        assert len(np.unique(output.data[1].marker.color)) == 1
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert np.array_equal(output.data[-1].hovertext, expected_output.hovertext)
+        assert len(np.unique(output.data[-1].marker.color)) == 1
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_3(self):
@@ -748,10 +748,10 @@ class TestSmartPlotter(unittest.TestCase):
             ],
         )
 
-        assert np.array_equal(output.data[1].x, expected_output.x)
-        assert np.array_equal(output.data[1].y, expected_output.y)
-        assert np.array_equal(output.data[1].hovertext, expected_output.hovertext)
-        assert len(np.unique(output.data[1].marker.color)) == 2
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert np.array_equal(output.data[-1].hovertext, expected_output.hovertext)
+        assert len(np.unique(output.data[-1].marker.color)) == 2
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_4(self):
@@ -777,10 +777,10 @@ class TestSmartPlotter(unittest.TestCase):
             ],
         )
 
-        assert np.array_equal(output.data[1].x, expected_output.x)
-        assert np.array_equal(output.data[1].y, expected_output.y)
-        assert len(np.unique(output.data[1].marker.color)) >= 2
-        assert np.array_equal(output.data[1].hovertext, expected_output.hovertext)
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert len(np.unique(output.data[-1].marker.color)) >= 2
+        assert np.array_equal(output.data[-1].hovertext, expected_output.hovertext)
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_5(self):
