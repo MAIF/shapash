@@ -1,5 +1,5 @@
 pip>=23.2.0
-numpy>1.18.0
+numpy>1.18.0,<2
 dash==2.15.0
 catboost>=1.0.1
 category-encoders>=2.6.0
