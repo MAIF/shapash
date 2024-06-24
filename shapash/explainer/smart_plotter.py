@@ -370,13 +370,14 @@ class SmartPlotter:
             h = contributions.values.flatten().max() - contributions_min
 
             if feature_values.iloc[:, 0].dtype.kind in "biufc":
-                val_inter = feature_values_array.max() - feature_values_array.min()
+                feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
+                val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
                 kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(
                     np.array(feature_values_array)[:, None]
                 )
-                xs = np.linspace(min(feature_values_array), max(feature_values_array), 1000)
+                xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
                 y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + contributions_min
                 y_lower = np.full_like(y_upper, contributions_min)
@@ -3718,33 +3719,34 @@ class SmartPlotter:
                 y_target = y_target.iloc[:, 0][
                     (y_target.iloc[:, 0] > lower_quantile) & (y_target.iloc[:, 0] < upper_quantile)
                 ]
+            y_target_values = y_target.values.flatten()
 
             y_pred = self.explainer.y_pred.loc[y_target.index]
             prediction_error = np.array(prediction_error.loc[y_target.index])
 
-            feature_values_array = y_target.values.flatten()
+            feature_values_array = y_target_values
             if len(feature_values_array) > 2:
                 y_pred_flatten = y_pred.values.flatten()
-                y_pred_flatten_min = y_pred_flatten.min()
+                y_pred_flatten_min = min(y_pred_flatten)
 
-                h = y_pred_flatten.max() - y_pred_flatten_min
+                h = max(y_pred_flatten) - y_pred_flatten_min
 
-                val_inter = feature_values_array.max() - feature_values_array.min()
+                feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
+                val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
                 kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(
                     np.array(feature_values_array)[:, None]
                 )
-                xs = np.linspace(min(feature_values_array), max(feature_values_array), 1000)
+                xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
                 y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + y_pred_flatten_min
                 y_lower = np.full_like(y_upper, y_pred_flatten_min)
 
                 # Create the density plot
-                # density_plot = go.Scatter(x=xs.flatten(), y=ys, mode='lines', name='Density', line=dict(color='red'))
                 density_plot = go.Scatter(
-                    x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
-                    y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
+                    x=np.concatenate([xs, xs[::-1]]),
+                    y=np.concatenate([y_upper, y_lower[::-1]]),
                     fill="toself",
                     hoverinfo="none",
                     showlegend=False,
@@ -3757,17 +3759,18 @@ class SmartPlotter:
             if self.round_digit is None:
                 self.tuning_round_digit()
             y_pred = y_pred.map(lambda x: round(x, self.round_digit))
+            y_pred_flatten = y_pred.values.flatten()
 
             hv_text = [
                 f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}"
                 for x, y, z, w in zip(
-                    y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten()
+                    y_target.index, y_target_values, y_pred.values.flatten(), prediction_error.flatten()
                 )
             ]
 
             fig.add_scatter(
-                x=y_target.values.flatten(),
-                y=y_pred.values.flatten(),
+                x=y_target_values,
+                y=y_pred_flatten,
                 mode="markers",
                 hovertext=hv_text,
                 hovertemplate="<b>%{hovertext}</b><br />",
@@ -3789,8 +3792,8 @@ class SmartPlotter:
                 "y": 1.1,
             }
             range_axis = [
-                min(min(y_target.values.flatten()), min(y_pred.values.flatten())),
-                max(max(y_target.values.flatten()), max(y_pred.values.flatten())),
+                min(min(y_target_values), min(y_pred_flatten)),
+                max(max(y_target_values), max(y_pred_flatten)),
             ]
             fig.update_xaxes(range=range_axis)
             fig.update_yaxes(range=range_axis)
