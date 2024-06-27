@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.api.types import is_any_real_numeric_dtype
 
 
 def round_to_k(x, k):
@@ -37,7 +38,7 @@ def get_index_type(data):
     str
         Type numeric or text of the dataset index
     """
-    if data.index.is_numeric():
+    if is_any_real_numeric_dtype(data.index):
         return "number"
     else:
         return "text"

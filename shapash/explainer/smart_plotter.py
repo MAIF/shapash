@@ -108,7 +108,7 @@ class SmartPlotter:
             lower_quantile = data.quantile(0.05)
             upper_quantile = data.quantile(0.95)
             data_tmp = data[(data >= lower_quantile) & (data <= upper_quantile)]
-            if len(data_tmp) > 200:
+            if (len(data_tmp) > 200) and (data_tmp.nunique() > 1):
                 data = data_tmp
             cmin, cmax = data.min(), data.max()
 
@@ -374,9 +374,10 @@ class SmartPlotter:
                 val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
-                kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(
-                    np.array(feature_values_array)[:, None]
-                )
+                feature_np = np.array(feature_values_array)[:, None]
+                median_value = np.nanmedian(feature_np)
+                feature_np = np.where(np.isnan(feature_np), median_value, feature_np)
+                kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(feature_np)
                 xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
                 y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + contributions_min
@@ -3735,9 +3736,10 @@ class SmartPlotter:
                 val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
-                kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(
-                    np.array(feature_values_array)[:, None]
-                )
+                feature_np = np.array(feature_values_array)[:, None]
+                median_value = np.nanmedian(feature_np)
+                feature_np = np.where(np.isnan(feature_np), median_value, feature_np)
+                kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(feature_np)
                 xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
                 y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + y_pred_flatten_min
