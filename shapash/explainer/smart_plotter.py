@@ -2768,12 +2768,16 @@ class SmartPlotter:
                     top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
                     corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
                     list_features = list(corr.columns)
+                    k = 6
+                    list_features_shorten = [
+                        x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in list_features
+                    ]
 
                 fig.add_trace(
                     go.Heatmap(
                         z=corr.loc[list_features, list_features].round(decimals).values,
-                        x=list_features,
-                        y=list_features,
+                        x=list_features_shorten,
+                        y=list_features_shorten,
                         coloraxis="coloraxis",
                         text=[
                             [
@@ -2794,12 +2798,16 @@ class SmartPlotter:
             top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
             corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
             list_features = [col for col in corr.columns if col in top_features]
+            k = 6
+            list_features_shorten = [
+                x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in list_features
+            ]
 
             fig = go.Figure(
                 go.Heatmap(
                     z=corr.loc[list_features, list_features].round(decimals).values,
-                    x=list_features,
-                    y=list_features,
+                    x=list_features_shorten,
+                    y=list_features_shorten,
                     coloraxis="coloraxis",
                     text=[
                         [
