@@ -97,6 +97,11 @@ class ProjectReport:
         self.y_train, target_name_train = self._get_values_and_name(y_train, "target")
         self.target_name = target_name_train or target_name_test
 
+        if "max_points" in self.config.keys():
+            self.max_points = config["max_points"]
+        else:
+            self.max_points = 200
+
         if "title_story" in self.config.keys():
             self.title_story = config["title_story"]
         elif self.explainer.title_story != "":
@@ -392,7 +397,7 @@ class ProjectReport:
             list_cols_labels = [self.explainer.features_dict.get(col, col) for col in self.col_names]
             for feature_label in sorted(list_cols_labels):
                 feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
-                fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
+                fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=self.max_points)
                 # Apparently matkers are not supported during conversion into html
                 for el in fig.data:
                     if el.type == "bar":
