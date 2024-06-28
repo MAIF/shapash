@@ -2151,15 +2151,6 @@ class SmartPlotter:
         -------
         go.Figure
         """
-        # add break line to X label if necessary
-        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
-        x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(
-            add_line_break,
-            args=(
-                max_len_by_row,
-                120,
-            ),
-        )
 
         data_df = pd.DataFrame(
             {
@@ -2209,16 +2200,6 @@ class SmartPlotter:
         """
 
         fig = go.Figure()
-
-        # add break line to X label
-        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
-        x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(
-            add_line_break,
-            args=(
-                max_len_by_row,
-                120,
-            ),
-        )
 
         uniq_l = list(pd.unique(x_values.values.flatten()))
         uniq_l.sort()
@@ -2444,6 +2425,16 @@ class SmartPlotter:
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
         if col_id1 != col_id2:
             interaction_values = interaction_values * 2
+
+        # add break line to X label if necessary
+        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values1.columns.values[0]]), 8])
+        feature_values1.iloc[:, 0] = feature_values1.iloc[:, 0].apply(
+            add_line_break,
+            args=(
+                max_len_by_row,
+                120,
+            ),
+        )
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
