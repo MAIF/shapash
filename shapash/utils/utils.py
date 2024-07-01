@@ -160,11 +160,16 @@ def compute_digit_number(value):
     int
         number of digits
     """
+    if isinstance(value, np.ndarray):
+        scalar_value = value.item()
+    else:
+        scalar_value = value
+
     # fix for 0 value
-    if value == 0:
+    if scalar_value == 0:
         first_nz = 1
     else:
-        first_nz = int(math.log10(abs(value)))
+        first_nz = int(math.log10(abs(scalar_value)))
     digit = abs(min(3, first_nz) - 3)
     return digit
 
