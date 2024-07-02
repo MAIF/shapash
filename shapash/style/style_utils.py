@@ -102,6 +102,7 @@ def define_style(palette):
     }
     style_dict["featureimp_groups"] = list(palette["featureimp_groups"].values())
     style_dict["init_contrib_colorscale"] = palette["contrib_colorscale"]
+    style_dict["contrib_distribution"] = palette["contrib_distribution"]
     style_dict["violin_area_classif"] = list(palette["violin_area_classif"].values())
     style_dict["prediction_plot"] = list(palette["prediction_plot"].values())
     style_dict["violin_default"] = palette["violin_default"]

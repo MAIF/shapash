@@ -102,7 +102,7 @@ def predict_error(y_target, y_pred, case):
     """
     prediction_error = None
     if y_target is not None and y_pred is not None and case == "regression":
-        if (y_target == 0).any()[0]:
+        if (y_target == 0).any().iloc[0]:
             prediction_error = abs(y_target.values - y_pred.values)
         else:
             prediction_error = abs((y_target.values - y_pred.values) / y_target.values)

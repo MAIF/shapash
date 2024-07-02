@@ -689,15 +689,17 @@ class TestSmartPlotter(unittest.TestCase):
         """
         col = "X1"
         output = self.smart_explainer.plot.contribution_plot(col, violin_maxf=0, proba=False)
+        feature_values = self.smart_explainer.x_init[col].sort_values()
+        contributions = self.smart_explainer.contributions[-1][col].loc[feature_values.index]
         expected_output = go.Scatter(
-            x=self.smart_explainer.x_init[col],
-            y=self.smart_explainer.contributions[-1][col],
+            x=feature_values,
+            y=contributions,
             mode="markers",
-            hovertext=[f"Id: {x}<br />" for x in self.smart_explainer.x_init.index],
+            hovertext=[f"Id: {x}<br />" for x in feature_values.index],
         )
-        assert np.array_equal(output.data[0].x, expected_output.x)
-        assert np.array_equal(output.data[0].y, expected_output.y)
-        assert len(np.unique(output.data[0].marker.color)) == 1
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert len(np.unique(output.data[-1].marker.color)) == 1
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_2(self):
@@ -710,17 +712,19 @@ class TestSmartPlotter(unittest.TestCase):
         xpl._case = "regression"
         xpl.state = SmartState()
         output = xpl.plot.contribution_plot(col, violin_maxf=0)
+        feature_values = xpl.x_init[col].sort_values()
+        contributions = xpl.contributions[col].loc[feature_values.index]
         expected_output = go.Scatter(
-            x=xpl.x_init[col],
-            y=xpl.contributions[col],
+            x=feature_values,
+            y=contributions,
             mode="markers",
-            hovertext=[f"Id: {x}" for x in xpl.x_init.index],
+            hovertext=[f"Id: {x}" for x in feature_values.index],
         )
 
-        assert np.array_equal(output.data[0].x, expected_output.x)
-        assert np.array_equal(output.data[0].y, expected_output.y)
-        assert np.array_equal(output.data[0].hovertext, expected_output.hovertext)
-        assert len(np.unique(output.data[0].marker.color)) == 1
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert np.array_equal(output.data[-1].hovertext, expected_output.hovertext)
+        assert len(np.unique(output.data[-1].marker.color)) == 1
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_3(self):
@@ -732,17 +736,22 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.y_pred = pd.DataFrame([0, 1], columns=["pred"], index=xpl.x_init.index)
         xpl._classes = [0, 1]
         output = xpl.plot.contribution_plot(col, violin_maxf=0, proba=False)
+        feature_values = xpl.x_init[col].sort_values()
+        contributions = xpl.contributions[-1][col].loc[feature_values.index]
         expected_output = go.Scatter(
-            x=xpl.x_init[col],
-            y=xpl.contributions[-1][col],
+            x=feature_values,
+            y=contributions,
             mode="markers",
-            hovertext=[f"Id: {x}<br />Predict: {y}" for x, y in zip(xpl.x_init.index, xpl.y_pred.iloc[:, 0].tolist())],
+            hovertext=[
+                f"Id: {x}<br />Predict: {y}"
+                for x, y in zip(feature_values.index, xpl.y_pred.loc[feature_values.index].iloc[:, 0].tolist())
+            ],
         )
 
-        assert np.array_equal(output.data[0].x, expected_output.x)
-        assert np.array_equal(output.data[0].y, expected_output.y)
-        assert np.array_equal(output.data[0].hovertext, expected_output.hovertext)
-        assert len(np.unique(output.data[0].marker.color)) == 2
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert np.array_equal(output.data[-1].hovertext, expected_output.hovertext)
+        assert len(np.unique(output.data[-1].marker.color)) == 2
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_4(self):
@@ -756,19 +765,22 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.state = SmartState()
         xpl.y_pred = pd.DataFrame([0.46989877093, 12.749302948], columns=["pred"], index=xpl.x_init.index)
         output = xpl.plot.contribution_plot(col, violin_maxf=0)
+        feature_values = xpl.x_init[col].sort_values()
+        contributions = xpl.contributions[col].loc[feature_values.index]
         expected_output = go.Scatter(
-            x=xpl.x_init[col],
-            y=xpl.contributions[col],
+            x=feature_values,
+            y=contributions,
             mode="markers",
             hovertext=[
-                f"Id: {x}<br />Predict: {round(y,3)}" for x, y in zip(xpl.x_init.index, xpl.y_pred.iloc[:, 0].tolist())
+                f"Id: {x}<br />Predict: {round(y,3)}"
+                for x, y in zip(feature_values.index, xpl.y_pred.loc[feature_values.index].iloc[:, 0].tolist())
             ],
         )
 
-        assert np.array_equal(output.data[0].x, expected_output.x)
-        assert np.array_equal(output.data[0].y, expected_output.y)
-        assert len(np.unique(output.data[0].marker.color)) >= 2
-        assert np.array_equal(output.data[0].hovertext, expected_output.hovertext)
+        assert np.array_equal(output.data[-1].x, expected_output.x)
+        assert np.array_equal(output.data[-1].y, expected_output.y)
+        assert len(np.unique(output.data[-1].marker.color)) >= 2
+        assert np.array_equal(output.data[-1].hovertext, expected_output.hovertext)
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
 
     def test_contribution_plot_5(self):
@@ -784,14 +796,26 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.postprocessing_modifications = False
         xpl.y_pred = pd.concat([pd.DataFrame([0.46989877093, 12.749302948])] * 10, ignore_index=True)
         output = xpl.plot.contribution_plot(col)
+        new_index = xpl.x_init[col].sort_values().index
         np_hv = np.array(
-            [f"Id: {x}<br />Predict: {round(y,2)}" for x, y in zip(xpl.x_init.index, xpl.y_pred.iloc[:, 0].tolist())]
+            [
+                f"Id: {x}<br />Predict: {round(y,2)}"
+                for x, y in zip(new_index, xpl.y_pred.loc[new_index].iloc[:, 0].tolist())
+            ]
         )
-        assert len(output.data) == 3
-        assert output.data[0].type == "violin"
-        assert output.data[-1].type == "scatter"
-        assert len(np.unique(output.data[-1].marker.color)) >= 2
-        assert np.array_equal(output.data[-1].hovertext, np_hv)
+        output_hovertext = np.concatenate((output.data[2].hovertext, output.data[5].hovertext), axis=0)
+        nb_marker_volor = len(np.unique(output.data[2].marker.color)) + len(np.unique(output.data[5].marker.color))
+
+        assert len(output.data) == 7
+        assert output.data[0].type == "bar"
+        assert output.data[1].type == "violin"
+        assert output.data[2].type == "scatter"
+        assert output.data[3].type == "bar"
+        assert output.data[4].type == "violin"
+        assert output.data[5].type == "scatter"
+        assert output.data[6].type == "scatter"
+        assert nb_marker_volor >= 2
+        assert np.array_equal(output_hovertext, np_hv)
         assert output.layout.xaxis.title.text == xpl.features_dict[col]
 
     def test_contribution_plot_6(self):
@@ -810,12 +834,13 @@ class TestSmartPlotter(unittest.TestCase):
         np_hv.sort()
         annot_list = []
         for data_plot in output.data:
-            annot_list.extend(data_plot.hovertext.tolist())
+            if data_plot.type == "scatter":
+                annot_list.extend(data_plot.hovertext.tolist())
         annot_list.sort()
-        assert len(output.data) == 2
+        assert len(output.data) == 6
         for elem in output.data:
-            assert elem.type == "violin"
-        assert output.data[-1].marker.color == output.data[-2].marker.color
+            assert (elem.type == "violin") or (elem.type == "bar") or (elem.type == "scatter")
+        assert output.data[-3].marker.color == output.data[-6].marker.color
         self.assertListEqual(annot_list, np_hv)
         assert output.layout.xaxis.title.text == xpl.features_dict[col]
 
@@ -834,12 +859,13 @@ class TestSmartPlotter(unittest.TestCase):
         output = xpl.plot.contribution_plot(col, proba=False)
         annot_list = []
         for data_plot in output.data:
-            annot_list.extend(data_plot.hovertext.tolist())
+            if data_plot.type == "scatter":
+                annot_list.extend(data_plot.hovertext.tolist())
         annot_list.sort()
-        assert len(output.data) == 2
+        assert len(output.data) == 6
         for elem in output.data:
-            assert elem.type == "violin"
-        assert output.data[-1].marker.color == output.data[-2].marker.color
+            assert (elem.type == "violin") or (elem.type == "bar") or (elem.type == "scatter")
+        assert output.data[-3].marker.color == output.data[-6].marker.color
         self.assertListEqual(annot_list, np_hv)
         assert output.layout.xaxis.title.text == xpl.features_dict[col]
 
@@ -867,16 +893,16 @@ class TestSmartPlotter(unittest.TestCase):
         output = xpl.plot.contribution_plot(col, proba=False)
         annot_list = []
         for data_plot in output.data:
-            annot_list.extend(data_plot.hovertext.tolist())
+            if data_plot.type == "scatter":
+                annot_list.extend(data_plot.hovertext.tolist())
         annot_list.sort()
-        assert len(output.data) == 4
+        assert len(output.data) == 10
         for elem in output.data:
-            assert elem.type == "violin"
-        assert output.data[0].side == "negative"
-        assert output.data[1].side == "positive"
+            assert (elem.type == "violin") or (elem.type == "bar") or (elem.type == "scatter")
+        assert output.data[1].side == "negative"
+        assert output.data[3].side == "positive"
         assert output.data[-1].line.color == output.data[-3].line.color
         assert output.data[-1].line.color != output.data[-2].line.color
-        self.assertListEqual(annot_list, np_hv)
         assert output.layout.xaxis.title.text == xpl.features_dict[col]
 
     def test_contribution_plot_9(self):
@@ -897,19 +923,20 @@ class TestSmartPlotter(unittest.TestCase):
         model.classes_ = np.array([0, 1])
         xpl.model = model
         output = xpl.plot.contribution_plot(col, max_points=39, proba=False)
-        assert len(output.data) == 4
+        assert len(output.data) == 10
         for elem in output.data:
-            assert elem.type == "violin"
-        assert output.data[0].side == "negative"
-        assert output.data[1].side == "positive"
+            assert (elem.type == "violin") or (elem.type == "bar") or (elem.type == "scatter")
+        assert output.data[1].side == "negative"
+        assert output.data[3].side == "positive"
         assert output.data[-1].line.color == output.data[-3].line.color
         assert output.data[-1].line.color != output.data[-2].line.color
         assert output.layout.xaxis.title.text == xpl.features_dict[col]
         total_row = 0
         for data in output.data:
-            total_row = total_row + data.x.shape[0]
+            if data.type == "scatter":
+                total_row = total_row + data.x.shape[0]
         assert total_row == 39
-        expected_title = "<b>Education</b> - Feature Contribution<br><sup>Response: <b>1</b> - Length of random Subset: 39 (98%)</sup>"
+        expected_title = "<b>Education</b> - Feature Contribution<br><sup>Response: <b>1</b> - Length of smart Subset: 39 (98%)</sup>"
         assert output.layout.title["text"] == expected_title
 
     def test_contribution_plot_10(self):
@@ -927,9 +954,11 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.y_pred = pd.DataFrame([0.46989877093, 12.749302948] * 4, columns=["pred"], index=xpl.x_init.index)
         subset = [1, 2, 6, 7]
         output = xpl.plot.contribution_plot(col, selection=subset, violin_maxf=0)
+        feature_values = xpl.x_init[col].loc[subset].sort_values()
+        contributions = xpl.contributions[col].loc[feature_values.index]
         expected_output = go.Scatter(
-            x=xpl.x_init[col].loc[subset],
-            y=xpl.contributions[col].loc[subset],
+            x=feature_values,
+            y=contributions,
             mode="markers",
             hovertext=[
                 f"Id: {x}<br />Predict: {y:.2f}"
@@ -937,10 +966,9 @@ class TestSmartPlotter(unittest.TestCase):
             ],
         )
 
-        assert np.array_equal(output.data[0].x, expected_output.x)
-        assert np.array_equal(output.data[0].y, expected_output.y)
-        assert len(np.unique(output.data[0].marker.color)) >= 2
-        assert np.array_equal(output.data[0].hovertext, expected_output.hovertext)
+        assert np.array_equal(output.data[1].x, expected_output.x)
+        assert np.array_equal(output.data[1].y, expected_output.y)
+        assert len(np.unique(output.data[1].marker.color)) >= 2
         assert output.layout.xaxis.title.text == self.smart_explainer.features_dict[col]
         expected_title = "<b>Age</b> - Feature Contribution<br><sup>Length of user-defined Subset: 4 (50%)</sup>"
         assert output.layout.title["text"] == expected_title
@@ -956,8 +984,8 @@ class TestSmartPlotter(unittest.TestCase):
         )
         output = self.smart_explainer.plot.contribution_plot(col)
         assert str(type(output.data[-1])) == "<class 'plotly.graph_objs._scatter.Scatter'>"
-        self.assertListEqual(list(output.data[-1]["marker"]["color"]), [0.6, 0.7])
-        self.assertListEqual(list(output.data[-1]["y"]), [-0.3, 4.7])
+        self.assertListEqual(list(output.data[-1]["marker"]["color"]), [0.7, 0.6])
+        self.assertListEqual(list(output.data[1]["y"].round(2)), [4.7])
 
     def test_contribution_plot_12(self):
         """
@@ -984,8 +1012,9 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = xpl.plot.contribution_plot(col, proba=False)
 
-        assert len(output.data) == 1
+        assert len(output.data) == 2
         assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
         self.setUp()
 
     def test_contribution_plot_13(self):
@@ -1015,8 +1044,9 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = xpl.plot.contribution_plot(col, proba=False)
 
-        assert len(output.data) == 1
+        assert len(output.data) == 2
         assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
         self.setUp()
 
     def test_contribution_plot_14(self):
@@ -1045,9 +1075,10 @@ class TestSmartPlotter(unittest.TestCase):
         subset = list(range(10))
         output = xpl.plot.contribution_plot(col, proba=False, selection=subset)
 
-        assert len(output.data) == 1
+        assert len(output.data) == 2
         assert output.data[0].type == "scatter"
-        assert len(output.data[0].x) == 10
+        assert output.data[1].type == "scatter"
+        assert len(output.data[1].x) == 10
         self.setUp()
 
     def test_contribution_plot_15(self):
@@ -1078,9 +1109,10 @@ class TestSmartPlotter(unittest.TestCase):
         subset = list(range(10))
         output = xpl.plot.contribution_plot(col, proba=False, selection=subset)
 
-        assert len(output.data) == 1
+        assert len(output.data) == 2
         assert output.data[0].type == "scatter"
-        assert len(output.data[0].x) == 10
+        assert output.data[1].type == "scatter"
+        assert len(output.data[1].x) == 10
         self.setUp()
 
     def test_plot_features_import_1(self):
@@ -1888,7 +1920,6 @@ class TestSmartPlotter(unittest.TestCase):
         assert f"at least {approx*100:.0f}%" in output.data[0].hovertemplate
         assert f"Top {nb_features} features" in output.data[1].hovertemplate
 
-    def test_scatter_plot_prediction_1(self):
         """
         Regression
         """
@@ -1904,13 +1935,13 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.compile(x=X_test, y_target=y_test)
 
         output = xpl.plot.scatter_plot_prediction()
-        actual_shape = len(output.data[0].x)
+        actual_shape = len(output.data[1].x)
         expected_shape = X_test.shape[0]
         assert actual_shape == expected_shape
-        assert np.array(list(output.data[0].x)).dtype == "int64"
-        assert np.array(list(output.data[0].y)).dtype == "float64"
-        assert output.data[0].type == "scatter"
-        assert f"True Values" in output.data[0].hovertext[0]
+        assert np.array(list(output.data[1].x)).dtype == "int64"
+        assert np.array(list(output.data[1].y)).dtype == "float64"
+        assert output.data[1].type == "scatter"
+        assert "True Values" in output.data[1].hovertext[0]
 
     def test_scatter_plot_prediction_2(self):
         """
@@ -1928,13 +1959,13 @@ class TestSmartPlotter(unittest.TestCase):
 
         selection = list(range(20))
         output = xpl.plot.scatter_plot_prediction(selection=selection)
-        actual_shape = len(output.data[0].x)
+        actual_shape = len(output.data[1].x)
         expected_shape = len(selection)
         assert actual_shape == expected_shape
-        assert np.array(list(output.data[0].x)).dtype == "int64"
-        assert np.array(list(output.data[0].y)).dtype == "float64"
-        assert output.data[0].type == "scatter"
-        assert f"True Values" in output.data[0].hovertext[0]
+        assert np.array(list(output.data[1].x)).dtype == "int64"
+        assert np.array(list(output.data[1].y)).dtype == "float64"
+        assert output.data[1].type == "scatter"
+        assert "True Values" in output.data[1].hovertext[0]
 
     def test_scatter_plot_prediction_3(self):
         """

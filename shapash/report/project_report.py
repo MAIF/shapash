@@ -56,7 +56,7 @@ class ProjectReport:
         Information about the project (author, description, ...).
     x_train : pd.DataFrame
         DataFrame used for training the model.
-    y_test : pd.Series or pd.DataFrame
+    y_train : pd.Series or pd.DataFrame
         Series of labels in the train set.
     y_test : pd.Series or pd.DataFrame
         Series of labels in the test set.
@@ -393,6 +393,10 @@ class ProjectReport:
             for feature_label in sorted(list_cols_labels):
                 feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
                 fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
+                # Apparently matkers are not supported during conversion into html
+                for el in fig.data:
+                    if el.type == "bar":
+                        el.marker.color = "lightgrey"
                 explain_contrib_data.append(
                     {
                         "feature_index": int(inv_columns_dict[feature]),
