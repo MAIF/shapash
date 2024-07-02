@@ -2649,6 +2649,7 @@ class SmartPlotter:
     def correlations(
         self,
         df=None,
+        optimized=False,
         max_features=20,
         features_to_hide=None,
         facet_col=None,
@@ -2668,6 +2669,9 @@ class SmartPlotter:
         ----------
         df : pd.DataFrame, optional
             DataFrame for which we want to compute correlations. Will use x_init by default.
+        optimized : boolean, optional
+            True if we want to potentially accelerate the computation of the correlation matrix by reducing the
+            lenght of the data and the number of modalties per columns.
         max_features : int (default: 10)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
@@ -2741,7 +2745,17 @@ class SmartPlotter:
 
         if df is None:
             # Use x_init by default
-            df = self.explainer.x_init
+            df = self.explainer.x_init.copy()
+
+        if optimized:
+            categorical_columns = df.select_dtypes(include=["object", "category"]).columns
+
+            for col in categorical_columns:
+                top_categories = df[col].value_counts().nlargest(200).index
+                df[col] = df[col].where(df[col].isin(top_categories), other="Other")
+
+            if len(df) > 10000:
+                df = df.sample(n=10000, random_state=1)
 
         if facet_col:
             features_to_hide += [facet_col]

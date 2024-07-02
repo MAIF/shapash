@@ -315,6 +315,7 @@ class ProjectReport:
             print_md("### Multivariate analysis")
             fig_corr = self.explainer.plot.correlations(
                 self.df_train_test,
+                optimized=True,
                 facet_col="data_train_test",
                 max_features=20,
                 width=900 if len(self.df_train_test["data_train_test"].unique()) > 1 else 500,
