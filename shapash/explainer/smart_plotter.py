@@ -3717,9 +3717,20 @@ class SmartPlotter:
             if len(y_target) > 500:
                 lower_quantile = y_target.iloc[:, 0].quantile(0.005)
                 upper_quantile = y_target.iloc[:, 0].quantile(0.995)
-                y_target = y_target.iloc[:, 0][
+                y_target_tmp = y_target.iloc[:, 0][
                     (y_target.iloc[:, 0] > lower_quantile) & (y_target.iloc[:, 0] < upper_quantile)
                 ]
+                if len(y_target_tmp) > 0.95 * len(y_target):
+                    y_target = y_target_tmp
+                else:
+                    y_target_tmp = y_target.iloc[:, 0][(y_target.iloc[:, 0] < upper_quantile)]
+                    if len(y_target_tmp) > 0.95 * len(y_target):
+                        y_target = y_target_tmp
+                    else:
+                        y_target_tmp = y_target.iloc[:, 0][(y_target.iloc[:, 0] > lower_quantile)]
+                        if len(y_target_tmp) > 0.95 * len(y_target):
+                            y_target = y_target_tmp
+
             y_target_values = y_target.values.flatten()
 
             y_pred = self.explainer.y_pred.loc[y_target.index]
