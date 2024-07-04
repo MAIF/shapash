@@ -1,6 +1,7 @@
 """
 Smart plotter module
 """
+
 import copy
 import math
 import random
@@ -14,6 +15,7 @@ import scipy.cluster.hierarchy as sch
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
+from sklearn.cluster import KMeans
 
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import compute_corr, project_feature_values_1d
@@ -62,22 +64,68 @@ class SmartPlotter:
         """
         self._style_dict = define_style(colors_dict)
 
-        if hasattr(self, "pred_colorscale"):
-            delattr(self, "pred_colorscale")
-
-    def tuning_colorscale(self, values):
+    def tuning_colorscale(self, values, keep_90_pct=False):
         """
-        adapts the color scale to the distribution of points
+        Adjusts the color scale based on the distribution of points.
+
+        This function modifies the color scale used for visualization according to
+        the distribution of the provided values. Optionally, it can exclude the top and bottom
+        5% of values to focus on the core distribution of data.
+
         Parameters
         ----------
-        values: 1 column pd.DataFrame
-            values ​​whose quantiles must be calculated
+        values : pd.DataFrame
+            A one-column DataFrame containing the values for which quantiles need to be calculated.
+        keep_90_pct : bool, optional
+            If True, the function adjusts the color scale to cover the central 90% of the data,
+            excluding the lowest 5% and the highest 5%. Defaults to False.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the adjusted color scale, the minimum value, and the maximum value
+            used for the color scale adjustment.
         """
-        desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
-        min_pred, max_init = list(desc_df.loc[["min", "max"]].values)
+        # Extract the first column of values
+        data = values.iloc[:, 0]
+
+        # Initialize variables for min and max values
+        cmin, cmax = None, None
+
+        # Check if there is only one unique value
+        if data.nunique() == 1:
+            unique_value = data.iloc[0]
+            cmin, cmax = unique_value, unique_value
+            # Create a color scale where all values map to the unique value
+            color_scale = [
+                (i / (len(self._style_dict["init_contrib_colorscale"]) - 1), color)
+                for i, color in enumerate(self._style_dict["init_contrib_colorscale"])
+            ]
+            return color_scale, cmin, cmax
+
+        if keep_90_pct:
+            # Calculate quantiles to exclude the extreme 10% of values
+            lower_quantile = data.quantile(0.05)
+            upper_quantile = data.quantile(0.95)
+            data_tmp = data[(data >= lower_quantile) & (data <= upper_quantile)]
+            if (len(data_tmp) > 200) and (data_tmp.nunique() > 1):
+                data = data_tmp
+            cmin, cmax = data.min(), data.max()
+
+        # Describe the data to get basic statistics
+        desc_df = data.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+
+        # Extract the initial min and max values
+        min_pred, max_init = desc_df.loc[["min", "max"]]
+
+        # Adjust percentile values for color scale creation
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(["count", "mean", "std"])] - min_pred) / (max_init - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
-        return color_scale
+        color_scale = [
+            (value, color)
+            for value, color in zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"])
+        ]
+
+        return color_scale, cmin, cmax
 
     def tuning_round_digit(self):
         """
@@ -97,6 +145,8 @@ class SmartPlotter:
         proba_values,
         col_modality,
         col_scale,
+        cmin,
+        cmax,
         addnote,
         subtitle,
         width,
@@ -122,6 +172,10 @@ class SmartPlotter:
             specify the modality to color in scatter plot (One Vs All)
         col_scale: list (optional)
             specify the color of points in scatter data
+        cmin : float, optional
+            The minimum value for the color scale, providing the lower bound for color normalization.
+        cmax : float, optional
+            The maximum value for the color scale, providing the upper bound for color normalization.
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -160,24 +214,34 @@ class SmartPlotter:
             colorbar_title = "Predicted Proba"
 
         if colorpoints is not None:
-            fig.data[-1].marker.color = colorpoints.values.flatten()
-            fig.data[-1].marker.coloraxis = "coloraxis"
+            if fig.data[-1].type == "scatter":
+                fig.data[-1].marker.color = colorpoints.values.flatten()
+                fig.data[-1].marker.coloraxis = "coloraxis"
             fig.layout.coloraxis.colorscale = col_scale
             fig.layout.coloraxis.colorbar = {"title": {"text": colorbar_title}}
+            if (cmin is not None) and (cmax is not None):
+                fig.layout.coloraxis.cmin = cmin
+                fig.layout.coloraxis.cmax = cmax
 
         elif fig.data[0].type != "violin":
             if self.explainer._case == "classification" and pred is not None:
                 fig.data[-1].marker.color = pred.iloc[:, 0].apply(
-                    lambda x: self._style_dict["violin_area_classif"][1]
-                    if x == col_modality
-                    else self._style_dict["violin_area_classif"][0]
+                    lambda x: (
+                        self._style_dict["violin_area_classif"][1]
+                        if x == col_modality
+                        else self._style_dict["violin_area_classif"][0]
+                    )
                 )
             else:
                 fig.data[-1].marker.color = self._style_dict["violin_default"]
 
-        fig.update_traces(marker={"size": 10, "opacity": 0.8, "line": {"width": 0.8, "color": "white"}})
+        fig.update_traces(marker={"line": {"width": 0.8, "color": "white"}})
+        for trace in fig.data:
+            if trace.type != "bar":
+                trace.marker["size"] = 10
 
         fig.update_layout(
+            boxmode="group",
             template="none",
             title=dict_t,
             width=width,
@@ -201,6 +265,8 @@ class SmartPlotter:
         proba_values=None,
         col_modality=None,
         col_scale=None,
+        cmin=None,
+        cmax=None,
         metadata=None,
         addnote=None,
         subtitle=None,
@@ -229,6 +295,10 @@ class SmartPlotter:
             specify the modality to color in scatter plot (One Vs All)
         col_scale: list (optional)
             specify the color of points in scatter data
+        cmin : float, optional
+            The minimum value for the color scale, providing the lower bound for color normalization.
+        cmax : float, optional
+            The maximum value for the color scale, providing the upper bound for color normalization.
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -245,6 +315,14 @@ class SmartPlotter:
             graph is currently zoomed
         """
         fig = go.Figure()
+
+        column_name = feature_values.columns[0]
+        feature_values = feature_values.sort_values(by=column_name)
+        contributions = contributions.loc[feature_values.index]
+        if pred is not None:
+            pred = pred.loc[feature_values.index]
+        if proba_values is not None:
+            proba_values = proba_values.loc[feature_values.index]
 
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
@@ -285,26 +363,65 @@ class SmartPlotter:
             )
             text_groups_features = None
 
+        feature_values_array = feature_values.values.flatten()
+
+        if len(feature_values_array) > 2:
+            contributions_min = contributions.values.flatten().min()
+            h = contributions.values.flatten().max() - contributions_min
+
+            if feature_values.iloc[:, 0].dtype.kind in "biufc":
+                feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
+                val_inter = feature_values_max - feature_values_min
+                from sklearn.neighbors import KernelDensity
+
+                feature_np = np.array(feature_values_array)
+                feature_np = feature_np[~np.isnan(feature_np)][:, None]
+                kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(feature_np)
+                xs = np.linspace(feature_values_min, feature_values_max, 1000)
+                log_dens = kde.score_samples(xs[:, None])
+                y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + contributions_min
+                y_lower = np.full_like(y_upper, contributions_min)
+            else:
+                feature_values_counts = feature_values.value_counts()
+                xs = feature_values_counts.index.get_level_values(0).sort_values()
+                y_upper = (
+                    feature_values_counts.loc[xs] / feature_values_counts.sum()
+                ).values.flatten() / 3 + contributions_min
+                y_lower = np.full_like(y_upper, contributions_min)
+
+            # Create the density plot
+            density_plot = go.Scatter(
+                x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
+                y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
+                fill="toself",
+                hoverinfo="none",
+                showlegend=False,
+                line={"color": self._style_dict["contrib_distribution"]},
+            )
+            # Add density plot
+            fig.add_trace(density_plot)
+
         fig.add_scatter(
-            x=feature_values.values.flatten(),
+            x=feature_values_array,
             y=contributions.values.flatten(),
             mode="markers",
             hovertext=hv_text,
             hovertemplate=hovertemplate,
             text=text_groups_features,
+            showlegend=False,
         )
         # To change ticktext when the x label size is upper than 10 and zoom is False
-        if (type(feature_values.values.flatten()[0]) == str) & (not zoom):
-            feature_val = [x.replace("<br />", "") for x in feature_values.values.flatten()]
+        if (isinstance(feature_values_array[0], str)) & (not zoom):
+            feature_val = [x.replace("<br />", "") for x in feature_values_array]
             feature_val = [x.replace(x[3 : len(x) - 3], "...") if len(x) > 10 else x for x in feature_val]
 
             fig.update_xaxes(
-                tickangle=45, ticktext=feature_val, tickvals=feature_values.values.flatten(), tickmode="array", dtick=1
+                tickangle=45, ticktext=feature_val, tickvals=feature_values_array, tickmode="array", dtick=1
             )
         # Customdata contains the values and index of feature_values.
         # The values are used in the hovertext and the indexes are used for
         # the interactions between the graphics.
-        customdata = np.stack((feature_values.values.flatten(), feature_values.index.values), axis=-1)
+        customdata = np.stack((feature_values_array, feature_values.index.values), axis=-1)
 
         fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
@@ -315,6 +432,8 @@ class SmartPlotter:
             proba_values=proba_values,
             col_modality=col_modality,
             col_scale=col_scale,
+            cmin=cmin,
+            cmax=cmax,
             addnote=addnote,
             subtitle=subtitle,
             width=width,
@@ -325,6 +444,228 @@ class SmartPlotter:
 
         return fig
 
+    def _update_xaxis_labels(self, fig, xs, zoom=False):
+        """
+        Updates the x-axis labels of a Plotly figure based on label length and zoom status.
+        Shortens labels if they are longer than a specified threshold.
+
+        Parameters:
+        - fig: The Plotly figure object to update.
+        - xs: A list of x-axis label strings.
+        - zoom: Boolean indicating whether zoom is enabled.
+        """
+
+        # Define common x-axis parameters
+        params = {"tickvals": list(range(len(xs))), "tickmode": "array", "dtick": 1, "range": [-0.6, len(xs) - 0.4]}
+
+        nb_feature = len(xs)
+        # Determine label shortening strategy based on label count and zoom status
+        if isinstance(xs[0], str):
+            if not zoom:
+                feature_val = [x.replace("<br />", "") for x in xs]
+                if nb_feature < 6:
+                    k = 10
+                else:
+                    k = 6
+
+                # Shorten labels that exceed the threshold
+                feature_val = [
+                    x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in feature_val
+                ]
+            else:
+                k = 10
+                feature_val = []
+                for feature_name in xs:
+                    feature_name_splited = [
+                        x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x
+                        for x in feature_name.split("<br />")
+                    ]
+                    feature_val_name = "<br />".join(feature_name_splited)
+                    feature_val.append(feature_val_name)
+
+            params["ticktext"] = feature_val
+
+            # Adjust tick angle for longer lists of labels
+            if nb_feature > 5 * (zoom + 1):
+                params["tickangle"] = 45
+        else:
+            params["ticktext"] = xs
+
+        # Update the figure with the new x-axis parameters
+        fig.update_xaxes(**params)
+
+    def _calculate_percentage_intervals(self, data, bins=20):
+        """
+        Calculates the percentage of data points within each interval of a binned distribution.
+
+        Parameters:
+        - data: DataFrame containing the data to bin and calculate percentages for.
+        - bins: Number of bins to use for the distribution.
+
+        Returns:
+        - A numpy array of the percentage of points in the interval corresponding to each original data point.
+        """
+        # Binning data into intervals and calculating the percentage of points in each interval
+        intervals = pd.cut(data, bins, duplicates="drop")
+        points_per_interval = intervals.value_counts()
+        total_points = len(data)
+        percentage_per_interval = (points_per_interval / total_points).sort_index().to_dict()
+
+        # Mapping those percentages to the original data points
+        percentage_series = intervals.map(percentage_per_interval).to_numpy()
+
+        return percentage_series
+
+    def _create_jittered_points(
+        self, numerical_features, percentages, mean=0, std=0.6, clip_min=-1, clip_max=1, side="both"
+    ):
+        """
+        Creates jittered points by applying a random normal perturbation scaled by calculated percentages.
+
+        Parameters:
+        - numerical_features: The numerical features to which jitter will be added.
+        - percentages: The percentages to scale the jitter by.
+        - mean: Mean of the normal distribution to generate jitter.
+        - std: Standard deviation of the normal distribution to generate jitter.
+        - clip_min: Minimum value to clip the jitter values to.
+        - clip_max: Maximum value to clip the jitter values to.
+
+        Returns:
+        - A numpy array of jittered points.
+        """
+        # Creating jittered points
+        jitter = np.random.normal(mean, std, len(percentages))
+        if np.isnan(percentages).any():
+            percentages.fill(1)
+
+        if side in ["negative", "positive"]:
+            jitter = np.abs(jitter)
+
+        jitter = np.clip(jitter, clip_min, clip_max)
+
+        if side == "negative":
+            jitter *= -1
+
+        jittered_points = numerical_features + np.clip(jitter * percentages, -0.5, 0.5)
+
+        return jittered_points
+
+    def prepare_hover_text(self, feature_values, pred, feature_name):
+        """
+        Prepares the hover text for a Plotly plot based on feature values and predictions.
+
+        Parameters:
+        - feature_values: A pandas DataFrame of feature values.
+        - pred: A pandas Series of predictions, can be None.
+        - feature_name: The name of the feature for which the hover text is being prepared.
+
+        Returns:
+        - A pandas DataFrame containing the hover text.
+        - The hover template to be used in Plotly.
+        """
+        # Building the base text for hover
+        hv_text = [
+            f"Id: {id_val}{f'<br />Predict: {pred_val}' if pred is not None else ''}"
+            for id_val, pred_val in zip(
+                feature_values.index, pred.values.flatten() if pred is not None else [""] * len(feature_values)
+            )
+        ]
+
+        # Creating a DataFrame for hover text
+        hv_text_df = pd.DataFrame(hv_text, columns=["text"], index=feature_values.index)
+
+        # Hover template with contribution and custom data
+        hv_temp = f"{feature_name} :<br />%{{customdata[0]}}<br />Contribution: %{{y:.4f}}<extra></extra>"
+        hovertemplate = f"<b>%{{hovertext}}</b><br />{hv_temp}"
+
+        return hv_text_df, hovertemplate
+
+    def _add_violin_trace(self, fig, name, x, y, side, line_color, hovertext, secondary_y=True):
+        """Adds a Violin trace to the figure."""
+        # Violin plot has a problem if for one violin all the points have the same contribution value
+        y = y + np.random.normal(size=y.shape) * (max(y.max(), 0) - min(y.min(), 0)) / 10 ** 8
+        violin_trace = go.Violin(
+            name=name,
+            x=x,
+            y=y,
+            side=side,
+            line_color=line_color,
+            points=False,
+            showlegend=False,
+            meanline_visible=True,
+            hovertext=hovertext,
+        )
+
+        if side:
+            violin_trace.update(side=side)
+
+        fig.add_trace(violin_trace, secondary_y=secondary_y)
+
+    def _add_scatter_trace(self, fig, x, y, name, marker, hovertext, hovertemplate, customdata, secondary_y=True):
+        """Adds a Scatter trace to the figure."""
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                name=name,
+                mode="markers",
+                marker=marker,
+                showlegend=False,
+                hovertext=hovertext,
+                hovertemplate=hovertemplate,
+                customdata=customdata,
+            ),
+            secondary_y=secondary_y,
+        )
+
+    def _add_violin_and_scatter(
+        self,
+        fig,
+        feature_cond,
+        contributions,
+        feature_values,
+        hovertext_df,
+        colorpoints,
+        col_scale,
+        cmin,
+        cmax,
+        hovertemplate,
+        i,
+        c,
+        line_color,
+        secondary_y=True,
+        side="both",
+    ):
+        """Adds a Violin trace and a Scatter trace based on specified conditions."""
+        y = contributions.loc[feature_cond].iloc[:, 0].values
+        if len(y) > 0:
+            x = [i] * len(y)
+            hovertext = hovertext_df.loc[feature_cond].values.flatten()
+
+            self._add_violin_trace(fig, c, x, y, side, line_color, hovertext, secondary_y)
+
+            percentage_series = self._calculate_percentage_intervals(
+                contributions.loc[feature_cond].iloc[:, 0], bins=20
+            )
+            x = self._create_jittered_points(x, percentage_series, side=side)
+            if colorpoints is not None:
+                colorpoints_selected = colorpoints.loc[feature_cond].values.flatten()
+            customdata = np.stack(
+                (feature_values.loc[feature_cond].values.flatten(), contributions.loc[feature_cond].index.values),
+                axis=-1,
+            )
+            marker = None
+            if colorpoints is not None:
+                marker = {
+                    "color": colorpoints_selected,
+                    "colorscale": col_scale,
+                    "opacity": 0.7,
+                    "cmin": cmin,
+                    "cmax": cmax,
+                }
+
+            self._add_scatter_trace(fig, x, y, c, marker, hovertext, hovertemplate, customdata, secondary_y)
+
     def plot_violin(
         self,
         feature_values,
@@ -334,6 +675,8 @@ class SmartPlotter:
         proba_values=None,
         col_modality=None,
         col_scale=None,
+        cmin=None,
+        cmax=None,
         addnote=None,
         subtitle=None,
         width=900,
@@ -361,6 +704,10 @@ class SmartPlotter:
             specify the modality to color in scatter plot (One Vs All)
         col_scale: list (optional)
             specify the color of points in scatter data
+        cmin : float, optional
+            The minimum value for the color scale, providing the lower bound for color normalization.
+        cmax : float, optional
+            The maximum value for the color scale, providing the upper bound for color normalization.
         addnote : String (default: None)
             Specify a note to display
         subtitle : String (default: None)
@@ -376,18 +723,12 @@ class SmartPlotter:
         zoom: bool (default=False)
             graph is currently zoomed
         """
-        fig = go.Figure()
+        from plotly.subplots import make_subplots
 
-        points_param = False if proba_values is not None else "all"
-        jitter_param = 0.075
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-        if pred is not None:
-            hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten())]
-        else:
-            hv_text = [f"Id: {x}" for x in feature_values.index]
-        hv_text_df = pd.DataFrame(hv_text, columns=["text"], index=feature_values.index)
-        hv_temp = f"{feature_name} :<br />" + "%{customdata[0]}<br />Contribution: %{y:.4f}<extra></extra>"
-        # add break line to X label
+        column_name = feature_values.columns[0]
+        feature_values = feature_values.sort_values(by=column_name)
         max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values.columns.values[0]]), 8])
         feature_values.iloc[:, 0] = feature_values.iloc[:, 0].apply(
             add_line_break,
@@ -396,121 +737,139 @@ class SmartPlotter:
                 120,
             ),
         )
+        contributions = contributions.loc[feature_values.index]
+        if pred is not None:
+            pred = pred.loc[feature_values.index]
+        if proba_values is not None:
+            proba_values = proba_values.loc[feature_values.index]
 
-        uniq_l = list(pd.unique(feature_values.values.flatten()))
-        uniq_l.sort()
+        hv_text_df, hovertemplate = self.prepare_hover_text(feature_values, pred, feature_name)
 
-        for i in uniq_l:
-            if pred is not None and self.explainer._case == "classification":
-                contribution_neg = contributions.loc[
-                    (pred.iloc[:, 0] != col_modality) & (feature_values.iloc[:, 0] == i)
-                ].values.flatten()
-                # Check if contribution is not empty
-                if len(contribution_neg) != 0:
-                    fig.add_trace(
-                        go.Violin(
-                            x=feature_values.loc[
-                                (pred.iloc[:, 0] != col_modality) & (feature_values.iloc[:, 0] == i)
-                            ].values.flatten(),
-                            y=contribution_neg,
-                            points=points_param,
-                            pointpos=-0.1,
-                            side="negative",
-                            line_color=self._style_dict["violin_area_classif"][0],
-                            showlegend=False,
-                            jitter=jitter_param,
-                            meanline_visible=True,
-                            hovertext=hv_text_df.loc[
-                                (pred.iloc[:, 0] != col_modality) & (feature_values.iloc[:, 0] == i)
-                            ].values.flatten(),
-                        )
-                    )
+        feature_values_counts = feature_values.value_counts()
+        xs = feature_values_counts.index.get_level_values(0).sort_values()
 
-                contribution_pos = contributions.loc[
-                    (pred.iloc[:, 0] == col_modality) & (feature_values.iloc[:, 0] == i)
-                ].values.flatten()
-                if len(contribution_pos) != 0:
-                    fig.add_trace(
-                        go.Violin(
-                            x=feature_values.loc[
-                                (pred.iloc[:, 0] == col_modality) & (feature_values.iloc[:, 0] == i)
-                            ].values.flatten(),
-                            y=contribution_pos,
-                            points=points_param,
-                            pointpos=0.1,
-                            side="positive",
-                            line_color=self._style_dict["violin_area_classif"][1],
-                            showlegend=False,
-                            jitter=jitter_param,
-                            meanline_visible=True,
-                            scalemode="count",
-                            hovertext=hv_text_df.loc[
-                                (pred.iloc[:, 0] == col_modality) & (feature_values.iloc[:, 0] == i)
-                            ].values.flatten(),
-                        )
-                    )
+        y_upper = (feature_values_counts.loc[xs] / feature_values_counts.sum()).values.flatten()
+        y_upper_max = y_upper.max()
 
-            else:
-                feature = feature_values.loc[feature_values.iloc[:, 0] == i].values.flatten()
-                fig.add_trace(
-                    go.Violin(
-                        x=feature,
-                        y=contributions.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                        line_color=self._style_dict["violin_default"],
-                        showlegend=False,
-                        meanline_visible=True,
-                        scalemode="count",
-                        hovertext=hv_text_df.loc[feature_values.iloc[:, 0] == i].values.flatten(),
-                    )
+        if self.explainer._case == "classification":
+            colorpoints = proba_values
+        elif self.explainer._case == "regression":
+            colorpoints = pred
+        else:
+            colorpoints = None
+
+        for i, c in enumerate(xs):
+            # Add Density Plot
+            fig.add_trace(
+                go.Bar(
+                    x=[i],
+                    y=[y_upper[i]],
+                    hoverinfo="none",
+                    showlegend=False,
+                    marker=dict(
+                        pattern_shape="+",
+                        pattern_size=6,
+                        pattern_fillmode="replace",
+                        pattern_bgcolor=self._style_dict["contrib_distribution"],
+                        color="white",
+                    ),
                 )
-                if pred is None:
-                    fig.data[-1].points = points_param
-                    fig.data[-1].pointpos = 0
-                    fig.data[-1].jitter = jitter_param
+            )
 
-        colorpoints = (
-            pred
-            if self.explainer._case == "regression"
-            else proba_values
-            if self.explainer._case == "classification"
-            else None
-        )
+            if pred is not None and self.explainer._case == "classification":
+                # Negative case
+                feature_cond_neg = (pred.iloc[:, 0] != col_modality) & (feature_values.iloc[:, 0] == c)
+                self._add_violin_and_scatter(
+                    fig,
+                    feature_cond_neg,
+                    contributions,
+                    feature_values,
+                    hv_text_df,
+                    colorpoints,
+                    col_scale,
+                    cmin,
+                    cmax,
+                    hovertemplate,
+                    i,
+                    c,
+                    line_color=self._style_dict["violin_area_classif"][0],
+                    secondary_y=True,
+                    side="negative",
+                )
 
-        hovertemplate = "<b>%{hovertext}</b><br />" + hv_temp
-        feature = feature_values.values.flatten()
-        customdata = np.stack((feature_values.values.flatten(), contributions.index.values), axis=-1)
+                # Positive case
+                feature_cond_pos = (pred.iloc[:, 0] == col_modality) & (feature_values.iloc[:, 0] == c)
+                self._add_violin_and_scatter(
+                    fig,
+                    feature_cond_pos,
+                    contributions,
+                    feature_values,
+                    hv_text_df,
+                    colorpoints,
+                    col_scale,
+                    cmin,
+                    cmax,
+                    hovertemplate,
+                    i,
+                    c,
+                    line_color=self._style_dict["violin_area_classif"][1],
+                    secondary_y=True,
+                    side="positive",
+                )
+            else:
+                # General case
+                feature_cond_other = feature_values.iloc[:, 0] == c
+                self._add_violin_and_scatter(
+                    fig,
+                    feature_cond_other,
+                    contributions,
+                    feature_values,
+                    hv_text_df,
+                    colorpoints,
+                    col_scale,
+                    cmin,
+                    cmax,
+                    hovertemplate,
+                    i,
+                    c,
+                    line_color=self._style_dict["violin_default"],
+                    secondary_y=True,
+                    side="both",
+                )
 
         if colorpoints is not None:
             fig.add_trace(
                 go.Scatter(
-                    x=feature_values.values.flatten(),
-                    y=contributions.values.flatten(),
+                    x=[None],
+                    y=[None],
                     mode="markers",
                     showlegend=False,
-                    hovertext=hv_text,
-                    hovertemplate=hovertemplate,
-                )
+                    hoverinfo="none",
+                ),
+                secondary_y=True,
             )
 
-        fig.update_layout(violingap=0.05, violingroupgap=0, violinmode="overlay", xaxis_type="category")
+        fig.update_layout(
+            violingap=0.05,
+            violingroupgap=0,
+            violinmode="overlay",
+            xaxis_type="linear",
+            barmode="overlay",
+            yaxis=dict(
+                side="right",
+                range=[0, y_upper_max * 3],
+                showticklabels=False,  # Hide tick labels
+                showgrid=False,  # Hide grid lines (optional)
+                visible=False,  # Make the entire axis invisible
+            ),
+            yaxis2=dict(
+                overlaying="y",
+                side="left",
+            ),
+        )
 
-        # To change ticktext when the x label size is upper than 10 and zoom is False
-        if (type(feature[0]) == str) & (not zoom):
-            feature_val = [x.replace("<br />", "") for x in np.unique(feature_values.values.flatten())]
-            feature_val = [x.replace(x[3 : len(x) - 3], "...") if len(x) > 10 else x for x in feature_val]
-            fig.update_xaxes(
-                tickangle=45,
-                ticktext=feature_val,
-                tickvals=np.unique(feature_values.values.flatten()),
-                tickmode="array",
-                dtick=1,
-                range=[-0.6, len(uniq_l) - 0.4],
-            )
-        else:
-            fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
-
-        # Update customdata and hovertemplate
-        fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
+        # To change ticktext
+        self._update_xaxis_labels(fig, xs, zoom)
 
         self._update_contributions_fig(
             fig=fig,
@@ -519,6 +878,8 @@ class SmartPlotter:
             proba_values=proba_values,
             col_modality=col_modality,
             col_scale=col_scale,
+            cmin=cmin,
+            cmax=cmax,
             addnote=addnote,
             subtitle=subtitle,
             width=width,
@@ -571,7 +932,6 @@ class SmartPlotter:
         topmargin = 80
         # Add subtitle and / or addnote
         if subtitle or addnote:
-            # title += f"<span style='font-size: 12px;'><br />{add_text([subtitle, addnote], sep=' - ')}</span>"
             if subtitle and addnote:
                 title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
             elif subtitle:
@@ -590,13 +950,15 @@ class SmartPlotter:
 
         # Change bar color for groups of features
         marker_color = [
-            self._style_dict["featureimp_groups"][0]
-            if (
-                self.explainer.features_groups is not None
-                and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
-                in self.explainer.features_groups.keys()
+            (
+                self._style_dict["featureimp_groups"][0]
+                if (
+                    self.explainer.features_groups is not None
+                    and self.explainer.inv_features_dict.get(f.replace("<b>", "").replace("</b>", ""))
+                    in self.explainer.features_groups.keys()
+                )
+                else dict_style_bar1["color"]
             )
-            else dict_style_bar1["color"]
             for f in feature_imp1.index
         ]
 
@@ -1221,12 +1583,16 @@ class SmartPlotter:
             else:
                 col_label = col_name
 
-        list_ind, addnote = self.explainer.plot._subset_sampling(selection, max_points)
+        list_ind, addnote = self.explainer.plot._subset_sampling(
+            selection, max_points, None if col_is_group else col, col_value_count
+        )
 
         col_value = None
         proba_values = None
         subtitle = None
         col_scale = None
+        cmin = None
+        cmax = None
 
         # Classification Case
         if self.explainer._case == "classification":
@@ -1237,21 +1603,20 @@ class SmartPlotter:
             # predict proba Color scale
             if proba and self.explainer.proba_values is not None:
                 proba_values = self.explainer.proba_values.iloc[:, [label_num]]
-                if not hasattr(self, "pred_colorscale"):
-                    self.pred_colorscale = {}
-                if label_num not in self.pred_colorscale:
-                    self.pred_colorscale[label_num] = self.tuning_colorscale(proba_values)
-                col_scale = self.pred_colorscale[label_num]
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
+                col_scale, cmin, cmax = self.tuning_colorscale(proba_values, keep_90_pct=True)
+            elif self.explainer.y_pred is not None:
+                pred_values = self.explainer.y_pred.iloc[:, [label_num]]
+                # Prediction subset:
+                pred_values = pred_values.loc[list_ind, :]
+                col_scale, cmin, cmax = self.tuning_colorscale(pred_values, keep_90_pct=True)
 
         # Regression Case - color scale
         elif self.explainer._case == "regression":
             subcontrib = contributions
             if self.explainer.y_pred is not None:
-                if not hasattr(self, "pred_colorscale"):
-                    self.pred_colorscale = self.tuning_colorscale(self.explainer.y_pred)
-                col_scale = self.pred_colorscale
+                col_scale, cmin, cmax = self.tuning_colorscale(self.explainer.y_pred.loc[list_ind], keep_90_pct=True)
 
         # Subset
         if self.explainer.postprocessing_modifications:
@@ -1317,6 +1682,8 @@ class SmartPlotter:
                 proba_values,
                 col_value,
                 col_scale,
+                cmin,
+                cmax,
                 metadata,
                 addnote,
                 subtitle,
@@ -1335,6 +1702,8 @@ class SmartPlotter:
                 proba_values,
                 col_value,
                 col_scale,
+                cmin,
+                cmax,
                 addnote,
                 subtitle,
                 width,
@@ -1475,16 +1844,20 @@ class SmartPlotter:
         if display_groups:
             # Bold font for groups of features
             global_feat_imp.index = [
-                "<b>" + str(f)
-                if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
-                else str(f)
+                (
+                    "<b>" + str(f)
+                    if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
+                    else str(f)
+                )
                 for f in global_feat_imp.index
             ]
             if subset_feat_imp is not None:
                 subset_feat_imp.index = [
-                    "<b>" + str(f)
-                    if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
-                    else str(f)
+                    (
+                        "<b>" + str(f)
+                        if self.explainer.inv_features_dict.get(f) in self.explainer.features_groups.keys()
+                        else str(f)
+                    )
                     for f in subset_feat_imp.index
                 ]
 
@@ -2487,7 +2860,7 @@ class SmartPlotter:
             + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
         )
         yaxis_title = "Importance<span style='font-size: 12px;'><br />(Average contributions)</span>"
-        col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
+        col_scale, _, _ = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
         hv_text = [
             f"<b>Feature: {col}</b><br />Importance: {y}<br />Variability: {x}"
             for col, x, y in zip(column_names, mean_variability, mean_amplitude)
@@ -2561,7 +2934,7 @@ class SmartPlotter:
         var_df = var_df[column_names[mean_amplitude.argsort()]]
 
         # Add colorscale
-        col_scale = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
+        col_scale, _, _ = self.tuning_colorscale(pd.DataFrame(mean_amplitude))
         color_list = mean_amplitude_normalized.tolist()
         color_list.sort()
         color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
@@ -2779,9 +3152,11 @@ class SmartPlotter:
                     name=g_df.iloc[::-1, ::-1].columns[i],
                     y=g_df.iloc[::-1, ::-1].index.tolist(),
                     x=g_df.iloc[::-1, ::-1].iloc[:, i],
-                    marker_color=self._style_dict["dict_stability_bar_colors"][1]
-                    if i == g_df.shape[1] - 1
-                    else self._style_dict["dict_stability_bar_colors"][0],
+                    marker_color=(
+                        self._style_dict["dict_stability_bar_colors"][1]
+                        if i == g_df.shape[1] - 1
+                        else self._style_dict["dict_stability_bar_colors"][0]
+                    ),
                     orientation="h",
                     opacity=np.clip(0.2 + i * (1 - 0.2) / (g_df.shape[1] - 1), 0.2, 1) if g_df.shape[1] > 1 else 1,
                 )
@@ -3326,45 +3701,95 @@ class SmartPlotter:
         subtitle = None
         prediction_error = self.explainer.prediction_error
         if prediction_error is not None:
-            if (self.explainer.y_target == 0).any()[0]:
+            if (self.explainer.y_target == 0).any().iloc[0]:
                 subtitle = "Prediction Error = abs(True Values - Predicted Values)"
             else:
                 subtitle = "Prediction Error = abs(True Values - Predicted Values) / True Values"
             df_equal_bins = prediction_error.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
             equal_bins = df_equal_bins.loc[~df_equal_bins.index.isin(["count", "mean", "std"])].values
             equal_bins = np.unique(equal_bins)
-            self.pred_colorscale = self.tuning_colorscale(
-                pd.DataFrame(
-                    pd.cut([val[0] for val in prediction_error.values], bins=[i for i in equal_bins], labels=False)
-                )
-            )
-            col_scale = self.pred_colorscale
+            bins_list = [i for i in equal_bins]
+            values = pd.DataFrame(pd.cut([val[0] for val in prediction_error.values], bins=bins_list, labels=False))
+            col_scale, _, _ = self.tuning_colorscale(values, keep_90_pct=False)
 
-            y_pred = self.explainer.y_pred.loc[list_ind]
             y_target = self.explainer.y_target.loc[list_ind]
-            prediction_error = np.array(prediction_error.loc[list_ind])
+            if len(y_target) > 500:
+                lower_quantile = y_target.iloc[:, 0].quantile(0.005)
+                upper_quantile = y_target.iloc[:, 0].quantile(0.995)
+                y_target_tmp = y_target.iloc[:, 0][
+                    (y_target.iloc[:, 0] > lower_quantile) & (y_target.iloc[:, 0] < upper_quantile)
+                ]
+                if len(y_target_tmp) > 0.95 * len(y_target):
+                    y_target = y_target_tmp
+                else:
+                    y_target_tmp = y_target.iloc[:, 0][(y_target.iloc[:, 0] < upper_quantile)]
+                    if len(y_target_tmp) > 0.95 * len(y_target):
+                        y_target = y_target_tmp
+                    else:
+                        y_target_tmp = y_target.iloc[:, 0][(y_target.iloc[:, 0] > lower_quantile)]
+                        if len(y_target_tmp) > 0.95 * len(y_target):
+                            y_target = y_target_tmp
+
+            y_target_values = y_target.values.flatten()
+
+            y_pred = self.explainer.y_pred.loc[y_target.index]
+            prediction_error = np.array(prediction_error.loc[y_target.index])
+
+            feature_values_array = y_target_values
+            if len(feature_values_array) > 2:
+                y_pred_flatten = y_pred.values.flatten()
+                y_pred_flatten_min = min(y_pred_flatten)
+
+                h = max(y_pred_flatten) - y_pred_flatten_min
+
+                feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
+                val_inter = feature_values_max - feature_values_min
+                from sklearn.neighbors import KernelDensity
+
+                feature_np = np.array(feature_values_array)
+                feature_np = feature_np[~np.isnan(feature_np)][:, None]
+                kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(feature_np)
+                xs = np.linspace(feature_values_min, feature_values_max, 1000)
+                log_dens = kde.score_samples(xs[:, None])
+                y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + y_pred_flatten_min
+                y_lower = np.full_like(y_upper, y_pred_flatten_min)
+
+                # Create the density plot
+                density_plot = go.Scatter(
+                    x=np.concatenate([xs, xs[::-1]]),
+                    y=np.concatenate([y_upper, y_lower[::-1]]),
+                    fill="toself",
+                    hoverinfo="none",
+                    showlegend=False,
+                    line={"color": self._style_dict["contrib_distribution"]},
+                )
+                # Add density plot
+                fig.add_trace(density_plot)
+
             # round predict
             if self.round_digit is None:
                 self.tuning_round_digit()
             y_pred = y_pred.map(lambda x: round(x, self.round_digit))
+            y_pred_flatten = y_pred.values.flatten()
 
             hv_text = [
                 f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}"
                 for x, y, z, w in zip(
-                    y_target.index, y_target.values.flatten(), y_pred.values.flatten(), prediction_error.flatten()
+                    y_target.index, y_target_values, y_pred.values.flatten(), prediction_error.flatten()
                 )
             ]
 
             fig.add_scatter(
-                x=y_target.values.flatten(),
-                y=y_pred.values.flatten(),
+                x=y_target_values,
+                y=y_pred_flatten,
                 mode="markers",
                 hovertext=hv_text,
                 hovertemplate="<b>%{hovertext}</b><br />",
                 customdata=y_pred.index.values,
+                showlegend=False,
             )
 
-            colorpoints = pd.cut([val[0] for val in prediction_error], bins=[i for i in equal_bins], labels=False) / 10
+            colorpoints = pd.cut([val[0] for val in prediction_error], bins=bins_list, labels=False) / 10
             colorbar_title = "Prediction Error"
             fig.data[-1].marker.color = colorpoints.flatten()
             fig.data[-1].marker.coloraxis = "coloraxis"
@@ -3378,8 +3803,8 @@ class SmartPlotter:
                 "y": 1.1,
             }
             range_axis = [
-                min(min(y_target.values.flatten()), min(y_pred.values.flatten())),
-                max(max(y_target.values.flatten()), max(y_pred.values.flatten())),
+                min(min(y_target_values), min(y_pred_flatten)),
+                max(max(y_target_values), max(y_pred_flatten)),
             ]
             fig.update_xaxes(range=range_axis)
             fig.update_yaxes(range=range_axis)
@@ -3400,47 +3825,111 @@ class SmartPlotter:
 
         return fig, subtitle
 
-    def _subset_sampling(self, selection=None, max_points=2000):
+    def _subset_sampling(self, selection=None, max_points=2000, col=None, col_value_count=0):
         """
-        Subset sampling for plots and create addnote for subtitle
+        Samples a subset of indices for plotting, optionally creating a note for the plot subtitle.
 
         Parameters
         ----------
-        selection: list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
-        max_points: int (optional, default: 2000)
-            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
+        selection : list, optional
+            A list of indices specifying a subset of the DataFrame for plotting.
+        max_points : int, optional
+            The maximum number of points to plot. Defaults to 2000.
+        col : str, optional
+            The column name based on which intelligent sampling is performed.
+        col_value_count : int, optional
+            The count of unique values in the specified column. Used for determining sampling strategy.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the selected indices and an additional note.
         """
+        random_seed = 79
+        random.seed(random_seed)
 
-        # Sampling
+        # Determine the sampling strategy
+        selected_indices, additional_note = self._determine_sampling_strategy(
+            selection, max_points, col, col_value_count, random_seed
+        )
+
+        # Format the additional note
+        if additional_note is not None:
+            additional_note = self._format_additional_note(selected_indices, additional_note)
+
+        return selected_indices, additional_note
+
+    def _determine_sampling_strategy(self, selection, max_points, col, col_value_count, random_seed):
+        """
+        Determines the sampling strategy based on the input parameters.
+        """
         if selection is None:
-            if self.explainer.x_init.shape[0] <= max_points:
-                list_ind = self.explainer.x_init.index.tolist()
-                addnote = None
-            else:
-                if self.explainer.x_init.shape[0] <= max_points:
-                    list_ind = self.explainer.x_init.index.tolist()
-                    addnote = None
-                else:
-                    random.seed(79)
-                    list_ind = random.sample(self.explainer.x_init.index.tolist(), max_points)
-                    addnote = "Length of random Subset: "
+            return self._no_selection_sampling(max_points, col, col_value_count, random_seed)
         elif isinstance(selection, list):
-            if len(selection) <= max_points:
-                list_ind = selection
-                addnote = "Length of user-defined Subset: "
-            else:
-                random.seed(79)
-                list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset: "
+            return self._list_selection_sampling(selection, max_points, col, col_value_count, random_seed)
         else:
-            raise ValueError("parameter selection must be a list")
-        if addnote is not None:
-            addnote = add_text(
-                [addnote, f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self.explainer.x_init.shape[0]))}%)"],
-                sep="",
-            )
+            raise ValueError("Parameter 'selection' must be a list.")
 
-        return list_ind, addnote
+    def _no_selection_sampling(self, max_points, col, col_value_count, random_seed):
+        """
+        Handles sampling when no specific selection is made.
+        """
+        if self.explainer.x_init.shape[0] <= max_points:
+            return self.explainer.x_init.index.tolist(), None
+        elif col is None:
+            selected_indices = random.sample(self.explainer.x_init.index.tolist(), max_points)
+            return selected_indices, "Length of random Subset: "
+        else:
+            selected_indices = self._intelligent_sampling(
+                self.explainer.x_init, max_points, col, col_value_count, random_seed
+            )
+            return selected_indices, "Length of smart Subset: "
+
+    def _list_selection_sampling(self, selection, max_points, col, col_value_count, random_seed):
+        """
+        Handles sampling when a specific list of indices is provided.
+        """
+        if len(selection) <= max_points:
+            return selection, "Length of user-defined Subset: "
+        elif col is None:
+            selected_indices = random.sample(selection, max_points)
+            return selected_indices, "Length of random Subset: "
+        else:
+            subset = self.explainer.x_init.loc[selection]
+            selected_indices = self._intelligent_sampling(subset, max_points, col, col_value_count, random_seed)
+            return selected_indices, "Length of smart Subset: "
+
+    def _intelligent_sampling(self, data, max_points, col, col_value_count, random_seed):
+        """
+        Performs intelligent sampling based on the distribution of values in the specified column.
+        """
+        rng = np.random.default_rng(seed=random_seed)
+        is_col_str = True
+        if data[col].dtype.kind in "fc":
+            try:
+                if data[col].str.isnumeric().all():
+                    is_col_str = False
+            except AttributeError:
+                is_col_str = False
+
+        if (col_value_count < len(data[col]) / 20) or is_col_str:
+            cluster_labels = data[col]
+            cluster_counts = cluster_labels.value_counts()
+        else:
+            n_clusters = min(100, len(data[col]) // 20)
+            kmeans = KMeans(n_clusters=n_clusters, random_state=random_seed, n_init="auto")
+            cluster_labels = pd.Series(kmeans.fit_predict(data[col].values.reshape(-1, 1)))
+            cluster_counts = cluster_labels.value_counts()
+
+        weights = cluster_counts.apply(lambda x: (x ** 0.5) / x).to_dict()
+        selection_weights = cluster_labels.apply(lambda x: weights[x])
+        selection_weights /= selection_weights.sum()
+        selected_indices = rng.choice(data.index.tolist(), max_points, p=selection_weights, replace=False)
+        return selected_indices
+
+    def _format_additional_note(self, selected_indices, additional_note):
+        """
+        Formats the additional note with the length and percentage of the selected subset.
+        """
+        percentage = int(np.round(100 * len(selected_indices) / self.explainer.x_init.shape[0]))
+        return f"{additional_note}{len(selected_indices)} ({percentage}%)"
