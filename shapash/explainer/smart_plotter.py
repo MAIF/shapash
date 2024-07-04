@@ -2639,6 +2639,7 @@ class SmartPlotter:
     def correlations(
         self,
         df=None,
+        optimized=False,
         max_features=20,
         features_to_hide=None,
         facet_col=None,
@@ -2658,6 +2659,9 @@ class SmartPlotter:
         ----------
         df : pd.DataFrame, optional
             DataFrame for which we want to compute correlations. Will use x_init by default.
+        optimized : boolean, optional
+            True if we want to potentially accelerate the computation of the correlation matrix by reducing the
+            lenght of the data and the number of modalties per columns.
         max_features : int (default: 10)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
@@ -2731,7 +2735,17 @@ class SmartPlotter:
 
         if df is None:
             # Use x_init by default
-            df = self.explainer.x_init
+            df = self.explainer.x_init.copy()
+
+        if optimized:
+            categorical_columns = df.select_dtypes(include=["object", "category"]).columns
+
+            for col in categorical_columns:
+                top_categories = df[col].value_counts().nlargest(200).index
+                df[col] = df[col].where(df[col].isin(top_categories), other="Other")
+
+            if len(df) > 10000:
+                df = df.sample(n=10000, random_state=1)
 
         if facet_col:
             features_to_hide += [facet_col]
@@ -2758,12 +2772,16 @@ class SmartPlotter:
                     top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
                     corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
                     list_features = list(corr.columns)
+                    k = 6
+                    list_features_shorten = [
+                        x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in list_features
+                    ]
 
                 fig.add_trace(
                     go.Heatmap(
                         z=corr.loc[list_features, list_features].round(decimals).values,
-                        x=list_features,
-                        y=list_features,
+                        x=list_features_shorten,
+                        y=list_features_shorten,
                         coloraxis="coloraxis",
                         text=[
                             [
@@ -2784,12 +2802,16 @@ class SmartPlotter:
             top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
             corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
             list_features = [col for col in corr.columns if col in top_features]
+            k = 6
+            list_features_shorten = [
+                x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in list_features
+            ]
 
             fig = go.Figure(
                 go.Heatmap(
                     z=corr.loc[list_features, list_features].round(decimals).values,
-                    x=list_features,
-                    y=list_features,
+                    x=list_features_shorten,
+                    y=list_features_shorten,
                     coloraxis="coloraxis",
                     text=[
                         [

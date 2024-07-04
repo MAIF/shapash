@@ -24,7 +24,7 @@ from shapash.report.visualisation import (
 )
 from shapash.utils.io import load_yml
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
-from shapash.utils.utils import get_project_root, truncate_str
+from shapash.utils.utils import compute_sorted_variables_interactions_list_indices, get_project_root, truncate_str
 from shapash.webapp.utils.utils import round_to_k
 
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +97,16 @@ class ProjectReport:
         self.y_test, target_name_test = self._get_values_and_name(y_test, "target")
         self.y_train, target_name_train = self._get_values_and_name(y_train, "target")
         self.target_name = target_name_train or target_name_test
+
+        if "max_points" in self.config.keys():
+            self.max_points = config["max_points"]
+        else:
+            self.max_points = 200
+
+        if "nb_top_interactions" in self.config.keys():
+            self.nb_top_interactions = config["nb_top_interactions"]
+        else:
+            self.nb_top_interactions = 5
 
         if "title_story" in self.config.keys():
             self.title_story = config["title_story"]
@@ -308,6 +318,7 @@ class ProjectReport:
             print_md("### Multivariate analysis")
             fig_corr = self.explainer.plot.correlations(
                 self.df_train_test,
+                optimized=True,
                 facet_col="data_train_test",
                 max_features=20,
                 width=900 if len(self.df_train_test["data_train_test"].unique()) > 1 else 500,
@@ -389,13 +400,16 @@ class ProjectReport:
         c_list = self.explainer._classes if multiclass else [1]  # list just used for multiclass
         for index_label, label in enumerate(c_list):  # Iterating over all labels in multiclass case
             label_value = self.explainer.check_label_name(label)[2] if multiclass else ""
+
+            # Feature Importance
             fig_features_importance = self.explainer.plot.features_importance(label=label)
 
+            # Contribution Plot
             explain_contrib_data = list()
             list_cols_labels = [self.explainer.features_dict.get(col, col) for col in self.col_names]
             for feature_label in sorted(list_cols_labels):
                 feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
-                fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=200)
+                fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=self.max_points)
                 # Apparently matkers are not supported during conversion into html
                 for el in fig.data:
                     if el.type == "bar":
@@ -408,6 +422,37 @@ class ProjectReport:
                         "plot": plotly.io.to_html(fig, include_plotlyjs=False, full_html=False),
                     }
                 )
+
+            # Interaction Plot
+            explain_contrib_data_interaction = list()
+            list_ind, _ = self.explainer.plot._select_indices_interactions_plot(
+                selection=None, max_points=self.max_points
+            )
+            interaction_values = self.explainer.get_interaction_values(selection=list_ind)
+            sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
+            indices_to_plot = sorted_top_features_indices[: self.nb_top_interactions]
+
+            for i, ids in enumerate(indices_to_plot):
+                id0, id1 = ids
+
+                fig_one_interaction = self.explainer.plot.interactions_plot(
+                    col1=self.explainer.columns_dict[id0],
+                    col2=self.explainer.columns_dict[id1],
+                    max_points=self.max_points,
+                )
+
+                explain_contrib_data_interaction.append(
+                    {
+                        "feature_index": i,
+                        "name": self.explainer.columns_dict[id0] + " / " + self.explainer.columns_dict[id1],
+                        "description": self.explainer.features_dict[self.explainer.columns_dict[id0]]
+                        + " / "
+                        + self.explainer.features_dict[self.explainer.columns_dict[id1]],
+                        "plot": plotly.io.to_html(fig_one_interaction, include_plotlyjs=False, full_html=False),
+                    }
+                )
+
+            # Aggregating the data
             explain_data.append(
                 {
                     "index": index_label,
@@ -416,6 +461,7 @@ class ProjectReport:
                         fig_features_importance, include_plotlyjs=False, full_html=False
                     ),
                     "features": explain_contrib_data,
+                    "features_interaction": explain_contrib_data_interaction,
                 }
             )
         print_html(explainability_template.render(labels=explain_data))
