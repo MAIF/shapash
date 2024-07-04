@@ -374,9 +374,8 @@ class SmartPlotter:
                 val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
-                feature_np = np.array(feature_values_array)[:, None]
-                median_value = np.nanmedian(feature_np)
-                feature_np = np.where(np.isnan(feature_np), median_value, feature_np)
+                feature_np = np.array(feature_values_array)
+                feature_np = feature_np[~np.isnan(feature_np)][:, None]
                 kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(feature_np)
                 xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
@@ -3747,9 +3746,8 @@ class SmartPlotter:
                 val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
-                feature_np = np.array(feature_values_array)[:, None]
-                median_value = np.nanmedian(feature_np)
-                feature_np = np.where(np.isnan(feature_np), median_value, feature_np)
+                feature_np = np.array(feature_values_array)
+                feature_np = feature_np[~np.isnan(feature_np)][:, None]
                 kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(feature_np)
                 xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
