@@ -1,3 +1,4 @@
+import importlib.metadata
 import logging
 import os
 import sys
@@ -229,11 +230,13 @@ class ProjectReport:
         print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
 
         for _, module in sorted(sys.modules.items()):
-            if (
-                hasattr(module, "__version__")
-                and self.explainer.model.__class__.__module__.split(".")[0] == module.__name__
-            ):
-                print_md(f"**Library version :** {module.__version__}")
+            module_name = module.__name__.split(".")[0]
+            if self.explainer.model.__class__.__module__.split(".")[0] == module_name:
+                try:
+                    version = importlib.metadata.version(module_name)
+                    print_md(f"**Library version :** {version}")
+                except importlib.metadata.PackageNotFoundError:
+                    print_md(f"**Library version :** not found for {module_name}")
 
         print_md("**Model parameters :** ")
         model_params = self.explainer.model.__dict__

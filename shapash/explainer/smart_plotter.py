@@ -374,9 +374,8 @@ class SmartPlotter:
                 val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
-                feature_np = np.array(feature_values_array)[:, None]
-                median_value = np.nanmedian(feature_np)
-                feature_np = np.where(np.isnan(feature_np), median_value, feature_np)
+                feature_np = np.array(feature_values_array)
+                feature_np = feature_np[~np.isnan(feature_np)][:, None]
                 kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(feature_np)
                 xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])
@@ -2151,15 +2150,6 @@ class SmartPlotter:
         -------
         go.Figure
         """
-        # add break line to X label if necessary
-        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
-        x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(
-            add_line_break,
-            args=(
-                max_len_by_row,
-                120,
-            ),
-        )
 
         data_df = pd.DataFrame(
             {
@@ -2209,16 +2199,6 @@ class SmartPlotter:
         """
 
         fig = go.Figure()
-
-        # add break line to X label
-        max_len_by_row = max([round(50 / self.explainer.features_desc[x_values.columns.values[0]]), 8])
-        x_values.iloc[:, 0] = x_values.iloc[:, 0].apply(
-            add_line_break,
-            args=(
-                max_len_by_row,
-                120,
-            ),
-        )
 
         uniq_l = list(pd.unique(x_values.values.flatten()))
         uniq_l.sort()
@@ -2444,6 +2424,16 @@ class SmartPlotter:
         interaction_values = self.explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
         if col_id1 != col_id2:
             interaction_values = interaction_values * 2
+
+        # add break line to X label if necessary
+        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values1.columns.values[0]]), 8])
+        feature_values1.iloc[:, 0] = feature_values1.iloc[:, 0].apply(
+            add_line_break,
+            args=(
+                max_len_by_row,
+                120,
+            ),
+        )
 
         # selecting the best plot : Scatter, Violin?
         if col_value_count1 > violin_maxf:
@@ -3668,7 +3658,7 @@ class SmartPlotter:
                 x=df_correct_predict["target"].values.flatten() + np.random.normal(0, 0.02, len(df_correct_predict)),
                 y=df_correct_predict["proba_values"].values.flatten(),
                 mode="markers",
-                marker_color=self._style_dict["prediction_plot"][0],
+                marker_color=self._style_dict["prediction_plot"][1],
                 showlegend=True,
                 name="Correct Prediction",
                 hovertext=hv_text_correct_predict,
@@ -3682,7 +3672,7 @@ class SmartPlotter:
                 x=df_wrong_predict["target"].values.flatten() + np.random.normal(0, 0.02, len(df_wrong_predict)),
                 y=df_wrong_predict["proba_values"].values.flatten(),
                 mode="markers",
-                marker_color=self._style_dict["prediction_plot"][1],
+                marker_color=self._style_dict["prediction_plot"][0],
                 showlegend=True,
                 name="Wrong Prediction",
                 hovertext=hv_text_wrong_predict,
@@ -3739,9 +3729,20 @@ class SmartPlotter:
             if len(y_target) > 500:
                 lower_quantile = y_target.iloc[:, 0].quantile(0.005)
                 upper_quantile = y_target.iloc[:, 0].quantile(0.995)
-                y_target = y_target.iloc[:, 0][
+                y_target_tmp = y_target.iloc[:, 0][
                     (y_target.iloc[:, 0] > lower_quantile) & (y_target.iloc[:, 0] < upper_quantile)
                 ]
+                if len(y_target_tmp) > 0.95 * len(y_target):
+                    y_target = y_target_tmp
+                else:
+                    y_target_tmp = y_target.iloc[:, 0][(y_target.iloc[:, 0] < upper_quantile)]
+                    if len(y_target_tmp) > 0.95 * len(y_target):
+                        y_target = y_target_tmp
+                    else:
+                        y_target_tmp = y_target.iloc[:, 0][(y_target.iloc[:, 0] > lower_quantile)]
+                        if len(y_target_tmp) > 0.95 * len(y_target):
+                            y_target = y_target_tmp
+
             y_target_values = y_target.values.flatten()
 
             y_pred = self.explainer.y_pred.loc[y_target.index]
@@ -3758,9 +3759,8 @@ class SmartPlotter:
                 val_inter = feature_values_max - feature_values_min
                 from sklearn.neighbors import KernelDensity
 
-                feature_np = np.array(feature_values_array)[:, None]
-                median_value = np.nanmedian(feature_np)
-                feature_np = np.where(np.isnan(feature_np), median_value, feature_np)
+                feature_np = np.array(feature_values_array)
+                feature_np = feature_np[~np.isnan(feature_np)][:, None]
                 kde = KernelDensity(bandwidth=val_inter / 300, kernel="epanechnikov").fit(feature_np)
                 xs = np.linspace(feature_values_min, feature_values_max, 1000)
                 log_dens = kde.score_samples(xs[:, None])

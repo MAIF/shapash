@@ -4,7 +4,7 @@ Main class of Web application Shapash
 import copy
 import random
 import re
-from math import log10
+from math import isfinite, log10
 
 import dash
 import dash_bootstrap_components as dbc
@@ -193,7 +193,7 @@ class SmartApp:
             typ = self.dataframe[col].dtype
             if typ == float:
                 std = self.dataframe[col].std()
-                if std != 0:
+                if isfinite(std) and std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
                     self.round_dataframe[col] = self.dataframe[col].map(f"{{:.{digit}f}}".format).astype(float)
 
