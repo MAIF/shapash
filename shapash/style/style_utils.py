@@ -1,6 +1,7 @@
 """
 functions for loading and manipulating colors
 """
+
 import json
 import os
 
@@ -100,11 +101,11 @@ def define_style(palette):
         1: {"color": featureimp_bar[1], "line": {"color": palette["featureimp_line"], "width": 0.5}},
         2: {"color": featureimp_bar[2]},
     }
-    style_dict["featureimp_groups"] = list(palette["featureimp_groups"].values())
+    style_dict["featureimp_groups"] = convert_string_to_int_keys(palette["featureimp_groups"])
     style_dict["init_contrib_colorscale"] = palette["contrib_colorscale"]
     style_dict["contrib_distribution"] = palette["contrib_distribution"]
-    style_dict["violin_area_classif"] = list(palette["violin_area_classif"].values())
-    style_dict["prediction_plot"] = list(palette["prediction_plot"].values())
+    style_dict["violin_area_classif"] = convert_string_to_int_keys(palette["violin_area_classif"])
+    style_dict["prediction_plot"] = convert_string_to_int_keys(palette["prediction_plot"])
     style_dict["violin_default"] = palette["violin_default"]
     style_dict["dict_title_compacity"] = {"font": {"size": 14, "family": "Arial", "color": palette["title_color"]}}
     style_dict["dict_xaxis"] = {"font": {"size": 16, "family": "Arial Black", "color": palette["axis_color"]}}
