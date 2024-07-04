@@ -1330,9 +1330,9 @@ class TestSmartPlotter(unittest.TestCase):
                     name=f"Id: <b>{index[i]}</b>",
                     hovertext=[
                         f"Id: <b>{index[i]}</b><br /><b>X1</b> <br />Contribution: {contributions[0][i]:.4f} <br />"
-                        + f"Value: {data.iloc[i][0]}",
+                        + f"Value: {data.iloc[i,0]}",
                         f"Id: <b>{index[i]}</b><br /><b>X2</b> <br />Contribution: {contributions[1][i]:.4f} <br />"
-                        + f"Value: {data.iloc[i][1]}",
+                        + f"Value: {data.iloc[i,1]}",
                     ],
                     marker={"color": colors[i]},
                 )
