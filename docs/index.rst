@@ -33,7 +33,7 @@ Shapash was developed by **MAIF** Data Scientists.
 
 - Enable Data Scientists to quickly comprehend their models using a **web app** for seamless navigation between global and local explainability, and to understand how different features contribute: `Live Demo shapash-monitor <https://shapash-demo.ossbymaif.fr/>`__
 
-.. image:: ./_static/shapash-webapp-demo.gif
+.. image:: ./_static/shapash_global.gif
    :width: 700px
    :align: center
    :target: https://shapash-demo.ossbymaif.fr/
