@@ -17,7 +17,6 @@ from shapash.webapp.utils.callbacks import (
     get_feature_from_clicked_data,
     get_feature_from_features_groups,
     get_figure_zoom,
-    get_group_name,
     get_id_card_contrib,
     get_id_card_features,
     get_indexes_from_datatable,
@@ -241,14 +240,6 @@ class TestCallbacks(unittest.TestCase):
 
         feature = get_feature_from_features_groups("column2", features_groups)
         assert feature == "column2"
-
-    def test_get_group_name(self):
-        features_groups = {"A": ["column1", "column3"]}
-        feature = get_group_name("A", features_groups)
-        assert feature == "A"
-
-        feature = get_group_name("column3", features_groups)
-        assert feature == None
 
     def test_get_indexes_from_datatable(self):
         data = self.smart_app.components["table"]["dataset"].data
