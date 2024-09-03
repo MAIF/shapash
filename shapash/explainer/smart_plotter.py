@@ -534,7 +534,8 @@ class SmartPlotter:
         - A numpy array of jittered points.
         """
         # Creating jittered points
-        jitter = np.random.normal(mean, std, len(percentages))
+        rng = np.random.default_rng(seed=79)
+        jitter = rng.normal(mean, std, len(percentages))
         if np.isnan(percentages).any():
             percentages.fill(1)
 
@@ -583,7 +584,8 @@ class SmartPlotter:
     def _add_violin_trace(self, fig, name, x, y, side, line_color, hovertext, secondary_y=True):
         """Adds a Violin trace to the figure."""
         # Violin plot has a problem if for one violin all the points have the same contribution value
-        y = y + np.random.normal(size=y.shape) * (max(y.max(), 0) - min(y.min(), 0)) / 10 ** 8
+        rng = np.random.default_rng(seed=79)
+        y = y + rng.normal(size=y.shape) * (max(y.max(), 0) - min(y.min(), 0)) / 10 ** 8
         violin_trace = go.Violin(
             name=name,
             x=x,
@@ -969,6 +971,8 @@ class SmartPlotter:
             width=width,
             height=height,
             title=dict_t,
+            # xaxis=dict(range=[0, 0.5]),
+            # yaxis=dict(autorange=True),
             xaxis_title=dict_xaxis,
             yaxis_title=dict_yaxis,
             hovermode="closest",
@@ -1718,6 +1722,7 @@ class SmartPlotter:
     def features_importance(
         self,
         max_features=20,
+        page="top",
         selection=None,
         label=-1,
         group_name=None,
@@ -1742,6 +1747,8 @@ class SmartPlotter:
         max_features: int (optional, default 20)
             this argument limit the number of hbar in features importance plot
             if max_features is 20, plot selects the 20 most important features
+        page: int, str (optional, default "top")
+            enable to select the features to plot between "top", "worse" or the number of the page
         selection: list (optional, default None)
             This argument allows to represent the importance calculated with a subset.
             Subset features importance is compared to global in the plot
@@ -1777,6 +1784,24 @@ class SmartPlotter:
         --------
         >>> xpl.plot.features_importance()
         """
+
+        def get_feature_importance_page(features_importance, page, max_features):
+            if isinstance(page, int):
+                nb_features = len(features_importance)
+                nb_page_max = nb_features // max_features + 1
+                page = (page - 1) % nb_page_max + 1
+
+            if (page == "top") or (page == 1):
+                return features_importance.tail(max_features)
+            elif page == "worst":
+                return features_importance.head(max_features)
+            elif isinstance(page, int):
+                start_index = (page - 1) * max_features
+                end_index = start_index + max_features
+                return features_importance.iloc[-end_index:-start_index]
+            else:
+                raise ValueError("Invalid value for page. It must be 'top', 'worst', or an integer.")
+
         self.explainer.compute_features_import(force=force)
         subtitle = None
         title = "Features Importance"
@@ -1809,7 +1834,7 @@ class SmartPlotter:
         # classification
         if self.explainer._case == "classification":
             label_num, _, label_value = self.explainer.check_label_name(label)
-            global_feat_imp = features_importance[label_num].tail(max_features)
+            global_feat_imp = get_feature_importance_page(features_importance[label_num], page, max_features)
             if selection is not None:
                 subset_feat_imp = self.explainer.backend.get_global_features_importance(
                     contributions=contributions[label_num], explain_data=self.explainer.explain_data, subset=selection
@@ -1817,9 +1842,10 @@ class SmartPlotter:
             else:
                 subset_feat_imp = None
             subtitle = f"Response: <b>{label_value}</b>"
+
         # regression
         elif self.explainer._case == "regression":
-            global_feat_imp = features_importance.tail(max_features)
+            global_feat_imp = get_feature_importance_page(features_importance, page, max_features)
             if selection is not None:
                 subset_feat_imp = self.explainer.backend.get_global_features_importance(
                     contributions=contributions, explain_data=self.explainer.explain_data, subset=selection
@@ -3652,10 +3678,10 @@ class SmartPlotter:
                 df_wrong_predict.target.values.flatten(),
             )
         ]
-
+        rng = np.random.default_rng(seed=79)
         fig.add_trace(
             go.Scatter(
-                x=df_correct_predict["target"].values.flatten() + np.random.normal(0, 0.02, len(df_correct_predict)),
+                x=df_correct_predict["target"].values.flatten() + rng.normal(0, 0.02, len(df_correct_predict)),
                 y=df_correct_predict["proba_values"].values.flatten(),
                 mode="markers",
                 marker_color=self._style_dict["prediction_plot"][1],
@@ -3669,7 +3695,7 @@ class SmartPlotter:
 
         fig.add_trace(
             go.Scatter(
-                x=df_wrong_predict["target"].values.flatten() + np.random.normal(0, 0.02, len(df_wrong_predict)),
+                x=df_wrong_predict["target"].values.flatten() + rng.normal(0, 0.02, len(df_wrong_predict)),
                 y=df_wrong_predict["proba_values"].values.flatten(),
                 mode="markers",
                 marker_color=self._style_dict["prediction_plot"][0],

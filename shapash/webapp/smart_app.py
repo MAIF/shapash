@@ -1,6 +1,7 @@
 """
 Main class of Web application Shapash
 """
+
 import copy
 import random
 import re
@@ -18,25 +19,29 @@ from flask import Flask
 
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.callbacks import (
+    adjust_figure_layout,
     create_dropdown_feature_filter,
     create_filter_modalities_selection,
     create_id_card_data,
     create_id_card_layout,
+    determine_total_pages_and_display,
     get_feature_contributions_sign_to_show,
     get_feature_filter_options,
     get_feature_from_clicked_data,
-    get_feature_from_features_groups,
     get_figure_zoom,
-    get_group_name,
     get_id_card_contrib,
     get_id_card_features,
     get_indexes_from_datatable,
+    get_selected_feature,
+    handle_group_display_logic,
+    handle_page_navigation,
+    plot_features_importance,
     select_data_from_bool_filters,
     select_data_from_date_filters,
     select_data_from_numeric_filters,
     select_data_from_prediction_picking,
     select_data_from_str_filters,
-    update_click_data_on_subset_changes,
+    update_click_data_on_subset_changes_if_needed,
     update_features_to_display,
 )
 from shapash.webapp.utils.explanations import Explanations
@@ -795,28 +800,101 @@ class SmartApp:
                                 dbc.Card(
                                     [
                                         html.Div(
-                                            # To drow the global_feature_importance graph
+                                            # To draw the global_feature_importance graph
                                             self.draw_component("graph", "global_feature_importance"),
                                             id="card_global_feature_importance",
                                             # Position must be absolute to add the explanation button
                                             style={"position": "absolute"},
                                         ),
                                         dcc.Store(id="clickdata-store"),
+                                        dcc.Store(id="selected-clickdata-store"),
                                         html.Div(
                                             [
-                                                # Create explanation button on feature importance graph
-                                                dbc.Button(
-                                                    "?", id="open_feature_importance", size="sm", color="warning"
+                                                # Create a row to contain the buttons
+                                                dbc.Row(
+                                                    [
+                                                        # Placeholder column to center the second button
+                                                        dbc.Col(
+                                                            dbc.Button(
+                                                                "Go Back",
+                                                                id="goback_feature_importance",
+                                                                size="sm",
+                                                                color="warning",
+                                                                style={"display": "none"},
+                                                            ),
+                                                            width=2,
+                                                            className="d-flex justify-content-start",
+                                                        ),
+                                                        # Centered button column
+                                                        dbc.Col(
+                                                            html.Div(
+                                                                [
+                                                                    dbc.Button(
+                                                                        "<",
+                                                                        id="page_left",
+                                                                        size="sm",
+                                                                        color="warning",
+                                                                        style={
+                                                                            "margin": "5px 0 5px 0",
+                                                                            "font-size": "12px",
+                                                                            "line-height": "1.2",
+                                                                        },
+                                                                    ),
+                                                                    html.Div(
+                                                                        [
+                                                                            html.Span(
+                                                                                "1", id="page_feature_importance"
+                                                                            ),
+                                                                            html.Span(" / ", id="separator"),
+                                                                            html.Span("1", id="total_pages"),
+                                                                        ],
+                                                                        style={
+                                                                            "padding": "0 10px",
+                                                                            "align-self": "center",
+                                                                        },
+                                                                    ),
+                                                                    dbc.Button(
+                                                                        ">",
+                                                                        id="page_right",
+                                                                        size="sm",
+                                                                        color="warning",
+                                                                        style={
+                                                                            "margin": "5px 0 5px 0",
+                                                                            "font-size": "12px",
+                                                                            "line-height": "1.2",
+                                                                        },
+                                                                    ),
+                                                                ],
+                                                                id="page_viewer_feature_importance",
+                                                                style={"display": "none"},
+                                                            ),
+                                                            width=8,
+                                                            className="d-flex justify-content-center",
+                                                        ),
+                                                        # First button column
+                                                        dbc.Col(
+                                                            dbc.Button(
+                                                                "?",
+                                                                id="open_feature_importance",
+                                                                size="sm",
+                                                                color="warning",
+                                                            ),
+                                                            width=2,
+                                                            className="d-flex justify-content-end",
+                                                        ),
+                                                    ],
+                                                    className="g-0",
+                                                    align="center",
+                                                    style={"width": "100%"},
                                                 ),
-                                                # Create popover for this button
+                                                # Create popover for the first button
                                                 dbc.Popover(
-                                                    "Click here to have more \
-                                                  information on Feature Importance graph.",
+                                                    "Click here to have more information on Feature Importance graph.",
                                                     target="open_feature_importance",
                                                     body=True,
                                                     trigger="hover",
                                                 ),
-                                                # Create modal associated to this button
+                                                # Create modal associated to the first button
                                                 dbc.Modal(
                                                     [
                                                         # Modal title
@@ -831,7 +909,7 @@ class SmartApp:
                                                                 html.A(
                                                                     "Click here for more details",
                                                                     href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot03-features-importance.ipynb",
-                                                                    # open new brother tab
+                                                                    # open new browser tab
                                                                     target="_blank",
                                                                     style={"color": self.color[0]},
                                                                 ),
@@ -850,7 +928,11 @@ class SmartApp:
                                                 ),
                                             ],
                                             # position must be relative
-                                            style={"position": "relative", "left": "96%"},
+                                            style={
+                                                "position": "relative",
+                                                "display": "flex",
+                                                "justify-content": "space-between",
+                                            },
                                         ),
                                     ]
                                 )
@@ -986,7 +1068,7 @@ class SmartApp:
                                                                 id="modal_prediction_picking",
                                                                 centered=True,
                                                                 size="lg",
-                                                            )
+                                                            ),
                                                             # Position must be relative
                                                         ],
                                                         style={"position": "relative", "left": "97%"},
@@ -1623,6 +1705,11 @@ class SmartApp:
                 Output("global_feature_importance", "figure"),
                 Output("global_feature_importance", "clickData"),
                 Output("clickdata-store", "data"),
+                Output("selected-clickdata-store", "data"),
+                Output("page_feature_importance", "children"),
+                Output("total_pages", "children"),
+                Output("page_viewer_feature_importance", "style"),
+                Output("goback_feature_importance", "style"),
             ],
             [
                 Input("select_label", "value"),
@@ -1634,12 +1721,17 @@ class SmartApp:
                 Input("card_global_feature_importance", "n_clicks"),
                 Input("bool_groups", "on"),
                 Input("ember_global_feature_importance", "n_clicks"),
+                Input("page_left", "n_clicks"),
+                Input("page_right", "n_clicks"),
+                Input("goback_feature_importance", "n_clicks"),
             ],
             [
                 State("global_feature_importance", "clickData"),
-                State("global_feature_importance", "figure"),
+                State("global_feature_importance", "selectedData"),
                 State("features", "value"),
                 State("clickdata-store", "data"),
+                State("selected-clickdata-store", "data"),
+                State("page_feature_importance", "children"),
             ],
         )
         def update_feature_importance(
@@ -1652,10 +1744,15 @@ class SmartApp:
             n_clicks,
             bool_group,
             click_zoom,
-            clickData,
-            figure,
+            click_page_left,
+            click_page_right,
+            click_goback,
+            click_data,
+            selected_click_data,
             features,
-            clickData_store,
+            click_data_store,
+            selected_click_data_store,
+            page,
         ):
             """
             update feature importance plot according label, click on graph,
@@ -1671,7 +1768,6 @@ class SmartApp:
             bool_group: display groups
             click_zoom: click on zoom button
             clickData: click on features importance graph
-            figure: figure of Features Importance graph
             features: features value
             clickData_store: previous click on features importance graph
             -------------------------------------------------------------
@@ -1681,59 +1777,76 @@ class SmartApp:
             previous click on Features Importance graph
             """
             ctx = dash.callback_context
-            # Zoom is False by Default. It becomes True if we click on it
-            zoom_active = get_figure_zoom(click_zoom)
-            selection = None
-            list_index = self.list_index
-            if clickData is not None and (
-                ctx.triggered[0]["prop_id"]
-                in ["apply_filter.n_clicks", "reset_dropdown_button.n_clicks", "dataset.data"]
-                or ("del_dropdown_button" in ctx.triggered[0]["prop_id"] and None not in nclicks_del)
-            ):
-                clickData = update_click_data_on_subset_changes(clickData)
 
-            selected_feature = (
-                self.explainer.inv_features_dict.get(get_feature_from_clicked_data(clickData)) if clickData else None
+            # Determine which triggered input
+            triggered_input = ctx.triggered[0]["prop_id"]
+
+            # Handle click_data updates based on filters or dataset changes
+            click_data = update_click_data_on_subset_changes_if_needed(click_data, triggered_input, nclicks_del)
+            selected_click_data = update_click_data_on_subset_changes_if_needed(
+                selected_click_data, triggered_input, nclicks_del
             )
 
-            if self.explainer.features_groups and bool_group:
-                if ctx.triggered[0]["prop_id"] == "card_global_feature_importance.n_clicks":
-                    # When we click twice on the same bar this will reset the graph
-                    if clickData_store == clickData:
-                        selected_feature = None
-                    selected_feature = get_feature_from_features_groups(
-                        selected_feature, self.explainer.features_groups
-                    )
-                elif ctx.triggered[0]["prop_id"] == "ember_global_feature_importance.n_clicks":
-                    selected_feature = get_feature_from_features_groups(
-                        selected_feature, self.explainer.features_groups
-                    )
-                else:
-                    selected_feature = None
+            # Get selected feature from click_data
+            selected_feature = get_selected_feature(click_data, self.explainer.inv_features_dict)
 
-            selection = get_indexes_from_datatable(data, list_index)
+            # Handle page navigation
+            page, selected_feature = handle_page_navigation(triggered_input, page, selected_feature)
 
-            group_name = get_group_name(selected_feature, self.explainer.features_groups)
-
-            figure = self.explainer.plot.features_importance(
-                max_features=features,
-                selection=selection,
-                label=label,
-                group_name=group_name,
-                display_groups=bool_group,
-                zoom=zoom_active,
+            # Handle group display logic
+            selected_feature, group_name, click_data, selected_click_data = handle_group_display_logic(
+                bool_group,
+                triggered_input,
+                selected_feature,
+                selected_click_data,
+                click_data,
+                click_data_store,
+                selected_click_data_store,
+                self.explainer.features_groups,
+                self.explainer.features_dict,
             )
-            # Adjust graph with adding x axis title
-            MyGraph.adjust_graph_static(figure, x_ax="Mean absolute Contribution")
-            figure.layout.clickmode = "event+select"
+
+            # Get selection indexes from datatable
+            selection = get_indexes_from_datatable(data, self.list_index)
+
+            # Plot features importance
+            figure = plot_features_importance(
+                self.explainer, features, page, selection, label, group_name, bool_group, click_zoom
+            )
+
+            # Determine total pages and display settings
+            total_pages, display_page, page = determine_total_pages_and_display(
+                self.explainer, features, bool_group, group_name, page
+            )
+
+            if group_name and selected_feature is group_name:
+                selected_feature = None
+
+            if group_name:
+                goback_feature_importance = {}
+            else:
+                goback_feature_importance = {"display": "none"}
+
             if selected_feature:
-                self.select_point(figure, clickData)
+                self.select_point(figure, click_data)
 
-            # font size can be adapted to screen size
-            nb_car = max([len(figure.data[0].y[i]) for i in range(len(figure.data[0].y))])
-            figure.update_layout(yaxis=dict(tickfont={"size": min(round(500 / nb_car), 12)}))
-            clickData_store = clickData.copy() if clickData is not None else None
-            return figure, clickData, clickData_store
+            # Adjust figure layout
+            adjust_figure_layout(figure)
+
+            # Update clickData store
+            click_data_store = click_data.copy() if click_data is not None else None
+            selected_click_data_store = selected_click_data.copy() if selected_click_data is not None else None
+
+            return (
+                figure,
+                click_data,
+                click_data_store,
+                selected_click_data_store,
+                page,
+                str(total_pages),
+                display_page,
+                goback_feature_importance,
+            )
 
         @app.callback(
             Output(component_id="feature_selector", component_property="figure"),
