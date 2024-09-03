@@ -98,7 +98,7 @@ def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
     size = min([dataset.shape[0], sample_size])
     # Randomly sample points from dataset
     rng = np.random.default_rng(seed=79)
-    sampled_instances = dataset[rng.randint(0, dataset.shape[0], size), :]
+    sampled_instances = dataset[rng.integers(0, dataset.shape[0], size), :]
     # Define normalization vector
     mean_vector = np.array(dataset, dtype=np.float32).std(axis=0)
     # Initialize the similarity matrix
