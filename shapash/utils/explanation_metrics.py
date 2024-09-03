@@ -97,7 +97,8 @@ def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
     # Select 500 points max to sample
     size = min([dataset.shape[0], sample_size])
     # Randomly sample points from dataset
-    sampled_instances = dataset[np.random.randint(0, dataset.shape[0], size), :]
+    rng = np.random.default_rng(seed=79)
+    sampled_instances = dataset[rng.integers(0, dataset.shape[0], size), :]
     # Define normalization vector
     mean_vector = np.array(dataset, dtype=np.float32).std(axis=0)
     # Initialize the similarity matrix
@@ -109,9 +110,9 @@ def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
             similarity_distance[i, j] = dist
             similarity_distance[j, i] = dist
     # Select top n_neighbors
-    ordered_X = np.sort(similarity_distance)[:, 1 : n_neighbors + 1]
+    ordered_x = np.sort(similarity_distance)[:, 1 : n_neighbors + 1]
     # Select the value of the distance that captures XX% of all distances (percentile)
-    return np.percentile(ordered_X.flatten(), percentile)
+    return np.percentile(ordered_x.flatten(), percentile)
 
 
 def find_neighbors(selection, dataset, model, mode, n_neighbors=10):

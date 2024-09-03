@@ -1,10 +1,17 @@
 import datetime
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from shapash.explainer.smart_explainer import SmartExplainer
 
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 from dash import dcc, html
+from dash.exceptions import PreventUpdate
+from plotly.graph_objs import Figure
+
+from shapash.webapp.utils.MyGraph import MyGraph
 
 
 def select_data_from_prediction_picking(round_dataframe: pd.DataFrame, selected_data: dict) -> pd.DataFrame:
@@ -240,29 +247,8 @@ def get_feature_from_features_groups(selected_feature: Optional[str], features_g
     if selected_feature in list_sub_features:
         for k, v in features_groups.items():
             if selected_feature in v:
-                selected_feature = k
+                return k
     return selected_feature
-
-
-def get_group_name(selected_feature: Optional[str], features_groups: Optional[dict]) -> Optional[str]:
-    """Get the group feature name if the selected feature is one of the groups.
-
-    Parameters
-    ----------
-    selected_feature : Optional[str]
-        Selected feature
-    features_groups : Optional[dict]
-        Groups names and corresponding list of features
-
-    Returns
-    -------
-    Optional[str]
-        Group feature name
-    """
-    group_name = (
-        selected_feature if (features_groups is not None and selected_feature in features_groups.keys()) else None
-    )
-    return group_name
 
 
 def get_indexes_from_datatable(data: list, list_index: Optional[list] = None) -> Optional[list]:
@@ -522,16 +508,20 @@ def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict:
                     dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style),
                     dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
                     dbc.Col(width=1),
-                    dbc.Col(
-                        dbc.Row(
-                            dbc.Label(format(row["feature_contrib"], ".4f"), width="auto", style={"padding-top": 0}),
-                            justify="end",
-                        ),
-                        width=2,
-                        className="id_card_solid",
-                    )
-                    if not np.isnan(row["feature_contrib"])
-                    else None,
+                    (
+                        dbc.Col(
+                            dbc.Row(
+                                dbc.Label(
+                                    format(row["feature_contrib"], ".4f"), width="auto", style={"padding-top": 0}
+                                ),
+                                justify="end",
+                            ),
+                            width=2,
+                            className="id_card_solid",
+                        )
+                        if not np.isnan(row["feature_contrib"])
+                        else None
+                    ),
                 ]
             )
         )
@@ -704,3 +694,168 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
         )
 
     return new_element
+
+
+def handle_page_navigation(triggered_input: str, page: Union[int, str], selected_feature: str) -> Tuple[int, str]:
+    """
+    Handle the navigation between different pages based on user input.
+
+    Args:
+        triggered_input (str): The input that triggered the navigation.
+        page (Union[int, str]): The current page number.
+        selected_feature (str): The currently selected feature.
+
+    Returns:
+        Tuple[int, str]: Updated page number and selected feature.
+    """
+    page = int(page)
+    if triggered_input == "page_left.n_clicks":
+        page -= 1
+        selected_feature = None
+    elif triggered_input == "page_right.n_clicks":
+        page += 1
+        selected_feature = None
+    elif triggered_input == "bool_groups.on":
+        page = 1
+        selected_feature = None
+    return page, selected_feature
+
+
+def update_click_data_on_subset_changes_if_needed(click_data: dict, triggered_input: str, nclicks_del: list) -> dict:
+    """
+    Update the click data when there are changes in the subset of data.
+
+    Args:
+        click_data (dict): The current click data.
+        triggered_input (str): The input that triggered the update.
+        nclicks_del (list): The number of delete clicks.
+
+    Returns:
+        dict: Updated click data.
+    """
+    if click_data and (
+        triggered_input in ["apply_filter.n_clicks", "reset_dropdown_button.n_clicks", "dataset.data"]
+        or ("del_dropdown_button" in triggered_input and None not in nclicks_del)
+    ):
+        click_data = update_click_data_on_subset_changes(click_data)
+    return click_data
+
+
+def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str:
+    """
+    Retrieve the selected feature from the click data.
+
+    Args:
+        click_data (dict): The click data.
+        inv_features_dict (dict): Dictionary mapping feature IDs to feature names.
+
+    Returns:
+        str: The selected feature, if any.
+    """
+    return inv_features_dict.get(get_feature_from_clicked_data(click_data)) if click_data else None
+
+
+def handle_group_display_logic(
+    bool_group: bool,
+    triggered_input: str,
+    selected_feature: str,
+    selected_click_data,
+    click_data: dict,
+    click_data_store: dict,
+    selected_click_data_store,
+    features_groups: dict,
+    features_dict: dict,
+) -> Tuple[str, str, dict]:
+    """
+    Handle the display logic for feature groups.
+
+    Args:
+        bool_group (bool): Whether to display feature groups.
+        triggered_input (str): The input that triggered the update.
+        selected_feature (str): The currently selected feature.
+        click_data (dict): The current click data.
+        click_data_store (dict): Stored click data.
+        features_groups (dict): Dictionary of feature groups.
+        features_dict (dict): Dictionary of features.
+
+    Returns:
+        Tuple[str, str, dict]: Updated selected feature, group name, and click data.
+    """
+    group_name = None
+    selected_feature_group = None
+    if features_groups and bool_group:
+        if triggered_input in ["card_global_feature_importance.n_clicks", "ember_global_feature_importance.n_clicks"]:
+            selected_feature_group = get_feature_from_features_groups(selected_feature, features_groups)
+        else:
+            selected_feature = None
+
+        group_name = (
+            selected_feature_group
+            if (features_groups is not None and selected_feature_group in features_groups.keys())
+            else None
+        )
+
+        if (triggered_input == "card_global_feature_importance.n_clicks") and (
+            selected_click_data_store == selected_click_data
+        ):
+            raise PreventUpdate
+
+        if (triggered_input == "card_global_feature_importance.n_clicks") and (click_data_store == click_data):
+            if group_name and selected_feature and selected_feature != group_name:
+                click_data["points"][0]["label"] = features_dict.get(group_name, group_name)
+            else:
+                click_data = None
+                group_name = None
+            selected_feature = None
+        elif triggered_input == "goback_feature_importance.n_clicks":
+            selected_click_data = None
+            click_data = None
+            group_name = None
+            selected_feature = None
+
+    return selected_feature, group_name, click_data, selected_click_data
+
+
+def determine_total_pages_and_display(
+    explainer: "SmartExplainer", features: int, bool_group: bool, group_name: str, page: int
+) -> Tuple[int, str, int]:
+    """
+    Determine the total number of pages and the display properties.
+
+    Args:
+        explainer (SmartExplainer): The explainer object.
+        features (int): Number of features to display per page.
+        bool_group (bool): Whether to display groups.
+        group_name (str): Name of the feature group.
+        page (int): Current page number.
+
+    Returns:
+        Tuple[int, str, int]: Total pages, display properties, and updated page number.
+    """
+    display_groups = explainer.features_groups is not None and bool_group
+    nb_features = len(explainer.features_imp_groups) if display_groups else len(explainer.features_imp)
+    total_pages = nb_features // features + 1
+    if (total_pages == 1) or (group_name):
+        display_page = {"display": "none"}
+    else:
+        display_page = {"display": "flex"}
+        page = (page - 1) % total_pages + 1
+
+    return total_pages, display_page, page
+
+
+def adjust_figure_layout(figure: Figure) -> None:
+    """
+    Adjust the layout of the figure.
+
+    Args:
+        figure (Figure): The figure to adjust.
+
+    Returns:
+        None
+    """
+    MyGraph.adjust_graph_static(figure, x_ax="Mean absolute Contribution")
+    figure.layout.clickmode = "event+select"
+
+    nb_car = max([len(figure.data[0].y[i]) for i in range(len(figure.data[0].y))])
+    figure.update_layout(yaxis=dict(tickfont={"size": min(round(500 / nb_car), 12)}))

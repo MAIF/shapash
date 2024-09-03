@@ -30,10 +30,11 @@ class TestExplanationMetrics(unittest.TestCase):
         epsilon = 0
         expected = 0.5
         t = _compute_distance(x1, x2, mean_vector, epsilon)
-        assert t == expected
+        assert np.isclose(t, expected)
 
     def test_compute_similarities(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(5, 4)), columns=list("ABCD")).values
+        rng = np.random.default_rng(seed=79)
+        df = pd.DataFrame(rng.integers(0, 100, size=(5, 4)), columns=list("ABCD")).values
         instance = df[0, :]
         expected_len = 5
         expected_dist = 0
@@ -42,12 +43,14 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t[0] == expected_dist
 
     def test_get_radius(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(5, 4)), columns=list("ABCD")).values
+        rng = np.random.default_rng(seed=79)
+        df = pd.DataFrame(rng.integers(0, 100, size=(5, 4)), columns=list("ABCD")).values
         t = _get_radius(df, n_neighbors=3)
         assert t > 0
 
     def test_find_neighbors(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list("ABCD"))
+        rng = np.random.default_rng(seed=79)
+        df = pd.DataFrame(rng.integers(0, 100, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]
         X = df.iloc[:, :-1]
         y = df.iloc[:, -1]
@@ -58,9 +61,10 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t[0].shape[1] == X.shape[1] + 2
 
     def test_shap_neighbors(self):
-        df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list("ABCD"))
-        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list("EFGH"))
-        instance = df.values[:2, :]
+        rng = np.random.default_rng(seed=79)
+        df = pd.DataFrame(rng.integers(0, 100, size=(15, 4)), columns=list("ABCD"))
+        contrib = pd.DataFrame(rng.integers(10, size=(15, 4)), columns=list("EFGH"))
+        instance = df.iloc[:2, :].values
         extra_cols = np.repeat(np.array([0, 0]), 2).reshape(2, -1)
         instance = np.append(instance, extra_cols, axis=1)
         mode = "regression"
@@ -70,7 +74,8 @@ class TestExplanationMetrics(unittest.TestCase):
         assert t[2].shape == (len(df.columns),)
 
     def test_get_min_nb_features(self):
-        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list("ABCD"))
+        rng = np.random.default_rng(seed=79)
+        contrib = pd.DataFrame(rng.integers(10, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]
         distance = 0.1
         mode = "regression"
@@ -80,7 +85,8 @@ class TestExplanationMetrics(unittest.TestCase):
         assert len(t) == len(selection)
 
     def test_get_distance(self):
-        contrib = pd.DataFrame(np.random.randint(10, size=(15, 4)), columns=list("ABCD"))
+        rng = np.random.default_rng(seed=79)
+        contrib = pd.DataFrame(rng.integers(10, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]
         nb_features = 2
         mode = "regression"
