@@ -971,8 +971,6 @@ class SmartPlotter:
             width=width,
             height=height,
             title=dict_t,
-            # xaxis=dict(range=[0, 0.5]),
-            # yaxis=dict(autorange=True),
             xaxis_title=dict_xaxis,
             yaxis_title=dict_yaxis,
             hovermode="closest",
