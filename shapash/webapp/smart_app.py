@@ -35,7 +35,6 @@ from shapash.webapp.utils.callbacks import (
     get_selected_feature,
     handle_group_display_logic,
     handle_page_navigation,
-    plot_features_importance,
     select_data_from_bool_filters,
     select_data_from_date_filters,
     select_data_from_numeric_filters,
@@ -1810,8 +1809,16 @@ class SmartApp:
             selection = get_indexes_from_datatable(data, self.list_index)
 
             # Plot features importance
-            figure = plot_features_importance(
-                self.explainer, features, page, selection, label, group_name, bool_group, click_zoom
+            page_to_plot = 1 if group_name else page
+            zoom_active = get_figure_zoom(click_zoom)
+            figure = self.explainer.plot.features_importance(
+                max_features=features,
+                page=page_to_plot,
+                selection=selection,
+                label=label,
+                group_name=group_name,
+                display_groups=bool_group,
+                zoom=zoom_active,
             )
 
             # Determine total pages and display settings

@@ -816,46 +816,6 @@ def handle_group_display_logic(
     return selected_feature, group_name, click_data, selected_click_data
 
 
-def plot_features_importance(
-    explainer: "SmartExplainer",
-    features: int,
-    page: int,
-    selection: list,
-    label: Union[int, str],
-    group_name: str,
-    bool_group: bool,
-    click_zoom: bool,
-) -> Figure:
-    """
-    Plot the features importance graph.
-
-    Args:
-        explainer (SmartExplainer): The explainer object.
-        features (int): Number of features to display.
-        page (int): Current page number.
-        selection (list): List of selected features.
-        label (Union[int, str]): Label for the plot.
-        group_name (str): Name of the feature group.
-        bool_group (bool): Whether to display groups.
-        click_zoom (bool): Whether zoom is enabled.
-
-    Returns:
-        Figure: The features importance plot.
-    """
-    page_to_plot = 1 if group_name else page
-    # Zoom is False by Default. It becomes True if we click on it
-    zoom_active = get_figure_zoom(click_zoom)
-    return explainer.plot.features_importance(
-        max_features=features,
-        page=page_to_plot,
-        selection=selection,
-        label=label,
-        group_name=group_name,
-        display_groups=bool_group,
-        zoom=zoom_active,
-    )
-
-
 def determine_total_pages_and_display(
     explainer: "SmartExplainer", features: int, bool_group: bool, group_name: str, page: int
 ) -> Tuple[int, str, int]:
