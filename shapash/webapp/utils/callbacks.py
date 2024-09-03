@@ -795,12 +795,6 @@ def handle_group_display_logic(
             else None
         )
 
-        print("selected_click_data_store == selected_click_data: ", selected_click_data_store == selected_click_data)
-        print("click_data_store == click_data: ", click_data_store == click_data)
-        print("selected_feature: ", selected_feature)
-        print("group_name", group_name)
-        print("features_dict.get(group_name, group_name)", features_dict.get(group_name, group_name))
-
         if (triggered_input == "card_global_feature_importance.n_clicks") and (
             selected_click_data_store == selected_click_data
         ):
