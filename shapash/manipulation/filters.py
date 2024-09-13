@@ -113,7 +113,11 @@ def cutoff_contributions(mask, k=10):
     pd.Dataframe
         Mask where only the k-top contributions are considered.
     """
-    return mask.replace(False, np.nan).cumsum(axis=1).isin(range(1, k + 1))
+    # Convert False values to np.nan explicitly without changing data type
+    mask_nan = mask.astype(float).replace(0, np.nan)
+
+    # Compute the cumulative sum and check if the index is within the top-k
+    return mask_nan.cumsum(axis=1).isin(range(1, k + 1))
 
 
 def combine_masks(masks_list):

@@ -68,7 +68,7 @@ setup(
     version=version_d["__version__"],
     python_requires=">3.8, <3.13",
     url="https://github.com/MAIF/shapash",
-    author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre",
+    author="Yann Golhen, Sebastien Bidault, Yann Lagre, Maxime Gendre, Thomas Bouché, Maxime Lecardonnel, Guillaume Vignal",
     author_email="yann.golhen@maif.fr",
     description="Shapash is a Python library which aims to make machine learning interpretable and understandable by everyone.",
     long_description=long_description,

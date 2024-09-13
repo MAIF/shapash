@@ -226,23 +226,23 @@ class MultiDecorator:
         arg_tup = list(zip(s_contribs, var_dicts, xs_sorted, masks))
         return self.delegate("summarize", arg_tup, columns_dict, features_dict)
 
-    def compute_features_import(self, contributions):
+    def compute_features_import(self, contributions, norm=1):
         """
         Compute a relative features importance, sum of absolute values
-         ​​of the contributions for each
-         features importance compute in base 100
+        ​​of the contributions for each
+        features importance compute in base 100
 
         Parameters
         ----------
         contributions : list
-             list of pandas.DataFrames containing contributions
+            list of pandas.DataFrames containing contributions
 
         Returns
         -------
         list
             list of features importance pandas.series
         """
-        return self.delegate("compute_features_import", contributions)
+        return self.delegate("compute_features_import", contributions, norm)
 
     def compute_grouped_contributions(self, contributions, features_groups):
         """

@@ -301,11 +301,11 @@ class SmartState:
         """
         return summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict)
 
-    def compute_features_import(self, contributions):
+    def compute_features_import(self, contributions, norm=1):
         """
         Compute a relative features importance, sum of absolute values
-         ​​of the contributions for each
-         features importance compute in base 100
+        ​​of the contributions for each
+        features importance compute in base 100
         Parameters
         ----------
         contributions: pd.DataFrame
@@ -317,7 +317,7 @@ class SmartState:
             feature importance, One row by feature,
             index of the serie = contributions.columns
         """
-        return compute_features_import(contributions)
+        return compute_features_import(contributions, norm)
 
     def compute_grouped_contributions(self, contributions, features_groups):
         """
