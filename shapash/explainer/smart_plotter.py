@@ -452,7 +452,7 @@ class SmartPlotter:
         Parameters:
         - fig: The Plotly figure object to update.
         - xs: A list of x-axis label strings.
-        - zoom: BoOverallQuaolean indicating whether zoom is enabled.
+        - zoom: Boolean indicating whether zoom is enabled.
         """
 
         # Define common x-axis parameters
