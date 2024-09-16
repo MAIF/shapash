@@ -452,7 +452,7 @@ class SmartPlotter:
         Parameters:
         - fig: The Plotly figure object to update.
         - xs: A list of x-axis label strings.
-        - zoom: Boolean indicating whether zoom is enabled.
+        - zoom: BoOverallQuaolean indicating whether zoom is enabled.
         """
 
         # Define common x-axis parameters
@@ -1621,6 +1621,8 @@ class SmartPlotter:
                 col_scale, cmin, cmax = self.tuning_colorscale(self.explainer.y_pred.loc[list_ind], keep_90_pct=True)
 
         # Subset
+        self.explainer.x_init[col_name].fillna(-999, inplace=True)
+
         if self.explainer.postprocessing_modifications:
             feature_values = self.explainer.x_contrib_plot.loc[list_ind, col_name]
         else:
