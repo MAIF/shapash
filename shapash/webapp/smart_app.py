@@ -411,9 +411,8 @@ class SmartApp:
             page_action="none",
             fixed_rows={"headers": True, "data": 0},
             fixed_columns={"headers": True, "data": 0},
-            sort_action="custom",
+            sort_action="native",
             sort_mode="multi",
-            sort_by=[],
             style_table={"overflowY": "auto", "overflowX": "auto"},
             style_header={"height": "30px"},
             style_cell={
