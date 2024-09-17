@@ -148,6 +148,11 @@ def select_data_from_numeric_filters(
         Subset dataframe
     """
     # get list of ID
+    
+    # Remplacer les NaN par une valeur spécifique avant le filtrage
+    for feature in val_feature:
+        df[feature].fillna(-999, inplace=True) 
+    
     lower_id = [id_lower_modality[i]["index"] for i in range(len(id_lower_modality))]
     # If there is some filters
     if len(lower_id) > 0:
@@ -635,38 +640,41 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     html.Div
         Div containing the modalities selection options
     """
-    if type(round_dataframe[value].iloc[0]) == bool:
+
+    df_column = round_dataframe[value].replace({np.nan : -999})
+
+    if type(df_column.iloc[0]) == bool:
         new_element = html.Div(
             dcc.RadioItems(
-                [{"label": val, "value": val} for val in round_dataframe[value].unique()],
+                [{"label": val, "value": val} for val in df_column.unique()],
                 id={"type": "dynamic-bool", "index": id["index"]},
-                value=round_dataframe[value].iloc[0],
+                value=df_column.iloc[0],
                 inline=False,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) == str) | (
-        (type(round_dataframe[value].iloc[0]) == np.int64) & (len(round_dataframe[value].unique()) <= 20)
+    elif (type(df_column.iloc[0]) == str) | (
+        (type(df_column.iloc[0]) == np.int64) & (len(df_column.unique()) <= 20)
     ):
         new_element = html.Div(
             dcc.Dropdown(
                 id={"type": "dynamic-str", "index": id["index"]},
-                options=[{"label": i, "value": i} for i in np.sort(round_dataframe[value].unique())],
+                options=[{"label": i, "value": i} for i in np.sort(df_column.unique())],
                 multi=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) is pd.Timestamp) | (
-        type(round_dataframe[value].iloc[0]) is datetime.datetime
+    elif (type(df_column.iloc[0]) is pd.Timestamp) | (
+        type(df_column.iloc[0]) is datetime.datetime
     ):
         new_element = (
             html.Div(
                 dcc.DatePickerRange(
                     id={"type": "dynamic-date", "index": id["index"]},
-                    min_date_allowed=round_dataframe[value].min(),
-                    max_date_allowed=round_dataframe[value].max(),
-                    start_date=round_dataframe[value].min(),
-                    end_date=round_dataframe[value].max(),
+                    min_date_allowed=df_column.min(),
+                    max_date_allowed=df_column.max(),
+                    start_date=df_column.min(),
+                    end_date=df_column.max(),
                 ),
                 style={"width": "65%", "margin-left": "20px"},
             ),
@@ -682,7 +690,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
                     type="number",
                     style={"width": "60px"},
                 ),
-                " <= {} in [{}, {}]<= ".format(value, round_dataframe[value].min(), round_dataframe[value].max()),
+                " <= {} in [{}, {}]<= ".format(value, df_column.min(), df_column.max()),
                 dcc.Input(
                     id={"type": "upper", "index": id["index"]},
                     value=upper_value,
