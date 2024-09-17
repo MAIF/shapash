@@ -111,6 +111,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.proba_values = None
         self.smart_explainer.features_desc = dict(self.x_init.nunique())
         self.smart_explainer.features_compacity = self.features_compacity
+        self.smart_explainer.inv_features_dict = {v: k for k, v in self.smart_explainer.features_dict.items()}
 
     def test_define_style_attributes(self):
         # clear style attributes
@@ -123,7 +124,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(list(self.smart_explainer.plot._style_dict.keys())) > 0
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_plotter.SmartPlotter.local_pred")
+    @patch("shapash.explainer.smart_plotter.SmartPlotter._local_pred")
     def test_local_plot_1(self, local_pred, filter):
         """
         Unit test Local plot 1
@@ -190,7 +191,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_plotter.SmartPlotter.local_pred")
+    @patch("shapash.explainer.smart_plotter.SmartPlotter._local_pred")
     def test_local_plot_4(self, local_pred, select_lines, filter):
         """
         Unit test local plot 4
@@ -253,7 +254,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_plotter.SmartPlotter.local_pred")
+    @patch("shapash.explainer.smart_plotter.SmartPlotter._local_pred")
     def test_local_plot_5(self, local_pred, select_lines, filter):
         """
         Unit test local plot 5
@@ -347,7 +348,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_plotter.SmartPlotter.local_pred")
+    @patch("shapash.explainer.smart_plotter.SmartPlotter._local_pred")
     def test_local_plot_groups_features(self, local_pred, select_lines, filter):
         """
         Unit test local plot 6 for groups of features
@@ -515,7 +516,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_plotter.SmartPlotter.local_pred")
+    @patch("shapash.explainer.smart_plotter.SmartPlotter._local_pred")
     def test_local_plot_multi_index(self, local_pred, select_lines, filter):
         """
         Unit test local plot multi index
@@ -584,7 +585,7 @@ class TestSmartPlotter(unittest.TestCase):
         Unit test get selection
         """
         line = ["person_A"]
-        output = self.smart_explainer.plot.get_selection(line, self.var_dict, self.x_sorted, self.contrib_sorted)
+        output = self.smart_explainer.plot._get_selection(line, self.var_dict, self.x_sorted, self.contrib_sorted)
         expected_output = np.array([0, 1]), np.array(["PhD", 34]), np.array([-3.4, 0.78])
         assert len(output) == 3
         assert np.array_equal(output[0], expected_output[0])
@@ -599,7 +600,7 @@ class TestSmartPlotter(unittest.TestCase):
         var_dict = np.array([0, 1])
         x_sorted = np.array(["PhD", 34])
         contrib_sorted = np.array([-3.4, 0.78])
-        output = self.smart_explainer.plot.apply_mask_one_line(line, var_dict, x_sorted, contrib_sorted)
+        output = self.smart_explainer.plot._apply_mask_one_line(line, var_dict, x_sorted, contrib_sorted)
         expected_output = np.array([0]), np.array(["PhD"]), np.array([-3.4])
         assert len(output) == 3
         assert np.array_equal(output[0], expected_output[0])
@@ -614,7 +615,7 @@ class TestSmartPlotter(unittest.TestCase):
         var_dict = ["X1", "X2"]
         x_val = ["PhD", 34]
         contrib = [-3.4, 0.78]
-        var_dict, x_val, contrib = self.smart_explainer.plot.check_masked_contributions(line, var_dict, x_val, contrib)
+        var_dict, x_val, contrib = self.smart_explainer.plot._check_masked_contributions(line, var_dict, x_val, contrib)
         expected_var_dict = ["X1", "X2"]
         expected_x_val = ["PhD", 34]
         expected_contrib = [-3.4, 0.78]
@@ -633,7 +634,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.masked_contributions = pd.DataFrame(
             data=[[0.0, 2.5], [0.0, 1.6]], columns=["masked_neg", "masked_pos"], index=["person_A", "person_B"]
         )
-        var_dict, x_val, contrib = self.smart_explainer.plot.check_masked_contributions(line, var_dict, x_val, contrib)
+        var_dict, x_val, contrib = self.smart_explainer.plot._check_masked_contributions(line, var_dict, x_val, contrib)
         expected_var_dict = ["X1", "X2", "Hidden Positive Contributions"]
         expected_x_val = ["PhD", 34, ""]
         expected_contrib = [-3.4, 0.78, 2.5]
@@ -655,7 +656,7 @@ class TestSmartPlotter(unittest.TestCase):
             )
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
         self.smart_explainer._case = "regression"
-        fig_output = self.smart_explainer.plot.plot_bar_chart("ind", var_dict, x_val, contributions)
+        fig_output = self.smart_explainer.plot._plot_bar_chart("ind", var_dict, x_val, contributions)
         for part in list(zip(fig_output.data, expected_output_fig.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
@@ -678,7 +679,7 @@ class TestSmartPlotter(unittest.TestCase):
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
 
         self.smart_explainer._case = "regression"
-        fig_output = self.smart_explainer.plot.plot_bar_chart("ind", var_dict, x_val, contributions)
+        fig_output = self.smart_explainer.plot._plot_bar_chart("ind", var_dict, x_val, contributions)
         for part in list(zip(fig_output.data, expected_output_fig.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
@@ -1120,7 +1121,7 @@ class TestSmartPlotter(unittest.TestCase):
         Unit test plot features import 1
         """
         serie1 = pd.Series([0.131, 0.51], index=["col1", "col2"])
-        output = self.smart_explainer.plot.plot_features_import(serie1)
+        output = self.smart_explainer.plot._plot_features_import(serie1)
         data = go.Bar(x=serie1, y=serie1.index, name="Global", orientation="h")
 
         expected_output = go.Figure(data=data)
@@ -1135,7 +1136,7 @@ class TestSmartPlotter(unittest.TestCase):
         """
         serie1 = pd.Series([0.131, 0.51], index=["col1", "col2"])
         serie2 = pd.Series([0.33, 0.11], index=["col1", "col2"])
-        output = self.smart_explainer.plot.plot_features_import(serie1, serie2)
+        output = self.smart_explainer.plot._plot_features_import(serie1, serie2)
         data1 = go.Bar(x=serie1, y=serie1.index, name="Global", orientation="h")
         data2 = go.Bar(x=serie2, y=serie2.index, name="Subset", orientation="h")
         expected_output = go.Figure(data=[data2, data1])
@@ -1154,7 +1155,7 @@ class TestSmartPlotter(unittest.TestCase):
         """
         xpl = self.smart_explainer
         xpl.explain_data = None
-        output = xpl.plot.features_importance(selection=["person_A", "person_B"])
+        output = xpl.plot.features_importance(selection=["person_A", "person_B"], zoom=True)
 
         data1 = go.Bar(x=np.array([0.2296, 0.7704]), y=np.array(["Age", "Education"]), name="Subset", orientation="h")
 
@@ -1170,6 +1171,31 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array_equal(output.data[1].y, expected_output.data[1].y)
         assert output.data[1].name == expected_output.data[1].name
         assert output.data[1].orientation == expected_output.data[1].orientation
+
+    def test_features_importance_cumulative_1(self):
+        """
+        Unit test features importance cumulative 1
+        """
+        xpl = self.smart_explainer
+        xpl.explain_data = None
+        output = xpl.plot.features_importance(mode="cumulative", selection=["person_A", "person_B"], zoom=True)
+
+        assert len(output.data) == 2
+        assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+
+    def test_features_importance_local_1(self):
+        """
+        Unit test features importance local 1
+        """
+        xpl = self.smart_explainer
+        xpl.explain_data = None
+        output = xpl.plot.features_importance(mode="global-local", selection=["person_A", "person_B"], zoom=True)
+
+        assert len(output.data) == 3
+        assert output.data[0].type == "bar"
+        assert output.data[1].type == "bar"
+        assert output.data[2].type == "bar"
 
     def test_features_importance_2(self):
         """
@@ -1198,6 +1224,41 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array_equal(output.data[1].y, expected_output.data[1].y)
         assert output.data[1].name == expected_output.data[1].name
         assert output.data[1].orientation == expected_output.data[1].orientation
+
+    def test_features_importance_cumulative_2(self):
+        """
+        Unit test features importance cumulative 2
+        """
+        xpl = self.smart_explainer
+        # regression
+        xpl.contributions = self.contrib1
+        xpl.backend.state = SmartState()
+        xpl.explain_data = None
+        xpl._case = "regression"
+        xpl.state = SmartState()
+        output = xpl.plot.features_importance(mode="cumulative", selection=["person_A", "person_B"])
+
+        assert len(output.data) == 2
+        assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+
+    def test_features_importance_local_2(self):
+        """
+        Unit test features importance local 2
+        """
+        xpl = self.smart_explainer
+        # regression
+        xpl.contributions = self.contrib1
+        xpl.backend.state = SmartState()
+        xpl.explain_data = None
+        xpl._case = "regression"
+        xpl.state = SmartState()
+        output = xpl.plot.features_importance(mode="global-local", selection=["person_A", "person_B"])
+
+        assert len(output.data) == 3
+        assert output.data[0].type == "bar"
+        assert output.data[1].type == "bar"
+        assert output.data[2].type == "bar"
 
     def test_features_importance_3(self):
         """
@@ -1248,6 +1309,103 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].name == expected_output.data[0].name
         assert output.data[0].orientation == expected_output.data[0].orientation
 
+    def test_features_importance_cumulative_3(self):
+        """
+        Unit test features importance cumulative for groups of features
+        """
+        x_init = pd.DataFrame(
+            data=np.array([["PhD", 34, 1], ["Master", 27, 0]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        contrib = pd.DataFrame(
+            data=np.array([[-3.4, 0.78, 1.2], [1.2, 3.6, -0.3]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        smart_explainer = SmartExplainer(model=self.model)
+        smart_explainer.x_encoded = x_init
+        smart_explainer.x_init = x_init
+        smart_explainer.postprocessing_modifications = False
+        smart_explainer.features_imp_groups = None
+        smart_explainer.features_imp = None
+        smart_explainer.features_groups = {"group0": ["X1", "X2"]}
+        smart_explainer.contributions = [contrib, -contrib]
+        smart_explainer.features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.inv_features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.model = self.smart_explainer.model
+        smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
+        smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
+        smart_explainer.backend.state = MultiDecorator(SmartState())
+        smart_explainer.explain_data = None
+        smart_explainer.state = MultiDecorator(SmartState())
+        smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
+            smart_explainer.contributions, smart_explainer.features_groups
+        )
+        smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups
+        )
+
+        output = smart_explainer.plot.features_importance(mode="cumulative")
+
+        assert len(output.data) == 2
+        assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+
+    def test_features_importance_local_3(self):
+        """
+        Unit test features importance local for groups of features
+        """
+        x_init = pd.DataFrame(
+            data=np.array([["PhD", 34, 1], ["Master", 27, 0]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        contrib = pd.DataFrame(
+            data=np.array([[-3.4, 0.78, 1.2], [1.2, 3.6, -0.3]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        smart_explainer = SmartExplainer(model=self.model)
+        smart_explainer.x_encoded = x_init
+        smart_explainer.x_init = x_init
+        smart_explainer.postprocessing_modifications = False
+        smart_explainer.features_imp_groups = None
+        smart_explainer.features_imp = None
+        smart_explainer.features_groups = {"group0": ["X1", "X2"]}
+        smart_explainer.contributions = [contrib, -contrib]
+        smart_explainer.features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.inv_features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.model = self.smart_explainer.model
+        smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
+        smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
+        smart_explainer.backend.state = MultiDecorator(SmartState())
+        smart_explainer.explain_data = None
+        smart_explainer.state = MultiDecorator(SmartState())
+        smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
+            smart_explainer.contributions, smart_explainer.features_groups
+        )
+        smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups
+        )
+        smart_explainer.features_imp_groups_local_lev1 = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups, norm=3
+        )
+        smart_explainer.features_imp_groups_local_lev2 = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups, norm=7
+        )
+
+        output = smart_explainer.plot.features_importance(mode="global-local")
+
+        assert len(output.data) == 3
+        assert output.data[0].type == "bar"
+        assert output.data[1].type == "bar"
+        assert output.data[2].type == "bar"
+
     def test_features_importance_4(self):
         """
         Unit test features importance for groups of features when displaying a group
@@ -1297,12 +1455,103 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].name == expected_output.data[0].name
         assert output.data[0].orientation == expected_output.data[0].orientation
 
+    def test_features_importance_cumulative_4(self):
+        """
+        Unit test features importance cumulative for groups of features when displaying a group
+        """
+        x_init = pd.DataFrame(
+            data=np.array([["PhD", 34, 1], ["Master", 27, 0]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        contrib = pd.DataFrame(
+            data=np.array([[-3.4, 0.78, 1.2], [1.2, 3.6, -0.3]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        smart_explainer = SmartExplainer(model=self.model)
+        smart_explainer.x_encoded = x_init
+        smart_explainer.x_init = x_init
+        smart_explainer.postprocessing_modifications = False
+        smart_explainer.features_imp_groups = None
+        smart_explainer.features_imp = None
+        smart_explainer.features_groups = {"group0": ["X1", "X2"]}
+        smart_explainer.contributions = [contrib, -contrib]
+        smart_explainer.features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.inv_features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.model = self.smart_explainer.model
+        smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
+        smart_explainer.backend.state = MultiDecorator(SmartState())
+        smart_explainer.explain_data = None
+        smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
+        smart_explainer.state = smart_explainer.backend.state
+        smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
+            smart_explainer.contributions, smart_explainer.features_groups
+        )
+        smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups
+        )
+
+        output = smart_explainer.plot.features_importance(mode="cumulative", group_name="group0")
+
+        assert len(output.data) == 2
+        assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+
+    def test_features_importance_local_4(self):
+        """
+        Unit test features importance local for groups of features when displaying a group
+        """
+        x_init = pd.DataFrame(
+            data=np.array([["PhD", 34, 1], ["Master", 27, 0]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        contrib = pd.DataFrame(
+            data=np.array([[-3.4, 0.78, 1.2], [1.2, 3.6, -0.3]]),
+            columns=["X1", "X2", "X3"],
+            index=["person_A", "person_B"],
+        )
+
+        smart_explainer = SmartExplainer(model=self.model)
+        smart_explainer.x_encoded = x_init
+        smart_explainer.x_init = x_init
+        smart_explainer.postprocessing_modifications = False
+        smart_explainer.features_imp_groups = None
+        smart_explainer.features_imp = None
+        smart_explainer.features_groups = {"group0": ["X1", "X2"]}
+        smart_explainer.contributions = [contrib, -contrib]
+        smart_explainer.features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.inv_features_dict = {"X1": "X1", "X2": "X2", "X3": "X3", "group0": "group0"}
+        smart_explainer.model = self.smart_explainer.model
+        smart_explainer.backend = ShapBackend(model=self.smart_explainer.model)
+        smart_explainer.backend.state = MultiDecorator(SmartState())
+        smart_explainer.explain_data = None
+        smart_explainer._case, smart_explainer._classes = check_model(self.smart_explainer.model)
+        smart_explainer.state = smart_explainer.backend.state
+        smart_explainer.contributions_groups = smart_explainer.state.compute_grouped_contributions(
+            smart_explainer.contributions, smart_explainer.features_groups
+        )
+        smart_explainer.features_imp_groups = smart_explainer.state.compute_features_import(
+            smart_explainer.contributions_groups
+        )
+
+        output = smart_explainer.plot.features_importance(mode="global-local", group_name="group0")
+
+        assert len(output.data) == 3
+        assert output.data[0].type == "bar"
+        assert output.data[1].type == "bar"
+        assert output.data[2].type == "bar"
+
     def test_local_pred_1(self):
         xpl = self.smart_explainer
         xpl.proba_values = pd.DataFrame(
             data=np.array([[0.4, 0.6], [0.3, 0.7]]), columns=["class_1", "class_2"], index=xpl.x_encoded.index.values
         )
-        output = xpl.plot.local_pred("person_A", label=0)
+        output = xpl.plot._local_pred("person_A", label=0)
         assert isinstance(output, float)
 
     def test_plot_line_comparison_1(self):
@@ -1338,7 +1587,7 @@ class TestSmartPlotter(unittest.TestCase):
                 )
             )
         expected_output = go.Figure(data=fig)
-        output = xpl.plot.plot_line_comparison(
+        output = xpl.plot._plot_line_comparison(
             ["person_A", "person_B"], var_dict, contributions, predictions=predictions, dict_features=features_dict
         )
 
@@ -1367,7 +1616,7 @@ class TestSmartPlotter(unittest.TestCase):
         )
         predictions = [data.loc[id] for id in index]
 
-        output = xpl.plot.plot_line_comparison(
+        output = xpl.plot._plot_line_comparison(
             index,
             var_dict,
             contributions,

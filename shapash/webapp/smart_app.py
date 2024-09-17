@@ -2134,7 +2134,7 @@ class SmartApp:
                     selected_contrib = get_id_card_contrib(
                         self.explainer.data, index, self.explainer.features_dict, self.explainer.columns_dict, label_num
                     )
-                    proba = self.explainer.plot.local_pred(index, label_num)
+                    proba = self.explainer.plot._local_pred(index, label_num)
                     title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
                     _, _, predicted_label_value = self.explainer.check_label_name(
                         selected_row.loc["_predict_", "feature_value"]

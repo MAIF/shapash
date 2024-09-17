@@ -26,8 +26,8 @@ repos:
         exclude: ^(docs/|gdocs/)
     -   id: check-added-large-files
         args: ['--maxkb=500']
-    - id: no-commit-to-branch
-      args: ['--branch', 'master', '--branch', 'develop']
+    -   id: no-commit-to-branch
+        args: ['--branch', 'master', '--branch', 'develop']
 -   repo: https://github.com/psf/black
     rev: 21.12b0
     hooks:

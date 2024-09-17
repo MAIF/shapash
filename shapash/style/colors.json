@@ -28,9 +28,19 @@
       "rgb(0, 70, 92)"
     ],
     "contrib_distribution": "rgb(211, 211, 211)",
+    "feature_contributions_cumulative": [
+      "rgb(255, 55, 55)",
+      "rgb(255, 166, 0)",
+      "rgb(255, 200, 100)",
+      "rgb(55, 190, 255)",
+      "rgb(0, 0, 255)",
+      "rgb(0, 0, 0)"
+    ],
     "featureimp_bar": {
       "1": "rgba(0, 154, 203, 1)",
-      "2": "rgba(223, 103, 0, 0.8)"
+      "2": "rgba(223, 103, 0, 0.8)",
+      "3": "rgba(240, 195, 162, 0.8)",
+      "4": "rgba(245, 122, 0, 0.8)"
     },
     "featureimp_groups": {
       "0": "rgb(10, 204, 143)",
@@ -128,9 +138,19 @@
       "rgb(255, 77, 7)"
     ],
     "contrib_distribution": "rgb(211, 211, 211)",
+    "feature_contributions_cumulative": [
+      "rgb(255, 55, 55)",
+      "rgb(255, 166, 0)",
+      "rgb(255, 200, 100)",
+      "rgb(55, 190, 255)",
+      "rgb(0, 0, 255)",
+      "rgb(0, 0, 0)"
+    ],
     "featureimp_bar": {
       "1": "rgba(244, 192, 0, 1.0)",
-      "2": "rgba(52, 55, 54, 0.7)"
+      "2": "rgba(52, 55, 54, 0.7)",
+      "3": "rgba(103, 208, 255, 0.8)",
+      "4": "rgba(0, 98, 128, 0.8)"
     },
     "featureimp_groups": {
       "0": "rgb(245, 133, 24)",
