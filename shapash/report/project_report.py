@@ -316,7 +316,7 @@ class ProjectReport:
                     )
         if multivariate_analysis:
             print_md("### Multivariate analysis")
-            fig_corr = self.explainer.plot.correlations(
+            fig_corr = self.explainer.plot.correlations_plot(
                 self.df_train_test,
                 optimized=True,
                 facet_col="data_train_test",

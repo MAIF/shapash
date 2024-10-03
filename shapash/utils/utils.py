@@ -323,3 +323,61 @@ def convert_string_to_int_keys(input_dict: dict) -> dict:
     dict
     """
     return {int(k): v for k, v in input_dict.items()}
+
+
+def tuning_colorscale(init_colorscale, values, keep_90_pct=False):
+    """
+    Adjusts the color scale based on the distribution of points.
+
+    This function modifies the color scale used for visualization according to
+    the distribution of the provided values. Optionally, it can exclude the top and bottom
+    5% of values to focus on the core distribution of data.
+
+    Parameters
+    ----------
+    values : pd.DataFrame
+        A one-column DataFrame containing the values for which quantiles need to be calculated.
+    keep_90_pct : bool, optional
+        If True, the function adjusts the color scale to cover the central 90% of the data,
+        excluding the lowest 5% and the highest 5%. Defaults to False.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the adjusted color scale, the minimum value, and the maximum value
+        used for the color scale adjustment.
+    """
+    # Extract the first column of values
+    data = values.iloc[:, 0]
+
+    # Initialize variables for min and max values
+    cmin, cmax = None, None
+
+    # Check if there is only one unique value
+    if data.nunique() == 1:
+        unique_value = data.iloc[0]
+        cmin, cmax = unique_value, unique_value
+        # Create a color scale where all values map to the unique value
+        color_scale = [(i / (len(init_colorscale) - 1), color) for i, color in enumerate(init_colorscale)]
+        return color_scale, cmin, cmax
+
+    if keep_90_pct:
+        # Calculate quantiles to exclude the extreme 10% of values
+        lower_quantile = data.quantile(0.05)
+        upper_quantile = data.quantile(0.95)
+        data_tmp = data[(data >= lower_quantile) & (data <= upper_quantile)]
+        if (len(data_tmp) > 200) and (data_tmp.nunique() > 1):
+            data = data_tmp
+        cmin, cmax = data.min(), data.max()
+
+    # Describe the data to get basic statistics
+    desc_df = data.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+
+    # Extract the initial min and max values
+    min_pred, max_init = desc_df.loc[["min", "max"]]
+
+    # Adjust percentile values for color scale creation
+    desc_pct_df = (desc_df.loc[~desc_df.index.isin(["count", "mean", "std"])] - min_pred) / (max_init - min_pred)
+    color_scale = [(value, color) for value, color in zip(desc_pct_df.values.flatten(), init_colorscale)]
+
+    return color_scale, cmin, cmax

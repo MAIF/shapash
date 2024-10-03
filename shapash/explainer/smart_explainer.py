@@ -331,6 +331,7 @@ class SmartExplainer:
             else self._compile_additional_features_dict(additional_features_dict)
         )
         self.additional_data = self._compile_additional_data(additional_data)
+        self.plot._tuning_round_digit()
 
     def _get_contributions_from_backend_or_user(self, x, contributions):
         # Computing contributions using backend
@@ -1320,3 +1321,31 @@ class SmartExplainer:
             if rm_working_dir:
                 shutil.rmtree(working_dir)
             raise e
+
+    def _local_pred(self, index, label=None):
+        """
+        compute a local pred to display in local_plot
+        Parameters
+        ----------
+        index: string, int, float, ...
+            specify the row we want to pred
+        label: int (default: None)
+        Returns
+        -------
+        float: Predict or predict_proba value
+        """
+        if self._case == "classification":
+            if self.proba_values is not None:
+                value = self.proba_values.iloc[:, [label]].loc[index].values[0]
+            else:
+                value = None
+        elif self._case == "regression":
+            if self.y_pred is not None:
+                value = self.y_pred.loc[index]
+            else:
+                value = self.model.predict(self.x_encoded.loc[[index]])[0]
+
+        if isinstance(value, pd.Series):
+            value = value.values[0]
+
+        return value
