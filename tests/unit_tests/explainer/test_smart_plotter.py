@@ -17,6 +17,8 @@ from shapash import SmartExplainer
 from shapash.backend import ShapBackend
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
+from shapash.plots.plot_bar_chart import plot_bar_chart
+from shapash.plots.plot_feature_importance import _plot_features_import
 from shapash.plots.plot_line_comparison import plot_line_comparison
 from shapash.style.style_utils import get_palette
 from shapash.utils.check import check_model
@@ -660,7 +662,7 @@ class TestSmartPlotter(unittest.TestCase):
             )
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
         self.smart_explainer._case = "regression"
-        fig_output = self.smart_explainer.plot._plot_bar_chart("ind", var_dict, x_val, contributions)
+        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions, self.smart_explainer.plot._style_dict)
         for part in list(zip(fig_output.data, expected_output_fig.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
@@ -683,7 +685,7 @@ class TestSmartPlotter(unittest.TestCase):
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
 
         self.smart_explainer._case = "regression"
-        fig_output = self.smart_explainer.plot._plot_bar_chart("ind", var_dict, x_val, contributions)
+        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions, self.smart_explainer.plot._style_dict)
         for part in list(zip(fig_output.data, expected_output_fig.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
@@ -1126,8 +1128,9 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Unit test plot features import 1
         """
+        xpl = self.smart_explainer
         serie1 = pd.Series([0.131, 0.51], index=["col1", "col2"])
-        output = self.smart_explainer.plot._plot_features_import(serie1)
+        output = _plot_features_import(serie1, xpl.plot._style_dict, {})
         data = go.Bar(x=serie1, y=serie1.index, name="Global", orientation="h")
 
         expected_output = go.Figure(data=data)
@@ -1140,9 +1143,10 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Unit test plot features import 2
         """
+        xpl = self.smart_explainer
         serie1 = pd.Series([0.131, 0.51], index=["col1", "col2"])
         serie2 = pd.Series([0.33, 0.11], index=["col1", "col2"])
-        output = self.smart_explainer.plot._plot_features_import(serie1, serie2)
+        output = _plot_features_import(serie1, xpl.plot._style_dict, {}, feature_imp2=serie2)
         data1 = go.Bar(x=serie1, y=serie1.index, name="Global", orientation="h")
         data2 = go.Bar(x=serie2, y=serie2.index, name="Subset", orientation="h")
         expected_output = go.Figure(data=[data2, data1])
