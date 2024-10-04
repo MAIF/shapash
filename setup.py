@@ -22,7 +22,7 @@ requirements = [
     "numpy>1.18.0,<2",
     "pandas>=2.1.0",
     "shap>=0.45.0",
-    "Flask>=2.0.0",
+    "Flask>=1.0.4",
     "dash>=2.3.1",
     "dash-bootstrap-components>=1.1.0",
     "dash-core-components>=2.0.0",
