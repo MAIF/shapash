@@ -662,7 +662,7 @@ class TestSmartPlotter(unittest.TestCase):
             )
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
         self.smart_explainer._case = "regression"
-        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions)
+        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions, self.smart_explainer.plot._style_dict)
         for part in list(zip(fig_output.data, expected_output_fig.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
@@ -685,7 +685,7 @@ class TestSmartPlotter(unittest.TestCase):
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
 
         self.smart_explainer._case = "regression"
-        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions)
+        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions, self.smart_explainer.plot._style_dict)
         for part in list(zip(fig_output.data, expected_output_fig.data)):
             assert part[0].x == part[1].x
             assert part[0].y == part[1].y
