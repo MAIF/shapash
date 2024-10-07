@@ -1,6 +1,7 @@
 """
 Report generation helper module.
 """
+
 import os
 from typing import Optional, Union
 

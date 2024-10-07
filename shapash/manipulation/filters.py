@@ -1,6 +1,7 @@
 """
 Filters module
 """
+
 import numpy as np
 import pandas as pd
 
@@ -144,5 +145,5 @@ def combine_masks(masks_list):
     mask_final = np.min(masks_cube, axis=2)
 
     return pd.DataFrame(
-        mask_final, columns=["contrib_{}".format(i + 1) for i in range(mask_final.shape[1])], index=masks_list[0].index
+        mask_final, columns=[f"contrib_{i + 1}" for i in range(mask_final.shape[1])], index=masks_list[0].index
     )

@@ -306,7 +306,7 @@ class Consistency:
         mean_distances : DataFrame
             DataFrame storing all pairwise distances between methods
         """
-        font = {"color": "#{:02x}{:02x}{:02x}".format(50, 50, 50)}
+        font = {"color": f"#{50:02x}{50:02x}{50:02x}"}
 
         fig, ax = plt.subplots(ncols=1, figsize=(10, 6))
 
@@ -426,13 +426,13 @@ class Consistency:
             idx = np.flip(i.argsort())
             i, j = i[idx], j[idx]
 
-            axes[n].barh(y, i, label="method 1", left=0, color="#{:02x}{:02x}{:02x}".format(255, 166, 17))
+            axes[n].barh(y, i, label="method 1", left=0, color=f"#{255:02x}{166:02x}{17:02x}")
             axes[n].barh(
                 y,
                 j,
                 label="method 2",
                 left=np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i) / 3,
-                color="#{:02x}{:02x}{:02x}".format(117, 152, 189),
+                color=f"#{117:02x}{152:02x}{189:02x}",
             )  # /3 to add space
 
             # set gray background
@@ -567,10 +567,8 @@ class Consistency:
         # Plot the distribution
 
         for i, c in enumerate(top_features):
-
             switch = False
             if c in encoder.cols:
-
                 switch = True
 
                 mapping = encoder.mapping[encoder.cols.index(c)]["mapping"]

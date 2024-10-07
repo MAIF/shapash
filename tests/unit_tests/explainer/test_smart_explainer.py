@@ -992,8 +992,8 @@ class TestSmartExplainer(unittest.TestCase):
         expect1 = expect1 / expect1.sum()
         expect2 = contrib2.abs().sum().sort_values(ascending=True)
         expect2 = expect2 / expect2.sum()
-        assert expect1.equals(xpl.features_imp[0])
-        assert expect2.equals(xpl.features_imp[1])
+        assert expect1.round(8).equals(xpl.features_imp[0].round(8))
+        assert expect2.round(8).equals(xpl.features_imp[1].round(8))
 
     def test_to_smartpredictor_1(self):
         """

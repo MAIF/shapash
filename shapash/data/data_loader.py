@@ -1,6 +1,7 @@
 """
 Data loader module
 """
+
 import json
 import os
 from pathlib import Path

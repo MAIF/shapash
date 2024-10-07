@@ -147,7 +147,7 @@ def generate_fig_univariate_categorical(
 
     for p in ax.patches:
         ax.annotate(
-            "{:.1f}%".format(np.nan_to_num(p.get_width(), nan=0)),
+            f"{np.nan_to_num(p.get_width(), nan=0):.1f}%",
             xy=(p.get_width(), p.get_y() + p.get_height() / 2),
             xytext=(5, 0),
             textcoords="offset points",

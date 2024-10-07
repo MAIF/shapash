@@ -114,17 +114,12 @@ def plot_bar_chart(
                     feat_groups_values = x_init[features_groups[group_name]].loc[index_value[0]]
                     hoverlabel = "<br />".join(
                         [
-                            "<b>{} :</b>{}".format(
-                                add_line_break(features_dict.get(f_name, f_name), 40, maxlen=120),
-                                add_line_break(f_value, 40, maxlen=160),
-                            )
+                            f"<b>{add_line_break(features_dict.get(f_name, f_name), 40, maxlen=120)} :</b>{add_line_break(f_value, 40, maxlen=160)}"
                             for f_name, f_value in feat_groups_values.to_dict().items()
                         ]
                     )
                 else:
-                    hoverlabel = "<b>{} :</b><br />{}".format(
-                        add_line_break(feat_name, 40, maxlen=120), add_line_break(x_val_el, 40, maxlen=160)
-                    )
+                    hoverlabel = f"<b>{add_line_break(feat_name, 40, maxlen=120)} :</b><br />{add_line_break(x_val_el, 40, maxlen=160)}"
                 trunc_value = truncate_str(feat_name, 45)
                 if not zoom:
                     # Truncate value if length is upper than 30
@@ -141,7 +136,7 @@ def plot_bar_chart(
                     or (features_groups is not None and group_name not in features_groups.keys())
                 ):
                     # ylabel is based on trunc_new_value
-                    ylabel = "<b>{} :</b><br />{}".format(trunc_new_value, truncate_str(x_val_el, 45))
+                    ylabel = f"<b>{trunc_new_value} :</b><br />{truncate_str(x_val_el, 45)}"
                 else:
                     ylabel = f"<b>{trunc_new_value}</b>"
             # colors

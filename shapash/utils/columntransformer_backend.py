@@ -440,7 +440,6 @@ def get_col_mapping_ct(encoder, x_encoded):
     idx_encoded = 0
     for name, estimator, features in encoder.transformers_:
         if name != "remainder":
-
             if str(type(estimator)) in dummies_sklearn:
                 features_out, categories_out = get_feature_out(estimator, features)
                 for i, f_name in enumerate(features):
