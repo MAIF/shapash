@@ -682,7 +682,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
                     type="number",
                     style={"width": "60px"},
                 ),
-                " <= {} in [{}, {}]<= ".format(value, round_dataframe[value].min(), round_dataframe[value].max()),
+                f" <= {value} in [{round_dataframe[value].min()}, {round_dataframe[value].max()}]<= ",
                 dcc.Input(
                     id={"type": "upper", "index": id["index"]},
                     value=upper_value,

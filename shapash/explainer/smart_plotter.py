@@ -1643,7 +1643,6 @@ class SmartPlotter:
 
         # Plot 2 : Show distribution of variability
         else:
-
             # If set, only keep features with the highest mean amplitude
             if max_features is not None:
                 keep = mean_amplitude.argsort()[::-1][:max_features]

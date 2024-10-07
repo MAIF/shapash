@@ -1,6 +1,7 @@
 """
 Smart State Module
 """
+
 import numpy as np
 import pandas as pd
 
@@ -304,7 +305,7 @@ class SmartState:
     def compute_features_import(self, contributions, norm=1):
         """
         Compute a relative features importance, sum of absolute values
-        ​​of the contributions for each
+        \u200b\u200bof the contributions for each
         features importance compute in base 100
         Parameters
         ----------

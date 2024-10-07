@@ -1,6 +1,7 @@
 """
 Multi Decorator module
 """
+
 from shapash.explainer.smart_state import SmartState
 
 
@@ -75,7 +76,7 @@ class MultiDecorator:
         """
         if not args:
             raise ValueError(
-                "{} is applied without arguments," "please check that you have specified contributions.".format(name)
+                f"{name} is applied without arguments," "please check that you have specified contributions."
             )
 
     def check_method(self, method, name):
@@ -115,8 +116,8 @@ class MultiDecorator:
         """
         if not isinstance(arg, list):
             raise ValueError(
-                "{} is not applied to a list of contributions,"
-                "please check that you are dealing with a multi-class problem.".format(name)
+                f"{name} is not applied to a list of contributions,"
+                "please check that you are dealing with a multi-class problem."
             )
 
     def assign_contributions(self, ranked):
@@ -229,7 +230,7 @@ class MultiDecorator:
     def compute_features_import(self, contributions, norm=1):
         """
         Compute a relative features importance, sum of absolute values
-        ​​of the contributions for each
+        \u200b\u200bof the contributions for each
         features importance compute in base 100
 
         Parameters

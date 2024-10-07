@@ -453,7 +453,7 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
         fig.layout.coloraxis.colorbar = {
             "title": {"text": colorbar_title},
             "tickvals": [col_scale[0][0], col_scale[-1][0] - 0.15],
-            "ticktext": [float("{:0.3f}".format(equal_bins[0])), float("{:0.3f}".format(equal_bins[-2]))],
+            "ticktext": [float(f"{equal_bins[0]:0.3f}"), float(f"{equal_bins[-2]:0.3f}")],
             "tickformat": ".2s",
             "yanchor": "top",
             "y": 1.1,

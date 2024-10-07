@@ -103,7 +103,7 @@ def _intelligent_sampling(data, max_points, col, col_value_count, random_seed):
         cluster_labels = pd.Series(kmeans.fit_predict(data[col].values.reshape(-1, 1)))
         cluster_counts = cluster_labels.value_counts()
 
-    weights = cluster_counts.apply(lambda x: (x ** 0.5) / x).to_dict()
+    weights = cluster_counts.apply(lambda x: (x**0.5) / x).to_dict()
     selection_weights = cluster_labels.apply(lambda x: weights[x])
     selection_weights /= selection_weights.sum()
     selected_indices = rng.choice(data.index.tolist(), max_points, p=selection_weights, replace=False)

@@ -1,6 +1,7 @@
 """
 Smart predictor module
 """
+
 import copy
 
 import pandas as pd
@@ -121,11 +122,9 @@ class SmartPredictor:
         for params in params_dict:
             if (params is not None) and (not isinstance(params, dict)):
                 raise ValueError(
+                    f"""
+                    {str(params)} must be a dict.
                     """
-                    {} must be a dict.
-                    """.format(
-                        str(params)
-                    )
                 )
 
         self.model = model
@@ -284,7 +283,7 @@ class SmartPredictor:
             Raw dataset used by the model to perform the prediction (not preprocessed).
 
         """
-        if not (type(x) in [pd.DataFrame, dict]):
+        if type(x) not in [pd.DataFrame, dict]:
             raise ValueError(
                 """
                 x must be a dict or a pandas.DataFrame.

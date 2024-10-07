@@ -2,6 +2,7 @@
 Webapp launch module
 This is an example in python how to launch app from explainer
 """
+
 import pandas as pd
 from category_encoders import one_hot
 from lightgbm import LGBMClassifier, LGBMRegressor
