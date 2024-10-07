@@ -1,6 +1,7 @@
 """
 Smart explainer module
 """
+
 import copy
 import logging
 import shutil
@@ -217,13 +218,12 @@ class SmartExplainer:
         self.backend_kwargs = backend_kwargs
         self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
         self.label_dict = label_dict
-        self.plot = SmartPlotter(self)
         self.title_story = title_story if title_story is not None else ""
         self.palette_name = palette_name if palette_name else "default"
         self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
         if colors_dict is not None:
             self.colors_dict.update(colors_dict)
-        self.plot.define_style_attributes(colors_dict=self.colors_dict)
+        self.plot = SmartPlotter(self, self.colors_dict)
 
         self._case, self._classes = check_model(self.model)
         self.postprocessing = postprocessing
@@ -331,6 +331,7 @@ class SmartExplainer:
             else self._compile_additional_features_dict(additional_features_dict)
         )
         self.additional_data = self._compile_additional_data(additional_data)
+        self.plot._tuning_round_digit()
 
     def _get_contributions_from_backend_or_user(self, x, contributions):
         # Computing contributions using backend
@@ -359,7 +360,7 @@ class SmartExplainer:
         Performs required computations for groups of features.
         """
         if self.backend.support_groups is False:
-            raise AssertionError(f"Selected backend ({self.backend.name}) " f"does not support groups of features.")
+            raise AssertionError(f"Selected backend ({self.backend.name}) does not support groups of features.")
         # Compute contributions for groups of features
         self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
         self.features_imp_groups = None
@@ -931,7 +932,7 @@ class SmartExplainer:
 
         return pd.concat([y_pred, summary], axis=1)
 
-    def compute_features_import(self, force=False):
+    def compute_features_import(self, force=False, local=False):
         """
         Compute a relative features importance, sum of absolute values
         of the contributions for each.
@@ -949,11 +950,26 @@ class SmartExplainer:
             index of the serie = contributions.columns
         """
         self.features_imp = self.backend.get_global_features_importance(
-            contributions=self.contributions, explain_data=self.explain_data, subset=None
+            contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=1
         )
 
+        if local:
+            self.features_imp_local_lev1 = self.backend.get_global_features_importance(
+                contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=3
+            )
+            self.features_imp_local_lev2 = self.backend.get_global_features_importance(
+                contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=7
+            )
+
         if self.features_groups is not None and self.features_imp_groups is None:
-            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups)
+            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups, norm=1)
+            if local:
+                self.features_imp_groups_local_lev1 = self.state.compute_features_import(
+                    self.contributions_groups, norm=3
+                )
+                self.features_imp_groups_local_lev2 = self.state.compute_features_import(
+                    self.contributions_groups, norm=7
+                )
 
     def compute_features_stability(self, selection):
         """
@@ -1305,3 +1321,31 @@ class SmartExplainer:
             if rm_working_dir:
                 shutil.rmtree(working_dir)
             raise e
+
+    def _local_pred(self, index, label=None):
+        """
+        compute a local pred to display in local_plot
+        Parameters
+        ----------
+        index: string, int, float, ...
+            specify the row we want to pred
+        label: int (default: None)
+        Returns
+        -------
+        float: Predict or predict_proba value
+        """
+        if self._case == "classification":
+            if self.proba_values is not None:
+                value = self.proba_values.iloc[:, [label]].loc[index].values[0]
+            else:
+                value = None
+        elif self._case == "regression":
+            if self.y_pred is not None:
+                value = self.y_pred.loc[index]
+            else:
+                value = self.model.predict(self.x_encoded.loc[[index]])[0]
+
+        if isinstance(value, pd.Series):
+            value = value.values[0]
+
+        return value

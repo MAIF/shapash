@@ -100,8 +100,11 @@ def define_style(palette):
     style_dict["dict_featimp_colors"] = {
         1: {"color": featureimp_bar[1], "line": {"color": palette["featureimp_line"], "width": 0.5}},
         2: {"color": featureimp_bar[2]},
+        3: {"color": featureimp_bar[3], "line": {"color": palette["featureimp_line"], "width": 0.5}},
+        4: {"color": featureimp_bar[4], "line": {"color": palette["featureimp_line"], "width": 0.5}},
     }
     style_dict["featureimp_groups"] = convert_string_to_int_keys(palette["featureimp_groups"])
+    style_dict["feature_contributions_cumulative"] = palette["feature_contributions_cumulative"]
     style_dict["init_contrib_colorscale"] = palette["contrib_colorscale"]
     style_dict["contrib_distribution"] = palette["contrib_distribution"]
     style_dict["violin_area_classif"] = convert_string_to_int_keys(palette["violin_area_classif"])

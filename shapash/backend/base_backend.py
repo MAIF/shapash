@@ -107,7 +107,11 @@ class BaseBackend(ABC):
         return local_contributions
 
     def get_global_features_importance(
-        self, contributions: pd.DataFrame, explain_data: Optional[dict] = None, subset: Optional[List[int]] = None
+        self,
+        contributions: pd.DataFrame,
+        explain_data: Optional[dict] = None,
+        subset: Optional[List[int]] = None,
+        norm: int = 1,
     ) -> Union[pd.Series, List[pd.Series]]:
         """Get global contributions using the explainer data computed in the `run_explainer`
         method.
@@ -132,7 +136,7 @@ class BaseBackend(ABC):
                 contributions = [c.loc[subset] for c in contributions]
             else:
                 contributions = contributions.loc[subset]
-        return state.compute_features_import(contributions)
+        return state.compute_features_import(contributions, norm)
 
     def format_and_aggregate_local_contributions(
         self,

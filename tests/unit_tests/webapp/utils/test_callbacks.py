@@ -3,12 +3,13 @@ import unittest
 
 import numpy as np
 import pandas as pd
-from dash import dcc
+from dash import dcc, html
 from sklearn.tree import DecisionTreeClassifier
 
 from shapash import SmartExplainer
 from shapash.webapp.smart_app import SmartApp
 from shapash.webapp.utils.callbacks import (
+    create_dropdown_feature_filter,
     create_filter_modalities_selection,
     create_id_card_data,
     create_id_card_layout,
@@ -20,6 +21,7 @@ from shapash.webapp.utils.callbacks import (
     get_id_card_contrib,
     get_id_card_features,
     get_indexes_from_datatable,
+    handle_page_navigation,
     select_data_from_bool_filters,
     select_data_from_date_filters,
     select_data_from_numeric_filters,
@@ -422,3 +424,33 @@ class TestCallbacks(unittest.TestCase):
             "_column2", {"type": "var_dropdown", "index": 1}, self.smart_app.round_dataframe
         )
         assert type(new_element.children) == dcc.Dropdown
+
+    def test_handle_page_navigation_1(self):
+        page, selected_feature = handle_page_navigation(
+            triggered_input="page_left.n_clicks", page="3", selected_feature="column1"
+        )
+        assert page == 2
+        assert selected_feature == None
+
+    def test_handle_page_navigation_2(self):
+        page, selected_feature = handle_page_navigation(
+            triggered_input="page_right.n_clicks", page="3", selected_feature="column1"
+        )
+        assert page == 4
+        assert selected_feature == None
+
+    def test_handle_page_navigation_3(self):
+        page, selected_feature = handle_page_navigation(
+            triggered_input="bool_groups.on", page="3", selected_feature="column1"
+        )
+        assert page == 1
+        assert selected_feature == None
+
+    def test_handle_page_navigation_4(self):
+        page, selected_feature = handle_page_navigation(triggered_input="erreur", page="3", selected_feature="column1")
+        assert page == 3
+        assert selected_feature == "column1"
+
+    def test_create_dropdown_feature_filter(self):
+        dropdown = create_dropdown_feature_filter(1, [])
+        assert type(dropdown) == html.Div

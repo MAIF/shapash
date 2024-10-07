@@ -44,11 +44,11 @@ def summarize_el(dataframe, mask, prefix):
     return df_summarized_matrix
 
 
-def compute_features_import(dataframe):
+def compute_features_import(dataframe, norm=1):
     """
     Compute a relative features importance, sum of absolute values
-     ​​of the contributions for each
-     features importance compute in base 100
+    ​​of the contributions for each
+    features importance compute in base 100
     Parameters
     ----------
     dataframe: pd.DataFrame
@@ -60,7 +60,7 @@ def compute_features_import(dataframe):
         feature importance One row by feature,
         index of the serie = dataframe.columns
     """
-    feat_imp = dataframe.abs().sum().sort_values(ascending=True)
+    feat_imp = (((dataframe.abs() ** norm).sum()) ** (1 / norm)).sort_values(ascending=True)
     tot = feat_imp.sum()
     return feat_imp / tot
 
