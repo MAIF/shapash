@@ -112,7 +112,7 @@ def add_line_break(text, nbchar, maxlen=150):
         new_string = "".join(sum(zip(input_word, final_sep + [""]), ())[:-1]) + last_char
         return new_string
     else:
-        return text
+        return str(text)
 
 
 def truncate_str(text, maxlen=40):
