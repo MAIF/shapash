@@ -94,7 +94,7 @@ def plot_correlations(
         if corr.shape[0] < 2:
             return corr
 
-        pairwise_distances = sch.distance.pdist(corr ** degree)
+        pairwise_distances = sch.distance.pdist(corr**degree)
         linkage = sch.linkage(pairwise_distances, method="complete")
         cluster_distance_threshold = pairwise_distances.max() / 2
         idx_to_cluster_array = sch.fcluster(linkage, cluster_distance_threshold, criterion="distance")

@@ -505,6 +505,9 @@ class SmartPlotter:
         else:
             feature_values = self._explainer.x_init.loc[list_ind, col_name]
 
+        if self.explainer.x_init[col_name].dtype == 'bool':
+            feature_values = feature_values.astype(int)
+
         if col_is_group:
             feature_values = project_feature_values_1d(
                 feature_values,
@@ -1636,7 +1639,6 @@ class SmartPlotter:
 
         # Plot 2 : Show distribution of variability
         else:
-
             # If set, only keep features with the highest mean amplitude
             if max_features is not None:
                 keep = mean_amplitude.argsort()[::-1][:max_features]

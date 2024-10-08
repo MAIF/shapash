@@ -1,6 +1,7 @@
 """
 Utils is a group of function for the library
 """
+
 import math
 import socket
 

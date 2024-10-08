@@ -17,21 +17,17 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip wheel setuptools
-        pip install flake8 pytest
-        if [ -f requirements.dev.txt ]; then pip install -r requirements.dev.txt; fi
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        python -m pip install --upgrade pip
+        pip install .[all]
+    - name: Run pre-commit hook
+      run: pre-commit run --all-files
     - name: Test with pytest
       run: |
         python -m pytest
     - name: Build python package
       run: |
-        python setup.py sdist bdist_wheel
+        python -m pip install --upgrade build
+        python -m build
     - name: Deploy to PyPI
       if: success() && startsWith(github.ref, 'refs/tags') && matrix.python-version == '3.11'
       uses: pypa/gh-action-pypi-publish@release/v1

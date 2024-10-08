@@ -1,6 +1,7 @@
 """
 Model Module
 """
+
 from inspect import ismethod
 
 import pandas as pd

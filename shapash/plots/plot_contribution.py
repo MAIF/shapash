@@ -102,10 +102,7 @@ def plot_scatter(
             "<b>%{hovertext}</b><br />"
             + "Contribution: %{y:.4f} <br />"
             + "<br />".join(
-                [
-                    "{}: %{{text[{}]}}".format(text_groups_features_keys[i], i)
-                    for i in range(len(text_groups_features_keys))
-                ]
+                [f"{text_groups_features_keys[i]}: %{{text[{i}]}}" for i in range(len(text_groups_features_keys))]
             )
             + "<extra></extra>"
         )
@@ -754,7 +751,7 @@ def _add_violin_trace(fig, name, x, y, side, line_color, hovertext, secondary_y=
     """Adds a Violin trace to the figure."""
     # Violin plot has a problem if for one violin all the points have the same contribution value
     rng = np.random.default_rng(seed=79)
-    y = y + rng.normal(size=y.shape) * (max(y.max(), 0) - min(y.min(), 0)) / 10 ** 8
+    y = y + rng.normal(size=y.shape) * (max(y.max(), 0) - min(y.min(), 0)) / 10**8
     violin_trace = go.Violin(
         name=name,
         x=x,

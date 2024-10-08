@@ -215,7 +215,7 @@ def check_transformers(list_encoding):
     # check that Category encoding is apply on different columns
     col = []
     for enc in list_encoding:
-        if not str(type(enc)) in ("<class 'list'>", "<class 'dict'>", columntransformer):
+        if str(type(enc)) not in ("<class 'list'>", "<class 'dict'>", columntransformer):
             col += enc.cols
     duplicate = {x for x in col if col.count(x) > 1}
     if duplicate:

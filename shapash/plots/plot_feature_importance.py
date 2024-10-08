@@ -500,7 +500,7 @@ def _plot_feature_contributions_cumulative(
     col_scale = get_pyplot_color(colors=style_dict["feature_contributions_cumulative"])
     cmap = LinearSegmentedColormap.from_list("feature_contributions_cumulative", col_scale, N=256)
     colors = [cmap(i / num_features) for i in range(num_features)]
-    colors_hex = ["#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255)) for r, g, b, _ in colors]
+    colors_hex = [f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}" for r, g, b, _ in colors]
 
     # Initialize data for storing the series
     data = []
@@ -555,7 +555,7 @@ def _plot_feature_contributions_cumulative(
 
         # Apply initial degree-based normalization
         if degree not in [0, "slider"]:
-            serie_values /= serie_tot ** degree
+            serie_values /= serie_tot**degree
 
         # Append the trace for the current series
         figs.append(
