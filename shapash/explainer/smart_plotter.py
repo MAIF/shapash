@@ -505,7 +505,7 @@ class SmartPlotter:
         else:
             feature_values = self._explainer.x_init.loc[list_ind, col_name]
 
-        if self.explainer.x_init[col_name].dtype == 'bool':
+        if self.explainer.x_init[col_name].dtype == "bool":
             feature_values = feature_values.astype(int)
 
         if col_is_group:
