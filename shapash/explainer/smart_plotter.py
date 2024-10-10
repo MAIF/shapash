@@ -431,7 +431,6 @@ class SmartPlotter:
         --------
         >>> xpl.plot.contribution_plot(0)
         """
-
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
 
@@ -505,8 +504,13 @@ class SmartPlotter:
         else:
             feature_values = self._explainer.x_init.loc[list_ind, col_name]
 
-        if self.explainer.x_init[col_name].dtype == "bool":
-            feature_values = feature_values.astype(int)
+        if isinstance(col_name, list):
+            for el in col_name:
+                if feature_values[el].dtype == "bool":
+                    feature_values[el] = feature_values[el].astype(int)
+        else:
+            if feature_values.dtype == "bool":
+                feature_values = feature_values.astype(int)
 
         if col_is_group:
             feature_values = project_feature_values_1d(
@@ -1130,7 +1134,7 @@ class SmartPlotter:
             interaction_values = interaction_values * 2
 
         # add break line to X label if necessary
-        max_len_by_row = max([round(50 / self.explainer.features_desc[feature_values1.columns.values[0]]), 8])
+        max_len_by_row = max([round(50 / self._explainer.features_desc[feature_values1.columns.values[0]]), 8])
         args = (max_len_by_row, 120)
         feature_values_str = feature_values1.iloc[:, 0].apply(add_line_break, args=args)
         feature_values1 = pd.DataFrame({feature_values1.columns[0]: feature_values_str})
