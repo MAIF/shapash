@@ -1860,11 +1860,11 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0)
 
-        assert np.array_equal(output.data[0].x, ["34.0"])
+        assert np.array_equal(output.data[0].x, [34.0])
         assert np.array_equal(output.data[0].y, [-1.4])
         assert output.data[0].name == "PhD"
 
-        assert np.array_equal(output.data[1].x, ["27.0"])
+        assert np.array_equal(output.data[1].x, [27.0])
         assert np.array_equal(output.data[1].y, [-0.2])
         assert output.data[1].name == "Master"
 
@@ -1893,7 +1893,7 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
 
-        assert np.array_equal(output.data[0].x, ["520.0", "12800.0"])
+        assert np.array_equal(output.data[0].x, [520, 12800])
         assert np.array_equal(output.data[0].y, [-1.4, -0.2])
         assert np.array_equal(output.data[0].marker.color, [34.0, 27.0])
 

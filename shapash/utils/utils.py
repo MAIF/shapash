@@ -73,14 +73,14 @@ def is_nested_list(object_param):
     return any(isinstance(elem, list) for elem in object_param)
 
 
-def add_line_break(text, nbchar, maxlen=150):
+def add_line_break(value, nbchar, maxlen=150):
     """
     adding line break in string if necessary
 
     Parameters
     ----------
-    text : string
-        string to check in order to add line break
+    value : string or oither type
+        if string to check in order to add line break
     nbchar : int
         number of characters before line break
     maxlen : int
@@ -91,10 +91,10 @@ def add_line_break(text, nbchar, maxlen=150):
     string
         original text + line break
     """
-    if isinstance(text, str):
+    if isinstance(value, str):
         length = 0
         tot_length = 0
-        input_word = text.split()
+        input_word = value.split()
         final_sep = []
         for w in input_word[:-1]:
             length = length + len(w)
@@ -113,7 +113,7 @@ def add_line_break(text, nbchar, maxlen=150):
         new_string = "".join(sum(zip(input_word, final_sep + [""]), ())[:-1]) + last_char
         return new_string
     else:
-        return str(text)
+        return value
 
 
 def truncate_str(text, maxlen=40):
