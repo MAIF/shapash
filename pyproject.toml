@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shapash"
-version = "2.7.0"
+version = "2.7.1"
 authors = [
     {name = "Yann Golhen"},
     {name = "Sebastien Bidault"},
@@ -86,14 +86,14 @@ all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime
 Homepage = "https://github.com/MAIF/shapash"
 
 [tool.setuptools]
-package-dir = {"" = "shapash"}
+package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
-where = ["shapash"]
+where = ["."]
 
 
 [tool.setuptools.package-data]
-"shapash" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png"]
+"*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
