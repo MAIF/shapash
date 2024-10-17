@@ -833,8 +833,12 @@ def determine_total_pages_and_display(
         Tuple[int, str, int]: Total pages, display properties, and updated page number.
     """
     display_groups = explainer.features_groups is not None and bool_group
-    nb_features = len(explainer.features_imp_groups) if display_groups else len(explainer.features_imp)
-    total_pages = nb_features // features + 1
+    if explainer._case == "classification":
+        nb_features = len(explainer.features_imp_groups[0]) if display_groups else len(explainer.features_imp[0])
+    elif explainer._case == "regression":
+        nb_features = len(explainer.features_imp_groups) if display_groups else len(explainer.features_imp)
+
+    total_pages = (nb_features - 1) // features + 1
     if (total_pages == 1) or (group_name):
         display_page = {"display": "none"}
     else:

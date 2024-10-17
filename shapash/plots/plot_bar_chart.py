@@ -103,14 +103,16 @@ def plot_bar_chart(
         bars = []
         for num, expl in enumerate(zip(var_dict, x_val, contrib)):
             feat_name, x_val_el, contrib_value = expl
-            group_name = inv_features_dict.get(feat_name)
+            is_grouped = False
             if x_val_el == "":
                 ylabel = f"<i>{feat_name}</i>"
                 hoverlabel = f"<b>{feat_name}</b>"
             else:
                 # If bar is a group of features, hovertext includes the values of the features of the group
                 # And color changes
+                group_name = inv_features_dict.get(feat_name)
                 if features_groups is not None and group_name in features_groups.keys() and len(index_value) > 0:
+                    is_grouped = True
                     feat_groups_values = x_init[features_groups[group_name]].loc[index_value[0]]
                     hoverlabel = "<br />".join(
                         [
@@ -146,7 +148,7 @@ def plot_bar_chart(
                 color = -1 if x_val_el != "" else -2
 
             # If the bar is a group of features we modify the color
-            if group_name is not None:
+            if is_grouped:
                 bar_color = style_dict["featureimp_groups"][0] if color == 1 else style_dict["featureimp_groups"][1]
             else:
                 bar_color = dict_local_plot_colors[color]["color"]
