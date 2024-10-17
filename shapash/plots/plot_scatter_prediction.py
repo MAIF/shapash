@@ -220,7 +220,6 @@ def _prediction_classification_plot(
         df_pred = pd.concat(
             [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
         )
-        print(df_pred)
         df_pred.set_index(df_pred.columns[0], inplace=True)
         df_pred.columns = ["proba_values", "predict_class", "target"]
         df_pred["wrong_predict"] = 1
