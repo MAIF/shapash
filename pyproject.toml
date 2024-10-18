@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shapash"
-version = "2.7.2"
+version = "2.7.3"
 authors = [
     {name = "Yann Golhen"},
     {name = "Sebastien Bidault"},
@@ -93,7 +93,7 @@ where = ["."]
 
 
 [tool.setuptools.package-data]
-"*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png", "*.ico"]
+"*" = ["*.*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
