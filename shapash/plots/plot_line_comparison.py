@@ -67,7 +67,7 @@ def plot_line_comparison(
     else:
         title = "Compare plot - index : " + " ; ".join(["<b>" + str(id) + "</b>" for id in index])
         dict_xaxis["text"] = "Contributions"
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
 
     if subtitle is not None:
         topmargin += 15 * height / 275

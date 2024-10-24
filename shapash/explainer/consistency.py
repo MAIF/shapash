@@ -1,4 +1,3 @@
-import copy
 import itertools
 
 import matplotlib.pyplot as plt
@@ -671,13 +670,10 @@ class Consistency:
         """
         title = "Pairwise comparison of Consistency:"
         title += "<span style='font-size: 16px;'>\
-                 <br />How are differences in contributions distributed across features?</span>"
-        dict_t = copy.deepcopy(self._style_dict["dict_title_stability"])
-        dict_xaxis = copy.deepcopy(self._style_dict["dict_xaxis"])
-        dict_yaxis = copy.deepcopy(self._style_dict["dict_yaxis"])
-        dict_xaxis["text"] = xaxis_title
-        dict_yaxis["text"] = yaxis_title
-        dict_t["text"] = title
+                    <br />How are differences in contributions distributed across features?</span>"
+        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
+        dict_xaxis = self._style_dict["dict_xaxis"] | {"text": xaxis_title}
+        dict_yaxis = self._style_dict["dict_yaxis"] | {"text": yaxis_title}
 
         fig.layout.yaxis.update(showticklabels=True)
         fig.layout.yaxis2.update(showticklabels=False)

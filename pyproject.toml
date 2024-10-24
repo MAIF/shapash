@@ -93,7 +93,7 @@ where = ["."]
 
 
 [tool.setuptools.package-data]
-"*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png", "*.ico"]
+"*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png", "*.ico", "*.ipynb", "*.html", "*.j2"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

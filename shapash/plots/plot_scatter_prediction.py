@@ -116,7 +116,7 @@ def plot_scatter_prediction(
             title += "<br><sup>" + subtitle + "</sup>"
         else:
             title += "<br><sup>" + addnote + "</sup>"
-        dict_t = style_dict["dict_title"] | {"text": title}
+        dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
         dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str("True Values", 110)}
         dict_yaxis = style_dict["dict_yaxis"] | {"text": "Predicted Values"}
 

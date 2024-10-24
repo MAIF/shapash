@@ -6,7 +6,7 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 
 from shapash.manipulation.summarize import compute_corr
-from shapash.utils.utils import compute_top_correlations_features
+from shapash.utils.utils import compute_top_correlations_features, suffix_duplicates
 
 
 def plot_correlations(
@@ -108,6 +108,21 @@ def plot_correlations(
 
         return corr[idx, :][:, idx]
 
+    # Function to compute correlation matrix and prepare top features
+    def prepare_corr_matrix(df_subset):
+        corr = compute_corr(df_subset.drop(features_to_hide, axis=1), compute_method)
+        top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+        corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
+        list_features = [col for col in corr.columns if col in top_features]
+
+        # Shorten long feature names and handle duplicates
+        k = 12
+        list_features_shorten = [
+            x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in list_features
+        ]
+        list_features_shorten = suffix_duplicates(list_features_shorten)
+        return corr, list_features, list_features_shorten
+
     if features_dict is None:
         features_dict = {}
 
@@ -142,17 +157,8 @@ def plot_correlations(
         )
         # Used for the Shapash report to get train then test set
         for i, col_v in enumerate(facet_col_values):
-            corr = compute_corr(df.loc[df[facet_col] == col_v].drop(features_to_hide, axis=1), compute_method)
-
-            # Keep the same list of features for each subplot
-            if len(list_features) == 0:
-                top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
-                corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
-                list_features = list(corr.columns)
-                k = 6
-                list_features_shorten = [
-                    x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in list_features
-                ]
+            df_subset = df[df[facet_col] == col_v]
+            corr, list_features, list_features_shorten = prepare_corr_matrix(df_subset)
 
             fig.add_trace(
                 go.Heatmap(
@@ -174,14 +180,7 @@ def plot_correlations(
             )
 
     else:
-        corr = compute_corr(df.drop(features_to_hide, axis=1), compute_method)
-        top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
-        corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
-        list_features = [col for col in corr.columns if col in top_features]
-        k = 6
-        list_features_shorten = [
-            x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in list_features
-        ]
+        corr, list_features, list_features_shorten = prepare_corr_matrix(df)
 
         fig = go.Figure(
             go.Heatmap(
@@ -204,7 +203,7 @@ def plot_correlations(
     if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
         subtitle = f"Top {len(list_features)} correlations"
         title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
 
     fig.update_layout(
         coloraxis=dict(colorscale=["rgb(255, 255, 255)"] + style_dict["init_contrib_colorscale"][5:-1]),

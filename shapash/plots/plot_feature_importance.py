@@ -234,7 +234,7 @@ def _plot_features_import(
         else:
             title += "<br><sup>" + addnote + "</sup>"
         topmargin = topmargin + 15
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
     dict_style_bar1 = style_dict["dict_featimp_colors"][1]
@@ -357,7 +357,7 @@ def _plot_local_features_import(
         else:
             title += "<br><sup>" + addnote + "</sup>"
         topmargin = topmargin + 15
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
     dict_style_bar = {}
@@ -537,7 +537,7 @@ def _plot_feature_contributions_cumulative(
         else:
             title += "<br><sup>" + addnote + "</sup>"
         topmargin = topmargin + 15
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
 
     if (isinstance(lst_feat[0], str)) & (not zoom):
         # change index to abc...abc if its length is upper than 30

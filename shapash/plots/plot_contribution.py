@@ -493,7 +493,7 @@ def _update_contributions_fig(
             title += "<br><sup>" + subtitle + "</sup>"
         else:
             title += "<br><sup>" + addnote + "</sup>"
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(feature_name, 110)}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": "Contribution"}
 
@@ -571,13 +571,15 @@ def _update_xaxis_labels(fig, xs, zoom=False):
                 k = 6
 
             # Shorten labels that exceed the threshold
-            feature_val = [x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x for x in feature_val]
+            feature_val = [
+                x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in feature_val
+            ]
         else:
             k = 10
             feature_val = []
             for feature_name in xs:
                 feature_name_splited = [
-                    x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k else x
+                    x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x
                     for x in feature_name.split("<br />")
                 ]
                 feature_val_name = "<br />".join(feature_name_splited)

@@ -12,6 +12,39 @@ from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 
 
+def suffix_duplicates(lst):
+    """
+    Adds suffixes (_2, _3, ...) to non-unique elements in a list to make them unique.
+
+    Args:
+        lst (list): The input list of elements (strings) which may contain duplicates.
+
+    Returns:
+        list: A new list where non-unique elements have suffixes to ensure uniqueness.
+
+    Example:
+        Input: ["feature1", "feature2", "feature1", "feature2", "feature3"]
+        Output: ["feature1", "feature2", "feature1_2", "feature2_2", "feature3"]
+    """
+
+    seen = {}
+    result = []
+
+    for item in lst:
+        if item in seen:
+            # If the item has been seen before, increment its count and add a suffix
+            seen[item] += 1
+            new_item = f"{item}_{seen[item] + 1}"
+        else:
+            # If the item is seen for the first time, add it without a suffix
+            seen[item] = 0
+            new_item = item
+
+        result.append(new_item)
+
+    return result
+
+
 def get_host_name():
     """
     Get the url of the current host
