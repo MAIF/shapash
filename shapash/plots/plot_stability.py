@@ -172,7 +172,7 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
     """
     title = "Importance & Local Stability of explanations:"
     title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-    dict_t = style_dict["dict_title_stability"] | {"text": title}
+    dict_t = style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
 
     dict_xaxis = style_dict["dict_xaxis"] | {"text": xaxis_title}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": yaxis_title}

@@ -104,7 +104,7 @@ def plot_compacity(
     title += (
         "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
     )
-    dict_t = style_dict["dict_title_stability"] | {"text": title}
+    dict_t = style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
 
     fig.update_layout(
         template="none",
