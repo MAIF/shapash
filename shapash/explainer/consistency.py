@@ -10,6 +10,7 @@ from plotly.subplots import make_subplots
 from sklearn.manifold import MDS
 
 from shapash.style.style_utils import colors_loading, define_style, select_palette
+from shapash.utils.utils import adjust_title_height
 
 
 class Consistency:
@@ -668,10 +669,11 @@ class Consistency:
         auto_open: bool
             open automatically the plot
         """
+        height = max(500, 40 * len(top_features))
         title = "Pairwise comparison of Consistency:"
         title += "<span style='font-size: 16px;'>\
                     <br />How are differences in contributions distributed across features?</span>"
-        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
+        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": xaxis_title}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": yaxis_title}
 
@@ -684,7 +686,7 @@ class Consistency:
             yaxis_title=dict_yaxis,
             yaxis=dict(range=[-0.7, len(top_features) - 0.3]),
             yaxis2=dict(range=[-0.7, len(top_features) - 0.3]),
-            height=max(500, 40 * len(top_features)),
+            height=height,
         )
 
         fig.update_yaxes(automargin=True, zeroline=False)

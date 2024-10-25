@@ -4,7 +4,7 @@ from plotly import graph_objs as go
 from plotly.offline import plot
 
 from shapash.utils.sampling import subset_sampling
-from shapash.utils.utils import truncate_str, tuning_colorscale
+from shapash.utils.utils import adjust_title_height, truncate_str, tuning_colorscale
 
 
 def plot_scatter_prediction(
@@ -116,7 +116,7 @@ def plot_scatter_prediction(
             title += "<br><sup>" + subtitle + "</sup>"
         else:
             title += "<br><sup>" + addnote + "</sup>"
-        dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+        dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
         dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str("True Values", 110)}
         dict_yaxis = style_dict["dict_yaxis"] | {"text": "Predicted Values"}
 

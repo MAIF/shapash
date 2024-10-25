@@ -230,7 +230,7 @@ class MultiDecorator:
     def compute_features_import(self, contributions, norm=1):
         """
         Compute a relative features importance, sum of absolute values
-        \u200b\u200bof the contributions for each
+        of the contributions for each
         features importance compute in base 100
 
         Parameters

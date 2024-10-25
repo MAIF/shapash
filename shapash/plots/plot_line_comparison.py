@@ -3,7 +3,7 @@ import warnings
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_line_break, truncate_str
+from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
 
 
 def plot_line_comparison(
@@ -67,7 +67,7 @@ def plot_line_comparison(
     else:
         title = "Compare plot - index : " + " ; ".join(["<b>" + str(id) + "</b>" for id in index])
         dict_xaxis["text"] = "Contributions"
-    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
     if subtitle is not None:
         topmargin += 15 * height / 275

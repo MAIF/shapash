@@ -26,6 +26,7 @@ from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import (
     add_line_break,
     add_text,
+    adjust_title_height,
     compute_digit_number,
     compute_sorted_variables_interactions_list_indices,
     maximum_difference_sort_value,
@@ -1511,9 +1512,10 @@ class SmartPlotter:
             ]
         )
 
+        height = max(500, 11 * g_df.shape[0] * g_df.shape[1])
         title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
+        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": "Normalized contribution values"}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": ""}
 
@@ -1524,7 +1526,7 @@ class SmartPlotter:
             yaxis_title=dict_yaxis,
             hovermode="closest",
             barmode="group",
-            height=max(500, 11 * g_df.shape[0] * g_df.shape[1]),
+            height=height,
             legend={"traceorder": "reversed"},
             xaxis={"side": "bottom"},
         )

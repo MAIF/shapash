@@ -153,7 +153,7 @@ class SmartExplainer:
     model: model object
         model used to check the different values of target estimate predict proba
     features_desc: dict
-        Dictionary that references the numbers of feature values \u200b\u200bin the x_init
+        Dictionary that references the numbers of feature values in the x_init
     features_imp: pandas.Series (regression) or list (classification)
         Features importance values
     local_neighbors: dict

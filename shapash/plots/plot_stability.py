@@ -3,7 +3,7 @@ import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import tuning_colorscale
+from shapash.utils.utils import adjust_title_height, tuning_colorscale
 
 
 def plot_stability_distribution(
@@ -124,10 +124,6 @@ def plot_stability_distribution(
 
         fig.add_trace(colorbar_trace)
 
-        fig.update_layout(
-            height=height_value,
-        )
-
         _update_stability_fig(
             fig=fig,
             x_barlen=len(mean_amplitude),
@@ -137,12 +133,13 @@ def plot_stability_distribution(
             yaxis_title=yaxis_title,
             file_name=file_name,
             auto_open=auto_open,
+            height=height_value,
         )
 
         return fig
 
 
-def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open):
+def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open, height=500):
     """
     Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
     to update the layout of the plotly figure.
@@ -165,6 +162,8 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
         Specify the save path of html files. If it is not provided, no file will be saved.
     auto_open: bool (default=False)
         open automatically the plot
+    height: int
+        Plotly figure - layout height
 
     Returns
     -------
@@ -172,7 +171,7 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
     """
     title = "Importance & Local Stability of explanations:"
     title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-    dict_t = style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
 
     dict_xaxis = style_dict["dict_xaxis"] | {"text": xaxis_title}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": yaxis_title}
@@ -206,6 +205,7 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
         yaxis_title=dict_yaxis,
         coloraxis_showscale=False,
         hovermode="closest",
+        height=height,
     )
 
     fig.update_yaxes(automargin=True)

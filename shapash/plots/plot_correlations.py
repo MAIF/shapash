@@ -6,7 +6,7 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 
 from shapash.manipulation.summarize import compute_corr
-from shapash.utils.utils import compute_top_correlations_features, suffix_duplicates
+from shapash.utils.utils import adjust_title_height, compute_top_correlations_features, suffix_duplicates
 
 
 def plot_correlations(
@@ -203,7 +203,7 @@ def plot_correlations(
     if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
         subtitle = f"Top {len(list_features)} correlations"
         title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
-    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
     fig.update_layout(
         coloraxis=dict(colorscale=["rgb(255, 255, 255)"] + style_dict["init_contrib_colorscale"][5:-1]),

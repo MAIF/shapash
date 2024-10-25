@@ -5,6 +5,7 @@ from plotly import graph_objs as go
 from plotly.offline import plot
 
 from shapash.style.style_utils import get_pyplot_color
+from shapash.utils.utils import adjust_title_height
 
 
 def plot_feature_importance(
@@ -234,7 +235,7 @@ def _plot_features_import(
         else:
             title += "<br><sup>" + addnote + "</sup>"
         topmargin = topmargin + 15
-    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
     dict_style_bar1 = style_dict["dict_featimp_colors"][1]
@@ -357,7 +358,7 @@ def _plot_local_features_import(
         else:
             title += "<br><sup>" + addnote + "</sup>"
         topmargin = topmargin + 15
-    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
     dict_style_bar = {}
@@ -537,7 +538,7 @@ def _plot_feature_contributions_cumulative(
         else:
             title += "<br><sup>" + addnote + "</sup>"
         topmargin = topmargin + 15
-    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
     if (isinstance(lst_feat[0], str)) & (not zoom):
         # change index to abc...abc if its length is upper than 30

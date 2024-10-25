@@ -3,7 +3,7 @@ import plotly.express as px
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_text, truncate_str
+from shapash.utils.utils import add_text, adjust_title_height, truncate_str
 
 
 def plot_interactions_scatter(x_name, y_name, col_name, x_values, y_values, col_values, col_scale, style_dict):
@@ -160,7 +160,7 @@ def update_interactions_fig(fig, col_name1, col_name2, addnote, width, height, f
     title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
     if addnote:
         title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
-    dict_t = style_dict["dict_title"] | {"text": title}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(col_name1, 110)}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": "Shap interaction value"}
 
