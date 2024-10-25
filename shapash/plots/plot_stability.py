@@ -139,7 +139,7 @@ def plot_stability_distribution(
         return fig
 
 
-def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open, height):
+def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open, height=500):
     """
     Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
     to update the layout of the plotly figure.
