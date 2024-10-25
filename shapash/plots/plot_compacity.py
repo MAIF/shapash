@@ -2,6 +2,8 @@ from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
 
+from shapash.utils.utils import adjust_title_height
+
 
 def plot_compacity(
     features_needed, distance_reached, style_dict, approx=0.9, nb_features=5, file_name=None, auto_open=False
@@ -104,7 +106,7 @@ def plot_compacity(
     title += (
         "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
     )
-    dict_t = style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height()}
 
     fig.update_layout(
         template="none",

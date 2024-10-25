@@ -5,7 +5,7 @@ import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_line_break, truncate_str
+from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
 from shapash.webapp.utils.utils import round_to_k
 
 
@@ -493,7 +493,7 @@ def _update_contributions_fig(
             title += "<br><sup>" + subtitle + "</sup>"
         else:
             title += "<br><sup>" + addnote + "</sup>"
-    dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(feature_name, 110)}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": "Contribution"}
 

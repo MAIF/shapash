@@ -12,6 +12,24 @@ from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 
 
+def adjust_title_height(figure_height=500):
+    """
+    Adjust the height of the title according to height of the figure
+
+    Parameters
+    ----------
+    figure_height : int
+        height of the figure
+
+    Returns
+    -------
+    int
+        height of the title
+    """
+
+    return 1 - 0.1 * 500 / figure_height
+
+
 def suffix_duplicates(lst):
     """
     Adds suffixes (_2, _3, ...) to non-unique elements in a list to make them unique.

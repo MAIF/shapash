@@ -1,7 +1,7 @@
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_line_break, truncate_str
+from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
 
 
 def plot_bar_chart(
@@ -83,7 +83,7 @@ def plot_bar_chart(
         if subtitle:
             title += "<br><sup>" + subtitle + "</sup>"
             topmargin += 15
-        dict_t = style_dict["dict_title"] | {"text": title, "yref": "paper"}
+        dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
         dict_xaxis = style_dict["dict_xaxis"] | {"text": "Contribution"}
         dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
         dict_local_plot_colors = style_dict["dict_local_plot_colors"] | {"text": None}

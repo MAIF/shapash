@@ -1511,9 +1511,10 @@ class SmartPlotter:
             ]
         )
 
+        height = max(500, 11 * g_df.shape[0] * g_df.shape[1])
         title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
-        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "yref": "paper"}
+        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": height}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": "Normalized contribution values"}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": ""}
 
@@ -1524,7 +1525,7 @@ class SmartPlotter:
             yaxis_title=dict_yaxis,
             hovermode="closest",
             barmode="group",
-            height=max(500, 11 * g_df.shape[0] * g_df.shape[1]),
+            height=height,
             legend={"traceorder": "reversed"},
             xaxis={"side": "bottom"},
         )
