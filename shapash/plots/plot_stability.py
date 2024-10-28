@@ -7,7 +7,17 @@ from shapash.utils.utils import adjust_title_height, tuning_colorscale
 
 
 def plot_stability_distribution(
-    variability, plot_type, mean_amplitude, dataset, column_names, file_name, auto_open, init_colorscale, style_dict
+    variability,
+    plot_type,
+    mean_amplitude,
+    dataset,
+    column_names,
+    file_name,
+    auto_open,
+    init_colorscale,
+    style_dict,
+    height="auto",
+    width=900,
 ):
     """
     Generates and displays a stability distribution plot for feature variability using either a boxplot or violin plot.
@@ -43,6 +53,10 @@ def plot_stability_distribution(
     style_dict : dict
         A dictionary specifying the various style options such as font size, color, and other aesthetic parameters
         for the plot.
+    height: int or 'auto'
+        Plotly figure - layout height
+    width: int
+        Plotly figure - layout width
 
     Returns
     -------
@@ -70,7 +84,10 @@ def plot_stability_distribution(
     color_list = mean_amplitude_normalized.tolist()
     color_list.sort()
     color_list = [next(pair[1] for pair in col_scale if x <= pair[0]) for x in color_list]
-    height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
+    if height == "auto":
+        height_value = max(500, 40 * dataset.shape[1] if dataset.shape[1] < 100 else 13 * dataset.shape[1])
+    else:
+        height_value = height
 
     xaxis_title = "Normalized local contribution value variability"
     yaxis_title = ""
@@ -134,12 +151,15 @@ def plot_stability_distribution(
             file_name=file_name,
             auto_open=auto_open,
             height=height_value,
+            width=width,
         )
 
         return fig
 
 
-def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open, height=500):
+def _update_stability_fig(
+    fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open, height=500, width=900
+):
     """
     Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
     to update the layout of the plotly figure.
@@ -169,8 +189,8 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
     -------
     go.Figure
     """
-    title = "Importance & Local Stability of explanations:"
-    title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+    title = "<br>Importance & Local Stability of explanations:"
+    title += "<br><sup>How similar are explanations for closeby neighbours?</sup>"
     dict_t = style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
 
     dict_xaxis = style_dict["dict_xaxis"] | {"text": xaxis_title}
@@ -200,12 +220,15 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
 
     fig.update_layout(
         template="none",
+        autosize=False,
         title=dict_t,
         xaxis_title=dict_xaxis,
         yaxis_title=dict_yaxis,
         coloraxis_showscale=False,
         hovermode="closest",
         height=height,
+        width=width,
+        margin={"l": 150, "r": 20, "t": 95, "b": 70},
     )
 
     fig.update_yaxes(automargin=True)
@@ -216,7 +239,15 @@ def _update_stability_fig(fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_t
 
 
 def plot_amplitude_vs_stability(
-    mean_variability, mean_amplitude, column_names, file_name, auto_open, col_scale, style_dict
+    mean_variability,
+    mean_amplitude,
+    column_names,
+    file_name,
+    auto_open,
+    col_scale,
+    style_dict,
+    height="auto",
+    width=900,
 ):
     """
     Generates and displays a scatter plot showing the relationship between feature variability and importance.
@@ -247,6 +278,10 @@ def plot_amplitude_vs_stability(
     style_dict : dict
         A dictionary specifying various style options such as font size, axis formatting, and other aesthetic
         properties for the plot.
+    height: int
+        Plotly figure - layout height
+    width: int
+        Plotly figure - layout width
 
     Returns
     -------
@@ -262,6 +297,8 @@ def plot_amplitude_vs_stability(
     - The function can optionally save the plot as an HTML file for further exploration.
 
     """
+    if height == "auto":
+        height = 500
     xaxis_title = (
         "Variability of the Normalized Local Contribution Values"
         + "<span style='font-size: 12px;'><br />(standard deviation / mean)</span>"
@@ -301,5 +338,7 @@ def plot_amplitude_vs_stability(
         yaxis_title=yaxis_title,
         file_name=file_name,
         auto_open=auto_open,
+        height=height,
+        width=width,
     )
     return fig

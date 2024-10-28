@@ -1428,7 +1428,7 @@ class SmartPlotter:
 
         return fig
 
-    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False):
+    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False, height="auto", width=900):
         """
         The Local_neighbors_plot has the main objective of increasing confidence \
         in interpreting the contribution values of a selected instance.
@@ -1450,6 +1450,7 @@ class SmartPlotter:
         * For classification:
         .. math::
             distance = |output_{allFeatures} - output_{currentFeatures}|
+
         Parameters
         ----------
         index: int
@@ -1460,6 +1461,11 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
+        height : str or int, optional
+            Height of the figure. Default is 'auto'.
+        width : int, optional
+            Width of the figure. Default is 900.
+
         Returns
         -------
         fig
@@ -1512,15 +1518,18 @@ class SmartPlotter:
             ]
         )
 
-        height = max(500, 11 * g_df.shape[0] * g_df.shape[1])
-        title = f"Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
-        title += "<span style='font-size: 16px;'><br />How similar are explanations for closeby neighbours?</span>"
+        if height == "auto":
+            height = max(500, 11 * g_df.shape[0] * g_df.shape[1])
+        title = f"<br>Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
+        title += "<br><sup>How similar are explanations for closeby neighbours?</sup>"
         dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": "Normalized contribution values"}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": ""}
 
         fig.update_layout(
             template="none",
+            autosize=False,
+            width=width,
             title=dict_t,
             xaxis_title=dict_xaxis,
             yaxis_title=dict_yaxis,
@@ -1529,6 +1538,7 @@ class SmartPlotter:
             height=height,
             legend={"traceorder": "reversed"},
             xaxis={"side": "bottom"},
+            margin={"l": 150, "r": 20, "t": 95, "b": 70},
         )
 
         fig.update_yaxes(automargin=True)
@@ -1548,6 +1558,8 @@ class SmartPlotter:
         distribution="none",
         file_name=None,
         auto_open=False,
+        height="auto",
+        width=900,
     ):
         """
         The Stability_plot has the main objective of increasing confidence in contribution values, \
@@ -1588,6 +1600,11 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
+        height: int or 'auto'
+            Plotly figure - layout height
+        width: int
+            Plotly figure - layout width
+
         Returns
         -------
         If single instance:
@@ -1641,6 +1658,8 @@ class SmartPlotter:
                 auto_open,
                 self._style_dict["init_contrib_colorscale"],
                 self._style_dict,
+                height=height,
+                width=width,
             )
 
         # Plot 2 : Show distribution of variability
@@ -1665,12 +1684,23 @@ class SmartPlotter:
                 auto_open,
                 self._style_dict["init_contrib_colorscale"],
                 self._style_dict,
+                height=height,
+                width=width,
             )
 
         return fig
 
     def compacity_plot(
-        self, selection=None, max_points=2000, force=False, approx=0.9, nb_features=5, file_name=None, auto_open=False
+        self,
+        selection=None,
+        max_points=2000,
+        force=False,
+        approx=0.9,
+        nb_features=5,
+        file_name=None,
+        auto_open=False,
+        height=600,
+        width=900,
     ):
         """
         The Compacity_plot has the main objective of determining if a small subset of features
@@ -1705,6 +1735,10 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
+        height: int, optional
+            height of the plot, by default 600
+        width:  int, optional
+            width of the plot, by default 900
         """
         # Sampling
         if selection is None:
@@ -1735,7 +1769,15 @@ class SmartPlotter:
 
         # Plot generation
         fig = plot_compacity(
-            features_needed, distance_reached, self._style_dict, approx, nb_features, file_name, auto_open
+            features_needed,
+            distance_reached,
+            self._style_dict,
+            approx,
+            nb_features,
+            file_name,
+            auto_open,
+            height,
+            width,
         )
 
         return fig
