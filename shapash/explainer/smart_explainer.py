@@ -951,6 +951,9 @@ class SmartExplainer:
             contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=1
         )
 
+        if self.features_groups is not None and self.features_imp_groups is None:
+            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups, norm=1)
+
         if local:
             self.features_imp_local_lev1 = self.backend.get_global_features_importance(
                 contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=3
@@ -958,10 +961,7 @@ class SmartExplainer:
             self.features_imp_local_lev2 = self.backend.get_global_features_importance(
                 contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=7
             )
-
-        if self.features_groups is not None and self.features_imp_groups is None:
-            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups, norm=1)
-            if local:
+            if self.features_groups is not None:
                 self.features_imp_groups_local_lev1 = self.state.compute_features_import(
                     self.contributions_groups, norm=3
                 )
