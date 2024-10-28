@@ -6,7 +6,15 @@ from shapash.utils.utils import adjust_title_height
 
 
 def plot_compacity(
-    features_needed, distance_reached, style_dict, approx=0.9, nb_features=5, file_name=None, auto_open=False
+    features_needed,
+    distance_reached,
+    style_dict,
+    approx=0.9,
+    nb_features=5,
+    file_name=None,
+    auto_open=False,
+    height=600,
+    width=900,
 ):
     """
         The Compacity_plot has the main objective of determining if a small subset of features \
@@ -39,6 +47,10 @@ def plot_compacity(
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
+        height: int, optional
+            height of the plot, by default 600
+        width:  int, optional
+            width of the plot, by default 900
         """
 
     # Make plots
@@ -102,19 +114,19 @@ def plot_compacity(
     title = style_dict["dict_yaxis"] | {"text": "Cumulative distribution over<br>dataset's instances (%)"}
     fig.update_yaxes(title=title, row=1, col=2)
 
-    title = "Compacity of explanations:"
-    title += (
-        "<span style='font-size: 16px;'><br />How many variables are enough to produce accurate explanations?</span>"
-    )
+    title = "<br>Compacity of explanations:"
+    title += "<br><sup>How many variables are enough to produce accurate explanations?</sup>"
     dict_t = style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height()}
 
     fig.update_layout(
         template="none",
+        autosize=False,
+        height=height,
+        width=width,
         title=dict_t,
-        title_y=0.8,
         hovermode="closest",
-        margin={"t": 150},
         showlegend=False,
+        margin={"l": 150, "r": 20, "t": 150, "b": 70},
     )
 
     if file_name is not None:

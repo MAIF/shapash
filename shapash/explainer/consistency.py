@@ -16,8 +16,8 @@ from shapash.utils.utils import adjust_title_height
 class Consistency:
     """Consistency class"""
 
-    def __init__(self):
-        self._palette_name = list(colors_loading().keys())[0]
+    def __init__(self, palette_name="default"):
+        self._palette_name = palette_name
         self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
 
     def tuning_colorscale(self, values):
@@ -454,7 +454,15 @@ class Consistency:
         return fig
 
     def pairwise_consistency_plot(
-        self, methods, selection=None, max_features=10, max_points=100, file_name=None, auto_open=False
+        self,
+        methods,
+        selection=None,
+        max_features=10,
+        max_points=100,
+        file_name=None,
+        auto_open=False,
+        width=1000,
+        height="auto",
     ):
         """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point,
         and plots the distribution of those differences.
@@ -480,6 +488,10 @@ class Consistency:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool
             open automatically the plot, by default False
+        height : str or int, optional
+            Height of the figure. Default is 'auto'.
+        width : int, optional
+            Width of the figure. Default is 1000.
 
 
         Returns
@@ -520,11 +532,15 @@ class Consistency:
         mean_contributions = np.mean(np.abs(pd.concat(weights)), axis=0)
         top_features = np.flip(mean_contributions.sort_values(ascending=False)[:max_features].keys())
 
-        fig = self.plot_pairwise_consistency(weights, x, top_features, methods, file_name, auto_open)
+        fig = self.plot_pairwise_consistency(
+            weights, x, top_features, methods, file_name, auto_open, width=width, height=height
+        )
 
         return fig
 
-    def plot_pairwise_consistency(self, weights, x, top_features, methods, file_name, auto_open):
+    def plot_pairwise_consistency(
+        self, weights, x, top_features, methods, file_name, auto_open, width=1000, height="auto"
+    ):
         """Plot the main graph displaying distances between methods across each feature and data point
 
         Parameters
@@ -541,6 +557,10 @@ class Consistency:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool
             open automatically the plot
+        height : str or int, optional
+            Height of the figure. Default is 'auto'.
+        width : int, optional
+            Width of the figure. Default is 1000.
 
         Returns
         -------
@@ -555,8 +575,7 @@ class Consistency:
             x = encoder.transform(x)
 
         xaxis_title = (
-            "Difference of contributions between the 2 methods"
-            + f"<span style='font-size: 12px;'><br />{methods[0]} - {methods[1]}</span>"
+            "<br>Difference of contributions between the 2 methods" + f"<br><sup>{methods[0]} - {methods[1]}</sup>"
         )
         yaxis_title = (
             "Top features<span style='font-size: 12px;'><br />(Ordered by mean of absolute contributions)</span>"
@@ -647,11 +666,15 @@ class Consistency:
             yaxis_title=yaxis_title,
             file_name=file_name,
             auto_open=auto_open,
+            height=height,
+            width=width,
         )
 
         return fig
 
-    def _update_pairwise_consistency_fig(self, fig, top_features, xaxis_title, yaxis_title, file_name, auto_open):
+    def _update_pairwise_consistency_fig(
+        self, fig, top_features, xaxis_title, yaxis_title, file_name, auto_open, height="auto", width=1000
+    ):
         """Function used for the pairwise_consistency_plot to update the layout of the plotly figure.
 
         Parameters
@@ -668,11 +691,19 @@ class Consistency:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool
             open automatically the plot
+        height : str or int, optional
+            Height of the figure. Default is 'auto'.
+        width : int, optional
+            Width of the figure. Default is 1000.
+
+        Returns
+        -------
+        None
         """
-        height = max(500, 40 * len(top_features))
-        title = "Pairwise comparison of Consistency:"
-        title += "<span style='font-size: 16px;'>\
-                    <br />How are differences in contributions distributed across features?</span>"
+        if height == "auto":
+            height = max(500, 40 * len(top_features) + 300)
+        title = "<br>Pairwise comparison of Consistency:"
+        title += "<br><sup>How are differences in contributions distributed across features?</sup>"
         dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": xaxis_title}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": yaxis_title}
@@ -681,12 +712,15 @@ class Consistency:
         fig.layout.yaxis2.update(showticklabels=False)
         fig.update_layout(
             template="none",
+            autosize=False,
             title=dict_t,
             xaxis_title=dict_xaxis,
             yaxis_title=dict_yaxis,
             yaxis=dict(range=[-0.7, len(top_features) - 0.3]),
             yaxis2=dict(range=[-0.7, len(top_features) - 0.3]),
             height=height,
+            width=width,
+            margin={"l": 150, "r": 20, "t": 95, "b": 70},
         )
 
         fig.update_yaxes(automargin=True, zeroline=False)
