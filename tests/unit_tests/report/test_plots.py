@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from shapash.report.common import VarType
-from shapash.report.plots import (
+from shapash.plots.plot_univariate import (
     generate_fig_univariate,
     generate_fig_univariate_categorical,
     generate_fig_univariate_continuous,

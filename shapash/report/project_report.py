@@ -12,9 +12,10 @@ import pandas as pd
 import plotly
 
 from shapash import SmartExplainer
+from shapash.plots.plot_metrics import generate_confusion_matrix_plot
+from shapash.plots.plot_univariate import generate_fig_univariate
 from shapash.report.common import compute_col_types, display_value, get_callable, series_dtype
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_confusion_matrix_plot, generate_fig_univariate
 from shapash.report.visualisation import (
     convert_fig_to_html,
     print_css_style,
@@ -52,7 +53,7 @@ class ProjectReport:
     Attributes
     ----------
     explainer : shapash.explainer.smart_explainer.SmartExplainer
-         A shapash SmartExplainer object that has already be compiled.
+        A shapash SmartExplainer object that has already be compiled.
     metadata : dict
         Information about the project (author, description, ...).
     x_train : pd.DataFrame
