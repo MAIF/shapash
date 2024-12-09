@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as sch
@@ -6,12 +8,14 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 
 from shapash.manipulation.summarize import compute_corr
+from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.utils import adjust_title_height, compute_top_correlations_features, suffix_duplicates
 
 
 def plot_correlations(
     df,
-    style_dict,
+    style_dict: Optional[dict] = None,
+    palette_name: str = "default",
     features_dict=None,
     optimized=False,
     max_features=20,
@@ -35,6 +39,8 @@ def plot_correlations(
         DataFrame for which we want to compute correlations.
     style_dict: dict
         the different styles used in the different outputs of Shapash
+    palette_name : str, optional, default="default"
+        The name of the color palette to be used if `colors_dict` is not provided.
     features_dict: dict (default: None)
         Dictionary mapping technical feature names to domain names.
     optimized : boolean, optional
@@ -123,6 +129,15 @@ def plot_correlations(
         list_features_shorten = suffix_duplicates(list_features_shorten)
         return corr, list_features, list_features_shorten
 
+    if style_dict:
+        style_dict_default = {}
+        keys = ["dict_title", "init_contrib_colorscale"]
+        if any(key not in style_dict for key in keys):
+            style_dict_default = define_style(get_palette(palette_name))
+        style_dict_default.update(style_dict)
+    else:
+        style_dict_default = define_style(get_palette(palette_name))
+
     if features_dict is None:
         features_dict = {}
 
@@ -203,10 +218,10 @@ def plot_correlations(
     if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
         subtitle = f"Top {len(list_features)} correlations"
         title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
-    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+    dict_t = style_dict_default["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
     fig.update_layout(
-        coloraxis=dict(colorscale=["rgb(255, 255, 255)"] + style_dict["init_contrib_colorscale"][5:-1]),
+        coloraxis=dict(colorscale=["rgb(255, 255, 255)"] + style_dict_default["init_contrib_colorscale"][5:-1]),
         showlegend=True,
         title=dict_t,
         width=width,

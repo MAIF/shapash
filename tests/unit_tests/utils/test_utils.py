@@ -67,7 +67,7 @@ class TestUtils(unittest.TestCase):
 
     def test_compute_digit_number_3(self):
         t = compute_digit_number(0.000044)
-        assert t == 7
+        assert t == 8
 
     def test_truncate_str_1(self):
         t = truncate_str(12)

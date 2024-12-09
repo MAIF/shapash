@@ -1,8 +1,11 @@
+from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 
+from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import adjust_title_height, truncate_str, tuning_colorscale
 
@@ -356,7 +359,6 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
     fig = go.Figure()
 
     subtitle = None
-    prediction_error = prediction_error
     if prediction_error is not None:
         if (y_target == 0).any().iloc[0]:
             subtitle = "Prediction Error = abs(True Values - Predicted Values)"
@@ -458,8 +460,8 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
             "y": 1.1,
         }
         range_axis = [
-            min(min(y_target_values), min(y_pred_flatten)),
-            max(max(y_target_values), max(y_pred_flatten)),
+            min(y_target_values.min(), y_pred_flatten.min()),
+            max(y_target_values.max(), y_pred_flatten.max()),
         ]
         fig.update_xaxes(range=range_axis)
         fig.update_yaxes(range=range_axis)
@@ -479,3 +481,152 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
         )
 
     return fig, subtitle
+
+
+def plot_confusion_matrix(
+    y_true: Union[np.ndarray, list],
+    y_pred: Union[np.ndarray, list],
+    colors_dict: Optional[dict] = None,
+    width: int = 700,
+    height: int = 500,
+    palette_name: str = "default",
+    file_name=None,
+    auto_open=False,
+) -> go.Figure:
+    """
+    Creates an interactive confusion matrix using Plotly.
+
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth (correct) target values.
+    y_pred : array-like
+        Estimated targets as returned by a classifier.
+    colors_dict : dict, optional
+        Custom colors for the confusion matrix.
+    width : int, optional
+        The width of the figure in pixels.
+    height : int, optional
+        The height of the figure in pixels.
+    palette_name : str, optional
+        The color palette to use for the heatmap.
+    file_name: string, optional
+        Specify the save path of html files. If None, no file will be saved.
+    auto_open: bool, optional
+        Automatically open the plot.
+
+    Returns
+    -------
+    go.Figure
+        The generated confusion matrix as a Plotly figure.
+    """
+    # Create a confusion matrix as a DataFrame
+    labels = sorted(set(y_true).union(set(y_pred)))
+    se_y_true = pd.Series(y_true, name="Actual")
+    se_y_pred = pd.Series(y_pred, name="Predicted")
+    df_cm = pd.crosstab(se_y_true, se_y_pred).reindex(index=labels, columns=labels, fill_value=0)
+
+    if colors_dict:
+        style_dict = {}
+        keys = ["dict_title", "init_confusion_matrix_colorscale", "dict_xaxis", "dict_yaxis"]
+        if any(key not in colors_dict for key in keys):
+            style_dict = define_style(get_palette(palette_name))
+        style_dict.update(colors_dict)
+    else:
+        style_dict = define_style(get_palette(palette_name))
+
+    init_colorscale = style_dict["init_confusion_matrix_colorscale"]
+    linspace = np.linspace(0, 1, len(init_colorscale))
+    col_scale = [(value, color) for value, color in zip(linspace, init_colorscale)]
+
+    # Convert the DataFrame to a NumPy array
+    x_labels = list(df_cm.columns)
+    y_labels = list(df_cm.index)
+    z = df_cm.loc[x_labels, y_labels].values
+
+    title = "Confusion Matrix"
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+    dict_xaxis = style_dict["dict_xaxis"] | {"text": se_y_pred.name}
+    dict_yaxis = style_dict["dict_yaxis"] | {"text": se_y_true.name}
+
+    # Determine if labels are numeric
+    x_numeric = all(str(label).isdigit() for label in x_labels)
+    y_numeric = all(str(label).isdigit() for label in y_labels)
+
+    hv_text = [
+        [f"Actual: {y}<br>Predicted: {x}<br>Count: {value}" for x, value in zip(x_labels, row)]
+        for y, row in zip(y_labels, z)
+    ]
+
+    if not x_numeric:
+        if len(x_labels) < 6:
+            k = 10
+        else:
+            k = 6
+
+        # Shorten labels that exceed the threshold
+        x_labels = [x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in x_labels]
+
+    if not y_numeric:
+        if len(y_labels) < 6:
+            k = 10
+        else:
+            k = 6
+
+        # Shorten labels that exceed the threshold
+        y_labels = [x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in y_labels]
+
+    # Create the heatmap using go.Heatmap
+    heatmap = go.Heatmap(
+        z=z,
+        x=x_labels,
+        y=y_labels,
+        colorscale=col_scale,
+        hovertext=hv_text,
+        hovertemplate="%{hovertext}<extra></extra>",
+        showscale=True,
+    )
+
+    fig = go.Figure(data=[heatmap])
+
+    # Add annotations for each cell
+    annotations = []
+    for i, y_label in enumerate(y_labels):
+        for j, x_label in enumerate(x_labels):
+            annotations.append(
+                dict(
+                    x=x_label,
+                    y=y_label,
+                    text=str(z[i][j]),
+                    showarrow=False,
+                    font=dict(color="black" if z[i][j] < z.max() / 2 else "white"),
+                )
+            )
+
+    # Update layout
+    fig.update_layout(
+        annotations=annotations,
+        title=dict_t,
+        xaxis=dict(
+            title=dict_xaxis,
+            tickangle=45,
+            tickmode="array" if x_numeric else "linear",
+            tickvals=[int(label) for label in x_labels] if x_numeric else None,
+            ticktext=x_labels if x_numeric else None,
+        ),
+        yaxis=dict(
+            title=dict_yaxis,
+            autorange="reversed",  # Reverse y-axis to match conventional confusion matrix
+            tickmode="array" if y_numeric else "linear",
+            tickvals=[int(label) for label in y_labels] if y_numeric else None,
+            ticktext=y_labels if y_numeric else None,
+        ),
+        width=width,
+        height=height,
+        margin=dict(l=150, r=20, t=100, b=70),
+    )
+
+    if file_name:
+        plot(fig, filename=file_name, auto_open=auto_open)
+
+    return fig

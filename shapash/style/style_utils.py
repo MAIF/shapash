@@ -5,7 +5,31 @@ functions for loading and manipulating colors
 import json
 import os
 
+import numpy as np
+
 from shapash.utils.utils import convert_string_to_int_keys
+
+
+def random_color(a: float = 0.6) -> str:
+    """
+    Generates a random RGBA color string.
+
+    Parameters
+    ----------
+    a : float, optional, default=0.6
+        Alpha (transparency) value for the color. Must be between 0 and 1.
+
+    Returns
+    -------
+    str
+        A string representing a random RGBA color in the format "rgba(r, g, b, a)".
+    """
+    if not (0 <= a <= 1):
+        raise ValueError("Alpha value 'a' must be between 0 and 1.")
+
+    rng = np.random.default_rng()
+    r, g, b = rng.integers(0, 256, size=3)  # Generate random RGB values
+    return f"rgba({r}, {g}, {b}, {a})"
 
 
 def colors_loading():
@@ -106,6 +130,9 @@ def define_style(palette):
     style_dict["featureimp_groups"] = convert_string_to_int_keys(palette["featureimp_groups"])
     style_dict["feature_contributions_cumulative"] = palette["feature_contributions_cumulative"]
     style_dict["init_contrib_colorscale"] = palette["contrib_colorscale"]
+    style_dict["init_confusion_matrix_colorscale"] = palette["confusion_matrix_colorscale"]
+    style_dict["report_confusion_matrix"] = palette["report_confusion_matrix"]
+    style_dict["report_feature_distribution"] = palette["report_feature_distribution"]
     style_dict["contrib_distribution"] = palette["contrib_distribution"]
     style_dict["violin_area_classif"] = convert_string_to_int_keys(palette["violin_area_classif"])
     style_dict["prediction_plot"] = convert_string_to_int_keys(palette["prediction_plot"])

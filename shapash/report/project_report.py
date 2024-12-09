@@ -12,11 +12,11 @@ import pandas as pd
 import plotly
 
 from shapash import SmartExplainer
+from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
+from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, display_value, get_callable, series_dtype
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.plots import generate_confusion_matrix_plot, generate_fig_univariate
 from shapash.report.visualisation import (
-    convert_fig_to_html,
     print_css_style,
     print_html,
     print_javascript_misc,
@@ -52,7 +52,7 @@ class ProjectReport:
     Attributes
     ----------
     explainer : shapash.explainer.smart_explainer.SmartExplainer
-         A shapash SmartExplainer object that has already be compiled.
+        A shapash SmartExplainer object that has already be compiled.
     metadata : dict
         Information about the project (author, description, ...).
     x_train : pd.DataFrame
@@ -356,8 +356,11 @@ class ProjectReport:
         ]
         for col_label in sorted(list_cols_labels):
             col = self.explainer.inv_features_dict.get(col_label, col_label)
-            fig = generate_fig_univariate(
-                df_all=df, col=col, hue=col_splitter, type=col_types[col], colors_dict=self.explainer.colors_dict
+            fig = plot_distribution(
+                df_all=df,
+                col=col,
+                hue=col_splitter,
+                colors_dict=self.explainer.colors_dict["report_feature_distribution"],
             )
             df_col_stats = self._stats_to_table(
                 test_stats=test_stats_univariate[col],
@@ -372,7 +375,7 @@ class ProjectReport:
                     "type": str(series_dtype(df[col])),
                     "description": col_label,
                     "table": df_col_stats.to_html(classes="greyGridTable"),
-                    "image": convert_fig_to_html(fig),
+                    "image": plotly.io.to_html(fig, include_plotlyjs=False, full_html=False),
                 }
             )
         print_html(univariate_template.render(features=univariate_features_desc, groupId=group_id))
@@ -526,13 +529,10 @@ class ProjectReport:
                 or metric["name"] == "confusion_matrix"
             ):
                 print_md(f"**{metric['name']} :**")
-                print_html(
-                    convert_fig_to_html(
-                        generate_confusion_matrix_plot(
-                            y_true=self.y_test, y_pred=self.y_pred, colors_dict=self.explainer.colors_dict
-                        )
-                    )
+                fig = plot_confusion_matrix(
+                    y_true=self.y_test, y_pred=self.y_pred, colors_dict=self.explainer.colors_dict
                 )
+                print_html(plotly.io.to_html(fig, include_plotlyjs=False, full_html=False))
             else:
                 try:
                     metric_fn = get_callable(path=metric["path"])
