@@ -4,6 +4,7 @@ Smart plotter module
 
 import math
 import random
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -16,11 +17,12 @@ from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
+from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix, plot_scatter_prediction
 from shapash.plots.plot_feature_importance import plot_feature_importance
 from shapash.plots.plot_interactions import plot_interactions_scatter, plot_interactions_violin, update_interactions_fig
 from shapash.plots.plot_line_comparison import plot_line_comparison
-from shapash.plots.plot_scatter_prediction import plot_scatter_prediction
 from shapash.plots.plot_stability import plot_amplitude_vs_stability, plot_stability_distribution
+from shapash.plots.plot_univariate import plot_distribution
 from shapash.style.style_utils import colors_loading, define_style, select_palette
 from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import (
@@ -1852,3 +1854,119 @@ class SmartPlotter:
         )
 
         return fig
+
+    def confusion_matrix_plot(
+        self,
+        width: int = 700,
+        height: int = 500,
+        file_name=None,
+        auto_open=False,
+    ):
+        """
+        Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
+        y_pred parameters.
+
+        Parameters
+        ----------
+        y_true : array-like
+            Ground truth (correct) target values.
+        y_pred : array-like
+            Estimated targets as returned by a classifier.
+        colors_dict : dict
+            dict of colors used
+        width : int, optional, default=7
+            The width of the generated figure, in inches.
+        height : int, optional, default=4
+            The height of the generated figure, in inches.
+
+        Returns
+        -------
+        matplotlib.pyplot.Figure
+        """
+
+        # Classification Case
+        if self._explainer._case == "classification":
+            y_true = self._explainer.y_target.iloc[:, 0]
+            y_pred = self._explainer.y_pred.iloc[:, 0]
+            if self._explainer.label_dict is not None:
+                y_true = y_true.map(self._explainer.label_dict)
+                y_pred = y_pred.map(self._explainer.label_dict)
+        # Regression Case
+        elif self._explainer._case == "regression":
+            raise (ValueError("Confusion matrix is only available for classification case"))
+
+        return plot_confusion_matrix(
+            y_true=y_true,
+            y_pred=y_pred,
+            colors_dict=self._style_dict,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+        )
+
+    def distribution_plot(
+        self,
+        col: str,
+        hue: Optional[str] = None,
+        width: int = 700,
+        height: int = 500,
+        nb_cat_max: int = 7,
+        nb_hue_max: int = 7,
+        file_name=None,
+        auto_open=False,
+    ) -> go.Figure:
+        """
+        Generate a Plotly figure displaying the univariate distribution of a feature
+        (continuous or categorical) in the dataset.
+
+        For categorical features with too many unique categories, the least frequent
+        categories are grouped into a new 'Other' category to ensure the plot remains
+        readable. Continuous features are visualized using KDE plots.
+
+        The input DataFrame must contain the column of interest (`col`) and a second column
+        (`hue`) used to distinguish between two groups (e.g., 'train' and 'test').
+
+        Parameters
+        ----------
+        col : str
+            The name of the column of interest whose distribution is to be visualized.
+        hue : Optional[str], optional
+            The name of the column used to differentiate between groups.
+        width : int, optional, default=700
+            The width of the generated figure, in pixels.
+        height : int, optional, default=500
+            The height of the generated figure, in pixels.
+        nb_cat_max : int, optional, default=7
+            Maximum number of categories to display. Categories beyond this limit
+            are grouped into a new 'Other' category (only for categorical features).
+        nb_hue_max : int, optional, default=7
+            Maximum number of hue categories to display. Categories beyond this limit
+            are grouped into a new 'Other' category.
+        file_name : str, optional
+            Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
+        auto_open : bool, optional
+            If True, the plot will automatically open in a web browser after being generated, by default False.
+
+        Returns
+        -------
+        go.Figure
+            A Plotly figure object representing the distribution of the feature.
+        """
+        if self._explainer.y_target is not None:
+            data = pd.concat([self._explainer.x_init, self._explainer.y_target], axis=1)
+        else:
+            data = self._explainer.x_init
+
+        return plot_distribution(
+            data,
+            col,
+            hue=hue,
+            colors_dict=self._style_dict,
+            width=width,
+            height=height,
+            nb_cat_max=nb_cat_max,
+            nb_hue_max=nb_hue_max,
+            file_name=file_name,
+            auto_open=auto_open,
+        )

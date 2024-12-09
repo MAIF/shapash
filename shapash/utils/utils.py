@@ -198,7 +198,7 @@ def truncate_str(text, maxlen=40):
     return text
 
 
-def compute_digit_number(value):
+def compute_digit_number(value, significant_digits: int = 4):
     """
     return int, number of digits to display
 
@@ -206,6 +206,8 @@ def compute_digit_number(value):
     ----------
     value : float
         can be the gap between percentiles
+    significant_digits : int, optional, default=4
+        Fixed number of significant digits to display.
 
     Returns
     -------
@@ -221,8 +223,8 @@ def compute_digit_number(value):
     if scalar_value == 0:
         first_nz = 1
     else:
-        first_nz = int(math.log10(abs(scalar_value)))
-    digit = abs(min(3, first_nz) - 3)
+        first_nz = math.ceil(math.log10(abs(scalar_value)))
+    digit = abs(min(significant_digits, first_nz) - significant_digits)
     return digit
 
 
@@ -422,14 +424,13 @@ def tuning_colorscale(init_colorscale, values, keep_90_pct=False):
             data = data_tmp
         cmin, cmax = data.min(), data.max()
 
-    # Describe the data to get basic statistics
-    desc_df = data.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
+    # Calculate only the quantiles corresponding to the color scale
+    quantiles = data.quantile(np.linspace(0, 1, len(init_colorscale)))
 
-    # Extract the initial min and max values
-    min_pred, max_init = desc_df.loc[["min", "max"]]
+    # Normalize quantiles to a 0-1 scale
+    min_pred, max_pred = quantiles.min(), quantiles.max()
+    normalized_quantiles = (quantiles - min_pred) / (max_pred - min_pred)
 
-    # Adjust percentile values for color scale creation
-    desc_pct_df = (desc_df.loc[~desc_df.index.isin(["count", "mean", "std"])] - min_pred) / (max_init - min_pred)
-    color_scale = [(value, color) for value, color in zip(desc_pct_df.values.flatten(), init_colorscale)]
-
+    # Build the color scale
+    color_scale = [(value, color) for value, color in zip(normalized_quantiles, init_colorscale)]
     return color_scale, cmin, cmax

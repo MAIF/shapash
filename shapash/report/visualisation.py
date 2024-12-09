@@ -36,13 +36,13 @@ def print_css_style():
             margin-left: 5px;
         }
         table.greyGridTable tbody td {
-              border: solid 1px #DEDDEE;
-              color: #333;
-              padding: 5px;
-              margin-left: 10px;
-              margin-right: 10px;
-              text-align: center;
-              text-shadow: 1px 1px 1px #fff;
+            border: solid 1px #DEDDEE;
+            color: #333;
+            padding: 5px;
+            margin-left: 10px;
+            margin-right: 10px;
+            text-align: center;
+            text-shadow: 1px 1px 1px #fff;
         }
         table.greyGridTable thead th {
             border: solid 1px #DEDDEE;
@@ -82,7 +82,7 @@ def print_css_style():
     }
 
         .scrollable-menu > li{
-          list-style:none;
+            list-style:none;
     }
     </style>
     """
@@ -95,24 +95,24 @@ def print_javascript_misc():
         """
     <script>
     function showBlock(groupId, blockId) {
-      var elms = document.querySelectorAll('*[id^="' + groupId + '"]');
-      for (i=0;i<elms.length;i++) {
+        var elms = document.querySelectorAll('*[id^="' + groupId + '"]');
+        for (i=0;i<elms.length;i++) {
         elms[i].style.display = "none";
-      }
-      var x = document.getElementById(blockId);
-      if (x.style.display === "none") {
+        }
+        var x = document.getElementById(blockId);
+        if (x.style.display === "none") {
         x.style.display = "block";
-      } else {
+        } else {
         x.style.display = "none";
-      }
+        }
 
     var x = document.getElementById(blockId + '-2');
     if (x != null) {
-      if (x.style.display === "none") {
+        if (x.style.display === "none") {
         x.style.display = "block";
-      } else {
+        } else {
         x.style.display = "none";
-      }}
+        }}
     }
     </script>
     """
@@ -135,8 +135,8 @@ def html_str_df_and_image(df: pd.DataFrame, fig: plt.Figure) -> str:
     """Convert dataframe to HTML display"""
     return f"""
     <div class="row-fluid" style="margin-top:5px;">
-      <div class="col-sm-6">{df.to_html(classes="greyGridTable")}</div>
-      <div class="col-sm-6">{convert_fig_to_html(fig)}</div>
+        <div class="col-sm-6">{df.to_html(classes="greyGridTable")}</div>
+        <div class="col-sm-6">{convert_fig_to_html(fig)}</div>
     </div>
     """
 
