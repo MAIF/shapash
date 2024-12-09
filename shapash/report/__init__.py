@@ -1,7 +1,7 @@
 import importlib
 
 # This list should be identical to the list in setup.py
-report_requirements = ["nbconvert==6.0.7", "papermill", "matplotlib", "seaborn", "notebook", "Jinja2"]
+report_requirements = ["nbconvert==6.0.7", "papermill", "matplotlib", "notebook", "Jinja2"]
 
 
 def check_report_requirements():
