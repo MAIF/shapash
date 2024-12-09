@@ -4,7 +4,6 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from shapash.report.common import VarType
 from shapash.plots.plot_univariate import (
     plot_distribution,
     plot_categorical_distribution,
@@ -56,7 +55,7 @@ class TestPlots(unittest.TestCase):
     def test_plot_continuous_distribution_1(self):
         df = pd.DataFrame(
             {
-                "int_data": [10, 20, 30, 40],
+                "int_data": [10, 20, 30, 40, 50],
             }
         )
         fig = plot_continuous_distribution(df, "int_data")
@@ -67,8 +66,8 @@ class TestPlots(unittest.TestCase):
     def test_plot_continuous_distribution_2(self):
         df = pd.DataFrame(
             {
-                "int_data": [10, 20, 30, 40, 50, 30, 20, 0],
-                "data_train_test": ["train", "train", "train", "train", "test", "test", "test", "test"],
+                "int_data": [10, 20, 30, 40, 50, 30, 20, 0, 10, 20],
+                "data_train_test": ["train", "train", "train", "train", "train", "test", "test", "test", "test", "test"],
             }
         )
         fig = plot_continuous_distribution(df, "int_data", "data_train_test")

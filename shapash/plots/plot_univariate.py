@@ -165,9 +165,11 @@ def plot_continuous_distribution(
     else:
         style_dict = define_style(get_palette(palette_name))
 
-    lower_quantile = df_all[col].quantile(0.005)
-    upper_quantile = df_all[col].quantile(0.995)
-    filtered_data = df_all[(df_all[col] > lower_quantile) & (df_all[col] < upper_quantile)].copy()
+    filtered_data = df_all.copy()
+    if len(filtered_data) > 200:
+        lower_quantile = filtered_data[col].quantile(0.005)
+        upper_quantile = filtered_data[col].quantile(0.995)
+        filtered_data = filtered_data[(filtered_data[col] > lower_quantile) & (filtered_data[col] < upper_quantile)]
 
     # Initialize the figure
     fig = go.Figure()
