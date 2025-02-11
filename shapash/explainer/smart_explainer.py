@@ -1206,6 +1206,7 @@ class SmartExplainer:
         notebook_path=None,
         kernel_name=None,
         max_points=200,
+        display_interaction_plot=False,
         nb_top_interactions=5,
     ):
         """
@@ -1251,6 +1252,9 @@ class SmartExplainer:
             by default.
         max_points : int, optional
             number of maximum points in the contribution plot
+        display_interaction_plot: bool, optional
+            Whether to display the interaction plot. This can be computationally expensive,
+            so it is set to False by default to optimize performance.
         nb_top_interactions : int
             Number of top interactions to display.
         Examples
@@ -1305,6 +1309,7 @@ class SmartExplainer:
                     title_description=title_description,
                     metrics=metrics,
                     max_points=max_points,
+                    display_interaction_plot=display_interaction_plot,
                     nb_top_interactions=nb_top_interactions,
                 ),
                 notebook_path=notebook_path,

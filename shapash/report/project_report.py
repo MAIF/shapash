@@ -103,6 +103,11 @@ class ProjectReport:
         else:
             self.max_points = 200
 
+        if "display_interaction_plot" in self.config.keys():
+            self.display_interaction_plot = config["display_interaction_plot"]
+        else:
+            self.display_interaction_plot = False
+
         if "nb_top_interactions" in self.config.keys():
             self.nb_top_interactions = config["nb_top_interactions"]
         else:
@@ -427,46 +432,47 @@ class ProjectReport:
                 )
 
             # Interaction Plot
-            explain_contrib_data_interaction = list()
-            list_ind, _ = self.explainer.plot._select_indices_interactions_plot(
-                selection=None, max_points=self.max_points
-            )
-            interaction_values = self.explainer.get_interaction_values(selection=list_ind)
-            sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
-            indices_to_plot = sorted_top_features_indices[: self.nb_top_interactions]
-
-            for i, ids in enumerate(indices_to_plot):
-                id0, id1 = ids
-
-                fig_one_interaction = self.explainer.plot.interactions_plot(
-                    col1=self.explainer.columns_dict[id0],
-                    col2=self.explainer.columns_dict[id1],
-                    max_points=self.max_points,
+            if self.display_interaction_plot:
+                explain_contrib_data_interaction = list()
+                list_ind, _ = self.explainer.plot._select_indices_interactions_plot(
+                    selection=None, max_points=self.max_points
                 )
+                interaction_values = self.explainer.get_interaction_values(selection=list_ind)
+                sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
+                indices_to_plot = sorted_top_features_indices[: self.nb_top_interactions]
 
-                explain_contrib_data_interaction.append(
+                for i, ids in enumerate(indices_to_plot):
+                    id0, id1 = ids
+
+                    fig_one_interaction = self.explainer.plot.interactions_plot(
+                        col1=self.explainer.columns_dict[id0],
+                        col2=self.explainer.columns_dict[id1],
+                        max_points=self.max_points,
+                    )
+
+                    explain_contrib_data_interaction.append(
+                        {
+                            "feature_index": i,
+                            "name": self.explainer.columns_dict[id0] + " / " + self.explainer.columns_dict[id1],
+                            "description": self.explainer.features_dict[self.explainer.columns_dict[id0]]
+                            + " / "
+                            + self.explainer.features_dict[self.explainer.columns_dict[id1]],
+                            "plot": plotly.io.to_html(fig_one_interaction, include_plotlyjs=False, full_html=False),
+                        }
+                    )
+
+                # Aggregating the data
+                explain_data.append(
                     {
-                        "feature_index": i,
-                        "name": self.explainer.columns_dict[id0] + " / " + self.explainer.columns_dict[id1],
-                        "description": self.explainer.features_dict[self.explainer.columns_dict[id0]]
-                        + " / "
-                        + self.explainer.features_dict[self.explainer.columns_dict[id1]],
-                        "plot": plotly.io.to_html(fig_one_interaction, include_plotlyjs=False, full_html=False),
+                        "index": index_label,
+                        "name": label_value,
+                        "feature_importance_plot": plotly.io.to_html(
+                            fig_features_importance, include_plotlyjs=False, full_html=False
+                        ),
+                        "features": explain_contrib_data,
+                        "features_interaction": explain_contrib_data_interaction,
                     }
                 )
-
-            # Aggregating the data
-            explain_data.append(
-                {
-                    "index": index_label,
-                    "name": label_value,
-                    "feature_importance_plot": plotly.io.to_html(
-                        fig_features_importance, include_plotlyjs=False, full_html=False
-                    ),
-                    "features": explain_contrib_data,
-                    "features_interaction": explain_contrib_data_interaction,
-                }
-            )
         print_html(explainability_template.render(labels=explain_data))
         print_md("---")
 

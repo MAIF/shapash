@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shapash"
-version = "2.7.6"
+version = "2.7.7"
 authors = [
     {name = "Yann Golhen"},
     {name = "Sebastien Bidault"},
@@ -29,7 +29,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "plotly>=5.0.0",
+    "plotly>=5.0.0,<6.0.0",
     "matplotlib>=3.2.0",
     "numpy>1.18.0,<2",
     "pandas>=2.1.0",
