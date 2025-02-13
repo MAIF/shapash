@@ -302,12 +302,16 @@ class ProjectReport:
             )
         if target_analysis:
             df_target = self._create_train_test_df(
-                test=pd.DataFrame({self.target_name: self.y_test}, index=range(len(self.y_test)))
-                if self.y_test is not None
-                else None,
-                train=pd.DataFrame({self.target_name: self.y_train}, index=range(len(self.y_train)))
-                if self.y_train is not None
-                else None,
+                test=(
+                    pd.DataFrame({self.target_name: self.y_test}, index=range(len(self.y_test)))
+                    if self.y_test is not None
+                    else None
+                ),
+                train=(
+                    pd.DataFrame({self.target_name: self.y_train}, index=range(len(self.y_train)))
+                    if self.y_train is not None
+                    else None
+                ),
             )
             if df_target is not None:
                 if target_analysis:
@@ -432,8 +436,8 @@ class ProjectReport:
                 )
 
             # Interaction Plot
+            explain_contrib_data_interaction = list()
             if self.display_interaction_plot:
-                explain_contrib_data_interaction = list()
                 list_ind, _ = self.explainer.plot._select_indices_interactions_plot(
                     selection=None, max_points=self.max_points
                 )
@@ -461,18 +465,18 @@ class ProjectReport:
                         }
                     )
 
-                # Aggregating the data
-                explain_data.append(
-                    {
-                        "index": index_label,
-                        "name": label_value,
-                        "feature_importance_plot": plotly.io.to_html(
-                            fig_features_importance, include_plotlyjs=False, full_html=False
-                        ),
-                        "features": explain_contrib_data,
-                        "features_interaction": explain_contrib_data_interaction,
-                    }
-                )
+            # Aggregating the data
+            explain_data.append(
+                {
+                    "index": index_label,
+                    "name": label_value,
+                    "feature_importance_plot": plotly.io.to_html(
+                        fig_features_importance, include_plotlyjs=False, full_html=False
+                    ),
+                    "features": explain_contrib_data,
+                    "features_interaction": explain_contrib_data_interaction,
+                }
+            )
         print_html(explainability_template.render(labels=explain_data))
         print_md("---")
 
@@ -508,9 +512,11 @@ class ProjectReport:
         df = pd.concat(
             [
                 pd.DataFrame({self.target_name: self.y_pred}).assign(_dataset="pred"),
-                pd.DataFrame({self.target_name: self.y_test}).assign(_dataset="true")
-                if self.y_test is not None
-                else None,
+                (
+                    pd.DataFrame({self.target_name: self.y_test}).assign(_dataset="true")
+                    if self.y_test is not None
+                    else None
+                ),
             ]
         ).reset_index(drop=True)
         self._perform_and_display_analysis_univariate(
