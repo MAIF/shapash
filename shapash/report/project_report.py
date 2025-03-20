@@ -235,13 +235,20 @@ class ProjectReport:
         print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
 
         for _, module in sorted(sys.modules.items()):
+            if not hasattr(module, "__name__"):
+                continue
+
             module_name = module.__name__.split(".")[0]
-            if self.explainer.model.__class__.__module__.split(".")[0] == module_name:
+            expected_name = self.explainer.model.__class__.__module__.split(".")[0]
+
+            if expected_name == module_name:
                 try:
-                    version = importlib.metadata.version(module_name)
+                    package_name = "scikit-learn" if module_name == "sklearn" else module_name
+                    version = importlib.metadata.version(package_name)
                     print_md(f"**Library version :** {version}")
                 except importlib.metadata.PackageNotFoundError:
                     print_md(f"**Library version :** not found for {module_name}")
+                break
 
         print_md("**Model parameters :** ")
         model_params = self.explainer.model.__dict__
