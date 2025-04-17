@@ -642,6 +642,8 @@ class TestSmartExplainer(unittest.TestCase):
             pkl_file = path.join(current, "data/xpl_to_load_311.pkl")
         elif str(sys.version)[0:4] == "3.12":
             pkl_file = path.join(current, "data/xpl_to_load_312.pkl")
+        elif str(sys.version)[0:4] == "3.13":
+            pkl_file = path.join(current, "data/xpl_to_load_313.pkl")
         else:
             raise NotImplementedError
 
