@@ -777,7 +777,7 @@ def plot_contributions_projection(
             template="none",
             width=width, 
             height=height,
-            title=style_dict['dict_title'] | {"text": "Shapley Projection Plot" if not title else title, "y": adjust_title_height(height)},
+            title=style_dict['dict_title'] | {"text": "UMAP Projection Plot" if not title else title, "y": adjust_title_height(height)},
             xaxis_title=style_dict['dict_xaxis'], 
             yaxis_title=style_dict['dict_yaxis'],
             hovermode="closest")
