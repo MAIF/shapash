@@ -633,11 +633,9 @@ def plot_confusion_matrix(
     return fig
 
 
-def plot_shapley_projection(
-    explainer,
-    case,
-    y_proba_values=None,
-    style_dict=None,
+def plot_contributions_projection(
+    values_to_project,
+    color_value,
     round_digit=2,
     metric='euclidean',
     n_neighbors=15,
@@ -648,26 +646,28 @@ def plot_shapley_projection(
     n_epochs=None,
     random_state=None,
     marker_size=10,
+    style_dict=None,
     opacity=0.8,
     width=900,
     height=600,
+    title=None,
+    colorbar_title=None,
     file_name=None,
     auto_open=False
 ):
     """
-    Generate a 2-dimensional scatter plot of the shapley values of the data and model used in the explainer.
+    Generate a 2-dimensional scatter plot of the UMAP projection of the data.
 
-    This plot allows the user to have a visual interpretation of the impact of variables on predictions.
+    This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points. 
+    Points are colored based on a selected variable, helping highlight patterns, groupings, or trends related to that feature.
 
     Parameters
     ----------
-    explainer : SmartExplainer
-        SmartExplainer object compiled on the wanted data and model.
-    case : str
-        Defines the type of task. Accepts either "classification" or "regression".
-    y_proba_values : pd.Series, optional
-        Array of predicted probabilities for classification tasks. Mandatory for classification case.
-    round_digit : int
+    values_to_project : pd.DataFrame
+        A DataFrame object containing the values to transform.
+    color_value : pd.DataFrame
+        A 1-D DataFrame object containing the values used as a color reference for markers.
+    round_digit : int, optional
         Number of decimal places to round the predicted values for display purposes.
     metric : str, optional
         The metric to use to compute distances in high dimensional space. If a string is passed it must match a valid predefined metric. If a general metric is required a function that takes two 1d arrays and returns a float can be provided. For performance purposes it is required that this be a numba jit'd function. Valid string metrics include:
@@ -711,12 +711,18 @@ def plot_shapley_projection(
         If int, random_state is the seed used by the random number generator; If RandomState instance, random_state is the random number generator; If None, the random number generator is the RandomState instance used by np.random.
     marker_size : int, optional
         Marker size of the data points.
+    style_dict : dict
+        Dictionary containing style settings (e.g., colors, title fonts, etc.) for customizing the plot.
     opacity : float, optional
         Opacity of the markers on the plot (between 0 and 1).
     width : int, optional
         Width of the plot, by default 900.
     height : int, optional
         Height of the plot, by default 600.
+    title : str, optional
+        Title of the plot.
+    colorbar_title : str, optional
+        Title of the colorbar
     file_name : str, optional
         Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
     auto_open : bool, optional
@@ -726,7 +732,7 @@ def plot_shapley_projection(
     Returns
     -------
     plotly.graph_objects.Figure
-        A Plotly figure object containing the 2-dimensional representations of the shapley values.
+        A Plotly figure object containing the 2-dimensional UMAP projection of the input data.
 
     Raises
     ------
@@ -745,80 +751,40 @@ def plot_shapley_projection(
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
 
+    ### Dimensional Reduction with UMAP
+    umap = UMAP(metric=metric, n_neighbors=n_neighbors, learning_rate=learning_rate, min_dist=min_dist, spread=spread, n_components=n_components, n_epochs=n_epochs, random_state=random_state)
+    projections = umap.fit_transform(values_to_project)
+    x, y = np.round(projections.T, round_digit)
 
-    if case == "regression":
+    ### Plotting
+    fig = go.Figure()
 
-        ### Dimensional Reduction with UMAP
-        umap = UMAP(metric=metric, n_neighbors=n_neighbors, learning_rate=learning_rate, min_dist=min_dist, spread=spread, n_components=n_components, n_epochs=n_epochs, random_state=random_state)
-        projections = umap.fit_transform(explainer.contributions)
-        x, y = np.round(projections.T, round_digit)
+    # Plot parameters
+    _, cmin, cmax = tuning_colorscale(init_colorscale=style_dict['init_contrib_colorscale'], values=color_value, keep_90_pct=True)
+    colorbar_dict = dict(title={"text":"Predictions" if not colorbar_title else colorbar_title})
+    marker_dict = dict(size=marker_size, color=color_value.iloc[:, 0], colorscale=style_dict['init_contrib_colorscale'], cmin=cmin, cmax=cmax, showscale=True, colorbar=colorbar_dict, opacity=opacity)
 
-        ### Plotting
-        fig = go.Figure()
+    # Displaying plot
+    scatterplot = go.Scatter(
+                    x=x, 
+                    y=y, 
+                    mode='markers', 
+                    marker=marker_dict)
 
-        # Plot parameters
-        _, cmin, cmax = tuning_colorscale(init_colorscale=style_dict['init_contrib_colorscale'], values=explainer.y_pred, keep_90_pct=True)
-        colorbar_dict = dict(title={"text":"Predictions"})
-        marker_dict = dict(size=marker_size, color=explainer.y_pred['pred'], colorscale=style_dict['init_contrib_colorscale'], cmin=cmin, cmax=cmax, showscale=True, colorbar=colorbar_dict, opacity=opacity)
+    fig.add_trace(scatterplot)
 
+    fig.update_layout(
+            template="none",
+            width=width, 
+            height=height,
+            title=style_dict['dict_title'] | {"text": "Shapley Projection Plot" if not title else title, "y": adjust_title_height(height)},
+            xaxis_title=style_dict['dict_xaxis'], 
+            yaxis_title=style_dict['dict_yaxis'],
+            hovermode="closest")
 
-        # Displaying plot
-        scatterplot = go.Scatter(
-                        x=x, 
-                        y=y, 
-                        mode='markers', 
-                        marker=marker_dict)
-
-        fig.add_trace(scatterplot)
-
-        fig.update_layout(
-                template="none",
-                width=width, 
-                height=height,
-                title=style_dict['dict_title'] | {"text": "Shapley Projection Plot (Predictions)", "y": adjust_title_height(height)},
-                xaxis_title=style_dict['dict_xaxis'] | {"text": "Shap1"}, 
-                yaxis_title=style_dict['dict_yaxis'] | {"text": "Shap2"},
-                hovermode="closest")
-
-
-    elif case == "classification":
-
-        assert y_proba_values is not None, "You must indicate the y_pred_proba variable."
-
-        ### Dimensional Reduction with UMAP
-        umap = UMAP(metric=metric, n_neighbors=n_neighbors, learning_rate=learning_rate, min_dist=min_dist, spread=spread, n_components=n_components, n_epochs=n_epochs, random_state=random_state)
-        projections = umap.fit_transform(explainer.contributions[0])
-        x, y = np.round(projections.T, round_digit)
-
-        ### Plotting
-        fig = go.Figure()
-
-        # Plot parameters
-        _, cmin, cmax = tuning_colorscale(init_colorscale=style_dict['init_contrib_colorscale'], values=pd.DataFrame(y_proba_values), keep_90_pct=True)
-        colorbar_dict = dict(title={"text":"Probability"})
-        marker_dict = dict(size=marker_size, color=y_proba_values, colorscale=style_dict['init_contrib_colorscale'], cmin=cmin, cmax=cmax, showscale=True, colorbar=colorbar_dict, opacity=opacity)
-
-
-        # Displaying plot
-        scatterplot = go.Scatter(
-                        x=x, 
-                        y=y, 
-                        mode='markers', 
-                        marker=marker_dict)
-
-        fig.add_trace(scatterplot)
-
-        fig.update_layout(
-                template="none",
-                width=width, 
-                height=height,
-                title=style_dict['dict_title'] | {"text": "Shapley Projection Plot (Probability)", "y": adjust_title_height(height)},
-                xaxis_title=style_dict['dict_xaxis'] | {"text": "Shap1"}, 
-                yaxis_title=style_dict['dict_yaxis'] | {"text": "Shap2"},
-                hovermode="closest")
     
-    fig.update_yaxes(automargin=True)
-    fig.update_xaxes(automargin=True)
+    fig.update_yaxes(automargin=True, showticklabels=False)
+    fig.update_xaxes(automargin=True, showticklabels=False)
         
     if file_name:
         plot(fig, filename=file_name, auto_open=auto_open)
