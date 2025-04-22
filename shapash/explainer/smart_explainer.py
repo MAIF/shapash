@@ -34,6 +34,7 @@ from shapash.utils.utils import get_host_name
 from shapash.webapp.smart_app import SmartApp
 
 from .smart_plotter import SmartPlotter
+from shapash.plots.plot_evaluation_metrics import plot_contributions_projection
 
 logging.basicConfig(level=logging.INFO)
 
@@ -1352,3 +1353,27 @@ class SmartExplainer:
             value = value.values[0]
 
         return value
+    def contributions_projection_plot(self, **kwargs):
+
+        """Generate a 2-dimensional scatter plot of the UMAP projection of the data. 
+        This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points. Points are colored based on a selected variable, helping highlight patterns, groupings, or trends related to that feature.
+        
+        Returns
+        -------
+        plotly.graph_objects.Figure
+        A Plotly figure object containing the 2-dimensional UMAP projection of the input data.
+        
+        For more information about this plot, see plot_contributions_projection() in shapash.plots.plot_evaluation_metrics."""
+
+
+        if not hasattr(self, "model"):
+            raise AssertionError(
+                "Explainer object was not compiled. Please compile the explainer "
+                "object using .compile(...) method before generating the report."
+            )
+
+        if self._case == "classification":
+            plot_contributions_projection(values_to_project=self.contributions[0], color_value=self.proba_values, **kwargs)
+
+        elif self._case == "regression":
+            plot_contributions_projection(values_to_project=self.contributions, color_value=self.y_pred, **kwargs)
