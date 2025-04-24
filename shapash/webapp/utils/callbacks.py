@@ -1,5 +1,5 @@
 import datetime
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
     from shapash.explainer.smart_explainer import SmartExplainer
@@ -335,7 +335,7 @@ def get_feature_contributions_sign_to_show(positive: list, negative: list) -> Op
     return sign
 
 
-def update_features_to_display(features: int, nb_columns: int, value: int) -> Tuple[int, int, dict]:
+def update_features_to_display(features: int, nb_columns: int, value: int) -> tuple[int, int, dict]:
     """Update features to display slider.
 
     Parameters
@@ -349,7 +349,7 @@ def update_features_to_display(features: int, nb_columns: int, value: int) -> Tu
 
     Returns
     -------
-    Tuple[int, int, dict]
+    tuple[int, int, dict]
         Number of columns to plot, Number max of columns to plot, Marks in the slider
     """
     max_value = min(features, nb_columns)
@@ -696,7 +696,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     return new_element
 
 
-def handle_page_navigation(triggered_input: str, page: Union[int, str], selected_feature: str) -> Tuple[int, str]:
+def handle_page_navigation(triggered_input: str, page: Union[int, str], selected_feature: str) -> tuple[int, str]:
     """
     Handle the navigation between different pages based on user input.
 
@@ -706,7 +706,7 @@ def handle_page_navigation(triggered_input: str, page: Union[int, str], selected
         selected_feature (str): The currently selected feature.
 
     Returns:
-        Tuple[int, str]: Updated page number and selected feature.
+        tuple[int, str]: Updated page number and selected feature.
     """
     page = int(page)
     if triggered_input == "page_left.n_clicks":
@@ -765,7 +765,7 @@ def handle_group_display_logic(
     selected_click_data_store,
     features_groups: dict,
     features_dict: dict,
-) -> Tuple[str, str, dict]:
+) -> tuple[str, str, dict]:
     """
     Handle the display logic for feature groups.
 
@@ -779,7 +779,7 @@ def handle_group_display_logic(
         features_dict (dict): Dictionary of features.
 
     Returns:
-        Tuple[str, str, dict]: Updated selected feature, group name, and click data.
+        tuple[str, str, dict]: Updated selected feature, group name, and click data.
     """
     group_name = None
     selected_feature_group = None
@@ -818,7 +818,7 @@ def handle_group_display_logic(
 
 def determine_total_pages_and_display(
     explainer: "SmartExplainer", features: int, bool_group: bool, group_name: str, page: int
-) -> Tuple[int, str, int]:
+) -> tuple[int, str, int]:
     """
     Determine the total number of pages and the display properties.
 
@@ -830,7 +830,7 @@ def determine_total_pages_and_display(
         page (int): Current page number.
 
     Returns:
-        Tuple[int, str, int]: Total pages, display properties, and updated page number.
+        tuple[int, str, int]: Total pages, display properties, and updated page number.
     """
     display_groups = explainer.features_groups is not None and bool_group
     if explainer._case == "classification":

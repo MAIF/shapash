@@ -138,7 +138,7 @@ def preprocessing_tolist(preprocess):
 
     Returns
     -------
-    List
+    list
         A list containing all preprocessing.
     """
     list_encoding = preprocess if isinstance(preprocess, list) else [preprocess]

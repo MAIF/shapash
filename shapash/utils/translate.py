@@ -16,7 +16,7 @@ def translate(elements, mapping):
 
     Returns
     -------
-    List
+    list
         The list of business names (strings) obtained.
     """
     return [mapping[element] for element in elements]

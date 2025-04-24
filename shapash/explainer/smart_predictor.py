@@ -748,7 +748,7 @@ class SmartPredictor:
 
         Parameters
         ----------
-        features : List
+        features : list
             List of ints (columns ids) or of strings (business names)
 
         Returns
