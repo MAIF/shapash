@@ -4,7 +4,7 @@ import os
 import sys
 from datetime import date
 from numbers import Number
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import jinja2
 import numpy as np
@@ -137,7 +137,7 @@ class ProjectReport:
     @staticmethod
     def _get_values_and_name(
         y: Optional[Union[pd.DataFrame, pd.Series, list]], default_name: str
-    ) -> Union[Tuple[list, str], Tuple[None, None]]:
+    ) -> Union[tuple[list, str], tuple[None, None]]:
         """
         Extracts vales and column name from a Pandas Series, DataFrame, or assign a default
         name if y is a list of values.

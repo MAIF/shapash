@@ -692,7 +692,7 @@ class SmartExplainer:
         Features names can be part of columns_dict or features_dict.
         Parameters
         ----------
-        features : List
+        features : list
             List of ints (columns ids) or of strings (business names)
         use_groups : bool
             Whether or not features parameter includes groups of features

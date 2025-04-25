@@ -14,7 +14,7 @@ def extract_features_model(model, model_attribute):
      -------
     model: model object
         model used to check the different values of target estimate predict proba
-    model_attribute: String or List
+    model_attribute: String or list
         if model can give features, attributes to access features, if not 'length'
     """
     if model_attribute[0] == "length":

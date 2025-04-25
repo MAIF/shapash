@@ -422,7 +422,7 @@ def check_features_name(columns_dict, features_dict, features):
 
     Parameters
     ----------
-    features : List
+    features : list
         List of ints (columns ids) or of strings (business names)
     columns_dict: dict
     Dictionary mapping integer column number to technical feature names.

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -68,8 +68,8 @@ class BaseBackend(ABC):
         )
 
     def get_local_contributions(
-        self, x: pd.DataFrame, explain_data: Any, subset: Optional[List[int]] = None
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        self, x: pd.DataFrame, explain_data: Any, subset: Optional[list[int]] = None
+    ) -> Union[pd.DataFrame, list[pd.DataFrame]]:
         """Get local contributions using the explainer data computed in the `run_explainer`
         method.
 
@@ -110,9 +110,9 @@ class BaseBackend(ABC):
         self,
         contributions: pd.DataFrame,
         explain_data: Optional[dict] = None,
-        subset: Optional[List[int]] = None,
+        subset: Optional[list[int]] = None,
         norm: int = 1,
-    ) -> Union[pd.Series, List[pd.Series]]:
+    ) -> Union[pd.Series, list[pd.Series]]:
         """Get global contributions using the explainer data computed in the `run_explainer`
         method.
 
@@ -141,8 +141,8 @@ class BaseBackend(ABC):
     def format_and_aggregate_local_contributions(
         self,
         x: pd.DataFrame,
-        contributions: Union[pd.DataFrame, np.array, List[pd.DataFrame], List[np.array]],
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        contributions: Union[pd.DataFrame, np.array, list[pd.DataFrame], list[np.array]],
+    ) -> Union[pd.DataFrame, list[pd.DataFrame]]:
         """
         This function allows to format and aggregate contributions in the right format
         (pd.DataFrame or list of pd.DataFrame).
@@ -175,8 +175,8 @@ class BaseBackend(ABC):
         return contributions
 
     def _apply_preprocessing(
-        self, contributions: Union[pd.DataFrame, List[pd.DataFrame]]
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        self, contributions: Union[pd.DataFrame, list[pd.DataFrame]]
+    ) -> Union[pd.DataFrame, list[pd.DataFrame]]:
         """
         Reconstruct contributions for original features, taken into account a preprocessing.
 
