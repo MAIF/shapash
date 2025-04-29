@@ -711,7 +711,7 @@ def plot_contributions_projection(
         If int, random_state is the seed used by the random number generator; If RandomState instance, random_state is the random number generator; If None, the random number generator is the RandomState instance used by np.random.
     marker_size : int, optional
         Marker size of the data points.
-    style_dict : dict
+    style_dict : dict, optional
         Dictionary containing style settings (e.g., colors, title fonts, etc.) for customizing the plot.
     opacity : float, optional
         Opacity of the markers on the plot (between 0 and 1).
@@ -741,10 +741,10 @@ def plot_contributions_projection(
 
     Examples
     --------
-    >>> plot_shapley_projection(
-            explainer=xpl,
-            case="classification",
-            random_state=42)
+    >>> plot_contributions_projection(
+            values_to_project=contributions_data, 
+            color_value=predictions, 
+            random_state=100)
 
     """
     
