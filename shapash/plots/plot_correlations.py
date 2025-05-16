@@ -100,9 +100,23 @@ def plot_correlations(
         if corr.shape[0] < 2:
             return corr
 
-        pairwise_distances = sch.distance.pdist(corr**degree)
+        # Compute pairwise distances based on transformed correlation matrix
+        pairwise_distances = sch.distance.pdist(np.abs(corr) ** degree)
+
+        # Replace non-finite values (NaN, inf) with the maximum valid distance or 0 if all are invalid
+        finite_mask = np.isfinite(pairwise_distances)
+        if not np.all(finite_mask):
+            # Use the maximum of the valid distances as a fallback value
+            max_valid = pairwise_distances[finite_mask].max() if np.any(finite_mask) else 0.0
+            pairwise_distances[~finite_mask] = max_valid
+
+        # Perform hierarchical clustering
         linkage = sch.linkage(pairwise_distances, method="complete")
+
+        # Define threshold for cluster cutting (half of the maximum distance)
         cluster_distance_threshold = pairwise_distances.max() / 2
+
+        # Assign cluster labels
         idx_to_cluster_array = sch.fcluster(linkage, cluster_distance_threshold, criterion="distance")
         idx = np.argsort(idx_to_cluster_array)
 
@@ -220,8 +234,13 @@ def plot_correlations(
         title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
     dict_t = style_dict_default["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
+    if corr.min().min() >= 0:
+        colorscale = ["rgb(255, 255, 255)"] + style_dict_default["init_contrib_colorscale"][5:-1]
+    else:
+        colorscale = style_dict_default["init_contrib_colorscale"]
+
     fig.update_layout(
-        coloraxis=dict(colorscale=["rgb(255, 255, 255)"] + style_dict_default["init_contrib_colorscale"][5:-1]),
+        coloraxis=dict(colorscale=colorscale),
         showlegend=True,
         title=dict_t,
         width=width,
