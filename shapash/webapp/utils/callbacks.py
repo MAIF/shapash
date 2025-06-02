@@ -635,7 +635,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     html.Div
         Div containing the modalities selection options
     """
-    if type(round_dataframe[value].iloc[0]) is np.bool_:
+    if type(round_dataframe[value].iloc[0]) is np.bool_ and type(round_dataframe[value].iloc[0]) is bool:
         new_element = html.Div(
             dcc.RadioItems(
                 [{"label": str(val), "value": val} for val in round_dataframe[value].unique()],
