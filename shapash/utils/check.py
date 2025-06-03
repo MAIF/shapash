@@ -218,9 +218,9 @@ def check_consistency_model_features(
     postprocessing : dict
         Dictionnary of postprocessing that need to be checked.
     list_preprocessing: list (optional)
-         list containing all preprocessing.
+        list containing all preprocessing.
     features_groups: list (optional)
-         list containing all groups of features.
+        list containing all groups of features.
     """
     # Features dict can include additional entries for groups of features.
     # We don't want to check them here as they may not be in other dict
@@ -307,7 +307,7 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None,
     features_dict: dict
         Dictionary mapping technical feature names to domain names.
     list_preprocessing: list (optional)
-         list containing all preprocessing.
+        list containing all preprocessing.
     Returns
     -------
     None, dict
@@ -465,3 +465,11 @@ def check_additional_data(x, additional_data):
         raise ValueError("additional_data must be a pd.Dataframe.")
     if not additional_data.index.equals(x.index):
         raise ValueError("x and additional_data should have the same index.")
+
+
+def check_data_order(data_order):
+    """Checks if data_order is a list of strings"""
+    if not isinstance(data_order, list):
+        raise ValueError("data_order must be a list.")
+    if not all(isinstance(item, str) for item in data_order):
+        raise ValueError("All elements in data_order must be strings.")

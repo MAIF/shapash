@@ -19,6 +19,7 @@ from sklearn.compose import ColumnTransformer
 
 from shapash.utils.check import (
     check_additional_data,
+    check_columns_order,
     check_consistency_model_features,
     check_consistency_model_label,
     check_contribution_object,
@@ -627,3 +628,15 @@ class TestCheck(unittest.TestCase):
         with pytest.raises(Exception) as exc_info:
             check_additional_data(x_init, additional_data)
         assert str(exc_info.value) == "additional_data must be a pd.Dataframe."
+
+    def test_check_columns_order_raises_index(self):
+        columns_order = 0
+        with pytest.raises(Exception) as exc_info:
+            check_columns_order(columns_order)
+        assert str(exc_info.value) == "columns_order must be a list."
+
+    def test_check_columns_order_raises_type(self):
+        columns_order = ["Col1", 2]
+        with pytest.raises(Exception) as exc_info:
+            check_columns_order(columns_order)
+        assert str(exc_info.value) == "All elements in columns_order must be strings."

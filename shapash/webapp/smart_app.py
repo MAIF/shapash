@@ -184,14 +184,18 @@ class SmartApp:
             if self.explainer._case == "regression":
                 self.dataframe = self.dataframe.join(self.explainer.prediction_error)
 
-        col_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
+        if self.explainer.columns_order is not None:
+            special_cols_remaining = [col for col in self.special_cols if col not in self.explainer.columns_order]
+            columns_order = special_cols_remaining + self.explainer.columns_order
+        else:
+            columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
         random.seed(79)
         if rows is None:
             rows = self.settings["rows"]
         self.list_index = random.sample(
             population=self.dataframe.index.tolist(), k=min(rows, len(self.dataframe.index.tolist()))
         )
-        self.dataframe = self.dataframe[col_order].loc[self.list_index].sort_index()
+        self.dataframe = self.dataframe[columns_order].loc[self.list_index].sort_index()
         self.round_dataframe = self.dataframe.copy()
         for col in list(self.dataframe.columns):
             typ = self.dataframe[col].dtype
@@ -211,7 +215,7 @@ class SmartApp:
             id="rows",
             label="Number of rows for subset",
             tooltip="Set max number of lines for subset (datatable). \
-                     Filter will be apply on this subset.",
+                    Filter will be apply on this subset.",
         )
 
         self.components["settings"]["input_points"] = _create_input_modal(
@@ -224,14 +228,14 @@ class SmartApp:
             id="features",
             label="Number of features to plot",
             tooltip="Set max number of features to plot in features \
-                     importance and local explanation plots.",
+                    importance and local explanation plots.",
         )
 
         self.components["settings"]["input_violin"] = _create_input_modal(
             id="violin",
             label="Max number of labels for violin plot",
             tooltip="Set max number of labels to display a violin plot \
-                     for feature contribution plot (otherwise a scatter \
+                    for feature contribution plot (otherwise a scatter \
                                                     plot is displayed).",
         )
 
@@ -241,7 +245,7 @@ class SmartApp:
                     options=[
                         {
                             "label": "Use domain name for \
-                              features name.",
+                            features name.",
                             "value": 1,
                         }
                     ],
@@ -1016,7 +1020,7 @@ class SmartApp:
                                                             # Create popover for this button
                                                             dbc.Popover(
                                                                 "Click here to have more \
-                                                         information on Prediction Picking graph.",
+                                                                information on Prediction Picking graph.",
                                                                 target="open_prediction_picking",
                                                                 body=True,
                                                                 trigger="hover",
