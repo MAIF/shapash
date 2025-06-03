@@ -467,9 +467,9 @@ def check_additional_data(x, additional_data):
         raise ValueError("x and additional_data should have the same index.")
 
 
-def check_data_order(data_order):
-    """Checks if data_order is a list of strings"""
-    if not isinstance(data_order, list):
-        raise ValueError("data_order must be a list.")
-    if not all(isinstance(item, str) for item in data_order):
-        raise ValueError("All elements in data_order must be strings.")
+def check_columns_order(columns_order):
+    """Checks if columns_order is a list of strings"""
+    if not isinstance(columns_order, list):
+        raise ValueError("columns_order must be a list.")
+    if not all(isinstance(item, str) for item in columns_order):
+        raise ValueError("All elements in columns_order must be strings.")
