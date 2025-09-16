@@ -42,11 +42,6 @@ repos:
     hooks:
     -   id: blacken-docs
         additional_dependencies: [black==21.12b0]
--   repo: https://github.com/pypa/pip-audit
-    rev: v2.7.3
-    hooks:
-      - id: pip-audit
-        args: ["--skip-editable"]
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.3.0
     hooks:

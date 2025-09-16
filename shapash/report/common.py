@@ -20,7 +20,7 @@ class VarType(Enum):
         return str(self.value)
 
 
-def series_dtype(s: pd.Series) -> VarType:
+def series_dtype(s: pd.Series, cat_num_threshold: int = 15) -> VarType:
     """
     Computes the type of a pandas series.
 
@@ -28,6 +28,9 @@ def series_dtype(s: pd.Series) -> VarType:
     ----------
     s : pd.Series
         The series for which we wish to determine the type.
+    cat_num_threshold : int, default=15
+        Threshold on the number of unique values to decide if a numeric
+        series is treated as categorical or as continuous numeric.
 
     Returns
     -------
@@ -40,7 +43,7 @@ def series_dtype(s: pd.Series) -> VarType:
     elif s.dtype.name == "object":
         return VarType.TYPE_CAT
     elif is_numeric_dtype(s):
-        if numeric_is_continuous(s):
+        if numeric_is_continuous(s, threshold=cat_num_threshold):
             return VarType.TYPE_NUM
         else:
             return VarType.TYPE_CAT
@@ -48,21 +51,25 @@ def series_dtype(s: pd.Series) -> VarType:
         return VarType.TYPE_UNSUPPORTED
 
 
-def numeric_is_continuous(s: pd.Series):
+def numeric_is_continuous(s: pd.Series, threshold: int = 15) -> bool:
     """
-    Function that returns True if a numeric pandas series is continuous and False if it is categorical.
+    Function that returns True if a numeric pandas series is continuous
+    and False if it is categorical.
 
     Parameters
     ----------
     s : pd.Series
+        The input numeric series.
+    threshold : int, default=15
+        Minimum number of unique values required to consider the series continuous.
 
     Returns
     -------
     bool
+        True if the series is continuous, False otherwise.
     """
-    # This test could probably be improved
     n_unique = s.nunique()
-    return True if n_unique > 15 else False
+    return n_unique > threshold
 
 
 def compute_col_types(df_all: Optional[pd.DataFrame]) -> Optional[dict]:

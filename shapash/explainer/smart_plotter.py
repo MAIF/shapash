@@ -1913,6 +1913,7 @@ class SmartPlotter:
         height: int = 500,
         nb_cat_max: int = 7,
         nb_hue_max: int = 7,
+        cat_num_threshold: int = 200,
         file_name=None,
         auto_open=False,
     ) -> go.Figure:
@@ -1943,6 +1944,9 @@ class SmartPlotter:
         nb_hue_max : int, optional, default=7
             Maximum number of hue categories to display. Categories beyond this limit
             are grouped into a new 'Other' category.
+        cat_num_threshold : int, optional, default=200
+            Threshold on the number of unique values used to decide whether a numeric
+            series is treated as categorical or continuous.
         file_name : str, optional
             Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
         auto_open : bool, optional
@@ -1967,6 +1971,7 @@ class SmartPlotter:
             height=height,
             nb_cat_max=nb_cat_max,
             nb_hue_max=nb_hue_max,
+            cat_num_threshold=cat_num_threshold,
             file_name=file_name,
             auto_open=auto_open,
         )
