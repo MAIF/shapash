@@ -184,11 +184,19 @@ class SmartApp:
             if self.explainer._case == "regression":
                 self.dataframe = self.dataframe.join(self.explainer.prediction_error)
 
-        if self.explainer.columns_order is not None:
+        if isinstance(self.explainer.columns_order, list):
             special_cols_remaining = [col for col in self.special_cols if col not in self.explainer.columns_order]
             columns_order = special_cols_remaining + self.explainer.columns_order
+
+        elif self.explainer.columns_order == "start":
+            columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
+
+        elif self.explainer.columns_order == "end":
+            columns_order = self.dataframe.columns.drop(self.special_cols).tolist() + self.special_cols
+
         else:
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
+
         random.seed(79)
         if rows is None:
             rows = self.settings["rows"]
