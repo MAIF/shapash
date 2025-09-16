@@ -22,6 +22,7 @@ def plot_distribution(
     palette_name: str = "default",
     nb_cat_max: int = 7,
     nb_hue_max: int = 7,
+    cat_num_threshold: int = 200,
     file_name=None,
     auto_open=False,
 ) -> go.Figure:
@@ -59,6 +60,9 @@ def plot_distribution(
     nb_hue_max : int, optional, default=7
         Maximum number of hue categories to display. Categories beyond this limit
         are grouped into a new 'Other' category.
+    cat_num_threshold : int, optional, default=200
+        Threshold on the number of unique values used to decide whether a numeric
+        series is treated as categorical or continuous.
     file_name : str, optional
         Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
     auto_open : bool, optional
@@ -70,13 +74,13 @@ def plot_distribution(
         A Plotly figure object representing the distribution of the feature.
     """
 
-    serie_type = series_dtype(df_all[col])
-
     if col not in df_all.columns:
         raise ValueError(f"Column '{col}' not found in the input DataFrame.")
 
     if hue is not None and hue not in df_all.columns:
         raise ValueError(f"Column '{hue}' not found in the input DataFrame.")
+
+    serie_type = series_dtype(df_all[col], cat_num_threshold=cat_num_threshold)
 
     if serie_type == VarType.TYPE_NUM:
         # Use the continuous plotting function
@@ -166,10 +170,20 @@ def plot_continuous_distribution(
         style_dict = define_style(get_palette(palette_name))
 
     filtered_data = df_all.copy()
-    if len(filtered_data) > 200:
+    if filtered_data[col].unique().shape[0] > 200:
         lower_quantile = filtered_data[col].quantile(0.005)
         upper_quantile = filtered_data[col].quantile(0.995)
-        filtered_data = filtered_data[(filtered_data[col] > lower_quantile) & (filtered_data[col] < upper_quantile)]
+        filtered_data_tmp = filtered_data[(filtered_data[col] > lower_quantile) & (filtered_data[col] < upper_quantile)]
+        if len(filtered_data_tmp) > 0.95 * len(filtered_data):
+            filtered_data = filtered_data_tmp
+        else:
+            filtered_data_tmp = filtered_data[(filtered_data < upper_quantile)]
+            if len(filtered_data_tmp) > 0.95 * len(filtered_data):
+                filtered_data = filtered_data_tmp
+            else:
+                filtered_data_tmp = filtered_data[(filtered_data > lower_quantile)]
+                if len(filtered_data_tmp) > 0.95 * len(filtered_data):
+                    filtered_data = filtered_data_tmp
 
     # Initialize the figure
     fig = go.Figure()
