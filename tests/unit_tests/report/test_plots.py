@@ -31,7 +31,7 @@ class TestPlots(unittest.TestCase):
     @patch("shapash.plots.plot_univariate.plot_categorical_distribution")
     def test_plot_distribution_2(self, mock_plot_cat, mock_plot_cont):
         df = pd.DataFrame(
-            {"int_data": list(range(50)), "data_train_test": ["train", "train", "train", "train", "test"] * 10}
+            {"int_data": list(range(300)), "data_train_test": ["train", "train", "train", "train", "test"] * 60}
         )
 
         plot_distribution(df, "int_data", "data_train_test")
