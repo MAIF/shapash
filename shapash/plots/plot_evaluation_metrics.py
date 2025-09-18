@@ -637,7 +637,7 @@ def plot_contributions_projection(
     values_to_project,
     color_value,
     round_digit=2,
-    metric='euclidean',
+    metric="euclidean",
     n_neighbors=15,
     learning_rate=1,
     min_dist=0.1,
@@ -653,12 +653,12 @@ def plot_contributions_projection(
     title=None,
     colorbar_title=None,
     file_name=None,
-    auto_open=False
+    auto_open=False,
 ):
     """
     Generate a 2-dimensional scatter plot of the UMAP projection of the data.
 
-    This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points. 
+    This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points.
     Points are colored based on a selected variable, helping highlight patterns, groupings, or trends related to that feature.
 
     Parameters
@@ -742,17 +742,26 @@ def plot_contributions_projection(
     Examples
     --------
     >>> plot_contributions_projection(
-            values_to_project=contributions_data, 
-            color_value=predictions, 
+            values_to_project=contributions_data,
+            color_value=predictions,
             random_state=100)
 
     """
-    
+
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
 
     ### Dimensional Reduction with UMAP
-    umap = UMAP(metric=metric, n_neighbors=n_neighbors, learning_rate=learning_rate, min_dist=min_dist, spread=spread, n_components=n_components, n_epochs=n_epochs, random_state=random_state)
+    umap = UMAP(
+        metric=metric,
+        n_neighbors=n_neighbors,
+        learning_rate=learning_rate,
+        min_dist=min_dist,
+        spread=spread,
+        n_components=n_components,
+        n_epochs=n_epochs,
+        random_state=random_state,
+    )
     projections = umap.fit_transform(values_to_project)
     x, y = np.round(projections.T, round_digit)
 
@@ -760,32 +769,40 @@ def plot_contributions_projection(
     fig = go.Figure()
 
     # Plot parameters
-    _, cmin, cmax = tuning_colorscale(init_colorscale=style_dict['init_contrib_colorscale'], values=color_value, keep_90_pct=True)
-    colorbar_dict = dict(title={"text":"Predictions" if not colorbar_title else colorbar_title})
-    marker_dict = dict(size=marker_size, color=color_value.iloc[:, 0], colorscale=style_dict['init_contrib_colorscale'], cmin=cmin, cmax=cmax, showscale=True, colorbar=colorbar_dict, opacity=opacity)
+    colorscale, cmin, cmax = tuning_colorscale(
+        init_colorscale=style_dict["init_contrib_colorscale"], values=color_value, keep_90_pct=True
+    )
+    colorbar_dict = dict(title={"text": "Predictions" if not colorbar_title else colorbar_title})
+    marker_dict = dict(
+        size=marker_size,
+        color=color_value.iloc[:, 0],
+        colorscale=colorscale,
+        cmin=cmin,
+        cmax=cmax,
+        showscale=True,
+        colorbar=colorbar_dict,
+        opacity=opacity,
+    )
 
     # Displaying plot
-    scatterplot = go.Scatter(
-                    x=x, 
-                    y=y, 
-                    mode='markers', 
-                    marker=marker_dict)
+    scatterplot = go.Scatter(x=x, y=y, mode="markers", marker=marker_dict)
 
     fig.add_trace(scatterplot)
 
     fig.update_layout(
-            template="none",
-            width=width, 
-            height=height,
-            title=style_dict['dict_title'] | {"text": "UMAP Projection Plot" if not title else title, "y": adjust_title_height(height)},
-            xaxis_title=style_dict['dict_xaxis'], 
-            yaxis_title=style_dict['dict_yaxis'],
-            hovermode="closest")
+        template="none",
+        width=width,
+        height=height,
+        title=style_dict["dict_title"]
+        | {"text": "UMAP Projection Plot" if not title else title, "y": adjust_title_height(height)},
+        xaxis_title=style_dict["dict_xaxis"],
+        yaxis_title=style_dict["dict_yaxis"],
+        hovermode="closest",
+    )
 
-    
     fig.update_yaxes(automargin=True, showticklabels=False)
     fig.update_xaxes(automargin=True, showticklabels=False)
-        
+
     if file_name:
         plot(fig, filename=file_name, auto_open=auto_open)
 

@@ -17,7 +17,11 @@ from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
-from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix, plot_scatter_prediction
+from shapash.plots.plot_evaluation_metrics import (
+    plot_confusion_matrix,
+    plot_contributions_projection,
+    plot_scatter_prediction,
+)
 from shapash.plots.plot_feature_importance import plot_feature_importance
 from shapash.plots.plot_interactions import plot_interactions_scatter, plot_interactions_violin, update_interactions_fig
 from shapash.plots.plot_line_comparison import plot_line_comparison
@@ -1967,6 +1971,202 @@ class SmartPlotter:
             height=height,
             nb_cat_max=nb_cat_max,
             nb_hue_max=nb_hue_max,
+            file_name=file_name,
+            auto_open=auto_open,
+        )
+
+    def contributions_projection_plot(
+        self,
+        color_value="predictions",
+        max_points=2000,
+        selection=None,
+        label=-1,
+        round_digit=2,
+        metric="euclidean",
+        n_neighbors=15,
+        learning_rate=1,
+        min_dist=0.1,
+        spread=1,
+        n_components=2,
+        n_epochs=None,
+        random_state=79,
+        marker_size=10,
+        style_dict=None,
+        opacity=0.8,
+        width=900,
+        height=600,
+        file_name=None,
+        auto_open=False,
+    ):
+        """
+        Generate a 2-dimensional scatter plot of the UMAP projection of the data.
+
+        This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points.
+        Points are colored based on a selected variable, helping highlight patterns, groupings, or trends related to that feature.
+
+        Parameters
+        ----------
+        color_value : str, optional
+            Color markers according to the specified option ('predictions', 'target', 'errors). By default, 'predictions'.
+        max_points: int (optional, default: 2000)
+            maximum number to plot in contributions projection plot. if input dataset is bigger than max_points,
+            a sample limits the number of points to plot.
+            nb: you can also limit the number using 'selection' parameter.
+        selection: list (optional)
+            Contains list of index, subset of the input DataFrame that we want to plot
+        label: integer or string (default -1)
+            If the label is of string type, check if it can be changed to integer to select the
+            good dataframe object.
+        round_digit : int, optional
+            Number of decimal places to round the predicted values for display purposes.
+        metric : str, optional
+            The metric to use to compute distances in high dimensional space. If a string is passed it must match a valid predefined metric. If a general metric is required a function that takes two 1d arrays and returns a float can be provided. For performance purposes it is required that this be a numba jit'd function. Valid string metrics include:
+            euclidean
+            manhattan
+            chebyshev
+            minkowski
+            canberra
+            braycurtis
+            mahalanobis
+            wminkowski
+            seuclidean
+            cosine
+            correlation
+            haversine
+            hamming
+            jaccard
+            dice
+            russelrao
+            kulsinski
+            ll_dirichlet
+            hellinger
+            rogerstanimoto
+            sokalmichener
+            sokalsneath
+            yule
+            Metrics that take arguments (such as minkowski, mahalanobis etc.) can have arguments passed via the metric_kwds dictionary. At this time care must be taken and dictionary elements must be ordered appropriately; this will hopefully be fixed in the future.
+        n_neighbors : int, optional
+            The size of local neighborhood (in terms of number of neighboring sample points) used for manifold approximation. Larger values result in more global views of the manifold, while smaller values result in more local data being preserved. In general values should be in the range 2 to 100.
+        learning_rate : float, optional
+            The initial learning rate for the embedding optimization.
+        min_dist : float, optional
+            The effective minimum distance between embedded points. Smaller values will result in a more clustered/clumped embedding where nearby points on the manifold are drawn closer together, while larger values will result on a more even dispersal of points. The value should be set relative to the spread value, which determines the scale at which embedded points will be spread out.
+        spread : float, optional
+            The effective scale of embedded points. In combination with min_dist this determines how clustered/clumped the embedded points are.
+        n_components : int, optional
+            The dimension of the space to embed into. This defaults to 2 to provide easy visualization, but can reasonably be set to any integer value in the range 2 to 100.
+        n_epochs : int, optional
+            The number of training epochs to be used in optimizing the low dimensional embedding. Larger values result in more accurate embeddings. If None is specified a value will be selected based on the size of the input dataset (200 for large datasets, 500 for small).
+        random_state : int, optional
+            If int, random_state is the seed used by the random number generator; If RandomState instance, random_state is the random number generator; If None, the random number generator is the RandomState instance used by np.random.
+        marker_size : int, optional
+            Marker size of the data points.
+        style_dict : dict, optional
+            Dictionary containing style settings (e.g., colors, title fonts, etc.) for customizing the plot.
+        opacity : float, optional
+            Opacity of the markers on the plot (between 0 and 1).
+        width : int, optional
+            Width of the plot, by default 900.
+        height : int, optional
+            Height of the plot, by default 600.
+        file_name : str, optional
+            Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
+        auto_open : bool, optional
+            If True, the plot will automatically open in a web browser after being generated, by default False.
+
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            A Plotly figure object containing the 2-dimensional UMAP projection of the input data.
+
+        Raises
+        ------
+        ValueError
+            If `case` is not one of "classification" or "regression".
+
+        Examples
+        --------
+        >>> xpl.contributions_projection_plot(
+                color_value="errors",
+                metric="correlation",
+                random_state=42)
+
+        """
+
+        if not hasattr(self._explainer, "model"):
+            raise AssertionError(
+                "Explainer object was not compiled. Please compile the explainer " "object using .compile(...) method."
+            )
+
+        if not hasattr(self._explainer, "_case") or self._explainer._case not in {"classification", "regression"}:
+            raise ValueError('`self._explainer._case` must be "classification" or "regression".')
+
+        if not hasattr(self._explainer, "contributions"):
+            raise ValueError("`self._explainer.contributions` is required but was not found on `self`.")
+
+        if self._explainer._case == "classification":
+            label_num, _, label_value = self._explainer.check_label_name(label)
+
+        list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
+
+        colorbar_title = color_value.capitalize()
+
+        if self._explainer._case == "classification":
+            values_to_project = self._explainer.contributions[label_num]
+            values_to_project = values_to_project.loc[list_ind, :]
+
+            if color_value == "predictions":
+                color_value = self._explainer.proba_values[:, [label_num]]
+
+            elif color_value == "targets":
+                color_value = self._explainer.y_target[:, [label_num]]
+
+            elif color_value == "errors":
+                color_value = pd.DataFrame(
+                    np.abs(self._explainer.y_target[:, [label_num]] - self._explainer.proba_values[:, [label_num]])
+                )
+            else:
+                raise ValueError(r"Select a color_value among the valid options ('predictions', 'targets', 'errors').")
+            color_value = color_value.loc[list_ind, :]
+
+        elif self._explainer._case == "regression":
+            values_to_project = self._explainer.contributions
+            values_to_project = values_to_project.loc[list_ind, :]
+
+            if color_value == "predictions":
+                color_value = self._explainer.y_pred
+
+            elif color_value == "targets":
+                color_value = self._explainer.y_target
+
+            elif color_value == "errors":
+                color_value = pd.DataFrame(
+                    np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0])
+                )
+            else:
+                raise ValueError(r"Select a color_value among the valid options ('predictions', 'targets', 'errors').")
+            color_value = color_value.loc[list_ind, :]
+
+        plot_contributions_projection(
+            values_to_project=values_to_project,
+            color_value=color_value,
+            round_digit=round_digit,
+            metric=metric,
+            n_neighbors=n_neighbors,
+            learning_rate=learning_rate,
+            min_dist=min_dist,
+            spread=spread,
+            n_components=n_components,
+            n_epochs=n_epochs,
+            random_state=random_state,
+            marker_size=marker_size,
+            style_dict=style_dict,
+            opacity=opacity,
+            width=width,
+            height=height,
+            title="Contributions Projection Plot",
+            colorbar_title=colorbar_title,
             file_name=file_name,
             auto_open=auto_open,
         )
