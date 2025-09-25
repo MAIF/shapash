@@ -2127,7 +2127,13 @@ class SmartPlotter:
         subtitle = None
         if self._explainer.features_imp is None:
             self._explainer.compute_features_import()
-        top_contributors_col = top_contributors(self._explainer.features_imp, threshold=threshold_top_features)
+
+        features_imp = (
+            self._explainer.features_imp
+            if isinstance(self._explainer.features_imp, pd.Series)
+            else self._explainer.features_imp[0]
+        )
+        top_contributors_col = top_contributors(features_imp, threshold=threshold_top_features)
 
         if not isinstance(color_value, list):
             color_value = [color_value]
@@ -2145,8 +2151,8 @@ class SmartPlotter:
                 y_proba_values = y_proba_values[["proba_target"]]
                 # Proba subset:
                 y_proba_values = y_proba_values.loc[list_ind, :]
-                target = self._explainer.y_target[:, [label_num]].loc[list_ind, :]
-                y_pred = self._explainer.y_pred[:, [label_num]].loc[list_ind, :]
+                target = self._explainer.y_target.iloc[:, [label_num]].loc[list_ind, :]
+                y_pred = self._explainer.y_pred.iloc[:, [label_num]].loc[list_ind, :]
                 df_pred = pd.concat(
                     [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
                 )
@@ -2166,16 +2172,17 @@ class SmartPlotter:
 
             for el in color_value:
                 if el == "predictions":
-                    color_value_data.append(self._explainer.proba_values[:, [label_num]])
+                    color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
 
                 elif el == "targets":
-                    color_value_data.append(self._explainer.y_target[:, [label_num]])
+                    color_value_data.append(self._explainer.y_target.iloc[:, [label_num]])
 
                 elif el == "errors":
                     color_value_data.append(
                         pd.DataFrame(
                             np.abs(
-                                self._explainer.y_target[:, [label_num]] - self._explainer.proba_values[:, [label_num]]
+                                self._explainer.y_target.iloc[:, label_num]
+                                - self._explainer.proba_values.iloc[:, label_num]
                             )
                         )
                     )

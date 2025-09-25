@@ -803,6 +803,7 @@ def plot_contributions_projection(
                 marker=marker_dict,
                 hovertext=hv_text_predict,
                 hovertemplate="<b>%{hovertext}</b><br />",
+                name="",
             )
         )
 
