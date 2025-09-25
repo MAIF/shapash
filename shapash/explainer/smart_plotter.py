@@ -36,6 +36,7 @@ from shapash.utils.utils import (
     compute_digit_number,
     compute_sorted_variables_interactions_list_indices,
     maximum_difference_sort_value,
+    top_contributors,
     truncate_str,
     tuning_colorscale,
 )
@@ -487,14 +488,14 @@ class SmartPlotter:
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 col_scale, cmin, cmax = tuning_colorscale(
-                    self._style_dict["init_contrib_colorscale"], proba_values, keep_90_pct=True
+                    self._style_dict["init_contrib_colorscale"], proba_values, keep_quantile=(0.05, 0.95)
                 )
             elif self._explainer.y_pred is not None:
                 pred_values = self._explainer.y_pred.iloc[:, [label_num]]
                 # Prediction subset:
                 pred_values = pred_values.loc[list_ind, :]
                 col_scale, cmin, cmax = tuning_colorscale(
-                    self._style_dict["init_contrib_colorscale"], pred_values, keep_90_pct=True
+                    self._style_dict["init_contrib_colorscale"], pred_values, keep_quantile=(0.05, 0.95)
                 )
 
         # Regression Case - color scale
@@ -502,7 +503,9 @@ class SmartPlotter:
             subcontrib = contributions
             if self._explainer.y_pred is not None:
                 col_scale, cmin, cmax = tuning_colorscale(
-                    self._style_dict["init_contrib_colorscale"], self._explainer.y_pred.loc[list_ind], keep_90_pct=True
+                    self._style_dict["init_contrib_colorscale"],
+                    self._explainer.y_pred.loc[list_ind],
+                    keep_quantile=(0.05, 0.95),
                 )
 
         # Subset
@@ -1978,17 +1981,18 @@ class SmartPlotter:
     def contributions_projection_plot(
         self,
         color_value="predictions",
+        keep_quantile=(0.05, 0.95),
         max_points=2000,
         selection=None,
         label=-1,
-        round_digit=2,
         metric="euclidean",
-        n_neighbors=15,
+        threshold_top_features=0.9,
+        n_neighbors=200,
         learning_rate=1,
         min_dist=0.1,
         spread=1,
         n_components=2,
-        n_epochs=None,
+        n_epochs=200,
         random_state=79,
         marker_size=10,
         style_dict=None,
@@ -1999,99 +2003,106 @@ class SmartPlotter:
         auto_open=False,
     ):
         """
-        Generate a 2-dimensional scatter plot of the UMAP projection of the data.
+        Generate a 2D UMAP projection plot (or multiple plots) based on SHAP-like feature contributions.
 
-        This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points.
-        Points are colored based on a selected variable, helping highlight patterns, groupings, or trends related to that feature.
+        This function visualizes high-dimensional contribution data by projecting it into 2D space using UMAP.
+        It highlights similarities between observations and allows visual comparison by coloring points using selected values
+        (e.g., predictions, targets, errors). Multiple color views can be displayed side by side, sharing a common color scale.
 
         Parameters
         ----------
-        color_value : str, optional
-            Color markers according to the specified option ('predictions', 'target', 'errors). By default, 'predictions'.
-        max_points: int (optional, default: 2000)
-            maximum number to plot in contributions projection plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        selection: list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
-        label: integer or string (default -1)
-            If the label is of string type, check if it can be changed to integer to select the
-            good dataframe object.
-        round_digit : int, optional
-            Number of decimal places to round the predicted values for display purposes.
-        metric : str, optional
-            The metric to use to compute distances in high dimensional space. If a string is passed it must match a valid predefined metric. If a general metric is required a function that takes two 1d arrays and returns a float can be provided. For performance purposes it is required that this be a numba jit'd function. Valid string metrics include:
-            euclidean
-            manhattan
-            chebyshev
-            minkowski
-            canberra
-            braycurtis
-            mahalanobis
-            wminkowski
-            seuclidean
-            cosine
-            correlation
-            haversine
-            hamming
-            jaccard
-            dice
-            russelrao
-            kulsinski
-            ll_dirichlet
-            hellinger
-            rogerstanimoto
-            sokalmichener
-            sokalsneath
-            yule
-            Metrics that take arguments (such as minkowski, mahalanobis etc.) can have arguments passed via the metric_kwds dictionary. At this time care must be taken and dictionary elements must be ordered appropriately; this will hopefully be fixed in the future.
-        n_neighbors : int, optional
-            The size of local neighborhood (in terms of number of neighboring sample points) used for manifold approximation. Larger values result in more global views of the manifold, while smaller values result in more local data being preserved. In general values should be in the range 2 to 100.
-        learning_rate : float, optional
-            The initial learning rate for the embedding optimization.
-        min_dist : float, optional
-            The effective minimum distance between embedded points. Smaller values will result in a more clustered/clumped embedding where nearby points on the manifold are drawn closer together, while larger values will result on a more even dispersal of points. The value should be set relative to the spread value, which determines the scale at which embedded points will be spread out.
-        spread : float, optional
-            The effective scale of embedded points. In combination with min_dist this determines how clustered/clumped the embedded points are.
-        n_components : int, optional
-            The dimension of the space to embed into. This defaults to 2 to provide easy visualization, but can reasonably be set to any integer value in the range 2 to 100.
-        n_epochs : int, optional
-            The number of training epochs to be used in optimizing the low dimensional embedding. Larger values result in more accurate embeddings. If None is specified a value will be selected based on the size of the input dataset (200 for large datasets, 500 for small).
-        random_state : int, optional
-            If int, random_state is the seed used by the random number generator; If RandomState instance, random_state is the random number generator; If None, the random number generator is the RandomState instance used by np.random.
-        marker_size : int, optional
-            Marker size of the data points.
-        style_dict : dict, optional
-            Dictionary containing style settings (e.g., colors, title fonts, etc.) for customizing the plot.
-        opacity : float, optional
-            Opacity of the markers on the plot (between 0 and 1).
-        width : int, optional
-            Width of the plot, by default 900.
-        height : int, optional
-            Height of the plot, by default 600.
-        file_name : str, optional
-            Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
-        auto_open : bool, optional
-            If True, the plot will automatically open in a web browser after being generated, by default False.
+        color_value : str or list of str, optional, default="predictions"
+            Variable(s) to use for coloring the data points. Can be one or more of:
+            - 'predictions'
+            - 'targets'
+            - 'errors'
+            If a list is provided, one subplot is created per item.
 
+        keep_quantile : tuple of float, optional, default=(0.05, 0.95)
+            Tuple defining the lower and upper quantiles to keep when scaling colors. Useful to remove outliers.
+            For example, (0.05, 0.95) retains the central 90% of the distribution.
+
+        max_points : int, optional, default=2000
+            Maximum number of points to display. If the dataset is larger, a random sample is taken (unless 'selection' is provided).
+
+        selection : list, optional, default=None
+            List of indices to use for subsetting the data. Overrides random sampling.
+
+        label : int or str, optional, default=-1
+            Label to use in classification tasks (e.g., class index or name). Ignored in regression.
+
+        metric : str, optional, default="euclidean"
+            Distance metric used for UMAP. Can be one of:
+            'euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra', 'braycurtis', 'mahalanobis',
+            'wminkowski', 'seuclidean', 'cosine', 'correlation', 'haversine', 'hamming', 'jaccard',
+            'dice', 'russelrao', 'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
+            'sokalmichener', 'sokalsneath', 'yule'
+
+        threshold_top_features : float, optional, default=0.9
+            Feature selection threshold based on mean absolute contribution values. Only features contributing
+            to the cumulative threshold are retained for projection.
+
+        n_neighbors : int, optional, default=200
+            UMAP parameter: size of the local neighborhood (affects local vs global structure).
+
+        learning_rate : float, optional, default=1
+            UMAP parameter: initial learning rate for optimization.
+
+        min_dist : float, optional, default=0.1
+            UMAP parameter: controls the minimum distance between points in the low-dimensional space.
+
+        spread : float, optional, default=1
+            UMAP parameter: controls the scale of the embedded space (used with min_dist).
+
+        n_components : int, optional, default=2
+            UMAP parameter: Dimension of the embedded space. Use 2 for 2D plots.
+
+        n_epochs : int, optional, default=200
+            UMAP parameter: Number of training epochs for UMAP optimization. If None, defaults are used based on dataset size.
+
+        random_state : int, optional, default=79
+            Random seed for reproducibility.
+
+        marker_size : int, optional, default=10
+            Size of the data point markers in the plot.
+
+        style_dict : dict, optional, default=None
+            Dictionary containing style configuration (e.g., color scales, font sizes, etc.).
+
+        opacity : float, optional, default=0.8
+            Opacity of the data point markers (between 0 and 1).
+
+        width : int, optional, default=900
+            Total width of the figure layout (split across subplots if multiple color values are given).
+
+        height : int, optional, default=600
+                            Total height of the figure.
+
+        file_name : str, optional, default=None
+            Path to save the resulting figure as an HTML file. If None, the figure is not saved.
+
+        auto_open : bool, optional, default=False
+            If True and file_name is provided, the plot will be opened in the default web browser.
 
         Returns
         -------
         plotly.graph_objects.Figure
-            A Plotly figure object containing the 2-dimensional UMAP projection of the input data.
+            A Plotly figure object displaying the UMAP projection. If multiple color values are passed,
+            a subplot layout is returned with one panel per value.
 
         Raises
         ------
         ValueError
-            If `case` is not one of "classification" or "regression".
+            If the explainer case is not one of "classification" or "regression".
+            If an invalid color_value is provided.
 
         Examples
         --------
-        >>> xpl.contributions_projection_plot(
-                color_value="errors",
-                metric="correlation",
-                random_state=42)
+        >>> # Single color projection
+        >>> xpl.contributions_projection_plot(color_value="predictions")
 
+        >>> # Compare multiple color schemes side-by-side
+        >>> xpl.contributions_projection_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
         """
 
         if not hasattr(self._explainer, "model"):
@@ -2107,51 +2118,113 @@ class SmartPlotter:
 
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
+        # Regression Case
+        elif self._explainer._case == "regression":
+            label_num, label_value = None, None
 
         list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
 
-        colorbar_title = color_value.capitalize()
+        subtitle = None
+        if self._explainer.features_imp is None:
+            self._explainer.compute_features_import()
+        top_contributors_col = top_contributors(self._explainer.features_imp, threshold=threshold_top_features)
+
+        if not isinstance(color_value, list):
+            color_value = [color_value]
+        color_value_data = []
 
         if self._explainer._case == "classification":
-            values_to_project = self._explainer.contributions[label_num]
-            values_to_project = values_to_project.loc[list_ind, :]
+            values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
 
-            if color_value == "predictions":
-                color_value = self._explainer.proba_values[:, [label_num]]
+            y_proba_values = self._explainer.proba_values.copy()
 
-            elif color_value == "targets":
-                color_value = self._explainer.y_target[:, [label_num]]
-
-            elif color_value == "errors":
-                color_value = pd.DataFrame(
-                    np.abs(self._explainer.y_target[:, [label_num]] - self._explainer.proba_values[:, [label_num]])
+            # predict
+            if y_proba_values is not None:
+                # Assign proba values of the target
+                y_proba_values["proba_target"] = y_proba_values.iloc[:, label_num]
+                y_proba_values = y_proba_values[["proba_target"]]
+                # Proba subset:
+                y_proba_values = y_proba_values.loc[list_ind, :]
+                target = self._explainer.y_target[:, [label_num]].loc[list_ind, :]
+                y_pred = self._explainer.y_pred[:, [label_num]].loc[list_ind, :]
+                df_pred = pd.concat(
+                    [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
                 )
-            else:
-                raise ValueError(r"Select a color_value among the valid options ('predictions', 'targets', 'errors').")
-            color_value = color_value.loc[list_ind, :]
+                df_pred.set_index(df_pred.columns[0], inplace=True)
+                df_pred.columns = ["proba_values", "predict_class", "target"]
+                subtitle = f"Response: <b>{label_value}</b>"
+
+            hv_text_predict = [
+                f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />"
+                for x, y, w, z in zip(
+                    df_pred.index,
+                    df_pred.proba_values.values.round(3).flatten(),
+                    df_pred.predict_class.values.flatten(),
+                    df_pred.target.values.flatten(),
+                )
+            ]
+
+            for el in color_value:
+                if el == "predictions":
+                    color_value_data.append(self._explainer.proba_values[:, [label_num]])
+
+                elif el == "targets":
+                    color_value_data.append(self._explainer.y_target[:, [label_num]])
+
+                elif el == "errors":
+                    color_value_data.append(
+                        pd.DataFrame(
+                            np.abs(
+                                self._explainer.y_target[:, [label_num]] - self._explainer.proba_values[:, [label_num]]
+                            )
+                        )
+                    )
+                else:
+                    raise ValueError(
+                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
+                    )
 
         elif self._explainer._case == "regression":
-            values_to_project = self._explainer.contributions
-            values_to_project = values_to_project.loc[list_ind, :]
+            values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
-            if color_value == "predictions":
-                color_value = self._explainer.y_pred
+            target = self._explainer.y_target.loc[list_ind, :]
+            y_pred = self._explainer.y_pred.loc[list_ind, :]
+            y_proba_values = None
+            prediction_error = self._explainer.prediction_error.loc[list_ind, :]
 
-            elif color_value == "targets":
-                color_value = self._explainer.y_target
-
-            elif color_value == "errors":
-                color_value = pd.DataFrame(
-                    np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0])
+            hv_text_predict = [
+                f"Id: {x}<br />True Values: {y:,.{self._round_digit}f}<br />Predicted Values: {z:,.{self._round_digit}f}<br />Prediction Error: {w:,.2f}"
+                for x, y, z, w in zip(
+                    target.index, target.values.flatten(), y_pred.values.flatten(), prediction_error.values.flatten()
                 )
-            else:
-                raise ValueError(r"Select a color_value among the valid options ('predictions', 'targets', 'errors').")
-            color_value = color_value.loc[list_ind, :]
+            ]
+
+            for el in color_value:
+                if el == "predictions":
+                    color_value_data.append(self._explainer.y_pred)
+
+                elif el == "targets":
+                    color_value_data.append(self._explainer.y_target)
+
+                elif el == "errors":
+                    color_value_data.append(
+                        pd.DataFrame(np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0]))
+                    )
+                else:
+                    raise ValueError(
+                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
+                    )
+
+        title = "Contributions Projection Plot"
+
+        color_value_data = [el.loc[list_ind, :] for el in color_value_data]
+        colorbar_title = [el.capitalize() for el in color_value]
 
         plot_contributions_projection(
             values_to_project=values_to_project,
-            color_value=color_value,
-            round_digit=round_digit,
+            hv_text_predict=hv_text_predict,
+            color_value=color_value_data,
+            keep_quantile=keep_quantile,
             metric=metric,
             n_neighbors=n_neighbors,
             learning_rate=learning_rate,
@@ -2165,7 +2238,9 @@ class SmartPlotter:
             opacity=opacity,
             width=width,
             height=height,
-            title="Contributions Projection Plot",
+            title=title,
+            subtitle=subtitle,
+            addnote=addnote,
             colorbar_title=colorbar_title,
             file_name=file_name,
             auto_open=auto_open,

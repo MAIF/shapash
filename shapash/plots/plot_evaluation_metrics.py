@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
+from plotly.subplots import make_subplots
 from umap import UMAP
 
 from shapash.style.style_utils import define_style, get_palette
@@ -371,7 +372,7 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
         bins_list = [i for i in equal_bins]
         values = pd.DataFrame(pd.cut([val[0] for val in prediction_error.values], bins=bins_list, labels=False))
         col_scale, _, _ = tuning_colorscale(
-            init_colorscale=style_dict["init_contrib_colorscale"], values=values, keep_90_pct=False
+            init_colorscale=style_dict["init_contrib_colorscale"], values=values, keep_quantile=(0.05, 0.95)
         )
 
         y_target = y_target.loc[list_ind]
@@ -635,15 +636,16 @@ def plot_confusion_matrix(
 
 def plot_contributions_projection(
     values_to_project,
+    hv_text_predict,
     color_value,
-    round_digit=2,
+    keep_quantile=None,
     metric="euclidean",
-    n_neighbors=15,
+    n_neighbors=200,
     learning_rate=1,
     min_dist=0.1,
     spread=1,
     n_components=2,
-    n_epochs=None,
+    n_epochs=200,
     random_state=None,
     marker_size=10,
     style_dict=None,
@@ -651,105 +653,100 @@ def plot_contributions_projection(
     width=900,
     height=600,
     title=None,
+    subtitle=None,
+    addnote=None,
     colorbar_title=None,
     file_name=None,
     auto_open=False,
 ):
     """
-    Generate a 2-dimensional scatter plot of the UMAP projection of the data.
+    Generate a 2D scatter plot using UMAP projection of high-dimensional data.
 
-    This plot allows users to explore high-dimensional data, highlighting natural groupings and similarities between data points.
-    Points are colored based on a selected variable, helping highlight patterns, groupings, or trends related to that feature.
+    This visualization helps to explore data structure by reducing dimensions and highlighting clusters or relationships.
+    Data points are colored according to a specified variable and include hover text for additional context.
 
     Parameters
     ----------
     values_to_project : pd.DataFrame
-        A DataFrame object containing the values to transform.
-    color_value : pd.DataFrame
-        A 1-D DataFrame object containing the values used as a color reference for markers.
-    round_digit : int, optional
-        Number of decimal places to round the predicted values for display purposes.
-    metric : str, optional
-        The metric to use to compute distances in high dimensional space. If a string is passed it must match a valid predefined metric. If a general metric is required a function that takes two 1d arrays and returns a float can be provided. For performance purposes it is required that this be a numba jit'd function. Valid string metrics include:
-        euclidean
-        manhattan
-        chebyshev
-        minkowski
-        canberra
-        braycurtis
-        mahalanobis
-        wminkowski
-        seuclidean
-        cosine
-        correlation
-        haversine
-        hamming
-        jaccard
-        dice
-        russelrao
-        kulsinski
-        ll_dirichlet
-        hellinger
-        rogerstanimoto
-        sokalmichener
-        sokalsneath
-        yule
-        Metrics that take arguments (such as minkowski, mahalanobis etc.) can have arguments passed via the metric_kwds dictionary. At this time care must be taken and dictionary elements must be ordered appropriately; this will hopefully be fixed in the future.
-    n_neighbors : int, optional
-        The size of local neighborhood (in terms of number of neighboring sample points) used for manifold approximation. Larger values result in more global views of the manifold, while smaller values result in more local data being preserved. In general values should be in the range 2 to 100.
-    learning_rate : float, optional
-        The initial learning rate for the embedding optimization.
-    min_dist : float, optional
-        The effective minimum distance between embedded points. Smaller values will result in a more clustered/clumped embedding where nearby points on the manifold are drawn closer together, while larger values will result on a more even dispersal of points. The value should be set relative to the spread value, which determines the scale at which embedded points will be spread out.
-    spread : float, optional
-        The effective scale of embedded points. In combination with min_dist this determines how clustered/clumped the embedded points are.
-    n_components : int, optional
-        The dimension of the space to embed into. This defaults to 2 to provide easy visualization, but can reasonably be set to any integer value in the range 2 to 100.
-    n_epochs : int, optional
-        The number of training epochs to be used in optimizing the low dimensional embedding. Larger values result in more accurate embeddings. If None is specified a value will be selected based on the size of the input dataset (200 for large datasets, 500 for small).
-    random_state : int, optional
-        If int, random_state is the seed used by the random number generator; If RandomState instance, random_state is the random number generator; If None, the random number generator is the RandomState instance used by np.random.
-    marker_size : int, optional
-        Marker size of the data points.
-    style_dict : dict, optional
-        Dictionary containing style settings (e.g., colors, title fonts, etc.) for customizing the plot.
-    opacity : float, optional
-        Opacity of the markers on the plot (between 0 and 1).
-    width : int, optional
-        Width of the plot, by default 900.
-    height : int, optional
-        Height of the plot, by default 600.
-    title : str, optional
-        Title of the plot.
-    colorbar_title : str, optional
-        Title of the colorbar
-    file_name : str, optional
-        Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
-    auto_open : bool, optional
-        If True, the plot will automatically open in a web browser after being generated, by default False.
-
+        DataFrame containing the high-dimensional data to be projected.
+    hv_text_predict : list of str
+        List of text values to show when hovering over each data point.
+    color_value : pd.DataFrame or pd.Series
+        1D data structure (e.g., Series) used to determine the color of each marker.
+    keep_quantile : tuple of float, optional, default=(0.05, 0.95)
+        Quantiles to retain for color scaling, helping to manage outliers.
+    metric : str, optional, default="euclidean"
+        Distance metric used for UMAP. Can be one of:
+        ['euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra',
+        'braycurtis', 'mahalanobis', 'wminkowski', 'seuclidean', 'cosine',
+        'correlation', 'haversine', 'hamming', 'jaccard', 'dice', 'russelrao',
+        'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
+        'sokalmichener', 'sokalsneath', 'yule']
+    n_neighbors : int, optional, default=200
+        Size of local neighborhood used for manifold approximation. Larger values capture more global structure.
+    learning_rate : float, optional, default=1
+        Initial learning rate used during UMAP embedding optimization.
+    min_dist : float, optional, default=0.1
+        Controls how tightly UMAP packs points together. Smaller values lead to tighter clusters.
+    spread : float, optional, default=1
+        Controls the scale of embedded points. Used in combination with `min_dist`.
+    n_components : int, optional, default=2
+        Number of dimensions in the reduced space (usually 2 for visualization).
+    n_epochs : int, optional, default=200
+        Number of training epochs for the UMAP optimization.
+    random_state : int or None, optional, default=None
+        Random seed for reproducibility. Accepts int or numpy RandomState.
+    marker_size : int, optional, default=10
+        Size of the data point markers in the plot.
+    style_dict : dict or None, optional, default=None
+        Custom styling options (e.g., fonts, layout settings).
+    opacity : float, optional, default=0.8
+        Opacity of the data point markers (between 0 and 1).
+    width : int, optional, default=900
+        Width of the plot in pixels.
+    height : int, optional, default=600
+        Height of the plot in pixels.
+    title : str or None, optional, default=None
+        Main title of the plot.
+    subtitle : str or None, optional, default=None
+        Subtitle shown under the main title.
+    addnote : str or None, optional, default=None
+        Additional text note to be displayed.
+    colorbar_title : str or None, optional, default=None
+        Label for the colorbar (if applicable).
+    file_name : str or None, optional, default=None
+        Path to save the interactive plot as an HTML file. If None, the plot is not saved.
+    auto_open : bool, optional, default=False
+        Whether to open the plot automatically in a web browser after saving.
 
     Returns
     -------
     plotly.graph_objects.Figure
-        A Plotly figure object containing the 2-dimensional UMAP projection of the input data.
-
-    Raises
-    ------
-    ValueError
-        If `case` is not one of "classification" or "regression".
+        A Plotly Figure object representing the 2D UMAP projection.
 
     Examples
     --------
     >>> plot_contributions_projection(
-            values_to_project=contributions_data,
-            color_value=predictions,
-            random_state=100)
-
+            values_to_project=data,
+            hv_text_predict=hover_labels,
+            color_value=cluster_labels,
+            random_state=79
+        )
     """
 
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
+
+    if not title:
+        title = "UMAP Projection Plot"
+    if subtitle and addnote:
+        title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+    elif subtitle:
+        title += "<br><sup>" + subtitle + "</sup>"
+    elif addnote:
+        title += "<br><sup>" + addnote + "</sup>"
+
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
     ### Dimensional Reduction with UMAP
     umap = UMAP(
@@ -761,49 +758,85 @@ def plot_contributions_projection(
         n_components=n_components,
         n_epochs=n_epochs,
         random_state=random_state,
+        n_jobs=1,
     )
     projections = umap.fit_transform(values_to_project)
-    x, y = np.round(projections.T, round_digit)
+    x, y = projections.T
 
-    ### Plotting
-    fig = go.Figure()
+    figures = []
 
-    # Plot parameters
     colorscale, cmin, cmax = tuning_colorscale(
-        init_colorscale=style_dict["init_contrib_colorscale"], values=color_value, keep_90_pct=True
+        init_colorscale=style_dict["init_contrib_colorscale"], values=color_value[0], keep_quantile=keep_quantile
     )
-    colorbar_dict = dict(title={"text": "Predictions" if not colorbar_title else colorbar_title})
-    marker_dict = dict(
-        size=marker_size,
-        color=color_value.iloc[:, 0],
-        colorscale=colorscale,
-        cmin=cmin,
-        cmax=cmax,
-        showscale=True,
-        colorbar=colorbar_dict,
-        opacity=opacity,
+    if colorbar_title and len(colorbar_title) == 1:
+        colorbar_dict = dict(title={"text": colorbar_title[0]})
+    else:
+        colorbar_dict = dict(title={"text": ""})
+
+    n_figs = len(color_value)
+
+    for i, color_value_el in enumerate(color_value, start=1):
+        showscale_flag = i == 1
+
+        ### Plotting
+        fig = go.Figure()
+
+        # Plot parameters
+
+        marker_dict = dict(
+            size=marker_size,
+            color=color_value_el.iloc[:, 0],
+            colorscale=colorscale,
+            cmin=cmin,
+            cmax=cmax,
+            showscale=showscale_flag,
+            colorbar=colorbar_dict if showscale_flag else None,
+            opacity=opacity,
+        )
+
+        # Displaying plot
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                mode="markers",
+                marker=marker_dict,
+                hovertext=hv_text_predict,
+                hovertemplate="<b>%{hovertext}</b><br />",
+            )
+        )
+
+        fig.update_layout(
+            template="none",
+            width=(width - 100) // n_figs + 100,
+            height=(height - 200) // n_figs + 200,
+            hovermode="closest",
+        )
+
+        figures.append(fig)
+
+    ### Combine all figures into a single subplot
+
+    # Create a subplot with 1 row and N columns
+    combined_fig = make_subplots(
+        rows=1, cols=n_figs, subplot_titles=colorbar_title if colorbar_title else [""] * n_figs
     )
 
-    # Displaying plot
-    scatterplot = go.Scatter(x=x, y=y, mode="markers", marker=marker_dict)
+    # Add each figure's traces to the combined figure
+    for i, fig in enumerate(figures, start=1):
+        for trace in fig.data:
+            combined_fig.add_trace(trace, row=1, col=i)
+        # Also copy layout updates like axis titles if needed:
+        combined_fig.update_xaxes(automargin=True, showticklabels=False, row=1, col=i)
+        combined_fig.update_yaxes(automargin=True, showticklabels=False, row=1, col=i)
 
-    fig.add_trace(scatterplot)
-
-    fig.update_layout(
-        template="none",
-        width=width,
-        height=height,
-        title=style_dict["dict_title"]
-        | {"text": "UMAP Projection Plot" if not title else title, "y": adjust_title_height(height)},
-        xaxis_title=style_dict["dict_xaxis"],
-        yaxis_title=style_dict["dict_yaxis"],
-        hovermode="closest",
+    # Optional: update global layout
+    combined_fig.update_layout(
+        template="none", width=width, height=(height - 200) // n_figs + 200, title=dict_t, showlegend=False
     )
 
-    fig.update_yaxes(automargin=True, showticklabels=False)
-    fig.update_xaxes(automargin=True, showticklabels=False)
+    # Show the combined plot
+    combined_fig.show()
 
     if file_name:
         plot(fig, filename=file_name, auto_open=auto_open)
-
-    fig.show()
