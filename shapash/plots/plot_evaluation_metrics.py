@@ -751,7 +751,7 @@ def plot_contributions_projection(
     ### Dimensional Reduction with UMAP
     umap = UMAP(
         metric=metric,
-        n_neighbors=n_neighbors,
+        n_neighbors=min(n_neighbors, len(values_to_project)),
         learning_rate=learning_rate,
         min_dist=min_dist,
         spread=spread,
