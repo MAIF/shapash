@@ -836,8 +836,7 @@ def plot_contributions_projection(
         template="none", width=width, height=(height - 200) // n_figs + 200, title=dict_t, showlegend=False
     )
 
-    # Show the combined plot
-    combined_fig.show()
-
     if file_name:
         plot(fig, filename=file_name, auto_open=auto_open)
+
+    return fig

@@ -2397,3 +2397,57 @@ class TestSmartPlotter(unittest.TestCase):
         selection = np.array(list(range(10, 20)))
         with self.assertRaises(ValueError):
             list_ind, addnote = subset_sampling(df=xpl.x_init, selection=selection, max_points=50)
+
+    def test_contributions_projection_plot_default_classification(self):
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        output =  xpl.plot.contributions_projection_plot(color_value="predictions")
+        assert isinstance(output, go.Figure)
+        assert len(output.data) == 1
+        assert output.data[0].type == "scatter"
+
+
+    def test_contributions_projection_plot_multiple_colors_classification(self):
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets"])
+        assert isinstance(output, go.Figure)
+        assert len(output.data) == 1
+        assert output.data[0].type == "scatter"
+
+    def test_contributions_projection_plot_default_regression(self):
+        np.random.seed(42)
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = DecisionTreeRegressor().fit(X, y)
+
+        selection = list(range(40))
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X, y_target=y)
+        output =  xpl.plot.contributions_projection_plot(color_value="predictions", selection=selection)
+        assert isinstance(output, go.Figure)
+        assert len(output.data) == 1
+        assert output.data[0].type == "scatter"
+
+
+    def test_contributions_projection_plot_multiple_colors_regression(self):
+        np.random.seed(42)
+        df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1]
+        model = DecisionTreeRegressor().fit(X, y)
+
+        selection = list(range(40))
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X, y_target=y)
+        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets"], selection=selection)
+        assert isinstance(output, go.Figure)
+        assert len(output.data) == 1
+        assert output.data[0].type == "scatter"

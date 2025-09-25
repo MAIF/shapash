@@ -394,50 +394,59 @@ class SmartPlotter:
         zoom=False,
     ):
         """
-        contribution_plot method diplays a Plotly scatter or violin plot of a selected feature.
-        It represents the contribution of the selected feature to the predicted value.
-        This plot allows the user to understand how the value of a feature affects a prediction
-        Type of plot (Violin/scatter) is automatically selected. It depends on the feature
-        to be analyzed, the type of use case (regression / classification) and the presence of
-        predicted values attribute.
-        A sample is taken if the number of points to be displayed is too large
-        Using col parameter, shapash user can specify the column num, name or column label of
-        the feature
-        contribution_plot tutorial offers many examples (please check tutorial part of this doc)
+        Display a contribution plot using Plotly for a selected feature.
+
+        This method visualizes the contribution of a given feature to model predictions,
+        helping users understand how the feature's value influences the prediction outcome.
+        Depending on the feature type, use case (regression or classification), and model
+        outputs (e.g., predicted values), the plot will be either a scatter or a violin plot.
+
+        For large datasets, the plot will automatically sample data points to maintain performance.
+        Users can specify a subset of data via the `selection` parameter.
+
         Parameters
         ----------
-        col: String or Int
-            Name, label name or column number of the column whose contributions we want to plot
-        selection: list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
-        label: integer or string (default -1)
-            If the label is of string type, check if it can be changed to integer to select the
-            good dataframe object.
-        violin_maxf: int (optional, default: 10)
-            maximum number modality to plot violin. If the feature specified with col argument
-            has more modalities than violin_maxf, a scatter plot will be choose
-        max_points: int (optional, default: 2000)
-            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        proba: bool (optional, default: True)
-            use predict_proba to color plot (classification case)
-        width : Int (default: 900)
-            Plotly figure - layout width
-        height : Int (default: 600)
-            Plotly figure - layout height
-        file_name: string (optional)
-            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
-            Indicate whether to open the bar plot or not.
-        zoom: bool (default=False)
-            graph is currently zoomed
+        col : str or int
+            The name, label, or column index of the feature to be plotted.
+        selection : list, optional
+            List of row indices to plot (i.e., a subset of the input DataFrame).
+            If None, all rows are considered (up to `max_points`).
+        label : int or str, default=-1
+            Class label to select (used in classification). If a string is provided, it will
+            be cast to an integer if possible.
+        violin_maxf : int, default=10
+            Maximum number of unique values (modalities) allowed for a feature to use a
+            violin plot. If the feature has more than this, a scatter plot will be used instead.
+        max_points : int, default=2000
+            Maximum number of data points to display. If the dataset is larger, a sample will
+            be drawn. Can be overridden using the `selection` parameter.
+        proba : bool, default=True
+            Whether to use predicted probabilities (via `predict_proba`) to color the plot.
+            Applies to classification problems.
+        width : int, default=900
+            Width of the Plotly figure in pixels.
+        height : int, default=600
+            Height of the Plotly figure in pixels.
+        file_name : str, optional
+            If provided, the plot will be saved to this file (Plotly-supported formats).
+        auto_open : bool, default=False
+            Whether to automatically open the saved plot in a web browser.
+        zoom : bool, default=False
+            Indicates whether the plot should start in a zoomed-in state.
+
         Returns
         -------
-        Plotly Figure Object
-        Example
+        plotly.graph_objects.Figure
+            The generated Plotly figure object.
+
+        Examples
         --------
         >>> xpl.plot.contribution_plot(0)
+        >>> xpl.plot.contribution_plot("Age", selection=[0, 1, 2], label=1)
+
+        Notes
+        -----
+        For more usage examples, refer to the contribution plot tutorial in the documentation.
         """
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
@@ -2227,7 +2236,7 @@ class SmartPlotter:
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]
 
-        plot_contributions_projection(
+        return plot_contributions_projection(
             values_to_project=values_to_project,
             hv_text_predict=hv_text_predict,
             color_value=color_value_data,
