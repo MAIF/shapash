@@ -2416,10 +2416,12 @@ class TestSmartPlotter(unittest.TestCase):
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X_train, y_target=y_train)
-        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets"])
+        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets", "errors"])
         assert isinstance(output, go.Figure)
-        assert len(output.data) == 1
+        assert len(output.data) == 3
         assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+        assert output.data[2].type == "scatter"
 
     def test_contributions_projection_plot_default_regression(self):
         np.random.seed(42)
@@ -2447,7 +2449,8 @@ class TestSmartPlotter(unittest.TestCase):
         selection = list(range(40))
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X, y_target=y)
-        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets"], selection=selection)
-        assert isinstance(output, go.Figure)
-        assert len(output.data) == 1
+        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets", "errors"], selection=selection)
+        assert len(output.data) == 3
         assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+        assert output.data[2].type == "scatter"

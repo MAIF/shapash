@@ -837,6 +837,6 @@ def plot_contributions_projection(
     )
 
     if file_name:
-        plot(fig, filename=file_name, auto_open=auto_open)
+        plot(combined_fig, filename=file_name, auto_open=auto_open)
 
-    return fig
+    return combined_fig
