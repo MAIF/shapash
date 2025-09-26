@@ -424,7 +424,7 @@ class SmartExplainer:
         """
         Performs required computations for ordering data.
         """
-        if isinstance(self.columns_order, list):
+        if isinstance(columns_order, list):
             check_columns_order(columns_order)
             # Prefix column name with "_" if it's listed in additional_features_dict
             columns_order = [f"_{col}" if f"_{col}" in self.additional_features_dict else col for col in columns_order]
