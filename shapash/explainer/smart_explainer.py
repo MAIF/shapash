@@ -288,8 +288,8 @@ class SmartExplainer:
             Defines the order of the columns in the dataframe.
             - If a list is provided, it specifies the exact order of columns to display.
             Any special columns not included in the list will be added automatically.
-            - If set to "start", all special columns are placed at the beginning.
-            - If set to "end", all special columns are placed at the end.
+            - If set to "first", all special columns are placed at the beginning.
+            - If set to "last", all special columns are placed at the end.
             This parameter is especially useful for controlling column order
             in Shapash SmartApp.
         additional_data : pandas.DataFrame, optional (default: None)
@@ -496,9 +496,13 @@ class SmartExplainer:
             Target values (1 column only).
             The index must be identical to the index of x_init.
             This is an interesting parameter for outputs on prediction
-        columns_order: list, optional (default: None)
-            The order of the columns in the dataframe.
-            This is an interesting parameter for ordering columns
+        columns_order: list or str, optional (default: None)
+            Defines the order of the columns in the dataframe.
+            - If a list is provided, it specifies the exact order of columns to display.
+            Any special columns not included in the list will be added automatically.
+            - If set to "first", all special columns are placed at the beginning.
+            - If set to "last", all special columns are placed at the end.
+            This parameter is especially useful for controlling column order
             in Shapash SmartApp.
         additional_data : pandas.DataFrame, optional (default: None)
             Additional dataset of features outsite the model.
