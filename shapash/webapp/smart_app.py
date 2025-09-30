@@ -188,10 +188,10 @@ class SmartApp:
             special_cols_remaining = [col for col in self.special_cols if col not in self.explainer.columns_order]
             columns_order = special_cols_remaining + self.explainer.columns_order
 
-        elif self.explainer.columns_order == "additional data first":
+        elif self.explainer.columns_order == "additional_data_first":
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
 
-        elif self.explainer.columns_order == "additional data last":
+        elif self.explainer.columns_order == "additional_data_last":
             auto_columns = [col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols]
             special_cols_remaining = [col for col in self.special_cols if col not in auto_columns]
             columns_order = (
