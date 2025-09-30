@@ -192,12 +192,10 @@ class SmartApp:
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
 
         elif self.explainer.columns_order == "additional data last":
-            automomatics_col = [
-                col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols
-            ]
-            special_cols_remaining = [col for col in self.special_cols if col not in automomatics_col]
+            auto_columns = [col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols]
+            special_cols_remaining = [col for col in self.special_cols if col not in auto_columns]
             columns_order = (
-                automomatics_col + self.dataframe.columns.drop(self.special_cols).tolist() + special_cols_remaining
+                auto_columns + self.dataframe.columns.drop(self.special_cols).tolist() + special_cols_remaining
             )
 
         else:
