@@ -82,7 +82,7 @@ doc = [
     "sphinx_material==0.0.35",
 ]
 
-all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc]"]
+all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc, umap]"]
 
 [project.urls]
 Homepage = "https://github.com/MAIF/shapash"
