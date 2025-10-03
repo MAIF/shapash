@@ -30,47 +30,49 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "plotly>=5.0.0,<6.0.0",
-    "matplotlib>=3.8.4",
-    "numpy>=2.0.0",
-    "pandas>=2.2.2",
-    "shap>=0.46.0",
-    "Flask>=1.0.4",
-    "dash>=2.3.1,<3.0.0",
+    "category_encoders>=2.6.0",
     "dash-bootstrap-components>=1.1.0",
     "dash-core-components>=2.0.0",
     "dash-daq>=0.5.0",
     "dash-html-components>=2.0.0",
     "dash-renderer==1.8.3",
     "dash-table>=5.0.0",
+    "dash>=2.3.1,<3.0.0",
+    "Flask>=1.0.4",
+    "matplotlib>=3.8.4",
     "nbformat>5.8.0",
     "numba>=0.60.0",
+    "numpy>=2.0.0",
+    "pandas>=2.2.2",
+    "plotly>=5.0.0,<6.0.0",
     "scikit-learn>=1.4.2,<1.6.0",
-    "category_encoders>=2.6.0",
     "scipy>=1.13.0",
+    "shap>=0.46.0",
+    "umap-learn>=0.5.7",
 ]
 
 [project.optional-dependencies] # Optional
 report = [
-    "nbconvert>=7.2.0",
-    "papermill>=2.5.0",
-    "jupyter-client>=8.3.0",
-    "notebook>=7.0.0",
     "Jinja2>=3.1.0",
+    "jupyter-client>=8.3.0",
+    "nbconvert>=7.2.0",
+    "notebook>=7.0.0",
+    "papermill>=2.5.0",
     "phik>=0.12.4",
     "pyarrow>=17.0.0",
 ]
 xgboost = ["xgboost>=2.1.0"]
-lightgbm = ["lightgbm>=4.4.0"]
 catboost = ["catboost>=1.2.8"]
+lightgbm = ["lightgbm>=4.4.0"]
 lime = ["lime>=0.2.0.0"]
-umap = ["umap-learn>=0.5.7"]
 
 dev = ["pre-commit", "mypy", "ruff"]
 test = ["pytest", "pytest-cov"]
 mypy = ["mypy"]
 ruff = ["ruff"]
 doc = [
+    "nbsphinx==0.8.8",
+    "sphinx_material==0.0.35",
     "Sphinx==4.5.0",
     "sphinxcontrib-applehelp==1.0.2",
     "sphinxcontrib-devhelp==1.0.2",
@@ -78,11 +80,9 @@ doc = [
     "sphinxcontrib-jsmath==1.0.1",
     "sphinxcontrib-qthelp==1.0.3",
     "sphinxcontrib-serializinghtml==1.1.5",
-    "nbsphinx==0.8.8",
-    "sphinx_material==0.0.35",
 ]
 
-all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc, umap]"]
+all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc]"]
 
 [project.urls]
 Homepage = "https://github.com/MAIF/shapash"

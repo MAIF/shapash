@@ -94,10 +94,18 @@ def plot_scatter(
         hv_text = [f"Id: {x}" for x in feature_values.index]
 
     if metadata:
-        metadata = {k: [round_to_k(x, 3) if isinstance(x, Number) else x for x in v] for k, v in metadata.items()}
-        text_groups_features = np.swap = np.array([col_values for col_values in metadata.values()])
+        metadata = {
+            k: [
+                round_to_k(x, 3) if isinstance(x, Number) else x
+                for x in pd.Series(v, index=feature_values.index).reindex(feature_values.index)
+            ]
+            for k, v in metadata.items()
+        }
+
+        text_groups_features = np.array([col_values for col_values in metadata.values()])
         text_groups_features = np.swapaxes(text_groups_features, 0, 1)
         text_groups_features_keys = list(metadata.keys())
+
         hovertemplate = (
             "<b>%{hovertext}</b><br />"
             + "Contribution: %{y:.4f} <br />"
