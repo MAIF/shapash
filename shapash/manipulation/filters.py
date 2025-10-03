@@ -17,7 +17,7 @@ def hide_contributions(var_dict, features_list):
     var_dict: pd.DataFrame
         Dataframe with features indexes ordered
         by contribution.
-    feature_list: List
+    feature_list: list
         List of index, feature to hide.
 
     Returns

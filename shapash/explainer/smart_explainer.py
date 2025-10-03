@@ -19,6 +19,7 @@ from shapash.report import check_report_requirements
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.check import (
     check_additional_data,
+    check_columns_order,
     check_features_name,
     check_label_dict,
     check_model,
@@ -246,6 +247,7 @@ class SmartExplainer:
         y_pred=None,
         proba_values=None,
         y_target=None,
+        columns_order=None,
         additional_data=None,
         additional_features_dict=None,
     ):
@@ -282,6 +284,14 @@ class SmartExplainer:
             Target values (1 column only).
             The index must be identical to the index of x_init.
             This is an interesting parameter for outputs on prediction
+        columns_order: list or str, optional (default: None)
+            Defines the order of the columns in the dataframe.
+            - If a list is provided, it specifies the exact order of columns to display.
+            Any special columns not included in the list will be added automatically.
+            - If set to "additional_data_first", all additional data are placed at the beginning.
+            - If set to "additional_data_last", all additional data are placed at the end.
+            This parameter is especially useful for controlling column order
+            in Shapash SmartApp.
         additional_data : pandas.DataFrame, optional (default: None)
             Additional dataset of features outsite the model.
             The index must be identical to the index of x_init.
@@ -331,6 +341,7 @@ class SmartExplainer:
             else self._compile_additional_features_dict(additional_features_dict)
         )
         self.additional_data = self._compile_additional_data(additional_data)
+        self.columns_order = self._compile_columns_order(columns_order)
         self.plot._tuning_round_digit()
 
     def _get_contributions_from_backend_or_user(self, x, contributions):
@@ -409,6 +420,32 @@ class SmartExplainer:
                 self.additional_features_dict[feature] = feature
         return additional_data
 
+    def _compile_columns_order(self, columns_order):
+        """
+        Performs required computations for ordering data.
+        """
+        if isinstance(columns_order, list):
+            check_columns_order(columns_order)
+            # Prefix column name with "_" if it's listed in additional_features_dict
+            columns_order = [f"_{col}" if f"_{col}" in self.additional_features_dict else col for col in columns_order]
+
+            x_cols = set(self.x_encoded.columns)
+            additional_cols = set(self.additional_features_dict)
+            columns_order_set = set(columns_order)
+
+            # Check for missing or unexpected columns
+            missing_cols = x_cols - columns_order_set
+            extra_cols = columns_order_set - x_cols - additional_cols
+
+            if missing_cols:
+                raise ValueError(f"The following columns are missing from columns_order: {missing_cols}")
+            if extra_cols:
+                raise ValueError(
+                    f"The following columns in columns_order do not exist in x or additional data: {extra_cols}"
+                )
+
+        return columns_order
+
     def define_style(self, palette_name=None, colors_dict=None):
         """
         Set the color set to use in plots.
@@ -430,6 +467,7 @@ class SmartExplainer:
         label_dict=None,
         features_dict=None,
         title_story: str = None,
+        columns_order=None,
         additional_data=None,
         additional_features_dict=None,
     ):
@@ -458,6 +496,14 @@ class SmartExplainer:
             Target values (1 column only).
             The index must be identical to the index of x_init.
             This is an interesting parameter for outputs on prediction
+        columns_order: list or str, optional (default: None)
+            Defines the order of the columns in the dataframe.
+            - If a list is provided, it specifies the exact order of columns to display.
+            Any special columns not included in the list will be added automatically.
+            - If set to "additional_data_first", all additional data are placed at the beginning.
+            - If set to "additional_data_last", all additional data are placed at the end.
+            This parameter is especially useful for controlling column order
+            in Shapash SmartApp.
         additional_data : pandas.DataFrame, optional (default: None)
             Additional dataset of features outsite the model.
             The index must be identical to the index of x_init.
@@ -502,6 +548,8 @@ class SmartExplainer:
             self.additional_features_dict = self._compile_additional_features_dict(additional_features_dict)
         if additional_data is not None:
             self.additional_data = self._compile_additional_data(additional_data)
+        if columns_order is not None:
+            self.columns_order = self._compile_columns_order(columns_order)
 
     def get_interaction_values(self, n_samples_max=None, selection=None):
         """
