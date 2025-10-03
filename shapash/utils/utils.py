@@ -379,27 +379,33 @@ def convert_string_to_int_keys(input_dict: dict) -> dict:
     return {int(k): v for k, v in input_dict.items()}
 
 
-def tuning_colorscale(init_colorscale, values, keep_90_pct=False):
+def tuning_colorscale(init_colorscale, values, keep_quantile=None):
     """
-    Adjusts the color scale based on the distribution of points.
+    Adjust the color scale based on the distribution of points.
 
     This function modifies the color scale used for visualization according to
-    the distribution of the provided values. Optionally, it can exclude the top and bottom
-    5% of values to focus on the core distribution of data.
+    the distribution of the provided values. Optionally, it can keep only a specified
+    central quantile range to exclude extreme values and focus on the core distribution.
 
     Parameters
     ----------
+    init_colorscale : list
+        A list of colors defining the base color scale.
     values : pd.DataFrame
         A one-column DataFrame containing the values for which quantiles need to be calculated.
-    keep_90_pct : bool, optional
-        If True, the function adjusts the color scale to cover the central 90% of the data,
-        excluding the lowest 5% and the highest 5%. Defaults to False.
+    keep_quantile : tuple of float or None, optional, default=None
+        Tuple (low, high) defining the lower and upper quantiles to **keep** in the distribution.
+        - If None: the full range of data is used.
+        - Example: (0.05, 0.95) keeps the central 90% (removes bottom 5% and top 5%).
+        - Example: (0.1, 0.9) keeps the central 80%.
 
     Returns
     -------
     tuple
-        A tuple containing the adjusted color scale, the minimum value, and the maximum value
-        used for the color scale adjustment.
+        A tuple containing:
+        - color_scale : list of tuples (normalized position, color)
+        - cmin : float, minimum value used for color scaling
+        - cmax : float, maximum value used for color scaling
     """
     # Extract the first column of values
     data = values.iloc[:, 0]
@@ -407,30 +413,64 @@ def tuning_colorscale(init_colorscale, values, keep_90_pct=False):
     # Initialize variables for min and max values
     cmin, cmax = None, None
 
-    # Check if there is only one unique value
+    # Case 1: All values identical
     if data.nunique() == 1:
         unique_value = data.iloc[0]
         cmin, cmax = unique_value, unique_value
-        # Create a color scale where all values map to the unique value
         color_scale = [(i / (len(init_colorscale) - 1), color) for i, color in enumerate(init_colorscale)]
         return color_scale, cmin, cmax
 
-    if keep_90_pct:
-        # Calculate quantiles to exclude the extreme 10% of values
-        lower_quantile = data.quantile(0.05)
-        upper_quantile = data.quantile(0.95)
+    # Case 2: Filter based on quantile range if requested
+    if keep_quantile is not None:
+        if not (0 <= keep_quantile[0] < keep_quantile[1] <= 1):
+            raise ValueError("keep_quantile must be a tuple (low, high) with 0 <= low < high <= 1.")
+        lower_quantile = data.quantile(keep_quantile[0])
+        upper_quantile = data.quantile(keep_quantile[1])
         data_tmp = data[(data >= lower_quantile) & (data <= upper_quantile)]
-        if (len(data_tmp) > 200) and (data_tmp.nunique() > 1):
+        # Only keep filtered data if it's meaningful
+        if (len(data_tmp) > 20) and (data_tmp.nunique() > 1):
             data = data_tmp
         cmin, cmax = data.min(), data.max()
 
-    # Calculate only the quantiles corresponding to the color scale
+    # Compute quantiles for the color scale
     quantiles = data.quantile(np.linspace(0, 1, len(init_colorscale)))
 
-    # Normalize quantiles to a 0-1 scale
+    # Normalize quantiles between 0 and 1
     min_pred, max_pred = quantiles.min(), quantiles.max()
     normalized_quantiles = (quantiles - min_pred) / (max_pred - min_pred)
 
-    # Build the color scale
+    # Build the final color scale
     color_scale = [(value, color) for value, color in zip(normalized_quantiles, init_colorscale)]
     return color_scale, cmin, cmax
+
+
+def top_contributors(series: pd.Series, threshold: float = 0.9) -> list:
+    """
+    Returns the list of names (index values) that cumulatively contribute up to a given threshold of the total.
+
+    Parameters:
+    - series (pd.Series): A pandas Series sorted in ascending order, with names as the index.
+    - threshold (float): Cumulative contribution threshold (between 0 and 1).
+
+    Returns:
+    - list: List of names contributing up to the threshold.
+    """
+    # Check if the series is sorted in ascending order
+    if not series.is_monotonic_increasing:
+        series = series.sort_values(ascending=True)
+
+    # Reverse the series to start from the highest contributors
+    series_desc = series[::-1]
+
+    # Compute the cumulative percentage of the total
+    cumulative_ratio = series_desc.cumsum() / series_desc.sum()
+
+    # Select entries where cumulative sum is below or equal to the threshold
+    mask = cumulative_ratio <= threshold
+
+    # Include the next item that may slightly exceed the threshold
+    if not mask.all():
+        mask.iloc[mask.sum()] = True
+
+    # Return the list of names (index values)
+    return series_desc[mask].index.tolist()

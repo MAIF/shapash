@@ -635,10 +635,10 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     html.Div
         Div containing the modalities selection options
     """
-    if type(round_dataframe[value].iloc[0]) == bool:
+    if type(round_dataframe[value].iloc[0]) is np.bool_ or type(round_dataframe[value].iloc[0]) is bool:
         new_element = html.Div(
             dcc.RadioItems(
-                [{"label": val, "value": val} for val in round_dataframe[value].unique()],
+                [{"label": str(val), "value": val} for val in round_dataframe[value].unique()],
                 id={"type": "dynamic-bool", "index": id["index"]},
                 value=round_dataframe[value].iloc[0],
                 inline=False,
@@ -659,17 +659,16 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     elif (type(round_dataframe[value].iloc[0]) is pd.Timestamp) | (
         type(round_dataframe[value].iloc[0]) is datetime.datetime
     ):
-        new_element = (
-            html.Div(
-                dcc.DatePickerRange(
-                    id={"type": "dynamic-date", "index": id["index"]},
-                    min_date_allowed=round_dataframe[value].min(),
-                    max_date_allowed=round_dataframe[value].max(),
-                    start_date=round_dataframe[value].min(),
-                    end_date=round_dataframe[value].max(),
-                ),
-                style={"width": "65%", "margin-left": "20px"},
+        new_element = html.Div(
+            dcc.DatePickerRange(
+                id={"type": "dynamic-date", "index": id["index"]},
+                min_date_allowed=round_dataframe[value].min(),
+                max_date_allowed=round_dataframe[value].max(),
+                start_date=round_dataframe[value].min(),
+                end_date=round_dataframe[value].max(),
+                clearable=True,
             ),
+            style={"width": "65%", "margin-left": "20px"},
         )
     else:
         lower_value = 0

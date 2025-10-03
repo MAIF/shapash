@@ -17,7 +17,11 @@ from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
-from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix, plot_scatter_prediction
+from shapash.plots.plot_evaluation_metrics import (
+    plot_confusion_matrix,
+    plot_contributions_projection,
+    plot_scatter_prediction,
+)
 from shapash.plots.plot_feature_importance import plot_feature_importance
 from shapash.plots.plot_interactions import plot_interactions_scatter, plot_interactions_violin, update_interactions_fig
 from shapash.plots.plot_line_comparison import plot_line_comparison
@@ -32,6 +36,7 @@ from shapash.utils.utils import (
     compute_digit_number,
     compute_sorted_variables_interactions_list_indices,
     maximum_difference_sort_value,
+    top_contributors,
     truncate_str,
     tuning_colorscale,
 )
@@ -389,50 +394,59 @@ class SmartPlotter:
         zoom=False,
     ):
         """
-        contribution_plot method diplays a Plotly scatter or violin plot of a selected feature.
-        It represents the contribution of the selected feature to the predicted value.
-        This plot allows the user to understand how the value of a feature affects a prediction
-        Type of plot (Violin/scatter) is automatically selected. It depends on the feature
-        to be analyzed, the type of use case (regression / classification) and the presence of
-        predicted values attribute.
-        A sample is taken if the number of points to be displayed is too large
-        Using col parameter, shapash user can specify the column num, name or column label of
-        the feature
-        contribution_plot tutorial offers many examples (please check tutorial part of this doc)
+        Display a contribution plot using Plotly for a selected feature.
+
+        This method visualizes the contribution of a given feature to model predictions,
+        helping users understand how the feature's value influences the prediction outcome.
+        Depending on the feature type, use case (regression or classification), and model
+        outputs (e.g., predicted values), the plot will be either a scatter or a violin plot.
+
+        For large datasets, the plot will automatically sample data points to maintain performance.
+        Users can specify a subset of data via the `selection` parameter.
+
         Parameters
         ----------
-        col: String or Int
-            Name, label name or column number of the column whose contributions we want to plot
-        selection: list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
-        label: integer or string (default -1)
-            If the label is of string type, check if it can be changed to integer to select the
-            good dataframe object.
-        violin_maxf: int (optional, default: 10)
-            maximum number modality to plot violin. If the feature specified with col argument
-            has more modalities than violin_maxf, a scatter plot will be choose
-        max_points: int (optional, default: 2000)
-            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        proba: bool (optional, default: True)
-            use predict_proba to color plot (classification case)
-        width : Int (default: 900)
-            Plotly figure - layout width
-        height : Int (default: 600)
-            Plotly figure - layout height
-        file_name: string (optional)
-            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
-            Indicate whether to open the bar plot or not.
-        zoom: bool (default=False)
-            graph is currently zoomed
+        col : str or int
+            The name, label, or column index of the feature to be plotted.
+        selection : list, optional
+            List of row indices to plot (i.e., a subset of the input DataFrame).
+            If None, all rows are considered (up to `max_points`).
+        label : int or str, default=-1
+            Class label to select (used in classification). If a string is provided, it will
+            be cast to an integer if possible.
+        violin_maxf : int, default=10
+            Maximum number of unique values (modalities) allowed for a feature to use a
+            violin plot. If the feature has more than this, a scatter plot will be used instead.
+        max_points : int, default=2000
+            Maximum number of data points to display. If the dataset is larger, a sample will
+            be drawn. Can be overridden using the `selection` parameter.
+        proba : bool, default=True
+            Whether to use predicted probabilities (via `predict_proba`) to color the plot.
+            Applies to classification problems.
+        width : int, default=900
+            Width of the Plotly figure in pixels.
+        height : int, default=600
+            Height of the Plotly figure in pixels.
+        file_name : str, optional
+            If provided, the plot will be saved to this file (Plotly-supported formats).
+        auto_open : bool, default=False
+            Whether to automatically open the saved plot in a web browser.
+        zoom : bool, default=False
+            Indicates whether the plot should start in a zoomed-in state.
+
         Returns
         -------
-        Plotly Figure Object
-        Example
+        plotly.graph_objects.Figure
+            The generated Plotly figure object.
+
+        Examples
         --------
         >>> xpl.plot.contribution_plot(0)
+        >>> xpl.plot.contribution_plot("Age", selection=[0, 1, 2], label=1)
+
+        Notes
+        -----
+        For more usage examples, refer to the contribution plot tutorial in the documentation.
         """
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
@@ -483,14 +497,14 @@ class SmartPlotter:
                 # Proba subset:
                 proba_values = proba_values.loc[list_ind, :]
                 col_scale, cmin, cmax = tuning_colorscale(
-                    self._style_dict["init_contrib_colorscale"], proba_values, keep_90_pct=True
+                    self._style_dict["init_contrib_colorscale"], proba_values, keep_quantile=(0.05, 0.95)
                 )
             elif self._explainer.y_pred is not None:
                 pred_values = self._explainer.y_pred.iloc[:, [label_num]]
                 # Prediction subset:
                 pred_values = pred_values.loc[list_ind, :]
                 col_scale, cmin, cmax = tuning_colorscale(
-                    self._style_dict["init_contrib_colorscale"], pred_values, keep_90_pct=True
+                    self._style_dict["init_contrib_colorscale"], pred_values, keep_quantile=(0.05, 0.95)
                 )
 
         # Regression Case - color scale
@@ -498,7 +512,9 @@ class SmartPlotter:
             subcontrib = contributions
             if self._explainer.y_pred is not None:
                 col_scale, cmin, cmax = tuning_colorscale(
-                    self._style_dict["init_contrib_colorscale"], self._explainer.y_pred.loc[list_ind], keep_90_pct=True
+                    self._style_dict["init_contrib_colorscale"],
+                    self._explainer.y_pred.loc[list_ind],
+                    keep_quantile=(0.05, 0.95),
                 )
 
         # Subset
@@ -1913,6 +1929,7 @@ class SmartPlotter:
         height: int = 500,
         nb_cat_max: int = 7,
         nb_hue_max: int = 7,
+        cat_num_threshold: int = 200,
         file_name=None,
         auto_open=False,
     ) -> go.Figure:
@@ -1943,6 +1960,9 @@ class SmartPlotter:
         nb_hue_max : int, optional, default=7
             Maximum number of hue categories to display. Categories beyond this limit
             are grouped into a new 'Other' category.
+        cat_num_threshold : int, optional, default=200
+            Threshold on the number of unique values used to decide whether a numeric
+            series is treated as categorical or continuous.
         file_name : str, optional
             Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
         auto_open : bool, optional
@@ -1967,6 +1987,282 @@ class SmartPlotter:
             height=height,
             nb_cat_max=nb_cat_max,
             nb_hue_max=nb_hue_max,
+            cat_num_threshold=cat_num_threshold,
+            file_name=file_name,
+            auto_open=auto_open,
+        )
+
+    def contributions_projection_plot(
+        self,
+        color_value="predictions",
+        keep_quantile=(0.05, 0.95),
+        max_points=2000,
+        selection=None,
+        label=-1,
+        metric="euclidean",
+        threshold_top_features=0.9,
+        n_neighbors=200,
+        learning_rate=1,
+        min_dist=0.1,
+        spread=1,
+        n_components=2,
+        n_epochs=200,
+        random_state=79,
+        marker_size=10,
+        style_dict=None,
+        opacity=0.8,
+        width=900,
+        height=600,
+        file_name=None,
+        auto_open=False,
+    ):
+        """
+        Generate a 2D UMAP projection plot (or multiple plots) based on SHAP-like feature contributions.
+
+        This function visualizes high-dimensional contribution data by projecting it into 2D space using UMAP.
+        It highlights similarities between observations and allows visual comparison by coloring points using selected values
+        (e.g., predictions, targets, errors). Multiple color views can be displayed side by side, sharing a common color scale.
+
+        Parameters
+        ----------
+        color_value : str or list of str, optional, default="predictions"
+            Variable(s) to use for coloring the data points. Can be one or more of:
+            - 'predictions'
+            - 'targets'
+            - 'errors'
+            If a list is provided, one subplot is created per item.
+
+        keep_quantile : tuple of float, optional, default=(0.05, 0.95)
+            Tuple defining the lower and upper quantiles to keep when scaling colors. Useful to remove outliers.
+            For example, (0.05, 0.95) retains the central 90% of the distribution.
+
+        max_points : int, optional, default=2000
+            Maximum number of points to display. If the dataset is larger, a random sample is taken (unless 'selection' is provided).
+
+        selection : list, optional, default=None
+            List of indices to use for subsetting the data. Overrides random sampling.
+
+        label : int or str, optional, default=-1
+            Label to use in classification tasks (e.g., class index or name). Ignored in regression.
+
+        metric : str, optional, default="euclidean"
+            Distance metric used for UMAP. Can be one of:
+            'euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra', 'braycurtis', 'mahalanobis',
+            'wminkowski', 'seuclidean', 'cosine', 'correlation', 'haversine', 'hamming', 'jaccard',
+            'dice', 'russelrao', 'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
+            'sokalmichener', 'sokalsneath', 'yule'
+
+        threshold_top_features : float, optional, default=0.9
+            Feature selection threshold based on mean absolute contribution values. Only features contributing
+            to the cumulative threshold are retained for projection.
+
+        n_neighbors : int, optional, default=200
+            UMAP parameter: size of the local neighborhood (affects local vs global structure).
+
+        learning_rate : float, optional, default=1
+            UMAP parameter: initial learning rate for optimization.
+
+        min_dist : float, optional, default=0.1
+            UMAP parameter: controls the minimum distance between points in the low-dimensional space.
+
+        spread : float, optional, default=1
+            UMAP parameter: controls the scale of the embedded space (used with min_dist).
+
+        n_components : int, optional, default=2
+            UMAP parameter: Dimension of the embedded space. Use 2 for 2D plots.
+
+        n_epochs : int, optional, default=200
+            UMAP parameter: Number of training epochs for UMAP optimization. If None, defaults are used based on dataset size.
+
+        random_state : int, optional, default=79
+            Random seed for reproducibility.
+
+        marker_size : int, optional, default=10
+            Size of the data point markers in the plot.
+
+        style_dict : dict, optional, default=None
+            Dictionary containing style configuration (e.g., color scales, font sizes, etc.).
+
+        opacity : float, optional, default=0.8
+            Opacity of the data point markers (between 0 and 1).
+
+        width : int, optional, default=900
+            Total width of the figure layout (split across subplots if multiple color values are given).
+
+        height : int, optional, default=600
+                            Total height of the figure.
+
+        file_name : str, optional, default=None
+            Path to save the resulting figure as an HTML file. If None, the figure is not saved.
+
+        auto_open : bool, optional, default=False
+            If True and file_name is provided, the plot will be opened in the default web browser.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            A Plotly figure object displaying the UMAP projection. If multiple color values are passed,
+            a subplot layout is returned with one panel per value.
+
+        Raises
+        ------
+        ValueError
+            If the explainer case is not one of "classification" or "regression".
+            If an invalid color_value is provided.
+
+        Examples
+        --------
+        >>> # Single color projection
+        >>> xpl.contributions_projection_plot(color_value="predictions")
+
+        >>> # Compare multiple color schemes side-by-side
+        >>> xpl.contributions_projection_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
+        """
+
+        if not hasattr(self._explainer, "model"):
+            raise AssertionError(
+                "Explainer object was not compiled. Please compile the explainer " "object using .compile(...) method."
+            )
+
+        if not hasattr(self._explainer, "_case") or self._explainer._case not in {"classification", "regression"}:
+            raise ValueError('`self._explainer._case` must be "classification" or "regression".')
+
+        if not hasattr(self._explainer, "contributions"):
+            raise ValueError("`self._explainer.contributions` is required but was not found on `self`.")
+
+        if self._explainer._case == "classification":
+            label_num, _, label_value = self._explainer.check_label_name(label)
+        # Regression Case
+        elif self._explainer._case == "regression":
+            label_num, label_value = None, None
+
+        list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
+
+        subtitle = None
+        if self._explainer.features_imp is None:
+            self._explainer.compute_features_import()
+
+        features_imp = (
+            self._explainer.features_imp
+            if isinstance(self._explainer.features_imp, pd.Series)
+            else self._explainer.features_imp[0]
+        )
+        top_contributors_col = top_contributors(features_imp, threshold=threshold_top_features)
+
+        if not isinstance(color_value, list):
+            color_value = [color_value]
+        color_value_data = []
+
+        if self._explainer._case == "classification":
+            values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+
+            y_proba_values = self._explainer.proba_values.copy()
+
+            # predict
+            if y_proba_values is not None:
+                # Assign proba values of the target
+                y_proba_values["proba_target"] = y_proba_values.iloc[:, label_num]
+                y_proba_values = y_proba_values[["proba_target"]]
+                # Proba subset:
+                y_proba_values = y_proba_values.loc[list_ind, :]
+                target = self._explainer.y_target.iloc[:, [label_num]].loc[list_ind, :]
+                y_pred = self._explainer.y_pred.iloc[:, [label_num]].loc[list_ind, :]
+                df_pred = pd.concat(
+                    [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
+                )
+                df_pred.set_index(df_pred.columns[0], inplace=True)
+                df_pred.columns = ["proba_values", "predict_class", "target"]
+                subtitle = f"Response: <b>{label_value}</b>"
+
+            hv_text_predict = [
+                f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />"
+                for x, y, w, z in zip(
+                    df_pred.index,
+                    df_pred.proba_values.values.round(3).flatten(),
+                    df_pred.predict_class.values.flatten(),
+                    df_pred.target.values.flatten(),
+                )
+            ]
+
+            for el in color_value:
+                if el == "predictions":
+                    color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
+
+                elif el == "targets":
+                    color_value_data.append(self._explainer.y_target.iloc[:, [label_num]])
+
+                elif el == "errors":
+                    color_value_data.append(
+                        pd.DataFrame(
+                            np.abs(
+                                self._explainer.y_target.iloc[:, label_num]
+                                - self._explainer.proba_values.iloc[:, label_num]
+                            )
+                        )
+                    )
+                else:
+                    raise ValueError(
+                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
+                    )
+
+        elif self._explainer._case == "regression":
+            values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
+
+            target = self._explainer.y_target.loc[list_ind, :]
+            y_pred = self._explainer.y_pred.loc[list_ind, :]
+            y_proba_values = None
+            prediction_error = self._explainer.prediction_error.loc[list_ind, :]
+
+            hv_text_predict = [
+                f"Id: {x}<br />True Values: {y:,.{self._round_digit}f}<br />Predicted Values: {z:,.{self._round_digit}f}<br />Prediction Error: {w:,.2f}"
+                for x, y, z, w in zip(
+                    target.index, target.values.flatten(), y_pred.values.flatten(), prediction_error.values.flatten()
+                )
+            ]
+
+            for el in color_value:
+                if el == "predictions":
+                    color_value_data.append(self._explainer.y_pred)
+
+                elif el == "targets":
+                    color_value_data.append(self._explainer.y_target)
+
+                elif el == "errors":
+                    color_value_data.append(
+                        pd.DataFrame(np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0]))
+                    )
+                else:
+                    raise ValueError(
+                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
+                    )
+
+        title = "Contributions Projection Plot"
+
+        color_value_data = [el.loc[list_ind, :] for el in color_value_data]
+        colorbar_title = [el.capitalize() for el in color_value]
+
+        return plot_contributions_projection(
+            values_to_project=values_to_project,
+            hv_text_predict=hv_text_predict,
+            color_value=color_value_data,
+            keep_quantile=keep_quantile,
+            metric=metric,
+            n_neighbors=n_neighbors,
+            learning_rate=learning_rate,
+            min_dist=min_dist,
+            spread=spread,
+            n_components=n_components,
+            n_epochs=n_epochs,
+            random_state=random_state,
+            marker_size=marker_size,
+            style_dict=style_dict,
+            opacity=opacity,
+            width=width,
+            height=height,
+            title=title,
+            subtitle=subtitle,
+            addnote=addnote,
+            colorbar_title=colorbar_title,
             file_name=file_name,
             auto_open=auto_open,
         )
