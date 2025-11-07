@@ -1826,7 +1826,13 @@ class SmartApp:
             # Plot features importance
             page_to_plot = 1 if group_name else page
             zoom_active = get_figure_zoom(click_zoom)
+            if zoom_active:
+                mode = "global-local"
+            else:
+                mode = "global"
+
             figure = self.explainer.plot.features_importance(
+                mode=mode,
                 max_features=features,
                 page=page_to_plot,
                 selection=selection,

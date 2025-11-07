@@ -853,12 +853,15 @@ def adjust_figure_layout(figure: Figure) -> None:
 
     Args:
         figure (Figure): The figure to adjust.
-
-    Returns:
-        None
     """
     MyGraph.adjust_graph_static(figure, x_ax="Mean absolute Contribution")
     figure.layout.clickmode = "event+select"
 
-    nb_car = max([len(figure.data[0].y[i]) for i in range(len(figure.data[0].y))])
-    figure.update_layout(yaxis=dict(tickfont={"size": min(round(500 / nb_car), 12)}))
+    try:
+        y_values = figure.data[0].y
+        # Convert all y labels to strings before measuring their lengths
+        nb_car = max(len(str(y)) for y in y_values if y is not None)
+        figure.update_layout(yaxis=dict(tickfont={"size": min(round(500 / nb_car), 12)}))
+    except Exception as e:
+        # Optional: log or print an error message for debugging
+        print(f"Warning: Could not adjust figure layout properly: {e}")
