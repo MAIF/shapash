@@ -61,7 +61,7 @@ report = [
     "phik>=0.12.4",
     "pyarrow>=17.0.0",
 ]
-xgboost = ["xgboost>=2.1.0"]
+xgboost = ["xgboost>=2.1.0,<3.1.0"]
 catboost = ["catboost>=1.2.8"]
 lightgbm = ["lightgbm>=4.4.0"]
 lime = ["lime>=0.2.0.0"]
