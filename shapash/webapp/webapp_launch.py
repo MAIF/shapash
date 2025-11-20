@@ -26,6 +26,7 @@ if CASE == 1:
     X = titanic[features]
     y = titanic["Age"].to_frame()
     model = LGBMRegressor()
+    response_dict = None
 
 elif CASE == 2:
     features = ["Pclass", "Age", "Embarked", "Sex"]
@@ -33,13 +34,14 @@ elif CASE == 2:
     X = titanic[features]
     y = titanic["Survived"].to_frame()
     model = LGBMClassifier()
-
+    response_dict = {0: "Death", 1: "Survival"}
 else:
     features = ["Survived", "Age", "Embarked", "Sex"]
     encoder = one_hot.OneHotEncoder(titanic, cols=["Embarked", "Sex"])
     X = titanic[features]
     y = titanic["Pclass"].to_frame()
     model = LGBMClassifier()
+    response_dict = {1: "First Class", 2: "Second Class", 3: "Third Class"}
 
 titanic_enc = encoder.fit_transform(X)
 X_train, X_test, y_train, y_test = train_test_split(
@@ -61,7 +63,6 @@ y_pred = pd.DataFrame(data=y_pred, columns=y.columns.to_list(), index=X_test.ind
 
 y_target = pd.DataFrame(data=y_test, columns=y.columns.to_list(), index=X_test.index)
 
-response_dict = {0: "Death", 1: "Survival"}
 xpl = SmartExplainer(model, preprocessing=encoder, title_story=cases[CASE], label_dict=response_dict)
 
 xpl.compile(X_test, y_pred=y_pred, y_target=y_target)

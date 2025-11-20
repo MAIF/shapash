@@ -2131,10 +2131,10 @@ class SmartPlotter:
             raise ValueError("`self._explainer.contributions` is required but was not found on `self`.")
 
         if self._explainer._case == "classification":
-            label_num, _, label_value = self._explainer.check_label_name(label)
+            label_num, label_code, label_value = self._explainer.check_label_name(label)
         # Regression Case
         elif self._explainer._case == "regression":
-            label_num, label_value = None, None
+            label_num, label_code, label_value = None, None, None
 
         list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
 
@@ -2154,48 +2154,70 @@ class SmartPlotter:
         color_value_data = []
 
         if self._explainer._case == "classification":
-            values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+            if len(self._explainer.contributions) <= 2:
+                values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+            else:
+                contribs = [
+                    df.loc[list_ind, top_contributors_col].rename(columns=lambda c, i=i: f"{c}_{i}")
+                    for i, df in enumerate(self._explainer.contributions)
+                ]
+                values_to_project = pd.concat(contribs, axis=1, ignore_index=False)
 
             y_proba_values = self._explainer.proba_values.copy()
 
             # predict
             if y_proba_values is not None:
-                # Assign proba values of the target
-                y_proba_values["proba_target"] = y_proba_values.iloc[:, label_num]
-                y_proba_values = y_proba_values[["proba_target"]]
-                # Proba subset:
-                y_proba_values = y_proba_values.loc[list_ind, :]
-                target = self._explainer.y_target.iloc[:, [label_num]].loc[list_ind, :]
-                y_pred = self._explainer.y_pred.iloc[:, [label_num]].loc[list_ind, :]
-                df_pred = pd.concat(
-                    [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
+                # --- Extract proba values for the selected label
+                y_proba_target = (
+                    y_proba_values.iloc[:, [label_num]]
+                    .rename(columns={y_proba_values.columns[label_num]: "proba_values"})
+                    .loc[list_ind]
+                    .reset_index()
                 )
-                df_pred.set_index(df_pred.columns[0], inplace=True)
-                df_pred.columns = ["proba_values", "predict_class", "target"]
+
+                # --- Predicted classes
+                y_pred = self._explainer.y_pred.loc[list_ind].reset_index(drop=True)
+                if self._explainer.label_dict is not None:
+                    y_pred = y_pred.replace(self._explainer.label_dict)
+
+                # --- Base DataFrame parts
+                dfs = [y_proba_target, y_pred]
+                cols = ["proba_values", "predict_class"]
+
+                # --- Add target only if available
+                if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                    y_target = self._explainer.y_target.loc[list_ind].reset_index(drop=True)
+                    if self._explainer.label_dict is not None:
+                        y_target = y_target.replace(self._explainer.label_dict)
+                    dfs.append(y_target)
+                    cols.append("target")
+
+                # --- Combine everything
+                df_pred = pd.concat(dfs, axis=1).set_index(y_proba_target.columns[0])
+                df_pred.columns = cols
+
                 subtitle = f"Response: <b>{label_value}</b>"
 
-            hv_text_predict = [
-                f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />"
-                for x, y, w, z in zip(
-                    df_pred.index,
-                    df_pred.proba_values.values.round(3).flatten(),
-                    df_pred.predict_class.values.flatten(),
-                    df_pred.target.values.flatten(),
-                )
-            ]
+                # Build hover text
+                hv_text_predict = []
+                for idx, row in df_pred.iterrows():
+                    text = f"Id: {idx}<br />Predicted Values: {row['proba_values']:.3f}<br />Predicted class: {row['predict_class']}<br />"
+                    if "target" in df_pred.columns:
+                        text += f"True Values: {row['target']}<br />"
+                    hv_text_predict.append(text)
 
             for el in color_value:
                 if el == "predictions":
                     color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
 
                 elif el == "targets":
-                    color_value_data.append(self._explainer.y_target.iloc[:, [label_num]])
+                    color_value_data.append((self._explainer.y_target == label_code).astype(int))
 
                 elif el == "errors":
                     color_value_data.append(
                         pd.DataFrame(
                             np.abs(
-                                self._explainer.y_target.iloc[:, label_num]
+                                ((self._explainer.y_target.values.ravel() == label_code).astype(int))
                                 - self._explainer.proba_values.iloc[:, label_num]
                             )
                         )
@@ -2206,37 +2228,60 @@ class SmartPlotter:
                     )
 
         elif self._explainer._case == "regression":
+            # Base data: contributions and top contributors
             values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
-            target = self._explainer.y_target.loc[list_ind, :]
+            # Always available
             y_pred = self._explainer.y_pred.loc[list_ind, :]
-            y_proba_values = None
-            prediction_error = self._explainer.prediction_error.loc[list_ind, :]
 
-            hv_text_predict = [
-                f"Id: {x}<br />True Values: {y:,.{self._round_digit}f}<br />Predicted Values: {z:,.{self._round_digit}f}<br />Prediction Error: {w:,.2f}"
-                for x, y, z, w in zip(
-                    target.index, target.values.flatten(), y_pred.values.flatten(), prediction_error.values.flatten()
-                )
-            ]
+            # Optional pair: y_target and prediction_error
+            y_target = getattr(self._explainer, "y_target", None)
+            prediction_error = getattr(self._explainer, "prediction_error", None)
 
+            # If y_target exists, prediction_error must also exist
+            if y_target is not None and prediction_error is not None:
+                y_target = y_target.loc[list_ind, :]
+                prediction_error = prediction_error.loc[list_ind, :]
+                has_target_info = True
+            else:
+                has_target_info = False
+                y_target = None
+                prediction_error = None
+
+            y_proba_values = None  # not used in regression
+
+            # --- Build hover text dynamically ---
+            hv_text_predict = []
+            for i in list_ind:
+                text = f"Id: {i}<br />Predicted Values: {y_pred.loc[i].values[0]:,.{self._round_digit}f}<br />"
+                if has_target_info:
+                    text += (
+                        f"True Values: {y_target.loc[i].values[0]:,.{self._round_digit}f}<br />"
+                        f"Prediction Error: {prediction_error.loc[i].values[0]:,.2f}<br />"
+                    )
+                hv_text_predict.append(text)
+
+            # --- Handle color_value selections robustly ---
             for el in color_value:
                 if el == "predictions":
-                    color_value_data.append(self._explainer.y_pred)
+                    color_value_data.append(y_pred)
 
                 elif el == "targets":
-                    color_value_data.append(self._explainer.y_target)
+                    if not has_target_info:
+                        raise ValueError("Cannot color by targets: y_target is None.")
+                    color_value_data.append(y_target)
 
                 elif el == "errors":
-                    color_value_data.append(
-                        pd.DataFrame(np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0]))
-                    )
+                    if not has_target_info:
+                        raise ValueError("Cannot color by errors: prediction_error is None.")
+                    color_value_data.append(prediction_error)
+
                 else:
                     raise ValueError(
                         r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
                     )
 
-        title = "Contributions Projection Plot"
+        title = "Explanatory Individuals Map"
 
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]

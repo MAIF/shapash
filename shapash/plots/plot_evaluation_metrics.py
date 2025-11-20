@@ -804,6 +804,7 @@ def plot_contributions_projection(
                 hovertext=hv_text_predict,
                 hovertemplate="<b>%{hovertext}</b><br />",
                 name="",
+                customdata=values_to_project.index.values,
             )
         )
 
@@ -828,8 +829,8 @@ def plot_contributions_projection(
         for trace in fig.data:
             combined_fig.add_trace(trace, row=1, col=i)
         # Also copy layout updates like axis titles if needed:
-        combined_fig.update_xaxes(automargin=True, showticklabels=False, row=1, col=i)
-        combined_fig.update_yaxes(automargin=True, showticklabels=False, row=1, col=i)
+        combined_fig.update_xaxes(automargin=True, showticklabels=False, zeroline=False, showline=False, row=1, col=i)
+        combined_fig.update_yaxes(automargin=True, showticklabels=False, zeroline=False, showline=False, row=1, col=i)
 
     # Optional: update global layout
     combined_fig.update_layout(

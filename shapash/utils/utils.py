@@ -412,15 +412,24 @@ def tuning_colorscale(init_colorscale, values, keep_quantile=None):
 
     # Initialize variables for min and max values
     cmin, cmax = None, None
+    unique_vals = sorted(data.unique())
+    nunique = len(unique_vals)
+    n_colors = len(init_colorscale)
 
     # Case 1: All values identical
-    if data.nunique() == 1:
-        unique_value = data.iloc[0]
-        cmin, cmax = unique_value, unique_value
-        color_scale = [(i / (len(init_colorscale) - 1), color) for i, color in enumerate(init_colorscale)]
+    if nunique == 1:
+        unique_value = unique_vals[0]
+        color_scale = [(i / (n_colors - 1), c) for i, c in enumerate(init_colorscale)]
+        return color_scale, unique_value, unique_value
+
+    # Case 2: Number of unique values matches number of colors
+    if nunique in [2, n_colors]:
+        cmin, cmax = min(unique_vals), max(unique_vals)
+        positions = np.linspace(0, 1, n_colors)
+        color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale)]
         return color_scale, cmin, cmax
 
-    # Case 2: Filter based on quantile range if requested
+    # Case 3: Filter based on quantile range if requested
     if keep_quantile is not None:
         if not (0 <= keep_quantile[0] < keep_quantile[1] <= 1):
             raise ValueError("keep_quantile must be a tuple (low, high) with 0 <= low < high <= 1.")

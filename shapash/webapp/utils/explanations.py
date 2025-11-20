@@ -58,6 +58,42 @@ class Explanations:
                                 displaying this sub-population (grey) vs the full dataset (yellow).\n
                                 To reset the select, double click on the figure.
                                 """
+        self.predictions = """
+                        **What are the samples with correct or wrong predictions?**
+                        This graph enables to visualize and select samples to understand
+                        their explainability **dynamically** with the other graphs.\n
+                        If a single sample is selected, the local explicability graph is
+                        updated.\n
+                        If a sub-population is selected using the "box" or "lasso" tool,
+                        the global explainability is updated.\n
+                        It allows the comparison of the global feature contribution
+                        displaying this sub-population (grey) vs the full dataset (yellow).\n
+                        To reset the select, double click on the figure.
+                        """
+        self.targets = """
+                        **What are the samples with correct or wrong predictions?**
+                        This graph enables to visualize and select samples to understand
+                        their explainability **dynamically** with the other graphs.\n
+                        If a single sample is selected, the local explicability graph is
+                        updated.\n
+                        If a sub-population is selected using the "box" or "lasso" tool,
+                        the global explainability is updated.\n
+                        It allows the comparison of the global feature contribution
+                        displaying this sub-population (grey) vs the full dataset (yellow).\n
+                        To reset the select, double click on the figure.
+                        """
+        self.errors = """
+                        **What are the samples with correct or wrong predictions?**
+                        This graph enables to visualize and select samples to understand
+                        their explainability **dynamically** with the other graphs.\n
+                        If a single sample is selected, the local explicability graph is
+                        updated.\n
+                        If a sub-population is selected using the "box" or "lasso" tool,
+                        the global explainability is updated.\n
+                        It allows the comparison of the global feature contribution
+                        displaying this sub-population (grey) vs the full dataset (yellow).\n
+                        To reset the select, double click on the figure.
+                        """
         self.feature_importance = """
                                 **Global feature importance** is by default the sum of
                                 *individual contributions*,
@@ -74,8 +110,7 @@ class Explanations:
                                 """
         self.filter = """
                       **To create a new filter**, you must click on the
-                      *Add Filter* button. You can create as many filters
-                      as you want.
+                      *Add Filter* button. You can create as many filters as you want.
 
                       **To apply your filters**, you have to click on the
                       *Apply Filter* button.
@@ -87,4 +122,4 @@ class Explanations:
 
                       Finally, if you want **to delete all the filters**,
                       you can click on the *Reset all existing filters* button.
-                      """
+                    """
