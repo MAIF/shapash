@@ -175,3 +175,24 @@
     border-bottom-width: 1px;
     margin-bottom: 0.5rem;
 }
+
+.nav-tabs .nav-link.tab-label {
+    border: 2px solid #ddd;
+    padding: 0px 5px;
+    height: 30px;
+    color: black;
+    background-color: white;
+    transition: background-color 0.2s ease;
+}
+
+.nav-tabs .nav-link.tab-label:hover {
+    background-color: var(--tab-hover-color) !important;
+    cursor: pointer;
+}
+
+.nav-tabs .nav-link.tab-label.active {
+    background-color: white !important;
+    border-top: 3px solid var(--tab-active-color);
+    font-weight: bold;
+    font-style: italic;
+}
