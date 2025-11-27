@@ -2700,7 +2700,7 @@ class SmartApp:
             else:
                 subset = get_indexes_from_datatable(data)
 
-            figure = self.explainer.plot.contributions_projection_plot(
+            figure = self.explainer.plot.explanatory_individuals_map_plot(
                 selection=subset, max_points=points, label=label, color_value="predictions"
             )
             figure["layout"].clickmode = "event+select"
@@ -2756,7 +2756,7 @@ class SmartApp:
             else:
                 subset = get_indexes_from_datatable(data)
 
-            figure = self.explainer.plot.contributions_projection_plot(
+            figure = self.explainer.plot.explanatory_individuals_map_plot(
                 selection=subset, max_points=points, label=label, color_value="targets"
             )
             figure["layout"].clickmode = "event+select"
@@ -2812,7 +2812,7 @@ class SmartApp:
             else:
                 subset = get_indexes_from_datatable(data)
 
-            figure = self.explainer.plot.contributions_projection_plot(
+            figure = self.explainer.plot.explanatory_individuals_map_plot(
                 selection=subset, max_points=points, label=label, color_value="errors"
             )
             figure["layout"].clickmode = "event+select"

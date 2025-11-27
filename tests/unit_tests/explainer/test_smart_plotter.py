@@ -2398,32 +2398,32 @@ class TestSmartPlotter(unittest.TestCase):
         with self.assertRaises(ValueError):
             list_ind, addnote = subset_sampling(df=xpl.x_init, selection=selection, max_points=50)
 
-    def test_contributions_projection_plot_default_classification(self):
+    def test_explanatory_individuals_map_plot_default_classification(self):
         X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))
         y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X_train, y_target=y_train)
-        output =  xpl.plot.contributions_projection_plot(color_value="predictions")
+        output =  xpl.plot.explanatory_individuals_map_plot(color_value="predictions")
         assert isinstance(output, go.Figure)
         assert len(output.data) == 1
         assert output.data[0].type == "scatter"
 
 
-    def test_contributions_projection_plot_multiple_colors_classification(self):
+    def test_explanatory_individuals_map_plot_multiple_colors_classification(self):
         X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))
         y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
         model = DecisionTreeClassifier().fit(X_train, y_train)
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X_train, y_target=y_train)
-        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets", "errors"])
+        output = xpl.plot.explanatory_individuals_map_plot(color_value=["predictions", "targets", "errors"])
         assert isinstance(output, go.Figure)
         assert len(output.data) == 3
         assert output.data[0].type == "scatter"
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
 
-    def test_contributions_projection_plot_default_regression(self):
+    def test_explanatory_individuals_map_plot_default_regression(self):
         np.random.seed(42)
         df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
         X = df.iloc[:, :-1]
@@ -2433,13 +2433,13 @@ class TestSmartPlotter(unittest.TestCase):
         selection = list(range(40))
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X, y_target=y)
-        output =  xpl.plot.contributions_projection_plot(color_value="predictions", selection=selection)
+        output =  xpl.plot.explanatory_individuals_map_plot(color_value="predictions", selection=selection)
         assert isinstance(output, go.Figure)
         assert len(output.data) == 1
         assert output.data[0].type == "scatter"
 
 
-    def test_contributions_projection_plot_multiple_colors_regression(self):
+    def test_explanatory_individuals_map_plot_multiple_colors_regression(self):
         np.random.seed(42)
         df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
         X = df.iloc[:, :-1]
@@ -2449,7 +2449,7 @@ class TestSmartPlotter(unittest.TestCase):
         selection = list(range(40))
         xpl = SmartExplainer(model=model)
         xpl.compile(x=X, y_target=y)
-        output = xpl.plot.contributions_projection_plot(color_value=["predictions", "targets", "errors"], selection=selection)
+        output = xpl.plot.explanatory_individuals_map_plot(color_value=["predictions", "targets", "errors"], selection=selection)
         assert len(output.data) == 3
         assert output.data[0].type == "scatter"
         assert output.data[1].type == "scatter"

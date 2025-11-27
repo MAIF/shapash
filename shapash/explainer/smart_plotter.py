@@ -19,7 +19,7 @@ from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
     plot_confusion_matrix,
-    plot_contributions_projection,
+    plot_explanatory_individuals_map,
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
@@ -1992,7 +1992,7 @@ class SmartPlotter:
             auto_open=auto_open,
         )
 
-    def contributions_projection_plot(
+    def explanatory_individuals_map_plot(
         self,
         color_value="predictions",
         keep_quantile=(0.05, 0.95),
@@ -2113,10 +2113,10 @@ class SmartPlotter:
         Examples
         --------
         >>> # Single color projection
-        >>> xpl.contributions_projection_plot(color_value="predictions")
+        >>> xpl.explanatory_individuals_map_plot(color_value="predictions")
 
         >>> # Compare multiple color schemes side-by-side
-        >>> xpl.contributions_projection_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
+        >>> xpl.explanatory_individuals_map_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
         """
 
         if not hasattr(self._explainer, "model"):
@@ -2286,7 +2286,7 @@ class SmartPlotter:
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]
 
-        return plot_contributions_projection(
+        return plot_explanatory_individuals_map(
             values_to_project=values_to_project,
             hv_text_predict=hv_text_predict,
             color_value=color_value_data,

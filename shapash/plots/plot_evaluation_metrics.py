@@ -634,7 +634,7 @@ def plot_confusion_matrix(
     return fig
 
 
-def plot_contributions_projection(
+def plot_explanatory_individuals_map(
     values_to_project,
     hv_text_predict,
     color_value,
@@ -726,7 +726,7 @@ def plot_contributions_projection(
 
     Examples
     --------
-    >>> plot_contributions_projection(
+    >>> plot_explanatory_individuals_map(
             values_to_project=data,
             hv_text_predict=hover_labels,
             color_value=cluster_labels,
