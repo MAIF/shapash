@@ -2759,8 +2759,9 @@ class SmartApp:
             figure = self.explainer.plot.explanatory_individuals_map_plot(
                 selection=subset, max_points=points, label=label, color_value="targets"
             )
-            figure["layout"].clickmode = "event+select"
-            MyGraph.adjust_graph_static(figure)
+            if self.explainer.y_target is not None:
+                figure["layout"].clickmode = "event+select"
+                MyGraph.adjust_graph_static(figure)
 
             return figure, selectedData
 
@@ -2815,8 +2816,9 @@ class SmartApp:
             figure = self.explainer.plot.explanatory_individuals_map_plot(
                 selection=subset, max_points=points, label=label, color_value="errors"
             )
-            figure["layout"].clickmode = "event+select"
-            MyGraph.adjust_graph_static(figure)
+            if self.explainer.y_target is not None:
+                figure["layout"].clickmode = "event+select"
+                MyGraph.adjust_graph_static(figure)
 
             return figure, selectedData
 

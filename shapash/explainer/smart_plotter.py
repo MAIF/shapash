@@ -2153,6 +2153,25 @@ class SmartPlotter:
             color_value = [color_value]
         color_value_data = []
 
+        if (getattr(self._explainer, "y_target", None) is None) and (
+            ("targets" in color_value) or ("errors" in color_value)
+        ):
+            fig = go.Figure()
+            fig.update_layout(
+                xaxis={"visible": False},
+                yaxis={"visible": False},
+                annotations=[
+                    {
+                        "text": "Provide the y_target argument in the compile() method to display this plot.",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {"size": 14},
+                    }
+                ],
+            )
+            return fig
+
         if self._explainer._case == "classification":
             if len(self._explainer.contributions) <= 2:
                 values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
