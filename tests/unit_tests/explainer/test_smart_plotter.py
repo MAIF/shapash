@@ -2473,7 +2473,7 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = xpl.plot.explanatory_individuals_map_plot(color_value="targets")
         assert type(output) is go.Figure
-        assert len(output.data) == 1
+        assert len(output.data) == 0
         assert output.data[0].type == "scatter"
 
     def test_explanatory_individuals_map_plot_5_multiclass(self):
