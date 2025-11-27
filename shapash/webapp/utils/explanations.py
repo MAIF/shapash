@@ -51,47 +51,66 @@ class Explanations:
                                 This graph enables to visualize and select samples to understand
                                 their explainability **dynamically** with the other graphs.\n
                                 If a single sample is selected, the local explicability graph is
-                                updated.\n
-                                If a sub-population is selected using the "box" or "lasso" tool,
-                                the global explainability is updated.\n
+                                updated.
+
+                                If a group of samples is selected using the \"box\" or \"lasso\" tool, the global explainability is updated.
+
                                 It allows the comparison of the global feature contribution
-                                displaying this sub-population (grey) vs the full dataset (yellow).\n
+                                displaying this sub-population (grey) vs the full dataset (yellow).
+
                                 To reset the select, double click on the figure.
                                 """
         self.predictions = """
-                        **What are the samples with correct or wrong predictions?**
-                        This graph enables to visualize and select samples to understand
-                        their explainability **dynamically** with the other graphs.\n
-                        If a single sample is selected, the local explicability graph is
-                        updated.\n
-                        If a sub-population is selected using the "box" or "lasso" tool,
-                        the global explainability is updated.\n
-                        It allows the comparison of the global feature contribution
-                        displaying this sub-population (grey) vs the full dataset (yellow).\n
-                        To reset the select, double click on the figure.
-                        """
+                            **How are predictions distributed in the projection space?**
+
+                            This graph allows you to visualize and select samples on the 2D projection map
+                            based on their Shapley value representation, in order to explore model behaviour
+                            and understand prediction patterns dynamically with the other graphs.
+
+                            If a single sample is selected, the local explainability plot displays the
+                            Shapley contributions for this specific instance.
+
+                            If a group of samples is selected using the \"box\" or \"lasso\" tool, the global explainability is updated.
+
+                            It allows the comparison of the global feature contribution
+                            displaying this sub-population (grey) vs the full dataset (yellow).
+
+                            To reset the select, double click on the figure.
+                            """
         self.targets = """
-                        **What are the samples with correct or wrong predictions?**
-                        This graph enables to visualize and select samples to understand
-                        their explainability **dynamically** with the other graphs.\n
-                        If a single sample is selected, the local explicability graph is
-                        updated.\n
-                        If a sub-population is selected using the "box" or "lasso" tool,
-                        the global explainability is updated.\n
+                        **How are true target values distributed in the projection space?**
+
+                        This graph allows you to visualize and select samples on the 2D projection map
+                        based on their Shapley value representation, coloured by true target values.
+                        It helps explore how the real outcomes are structured and how they relate to
+                        model explanations.
+
+                        If a single sample is selected, the local explainability plot displays the
+                        Shapley contributions for this specific instance.
+
+                        If a group of samples is selected using the \"box\" or \"lasso\" tool, the global explainability is updated.
+
                         It allows the comparison of the global feature contribution
-                        displaying this sub-population (grey) vs the full dataset (yellow).\n
+                        displaying this sub-population (grey) vs the full dataset (yellow).
+
                         To reset the select, double click on the figure.
                         """
         self.errors = """
-                        **What are the samples with correct or wrong predictions?**
-                        This graph enables to visualize and select samples to understand
-                        their explainability **dynamically** with the other graphs.\n
-                        If a single sample is selected, the local explicability graph is
-                        updated.\n
-                        If a sub-population is selected using the "box" or "lasso" tool,
-                        the global explainability is updated.\n
+                        **How are prediction errors distributed in the projection space?**
+
+                        This graph allows you to visualize and select samples on the 2D projection map
+                        based on their Shapley value representation, coloured by prediction error.
+                        It helps identify regions where the model performs well or poorly and explore
+                        error patterns dynamically with the other graphs.
+
+                        If a single sample is selected, the local explainability plot displays the
+                        Shapley contributions for this specific instance.
+
+                        If a group of samples is selected using the \"box\" or \"lasso\" tool, the global explainability is updated.
+
                         It allows the comparison of the global feature contribution
-                        displaying this sub-population (grey) vs the full dataset (yellow).\n
+                        displaying this sub-population (grey) vs the full dataset (yellow).
+
                         To reset the select, double click on the figure.
                         """
         self.feature_importance = """
