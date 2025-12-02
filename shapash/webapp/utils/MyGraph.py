@@ -7,14 +7,17 @@ class MyGraph(dcc.Graph):
     """Class inherited from dcc.Graph. Add one method for updating graph layout."""
 
     def __init__(self, figure, id, style=None, **kwds):
-        super().__init__(**kwds)
+        super().__init__(
+            id=id,
+            figure=figure,
+            style=style if style is not None else {},
+            **kwds,
+        )
+
         self.figure = figure
-        self.style = style if style is not None else {}
-        self.id = id
-        # self.config = {'modeBarButtons': {'pan2d': True}}
-        if id == "prediction_picking":
+
+        if id in ["prediction_picking", "predictions", "errors", "targets"]:
             self.config = {
-                # Graph is responsive
                 "responsive": True,
                 "modeBarButtonsToRemove": [
                     "zoomOut2d",
@@ -26,12 +29,9 @@ class MyGraph(dcc.Graph):
                 ],
                 "displaylogo": False,
             }
-            # 'modeBarStyle': {'orientation': 'v'}, # Deprecated in Dash 1.17.0
         else:
             self.config = {
-                # Graph is responsive
                 "responsive": True,
-                # Graph don't have select box button
                 "modeBarButtonsToRemove": [
                     "lasso2d",
                     "zoomOut2d",

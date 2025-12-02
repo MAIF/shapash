@@ -19,7 +19,7 @@ from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
     plot_confusion_matrix,
-    plot_contributions_projection,
+    plot_explanatory_individuals_map,
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
@@ -555,7 +555,7 @@ class SmartPlotter:
                 self._explainer.features_dict[f_name]: self._explainer.x_init.loc[list_ind, f_name]
                 for f_name in top_features_of_group
             }
-            text_group = "Features values were projected on the x axis using Umap"
+            text_group = "Features values were projected on the x axis using TSNE"
             # if group don't show addnote, if not, it's too long
             # if addnote is not None:
             #    addnote = add_text([addnote, text_group], sep=' - ')
@@ -1992,21 +1992,14 @@ class SmartPlotter:
             auto_open=auto_open,
         )
 
-    def contributions_projection_plot(
+    def explanatory_individuals_map_plot(
         self,
         color_value="predictions",
         keep_quantile=(0.05, 0.95),
         max_points=2000,
         selection=None,
         label=-1,
-        metric="euclidean",
         threshold_top_features=0.9,
-        n_neighbors=200,
-        learning_rate=1,
-        min_dist=0.1,
-        spread=1,
-        n_components=2,
-        n_epochs=200,
         random_state=79,
         marker_size=10,
         style_dict=None,
@@ -2017,9 +2010,9 @@ class SmartPlotter:
         auto_open=False,
     ):
         """
-        Generate a 2D UMAP projection plot (or multiple plots) based on SHAP-like feature contributions.
+        Generate a 2D TSNE projection plot (or multiple plots) based on SHAP-like feature contributions.
 
-        This function visualizes high-dimensional contribution data by projecting it into 2D space using UMAP.
+        This function visualizes high-dimensional contribution data by projecting it into 2D space using TSNE.
         It highlights similarities between observations and allows visual comparison by coloring points using selected values
         (e.g., predictions, targets, errors). Multiple color views can be displayed side by side, sharing a common color scale.
 
@@ -2045,34 +2038,9 @@ class SmartPlotter:
         label : int or str, optional, default=-1
             Label to use in classification tasks (e.g., class index or name). Ignored in regression.
 
-        metric : str, optional, default="euclidean"
-            Distance metric used for UMAP. Can be one of:
-            'euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra', 'braycurtis', 'mahalanobis',
-            'wminkowski', 'seuclidean', 'cosine', 'correlation', 'haversine', 'hamming', 'jaccard',
-            'dice', 'russelrao', 'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
-            'sokalmichener', 'sokalsneath', 'yule'
-
         threshold_top_features : float, optional, default=0.9
             Feature selection threshold based on mean absolute contribution values. Only features contributing
             to the cumulative threshold are retained for projection.
-
-        n_neighbors : int, optional, default=200
-            UMAP parameter: size of the local neighborhood (affects local vs global structure).
-
-        learning_rate : float, optional, default=1
-            UMAP parameter: initial learning rate for optimization.
-
-        min_dist : float, optional, default=0.1
-            UMAP parameter: controls the minimum distance between points in the low-dimensional space.
-
-        spread : float, optional, default=1
-            UMAP parameter: controls the scale of the embedded space (used with min_dist).
-
-        n_components : int, optional, default=2
-            UMAP parameter: Dimension of the embedded space. Use 2 for 2D plots.
-
-        n_epochs : int, optional, default=200
-            UMAP parameter: Number of training epochs for UMAP optimization. If None, defaults are used based on dataset size.
 
         random_state : int, optional, default=79
             Random seed for reproducibility.
@@ -2101,7 +2069,7 @@ class SmartPlotter:
         Returns
         -------
         plotly.graph_objects.Figure
-            A Plotly figure object displaying the UMAP projection. If multiple color values are passed,
+            A Plotly figure object displaying the TSNE projection. If multiple color values are passed,
             a subplot layout is returned with one panel per value.
 
         Raises
@@ -2113,10 +2081,10 @@ class SmartPlotter:
         Examples
         --------
         >>> # Single color projection
-        >>> xpl.contributions_projection_plot(color_value="predictions")
+        >>> xpl.explanatory_individuals_map_plot(color_value="predictions")
 
         >>> # Compare multiple color schemes side-by-side
-        >>> xpl.contributions_projection_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
+        >>> xpl.explanatory_individuals_map_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
         """
 
         if not hasattr(self._explainer, "model"):
@@ -2131,10 +2099,10 @@ class SmartPlotter:
             raise ValueError("`self._explainer.contributions` is required but was not found on `self`.")
 
         if self._explainer._case == "classification":
-            label_num, _, label_value = self._explainer.check_label_name(label)
+            label_num, label_code, label_value = self._explainer.check_label_name(label)
         # Regression Case
         elif self._explainer._case == "regression":
-            label_num, label_value = None, None
+            label_num, label_code, label_value = None, None, None
 
         list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
 
@@ -2153,49 +2121,90 @@ class SmartPlotter:
             color_value = [color_value]
         color_value_data = []
 
+        if (getattr(self._explainer, "y_target", None) is None) and (
+            ("targets" in color_value) or ("errors" in color_value)
+        ):
+            fig = go.Figure()
+            fig.update_layout(
+                xaxis={"visible": False},
+                yaxis={"visible": False},
+                annotations=[
+                    {
+                        "text": "Provide the y_target argument in the compile() method to display this plot.",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {"size": 14},
+                    }
+                ],
+            )
+            return fig
+
         if self._explainer._case == "classification":
-            values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+            if len(self._explainer.contributions) <= 2:
+                values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+            else:
+                contribs = [
+                    df.loc[list_ind, top_contributors_col].rename(columns=lambda c, i=i: f"{c}_{i}")
+                    for i, df in enumerate(self._explainer.contributions)
+                ]
+                values_to_project = pd.concat(contribs, axis=1, ignore_index=False)
 
             y_proba_values = self._explainer.proba_values.copy()
 
             # predict
             if y_proba_values is not None:
-                # Assign proba values of the target
-                y_proba_values["proba_target"] = y_proba_values.iloc[:, label_num]
-                y_proba_values = y_proba_values[["proba_target"]]
-                # Proba subset:
-                y_proba_values = y_proba_values.loc[list_ind, :]
-                target = self._explainer.y_target.iloc[:, [label_num]].loc[list_ind, :]
-                y_pred = self._explainer.y_pred.iloc[:, [label_num]].loc[list_ind, :]
-                df_pred = pd.concat(
-                    [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
+                # --- Extract proba values for the selected label
+                y_proba_target = (
+                    y_proba_values.iloc[:, [label_num]]
+                    .rename(columns={y_proba_values.columns[label_num]: "proba_values"})
+                    .loc[list_ind]
+                    .reset_index()
                 )
-                df_pred.set_index(df_pred.columns[0], inplace=True)
-                df_pred.columns = ["proba_values", "predict_class", "target"]
+
+                # --- Predicted classes
+                y_pred = self._explainer.y_pred.loc[list_ind].reset_index(drop=True)
+                if self._explainer.label_dict is not None:
+                    y_pred = y_pred.replace(self._explainer.label_dict)
+
+                # --- Base DataFrame parts
+                dfs = [y_proba_target, y_pred]
+                cols = ["proba_values", "predict_class"]
+
+                # --- Add target only if available
+                if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                    y_target = self._explainer.y_target.loc[list_ind].reset_index(drop=True)
+                    if self._explainer.label_dict is not None:
+                        y_target = y_target.replace(self._explainer.label_dict)
+                    dfs.append(y_target)
+                    cols.append("target")
+
+                # --- Combine everything
+                df_pred = pd.concat(dfs, axis=1).set_index(y_proba_target.columns[0])
+                df_pred.columns = cols
+
                 subtitle = f"Response: <b>{label_value}</b>"
 
-            hv_text_predict = [
-                f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />"
-                for x, y, w, z in zip(
-                    df_pred.index,
-                    df_pred.proba_values.values.round(3).flatten(),
-                    df_pred.predict_class.values.flatten(),
-                    df_pred.target.values.flatten(),
-                )
-            ]
+                # Build hover text
+                hv_text_predict = []
+                for idx, row in df_pred.iterrows():
+                    text = f"Id: {idx}<br />Predicted Values: {row['proba_values']:.3f}<br />Predicted class: {row['predict_class']}<br />"
+                    if "target" in df_pred.columns:
+                        text += f"True Values: {row['target']}<br />"
+                    hv_text_predict.append(text)
 
             for el in color_value:
                 if el == "predictions":
                     color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
 
                 elif el == "targets":
-                    color_value_data.append(self._explainer.y_target.iloc[:, [label_num]])
+                    color_value_data.append((self._explainer.y_target == label_code).astype(int))
 
                 elif el == "errors":
                     color_value_data.append(
                         pd.DataFrame(
                             np.abs(
-                                self._explainer.y_target.iloc[:, label_num]
+                                ((self._explainer.y_target.values.ravel() == label_code).astype(int))
                                 - self._explainer.proba_values.iloc[:, label_num]
                             )
                         )
@@ -2206,53 +2215,69 @@ class SmartPlotter:
                     )
 
         elif self._explainer._case == "regression":
+            # Base data: contributions and top contributors
             values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
-            target = self._explainer.y_target.loc[list_ind, :]
+            # Always available
             y_pred = self._explainer.y_pred.loc[list_ind, :]
-            y_proba_values = None
-            prediction_error = self._explainer.prediction_error.loc[list_ind, :]
 
-            hv_text_predict = [
-                f"Id: {x}<br />True Values: {y:,.{self._round_digit}f}<br />Predicted Values: {z:,.{self._round_digit}f}<br />Prediction Error: {w:,.2f}"
-                for x, y, z, w in zip(
-                    target.index, target.values.flatten(), y_pred.values.flatten(), prediction_error.values.flatten()
-                )
-            ]
+            # Optional pair: y_target and prediction_error
+            y_target = getattr(self._explainer, "y_target", None)
+            prediction_error = getattr(self._explainer, "prediction_error", None)
 
+            # If y_target exists, prediction_error must also exist
+            if y_target is not None and prediction_error is not None:
+                y_target = y_target.loc[list_ind, :]
+                prediction_error = prediction_error.loc[list_ind, :]
+                has_target_info = True
+            else:
+                has_target_info = False
+                y_target = None
+                prediction_error = None
+
+            y_proba_values = None  # not used in regression
+
+            # --- Build hover text dynamically ---
+            hv_text_predict = []
+            for i in list_ind:
+                text = f"Id: {i}<br />Predicted Values: {y_pred.loc[i].values[0]:,.{self._round_digit}f}<br />"
+                if has_target_info:
+                    text += (
+                        f"True Values: {y_target.loc[i].values[0]:,.{self._round_digit}f}<br />"
+                        f"Prediction Error: {prediction_error.loc[i].values[0]:,.2f}<br />"
+                    )
+                hv_text_predict.append(text)
+
+            # --- Handle color_value selections robustly ---
             for el in color_value:
                 if el == "predictions":
-                    color_value_data.append(self._explainer.y_pred)
+                    color_value_data.append(y_pred)
 
                 elif el == "targets":
-                    color_value_data.append(self._explainer.y_target)
+                    if not has_target_info:
+                        raise ValueError("Cannot color by targets: y_target is None.")
+                    color_value_data.append(y_target)
 
                 elif el == "errors":
-                    color_value_data.append(
-                        pd.DataFrame(np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0]))
-                    )
+                    if not has_target_info:
+                        raise ValueError("Cannot color by errors: prediction_error is None.")
+                    color_value_data.append(prediction_error)
+
                 else:
                     raise ValueError(
                         r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
                     )
 
-        title = "Contributions Projection Plot"
+        title = "Explanatory Individuals Map"
 
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]
 
-        return plot_contributions_projection(
+        return plot_explanatory_individuals_map(
             values_to_project=values_to_project,
             hv_text_predict=hv_text_predict,
             color_value=color_value_data,
             keep_quantile=keep_quantile,
-            metric=metric,
-            n_neighbors=n_neighbors,
-            learning_rate=learning_rate,
-            min_dist=min_dist,
-            spread=spread,
-            n_components=n_components,
-            n_epochs=n_epochs,
             random_state=random_state,
             marker_size=marker_size,
             style_dict=style_dict,

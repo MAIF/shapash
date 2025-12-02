@@ -6,7 +6,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import umap
 from pandas.core.common import flatten
 from sklearn.manifold import TSNE
 
@@ -133,7 +132,7 @@ def group_contributions(contributions, features_groups):
     return new_contributions
 
 
-def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocessing, features_dict, how="umap"):
+def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocessing, features_dict, how="tsne"):
     """
     Project feature values of a group of features in 1 dimension.
     If feature_values contains categorical features, use preprocessing to get
@@ -156,7 +155,7 @@ def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocess
     features_dict: dict, optional (default: None)
         Dictionary mapping technical feature names to domain names.
     how : str
-        Method used to compute groups of features values in one column. Options: "umap", "tsne", "dict_of_values"
+        Method used to compute groups of features values in one column. Options: "tsne", "dict_of_values"
 
     Returns
     -------
@@ -171,18 +170,17 @@ def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocess
     feature_values = x_encoded.loc[feature_values.index, col_names_in_xinit]
 
     # Project in 1D the feature values
-    if how == "umap":
+    if how == "tsne":
         try:
-            reducer = umap.UMAP(n_components=1, n_epochs=50, random_state=79, n_jobs=1)
-            feature_values_proj_1d = reducer.fit_transform(feature_values)
-            feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
-        except Exception as e:
-            warnings.warn(f"Could not project group features values with UMAP: {e}", UserWarning)
-            feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
-
-    elif how == "tsne":
-        try:
-            feature_values_proj_1d = TSNE(n_components=1, random_state=1).fit_transform(feature_values)
+            n_samples = feature_values.shape[0]
+            perplexity = min(30, max(2, n_samples // 3))
+            feature_values_proj_1d = TSNE(
+                n_components=1,
+                perplexity=perplexity,
+                learning_rate="auto",
+                init="random",
+                random_state=79,
+            ).fit_transform(feature_values)
             feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
         except Exception as e:
             warnings.warn(f"Could not project group features values with t-SNE: {e}", UserWarning)
