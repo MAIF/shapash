@@ -63,9 +63,12 @@ class Explanations:
                                 *individual contributions*,
                                 computed on the complete dataset.
                                 You can click on each feature to update
-                                the detailed contribution plot below. \n
-                                In case of grouped the variables (based on the "features_groups"
-                                parameter),
+                                the detailed contribution plot below.\n
+                                When displaying the **Global Feature Importance** chart in full-screen mode,
+                                the visualization also includes the **Local Feature Importance** view,
+                                allowing you to explore both global and local contributions interactively.\n
+
+                                In case of grouped variables (based on the *"features_groups"* parameter),
                                 the group detail is available by clicking on the grouped variable
                                 (displayed in dark orange).
                                 """

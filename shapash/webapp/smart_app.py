@@ -112,9 +112,7 @@ class SmartApp:
         self.predict_col = ["_predict_"]
         self.special_cols = ["_index_", "_predict_"]
         if self.explainer.y_target is not None:
-            self.special_cols.append("_target_")
-            if self.explainer._case == "regression":
-                self.special_cols.append("_error_")
+            self.special_cols.extend(["_target_", "_error_"])
         self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
         if self.explainer._case == "classification":
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, "num")[1]
@@ -181,8 +179,7 @@ class SmartApp:
             self.dataframe = self.dataframe.join(
                 self.explainer.y_target.rename(columns={self.explainer.y_target.columns[0]: "_target_"}),
             )
-            if self.explainer._case == "regression":
-                self.dataframe = self.dataframe.join(self.explainer.prediction_error)
+            self.dataframe = self.dataframe.join(self.explainer.prediction_error)
 
         if isinstance(self.explainer.columns_order, list):
             special_cols_remaining = [col for col in self.special_cols if col not in self.explainer.columns_order]
@@ -1826,7 +1823,13 @@ class SmartApp:
             # Plot features importance
             page_to_plot = 1 if group_name else page
             zoom_active = get_figure_zoom(click_zoom)
+            if zoom_active:
+                mode = "global-local"
+            else:
+                mode = "global"
+
             figure = self.explainer.plot.features_importance(
+                mode=mode,
                 max_features=features,
                 page=page_to_plot,
                 selection=selection,

@@ -41,20 +41,25 @@ logging.basicConfig(level=logging.INFO)
 
 class SmartExplainer:
     """
-    The SmartExplainer class is the main object of the Shapash library.
-    It allows the Data Scientists to perform many operations to make the
-    results more understandable :
-    linking encoders, models, predictions, label dict and datasets.
-    SmartExplainer users have several methods which are described below.
+    The main class of the Shapash library, designed to make machine learning model
+    results more interpretable and understandable.
+
+    `SmartExplainer` links together the model, encoders, datasets, predictions,
+    and label dictionaries. It provides a variety of methods to visualize and
+    analyze model explanations both in notebooks and in the Shapash WebApp.
+
     Parameters
     ----------
-    model : model object
-        model used to consistency check. model object can also be used by some method to compute
-        predict and predict_proba values
-    backend : str or shapash.backend object (default: 'shap')
-        Select which computation method to use in order to compute contributions
-        and feature importance. Possible values are 'shap' or 'lime'. Default is 'shap'.
-        It is also possible to pass a backend class inherited from shpash.backend.BaseBackend.
+    model : object
+        The model to be explained. Used for consistency checks and, in some cases,
+        to compute `predict` and `predict_proba` values.
+    backend : str or shapash.backend.BaseBackend, default='shap'
+        Defines the backend used to compute feature contributions and importances.
+        Options:
+        - `'shap'`: use SHAP as backend.
+        - `'lime'`: use LIME as backend.
+        You can also pass a custom backend class that inherits from
+        `shapash.backend.BaseBackend`.
     preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
         --> Differents types of preprocessing are available:
         - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
@@ -82,29 +87,29 @@ class SmartExplainer:
         ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
         }
         Only one transformation by features is possible.
-    features_groups : dict, optional (default: None)
-        Dictionnary containing features that should be grouped together. This option allows
-        to compute and display the contributions and importance of this group of features.
-        Features that are grouped together will still be displayed in the webapp when clicking
-        on a group.
+    features_groups : dict, optional
+        Groups of features to be aggregated together in plots and importance
+        computations. Each key defines a group name, and its value is a list of
+        feature names.
+
+        Example:
         >>> {
-        ‘feature_group_1’ : ['feature3', 'feature7', 'feature24'],
-        ‘feature_group_2’ : ['feature1', 'feature12'],
-        }
-    features_dict: dict
-        Dictionary mapping technical feature names to domain names.
-    label_dict: dict
-        Dictionary mapping integer labels to domain names (classification - target values).
-    title_story: str (default: None)
-        The default title is empty. You can specify a custom title
-        which can be used the webapp, or other methods
-    palette_name : str
-        Name of the palette used for the colors of the report (refer to style folder).
-    colors_dic : dict
-        dictionnary contaning every palettes of colors. You can use this parameter to change
-        any color of the graphs.
+        ...   'feature_group_1': ['feature3', 'feature7', 'feature24'],
+        ...   'feature_group_2': ['feature1', 'feature12']
+        ... }
+    features_dict : dict, optional
+        Mapping from technical feature names to domain-specific (readable) names.
+    label_dict : dict, optional
+        Mapping from numeric labels to human-readable class names (for classification tasks).
+    title_story : str, optional
+        Custom title used in visualizations and reports. Default is empty.
+    palette_name : str, optional
+        Name of the color palette used for visualizations (see the `style` folder for options).
+    colors_dict : dict, optional
+        Dictionary containing the full color palette configuration.
+        Can be used to override default plot colors.
     **backend_kwargs : dict
-        Keyword parameters to be passed to the backend.
+        Additional keyword arguments passed to the backend.
 
     Attributes
     ----------
@@ -127,53 +132,53 @@ class SmartExplainer:
         data['x_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             It gives, for each line, the list of most important features values regarding the local
             decomposition. These values can only be understood with respect to data['var_dict']
-    backend_name:
-        backend name if backend passed is a string
-    x_encoded: pandas.DataFrame
-        preprocessed dataset used by the model to perform the prediction.
-    x_init: pandas.DataFrame
-        x_encoded dataset with inverse transformation with eventual postprocessing modifications.
-    x_contrib_plot: pandas.DataFrame
-        x_encoded dataset with inverse transformation, without postprocessing used for contribution_plot.
-    y_pred: pandas.DataFrame
-        User-specified prediction values.
-    contributions: pandas.DataFrame (regression) or list (classification)
-        local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
-    features_dict: dict
-        Dictionary mapping technical feature names to domain names.
-    inv_features_dict: dict
-        Inverse features_dict mapping.
-    label_dict: dict
-        Dictionary mapping integer labels to domain names (classification - target values).
-    inv_label_dict: dict
-        Inverse label_dict mapping.
-    columns_dict: dict
-        Dictionary mapping integer column number to technical feature names.
-    plot: object
-        Helper object containing all plotting functions (Bridge pattern).
-    model: model object
-        model used to check the different values of target estimate predict proba
-    features_desc: dict
-        Dictionary that references the numbers of feature values in the x_init
-    features_imp: pandas.Series (regression) or list (classification)
-        Features importance values
-    local_neighbors: dict
-        Dictionary of values to be displayed on the local_neighbors plot.
-        The key is "norm_shap (normalized contributions values of instance and neighbors)
-    features_stability: dict
-        Dictionary of arrays to be displayed on the stability plot.
-        The keys are "amplitude" (average contributions values for selected instances) and
-        "stability" (stability metric across neighborhood)
-    preprocessing : category_encoders, ColumnTransformer, list or dict
-        The processing apply to the original data.
+    backend_name : str
+        Name of the backend if specified as a string.
+    x_encoded : pandas.DataFrame
+        Preprocessed dataset used by the model.
+    x_init : pandas.DataFrame
+        Inverse-transformed dataset (after preprocessing) with optional postprocessing.
+    x_contrib_plot : pandas.DataFrame
+        Inverse-transformed dataset without postprocessing (used for plots).
+    y_pred : pandas.DataFrame
+        Model predictions.
+    contributions : pandas.DataFrame or list
+        Local feature contributions. Aggregated if preprocessing expands features
+        (e.g., one-hot encoding).
+    features_dict : dict
+        Mapping from technical feature names to domain names.
+    inv_features_dict : dict
+        Reverse mapping of `features_dict`.
+    label_dict : dict
+        Mapping from numeric labels to class names.
+    inv_label_dict : dict
+        Reverse mapping of `label_dict`.
+    columns_dict : dict
+        Mapping from feature index to technical feature name.
+    plot : SmartPlotter
+        Object providing access to all plotting functions.
+    model : object
+        The model being explained.
+    features_desc : dict
+        Number of unique values per feature in `x_init`.
+    features_imp : pandas.Series or list
+        Computed feature importance values.
+    local_neighbors : dict
+        Data displayed in local neighbor plots (normalized SHAP values, etc.).
+    features_stability : dict
+        Data used for stability plots, including:
+        - `'amplitude'`: average contribution values for selected instances.
+        - `'stability'`: metric assessing stability across neighborhoods.
+    preprocessing : category_encoders object, ColumnTransformer, list, or dict
+        Preprocessing transformations applied to raw input data.
     postprocessing : dict
-        Dictionnary of postprocessing modifications to apply in x_init dataframe.
-    y_target : pandas.Series or pandas.DataFrame, optional (default: None)
-        Target values
+        Postprocessing rules applied after inverse preprocessing.
+    y_target : pandas.Series or pandas.DataFrame, optional
+        True target values.
 
     Example
-    --------
-    >>> xpl = SmartExplainer(model, features_dict=featd,label_dict=labeld)
+    -------
+    >>> xpl = SmartExplainer(model, features_dict=featd, label_dict=labeld)
     >>> xpl.compile(x=x_encoded, y_target=y)
     >>> xpl.plot.features_importance()
     """
@@ -252,57 +257,59 @@ class SmartExplainer:
         additional_features_dict=None,
     ):
         """
-        The compile method is the first step to understand model and
-        prediction. It performs the sorting of contributions, the reverse
-        preprocessing steps and performs all the calculations necessary for
-        a quick display of plots and efficient display of summary of
-        explanation. This step can last a few moments with large datasets.
+        Prepare and structure all data needed for interpreting the model and its predictions.
+
+        The `compile` method is the first essential step to make your model explainable
+        with Shapash. It organizes the model’s inputs, outputs, and contributions into
+        a consistent format, applies inverse preprocessing, and computes all elements
+        required for visualization and summaries.
+
+        Depending on dataset size and backend, this step may take some time.
+
         Parameters
         ----------
         x : pandas.DataFrame
-            Prediction set.
-            IMPORTANT: this should be the raw prediction set,
-            whose values are seen by the end user.
-            x is a preprocessed dataset: Shapash can apply the model to it
-        contributions : pandas.DataFrame, np.ndarray or list
-            single or multiple contributions (multi-class) to handle.
-            if pandas.Dataframe, the index and columns should be share with
-            the prediction set. if np.ndarray, index and columns will be
-            generated according to x dataset
-        y_pred : pandas.Series or pandas.DataFrame, optional (default: None)
-            Prediction values (1 column only).
-            The index must be identical to the index of x_init.
-            This is an interesting parameter for more explicit outputs.
-            Shapash lets users define their own predict,
-            as they may wish to set their own threshold (classification)
-        proba_values : pandas.Series or pandas.DataFrame, optional (default: None)
-            Probability values (1 column only).
-            The index must be identical to the index of x_init.
-            This is an interesting parameter for more explicit outputs.
-            Shapash lets users define their own probability values
-        y_target : pandas.Series or pandas.DataFrame, optional (default: None)
-            Target values (1 column only).
-            The index must be identical to the index of x_init.
-            This is an interesting parameter for outputs on prediction
-        columns_order: list or str, optional (default: None)
-            Defines the order of the columns in the dataframe.
-            - If a list is provided, it specifies the exact order of columns to display.
-            Any special columns not included in the list will be added automatically.
-            - If set to "additional_data_first", all additional data are placed at the beginning.
-            - If set to "additional_data_last", all additional data are placed at the end.
-            This parameter is especially useful for controlling column order
-            in Shapash SmartApp.
-        additional_data : pandas.DataFrame, optional (default: None)
-            Additional dataset of features outsite the model.
-            The index must be identical to the index of x_init.
-            This is an interesting parameter for visualisation and filtering
-            in Shapash SmartApp.
-        additional_features_dict : dict
-            Dictionary mapping technical feature names to domain names for additional data.
+            Prediction dataset — the same data seen by the end user.
+            It should correspond to the **raw prediction input** (post-preprocessing).
+            Shapash will use this dataset to compute and align explanations.
+        contributions : pandas.DataFrame, numpy.ndarray, or list, optional
+            Local feature contributions for each sample.
+            - If a `DataFrame`, its index and columns must match those of `x`.
+            - If a `numpy.ndarray`, Shapash will automatically generate the corresponding
+            index and column names based on `x`.
+            - In multi-class settings, provide a list of contributions (one per class).
+        y_pred : pandas.Series or pandas.DataFrame, optional
+            Model predictions.
+            Must have the same index as `x_init`.
+            Useful for customizing predicted values, for example when applying
+            a custom threshold in classification tasks.
+        proba_values : pandas.Series or pandas.DataFrame, optional
+            Prediction probabilities.
+            Must have the same index as `x_init`.
+            Useful for visualizations and for comparing probabilities across classes.
+        y_target : pandas.Series or pandas.DataFrame, optional
+            True target values used for comparison or performance display.
+            Must have the same index as `x_init`.
+        columns_order : list or str, optional
+            Defines the display order of columns in the dataset.
+            - If a **list** is provided, it specifies the exact order of columns.
+            Any columns not included in the list will be added automatically.
+            - If set to `'additional_data_first'`, all additional columns are placed first.
+            - If set to `'additional_data_last'`, all additional columns are placed last.
+            This option helps control column order in the Shapash WebApp and SmartApp.
+        additional_data : pandas.DataFrame, optional
+            Additional features not used by the model but relevant for visualization or filtering
+            in the WebApp.
+            Must have the same index as `x_init`.
+        additional_features_dict : dict, optional
+            Mapping of additional feature names (technical names) to user-friendly
+            domain names, used to improve readability in plots and dashboards.
+            Must have the same index as `x_init`.
 
         Example
-        --------
+        -------
         >>> xpl.compile(x=x_test)
+        >>> xpl.plot.features_importance()
         """
         if isinstance(self.backend_name, str):
             backend_cls = get_backend_cls_from_name(self.backend_name)
@@ -321,7 +328,9 @@ class SmartExplainer:
             self.predict_proba()
 
         self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-        self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+        self.prediction_error = predict_error(
+            self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+        )
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
@@ -472,56 +481,71 @@ class SmartExplainer:
         additional_features_dict=None,
     ):
         """
-        add method allows the user to add a label_dict, features_dict
-        or y_pred without compiling again (and it can last a few moments).
-        y_pred can be used in the plot to color scatter.
-        y_pred is needed in the to_pandas method.
-        label_dict and features_dict displays allow to display clearer results.
+        Add or update metadata and outputs without recompiling the explainer.
+
+        The `add` method lets users attach or modify supplementary information such as
+        predictions, label or feature dictionaries, and display options **without**
+        rerunning the full `compile()` process (which can be time-consuming for large datasets).
+
+        It can be used to:
+        - Add or update `y_pred` (used to color plots or export results).
+        - Add or update `label_dict` and `features_dict` for clearer labels in visualizations.
+        - Include additional data or adjust column display order in the WebApp.
+
         Parameters
         ----------
-        y_pred : pandas.Series, optional (default: None)
-            Prediction values (1 column only).
-            The index must be identical to the index of x_init.
-        proba_values : pandas.Series, optional (default: None)
-            Probability values (1 column only).
-            The index must be identical to the index of x_init.
-        label_dict: dict, optional (default: None)
-            Dictionary mapping integer labels to domain names.
-        features_dict: dict, optional (default: None)
-            Dictionary mapping technical feature names to domain names.
-        title_story: str (default: None)
-            The default title is empty. You can specify a custom title
-            which can be used the webapp, or other methods
-        y_target : pandas.Series or pandas.DataFrame, optional (default: None)
-            Target values (1 column only).
-            The index must be identical to the index of x_init.
-            This is an interesting parameter for outputs on prediction
-        columns_order: list or str, optional (default: None)
-            Defines the order of the columns in the dataframe.
-            - If a list is provided, it specifies the exact order of columns to display.
-            Any special columns not included in the list will be added automatically.
-            - If set to "additional_data_first", all additional data are placed at the beginning.
-            - If set to "additional_data_last", all additional data are placed at the end.
-            This parameter is especially useful for controlling column order
-            in Shapash SmartApp.
-        additional_data : pandas.DataFrame, optional (default: None)
-            Additional dataset of features outsite the model.
-            The index must be identical to the index of x_init.
-            This is an interesting parameter for visualisation and filtering
-            in Shapash SmartApp.
-        additional_features_dict : dict
-            Dictionary mapping technical feature names to domain names for additional data.
+        y_pred : pandas.Series or pandas.DataFrame, optional
+            Model predictions (one column only).
+            Must have the same index as `x_init`.
+            Used in plots (e.g., to color scatter plots) and in export methods like `to_pandas()`.
+        proba_values : pandas.Series or pandas.DataFrame, optional
+            Prediction probabilities (one column only).
+            Must have the same index as `x_init`.
+            Useful for visualizations or probabilistic outputs.
+        y_target : pandas.Series or pandas.DataFrame, optional
+            True target values (one column only).
+            Must have the same index as `x_init`.
+            Used for comparison and performance-oriented visualizations.
+        label_dict : dict, optional
+            Mapping of integer labels to domain names (for classification targets).
+            Enables clearer class naming in plots and tables.
+        features_dict : dict, optional
+            Mapping of technical feature names to human-readable (domain) names.
+            Improves interpretability of plots and exported data.
+        title_story : str, optional
+            Custom title for reports or visualizations.
+            Default is empty.
+        columns_order : list or str, optional
+            Defines the display order of columns in the dataset.
+            - If a **list** is provided, it specifies the exact order of columns.
+            Columns not included will be appended automatically.
+            - If set to `'additional_data_first'`, additional columns appear first.
+            - If set to `'additional_data_last'`, additional columns appear last.
+            Especially useful for controlling display order in the Shapash SmartApp.
+        additional_data : pandas.DataFrame, optional
+            Extra dataset containing features outside the model.
+            Must have the same index as `x_init`.
+            Useful for filtering and enrichment in the Shapash WebApp.
+        additional_features_dict : dict, optional
+            Dictionary mapping technical feature names to human-readable names
+            for columns in `additional_data`.
+
+        Example
+        -------
+        >>> # Add predictions and friendly feature names after compiling
+        >>> xpl.add(y_pred=preds, features_dict=feat_dict)
+        >>> xpl.plot.local_plot(index=5)
         """
         if y_pred is not None:
             self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
-            if hasattr(self, "y_target"):
-                self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
         if proba_values is not None:
             self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
         if y_target is not None:
             self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-            if hasattr(self, "y_pred"):
-                self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+        if hasattr(self, "y_target") and self.y_target is not None:
+            self.prediction_error = predict_error(
+                self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+            )
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(
@@ -553,19 +577,32 @@ class SmartExplainer:
 
     def get_interaction_values(self, n_samples_max=None, selection=None):
         """
-        Compute shap interaction values for each row of x_encoded.
-        This function is only available for explainer of type TreeExplainer (used for tree based models).
-        Please refer to the official tree shap paper for more information : https://arxiv.org/pdf/1802.03888.pdf
+        Compute SHAP interaction values for the encoded dataset.
+
+        This method calculates pairwise SHAP interaction effects between features
+        for each sample in `x_encoded`. It is only available when using a backend
+        based on `TreeExplainer` (i.e., for tree-based models such as LightGBM,
+        XGBoost, or CatBoost).
+
+        For more details, see the official Tree SHAP paper:
+        https://arxiv.org/pdf/1802.03888.pdf
+
         Parameters
         ----------
         n_samples_max : int, optional
-            Limit the number of points for which we compute the interactions.
-        selection : list, optional
-            Contains list of index, subset of the input DataFrame that we want to plot
+            Maximum number of samples to compute interaction values for.
+            If provided, the computation will be limited to this number of samples,
+            selected randomly or according to the backend implementation.
+        selection : list of int, optional
+            List of specific sample indices for which to compute interactions.
+            Useful to focus on a subset of the dataset rather than the entire `x_encoded`.
+
         Returns
         -------
-        np.ndarray
-            Shap interaction values for each sample as an array of shape (# samples x # features x # features).
+        numpy.ndarray
+            Array of SHAP interaction values with shape `(n_samples, n_features, n_features)`.
+            Each entry `[i, j, k]` represents the interaction strength between features `j`
+            and `k` for sample `i`.
         """
         x = copy.deepcopy(self.x_encoded)
 
@@ -582,16 +619,23 @@ class SmartExplainer:
 
     def check_postprocessing_modif_strings(self, postprocessing=None):
         """
-        Check if any modification of postprocessing will convert numeric values into strings values.
-        If so, return True, otherwise False.
+        Check whether postprocessing transformations will convert numeric values to strings.
+
+        This method inspects the provided `postprocessing` configuration and determines
+        if any transformation rule would change a numerical feature into a string representation
+        (e.g., by adding prefixes, suffixes, or other text-based modifications).
+
         Parameters
         ----------
-        postprocessing: dict
-            Dict of postprocessing modifications to apply.
+        postprocessing : dict, optional
+            Dictionary of postprocessing transformations to apply.
+            Keys correspond to feature names, and values define transformation rules.
+
         Returns
         -------
-        modif: bool
-            Boolean which is True if any numerical variable will be converted into string.
+        bool
+            `True` if at least one numeric feature will be converted to string,
+            otherwise `False`.
         """
         modif = False
         if postprocessing is not None:
@@ -603,17 +647,24 @@ class SmartExplainer:
 
     def modify_postprocessing(self, postprocessing=None):
         """
-        Modifies postprocessing parameter, to change only keys, with features name,
-        in case of parameters are not real feature names (with columns_dict,
-        or inv_features_dict).
+        Adjust the postprocessing dictionary so that all keys reference actual feature names.
+
+        This method ensures that postprocessing rules are aligned with the real feature names
+        used in the dataset. If the provided dictionary uses alternative identifiers
+        (such as column indices or encoded names), they are converted into the corresponding
+        feature names using `columns_dict` or `inv_features_dict`.
+
         Parameters
         ----------
-        postprocessing : Dict
-            Dictionnary of postprocessing to modify.
+        postprocessing : dict, optional
+            Dictionary of postprocessing transformations to adjust.
+            Keys may be feature names, indices, or label references.
+
         Returns
         -------
-        Dict
-            Modified dictionnary, with same values but keys directly referencing to feature names.
+        dict
+            Modified postprocessing dictionary, where all keys correspond directly
+            to real feature names while preserving the original transformation rules.
         """
         if postprocessing:
             new_dic = dict()
@@ -634,16 +685,25 @@ class SmartExplainer:
 
     def apply_postprocessing(self, postprocessing=None):
         """
-        Modifies x_init Dataframe according to postprocessing modifications, if exists.
+        Apply postprocessing transformations to the `x_init` DataFrame, if defined.
+
+        This method updates `x_init` according to the transformation rules specified
+        in the `postprocessing` dictionary. If no postprocessing is provided,
+        the original `x_init` is returned unchanged.
+
         Parameters
         ----------
-        postprocessing: Dict
-            Dictionnary of postprocessing modifications to apply in x_init.
+        postprocessing : dict, optional
+            Dictionary of postprocessing transformations to apply to `x_init`.
+            Keys correspond to feature names, and values define the transformation rules.
+
         Returns
         -------
-        pandas.Dataframe
-            Returns x_init if postprocessing is empty, modified dataframe otherwise.
+        pandas.DataFrame
+            The modified `x_init` DataFrame if postprocessing rules are applied,
+            otherwise the unmodified `x_init`.
         """
+
         if postprocessing:
             return apply_postprocessing(self.x_init, postprocessing)
         else:
@@ -658,10 +718,20 @@ class SmartExplainer:
 
     def check_features_dict(self):
         """
-        Check the features_dict and add the necessary keys if all the
-        input X columns are not present
+        Synchronize features_dict with dataset columns:
+        - Remove features not present in dataset
+        - Add missing dataset features to features_dict
         """
-        for feature in set(list(self.columns_dict.values())) - set(list(self.features_dict)):
+
+        dataset_features = set(self.columns_dict.values())
+        current_features = set(self.features_dict.keys())
+
+        # Remove features not present in dataset
+        for feature in current_features - dataset_features:
+            self.features_dict.pop(feature, None)
+
+        # Add features present in dataset but missing in features_dict
+        for feature in dataset_features - current_features:
             self.features_dict[feature] = feature
 
     def _update_features_dict_with_groups(self, features_groups):
@@ -689,18 +759,32 @@ class SmartExplainer:
 
     def check_label_name(self, label, origin=None):
         """
-        Convert a string label in integer. If the label is already
-        an integer nothing is done. In all other cases an error is raised.
+        Validate and convert a label name into its corresponding integer identifier.
+
+        If the provided label is already an integer, it is returned unchanged.
+        If it is a string corresponding to a class name, the method converts it
+        into the appropriate integer label using the label dictionary.
+        An error is raised if the label cannot be recognized.
+
         Parameters
         ----------
-        label: int or string
-            Integer (id) or string (business names)
-        origin: None, 'num', 'code', 'value' (default: None)
-            Kind of the label used in parameter
+        label : int or str
+            Label identifier, provided either as an integer (class index)
+            or as a string (human-readable class name).
+        origin : {'num', 'code', 'value', None}, optional
+            Specifies the form of the input label:
+            - `'num'`: integer class index
+            - `'code'`: internal label code
+            - `'value'`: business or display name
+            - `None`: automatically inferred (default)
+
         Returns
         -------
         tuple
-            label num, label code (class of the mode), label value
+            A tuple containing:
+            - `label_num` : int — numerical class index
+            - `label_code` : object — internal class code used by the model
+            - `label_value` : str — human-readable class name
         """
         if origin is None:
             if label in self._classes:
@@ -736,64 +820,107 @@ class SmartExplainer:
 
     def check_features_name(self, features, use_groups=False):
         """
-        Convert a list of feature names (string) or features ids into features ids.
-        Features names can be part of columns_dict or features_dict.
+        Validate and convert feature names or IDs into their corresponding column indices.
+
+        This method ensures that the provided list of features is aligned with
+        the internal column indexing used in Shapash. It supports both
+        technical feature names and business (domain) names, as defined in
+        `columns_dict` or `features_dict`.
+
         Parameters
         ----------
         features : list
-            List of ints (columns ids) or of strings (business names)
-        use_groups : bool
-            Whether or not features parameter includes groups of features
+            List of feature identifiers, where each element can be either:
+            - an integer (column ID), or
+            - a string (technical or business feature name).
+        use_groups : bool, optional
+            If True, the method also resolves feature groups defined in
+            `features_groups`. Default is False.
+
         Returns
         -------
-        list of ints
-            Columns ids compatible with var_dict
+        list of int
+            List of column indices corresponding to the input features,
+            compatible with `var_dict`.
         """
         columns_dict = self.columns_dict if use_groups is False else self.columns_dict_groups
         return check_features_name(columns_dict, self.features_dict, features)
 
     def check_attributes(self, attribute):
         """
-        Check that explainer has the attribute precised
+        Verify that the SmartExplainer instance contains the specified attribute.
+
+        This method checks whether the given attribute exists within the
+        current `SmartExplainer` instance and returns its content if found.
+
         Parameters
         ----------
-        attribute: string
-            the label of the attribute to test
+        attribute : str
+            Name of the attribute to check.
+
         Returns
         -------
-        Object content of the attribute specified from SmartExplainer instance
+        object
+            The value of the specified attribute from the `SmartExplainer` instance.
+
+        Raises
+        ------
+        ValueError
+            If the specified attribute does not exist in the current explainer.
         """
         if not hasattr(self, attribute):
-            raise ValueError(
-                f"""
-                attribute {attribute} isn't an attribute of the explainer precised.
-                """
-            )
+            raise ValueError(f"The attribute '{attribute}' does not exist in this SmartExplainer instance.")
 
         return self.__dict__[attribute]
 
     def filter(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, display_groups=None):
         """
-        The filter method is an important method which allows to summarize the local explainability
-        by using the user defined parameters which correspond to its use case.
-        Filter method is used with the local_plot method of Smarplotter to see the concrete result of this summary
-        with a local contribution barchart
-        Please, watch the local_plot tutorial to see how these two methods are combined with a concrete example
+        Apply filtering rules to summarize local explainability results.
+
+        The `filter` method allows users to control which feature contributions
+        are displayed or hidden when visualizing local explanations.
+        It is typically used in combination with the `local_plot` method of
+        `SmartPlotter` to display a filtered local contribution bar chart.
+
+        For detailed examples, see the **Local Plot** tutorial in the Shapash documentation.
+
         Parameters
         ----------
-        features_to_hide : list, optional (default: None)
-            List of strings, containing features to hide.
-        threshold : float, optional (default: None)
-            Absolute threshold below which any contribution is hidden.
-        positive: bool, optional (default: None)
-            If True, hide negative values. False, hide positive values
-            If None, hide nothing.
-        max_contrib : int, optional (default: None)
-            Maximum number of contributions to show.
-        display_groups : bool (default: None)
-            Whether or not to display groups of features. This option is
-            only useful if groups of features are declared when compiling
-            SmartExplainer object.
+        features_to_hide : list of str, optional
+            List of feature names to hide from the visualization.
+            These can be individual feature names or group names if
+            `display_groups=True`.
+        threshold : float, optional
+            Absolute value threshold below which contributions are hidden.
+            For example, setting `threshold=0.01` hides all features with
+            contribution magnitudes smaller than 0.01.
+        positive : bool, optional
+            Defines whether to hide contributions by sign:
+            - If `True`, hides negative contributions.
+            - If `False`, hides positive contributions.
+            - If `None` (default), all contributions are displayed.
+        max_contrib : int, optional
+            Maximum number of contributions to display.
+            Only the top `max_contrib` features (by absolute contribution)
+            will be shown.
+        display_groups : bool, optional
+            If `True`, feature groups defined in `features_groups` are displayed
+            and filtered together.
+            If `False`, only individual features are considered.
+            By default, this is automatically set to `True` if
+            feature groups are defined.
+
+        Notes
+        -----
+        - The filtering configuration is stored in `self.mask_params`.
+        - The resulting filtered contributions are available in
+        `self.masked_contributions`.
+
+        Example
+        -------
+        >>> # Hide specific features and small contributions
+        >>> xpl.filter(features_to_hide=['Age', 'Gender'], threshold=0.01, max_contrib=10)
+        >>> xpl.plot.local_plot(index=5)
         """
         display_groups = True if (display_groups is not False and self.features_groups is not None) else False
         if display_groups:
@@ -825,17 +952,26 @@ class SmartExplainer:
 
     def save(self, path):
         """
-        Save method allows user to save SmartExplainer object on disk
-        using a pickle file.
-        Save method can be useful: you don't have to recompile to display
-        results later
+        Save the SmartExplainer object to disk as a pickle file.
+
+        This method serializes the current `SmartExplainer` instance and saves it
+        to a `.pkl` file. It allows users to reload an explainer later without
+        recompiling, which is especially useful for large datasets or models.
+
         Parameters
         ----------
         path : str
-            File path to store the pickle file
+            Destination file path where the pickle file will be saved.
+
+        Notes
+        -----
+        - The `smartapp` attribute is removed before saving to avoid serialization issues.
+        - The saved object can be reloaded using the `load` method.
+
         Example
-        --------
-        >>> xpl.save('path_to_pkl/xpl.pkl')
+        -------
+        >>> xpl.save("path_to_file/xpl.pkl")
+        >>> xpl_loaded = SmartExplainer.load("path_to_file/xpl.pkl")
         """
         if hasattr(self, "smartapp"):
             self.smartapp = None
@@ -844,16 +980,31 @@ class SmartExplainer:
     @classmethod
     def load(cls, path):
         """
-        Load method allows Shapash user to use pickled SmartExplainer.
-        To use this method you must first declare your SmartExplainer object
-        Watch the following example
+        Load a previously saved SmartExplainer object from a pickle file.
+
+        This class method restores a `SmartExplainer` instance that was saved
+        using the `save` method. It allows users to quickly reload a compiled
+        explainer without repeating the full preprocessing and explanation steps.
+
         Parameters
         ----------
         path : str
-            File path of the pickle file.
+            File path to the pickle file containing the saved `SmartExplainer` object.
+
+        Returns
+        -------
+        SmartExplainer
+            A reloaded `SmartExplainer` instance identical to the one saved on disk.
+
+        Raises
+        ------
+        ValueError
+            If the provided file does not contain a valid `SmartExplainer` object.
+
         Example
-        --------
-        >>> xpl = SmartExplainer.load('path_to_pkl/xpl.pkl')
+        -------
+        >>> xpl = SmartExplainer.load("path_to_file/xpl.pkl")
+        >>> xpl.plot.features_importance()
         """
         xpl = load_pickle(path)
         if isinstance(xpl, SmartExplainer):
@@ -861,65 +1012,136 @@ class SmartExplainer:
             smart_explainer.__dict__.update(xpl.__dict__)
             return smart_explainer
         else:
-            raise ValueError("File is not a SmartExplainer object")
+            raise ValueError("The provided file does not contain a SmartExplainer object.")
 
     def predict_proba(self):
         """
-        The predict_proba compute the proba values for each x_encoded row
+        Compute and store prediction probabilities for each sample in `x_encoded`.
+
+        This method applies the model’s `predict_proba` function to the encoded
+        dataset (`x_encoded`) and saves the resulting probability values in
+        `self.proba_values`.
+
+        It is typically used for classification models to display or analyze
+        predicted probabilities in visualizations or summaries.
+
+        Returns
+        -------
+        None
+            The computed probabilities are stored in the `proba_values` attribute.
+
+        Example
+        -------
+        >>> xpl.predict_proba()
+        >>> xpl.proba_values.head()
         """
         self.proba_values = predict_proba(self.model, self.x_encoded, self._classes)
 
     def predict(self):
         """
-        The predict method computes the model output for each x_encoded row and stores it in y_pred attribute
+        Compute and store model predictions for each sample in `x_encoded`.
+
+        This method applies the model’s `predict` function to the encoded dataset
+        (`x_encoded`) and saves the resulting predictions in the `y_pred` attribute.
+        If target values (`y_target`) are available, it also computes and stores
+        the prediction error in `prediction_error`.
+
+        Returns
+        -------
+        None
+            The computed predictions are stored in the `y_pred` attribute.
+            If available, prediction errors are stored in `prediction_error`.
+
+        Example
+        -------
+        >>> xpl.predict()
+        >>> xpl.y_pred.head()
+        >>> xpl.prediction_error
         """
         self.y_pred = predict(self.model, self.x_encoded)
         if hasattr(self, "y_target"):
-            self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+            self.prediction_error = predict_error(
+                self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+            )
 
     def to_pandas(
-        self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, proba=False, use_groups=None
+        self,
+        features_to_hide=None,
+        threshold=None,
+        positive=None,
+        max_contrib=None,
+        proba=False,
+        use_groups=None,
     ):
         """
-        The to_pandas method allows to export the summary of local explainability.
-        This method proposes a set of parameters to summarize the explainability of each point.
-        If the user does not specify any, the to_pandas method uses the parameter specified during
-        the last execution of the filter method.
-        In classification case, The method to_pandas summarizes the explicability which corresponds
-        to the predicted values specified by the user (with compile or add method).
-        the proba parameter displays the corresponding predict proba value for each point
-        In classification case, There are 2 ways to use this to pandas method.
-        - Provide a real prediction set to explain
-        - Focus on a constant target value and look at the proba and explainability corresponding to each point.
-        (in that case, specify a constant pd.Series with add or compile method)
-        Examples are presented in the tutorial local_plot (please check tutorial part of this doc)
+        Export a summarized view of local explainability results as a pandas DataFrame.
+
+        The `to_pandas` method summarizes the local contributions of each feature
+        for every sample, returning a DataFrame that combines predictions, probabilities
+        (if applicable), and the top feature contributions.
+
+        If no filtering parameters are provided, the method automatically reuses
+        the configuration from the most recent call to the `filter` method.
+
+        In classification tasks, this summary corresponds to the predicted values
+        specified by the user (using either `compile()` or `add()`).
+        You can also choose to include prediction probabilities using the `proba` parameter.
+
+        There are two main usage modes in classification:
+        1. Provide a real prediction set to explain.
+        2. Focus on a constant target value and analyze its explainability and associated
+        probabilities (using a constant `pd.Series` passed during `compile()` or `add()`).
+
+        See the **Local Plot** tutorial for detailed examples.
+
         Parameters
         ----------
-        features_to_hide : list, optional (default: None)
-            List of strings, containing features to hide.
-        threshold : float, optional (default: None)
-            Absolute threshold below which any contribution is hidden.
-        positive: bool, optional (default: None)
-            If True, hide negative values. Hide positive values otherwise. If None, hide nothing.
-        max_contrib : int, optional (default: 5)
-            Number of contributions to show in the pandas df
-        proba : bool, optional (default: False)
-            adding proba in output df
-        use_groups : bool (optional)
-            Whether or not to use groups of features contributions (only available if features_groups
-            parameter was not empty when calling compile method).
+        features_to_hide : list of str, optional
+            List of feature names to hide from the output summary.
+        threshold : float, optional
+            Absolute value threshold below which feature contributions are hidden.
+        positive : bool, optional
+            Determines which contribution signs to hide:
+            - `True`: hide negative values.
+            - `False`: hide positive values.
+            - `None` (default): show all contributions.
+        max_contrib : int, optional
+            Maximum number of top feature contributions to include for each sample.
+            Default is 5.
+        proba : bool, optional
+            If `True`, adds predicted probability values to the output DataFrame.
+            Default is `False`.
+        use_groups : bool, optional
+            If `True`, aggregates feature contributions by groups defined in
+            `features_groups` (if available).
+            Default automatically activates grouping if `features_groups` were defined
+            during `compile()`.
+
         Returns
         -------
         pandas.DataFrame
-            - selected explanation of each row for classification case
-        Examples
-        --------
-        >>> summary_df = xpl.to_pandas(max_contrib=2,proba=True)
-        >>> summary_df
-            pred	proba	    feature_1	value_1	    contribution_1	feature_2	value_2	    contribution_2
-        0	0	    0.756416	Sex	        1.0	        0.322308	    Pclass	    3.0	        0.155069
-        1	3	    0.628911	Sex	        2.0	        0.585475	    Pclass	    1.0	        0.370504
-        2	0	    0.543308	Sex	        2.0	        -0.486667	    Pclass	    3.0	        0.255072
+            A DataFrame summarizing local explanations for each sample.
+            Columns typically include:
+            - Predicted class or value (`pred`)
+            - Probability (`proba`, if `proba=True`)
+            - Top N feature names, values, and corresponding contributions
+
+        Raises
+        ------
+        ValueError
+            If predictions (`y_pred`) are missing.
+            Use `compile()` or `add()` before calling this method.
+
+        Example
+        -------
+        >>> # Export a summary of local explanations with probabilities
+        >>> summary_df = xpl.to_pandas(max_contrib=2, proba=True)
+        >>> summary_df.head()
+
+            pred    proba       feature_1   value_1     contribution_1   feature_2   value_2     contribution_2
+        0     0     0.756416    Sex         1.0         0.322308         Pclass      3.0         0.155069
+        1     3     0.628911    Sex         2.0         0.585475         Pclass      1.0         0.370504
+        2     0     0.543308    Sex         2.0         -0.486667        Pclass      3.0         0.255072
         """
         use_groups = True if (use_groups is not False and self.features_groups is not None) else False
         if use_groups:
@@ -980,20 +1202,49 @@ class SmartExplainer:
 
     def compute_features_import(self, force=False, local=False):
         """
-        Compute a relative features importance, sum of absolute values
-        of the contributions for each.
-        Features importance compute in base 100
+        Compute the relative feature importance based on contribution magnitudes.
+
+        This method calculates the global feature importance as the sum of the absolute
+        values of feature contributions across all samples.
+        The importance values are normalized on a base-100 scale.
+
+        For models with defined feature groups, grouped importances are also computed.
+        Optionally, local-level importances can be generated to capture finer-grained
+        feature effects at multiple neighborhood scales.
+
         Parameters
         ----------
-        force: bool (default: False)
-            True to force de compute if features importance is
-            already calculated
+        force : bool, optional
+            If `True`, recomputes feature importance even if it has already been calculated.
+            Default is `False`.
+        local : bool, optional
+            If `True`, computes additional local-level importances at multiple aggregation
+            scales (level 1 and level 2).
+            Default is `False`.
+
         Returns
         -------
-        pd.Serie (Regression)
-        or list of pd.Serie (Classification: One Serie for each target modality)
-            Each Serie: feature importance, One row by feature,
-            index of the serie = contributions.columns
+        pandas.Series or list of pandas.Series
+            - **Regression:** a single `Series` with one row per feature.
+            - **Classification:** a list of `Series`, one per class label.
+            Each `Series` represents the normalized feature importances,
+            indexed by feature name.
+
+        Notes
+        -----
+        - Feature importances are computed using the backend’s `get_global_features_importance` method.
+        - Grouped importances are computed if `features_groups` are defined.
+        - When `local=True`, additional granular importances are computed with
+        alternative normalization factors (norm=3 and norm=7).
+
+        Example
+        -------
+        >>> # Compute standard global feature importance
+        >>> xpl.compute_features_import()
+
+        >>> # Compute both global and local-level importances
+        >>> xpl.compute_features_import(local=True)
+        >>> xpl.features_imp.head()
         """
         self.features_imp = self.backend.get_global_features_importance(
             contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=1
@@ -1019,20 +1270,53 @@ class SmartExplainer:
 
     def compute_features_stability(self, selection):
         """
-        For a selection of instances, compute features stability metrics used in
-        methods `local_neighbors_plot` and `local_stability_plot`.
-        - If selection is a single instance, the method returns the (normalized) contribution values
-        of instance and corresponding neighbors.
-        - If selection represents multiple instances, the method returns the average (normalized) contribution values
-        of instances and neighbors (=amplitude), as well as the variability of those values in the neighborhood (=variability)
+        Compute feature stability metrics for a given selection of instances.
+
+        This method calculates how stable feature contributions are within the
+        neighborhood of selected samples.
+        The resulting metrics are used in the visualizations
+        `local_neighbors_plot` and `local_stability_plot`.
+
+        Behavior depends on the size of the selection:
+        - **Single instance:** returns the normalized contribution values of the
+          instance and its neighbors (`norm_shap`).
+        - **Multiple instances:** returns the average normalized contributions
+          (`amplitude`) and their variability across neighborhoods (`variability`).
+
         Parameters
         ----------
-        selection: list
-            Indices of rows to be displayed on the stability plot
+        selection : list of int
+            Indices of samples in `x_encoded` for which to compute stability metrics.
+            Each index corresponds to a row in the dataset.
+
         Returns
         -------
-        Dictionary
-            Values that will be displayed on the graph. Keys are "amplitude", "variability" and "norm_shap"
+        dict
+            Dictionary containing arrays to be displayed in stability plots:
+            - `"amplitude"` : average normalized contribution values of selected instances and their neighbors
+            - `"variability"` : variation in contributions across the neighborhood
+            - `"norm_shap"` : normalized SHAP (or contribution) values for the selected instance(s)
+
+        Raises
+        ------
+        AssertionError
+            If the explainer handles a multi-class classification problem (currently unsupported).
+
+        Notes
+        -----
+        - Only binary classification and regression tasks are supported.
+        - For each instance, nearest neighbors are identified using the encoded data (`x_encoded`).
+        - Contributions are normalized to enable comparison across samples.
+
+        Example
+        -------
+        >>> # Compute stability for a single instance
+        >>> xpl.compute_features_stability(selection=[5])
+        >>> xpl.local_neighbors["norm_shap"]
+
+        >>> # Compute stability for multiple instances
+        >>> xpl.compute_features_stability(selection=[2, 8, 12])
+        >>> xpl.features_stability["variability"].shape
         """
         if (self._case == "classification") and (len(self._classes) > 2):
             raise AssertionError("Multi-class classification is not supported")
@@ -1059,18 +1343,49 @@ class SmartExplainer:
 
     def compute_features_compacity(self, selection, distance, nb_features):
         """
-        For a selection of instances, compute features compacity metrics used in method `compacity_plot`.
-        The method returns :
-        * the minimum number of features needed for a given approximation level
-        * conversely, the approximation reached with a given number of features
+        Compute feature compacity metrics for a given selection of instances.
+
+        This method evaluates how efficiently a model’s predictions can be
+        approximated using only a subset of features. It returns:
+        - the minimum number of features needed to reach a specified approximation level, and
+        - the approximation level reached with a given number of features.
+
+        These metrics are used in the `compacity_plot` visualization to illustrate
+        the trade-off between explanation simplicity and fidelity.
+
         Parameters
         ----------
-        selection: list
-            Indices of rows to be displayed on the stability plot
+        selection : list of int
+            Indices of samples in `x_encoded` for which to compute compacity metrics.
         distance : float
-            How close we want to be from model with all features
+            Target approximation level (between 0 and 1) indicating how close
+            the reduced-feature model should be to the full model.
         nb_features : int
-            Number of features used
+            Number of features to use when computing the achieved approximation.
+
+        Raises
+        ------
+        AssertionError
+            If the explainer handles a multi-class classification problem (currently unsupported).
+
+        Returns
+        -------
+        dict
+            Dictionary containing:
+            - `"features_needed"` : number of features required to reach the target approximation level
+            - `"distance_reached"` : approximation level achieved using the given number of features
+
+        Notes
+        -----
+        - Only regression and binary classification tasks are supported.
+        - Approximation values are clipped between 0 and 1.
+        - Feature compacity measures how well the model’s predictions can be summarized
+          with fewer explanatory variables.
+
+        Example
+        -------
+        >>> xpl.compute_features_compacity(selection=[0, 5, 10], distance=0.9, nb_features=10)
+        >>> xpl.features_compacity["features_needed"]
         """
         if (self._case == "classification") and (len(self._classes) > 2):
             raise AssertionError("Multi-class classification is not supported")
@@ -1084,48 +1399,92 @@ class SmartExplainer:
 
     def init_app(self, settings: dict = None):
         """
-        Simple init of SmartApp in case of host smartapp by another way
+        Initialize a SmartApp instance for the current SmartExplainer object.
+
+        This method provides a simple way to create and configure the Shapash
+        WebApp (`SmartApp`) when it is hosted or launched through a custom setup,
+        rather than via the standard `run_app()` method.
 
         Parameters
         ----------
-        settings : dict (default: None)
-            A dict describing the default webapp settings values to be used
-            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
-            Values should be positive ints
+        settings : dict, optional
+            Dictionary specifying default configuration values for the WebApp.
+            Possible keys include:
+            - `'rows'` : int — number of rows to display by default
+            - `'points'` : int — number of points shown in scatter plots
+            - `'violin'` : int — number of points displayed in violin plots
+            - `'features'` : int — number of features shown in plots
+
+            All values must be positive integers.
+
+        Returns
+        -------
+        None
+            Initializes the `smartapp` attribute with a configured `SmartApp` instance.
+
+        Example
+        -------
+        >>> # Initialize SmartApp with custom settings
+        >>> xpl.init_app(settings={"rows": 100, "features": 10})
+        >>> xpl.smartapp.run()
         """
         self.smartapp = SmartApp(self, settings)
 
     def run_app(
-        self, port: int = None, host: str = None, title_story: str = None, settings: dict = None
+        self,
+        port: int = None,
+        host: str = None,
+        title_story: str = None,
+        settings: dict = None,
     ) -> CustomThread:
         """
-        run_app method launches the interpretability web app associated with the shapash object.
-        run_app method can be used directly in a Jupyter notebook
-        The link to the webapp is directly mentioned in the Jupyter output
-        Use object.kill() method to kill the current instance
-        Examples are presented in the web_app tutorial (please check tutorial part of this doc)
+        Launch the Shapash interpretability WebApp associated with this SmartExplainer.
+
+        This method starts the interactive Shapash WebApp that enables users to
+        explore model predictions, feature importances, and local explanations
+        directly in their browser.
+        It can be called directly from a Jupyter notebook — the application link
+        will appear in the notebook output.
+
+        To stop the running app, use the `.kill()` method on the returned object.
+
+        Examples of usage are provided in the **WebApp tutorial** in the Shapash documentation.
+
         Parameters
         ----------
-        port: int (default: None)
-            The port is by default on 8050. You can specify a custom port
-            for your webapp.
-        host: str (default: None)
-            The default host is '0.0.0.0'. You can specify a custom
-            ip address for your webapp
-        title_story: str (default: None)
-            The default title is empty. You can specify a custom title
-            for your webapp (can be reused in other methods like in a report, ...)
-        settings : dict (default: None)
-            A dict describing the default webapp settings values to be used
-            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
-            Values should be positive ints
+        port : int, optional
+            Port number for the WebApp server.
+            Defaults to `8050` if not specified.
+        host : str, optional
+            Host address for the WebApp server.
+            Defaults to `"0.0.0.0"`, allowing external access.
+        title_story : str, optional
+            Custom title to display in the WebApp interface.
+            This title can also be reused in reports or other visualizations.
+        settings : dict, optional
+            Dictionary specifying default configuration values for the WebApp.
+            Possible keys include:
+            - `'rows'` : int — number of rows displayed by default
+            - `'points'` : int — number of points in scatter plots
+            - `'violin'` : int — number of points in violin plots
+            - `'features'` : int — number of features shown in graphs
+            All values must be positive integers.
+
         Returns
         -------
         CustomThread
-            Return the thread instance of your server.
+            A thread instance running the WebApp server.
+
+        Raises
+        ------
+        ValueError
+            If the SmartExplainer has not been compiled before launching the app.
+
         Example
-        --------
-        >>> app = xpl.run_app()
+        -------
+        >>> # Launch the WebApp in a Jupyter notebook
+        >>> app = xpl.run_app(port=8050)
+        >>> # Stop the app
         >>> app.kill()
         """
 
@@ -1155,30 +1514,60 @@ class SmartExplainer:
 
     def to_smartpredictor(self):
         """
-        Create a SmartPredictor object designed from the following attributes
-        needed from the SmartExplainer Object :
-        features_dict: dict
-            Dictionary mapping technical feature names to domain names.
-        label_dict: dict
-            Dictionary mapping integer labels to domain names (classification - target values).
-        columns_dict: dict
-            Dictionary mapping integer column number to technical feature names.
-        features_types: dict
-            Dictionnary mapping features with the right types needed.
-        model: model object
-            model used to check the different values of target estimate predict proba
-        backend : backend object
-            backend used to compute contributions
-        preprocessing: category_encoders, ColumnTransformer, list or dict
-            The processing apply to the original data.
-        postprocessing: dict
-            Dictionnary of postprocessing modifications to apply in x_init dataframe.
-        _case: string
-            String that informs if the model used is for classification or regression problem.
-        _classes: list, None
-            List of labels if the model used is for classification problem, None otherwise.
-        mask_params: dict (optional)
-            Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+        Create and return a SmartPredictor object derived from the current SmartExplainer instance.
+
+        This method builds a `SmartPredictor` — a lightweight, production-oriented object
+        that encapsulates all necessary components from the `SmartExplainer` to generate
+        model predictions and interpretability outputs without requiring re-explanation.
+
+        The generated `SmartPredictor` includes the model, preprocessing and postprocessing
+        steps, feature and label mappings, and backend configuration used to compute
+        contributions.
+
+        Returns
+        -------
+        SmartPredictor
+            A `SmartPredictor` instance initialized with the relevant attributes
+            from the current `SmartExplainer`.
+
+        Raises
+        ------
+        ValueError
+            If no backend is defined in the current `SmartExplainer`.
+
+        Attributes Transferred
+        ----------------------
+        - **features_dict** : dict
+          Mapping from technical feature names to human-readable (domain) names.
+        - **label_dict** : dict
+          Mapping from integer labels to domain names (classification target values).
+        - **columns_dict** : dict
+          Mapping from integer column indices to technical feature names.
+        - **features_types** : dict
+          Mapping from feature names to their inferred data types.
+        - **model** : object
+          The trained model used for prediction.
+        - **backend** : BaseBackend
+          The backend used to compute feature contributions (e.g., SHAP, LIME).
+        - **preprocessing** : category_encoders object, ColumnTransformer, list, or dict
+          Preprocessing transformations applied to the original data.
+        - **postprocessing** : dict
+          Postprocessing transformations applied after inverse preprocessing.
+        - **features_groups** : dict, optional
+          Feature grouping structure, if defined during compilation.
+        - **_case** : str
+          Indicates whether the task is `"classification"` or `"regression"`.
+        - **_classes** : list or None
+          List of class labels for classification models, `None` for regression.
+        - **mask_params** : dict, optional
+          Parameters defining contribution filters used to summarize local explainability.
+
+        Example
+        -------
+        >>> # Convert a SmartExplainer into a deployable SmartPredictor
+        >>> sp = xpl.to_smartpredictor()
+        >>> sp.predict(data_sample)
+        >>> sp.explain(data_sample)
         """
         if self.backend is None:
             raise ValueError(
@@ -1213,16 +1602,35 @@ class SmartExplainer:
 
     def check_x_y_attributes(self, x_str, y_str):
         """
-        Check if x_str and y_str are attributes of the SmartExplainer
+        Validate and retrieve two attributes from the SmartExplainer instance.
+
+        This method checks whether the given attribute names exist in the current
+        `SmartExplainer` object. It returns the corresponding attribute values if found,
+        or `None` for any attribute that does not exist.
+
         Parameters
         ----------
-        x_str: string
-            label of the attribute x
-        y_str: string
-            label of the attribute y
+        x_str : str
+            Name of the first attribute to check.
+        y_str : str
+            Name of the second attribute to check.
+
         Returns
         -------
-        list of object detained by attributes x and y.
+        list
+            A two-element list containing the retrieved attributes in order:
+            `[x_attribute, y_attribute]`.
+            Each element is the attribute’s value if it exists, otherwise `None`.
+
+        Raises
+        ------
+        ValueError
+            If either `x_str` or `y_str` is not provided as a string.
+
+        Example
+        -------
+        >>> x_attr, y_attr = xpl.check_x_y_attributes("x_encoded", "y_pred")
+        >>> print(x_attr.shape, y_attr.shape)
         """
         if not (isinstance(x_str, str) and isinstance(y_str, str)):
             raise ValueError(
@@ -1258,74 +1666,94 @@ class SmartExplainer:
         nb_top_interactions=5,
     ):
         """
-        This method will generate an HTML report containing different information about the project.
-        It analyzes the data and the model used in order to provide interesting
-        insights that can be shared using the HTML format.
-        It requires a project info yml file on which can figure different information about the project.
+        Generate an interactive HTML report summarizing the model and its explainability.
+
+        This method produces a comprehensive HTML report containing visual and textual
+        insights about the project, dataset, and model performance.
+        It leverages a predefined or custom Jupyter notebook template to analyze
+        the model, generate plots, compute metrics, and export the final report.
+
+        A project information YAML file is required to describe key project details
+        (e.g., model name, author, date, context).
+
         Parameters
         ----------
         output_file : str
-            Path to the HTML file to write.
+            Path to the output HTML file where the report will be saved.
         project_info_file : str
-            Path to the file used to display some information about the project in the report.
-        x_train : pd.DataFrame, optional
-            DataFrame used for training the model.
-        y_train: pd.Series or pd.DataFrame, optional
-            Series of labels in the training set.
-        y_test : pd.Series or pd.DataFrame, optional
-            Series of labels in the test set.
+            Path to a YAML file containing project metadata to be displayed in the report
+            (e.g., project name, author, date, description).
+        x_train : pandas.DataFrame, optional
+            Training dataset used to fit the model.
+            Used for generating feature summaries and training-related analyses.
+        y_train : pandas.Series or pandas.DataFrame, optional
+            Target values corresponding to `x_train`.
+        y_test : pandas.Series or pandas.DataFrame, optional
+            Target values for the test dataset.
         title_story : str, optional
-            Report title.
+            Title displayed at the top of the report.
         title_description : str, optional
-            Report title description (as written just below the title).
-        metrics : list, optional
-            Metrics used in the model performance section. The metrics parameter should be a list
-            of dict. Each dict contains they following keys :
-            'path' (path to the metric function, ex: 'sklearn.metrics.mean_absolute_error'),
-            'name' (optional, name of the metric as displayed in the report),
-            and 'use_proba_values' (optional, possible values are False (default) or True
-            if the metric uses proba values instead of predicted values).
-            For example, metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]
+            Short descriptive text displayed below the main title.
+        metrics : list of dict, optional
+            List of metrics to compute and display in the performance section.
+            Each dictionary should include:
+            - `'path'`: str — import path to the metric function (e.g., `"sklearn.metrics.f1_score"`)
+            - `'name'`: str, optional — display name for the metric
+            - `'use_proba_values'`: bool, optional — if True, use predicted probabilities instead of labels
+            Example:
+            `metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]`
         working_dir : str, optional
-            Working directory in which will be generated the notebook used to create the report
-            and where the objects used to execute it will be saved. This parameter can be usefull
-            if one wants to create its own custom report and debug the notebook used to generate
-            the html report. If None, a temporary directory will be used.
+            Directory used to temporarily store generated files (e.g., notebook, outputs).
+            If `None`, a temporary directory is automatically created and deleted after report generation.
         notebook_path : str, optional
-            Path to the notebook used to generate the report. If None, the Shapash base report
-            notebook will be used.
+            Path to a custom notebook used as a template for generating the report.
+            If `None`, the default Shapash report notebook is used.
         kernel_name : str, optional
-            Name of the kernel used to generate the report. This parameter can be usefull if
-            you have multiple jupyter kernels and that the method does not use the right kernel
-            by default.
-        max_points : int, optional
-            number of maximum points in the contribution plot
-        display_interaction_plot: bool, optional
-            Whether to display the interaction plot. This can be computationally expensive,
-            so it is set to False by default to optimize performance.
-        nb_top_interactions : int
-            Number of top interactions to display.
-        Examples
-        --------
+            Name of the Jupyter kernel to use for report execution.
+            Useful when multiple kernels are available and the default one is incorrect.
+        max_points : int, optional, default=200
+            Maximum number of points displayed in contribution plots.
+        display_interaction_plot : bool, optional, default=False
+            If True, includes interaction plots in the report.
+            (Note: this can increase computation time.)
+        nb_top_interactions : int, optional, default=5
+            Number of top feature interactions to include in the report.
+
+        Returns
+        -------
+        None
+            The report is saved as an HTML file at the specified `output_file` location.
+
+        Raises
+        ------
+        AssertionError
+            If the SmartExplainer instance is not compiled before report generation.
+        Exception
+            If an unexpected error occurs during report execution or export.
+
+        Notes
+        -----
+        - The method internally executes a notebook that generates the report content.
+        - Temporary files are automatically cleaned up unless a custom `working_dir` is provided.
+        - Interaction plots can be disabled to optimize runtime performance.
+
+        Example
+        -------
         >>> xpl.generate_report(
-                output_file='report.html',
-                project_info_file='utils/project_info.yml',
-                x_train=x_train,
-                y_train=y_train,
-                y_test=ytest,
-                title_story="House prices project report",
-                title_description="This document is a data science report of the kaggle house prices project."
-                metrics=[
-                    {
-                        'path': 'sklearn.metrics.mean_squared_error',
-                        'name': 'Mean squared error',  # Optional : name that will be displayed next to the metric
-                    },
-                    {
-                        'path': 'sklearn.metrics.mean_absolute_error',
-                        'name': 'Mean absolute error',
-                    }
-                ]
-            )
+        ...     output_file="report.html",
+        ...     project_info_file="utils/project_info.yml",
+        ...     x_train=x_train,
+        ...     y_train=y_train,
+        ...     y_test=y_test,
+        ...     title_story="House Prices Project Report",
+        ...     title_description="Comprehensive interpretability analysis for the Kaggle house prices dataset.",
+        ...     metrics=[
+        ...         {"path": "sklearn.metrics.mean_squared_error", "name": "Mean Squared Error"},
+        ...         {"path": "sklearn.metrics.mean_absolute_error", "name": "Mean Absolute Error"},
+        ...     ],
+        ...     display_interaction_plot=True,
+        ...     nb_top_interactions=5,
+        ... )
         """
         check_report_requirements()
         if x_train is not None:
@@ -1375,15 +1803,37 @@ class SmartExplainer:
 
     def _local_pred(self, index, label=None):
         """
-        compute a local pred to display in local_plot
+        Compute the model prediction or probability for a single observation.
+
+        This internal method retrieves the prediction or class probability
+        corresponding to a specific sample index.
+
         Parameters
         ----------
-        index: string, int, float, ...
-            specify the row we want to pred
-        label: int (default: None)
+        index : int, str, or float
+            Index of the sample for which to compute the prediction.
+            Must correspond to a valid index in `x_encoded`.
+        label : int, optional
+            Class label for which to extract the probability in classification tasks.
+            If `None`, the method returns the prediction for the main target.
+
         Returns
         -------
-        float: Predict or predict_proba value
+        float
+            The predicted value (for regression) or predicted probability
+            (for classification).
+
+        Notes
+        -----
+        - For classification, returns the class probability if `proba_values` are available.
+        - For regression, returns the predicted numeric value.
+        - This is an internal helper used primarily for visualization.
+
+        Example
+        -------
+        >>> # Retrieve the predicted value for observation at index 12
+        >>> xpl._local_pred(index=12)
+        0.7421
         """
         if self._case == "classification":
             if self.proba_values is not None:
