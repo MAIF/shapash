@@ -716,10 +716,20 @@ class SmartExplainer:
 
     def check_features_dict(self):
         """
-        Check the features_dict and add the necessary keys if all the
-        input X columns are not present
+        Synchronize features_dict with dataset columns:
+        - Remove features not present in dataset
+        - Add missing dataset features to features_dict
         """
-        for feature in set(list(self.columns_dict.values())) - set(list(self.features_dict)):
+
+        dataset_features = set(self.columns_dict.values())
+        current_features = set(self.features_dict.keys())
+
+        # Remove features not present in dataset
+        for feature in current_features - dataset_features:
+            self.features_dict.pop(feature, None)
+
+        # Add features present in dataset but missing in features_dict
+        for feature in dataset_features - current_features:
             self.features_dict[feature] = feature
 
     def _update_features_dict_with_groups(self, features_groups):
