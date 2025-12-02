@@ -5,7 +5,7 @@ import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
-from umap import UMAP
+from sklearn.manifold import TSNE
 
 from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.sampling import subset_sampling
@@ -639,14 +639,7 @@ def plot_explanatory_individuals_map(
     hv_text_predict,
     color_value,
     keep_quantile=None,
-    metric="euclidean",
-    n_neighbors=200,
-    learning_rate=1,
-    min_dist=0.1,
-    spread=1,
-    n_components=2,
-    n_epochs=200,
-    random_state=None,
+    random_state=79,
     marker_size=10,
     style_dict=None,
     opacity=0.8,
@@ -660,7 +653,7 @@ def plot_explanatory_individuals_map(
     auto_open=False,
 ):
     """
-    Generate a 2D scatter plot using UMAP projection of high-dimensional data.
+    Generate a 2D scatter plot using TSNE projection of high-dimensional data.
 
     This visualization helps to explore data structure by reducing dimensions and highlighting clusters or relationships.
     Data points are colored according to a specified variable and include hover text for additional context.
@@ -675,27 +668,8 @@ def plot_explanatory_individuals_map(
         1D data structure (e.g., Series) used to determine the color of each marker.
     keep_quantile : tuple of float, optional, default=(0.05, 0.95)
         Quantiles to retain for color scaling, helping to manage outliers.
-    metric : str, optional, default="euclidean"
-        Distance metric used for UMAP. Can be one of:
-        ['euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra',
-        'braycurtis', 'mahalanobis', 'wminkowski', 'seuclidean', 'cosine',
-        'correlation', 'haversine', 'hamming', 'jaccard', 'dice', 'russelrao',
-        'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
-        'sokalmichener', 'sokalsneath', 'yule']
-    n_neighbors : int, optional, default=200
-        Size of local neighborhood used for manifold approximation. Larger values capture more global structure.
-    learning_rate : float, optional, default=1
-        Initial learning rate used during UMAP embedding optimization.
-    min_dist : float, optional, default=0.1
-        Controls how tightly UMAP packs points together. Smaller values lead to tighter clusters.
-    spread : float, optional, default=1
-        Controls the scale of embedded points. Used in combination with `min_dist`.
-    n_components : int, optional, default=2
-        Number of dimensions in the reduced space (usually 2 for visualization).
-    n_epochs : int, optional, default=200
-        Number of training epochs for the UMAP optimization.
-    random_state : int or None, optional, default=None
-        Random seed for reproducibility. Accepts int or numpy RandomState.
+    random_state : int, optional, default=79
+        Random seed for reproducibility of the TSNE projection.
     marker_size : int, optional, default=10
         Size of the data point markers in the plot.
     style_dict : dict or None, optional, default=None
@@ -722,7 +696,7 @@ def plot_explanatory_individuals_map(
     Returns
     -------
     plotly.graph_objects.Figure
-        A Plotly Figure object representing the 2D UMAP projection.
+        A Plotly Figure object representing the 2D TSNE projection.
 
     Examples
     --------
@@ -738,7 +712,7 @@ def plot_explanatory_individuals_map(
         style_dict = define_style(get_palette("default"))
 
     if not title:
-        title = "UMAP Projection Plot"
+        title = "TSNE Projection Plot"
     if subtitle and addnote:
         title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
     elif subtitle:
@@ -748,19 +722,18 @@ def plot_explanatory_individuals_map(
 
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
-    ### Dimensional Reduction with UMAP
-    umap = UMAP(
-        metric=metric,
-        n_neighbors=min(n_neighbors, len(values_to_project) - 1),
-        learning_rate=learning_rate,
-        min_dist=min_dist,
-        spread=spread,
-        n_components=n_components,
-        n_epochs=n_epochs,
+    ### Dimensional Reduction with TSNE
+    n_samples = values_to_project.shape[0]
+    perplexity = min(30, max(2, n_samples // 3))
+
+    projections = TSNE(
+        n_components=2,
+        perplexity=perplexity,
+        learning_rate="auto",
+        init="random",
         random_state=random_state,
-        n_jobs=1,
-    )
-    projections = umap.fit_transform(values_to_project)
+    ).fit_transform(values_to_project)
+
     x, y = projections.T
 
     figures = []

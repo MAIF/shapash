@@ -555,7 +555,7 @@ class SmartPlotter:
                 self._explainer.features_dict[f_name]: self._explainer.x_init.loc[list_ind, f_name]
                 for f_name in top_features_of_group
             }
-            text_group = "Features values were projected on the x axis using Umap"
+            text_group = "Features values were projected on the x axis using TSNE"
             # if group don't show addnote, if not, it's too long
             # if addnote is not None:
             #    addnote = add_text([addnote, text_group], sep=' - ')
@@ -1999,14 +1999,7 @@ class SmartPlotter:
         max_points=2000,
         selection=None,
         label=-1,
-        metric="euclidean",
         threshold_top_features=0.9,
-        n_neighbors=200,
-        learning_rate=1,
-        min_dist=0.1,
-        spread=1,
-        n_components=2,
-        n_epochs=200,
         random_state=79,
         marker_size=10,
         style_dict=None,
@@ -2017,9 +2010,9 @@ class SmartPlotter:
         auto_open=False,
     ):
         """
-        Generate a 2D UMAP projection plot (or multiple plots) based on SHAP-like feature contributions.
+        Generate a 2D TSNE projection plot (or multiple plots) based on SHAP-like feature contributions.
 
-        This function visualizes high-dimensional contribution data by projecting it into 2D space using UMAP.
+        This function visualizes high-dimensional contribution data by projecting it into 2D space using TSNE.
         It highlights similarities between observations and allows visual comparison by coloring points using selected values
         (e.g., predictions, targets, errors). Multiple color views can be displayed side by side, sharing a common color scale.
 
@@ -2045,34 +2038,9 @@ class SmartPlotter:
         label : int or str, optional, default=-1
             Label to use in classification tasks (e.g., class index or name). Ignored in regression.
 
-        metric : str, optional, default="euclidean"
-            Distance metric used for UMAP. Can be one of:
-            'euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra', 'braycurtis', 'mahalanobis',
-            'wminkowski', 'seuclidean', 'cosine', 'correlation', 'haversine', 'hamming', 'jaccard',
-            'dice', 'russelrao', 'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
-            'sokalmichener', 'sokalsneath', 'yule'
-
         threshold_top_features : float, optional, default=0.9
             Feature selection threshold based on mean absolute contribution values. Only features contributing
             to the cumulative threshold are retained for projection.
-
-        n_neighbors : int, optional, default=200
-            UMAP parameter: size of the local neighborhood (affects local vs global structure).
-
-        learning_rate : float, optional, default=1
-            UMAP parameter: initial learning rate for optimization.
-
-        min_dist : float, optional, default=0.1
-            UMAP parameter: controls the minimum distance between points in the low-dimensional space.
-
-        spread : float, optional, default=1
-            UMAP parameter: controls the scale of the embedded space (used with min_dist).
-
-        n_components : int, optional, default=2
-            UMAP parameter: Dimension of the embedded space. Use 2 for 2D plots.
-
-        n_epochs : int, optional, default=200
-            UMAP parameter: Number of training epochs for UMAP optimization. If None, defaults are used based on dataset size.
 
         random_state : int, optional, default=79
             Random seed for reproducibility.
@@ -2101,7 +2069,7 @@ class SmartPlotter:
         Returns
         -------
         plotly.graph_objects.Figure
-            A Plotly figure object displaying the UMAP projection. If multiple color values are passed,
+            A Plotly figure object displaying the TSNE projection. If multiple color values are passed,
             a subplot layout is returned with one panel per value.
 
         Raises
@@ -2310,13 +2278,6 @@ class SmartPlotter:
             hv_text_predict=hv_text_predict,
             color_value=color_value_data,
             keep_quantile=keep_quantile,
-            metric=metric,
-            n_neighbors=n_neighbors,
-            learning_rate=learning_rate,
-            min_dist=min_dist,
-            spread=spread,
-            n_components=n_components,
-            n_epochs=n_epochs,
             random_state=random_state,
             marker_size=marker_size,
             style_dict=style_dict,
