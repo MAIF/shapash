@@ -170,9 +170,10 @@ class TestSmartExplainer(unittest.TestCase):
         """
         Unit test check features dict 1
         """
-        xpl = SmartExplainer(self.model, features_dict={"Age": "Age (Years Old)"})
+        xpl = SmartExplainer(self.model, features_dict={"Age": "Age (Years Old)", "Place": "Place of Residence"})
         xpl.columns_dict = {0: "Age", 1: "Education", 2: "Sex"}
         xpl.check_features_dict()
+        assert len(xpl.features_dict) == 3
         assert xpl.features_dict["Age"] == "Age (Years Old)"
         assert xpl.features_dict["Education"] == "Education"
 
