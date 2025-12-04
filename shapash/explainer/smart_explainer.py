@@ -26,10 +26,10 @@ from shapash.utils.check import (
     check_postprocessing,
     check_y,
 )
+from shapash.utils.custom_thread import CustomThread
 from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
 from shapash.utils.io import load_pickle, save_pickle
 from shapash.utils.model import predict, predict_error, predict_proba
-from shapash.utils.threading import CustomThread
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 from shapash.utils.utils import get_host_name
 from shapash.webapp.smart_app import SmartApp
