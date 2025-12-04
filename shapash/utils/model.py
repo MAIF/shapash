@@ -4,6 +4,7 @@ Model Module
 
 from inspect import ismethod
 
+import numpy as np
 import pandas as pd
 
 
@@ -143,15 +144,16 @@ def predict_error(y_target, y_pred, model_type, proba_values=None, classes=None)
 
         # classes = order of model.classes_
         true_labels = y_target.iloc[:, 0]
-        errors = []
+        label_to_col = {cls: i for i, cls in enumerate(classes)}
 
-        for idx, label_code in true_labels.items():
-            try:
-                col_index = classes.index(label_code)
-            except ValueError as err:
-                raise ValueError(f"Label_code {label_code} not found in classes list: {classes}") from err
+        try:
+            col_indices = true_labels.map(label_to_col)
+        except KeyError as err:
+            raise ValueError(f"Unknown label in y_target: {err}") from err
 
-            proba_true_class = proba_values.iloc[idx, col_index]
-            errors.append(abs(1 - proba_true_class))
+        proba_true = proba_values.to_numpy()[np.arange(len(proba_values)), col_indices.to_numpy()]
+
+        # Erreur = 1 - proba de la vraie classe
+        errors = np.abs(1 - proba_true)
 
         return pd.DataFrame(errors, index=y_target.index, columns=["_error_"])
