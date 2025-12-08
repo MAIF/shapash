@@ -77,7 +77,7 @@ class TestCallbacks(unittest.TestCase):
                 }
             ]
         }
-        self.special_cols = ["_index_", "_predict_", "_target_"]
+        self.special_cols = ["_index_", "_predict_", "_target_", "_error_"]
 
         super().__init__(*args, **kwargs)
 
@@ -87,6 +87,7 @@ class TestCallbacks(unittest.TestCase):
                 "_index_": [0, 1, 2, 3, 4],
                 "_predict_": [0, 0, 0, 1, 1],
                 "_target_": [0, 0, 0, 1, 1],
+                "_error_": [0.0, 0.0, 0.0, 0.0, 0.0],
                 "column1": [1, 2, 3, 4, 5],
                 "column3": [1.1, 3.3, 2.2, 4.4, 5.5],
                 "_column2": ["a", "b", "c", "d", "e"],
@@ -318,11 +319,12 @@ class TestCallbacks(unittest.TestCase):
         selected_row = get_id_card_features(data, 3, self.special_cols, features_dict)
         expected_result = pd.DataFrame(
             {
-                "feature_value": [3, 1, 1, 4, 4.4, "d", False, pd.Timestamp("2023-01-04")],
+                "feature_value": [3, 1, 1, 0, 4, 4.4, "d", False, pd.Timestamp("2023-01-04")],
                 "feature_name": [
                     "_index_",
                     "_predict_",
                     "_target_",
+                    "_error_",
                     "column1",
                     "Useless col",
                     "_Additional col",
@@ -330,7 +332,7 @@ class TestCallbacks(unittest.TestCase):
                     "_column5",
                 ],
             },
-            index=["_index_", "_predict_", "_target_", "column1", "column3", "_column2", "_column4", "_column5"],
+            index=["_index_", "_predict_", "_target_", "_error_", "column1", "column3", "_column2", "_column4", "_column5"],
         )
         pd.testing.assert_frame_equal(selected_row, expected_result)
 
@@ -343,11 +345,12 @@ class TestCallbacks(unittest.TestCase):
     def test_create_id_card_data(self):
         selected_row = pd.DataFrame(
             {
-                "feature_value": [3, 1, 1, 4, 4.4, "d", False, pd.Timestamp("2023-01-04")],
+                "feature_value": [3, 1, 1, 0, 4, 4.4, "d", False, pd.Timestamp("2023-01-04")],
                 "feature_name": [
                     "_index_",
                     "_predict_",
                     "_target_",
+                    "_error_",
                     "column1",
                     "Useless col",
                     "_Additional col",
@@ -355,7 +358,7 @@ class TestCallbacks(unittest.TestCase):
                     "_column5",
                 ],
             },
-            index=["_index_", "_predict_", "_target_", "column1", "column3", "_column2", "_column4", "_column5"],
+            index=["_index_", "_predict_", "_target_", "_error_", "column1", "column3", "_column2", "_column4", "_column5"],
         )
 
         selected_contrib = pd.DataFrame(
@@ -370,34 +373,35 @@ class TestCallbacks(unittest.TestCase):
         )
         expected_result = pd.DataFrame(
             {
-                "feature_value": [3, 1, 1, 4.4, 4, "d", False, pd.Timestamp("2023-01-04")],
+                "feature_value": [3, 1, 1, 0, 4.4, 4, "d", False, pd.Timestamp("2023-01-04")],
                 "feature_name": [
                     "_index_",
                     "_predict_",
                     "_target_",
+                    "_error_",
                     "Useless col",
                     "column1",
                     "_Additional col",
                     "_column4",
                     "_column5",
                 ],
-                "feature_contrib": [np.nan, np.nan, np.nan, 0.0, -0.6, np.nan, np.nan, np.nan],
+                "feature_contrib": [np.nan, np.nan, np.nan, np.nan, 0.0, -0.6, np.nan, np.nan, np.nan],
             },
-            index=["_index_", "_predict_", "_target_", "column3", "column1", "_column2", "_column4", "_column5"],
+            index=["_index_", "_predict_", "_target_", "_error_", "column3", "column1", "_column2", "_column4", "_column5"],
         )
         pd.testing.assert_frame_equal(selected_data, expected_result)
 
     def test_create_id_card_layout(self):
         selected_data = pd.DataFrame(
             {
-                "feature_value": [3, 1, 1, 4.4, 4, "d"],
-                "feature_name": ["_index_", "_predict_", "_target_", "Useless col", "column1", "_Additional col"],
-                "feature_contrib": [np.nan, np.nan, np.nan, 0.0, -0.6, np.nan],
+                "feature_value": [3, 1, 1, 0, 4.4, 4, "d"],
+                "feature_name": ["_index_", "_predict_", "_target_", "_error_", "Useless col", "column1", "_Additional col"],
+                "feature_contrib": [np.nan, np.nan, np.nan, np.nan, 0.0, -0.6, np.nan],
             },
-            index=["_index_", "_predict_", "_target_", "column3", "column1", "_column2"],
+            index=["_index_", "_predict_", "_target_", "_error_","column3", "column1", "_column2"],
         )
         children = create_id_card_layout(selected_data, self.xpl.additional_features_dict)
-        assert len(children) == 6
+        assert len(children) == 7
 
     def test_get_feature_filter_options(self):
         features_dict = copy.deepcopy(self.xpl.features_dict)
@@ -407,6 +411,7 @@ class TestCallbacks(unittest.TestCase):
             "_index_",
             "_predict_",
             "_target_",
+            "_error_",
             "Useless col",
             "_Additional col",
             "_column4",

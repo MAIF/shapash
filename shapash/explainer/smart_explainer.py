@@ -26,10 +26,10 @@ from shapash.utils.check import (
     check_postprocessing,
     check_y,
 )
+from shapash.utils.custom_thread import CustomThread
 from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
 from shapash.utils.io import load_pickle, save_pickle
 from shapash.utils.model import predict, predict_error, predict_proba
-from shapash.utils.threading import CustomThread
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 from shapash.utils.utils import get_host_name
 from shapash.webapp.smart_app import SmartApp
@@ -328,7 +328,9 @@ class SmartExplainer:
             self.predict_proba()
 
         self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-        self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+        self.prediction_error = predict_error(
+            self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+        )
 
         self._get_contributions_from_backend_or_user(x, contributions)
         self.check_contributions()
@@ -536,14 +538,14 @@ class SmartExplainer:
         """
         if y_pred is not None:
             self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
-            if hasattr(self, "y_target"):
-                self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
         if proba_values is not None:
             self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
         if y_target is not None:
             self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-            if hasattr(self, "y_pred"):
-                self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+        if hasattr(self, "y_target") and self.y_target is not None:
+            self.prediction_error = predict_error(
+                self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+            )
         if label_dict is not None:
             if isinstance(label_dict, dict) is False:
                 raise ValueError(
@@ -716,10 +718,20 @@ class SmartExplainer:
 
     def check_features_dict(self):
         """
-        Check the features_dict and add the necessary keys if all the
-        input X columns are not present
+        Synchronize features_dict with dataset columns:
+        - Remove features not present in dataset
+        - Add missing dataset features to features_dict
         """
-        for feature in set(list(self.columns_dict.values())) - set(list(self.features_dict)):
+
+        dataset_features = set(self.columns_dict.values())
+        current_features = set(self.features_dict.keys())
+
+        # Remove features not present in dataset
+        for feature in current_features - dataset_features:
+            self.features_dict.pop(feature, None)
+
+        # Add features present in dataset but missing in features_dict
+        for feature in dataset_features - current_features:
             self.features_dict[feature] = feature
 
     def _update_features_dict_with_groups(self, features_groups):
@@ -1048,7 +1060,9 @@ class SmartExplainer:
         """
         self.y_pred = predict(self.model, self.x_encoded)
         if hasattr(self, "y_target"):
-            self.prediction_error = predict_error(self.y_target, self.y_pred, self._case)
+            self.prediction_error = predict_error(
+                self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+            )
 
     def to_pandas(
         self,
