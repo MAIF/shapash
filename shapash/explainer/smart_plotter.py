@@ -18,8 +18,8 @@ from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
+    plot_clustering_by_explainability,
     plot_confusion_matrix,
-    plot_explanatory_individuals_map,
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
@@ -1992,14 +1992,16 @@ class SmartPlotter:
             auto_open=auto_open,
         )
 
-    def explanatory_individuals_map_plot(
+    def clustering_by_explainability_plot(
         self,
         color_value="predictions",
+        show_clusters=True,
+        show_points=True,
         keep_quantile=(0.05, 0.95),
         max_points=2000,
         selection=None,
         label=-1,
-        threshold_top_features=0.9,
+        threshold_top_features=0.95,
         random_state=79,
         marker_size=10,
         style_dict=None,
@@ -2081,10 +2083,10 @@ class SmartPlotter:
         Examples
         --------
         >>> # Single color projection
-        >>> xpl.explanatory_individuals_map_plot(color_value="predictions")
+        >>> xpl.clustering_by_explainability_plot(color_value="predictions")
 
         >>> # Compare multiple color schemes side-by-side
-        >>> xpl.explanatory_individuals_map_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
+        >>> xpl.clustering_by_explainability_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
         """
 
         if not hasattr(self._explainer, "model"):
@@ -2107,23 +2109,32 @@ class SmartPlotter:
         list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
 
         subtitle = None
-        if self._explainer.features_imp is None:
-            self._explainer.compute_features_import()
+        if self._explainer.features_imp is None or getattr(self._explainer, "features_imp_local_lev2", None) is None:
+            self._explainer.compute_features_import(local=True)
 
         features_imp = (
             self._explainer.features_imp
             if isinstance(self._explainer.features_imp, pd.Series)
             else self._explainer.features_imp[0]
         )
-        top_contributors_col = top_contributors(features_imp, threshold=threshold_top_features)
+        features_imp_local_lev2 = (
+            self._explainer.features_imp_local_lev2
+            if isinstance(self._explainer.features_imp_local_lev2, pd.Series)
+            else self._explainer.features_imp_local_lev2[0]
+        )
+
+        top_global_contributors_col = top_contributors(features_imp, threshold=threshold_top_features)
+        top_local_contributors_col = top_contributors(features_imp_local_lev2, threshold=threshold_top_features)
+        top_contributors_col = list(set(top_global_contributors_col) | set(top_local_contributors_col))
 
         if not isinstance(color_value, list):
             color_value = [color_value]
         color_value_data = []
 
-        if (getattr(self._explainer, "y_target", None) is None) and (
-            ("targets" in color_value) or ("errors" in color_value)
-        ):
+        if getattr(self._explainer, "y_target", None) is None:
+            color_value = [el for el in color_value if el not in ("targets", "errors")]
+
+        if len(color_value) == 0:
             fig = go.Figure()
             fig.update_layout(
                 xaxis={"visible": False},
@@ -2179,40 +2190,57 @@ class SmartPlotter:
                     dfs.append(y_target)
                     cols.append("target")
 
+                errors_classification = pd.DataFrame(
+                    np.abs(
+                        ((self._explainer.y_target.loc[list_ind].values.ravel() == label_code).astype(int))
+                        - self._explainer.proba_values.loc[list_ind].iloc[:, label_num]
+                    )
+                )
+                dfs.append(errors_classification.reset_index(drop=True))
+                cols.append("error")
+
+                col_name = list(set(color_value) - {"predictions", "targets", "errors"})
+                if len(col_name) > 0:
+                    dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                    cols.append(col_name[0])
+
                 # --- Combine everything
                 df_pred = pd.concat(dfs, axis=1).set_index(y_proba_target.columns[0])
                 df_pred.columns = cols
 
                 subtitle = f"Response: <b>{label_value}</b>"
+                hv_text = []
+                for el in color_value:
+                    # Build hover text
+                    hv_text_el = []
+                    for idx, row in df_pred.iterrows():
+                        text = f"Id: {idx}<br />"
+                        if el not in ["predictions", "targets", "errors"]:
+                            text += f"{el}: {row[el]}<br />"
+                        text += f"Predicted Value: {row['proba_values']:.3f}<br />"
+                        if "error" in df_pred.columns:
+                            text += f"Error: {row['error']:.3f}<br />"
+                        text += f"Predicted class: {row['predict_class']}<br />"
+                        if "target" in df_pred.columns:
+                            text += f"True Value: {row['target']}<br />"
+                        hv_text_el.append(text)
+                    hv_text.append(hv_text_el)
 
-                # Build hover text
-                hv_text_predict = []
-                for idx, row in df_pred.iterrows():
-                    text = f"Id: {idx}<br />Predicted Values: {row['proba_values']:.3f}<br />Predicted class: {row['predict_class']}<br />"
-                    if "target" in df_pred.columns:
-                        text += f"True Values: {row['target']}<br />"
-                    hv_text_predict.append(text)
+                    if el == "predictions":
+                        color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
 
-            for el in color_value:
-                if el == "predictions":
-                    color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
+                    elif el == "targets":
+                        color_value_data.append((self._explainer.y_target == label_code).astype(int))
 
-                elif el == "targets":
-                    color_value_data.append((self._explainer.y_target == label_code).astype(int))
-
-                elif el == "errors":
-                    color_value_data.append(
-                        pd.DataFrame(
-                            np.abs(
-                                ((self._explainer.y_target.values.ravel() == label_code).astype(int))
-                                - self._explainer.proba_values.iloc[:, label_num]
+                    elif el == "errors":
+                        color_value_data.append(errors_classification)
+                    else:
+                        if el in self._explainer.x_contrib_plot.columns:
+                            color_value_data.append(self._explainer.x_contrib_plot[[el]])
+                        else:
+                            raise ValueError(
+                                r"Select a color_value among the valid options ('predictions', 'targets', 'errors' or a column name within your data)."
                             )
-                        )
-                    )
-                else:
-                    raise ValueError(
-                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
-                    )
 
         elif self._explainer._case == "regression":
             # Base data: contributions and top contributors
@@ -2238,7 +2266,7 @@ class SmartPlotter:
             y_proba_values = None  # not used in regression
 
             # --- Build hover text dynamically ---
-            hv_text_predict = []
+            hv_text = []
             for i in list_ind:
                 text = f"Id: {i}<br />Predicted Values: {y_pred.loc[i].values[0]:,.{self._round_digit}f}<br />"
                 if has_target_info:
@@ -2246,7 +2274,7 @@ class SmartPlotter:
                         f"True Values: {y_target.loc[i].values[0]:,.{self._round_digit}f}<br />"
                         f"Prediction Error: {prediction_error.loc[i].values[0]:,.2f}<br />"
                     )
-                hv_text_predict.append(text)
+                hv_text.append(text)
 
             # --- Handle color_value selections robustly ---
             for el in color_value:
@@ -2268,15 +2296,17 @@ class SmartPlotter:
                         r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
                     )
 
-        title = "Explanatory Individuals Map"
+        title = "Clustering by Explainability"
 
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]
 
-        return plot_explanatory_individuals_map(
+        return plot_clustering_by_explainability(
             values_to_project=values_to_project,
-            hv_text_predict=hv_text_predict,
+            hv_text=hv_text,
             color_value=color_value_data,
+            show_clusters=show_clusters,
+            show_points=show_points,
             keep_quantile=keep_quantile,
             random_state=random_state,
             marker_size=marker_size,

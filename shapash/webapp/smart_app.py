@@ -444,9 +444,7 @@ class SmartApp:
 
         # Component for the graph prediction picking
         self.components["graph"]["prediction_picking"] = MyGraph(figure=go.Figure(), id="prediction_picking")
-        self.components["graph"]["predictions"] = MyGraph(figure=go.Figure(), id="predictions")
-        self.components["graph"]["targets"] = MyGraph(figure=go.Figure(), id="targets")
-        self.components["graph"]["errors"] = MyGraph(figure=go.Figure(), id="errors")
+        self.components["graph"]["clusters"] = MyGraph(figure=go.Figure(), id="clusters")
 
         self.components["graph"]["detail_feature"] = MyGraph(figure=go.Figure(), id="detail_feature")
 
@@ -1014,7 +1012,7 @@ class SmartApp:
                                                 "fontStyle": "italic",
                                             },
                                         ),
-                                        # Tab which contains predictions graph
+                                        # Tab which contains clusters graph
                                         # and its explanation button
                                         dbc.Tab(
                                             dbc.Card(
@@ -1022,19 +1020,19 @@ class SmartApp:
                                                     html.Div(
                                                         [
                                                             # --- GRAPH ---
-                                                            *self.draw_component("graph", "predictions"),
+                                                            *self.draw_component("graph", "clusters"),
                                                             # --- BOUTON EXPLICATION OVERLAY ---
                                                             html.Div(
                                                                 [
                                                                     dbc.Button(
                                                                         "?",
-                                                                        id="open_predictions",
+                                                                        id="open_clusters",
                                                                         size="sm",
                                                                         color="warning",
                                                                     ),
                                                                     dbc.Popover(
                                                                         "Click here to have more information on this graph.",
-                                                                        target="open_predictions",
+                                                                        target="open_clusters",
                                                                         body=True,
                                                                         trigger="hover",
                                                                     ),
@@ -1048,7 +1046,7 @@ class SmartApp:
                                                                             dbc.ModalBody(
                                                                                 [
                                                                                     dcc.Markdown(
-                                                                                        self.explanations.predictions
+                                                                                        self.explanations.clusters
                                                                                     ),
                                                                                     html.Div(
                                                                                         html.Img(
@@ -1066,12 +1064,12 @@ class SmartApp:
                                                                             dbc.ModalFooter(
                                                                                 dbc.Button(
                                                                                     "Close",
-                                                                                    id="close_predictions",
+                                                                                    id="close_clusters",
                                                                                     color="warning",
                                                                                 )
                                                                             ),
                                                                         ],
-                                                                        id="modal_predictions",
+                                                                        id="modal_clusters",
                                                                         centered=True,
                                                                         size="lg",
                                                                     ),
@@ -1084,7 +1082,7 @@ class SmartApp:
                                                                 },
                                                             ),
                                                         ],
-                                                        id="card_predictions",
+                                                        id="card_clusters",
                                                         style={
                                                             "position": "relative",
                                                             "width": "100%",
@@ -1092,191 +1090,7 @@ class SmartApp:
                                                     ),
                                                 ]
                                             ),
-                                            label="Predictions",
-                                            # Style of the tab
-                                            label_style={
-                                                "color": "black",
-                                                "height": "30px",
-                                                "padding": "0px 5px",
-                                                "border": "2px solid #ddd",
-                                            },
-                                            labelClassName="tab-label",
-                                            active_label_style={
-                                                "border-top": f"3px solid {self.color[0]}",
-                                                "backgroundColor": "white",
-                                                "fontWeight": "bold",
-                                                "fontStyle": "italic",
-                                            },
-                                        ),
-                                        # Tab which contains prediction picking graph
-                                        # and its explanation button
-                                        dbc.Tab(
-                                            dbc.Card(
-                                                [
-                                                    html.Div(
-                                                        [
-                                                            # --- GRAPH ---
-                                                            *self.draw_component("graph", "targets"),
-                                                            # --- BOUTON EXPLICATION OVERLAY ---
-                                                            html.Div(
-                                                                [
-                                                                    dbc.Button(
-                                                                        "?",
-                                                                        id="open_targets",
-                                                                        size="sm",
-                                                                        color="warning",
-                                                                    ),
-                                                                    dbc.Popover(
-                                                                        "Click here to have more information on this graph.",
-                                                                        target="open_targets",
-                                                                        body=True,
-                                                                        trigger="hover",
-                                                                    ),
-                                                                    dbc.Modal(
-                                                                        [
-                                                                            dbc.ModalHeader(dbc.ModalTitle("Targets")),
-                                                                            dbc.ModalBody(
-                                                                                [
-                                                                                    dcc.Markdown(
-                                                                                        self.explanations.targets
-                                                                                    ),
-                                                                                    html.Div(
-                                                                                        html.Img(
-                                                                                            src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.A(
-                                                                                        "Click here for more details",
-                                                                                        href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
-                                                                                        target="_blank",
-                                                                                        style={"color": self.color[0]},
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            dbc.ModalFooter(
-                                                                                dbc.Button(
-                                                                                    "Close",
-                                                                                    id="close_targets",
-                                                                                    color="warning",
-                                                                                )
-                                                                            ),
-                                                                        ],
-                                                                        id="modal_targets",
-                                                                        centered=True,
-                                                                        size="lg",
-                                                                    ),
-                                                                ],
-                                                                style={
-                                                                    "position": "absolute",
-                                                                    "bottom": "10px",
-                                                                    "right": "10px",
-                                                                    "zIndex": 5,
-                                                                },
-                                                            ),
-                                                        ],
-                                                        id="card_targets",
-                                                        style={
-                                                            "position": "relative",
-                                                            "width": "100%",
-                                                        },
-                                                    ),
-                                                ]
-                                            ),
-                                            label="Targets",
-                                            # Style of the tab
-                                            label_style={
-                                                "color": "black",
-                                                "height": "30px",
-                                                "padding": "0px 5px",
-                                                "border": "2px solid #ddd",
-                                            },
-                                            labelClassName="tab-label",
-                                            active_label_style={
-                                                "border-top": f"3px solid {self.color[0]}",
-                                                "backgroundColor": "white",
-                                                "fontWeight": "bold",
-                                                "fontStyle": "italic",
-                                            },
-                                        ),
-                                        # Tab which contains errors graph
-                                        # and its explanation button
-                                        dbc.Tab(
-                                            dbc.Card(
-                                                [
-                                                    html.Div(
-                                                        [
-                                                            # --- GRAPH ---
-                                                            *self.draw_component("graph", "errors"),
-                                                            # --- BOUTON EXPLICATION OVERLAY ---
-                                                            html.Div(
-                                                                [
-                                                                    dbc.Button(
-                                                                        "?",
-                                                                        id="open_errors",
-                                                                        size="sm",
-                                                                        color="warning",
-                                                                    ),
-                                                                    dbc.Popover(
-                                                                        "Click here to have more information on this graph.",
-                                                                        target="open_errors",
-                                                                        body=True,
-                                                                        trigger="hover",
-                                                                    ),
-                                                                    dbc.Modal(
-                                                                        [
-                                                                            dbc.ModalHeader(
-                                                                                dbc.ModalTitle(
-                                                                                    "True values Vs Predicted values"
-                                                                                )
-                                                                            ),
-                                                                            dbc.ModalBody(
-                                                                                [
-                                                                                    dcc.Markdown(
-                                                                                        self.explanations.errors
-                                                                                    ),
-                                                                                    html.Div(
-                                                                                        html.Img(
-                                                                                            src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.A(
-                                                                                        "Click here for more details",
-                                                                                        href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
-                                                                                        target="_blank",
-                                                                                        style={"color": self.color[0]},
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            dbc.ModalFooter(
-                                                                                dbc.Button(
-                                                                                    "Close",
-                                                                                    id="close_errors",
-                                                                                    color="warning",
-                                                                                )
-                                                                            ),
-                                                                        ],
-                                                                        id="modal_errors",
-                                                                        centered=True,
-                                                                        size="lg",
-                                                                    ),
-                                                                ],
-                                                                style={
-                                                                    "position": "absolute",
-                                                                    "bottom": "10px",
-                                                                    "right": "10px",
-                                                                    "zIndex": 5,
-                                                                },
-                                                            ),
-                                                        ],
-                                                        id="card_errors",
-                                                        style={
-                                                            "position": "relative",
-                                                            "width": "100%",
-                                                        },
-                                                    ),
-                                                ]
-                                            ),
-                                            label="Errors",
+                                            label="Clusters",
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
@@ -1757,7 +1571,7 @@ class SmartApp:
                         style_component = {"height": "21.6rem"}
                         this_style_card = {"height": "22rem", "zIndex": 901}
 
-                    if id_str in ["predictions", "prediction_picking", "errors", "targets"]:
+                    if id_str == "clusters":
                         style_component = {"height": "22.7rem"}
                         this_style_card = {"height": "22.7rem", "zIndex": 901}
 
@@ -1851,9 +1665,7 @@ class SmartApp:
             ],
             [
                 Input("prediction_picking", "selectedData"),
-                Input("predictions", "selectedData"),
-                Input("errors", "selectedData"),
-                Input("targets", "selectedData"),
+                Input("clusters", "selectedData"),
                 Input("modal", "is_open"),
                 Input("apply_filter", "n_clicks"),
                 Input("reset_dropdown_button", "n_clicks"),
@@ -1878,9 +1690,7 @@ class SmartApp:
         )
         def update_datatable(
             selected_data_prediction_picking,
-            selected_data_predictions,
-            selected_data_errors,
-            selected_data_targets,
+            selected_data_clusters,
             is_open,
             nclicks_apply,
             nclicks_reset,
@@ -1935,17 +1745,10 @@ class SmartApp:
             columns = self.components["table"]["dataset"].columns
             filtered_subset_info = None
             filtered_subset_color = None
-            selected_data = (
-                selected_data_prediction_picking
-                or selected_data_predictions
-                or selected_data_errors
-                or selected_data_targets
-            )
+            selected_data = selected_data_prediction_picking or selected_data_clusters
             prediction_tabs = [
                 "prediction_picking.selectedData",
-                "predictions.selectedData",
-                "errors.selectedData",
-                "targets.selectedData",
+                "clusters.selectedData",
             ]
             if ctx.triggered[0]["prop_id"] == "modal.is_open":
                 if is_open:
@@ -2051,9 +1854,7 @@ class SmartApp:
                 Input("select_label", "value"),
                 Input("dataset", "data"),
                 Input("prediction_picking", "selectedData"),
-                Input("predictions", "selectedData"),
-                Input("errors", "selectedData"),
-                Input("targets", "selectedData"),
+                Input("clusters", "selectedData"),
                 Input("apply_filter", "n_clicks"),
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
@@ -2077,9 +1878,7 @@ class SmartApp:
             label,
             data,
             selected_data_prediction_picking,
-            selected_data_predictions,
-            selected_data_errors,
-            selected_data_targets,
+            selected_data_clusters,
             apply_filters,
             reset_filter,
             nclicks_del,
@@ -2273,9 +2072,7 @@ class SmartApp:
             [
                 Input("feature_selector", "clickData"),
                 Input("prediction_picking", "clickData"),
-                Input("predictions", "clickData"),
-                Input("errors", "clickData"),
-                Input("targets", "clickData"),
+                Input("clusters", "clickData"),
                 Input("dataset", "active_cell"),
                 Input("apply_filter", "n_clicks"),
                 Input("reset_dropdown_button", "n_clicks"),
@@ -2286,9 +2083,7 @@ class SmartApp:
         def update_index_id(
             click_data,
             prediction_picking,
-            predictions,
-            errors,
-            targets,
+            clusters,
             cell,
             apply_filters,
             reset_filter,
@@ -2321,12 +2116,8 @@ class SmartApp:
                     selected = click_data["points"][0]["customdata"][1]
                 elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData":
                     selected = prediction_picking["points"][0]["customdata"]
-                elif ctx.triggered[0]["prop_id"] == "predictions.clickData":
-                    selected = predictions["points"][0]["customdata"]
-                elif ctx.triggered[0]["prop_id"] == "errors.clickData":
-                    selected = errors["points"][0]["customdata"]
-                elif ctx.triggered[0]["prop_id"] == "targets.clickData":
-                    selected = targets["points"][0]["customdata"]
+                elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
+                    selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
                     selected = data[cell["row"]]["_index_"]
                 elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
@@ -2650,8 +2441,8 @@ class SmartApp:
             return figure, selectedData
 
         @app.callback(
-            Output("predictions", "figure"),
-            Output("predictions", "selectedData"),
+            Output("clusters", "figure"),
+            Output("clusters", "selectedData"),
             [
                 Input("dataset", "data"),
                 Input("apply_filter", "n_clicks"),
@@ -2659,11 +2450,11 @@ class SmartApp:
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
                 Input("select_label", "value"),
                 Input("modal", "is_open"),
-                Input("ember_predictions", "n_clicks"),
+                Input("ember_clusters", "n_clicks"),
             ],
-            [State("points", "value"), State("violin", "value"), State("predictions", "selectedData")],
+            [State("points", "value"), State("violin", "value"), State("clusters", "selectedData")],
         )
-        def update_predictions(
+        def update_clusters(
             data, apply_filters, reset_filter, nclicks_del, label, is_open, click_zoom, points, violin, selectedData
         ):
             """
@@ -2697,125 +2488,11 @@ class SmartApp:
             else:
                 subset = get_indexes_from_datatable(data)
 
-            figure = self.explainer.plot.explanatory_individuals_map_plot(
+            figure = self.explainer.plot.clustering_by_explainability_plot(
                 selection=subset, max_points=points, label=label, color_value="predictions"
             )
             figure["layout"].clickmode = "event+select"
             MyGraph.adjust_graph_static(figure)
-
-            return figure, selectedData
-
-        @app.callback(
-            Output("targets", "figure"),
-            Output("targets", "selectedData"),
-            [
-                Input("dataset", "data"),
-                Input("apply_filter", "n_clicks"),
-                Input("reset_dropdown_button", "n_clicks"),
-                Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
-                Input("select_label", "value"),
-                Input("modal", "is_open"),
-                Input("ember_targets", "n_clicks"),
-            ],
-            [State("points", "value"), State("violin", "value"), State("targets", "selectedData")],
-        )
-        def update_targets(
-            data, apply_filters, reset_filter, nclicks_del, label, is_open, click_zoom, points, violin, selectedData
-        ):
-            """
-            Update feature plot according to label, data,
-            selected feature and settings modifications
-            ------------------------------------------------
-            data: the dataset
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click on del button
-            label: selected label
-            is_open: modal
-            click_zoom: click on zoom button
-            points: number of points
-            violin: number of violin plot
-            -------------------------------------------------
-            return
-            prediction picking graph
-            """
-            ctx = dash.callback_context
-            # Filter subset
-            subset = None
-            if (
-                ctx.triggered[0]["prop_id"] == "apply_filter.n_clicks"
-                or ctx.triggered[0]["prop_id"] == "reset_dropdown_button.n_clicks"
-                or ("del_dropdown_button" in ctx.triggered[0]["prop_id"] and None not in nclicks_del)
-            ):
-                selectedData = None
-            if selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
-                raise PreventUpdate
-            else:
-                subset = get_indexes_from_datatable(data)
-
-            figure = self.explainer.plot.explanatory_individuals_map_plot(
-                selection=subset, max_points=points, label=label, color_value="targets"
-            )
-            if self.explainer.y_target is not None:
-                figure["layout"].clickmode = "event+select"
-                MyGraph.adjust_graph_static(figure)
-
-            return figure, selectedData
-
-        @app.callback(
-            Output("errors", "figure"),
-            Output("errors", "selectedData"),
-            [
-                Input("dataset", "data"),
-                Input("apply_filter", "n_clicks"),
-                Input("reset_dropdown_button", "n_clicks"),
-                Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
-                Input("select_label", "value"),
-                Input("modal", "is_open"),
-                Input("ember_errors", "n_clicks"),
-            ],
-            [State("points", "value"), State("violin", "value"), State("errors", "selectedData")],
-        )
-        def update_errors(
-            data, apply_filters, reset_filter, nclicks_del, label, is_open, click_zoom, points, violin, selectedData
-        ):
-            """
-            Update feature plot according to label, data,
-            selected feature and settings modifications
-            ------------------------------------------------
-            data: the dataset
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click on del button
-            label: selected label
-            is_open: modal
-            click_zoom: click on zoom button
-            points: number of points
-            violin: number of violin plot
-            -------------------------------------------------
-            return
-            prediction picking graph
-            """
-            ctx = dash.callback_context
-            # Filter subset
-            subset = None
-            if (
-                ctx.triggered[0]["prop_id"] == "apply_filter.n_clicks"
-                or ctx.triggered[0]["prop_id"] == "reset_dropdown_button.n_clicks"
-                or ("del_dropdown_button" in ctx.triggered[0]["prop_id"] and None not in nclicks_del)
-            ):
-                selectedData = None
-            if selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
-                raise PreventUpdate
-            else:
-                subset = get_indexes_from_datatable(data)
-
-            figure = self.explainer.plot.explanatory_individuals_map_plot(
-                selection=subset, max_points=points, label=label, color_value="errors"
-            )
-            if self.explainer.y_target is not None:
-                figure["layout"].clickmode = "event+select"
-                MyGraph.adjust_graph_static(figure)
 
             return figure, selectedData
 
@@ -2896,52 +2573,14 @@ class SmartApp:
             return is_open
 
         @app.callback(
-            Output("modal_predictions", "is_open"),
-            [Input("open_predictions", "n_clicks"), Input("close_predictions", "n_clicks")],
-            [State("modal_predictions", "is_open")],
+            Output("modal_clusters", "is_open"),
+            [Input("open_clusters", "n_clicks"), Input("close_clusters", "n_clicks")],
+            [State("modal_clusters", "is_open")],
         )
-        def toggle_modal_predictions(n1, n2, is_open):
+        def toggle_modal_clusters(n1, n2, is_open):
             """
             Function used to open and close modal explication when we click
-            on "?" button on predictions graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
-            """
-            if n1 or n2:
-                return not is_open
-            return is_open
-
-        @app.callback(
-            Output("modal_targets", "is_open"),
-            [Input("open_targets", "n_clicks"), Input("close_targets", "n_clicks")],
-            [State("modal_targets", "is_open")],
-        )
-        def toggle_modal_targets(n1, n2, is_open):
-            """
-            Function used to open and close modal explication when we click
-            on "?" button on targets graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
-            """
-            if n1 or n2:
-                return not is_open
-            return is_open
-
-        @app.callback(
-            Output("modal_errors", "is_open"),
-            [Input("open_errors", "n_clicks"), Input("close_errors", "n_clicks")],
-            [State("modal_errors", "is_open")],
-        )
-        def toggle_modal_errors(n1, n2, is_open):
-            """
-            Function used to open and close modal explication when we click
-            on "?" button on errors graph
+            on "?" button on clusters graph
             ---------------------------------------------------------------
             n1: click on "?" button
             n2: click on close button in modal

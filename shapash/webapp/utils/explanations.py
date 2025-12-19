@@ -60,7 +60,7 @@ class Explanations:
 
                                 To reset the select, double click on the figure.
                                 """
-        self.predictions = """
+        self.clusters = """
                             **How are predictions distributed in the projection space?**
 
                             This graph allows you to visualize and select samples on the 2D projection map
@@ -77,42 +77,6 @@ class Explanations:
 
                             To reset the select, double click on the figure.
                             """
-        self.targets = """
-                        **How are true target values distributed in the projection space?**
-
-                        This graph allows you to visualize and select samples on the 2D projection map
-                        based on their Shapley value representation, coloured by true target values.
-                        It helps explore how the real outcomes are structured and how they relate to
-                        model explanations.
-
-                        If a single sample is selected, the local explainability plot displays the
-                        Shapley contributions for this specific instance.
-
-                        If a group of samples is selected using the \"box\" or \"lasso\" tool, the global explainability is updated.
-
-                        It allows the comparison of the global feature contribution
-                        displaying this sub-population (grey) vs the full dataset (yellow).
-
-                        To reset the select, double click on the figure.
-                        """
-        self.errors = """
-                        **How are prediction errors distributed in the projection space?**
-
-                        This graph allows you to visualize and select samples on the 2D projection map
-                        based on their Shapley value representation, coloured by prediction error.
-                        It helps identify regions where the model performs well or poorly and explore
-                        error patterns dynamically with the other graphs.
-
-                        If a single sample is selected, the local explainability plot displays the
-                        Shapley contributions for this specific instance.
-
-                        If a group of samples is selected using the \"box\" or \"lasso\" tool, the global explainability is updated.
-
-                        It allows the comparison of the global feature contribution
-                        displaying this sub-population (grey) vs the full dataset (yellow).
-
-                        To reset the select, double click on the figure.
-                        """
         self.feature_importance = """
                                 **Global feature importance** is by default the sum of
                                 *individual contributions*,

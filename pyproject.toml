@@ -48,6 +48,7 @@ dependencies = [
     "scikit-learn>=1.4.2,<1.6.0",
     "scipy>=1.13.0",
     "shap>=0.46.0",
+    "shapely>=2.0.0",
 ]
 
 [project.optional-dependencies] # Optional
