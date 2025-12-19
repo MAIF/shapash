@@ -5,9 +5,20 @@ import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
-from sklearn.manifold import TSNE
 
 from shapash.style.style_utils import define_style, get_palette
+from shapash.utils.clustering import (
+    build_tsne_title,
+    compute_concave_hull,
+    compute_kmeans_labels,
+    compute_tsne_projection,
+    encode_color_value,
+    expand_polygons_independently,
+    move_points_towards_centroid,
+    scale_points_within_cluster,
+    smooth_polygon_contour,
+    value_to_rgba,
+)
 from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import adjust_title_height, truncate_str, tuning_colorscale
 
@@ -634,10 +645,13 @@ def plot_confusion_matrix(
     return fig
 
 
-def plot_explanatory_individuals_map(
+def plot_clustering_by_explainability(
     values_to_project,
-    hv_text_predict,
+    hv_text,
     color_value,
+    show_clusters=True,
+    show_points=True,
+    active_cluster=None,
     keep_quantile=None,
     random_state=79,
     marker_size=10,
@@ -662,7 +676,7 @@ def plot_explanatory_individuals_map(
     ----------
     values_to_project : pd.DataFrame
         DataFrame containing the high-dimensional data to be projected.
-    hv_text_predict : list of str
+    hv_text : list of str
         List of text values to show when hovering over each data point.
     color_value : pd.DataFrame or pd.Series
         1D data structure (e.g., Series) used to determine the color of each marker.
@@ -700,9 +714,9 @@ def plot_explanatory_individuals_map(
 
     Examples
     --------
-    >>> plot_explanatory_individuals_map(
+    >>> plot_clustering_by_explainability(
             values_to_project=data,
-            hv_text_predict=hover_labels,
+            hv_text=hover_labels,
             color_value=cluster_labels,
             random_state=79
         )
@@ -711,35 +725,21 @@ def plot_explanatory_individuals_map(
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
 
-    if not title:
-        title = "TSNE Projection Plot"
-    if subtitle and addnote:
-        title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
-    elif subtitle:
-        title += "<br><sup>" + subtitle + "</sup>"
-    elif addnote:
-        title += "<br><sup>" + addnote + "</sup>"
-
-    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+    dict_title = build_tsne_title(title, subtitle, addnote, style_dict=style_dict, height=height)
 
     ### Dimensional Reduction with TSNE
-    n_samples = values_to_project.shape[0]
-    perplexity = min(30, max(2, n_samples // 3))
-
-    projections = TSNE(
-        n_components=2,
-        perplexity=perplexity,
-        learning_rate="auto",
-        init="random",
+    projections = compute_tsne_projection(
+        values_to_project=values_to_project,
         random_state=random_state,
-    ).fit_transform(values_to_project)
-
-    x, y = projections.T
+    )
 
     figures = []
 
+    color_series, _, _ = encode_color_value(color_value[0].iloc[:, 0])
     colorscale, cmin, cmax = tuning_colorscale(
-        init_colorscale=style_dict["init_contrib_colorscale"], values=color_value[0], keep_quantile=keep_quantile
+        init_colorscale=style_dict["init_contrib_colorscale"],
+        values=pd.DataFrame(color_series),
+        keep_quantile=keep_quantile,
     )
     if colorbar_title and len(colorbar_title) == 1:
         colorbar_dict = dict(title={"text": colorbar_title[0]})
@@ -754,11 +754,85 @@ def plot_explanatory_individuals_map(
         ### Plotting
         fig = go.Figure()
 
-        # Plot parameters
+        labels, centers = compute_kmeans_labels(projections, n_clusters=25)
 
+        projections_moved = move_points_towards_centroid(projections, labels, centers, factor=1.0)
+        raw_polys = []
+        centroids = []
+        valid_labels = []
+        cluster_color = []
+
+        color_series, _, _ = encode_color_value(color_value_el.iloc[:, 0])
+        point_values = color_series.values
+        for c in np.unique(labels):
+            pts = projections_moved[labels == c]
+            cluster_color.append(point_values[labels == c].mean())
+
+            if pts.shape[0] < 3:
+                continue
+
+            poly = compute_concave_hull(pts, alpha=5)
+            if poly is None:
+                continue
+
+            poly = smooth_polygon_contour(poly)
+
+            raw_polys.append(poly)
+            centroids.append(pts.mean(axis=0))
+            valid_labels.append(c)
+
+        valid_labels = np.array(valid_labels)
+        cluster_label_to_index = {label: i for i, label in enumerate(valid_labels)}
+
+        expanded_polys, scales = expand_polygons_independently(
+            raw_polys,
+            centroids,
+            eps=0.02,
+            max_iter=600,
+        )
+
+        projections_final = scale_points_within_cluster(
+            projections_moved, labels, centers, scales * 0.8, cluster_label_to_index
+        )
+
+        if show_clusters:
+            for c, poly in enumerate(expanded_polys):
+                sx, sy = map(list, smooth_polygon_contour(poly).exterior.xy)
+
+                # Couleurs dynamiques pour le hover
+                c_n = c  # curve number
+                if c_n == active_cluster:
+                    fill = "rgba(255,0,0,0.30)"
+                    line_color = "rgba(200,0,0,1)"
+                else:
+                    if show_points:
+                        fill = "rgba(150,150,150,0.15)"
+                        line_color = "rgba(200,200,200,0.8)"
+                    else:
+                        fill = value_to_rgba(cluster_color[c], colorscale, cmin, cmax, alpha=0.99)
+                        line_color = value_to_rgba(cluster_color[c], colorscale, cmin, cmax, alpha=1)
+
+                # Zone (patate)
+                fig.add_trace(
+                    go.Scatter(
+                        x=sx,
+                        y=sy,
+                        fill="toself",
+                        fillcolor=fill,
+                        line=dict(color=line_color, width=2),
+                        mode="lines",
+                        hoveron="fills",
+                        hoverinfo="text",
+                        text=f"Cluster {c}",
+                        hovertemplate="<b>%{text}</b><extra></extra>",
+                        name=f"Cluster {c}",
+                    )
+                )
+
+        # Plot parameters
         marker_dict = dict(
             size=marker_size,
-            color=color_value_el.iloc[:, 0],
+            color=point_values if show_points else [cmin, cmax],
             colorscale=colorscale,
             cmin=cmin,
             cmax=cmax,
@@ -770,14 +844,14 @@ def plot_explanatory_individuals_map(
         # Displaying plot
         fig.add_trace(
             go.Scatter(
-                x=x,
-                y=y,
+                x=projections_final.T[0] if show_points else [None],
+                y=projections_final.T[1] if show_points else [None],
                 mode="markers",
                 marker=marker_dict,
-                hovertext=hv_text_predict,
-                hovertemplate="<b>%{hovertext}</b><br />",
+                hovertext=hv_text[i - 1] if show_points else None,
+                hovertemplate="<b>%{hovertext}</b><br />" if show_points else None,
                 name="",
-                customdata=values_to_project.index.values,
+                customdata=values_to_project.index.values if show_points else None,
             )
         )
 
@@ -807,7 +881,7 @@ def plot_explanatory_individuals_map(
 
     # Optional: update global layout
     combined_fig.update_layout(
-        template="none", width=width, height=(height - 200) // n_figs + 200, title=dict_t, showlegend=False
+        template="none", width=width, height=(height - 200) // n_figs + 200, title=dict_title, showlegend=False
     )
 
     if file_name:

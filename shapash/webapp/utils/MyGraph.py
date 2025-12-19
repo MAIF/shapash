@@ -16,7 +16,7 @@ class MyGraph(dcc.Graph):
 
         self.figure = figure
 
-        if id in ["prediction_picking", "predictions", "errors", "targets"]:
+        if id in ["prediction_picking", "clusters"]:
             self.config = {
                 "responsive": True,
                 "modeBarButtonsToRemove": [
