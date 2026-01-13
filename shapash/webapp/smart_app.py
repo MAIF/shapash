@@ -427,11 +427,17 @@ class SmartApp:
             sort_action="native",
             sort_mode="multi",
             style_table={"overflowY": "auto", "overflowX": "auto"},
-            style_header={"height": "30px"},
+            style_header={
+                "height": "60px",
+                "textAlign": "center",
+                "overflow": "hidden",
+                "textOverflow": "ellipsis",
+            },
             style_cell={
-                "minWidth": "70px",
-                "width": "120px",
+                "minWidth": "90px",
+                "width": "105px",
                 "maxWidth": "200px",
+                "overflow": "hidden",
                 "textOverflow": "ellipsis",
             },
         )
@@ -1013,85 +1019,249 @@ class SmartApp:
                                             },
                                         ),
                                         # Tab which contains clusters graph
-                                        # and its explanation button
+                                        # and its explanation button + bottom controls (UI only)
                                         dbc.Tab(
                                             dbc.Card(
                                                 [
-                                                    html.Div(
+                                                    # Main layout: graph left, controls right
+                                                    dbc.Row(
                                                         [
-                                                            # --- GRAPH ---
-                                                            *self.draw_component("graph", "clusters"),
-                                                            # --- BOUTON EXPLICATION OVERLAY ---
-                                                            html.Div(
-                                                                [
-                                                                    dbc.Button(
-                                                                        "?",
-                                                                        id="open_clusters",
-                                                                        size="sm",
-                                                                        color="warning",
-                                                                    ),
-                                                                    dbc.Popover(
-                                                                        "Click here to have more information on this graph.",
-                                                                        target="open_clusters",
-                                                                        body=True,
-                                                                        trigger="hover",
-                                                                    ),
-                                                                    dbc.Modal(
-                                                                        [
-                                                                            dbc.ModalHeader(
-                                                                                dbc.ModalTitle(
-                                                                                    "True values Vs Predicted values"
+                                                            # ---------------- LEFT: GRAPH ----------------
+                                                            dbc.Col(
+                                                                html.Div(
+                                                                    [
+                                                                        html.Div(
+                                                                            [
+                                                                                *self.draw_component(
+                                                                                    "graph",
+                                                                                    "clusters",
+                                                                                    is_draw_fullscreen=False,
                                                                                 )
-                                                                            ),
-                                                                            dbc.ModalBody(
-                                                                                [
-                                                                                    dcc.Markdown(
-                                                                                        self.explanations.clusters
+                                                                            ],
+                                                                            style={"width": "100%", "height": "100%"},
+                                                                        ),
+                                                                    ],
+                                                                    id="clusters_graph_zone",
+                                                                    style={
+                                                                        "position": "relative",
+                                                                        "width": "100%",
+                                                                        "height": "100%",
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                                style={"height": "100%"},
+                                                            ),
+                                                            # ---------------- RIGHT: CONTROLS COLUMN ----------------
+                                                            dbc.Col(
+                                                                html.Div(
+                                                                    [
+                                                                        # 1) Points
+                                                                        html.Div(
+                                                                            [
+                                                                                html.Div(
+                                                                                    "Points",
+                                                                                    className="text-muted",
+                                                                                    style={
+                                                                                        "fontSize": "1rem",
+                                                                                        "marginBottom": "4px",
+                                                                                    },
+                                                                                ),
+                                                                                dbc.ButtonGroup(
+                                                                                    [
+                                                                                        dbc.Button(
+                                                                                            "ON",
+                                                                                            id="toggle_points_on",
+                                                                                            size="sm",
+                                                                                            color="warning",
+                                                                                            style={
+                                                                                                "font-size": "1rem",
+                                                                                                "line-height": "1.0",
+                                                                                                "padding": "2px 8px",
+                                                                                            },
+                                                                                        ),
+                                                                                        dbc.Button(
+                                                                                            "OFF",
+                                                                                            id="toggle_points_off",
+                                                                                            size="sm",
+                                                                                            outline=True,
+                                                                                            color="warning",
+                                                                                            style={
+                                                                                                "font-size": "1rem",
+                                                                                                "line-height": "1.0",
+                                                                                                "padding": "2px 8px",
+                                                                                            },
+                                                                                        ),
+                                                                                    ],
+                                                                                    size="sm",
+                                                                                ),
+                                                                            ],
+                                                                            style={"marginBottom": "14px"},
+                                                                        ),
+                                                                        # 2) Colorscale
+                                                                        html.Div(
+                                                                            [
+                                                                                html.Div(
+                                                                                    "Colorscale",
+                                                                                    className="text-muted",
+                                                                                    style={
+                                                                                        "fontSize": "1rem",
+                                                                                        "marginBottom": "4px",
+                                                                                    },
+                                                                                ),
+                                                                                dcc.Dropdown(
+                                                                                    id="color_param_clusters",
+                                                                                    options=[
+                                                                                        {
+                                                                                            "label": "Aucun",
+                                                                                            "value": "none",
+                                                                                        },
+                                                                                        {
+                                                                                            "label": "Réelle",
+                                                                                            "value": "y_true",
+                                                                                        },
+                                                                                        {
+                                                                                            "label": "Prédite",
+                                                                                            "value": "y_pred",
+                                                                                        },
+                                                                                        {
+                                                                                            "label": "Score",
+                                                                                            "value": "score",
+                                                                                        },
+                                                                                    ],
+                                                                                    value="none",
+                                                                                    clearable=False,
+                                                                                    className="dd-20",
+                                                                                    style={"fontSize": "1rem"},
+                                                                                ),
+                                                                            ],
+                                                                            style={"marginBottom": "14px"},
+                                                                        ),
+                                                                        # 3) Clusters
+                                                                        html.Div(
+                                                                            [
+                                                                                html.Div(
+                                                                                    "Clusters",
+                                                                                    className="text-muted",
+                                                                                    style={
+                                                                                        "fontSize": "1rem",
+                                                                                        "marginBottom": "10px",
+                                                                                    },
+                                                                                ),
+                                                                                html.Div(
+                                                                                    dcc.Slider(
+                                                                                        id="n_clusters_slider",
+                                                                                        min=2,
+                                                                                        max=20,
+                                                                                        step=1,
+                                                                                        value=5,
+                                                                                        marks={
+                                                                                            "2": "2",
+                                                                                            "5": "5",
+                                                                                            "10": "10",
+                                                                                            "20": "20",
+                                                                                        },
+                                                                                        tooltip={
+                                                                                            "placement": "top",
+                                                                                            "always_visible": False,
+                                                                                        },
+                                                                                        className="slider-100",
                                                                                     ),
-                                                                                    html.Div(
-                                                                                        html.Img(
-                                                                                            src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.A(
-                                                                                        "Click here for more details",
-                                                                                        href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
-                                                                                        target="_blank",
-                                                                                        style={"color": self.color[0]},
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            dbc.ModalFooter(
+                                                                                    style={"width": "100%"},
+                                                                                ),
+                                                                            ],
+                                                                            style={"marginBottom": "16px"},
+                                                                        ),
+                                                                        # 4) Help (button + popover + modal)
+                                                                        html.Div(
+                                                                            [
                                                                                 dbc.Button(
-                                                                                    "Close",
-                                                                                    id="close_clusters",
+                                                                                    "?",
+                                                                                    id="open_clusters",
+                                                                                    size="sm",
                                                                                     color="warning",
-                                                                                )
-                                                                            ),
-                                                                        ],
-                                                                        id="modal_clusters",
-                                                                        centered=True,
-                                                                        size="lg",
-                                                                    ),
-                                                                ],
-                                                                style={
-                                                                    "position": "absolute",
-                                                                    "bottom": "10px",
-                                                                    "right": "10px",
-                                                                    "zIndex": 5,
-                                                                },
+                                                                                ),
+                                                                                dbc.Popover(
+                                                                                    "Click here to have more information on this graph.",
+                                                                                    target="open_clusters",
+                                                                                    body=True,
+                                                                                    trigger="hover",
+                                                                                ),
+                                                                                dbc.Modal(
+                                                                                    [
+                                                                                        dbc.ModalHeader(
+                                                                                            dbc.ModalTitle(
+                                                                                                "True values Vs Predicted values"
+                                                                                            )
+                                                                                        ),
+                                                                                        dbc.ModalBody(
+                                                                                            [
+                                                                                                dcc.Markdown(
+                                                                                                    self.explanations.clusters
+                                                                                                ),
+                                                                                                html.Div(
+                                                                                                    html.Img(
+                                                                                                        src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
+                                                                                                    )
+                                                                                                ),
+                                                                                                html.A(
+                                                                                                    "Click here for more details",
+                                                                                                    href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
+                                                                                                    target="_blank",
+                                                                                                    style={
+                                                                                                        "color": self.color[
+                                                                                                            0
+                                                                                                        ]
+                                                                                                    },
+                                                                                                ),
+                                                                                            ]
+                                                                                        ),
+                                                                                        dbc.ModalFooter(
+                                                                                            dbc.Button(
+                                                                                                "Close",
+                                                                                                id="close_clusters",
+                                                                                                color="warning",
+                                                                                            )
+                                                                                        ),
+                                                                                    ],
+                                                                                    id="modal_clusters",
+                                                                                    centered=True,
+                                                                                    size="lg",
+                                                                                ),
+                                                                            ],
+                                                                            style={
+                                                                                "marginTop": "auto",
+                                                                                "display": "flex",
+                                                                                "justifyContent": "flex-end",
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                    style={
+                                                                        "height": "100%",
+                                                                        "display": "flex",
+                                                                        "flexDirection": "column",
+                                                                        "justifyContent": "flex-start",
+                                                                        "padding": "10px 0 0 15px",
+                                                                        "borderLeft": "1px solid rgba(0,0,0,.12)",
+                                                                        "backgroundColor": "white",
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                                style={"height": "100%"},
                                                             ),
                                                         ],
-                                                        id="card_clusters",
-                                                        style={
-                                                            "position": "relative",
-                                                            "width": "100%",
-                                                        },
+                                                        className="g-0",
+                                                        style={"height": "100%"},
                                                     ),
-                                                ]
+                                                    self.draw_fullscreen("graph", "clusters"),
+                                                ],
+                                                id="card_clusters",
+                                                style={
+                                                    "width": "100%",
+                                                    "height": "24.1rem",
+                                                    "position": "relative",
+                                                },
                                             ),
                                             label="Clusters",
-                                            # Style of the tab
                                             label_style={
                                                 "color": "black",
                                                 "height": "30px",
@@ -1298,18 +1468,35 @@ class SmartApp:
                         ),
                         dbc.Col(
                             [
-                                dbc.Row(
+                                # Card that contains detail feature graph
+                                # and explanation button
+                                dbc.Card(
                                     [
-                                        dbc.Col(
+                                        dbc.Row(
                                             [
-                                                # Card that contains detail feature graph
-                                                # and explanation button
-                                                dbc.Card(
+                                                dbc.Col(
+                                                    html.Div(
+                                                        [
+                                                            # --- GRAPH + bouton fullscreen Shapash ---
+                                                            *self.draw_component(
+                                                                "graph", "detail_feature", is_draw_fullscreen=False
+                                                            ),
+                                                        ],
+                                                        id="card_defzefezetail_feature",
+                                                        style={
+                                                            "position": "relative",
+                                                            "width": "100%",
+                                                            "height": "100%",
+                                                        },
+                                                    ),
+                                                    width=9,
+                                                    style={"height": "100%"},
+                                                ),
+                                                dbc.Col(
                                                     [
                                                         html.Div(
                                                             [
-                                                                # --- GRAPH + bouton fullscreen Shapash ---
-                                                                *self.draw_component("graph", "detail_feature"),
+                                                                *self.draw_filter(),
                                                                 # --- BOUTON EXPLICATION EN OVERLAY ---
                                                                 html.Div(
                                                                     [
@@ -1362,41 +1549,42 @@ class SmartApp:
                                                                         ),
                                                                     ],
                                                                     style={
-                                                                        "position": "absolute",
-                                                                        "bottom": "10px",
-                                                                        "right": "10px",
-                                                                        "zIndex": 5,
+                                                                        "marginTop": "auto",
+                                                                        "display": "flex",
+                                                                        "justifyContent": "flex-end",
                                                                     },
                                                                 ),
                                                             ],
-                                                            id="card_detail_feature",
+                                                            className="card_filter",
                                                             style={
-                                                                "position": "relative",
-                                                                "width": "100%",
+                                                                "borderLeft": "1px solid rgba(0,0,0,.12)",
+                                                                "padding": "20px 5px 0 20px",
+                                                                "flex": "1 1 auto",
+                                                                "display": "flex",
+                                                                "flexDirection": "column",
+                                                                "justifyContent": "flex-start",
+                                                                "backgroundColor": "white",
                                                             },
+                                                            id="card_filter",
                                                         ),
-                                                    ]
-                                                )
-                                            ],
-                                            md=8,
-                                            align="center",
-                                        ),
-                                        dbc.Col(
-                                            [
-                                                html.Div(
-                                                    self.draw_filter(),
-                                                    className="card_filter",
-                                                    id="card_filter",
+                                                    ],
+                                                    width=3,
+                                                    style={"height": "100%", "display": "flex"},
                                                 ),
+                                                self.draw_fullscreen("graph", "detail_feature"),
                                             ],
-                                            md=4,
-                                            align="center",
+                                            id="card_detail_feature",
+                                            className="g-0",
+                                            style={"height": "100%"},
                                         ),
                                     ],
+                                    style={
+                                        "width": "100%",
+                                        "position": "relative",
+                                    },
                                 ),
                             ],
                             md=7,
-                            align="center",
                             style={"padding": "0px 10px"},
                         ),
                     ],
@@ -1438,7 +1626,7 @@ class SmartApp:
         else:
             raise ValueError(f"No rule defined for explainer case : {self.explainer._case}")
 
-    def draw_component(self, component_type, component_id, title=None):
+    def draw_component(self, component_type, component_id, title=None, is_draw_fullscreen=True):
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
@@ -1459,14 +1647,33 @@ class SmartApp:
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
-        component.append(
-            html.A(
-                html.I("fullscreen", className="material-icons tiny", style={"marginTop": "8px", "marginLeft": "1px"}),
-                id=f"ember_{component_id}",
-                className="dock-expand",
-                **{"data-component-type": component_type},
-                **{"data-component-id": component_id},
-            )
+        if is_draw_fullscreen:
+            component.append(self.draw_fullscreen(component_type, component_id))
+        return component
+
+    def draw_fullscreen(self, component_type, component_id):
+        """
+        Method which return a component from a type and id.
+        It's the method to insert component inside component container.
+        Parameters
+        ----------
+        component_type : string
+            Type of the component. Can be table, graph, ...
+        component_id : string
+            Id of the component. It must be unique.
+        Returns
+        -------
+        list
+            list of components
+            (combining for example Graph + embed button to get fullscreen
+            details)
+        """
+        component = html.A(
+            html.I("fullscreen", className="material-icons tiny", style={"marginTop": "8px", "marginLeft": "1px"}),
+            id=f"ember_{component_id}",
+            className="dock-expand",
+            **{"data-component-type": component_type},
+            **{"data-component-id": component_id},
         )
         return component
 
@@ -1489,15 +1696,11 @@ class SmartApp:
             list of components
         """
         filter = [
-            dbc.Container(
-                [
-                    dbc.Row([self.components["filter"]["index"]], align="center", style={"height": "4rem"}),
-                    dbc.Row([self.components["filter"]["threshold"]], align="center", style={"height": "5rem"}),
-                    dbc.Row([self.components["filter"]["max_contrib"]], align="center", style={"height": "5rem"}),
-                    dbc.Row([self.components["filter"]["positive_contrib"]], align="center", style={"height": "4rem"}),
-                    dbc.Row([self.components["filter"]["masked_contrib"]], align="center"),
-                ],
-            ),
+            html.Div([self.components["filter"]["index"]], style={"padding-bottom": "13px"}),
+            html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "13px"}),
+            html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "13px"}),
+            html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "13px"}),
+            html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "13px"}),
         ]
         return filter
 
@@ -1572,8 +1775,8 @@ class SmartApp:
                         this_style_card = {"height": "22rem", "zIndex": 901}
 
                     if id_str == "clusters":
-                        style_component = {"height": "22.7rem"}
-                        this_style_card = {"height": "22.7rem", "zIndex": 901}
+                        style_component = {"height": "23rem"}
+                        this_style_card = {"height": "24.1rem", "zIndex": 901}
 
                     if _component_type == "table":
                         style_component = {"maxHeight": "23rem"}
@@ -1584,7 +1787,7 @@ class SmartApp:
                 else:
                     # Style when zoom button is clicked
                     this_style_card = {
-                        "height": "70vh",
+                        "height": "93vh",
                         "width": "auto",
                         "zIndex": 998,
                         "position": "fixed",
@@ -2374,9 +2577,7 @@ class SmartApp:
                 for c in self.dataframe
                 if c in self.explainer.additional_features_dict
             ]
-            style_cell_conditional = [
-                {"if": {"column_id": c}, "width": "70px", "fontWeight": "bold"} for c in self.special_cols
-            ]
+            style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
             selected = check_row(data, index)
             if selected is not None:
@@ -2489,7 +2690,7 @@ class SmartApp:
                 subset = get_indexes_from_datatable(data)
 
             figure = self.explainer.plot.clustering_by_explainability_plot(
-                selection=subset, max_points=points, label=label, color_value="predictions"
+                selection=subset, max_points=points, label=label, color_value="SibSp", show_points=True
             )
             figure["layout"].clickmode = "event+select"
             MyGraph.adjust_graph_static(figure)

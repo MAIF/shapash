@@ -37,9 +37,7 @@
 
 /*      FILTER     */
 .filter_dashed {
-    border-top-color: silver;
-    border-top-style: dashed;
-    border-top-width: 1px;
+
     width: 100%;
 }
 #max_contrib_id, #threshold_id {
@@ -195,4 +193,9 @@
     border-top: 3px solid var(--tab-active-color);
     font-weight: bold;
     font-style: italic;
+}
+
+.form-label
+{
+    margin-bottom: 0;
 }

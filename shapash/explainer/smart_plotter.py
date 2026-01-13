@@ -2209,7 +2209,7 @@ class SmartPlotter:
                 df_pred.columns = cols
 
                 subtitle = f"Response: <b>{label_value}</b>"
-                hv_text = []
+                hv_text = {"points": [], "clusters": []}
                 for el in color_value:
                     # Build hover text
                     hv_text_el = []
@@ -2217,14 +2217,14 @@ class SmartPlotter:
                         text = f"Id: {idx}<br />"
                         if el not in ["predictions", "targets", "errors"]:
                             text += f"{el}: {row[el]}<br />"
-                        text += f"Predicted Value: {row['proba_values']:.3f}<br />"
+                        text += f"Predicted Value: {row['proba_values']:.{self._round_digit}f}<br />"
                         if "error" in df_pred.columns:
-                            text += f"Error: {row['error']:.3f}<br />"
+                            text += f"Error: {row['error']:.{self._round_digit}f}<br />"
                         text += f"Predicted class: {row['predict_class']}<br />"
                         if "target" in df_pred.columns:
                             text += f"True Value: {row['target']}<br />"
                         hv_text_el.append(text)
-                    hv_text.append(hv_text_el)
+                    hv_text["points"].append(hv_text_el)
 
                     if el == "predictions":
                         color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
@@ -2235,8 +2235,8 @@ class SmartPlotter:
                     elif el == "errors":
                         color_value_data.append(errors_classification)
                     else:
-                        if el in self._explainer.x_contrib_plot.columns:
-                            color_value_data.append(self._explainer.x_contrib_plot[[el]])
+                        if el in self._explainer.contributions[label_num].columns:
+                            color_value_data.append(self._explainer.contributions[label_num][[el]])
                         else:
                             raise ValueError(
                                 r"Select a color_value among the valid options ('predictions', 'targets', 'errors' or a column name within your data)."
@@ -2253,11 +2253,19 @@ class SmartPlotter:
             y_target = getattr(self._explainer, "y_target", None)
             prediction_error = getattr(self._explainer, "prediction_error", None)
 
+            # --- Base DataFrame parts
+            dfs = [y_pred.reset_index(drop=True)]
+            cols = ["predict_value"]
+
             # If y_target exists, prediction_error must also exist
             if y_target is not None and prediction_error is not None:
                 y_target = y_target.loc[list_ind, :]
                 prediction_error = prediction_error.loc[list_ind, :]
                 has_target_info = True
+                dfs.append(y_target.reset_index(drop=True))
+                cols.append("target")
+                dfs.append(prediction_error.reset_index(drop=True))
+                cols.append("error")
             else:
                 has_target_info = False
                 y_target = None
@@ -2265,19 +2273,31 @@ class SmartPlotter:
 
             y_proba_values = None  # not used in regression
 
-            # --- Build hover text dynamically ---
-            hv_text = []
-            for i in list_ind:
-                text = f"Id: {i}<br />Predicted Values: {y_pred.loc[i].values[0]:,.{self._round_digit}f}<br />"
-                if has_target_info:
-                    text += (
-                        f"True Values: {y_target.loc[i].values[0]:,.{self._round_digit}f}<br />"
-                        f"Prediction Error: {prediction_error.loc[i].values[0]:,.2f}<br />"
-                    )
-                hv_text.append(text)
+            col_name = list(set(color_value) - {"predictions", "targets", "errors"})
+            if len(col_name) > 0:
+                dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                cols.append(col_name[0])
+
+            # --- Combine everything
+            df_pred = pd.concat(dfs, axis=1).set_index(y_pred.index)
+            df_pred.columns = cols
 
             # --- Handle color_value selections robustly ---
+            hv_text = {"points": [], "clusters": []}
             for el in color_value:
+                # Build hover text
+                hv_text_el = []
+                for idx, row in df_pred.iterrows():
+                    text = f"Id: {idx}<br />"
+                    if el not in ["predictions", "targets", "errors"]:
+                        text += f"{el}: {row[el]}<br />"
+                    text += f"Predicted Value: {row['predict_value']:.{self._round_digit}f}<br />"
+                    if "error" in df_pred.columns:
+                        text += f"Error: {row['error']:.{self._round_digit}f}<br />"
+                    if "target" in df_pred.columns:
+                        text += f"True Value: {row['target']}<br />"
+                    hv_text_el.append(text)
+                hv_text["points"].append(hv_text_el)
                 if el == "predictions":
                     color_value_data.append(y_pred)
 
@@ -2292,9 +2312,12 @@ class SmartPlotter:
                     color_value_data.append(prediction_error)
 
                 else:
-                    raise ValueError(
-                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
-                    )
+                    if el in self._explainer.contributions.columns:
+                        color_value_data.append(self._explainer.contributions[[el]])
+                    else:
+                        raise ValueError(
+                            r"Select a color_value among the valid options ('predictions', 'targets', 'errors' or a column name within your data)."
+                        )
 
         title = "Clustering by Explainability"
 

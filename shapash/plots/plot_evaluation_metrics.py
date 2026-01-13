@@ -848,7 +848,7 @@ def plot_clustering_by_explainability(
                 y=projections_final.T[1] if show_points else [None],
                 mode="markers",
                 marker=marker_dict,
-                hovertext=hv_text[i - 1] if show_points else None,
+                hovertext=hv_text["points"][i - 1] if show_points else None,
                 hovertemplate="<b>%{hovertext}</b><br />" if show_points else None,
                 name="",
                 customdata=values_to_project.index.values if show_points else None,
@@ -868,7 +868,7 @@ def plot_clustering_by_explainability(
 
     # Create a subplot with 1 row and N columns
     combined_fig = make_subplots(
-        rows=1, cols=n_figs, subplot_titles=colorbar_title if colorbar_title else [""] * n_figs
+        rows=1, cols=n_figs, subplot_titles=colorbar_title if (colorbar_title and n_figs > 1) else [""] * n_figs
     )
 
     # Add each figure's traces to the combined figure
