@@ -181,6 +181,7 @@ class SmartApp:
             )
             self.dataframe = self.dataframe.join(self.explainer.prediction_error)
 
+        auto_columns = [col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols]
         if isinstance(self.explainer.columns_order, list):
             special_cols_remaining = [col for col in self.special_cols if col not in self.explainer.columns_order]
             columns_order = special_cols_remaining + self.explainer.columns_order
@@ -189,7 +190,6 @@ class SmartApp:
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
 
         elif self.explainer.columns_order == "additional_data_last":
-            auto_columns = [col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols]
             special_cols_remaining = [col for col in self.special_cols if col not in auto_columns]
             columns_order = (
                 auto_columns + self.dataframe.columns.drop(self.special_cols).tolist() + special_cols_remaining
@@ -213,6 +213,17 @@ class SmartApp:
                 if isfinite(std) and std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
                     self.round_dataframe[col] = self.dataframe[col].map(f"{{:.{digit}f}}".format).astype(float)
+        cluster_colorscale_columns = auto_columns + list(self.explainer.x_init.columns)
+        cluster_colorscale_columns.remove("_index_")
+        label_map = {
+            "_predict_": "predictions",
+            "_target_": "targets",
+            "_error_": "errors",
+        }
+
+        self.cluster_colorscale_columns_options = [
+            {"label": el, "value": label_map.get(el, el)} for el in cluster_colorscale_columns
+        ]
 
     def init_components(self):
         """
@@ -1096,6 +1107,7 @@ class SmartApp:
                                                                             ],
                                                                             style={"marginBottom": "14px"},
                                                                         ),
+                                                                        dcc.Store(id="points_visible_store", data=True),
                                                                         # 2) Colorscale
                                                                         html.Div(
                                                                             [
@@ -1107,27 +1119,11 @@ class SmartApp:
                                                                                         "marginBottom": "4px",
                                                                                     },
                                                                                 ),
+                                                                                # self.dataframe = self.dataframe.join(self.explainer.additional_data)
                                                                                 dcc.Dropdown(
                                                                                     id="color_param_clusters",
-                                                                                    options=[
-                                                                                        {
-                                                                                            "label": "Aucun",
-                                                                                            "value": "none",
-                                                                                        },
-                                                                                        {
-                                                                                            "label": "Réelle",
-                                                                                            "value": "y_true",
-                                                                                        },
-                                                                                        {
-                                                                                            "label": "Prédite",
-                                                                                            "value": "y_pred",
-                                                                                        },
-                                                                                        {
-                                                                                            "label": "Score",
-                                                                                            "value": "score",
-                                                                                        },
-                                                                                    ],
-                                                                                    value="none",
+                                                                                    options=self.cluster_colorscale_columns_options,
+                                                                                    value="predictions",
                                                                                     clearable=False,
                                                                                     className="dd-20",
                                                                                     style={"fontSize": "1rem"},
@@ -1152,7 +1148,7 @@ class SmartApp:
                                                                                         min=2,
                                                                                         max=30,
                                                                                         step=1,
-                                                                                        value=5,
+                                                                                        value=10,
                                                                                         marks={
                                                                                             "2": "2",
                                                                                             "5": "5",
@@ -2640,8 +2636,23 @@ class SmartApp:
             return figure, selectedData
 
         @app.callback(
+            Output("toggle_points_on", "outline"),
+            Output("toggle_points_off", "outline"),
+            Input("points_visible_store", "data"),
+        )
+        def sync_points_toggle(points_visible: bool):
+            """
+            Synchronize ON/OFF button styles with stored state.
+            - If points_visible is True: ON is filled, OFF is outline.
+            - If points_visible is False: ON is outline, OFF is filled.
+            """
+            points_visible = bool(points_visible)
+            return (not points_visible, points_visible)
+
+        @app.callback(
             Output("clusters", "figure"),
             Output("clusters", "selectedData"),
+            Output("points_visible_store", "data"),
             [
                 Input("dataset", "data"),
                 Input("apply_filter", "n_clicks"),
@@ -2650,50 +2661,92 @@ class SmartApp:
                 Input("select_label", "value"),
                 Input("modal", "is_open"),
                 Input("ember_clusters", "n_clicks"),
+                Input("n_clusters_slider", "value"),
+                Input("toggle_points_on", "n_clicks"),
+                Input("toggle_points_off", "n_clicks"),
+                Input("color_param_clusters", "value"),
             ],
-            [State("points", "value"), State("violin", "value"), State("clusters", "selectedData")],
+            [
+                State("points", "value"),
+                State("violin", "value"),
+                State("clusters", "selectedData"),
+                State("points_visible_store", "data"),
+            ],
         )
         def update_clusters(
-            data, apply_filters, reset_filter, nclicks_del, label, is_open, click_zoom, points, violin, selectedData
+            data,
+            apply_filters,
+            reset_filter,
+            nclicks_del,
+            label,
+            is_open,
+            click_zoom,
+            n_clusters,
+            n_on,
+            n_off,
+            color_value,
+            points,
+            violin,
+            selectedData,
+            points_visible,
         ):
             """
-            Update feature plot according to label, data,
-            selected feature and settings modifications
-            ------------------------------------------------
-            data: the dataset
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click on del button
-            label: selected label
-            is_open: modal
-            click_zoom: click on zoom button
-            points: number of points
-            violin: number of violin plot
-            -------------------------------------------------
-            return
-            prediction picking graph
+            Update clustering plot according to label, data, filters and settings.
+            Also stores ON/OFF state in points_visible_store.
             """
+
             ctx = dash.callback_context
-            # Filter subset
-            subset = None
+            if not ctx.triggered:
+                raise PreventUpdate
+
+            triggered_prop = ctx.triggered[0]["prop_id"]
+            trigger = triggered_prop.split(".")[0]
+
             if (
-                ctx.triggered[0]["prop_id"] == "apply_filter.n_clicks"
-                or ctx.triggered[0]["prop_id"] == "reset_dropdown_button.n_clicks"
-                or ("del_dropdown_button" in ctx.triggered[0]["prop_id"] and None not in nclicks_del)
+                trigger == "apply_filter"
+                or trigger == "reset_dropdown_button"
+                or ("del_dropdown_button" in triggered_prop and None not in nclicks_del)
             ):
                 selectedData = None
+
             if selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
-                raise PreventUpdate
-            else:
-                subset = get_indexes_from_datatable(data)
+                allowed = {
+                    "toggle_points_on",
+                    "toggle_points_off",
+                    "n_clusters_slider",
+                    "apply_filter",
+                    "reset_dropdown_button",
+                    "color_param_clusters",
+                    "select_label",
+                }
+                if trigger not in allowed:
+                    raise PreventUpdate
+                selectedData = None
+
+            subset = get_indexes_from_datatable(data)
+
+            show_points = bool(points_visible)
+            store_update = dash.no_update
+
+            if trigger == "toggle_points_on":
+                show_points = True
+                store_update = True
+            elif trigger == "toggle_points_off":
+                show_points = False
+                store_update = False
 
             figure = self.explainer.plot.clustering_by_explainability_plot(
-                selection=subset, max_points=points, label=label, color_value="Sex", show_points=False, n_clusters=25
+                selection=subset,
+                max_points=points,
+                label=label,
+                color_value=color_value,
+                show_points=show_points,
+                n_clusters=n_clusters,
             )
             figure["layout"].clickmode = "event+select"
             MyGraph.adjust_graph_static(figure)
 
-            return figure, selectedData
+            return figure, selectedData, store_update
 
         @app.callback(
             Output("modal_feature_importance", "is_open"),
