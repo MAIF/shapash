@@ -8,6 +8,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_numeric_dtype
 from plotly import graph_objs as go
 from plotly.offline import plot
 
@@ -18,6 +19,8 @@ from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
+    compute_kmeans_labels,
+    compute_tsne_projection,
     plot_clustering_by_explainability,
     plot_confusion_matrix,
     plot_scatter_prediction,
@@ -39,6 +42,7 @@ from shapash.utils.utils import (
     top_contributors,
     truncate_str,
     tuning_colorscale,
+    tuning_round_digit,
 )
 
 
@@ -81,12 +85,9 @@ class SmartPlotter:
         """
         adapts the display of the number of digit to the distribution of points
         """
-        quantile = [0.25, 0.75]
         if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
-            desc_df = self._explainer.y_pred.describe(percentiles=quantile)
-            perc1, perc2 = list(desc_df.loc[[str(int(p * 100)) + "%" for p in quantile]].values)
-            p_diff = perc2 - perc1
-            self._round_digit = compute_digit_number(p_diff)
+            quantile = [0.25, 0.75]
+            self._round_digit = tuning_round_digit(self._explainer.y_pred, quantile)
         else:
             self._round_digit = 0
 
@@ -1997,6 +1998,8 @@ class SmartPlotter:
         color_value="predictions",
         show_clusters=True,
         show_points=True,
+        active_cluster=None,
+        n_clusters=10,
         keep_quantile=(0.05, 0.95),
         max_points=2000,
         selection=None,
@@ -2026,6 +2029,18 @@ class SmartPlotter:
             - 'targets'
             - 'errors'
             If a list is provided, one subplot is created per item.
+
+        show_clusters : bool, optional, default=True
+            Whether to overlay cluster boundaries on the TSNE plot.
+
+        show_points : bool, optional, default=True
+            Whether to display individual data points on the plot.
+
+        active_cluster : int or None, optional, default=None
+            Index of the cluster to highlight. If None, no cluster is highlighted.
+
+        n_clusters : int, optional, default=10
+            Number of clusters to form using KMeans clustering.
 
         keep_quantile : tuple of float, optional, default=(0.05, 0.95)
             Tuple defining the lower and upper quantiles to keep when scaling colors. Useful to remove outliers.
@@ -2161,6 +2176,12 @@ class SmartPlotter:
                 ]
                 values_to_project = pd.concat(contribs, axis=1, ignore_index=False)
 
+            projections = compute_tsne_projection(
+                values_to_project=values_to_project,
+                random_state=random_state,
+            )
+            labels, centers = compute_kmeans_labels(projections, n_clusters=n_clusters)
+
             y_proba_values = self._explainer.proba_values.copy()
 
             # predict
@@ -2179,8 +2200,8 @@ class SmartPlotter:
                     y_pred = y_pred.replace(self._explainer.label_dict)
 
                 # --- Base DataFrame parts
-                dfs = [y_proba_target, y_pred]
-                cols = ["proba_values", "predict_class"]
+                dfs = [y_proba_target, y_pred, pd.Series(labels)]
+                cols = ["proba_values", "predict_class", "cluster"]
 
                 # --- Add target only if available
                 if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
@@ -2226,6 +2247,52 @@ class SmartPlotter:
                         hv_text_el.append(text)
                     hv_text["points"].append(hv_text_el)
 
+                    for c in sorted(np.unique(labels)):
+                        hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(labels == c)}"
+                        if el not in ["predictions", "targets", "errors"]:
+                            is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
+                            n_unique = df_pred[el].nunique(dropna=True)
+                            if is_num and n_unique > 5:
+                                mean_el = df_pred.loc[df_pred["cluster"] == c, el].mean()
+                                std_el = df_pred.loc[df_pred["cluster"] == c, el].std()
+                                hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
+                                hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
+                            else:
+                                top_element = df_pred.loc[df_pred["cluster"] == c, el].mode()[0]
+                                top_element_percentage = (
+                                    np.sum(df_pred.loc[df_pred["cluster"] == c, el] == top_element)
+                                    / df_pred.loc[df_pred["cluster"] == c, el].size
+                                    * 100
+                                )
+                                hv_text_cluster += (
+                                    f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)<br />"
+                                )
+                        mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "proba_values"].mean()
+                        hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
+                        if "error" in df_pred.columns:
+                            mean_error = df_pred.loc[df_pred["cluster"] == c, "error"].mean()
+                            hv_text_cluster += f"<br />Mean error: {mean_error:.{compute_digit_number(mean_error, 3)}f}"
+                        top_predicted_class = df_pred.loc[df_pred["cluster"] == c, "predict_class"].mode()[0]
+                        top_predicted_class_percentage = (
+                            np.sum(df_pred.loc[df_pred["cluster"] == c, "predict_class"] == top_predicted_class)
+                            / df_pred.loc[df_pred["cluster"] == c, "predict_class"].size
+                            * 100
+                        )
+                        hv_text_cluster += (
+                            f"<br />Top predicted class: {top_predicted_class} ({top_predicted_class_percentage:.1f}%)"
+                        )
+                        if "target" in df_pred.columns:
+                            top_target_value = df_pred.loc[df_pred["cluster"] == c, "target"].mode()[0]
+                            top_target_value_percentage = (
+                                np.sum(df_pred.loc[df_pred["cluster"] == c, "target"] == top_target_value)
+                                / df_pred.loc[df_pred["cluster"] == c, "target"].size
+                                * 100
+                            )
+                            hv_text_cluster += (
+                                f"<br />Top target value: {top_target_value} ({top_target_value_percentage:.1f}%)"
+                            )
+                        hv_text["clusters"].append(hv_text_cluster)
+
                     if el == "predictions":
                         color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
 
@@ -2246,6 +2313,13 @@ class SmartPlotter:
             # Base data: contributions and top contributors
             values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
+            projections = compute_tsne_projection(
+                values_to_project=values_to_project,
+                random_state=random_state,
+            )
+
+            labels, centers = compute_kmeans_labels(projections, n_clusters=n_clusters)
+
             # Always available
             y_pred = self._explainer.y_pred.loc[list_ind, :]
 
@@ -2254,8 +2328,8 @@ class SmartPlotter:
             prediction_error = getattr(self._explainer, "prediction_error", None)
 
             # --- Base DataFrame parts
-            dfs = [y_pred.reset_index(drop=True)]
-            cols = ["predict_value"]
+            dfs = [y_pred.reset_index(drop=True), pd.Series(labels)]
+            cols = ["predict_value", "cluster"]
 
             # If y_target exists, prediction_error must also exist
             if y_target is not None and prediction_error is not None:
@@ -2293,11 +2367,40 @@ class SmartPlotter:
                         text += f"{el}: {row[el]}<br />"
                     text += f"Predicted Value: {row['predict_value']:.{self._round_digit}f}<br />"
                     if "error" in df_pred.columns:
-                        text += f"Error: {row['error']:.{self._round_digit}f}<br />"
+                        text += f"Error: {row['error']:.{compute_digit_number(row['error'])}f}<br />"
                     if "target" in df_pred.columns:
                         text += f"True Value: {row['target']}<br />"
                     hv_text_el.append(text)
                 hv_text["points"].append(hv_text_el)
+
+                for c in sorted(np.unique(labels)):
+                    hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(labels == c)}"
+                    if el not in ["predictions", "targets", "errors"]:
+                        is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
+                        n_unique = df_pred[el].nunique(dropna=True)
+                        if is_num and n_unique > 5:
+                            mean_el = df_pred.loc[df_pred["cluster"] == c, el].mean()
+                            std_el = df_pred.loc[df_pred["cluster"] == c, el].std()
+                            hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
+                            hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
+                        else:
+                            top_element = df_pred.loc[df_pred["cluster"] == c, el].mode()[0]
+                            top_element_percentage = (
+                                np.sum(df_pred.loc[df_pred["cluster"] == c, el] == top_element)
+                                / df_pred.loc[df_pred["cluster"] == c, el].size
+                                * 100
+                            )
+                            hv_text_cluster += f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)"
+                    mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "predict_value"].mean()
+                    hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
+                    if "error" in df_pred.columns:
+                        mean_error = df_pred.loc[df_pred["cluster"] == c, "error"].mean()
+                        hv_text_cluster += f"<br />Mean error: {mean_error:.{compute_digit_number(mean_error, 3)}f}"
+                    if "target" in df_pred.columns:
+                        mean_target_value = df_pred.loc[df_pred["cluster"] == c, "target"].mean()
+                        hv_text_cluster += f"<br />Mean target value: {mean_target_value:.{compute_digit_number(mean_target_value, 3)}f}"
+                    hv_text["clusters"].append(hv_text_cluster)
+
                 if el == "predictions":
                     color_value_data.append(y_pred)
 
@@ -2330,6 +2433,11 @@ class SmartPlotter:
             color_value=color_value_data,
             show_clusters=show_clusters,
             show_points=show_points,
+            active_cluster=active_cluster,
+            n_clusters=n_clusters,
+            projections=projections,
+            labels=labels,
+            centers=centers,
             keep_quantile=keep_quantile,
             random_state=random_state,
             marker_size=marker_size,

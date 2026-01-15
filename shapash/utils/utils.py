@@ -228,6 +228,28 @@ def compute_digit_number(value, significant_digits: int = 4):
     return digit
 
 
+def tuning_round_digit(values: pd.DataFrame, quantile=(0.25, 0.75)):
+    """
+    return int, number of digits to display
+
+    Parameters
+    ----------
+    values : pd.DataFrame
+        one-column DataFrame containing the values to analyze
+    quantile : tuple, optional, default=(0.25, 0.75)
+        quantiles to compute the gap
+
+    Returns
+    -------
+    int
+        number of digits
+    """
+    desc_df = values.describe(percentiles=quantile)
+    perc1, perc2 = list(desc_df.loc[[str(int(p * 100)) + "%" for p in quantile]].values)
+    p_diff = perc2 - perc1
+    return compute_digit_number(p_diff)
+
+
 def add_text(text_list, sep):
     """
     return int, number of digits to display

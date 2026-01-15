@@ -575,6 +575,7 @@ class SmartApp:
                                 id="id_card",
                                 color="warning",
                                 style={"display": "none"},
+                                className="p-2 me-2",
                             ),
                             dbc.Popover(
                                 "Click here to visualize the identity card of the selected sample.",

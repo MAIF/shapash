@@ -27,6 +27,7 @@
     padding: 10px;
     color: #2e404f;
     -webkit-transition: -webkit-box-shadow .25s;
+    transition: box-shadow .25s;
     border-radius: 2px;
     box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
 }
@@ -45,17 +46,17 @@
 }
 
 .rc-slider-track {
-  background-color: var(--main-color);
+    background-color: var(--main-color);
 }
 .rc-slider-dot-active {
-  border-color: var(--bkg-color);
-  border: solid 2px var(--bkg-color);
+    border-color: var(--bkg-color);
+    border: solid 2px var(--bkg-color);
 }
 .rc-slider-handle {
-  border-color: var(--bkg-color);
+    border-color: var(--bkg-color);
 }
 .rc.slider-handle-active:active {
-  border-color: var(--main-color);
+    border-color: var(--main-color);
 }
 
 
@@ -94,24 +95,6 @@
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td.cell--selected, td.focused {
     background-color : Transparent !important;
-}
-/*
-.dash-spreadsheet td div {
-    line-height: 15px !important;
-    max-height: 30px !important;
-    /* min-height: 30px !important;
-    height: 30px !important; */
-/*    display: block !important;
-    overflow-y: hidden !important;
-}
-*/
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td.cell {
-    /* minWidth: 75px !important;
-    width: 75px !important;
-    maxWidth: 150px !important;
-    overflow: 'hidden' !important;
-    textOverflow: 'ellipsis' !important;
-    whiteSpace: 'normal' !important; */
 }
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {

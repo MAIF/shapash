@@ -652,6 +652,10 @@ def plot_clustering_by_explainability(
     show_clusters=True,
     show_points=True,
     active_cluster=None,
+    n_clusters=10,
+    projections=None,
+    labels=None,
+    centers=None,
     keep_quantile=None,
     random_state=79,
     marker_size=10,
@@ -680,6 +684,17 @@ def plot_clustering_by_explainability(
         List of text values to show when hovering over each data point.
     color_value : pd.DataFrame or pd.Series
         1D data structure (e.g., Series) used to determine the color of each marker.
+    show_clusters : bool, optional, default=True
+        Whether to display cluster boundaries on the plot.
+    show_points : bool, optional, default=True
+        Whether to display individual data points on the plot.
+    active_cluster : int or None, optional, default=None
+        Index of the cluster to highlight. If None, no cluster is highlighted.
+    n_clusters : int, optional, default=10
+        Number of clusters to form using KMeans clustering.
+    projections : np.ndarray or None, optional, default=None
+        Precomputed 2D TSNE projections. If None, projections will be computed within the function.
+    labels
     keep_quantile : tuple of float, optional, default=(0.05, 0.95)
         Quantiles to retain for color scaling, helping to manage outliers.
     random_state : int, optional, default=79
@@ -728,10 +743,16 @@ def plot_clustering_by_explainability(
     dict_title = build_tsne_title(title, subtitle, addnote, style_dict=style_dict, height=height)
 
     ### Dimensional Reduction with TSNE
-    projections = compute_tsne_projection(
-        values_to_project=values_to_project,
-        random_state=random_state,
-    )
+    if projections is None:
+        projections = compute_tsne_projection(
+            values_to_project=values_to_project,
+            random_state=random_state,
+        )
+
+    if (labels is None) or (centers is None):
+        labels, centers = compute_kmeans_labels(projections, n_clusters=n_clusters)
+
+    projections_moved = move_points_towards_centroid(projections, labels, centers, factor=1.0)
 
     figures = []
 
@@ -754,9 +775,6 @@ def plot_clustering_by_explainability(
         ### Plotting
         fig = go.Figure()
 
-        labels, centers = compute_kmeans_labels(projections, n_clusters=25)
-
-        projections_moved = move_points_towards_centroid(projections, labels, centers, factor=1.0)
         raw_polys = []
         centroids = []
         valid_labels = []
@@ -764,7 +782,7 @@ def plot_clustering_by_explainability(
 
         color_series, _, _ = encode_color_value(color_value_el.iloc[:, 0])
         point_values = color_series.values
-        for c in np.unique(labels):
+        for c in sorted(np.unique(labels)):
             pts = projections_moved[labels == c]
             cluster_color.append(point_values[labels == c].mean())
 
@@ -823,7 +841,7 @@ def plot_clustering_by_explainability(
                         mode="lines",
                         hoveron="fills",
                         hoverinfo="text",
-                        text=f"Cluster {c}",
+                        text=hv_text["clusters"][c],
                         hovertemplate="<b>%{text}</b><extra></extra>",
                         name=f"Cluster {c}",
                     )
