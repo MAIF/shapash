@@ -985,7 +985,6 @@ class SmartApp:
                                                 "border-top": f"3px solid {self.color[0]}",
                                                 "backgroundColor": "white",
                                                 "fontWeight": "bold",
-                                                "fontStyle": "italic",
                                             },
                                         ),
                                         # Tab which contains components to filter the dataset
@@ -1016,7 +1015,6 @@ class SmartApp:
                                                 "border-top": f"3px solid {self.color[0]}",
                                                 "backgroundColor": "white",
                                                 "fontWeight": "bold",
-                                                "fontStyle": "italic",
                                             },
                                         ),
                                         # Tab which contains clusters graph
@@ -1152,7 +1150,7 @@ class SmartApp:
                                                                                     dcc.Slider(
                                                                                         id="n_clusters_slider",
                                                                                         min=2,
-                                                                                        max=20,
+                                                                                        max=30,
                                                                                         step=1,
                                                                                         value=5,
                                                                                         marks={
@@ -1160,6 +1158,7 @@ class SmartApp:
                                                                                             "5": "5",
                                                                                             "10": "10",
                                                                                             "20": "20",
+                                                                                            "30": "30",
                                                                                         },
                                                                                         tooltip={
                                                                                             "placement": "top",
@@ -1274,7 +1273,6 @@ class SmartApp:
                                                 "border-top": f"3px solid {self.color[0]}",
                                                 "backgroundColor": "white",
                                                 "fontWeight": "bold",
-                                                "fontStyle": "italic",
                                             },
                                         ),
                                         # Tab which contains prediction picking graph
@@ -1368,7 +1366,6 @@ class SmartApp:
                                                 "border-top": f"3px solid {self.color[0]}",
                                                 "backgroundColor": "white",
                                                 "fontWeight": "bold",
-                                                "fontStyle": "italic",
                                             },
                                         ),
                                     ],
@@ -1697,11 +1694,11 @@ class SmartApp:
             list of components
         """
         filter = [
-            html.Div([self.components["filter"]["index"]], style={"padding-bottom": "13px"}),
-            html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "13px"}),
-            html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "13px"}),
-            html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "13px"}),
-            html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "13px"}),
+            html.Div([self.components["filter"]["index"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "8px"}),
         ]
         return filter
 
@@ -2691,7 +2688,7 @@ class SmartApp:
                 subset = get_indexes_from_datatable(data)
 
             figure = self.explainer.plot.clustering_by_explainability_plot(
-                selection=subset, max_points=points, label=label, color_value="SibSp", show_points=True
+                selection=subset, max_points=points, label=label, color_value="Sex", show_points=False, n_clusters=25
             )
             figure["layout"].clickmode = "event+select"
             MyGraph.adjust_graph_static(figure)

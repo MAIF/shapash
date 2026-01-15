@@ -175,7 +175,6 @@
     background-color: white !important;
     border-top: 3px solid var(--tab-active-color);
     font-weight: bold;
-    font-style: italic;
 }
 
 .form-label

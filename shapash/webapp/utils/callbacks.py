@@ -498,7 +498,7 @@ def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict:
     children = []
     for _, row in selected_data.iterrows():
         label_style = (
-            {"fontWeight": "bold", "font-style": "italic"}
+            {"fontWeight": "bold"}
             if row["feature_name"] in additional_features_dict.values()
             else {"fontWeight": "bold"}
         )
