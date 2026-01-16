@@ -1497,7 +1497,7 @@ class SmartPlotter:
         column_names = np.array([self._explainer.features_dict.get(x) for x in self._explainer.x_init.columns])
 
         def ordinal(n):
-            return "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])
+            return f"{n}{'tsnrhtdd'[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4]}"
 
         # Compute explanations for instance and neighbors
         g = self._explainer.local_neighbors["norm_shap"]
@@ -2176,11 +2176,28 @@ class SmartPlotter:
                 ]
                 values_to_project = pd.concat(contribs, axis=1, ignore_index=False)
 
-            projections = compute_tsne_projection(
-                values_to_project=values_to_project,
-                random_state=random_state,
-            )
-            labels, centers = compute_kmeans_labels(projections, n_clusters=n_clusters)
+            to_compute = False
+            if not hasattr(self, "cluster_projections"):
+                to_compute = True
+            elif self.cluster_projections.shape[0] != len(list_ind):
+                to_compute = True
+
+            if not pd.Index(list_ind).equals(getattr(self, "cluster_index", None)):
+                to_compute = True
+                self.cluster_index = pd.Index(list_ind)
+
+            if n_clusters != getattr(self, "n_clusters", None):
+                to_compute = True
+                self.n_clusters = n_clusters
+
+            if to_compute:
+                self.cluster_projections = compute_tsne_projection(
+                    values_to_project=values_to_project,
+                    random_state=random_state,
+                )
+                self.cluster_labels, self.cluster_centers = compute_kmeans_labels(
+                    self.cluster_projections, n_clusters=n_clusters
+                )
 
             y_proba_values = self._explainer.proba_values.copy()
 
@@ -2200,7 +2217,7 @@ class SmartPlotter:
                     y_pred = y_pred.replace(self._explainer.label_dict)
 
                 # --- Base DataFrame parts
-                dfs = [y_proba_target, y_pred, pd.Series(labels)]
+                dfs = [y_proba_target, y_pred, pd.Series(self.cluster_labels)]
                 cols = ["proba_values", "predict_class", "cluster"]
 
                 # --- Add target only if available
@@ -2222,7 +2239,10 @@ class SmartPlotter:
 
                 col_name = list(set(color_value) - {"predictions", "targets", "errors"})
                 if len(col_name) > 0:
-                    dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                    if self._explainer.postprocessing_modifications:
+                        dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                    else:
+                        dfs.append(self._explainer.x_init[[col_name[0]]].loc[list_ind].reset_index(drop=True))
                     cols.append(col_name[0])
 
                 # --- Combine everything
@@ -2247,8 +2267,8 @@ class SmartPlotter:
                         hv_text_el.append(text)
                     hv_text["points"].append(hv_text_el)
 
-                    for c in sorted(np.unique(labels)):
-                        hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(labels == c)}"
+                    for c in sorted(np.unique(self.cluster_labels)):
+                        hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(self.cluster_labels == c)}"
                         if el not in ["predictions", "targets", "errors"]:
                             is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
                             n_unique = df_pred[el].nunique(dropna=True)
@@ -2264,9 +2284,7 @@ class SmartPlotter:
                                     / df_pred.loc[df_pred["cluster"] == c, el].size
                                     * 100
                                 )
-                                hv_text_cluster += (
-                                    f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)<br />"
-                                )
+                                hv_text_cluster += f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)"
                         mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "proba_values"].mean()
                         hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
                         if "error" in df_pred.columns:
@@ -2313,12 +2331,29 @@ class SmartPlotter:
             # Base data: contributions and top contributors
             values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
-            projections = compute_tsne_projection(
-                values_to_project=values_to_project,
-                random_state=random_state,
-            )
+            to_compute = False
+            if not hasattr(self, "cluster_projections"):
+                to_compute = True
+            elif self.cluster_projections.shape[0] != len(list_ind):
+                to_compute = True
 
-            labels, centers = compute_kmeans_labels(projections, n_clusters=n_clusters)
+            if not pd.Index(list_ind).equals(getattr(self, "cluster_index", None)):
+                to_compute = True
+                self.cluster_index = pd.Index(list_ind)
+
+            if n_clusters != getattr(self, "n_clusters", None):
+                to_compute = True
+                self.n_clusters = n_clusters
+
+            if to_compute:
+                self.cluster_projections = compute_tsne_projection(
+                    values_to_project=values_to_project,
+                    random_state=random_state,
+                )
+
+                self.cluster_labels, self.cluster_centers = compute_kmeans_labels(
+                    self.cluster_projections, n_clusters=n_clusters
+                )
 
             # Always available
             y_pred = self._explainer.y_pred.loc[list_ind, :]
@@ -2328,7 +2363,7 @@ class SmartPlotter:
             prediction_error = getattr(self._explainer, "prediction_error", None)
 
             # --- Base DataFrame parts
-            dfs = [y_pred.reset_index(drop=True), pd.Series(labels)]
+            dfs = [y_pred.reset_index(drop=True), pd.Series(self.cluster_labels)]
             cols = ["predict_value", "cluster"]
 
             # If y_target exists, prediction_error must also exist
@@ -2349,7 +2384,10 @@ class SmartPlotter:
 
             col_name = list(set(color_value) - {"predictions", "targets", "errors"})
             if len(col_name) > 0:
-                dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                if self._explainer.postprocessing_modifications:
+                    dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                else:
+                    dfs.append(self._explainer.x_init[[col_name[0]]].loc[list_ind].reset_index(drop=True))
                 cols.append(col_name[0])
 
             # --- Combine everything
@@ -2373,8 +2411,8 @@ class SmartPlotter:
                     hv_text_el.append(text)
                 hv_text["points"].append(hv_text_el)
 
-                for c in sorted(np.unique(labels)):
-                    hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(labels == c)}"
+                for c in sorted(np.unique(self.cluster_labels)):
+                    hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(self.cluster_labels == c)}"
                     if el not in ["predictions", "targets", "errors"]:
                         is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
                         n_unique = df_pred[el].nunique(dropna=True)
@@ -2435,9 +2473,9 @@ class SmartPlotter:
             show_points=show_points,
             active_cluster=active_cluster,
             n_clusters=n_clusters,
-            projections=projections,
-            labels=labels,
-            centers=centers,
+            projections=self.cluster_projections,
+            labels=self.cluster_labels,
+            centers=self.cluster_centers,
             keep_quantile=keep_quantile,
             random_state=random_state,
             marker_size=marker_size,
