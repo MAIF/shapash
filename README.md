@@ -2,7 +2,6 @@
 <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png" width="300" title="shapash-logo">
 </p>
 
-
 <p align="center">
   <!-- Tests -->
   <a href="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg">
