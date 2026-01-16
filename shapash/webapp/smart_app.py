@@ -586,7 +586,7 @@ class SmartApp:
                                 id="id_card",
                                 color="warning",
                                 style={"display": "none"},
-                                className="p-2 me-2",
+                                className="p-1 me-1",
                             ),
                             dbc.Popover(
                                 "Click here to visualize the identity card of the selected sample.",
@@ -687,6 +687,7 @@ class SmartApp:
                         for mark in range(5)
                     },
                     id="threshold_id",
+                    tooltip={"placement": "top", "always_visible": False},
                 ),
             ],
             className="filter_dashed",
@@ -701,6 +702,7 @@ class SmartApp:
                     step=1,
                     value=min(self.settings["features"], len(self.explainer.x_init.columns)),
                     id="max_contrib_id",
+                    tooltip={"placement": "top", "always_visible": False},
                 ),
             ],
             className="filter_dashed",
@@ -1119,7 +1121,6 @@ class SmartApp:
                                                                                         "marginBottom": "4px",
                                                                                     },
                                                                                 ),
-                                                                                # self.dataframe = self.dataframe.join(self.explainer.additional_data)
                                                                                 dcc.Dropdown(
                                                                                     id="color_param_clusters",
                                                                                     options=self.cluster_colorscale_columns_options,
@@ -1135,7 +1136,7 @@ class SmartApp:
                                                                         html.Div(
                                                                             [
                                                                                 html.Div(
-                                                                                    "Clusters",
+                                                                                    id="n_clusters_label",
                                                                                     className="text-muted",
                                                                                     style={
                                                                                         "fontSize": "1rem",
@@ -1150,11 +1151,11 @@ class SmartApp:
                                                                                         step=1,
                                                                                         value=10,
                                                                                         marks={
-                                                                                            "2": "2",
-                                                                                            "5": "5",
-                                                                                            "10": "10",
-                                                                                            "20": "20",
-                                                                                            "30": "30",
+                                                                                            2: "2",
+                                                                                            5: "5",
+                                                                                            10: "10",
+                                                                                            20: "20",
+                                                                                            30: "30",
                                                                                         },
                                                                                         tooltip={
                                                                                             "placement": "top",
@@ -2742,6 +2743,7 @@ class SmartApp:
                 color_value=color_value,
                 show_points=show_points,
                 n_clusters=n_clusters,
+                threshold_top_features=0.95,
             )
             figure["layout"].clickmode = "event+select"
             MyGraph.adjust_graph_static(figure)
@@ -3028,3 +3030,12 @@ class SmartApp:
                 else:
                     new_element = html.Div()
                 return new_element
+
+        @app.callback(
+            Output("n_clusters_label", "children"),
+            Input("n_clusters_slider", "value"),
+        )
+        def update_n_clusters_label(n_clusters: int) -> str:
+            if n_clusters is None:
+                return "Clusters: —"
+            return f"Clusters: {n_clusters}"

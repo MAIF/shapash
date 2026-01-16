@@ -761,6 +761,7 @@ def plot_clustering_by_explainability(
         init_colorscale=style_dict["init_contrib_colorscale"],
         values=pd.DataFrame(color_series),
         keep_quantile=keep_quantile,
+        quantile_linearization=True,
     )
     if colorbar_title and len(colorbar_title) == 1:
         colorbar_dict = dict(title={"text": colorbar_title[0]})
