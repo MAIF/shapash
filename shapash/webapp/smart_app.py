@@ -181,6 +181,7 @@ class SmartApp:
             )
             self.dataframe = self.dataframe.join(self.explainer.prediction_error)
 
+        auto_columns = [col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols]
         if isinstance(self.explainer.columns_order, list):
             special_cols_remaining = [col for col in self.special_cols if col not in self.explainer.columns_order]
             columns_order = special_cols_remaining + self.explainer.columns_order
@@ -189,7 +190,6 @@ class SmartApp:
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
 
         elif self.explainer.columns_order == "additional_data_last":
-            auto_columns = [col for col in ["_index_", "_predict_", "_target_", "_error_"] if col in self.special_cols]
             special_cols_remaining = [col for col in self.special_cols if col not in auto_columns]
             columns_order = (
                 auto_columns + self.dataframe.columns.drop(self.special_cols).tolist() + special_cols_remaining
@@ -213,6 +213,17 @@ class SmartApp:
                 if isfinite(std) and std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
                     self.round_dataframe[col] = self.dataframe[col].map(f"{{:.{digit}f}}".format).astype(float)
+        cluster_colorscale_columns = auto_columns + list(self.explainer.x_init.columns)
+        cluster_colorscale_columns.remove("_index_")
+        label_map = {
+            "_predict_": "predictions",
+            "_target_": "targets",
+            "_error_": "errors",
+        }
+
+        self.cluster_colorscale_columns_options = [
+            {"label": el, "value": label_map.get(el, el)} for el in cluster_colorscale_columns
+        ]
 
     def init_components(self):
         """
@@ -427,11 +438,17 @@ class SmartApp:
             sort_action="native",
             sort_mode="multi",
             style_table={"overflowY": "auto", "overflowX": "auto"},
-            style_header={"height": "30px"},
+            style_header={
+                "height": "60px",
+                "textAlign": "center",
+                "overflow": "hidden",
+                "textOverflow": "ellipsis",
+            },
             style_cell={
-                "minWidth": "70px",
-                "width": "120px",
+                "minWidth": "90px",
+                "width": "105px",
                 "maxWidth": "200px",
+                "overflow": "hidden",
                 "textOverflow": "ellipsis",
             },
         )
@@ -444,6 +461,7 @@ class SmartApp:
 
         # Component for the graph prediction picking
         self.components["graph"]["prediction_picking"] = MyGraph(figure=go.Figure(), id="prediction_picking")
+        self.components["graph"]["clusters"] = MyGraph(figure=go.Figure(), id="clusters")
 
         self.components["graph"]["detail_feature"] = MyGraph(figure=go.Figure(), id="detail_feature")
 
@@ -568,6 +586,7 @@ class SmartApp:
                                 id="id_card",
                                 color="warning",
                                 style={"display": "none"},
+                                className="p-1 me-1",
                             ),
                             dbc.Popover(
                                 "Click here to visualize the identity card of the selected sample.",
@@ -668,6 +687,7 @@ class SmartApp:
                         for mark in range(5)
                     },
                     id="threshold_id",
+                    tooltip={"placement": "top", "always_visible": False},
                 ),
             ],
             className="filter_dashed",
@@ -682,6 +702,7 @@ class SmartApp:
                     step=1,
                     value=min(self.settings["features"], len(self.explainer.x_init.columns)),
                     id="max_contrib_id",
+                    tooltip={"placement": "top", "always_visible": False},
                 ),
             ],
             className="filter_dashed",
@@ -815,7 +836,7 @@ class SmartApp:
                                             self.draw_component("graph", "global_feature_importance"),
                                             id="card_global_feature_importance",
                                             # Position must be absolute to add the explanation button
-                                            style={"position": "absolute"},
+                                            style={"position": "relative"},
                                         ),
                                         dcc.Store(id="clickdata-store"),
                                         dcc.Store(id="selected-clickdata-store"),
@@ -966,13 +987,17 @@ class SmartApp:
                                             className="card",
                                             id="card_dataset",
                                             # Style of the tab
-                                            style={"cursor": "pointer"},
-                                            label_style={"color": "black", "height": "30px", "padding": "0px 5px"},
-                                            # Style when the tab is activated
-                                            active_tab_class_name="fw-bold fst-italic",
+                                            label_style={
+                                                "color": "black",
+                                                "height": "30px",
+                                                "padding": "0px 5px",
+                                                "border": "2px solid #ddd",
+                                            },
+                                            labelClassName="tab-label",
                                             active_label_style={
-                                                "border-top": "3px solid",
-                                                "border-top-color": self.color[0],
+                                                "border-top": f"3px solid {self.color[0]}",
+                                                "backgroundColor": "white",
+                                                "fontWeight": "bold",
                                             },
                                         ),
                                         # Tab which contains components to filter the dataset
@@ -992,16 +1017,259 @@ class SmartApp:
                                             # Tab name
                                             label="Dataset Filters",
                                             # Style of the tab
-                                            label_style={"color": "black", "height": "30px", "padding": "0px 5px"},
-                                            tab_style={
-                                                "border-left": "2px solid #ddd",
-                                                "border-right": "2px solid #ddd",
+                                            label_style={
+                                                "color": "black",
+                                                "height": "30px",
+                                                "padding": "0px 5px",
+                                                "border": "2px solid #ddd",
                                             },
-                                            # Style when the tab is activated
-                                            active_tab_class_name="fw-bold fst-italic",
+                                            labelClassName="tab-label",
                                             active_label_style={
-                                                "border-top": "3px solid",
-                                                "border-top-color": self.color[0],
+                                                "border-top": f"3px solid {self.color[0]}",
+                                                "backgroundColor": "white",
+                                                "fontWeight": "bold",
+                                            },
+                                        ),
+                                        # Tab which contains clusters graph
+                                        # and its explanation button + bottom controls (UI only)
+                                        dbc.Tab(
+                                            dbc.Card(
+                                                [
+                                                    # Main layout: graph left, controls right
+                                                    dbc.Row(
+                                                        [
+                                                            # ---------------- LEFT: GRAPH ----------------
+                                                            dbc.Col(
+                                                                html.Div(
+                                                                    [
+                                                                        html.Div(
+                                                                            [
+                                                                                *self.draw_component(
+                                                                                    "graph",
+                                                                                    "clusters",
+                                                                                    is_draw_fullscreen=False,
+                                                                                )
+                                                                            ],
+                                                                            style={"width": "100%", "height": "100%"},
+                                                                        ),
+                                                                    ],
+                                                                    id="clusters_graph_zone",
+                                                                    style={
+                                                                        "position": "relative",
+                                                                        "width": "100%",
+                                                                        "height": "100%",
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                                style={"height": "100%"},
+                                                            ),
+                                                            # ---------------- RIGHT: CONTROLS COLUMN ----------------
+                                                            dbc.Col(
+                                                                html.Div(
+                                                                    [
+                                                                        # 1) Points
+                                                                        html.Div(
+                                                                            [
+                                                                                html.Div(
+                                                                                    "Points",
+                                                                                    className="text-muted",
+                                                                                    style={
+                                                                                        "fontSize": "1rem",
+                                                                                        "marginBottom": "4px",
+                                                                                    },
+                                                                                ),
+                                                                                dbc.ButtonGroup(
+                                                                                    [
+                                                                                        dbc.Button(
+                                                                                            "ON",
+                                                                                            id="toggle_points_on",
+                                                                                            size="sm",
+                                                                                            color="warning",
+                                                                                            style={
+                                                                                                "font-size": "1rem",
+                                                                                                "line-height": "1.0",
+                                                                                                "padding": "2px 8px",
+                                                                                            },
+                                                                                        ),
+                                                                                        dbc.Button(
+                                                                                            "OFF",
+                                                                                            id="toggle_points_off",
+                                                                                            size="sm",
+                                                                                            outline=True,
+                                                                                            color="warning",
+                                                                                            style={
+                                                                                                "font-size": "1rem",
+                                                                                                "line-height": "1.0",
+                                                                                                "padding": "2px 8px",
+                                                                                            },
+                                                                                        ),
+                                                                                    ],
+                                                                                    size="sm",
+                                                                                ),
+                                                                            ],
+                                                                            style={"marginBottom": "14px"},
+                                                                        ),
+                                                                        dcc.Store(id="points_visible_store", data=True),
+                                                                        # 2) Colorscale
+                                                                        html.Div(
+                                                                            [
+                                                                                html.Div(
+                                                                                    "Colorscale",
+                                                                                    className="text-muted",
+                                                                                    style={
+                                                                                        "fontSize": "1rem",
+                                                                                        "marginBottom": "4px",
+                                                                                    },
+                                                                                ),
+                                                                                dcc.Dropdown(
+                                                                                    id="color_param_clusters",
+                                                                                    options=self.cluster_colorscale_columns_options,
+                                                                                    value="predictions",
+                                                                                    clearable=False,
+                                                                                    className="dd-20",
+                                                                                    style={"fontSize": "1rem"},
+                                                                                ),
+                                                                            ],
+                                                                            style={"marginBottom": "14px"},
+                                                                        ),
+                                                                        # 3) Clusters
+                                                                        html.Div(
+                                                                            [
+                                                                                html.Div(
+                                                                                    id="n_clusters_label",
+                                                                                    className="text-muted",
+                                                                                    style={
+                                                                                        "fontSize": "1rem",
+                                                                                        "marginBottom": "10px",
+                                                                                    },
+                                                                                ),
+                                                                                html.Div(
+                                                                                    dcc.Slider(
+                                                                                        id="n_clusters_slider",
+                                                                                        min=2,
+                                                                                        max=30,
+                                                                                        step=1,
+                                                                                        value=10,
+                                                                                        marks={
+                                                                                            2: "2",
+                                                                                            5: "5",
+                                                                                            10: "10",
+                                                                                            20: "20",
+                                                                                            30: "30",
+                                                                                        },
+                                                                                        tooltip={
+                                                                                            "placement": "top",
+                                                                                            "always_visible": False,
+                                                                                        },
+                                                                                        className="slider-100",
+                                                                                    ),
+                                                                                    style={"width": "100%"},
+                                                                                ),
+                                                                            ],
+                                                                            style={"marginBottom": "16px"},
+                                                                        ),
+                                                                        # 4) Help (button + popover + modal)
+                                                                        html.Div(
+                                                                            [
+                                                                                dbc.Button(
+                                                                                    "?",
+                                                                                    id="open_clusters",
+                                                                                    size="sm",
+                                                                                    color="warning",
+                                                                                ),
+                                                                                dbc.Popover(
+                                                                                    "Click here to have more information on this graph.",
+                                                                                    target="open_clusters",
+                                                                                    body=True,
+                                                                                    trigger="hover",
+                                                                                ),
+                                                                                dbc.Modal(
+                                                                                    [
+                                                                                        dbc.ModalHeader(
+                                                                                            dbc.ModalTitle(
+                                                                                                "True values Vs Predicted values"
+                                                                                            )
+                                                                                        ),
+                                                                                        dbc.ModalBody(
+                                                                                            [
+                                                                                                dcc.Markdown(
+                                                                                                    self.explanations.clusters
+                                                                                                ),
+                                                                                                html.Div(
+                                                                                                    html.Img(
+                                                                                                        src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-cluster_by_explainability.gif?raw=true"
+                                                                                                    )
+                                                                                                ),
+                                                                                                html.A(
+                                                                                                    "Click here for more details",
+                                                                                                    href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
+                                                                                                    target="_blank",
+                                                                                                    style={
+                                                                                                        "color": self.color[
+                                                                                                            0
+                                                                                                        ]
+                                                                                                    },
+                                                                                                ),
+                                                                                            ]
+                                                                                        ),
+                                                                                        dbc.ModalFooter(
+                                                                                            dbc.Button(
+                                                                                                "Close",
+                                                                                                id="close_clusters",
+                                                                                                color="warning",
+                                                                                            )
+                                                                                        ),
+                                                                                    ],
+                                                                                    id="modal_clusters",
+                                                                                    centered=True,
+                                                                                    size="lg",
+                                                                                ),
+                                                                            ],
+                                                                            style={
+                                                                                "marginTop": "auto",
+                                                                                "display": "flex",
+                                                                                "justifyContent": "flex-end",
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                    style={
+                                                                        "height": "100%",
+                                                                        "display": "flex",
+                                                                        "flexDirection": "column",
+                                                                        "justifyContent": "flex-start",
+                                                                        "padding": "10px 0 0 15px",
+                                                                        "borderLeft": "1px solid rgba(0,0,0,.12)",
+                                                                        "backgroundColor": "white",
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                                style={"height": "100%"},
+                                                            ),
+                                                        ],
+                                                        className="g-0",
+                                                        style={"height": "100%"},
+                                                    ),
+                                                    self.draw_fullscreen("graph", "clusters"),
+                                                ],
+                                                id="card_clusters",
+                                                style={
+                                                    "width": "100%",
+                                                    "height": "24.1rem",
+                                                    "position": "relative",
+                                                },
+                                            ),
+                                            label="Clusters",
+                                            label_style={
+                                                "color": "black",
+                                                "height": "30px",
+                                                "padding": "0px 5px",
+                                                "border": "2px solid #ddd",
+                                            },
+                                            labelClassName="tab-label",
+                                            active_label_style={
+                                                "border-top": f"3px solid {self.color[0]}",
+                                                "backgroundColor": "white",
+                                                "fontWeight": "bold",
                                             },
                                         ),
                                         # Tab which contains prediction picking graph
@@ -1010,91 +1278,91 @@ class SmartApp:
                                             dbc.Card(
                                                 [
                                                     html.Div(
-                                                        # draw prediction picking graph
-                                                        self.draw_component("graph", "prediction_picking"),
-                                                        id="card_prediction_picking",
-                                                        # Position must be absolute to add
-                                                        # the explanation button
-                                                        style={"position": "absolute"},
-                                                    ),
-                                                    html.Div(
                                                         [
-                                                            # Create explanation button
-                                                            dbc.Button(
-                                                                "?",
-                                                                id="open_prediction_picking",
-                                                                size="sm",
-                                                                color="warning",
-                                                            ),
-                                                            # Create popover for this button
-                                                            dbc.Popover(
-                                                                "Click here to have more \
-                                                                information on Prediction Picking graph.",
-                                                                target="open_prediction_picking",
-                                                                body=True,
-                                                                trigger="hover",
-                                                            ),
-                                                            # Create modal associated to this button
-                                                            dbc.Modal(
+                                                            # --- GRAPH + bouton fullscreen Shapash ---
+                                                            *self.draw_component("graph", "prediction_picking"),
+                                                            # --- BOUTON EXPLICATION EN OVERLAY ---
+                                                            html.Div(
                                                                 [
-                                                                    # Modal title
-                                                                    dbc.ModalHeader(
-                                                                        dbc.ModalTitle(
-                                                                            "True values Vs Predicted values"
-                                                                        )
+                                                                    dbc.Button(
+                                                                        "?",
+                                                                        id="open_prediction_picking",
+                                                                        size="sm",
+                                                                        color="warning",
                                                                     ),
-                                                                    dbc.ModalBody(
+                                                                    dbc.Popover(
+                                                                        "Click here to have more information on Prediction Picking graph.",
+                                                                        target="open_prediction_picking",
+                                                                        body=True,
+                                                                        trigger="hover",
+                                                                    ),
+                                                                    dbc.Modal(
                                                                         [
-                                                                            html.Div(
-                                                                                # explanation
-                                                                                dcc.Markdown(
-                                                                                    self.explanations.prediction_picking
+                                                                            dbc.ModalHeader(
+                                                                                dbc.ModalTitle(
+                                                                                    "True values Vs Predicted values"
                                                                                 )
                                                                             ),
-                                                                            # Here to add link in the modal
-                                                                            html.Div(
-                                                                                html.Img(
-                                                                                    src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
+                                                                            dbc.ModalBody(
+                                                                                [
+                                                                                    dcc.Markdown(
+                                                                                        self.explanations.prediction_picking
+                                                                                    ),
+                                                                                    html.Div(
+                                                                                        html.Img(
+                                                                                            src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
+                                                                                        )
+                                                                                    ),
+                                                                                    html.A(
+                                                                                        "Click here for more details",
+                                                                                        href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
+                                                                                        target="_blank",
+                                                                                        style={"color": self.color[0]},
+                                                                                    ),
+                                                                                ]
+                                                                            ),
+                                                                            dbc.ModalFooter(
+                                                                                dbc.Button(
+                                                                                    "Close",
+                                                                                    id="close_prediction_picking",
+                                                                                    color="warning",
                                                                                 )
                                                                             ),
-                                                                            # Here to add a link in the modal
-                                                                            html.A(
-                                                                                "Click here for more details",
-                                                                                href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb",
-                                                                                # open new brother tab
-                                                                                target="_blank",
-                                                                                style={"color": self.color[0]},
-                                                                            ),
-                                                                        ]
-                                                                    ),
-                                                                    dbc.ModalFooter(
-                                                                        # button to close the modal
-                                                                        dbc.Button(
-                                                                            "Close",
-                                                                            id="close_prediction_picking",
-                                                                            color="warning",
-                                                                        )
+                                                                        ],
+                                                                        id="modal_prediction_picking",
+                                                                        centered=True,
+                                                                        size="lg",
                                                                     ),
                                                                 ],
-                                                                id="modal_prediction_picking",
-                                                                centered=True,
-                                                                size="lg",
+                                                                style={
+                                                                    "position": "absolute",
+                                                                    "bottom": "10px",
+                                                                    "right": "10px",
+                                                                    "zIndex": 5,
+                                                                },
                                                             ),
-                                                            # Position must be relative
                                                         ],
-                                                        style={"position": "relative", "left": "97%"},
+                                                        id="card_prediction_picking",
+                                                        style={
+                                                            "position": "relative",
+                                                            "width": "100%",
+                                                        },
                                                     ),
                                                 ]
                                             ),
-                                            # Tab name
                                             label="True Values Vs Predicted Values",
                                             # Style of the tab
-                                            label_style={"color": "black", "height": "30px", "padding": "0px 5px"},
-                                            # Style when the tab is activated
-                                            active_tab_class_name="fw-bold fst-italic",
+                                            label_style={
+                                                "color": "black",
+                                                "height": "30px",
+                                                "padding": "0px 5px",
+                                                "border": "2px solid #ddd",
+                                            },
+                                            labelClassName="tab-label",
                                             active_label_style={
-                                                "border-top": "3px solid",
-                                                "border-top-color": self.color[0],
+                                                "border-top": f"3px solid {self.color[0]}",
+                                                "backgroundColor": "white",
+                                                "fontWeight": "bold",
                                             },
                                         ),
                                     ],
@@ -1102,7 +1370,11 @@ class SmartApp:
                                 )
                             ],
                             md=7,
-                            style={"padding": "10px 10px"},
+                            style={
+                                "padding": "10px 10px",
+                                "--tab-hover-color": self.color[0],
+                                "--tab-active-color": self.color[0],
+                            },
                         ),
                     ],
                     style={"padding": "10px 10px 0px 10px", "height": "100%"},
@@ -1117,60 +1389,71 @@ class SmartApp:
                                 dbc.Card(
                                     [
                                         html.Div(
-                                            # Draw feature selector graph
-                                            self.draw_component("graph", "feature_selector"),
-                                            id="card_feature_selector",
-                                            # Position must be absolute to
-                                            # add explanation button
-                                            style={"position": "absolute"},
-                                        ),
-                                        html.Div(
                                             [
-                                                # Create explanation button
-                                                dbc.Button("?", id="open_feature_selector", size="sm", color="warning"),
-                                                # popover of this button
-                                                dbc.Popover(
-                                                    "Click here to have more \
-                                                         information on Feature Selector graph.",
-                                                    target="open_feature_selector",
-                                                    body=True,
-                                                    trigger="hover",
-                                                ),
-                                                # Modal of this button
-                                                dbc.Modal(
+                                                # --- GRAPH + bouton fullscreen Shapash ---
+                                                *self.draw_component("graph", "feature_selector"),
+                                                # --- BOUTON EXPLICATION EN OVERLAY ---
+                                                html.Div(
                                                     [
-                                                        dbc.ModalHeader(dbc.ModalTitle("Feature selector")),
-                                                        dbc.ModalBody(
-                                                            [
-                                                                html.Div(
-                                                                    # explanations
-                                                                    dcc.Markdown(self.explanations.feature_selector)
-                                                                ),
-                                                                # Here to add link
-                                                                html.A(
-                                                                    "Click here for more details",
-                                                                    href="https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot02-contribution_plot.ipynb",
-                                                                    # open new brother tab
-                                                                    target="_blank",
-                                                                    style={"color": self.color[0]},
-                                                                ),
-                                                            ]
+                                                        dbc.Button(
+                                                            "?",
+                                                            id="open_feature_selector",
+                                                            size="sm",
+                                                            color="warning",
                                                         ),
-                                                        dbc.ModalFooter(
-                                                            # Button to close modal
-                                                            dbc.Button(
-                                                                "Close", id="close_feature_selector", color="warning"
-                                                            )
+                                                        dbc.Popover(
+                                                            "Click here to have more information on Feature Selector graph.",
+                                                            target="open_feature_selector",
+                                                            body=True,
+                                                            trigger="hover",
+                                                        ),
+                                                        dbc.Modal(
+                                                            [
+                                                                dbc.ModalHeader(dbc.ModalTitle("Feature selector")),
+                                                                dbc.ModalBody(
+                                                                    [
+                                                                        dcc.Markdown(
+                                                                            self.explanations.feature_selector
+                                                                        ),
+                                                                        html.A(
+                                                                            "Click here for more details",
+                                                                            href=(
+                                                                                "https://github.com/MAIF/shapash/"
+                                                                                "blob/master/tutorial/plots_and_charts/"
+                                                                                "tuto-plot02-contribution_plot.ipynb"
+                                                                            ),
+                                                                            target="_blank",
+                                                                            style={"color": self.color[0]},
+                                                                        ),
+                                                                    ]
+                                                                ),
+                                                                dbc.ModalFooter(
+                                                                    dbc.Button(
+                                                                        "Close",
+                                                                        id="close_feature_selector",
+                                                                        color="warning",
+                                                                    )
+                                                                ),
+                                                            ],
+                                                            id="modal_feature_selector",
+                                                            centered=True,
+                                                            size="lg",
                                                         ),
                                                     ],
-                                                    id="modal_feature_selector",
-                                                    centered=True,
-                                                    size="lg",
+                                                    style={
+                                                        "position": "absolute",
+                                                        "bottom": "10px",
+                                                        "right": "10px",
+                                                        "zIndex": 5,
+                                                    },
                                                 ),
                                             ],
-                                            # position must be relative
-                                            style={"position": "relative", "left": "96%"},
-                                        ),
+                                            id="card_feature_selector",
+                                            style={
+                                                "position": "relative",
+                                                "width": "100%",
+                                            },
+                                        )
                                     ]
                                 )
                             ],
@@ -1180,100 +1463,123 @@ class SmartApp:
                         ),
                         dbc.Col(
                             [
-                                dbc.Row(
+                                # Card that contains detail feature graph
+                                # and explanation button
+                                dbc.Card(
                                     [
-                                        dbc.Col(
+                                        dbc.Row(
                                             [
-                                                # Card that contains detail feature graph
-                                                # and explanation button
-                                                dbc.Card(
+                                                dbc.Col(
+                                                    html.Div(
+                                                        [
+                                                            # --- GRAPH + bouton fullscreen Shapash ---
+                                                            *self.draw_component(
+                                                                "graph", "detail_feature", is_draw_fullscreen=False
+                                                            ),
+                                                        ],
+                                                        id="card_defzefezetail_feature",
+                                                        style={
+                                                            "position": "relative",
+                                                            "width": "100%",
+                                                            "height": "100%",
+                                                        },
+                                                    ),
+                                                    width=9,
+                                                    style={"height": "100%"},
+                                                ),
+                                                dbc.Col(
                                                     [
                                                         html.Div(
-                                                            # draw detail_feature graph
-                                                            self.draw_component("graph", "detail_feature"),
-                                                            id="card_detail_feature",
-                                                            style={"position": "absolute"},
-                                                        ),
-                                                        html.Div(
                                                             [
-                                                                # Create explanation button
-                                                                dbc.Button(
-                                                                    "?",
-                                                                    id="open_detail_feature",
-                                                                    size="sm",
-                                                                    color="warning",
-                                                                ),
-                                                                # Popover of this button
-                                                                dbc.Popover(
-                                                                    "Click here to have more \
-                                                         information on Detail Feature graph.",
-                                                                    target="open_detail_feature",
-                                                                    body=True,
-                                                                    trigger="hover",
-                                                                ),
-                                                                # Modal of this button
-                                                                dbc.Modal(
+                                                                *self.draw_filter(),
+                                                                # --- BOUTON EXPLICATION EN OVERLAY ---
+                                                                html.Div(
                                                                     [
-                                                                        dbc.ModalHeader(
-                                                                            dbc.ModalTitle("Detail feature")
+                                                                        dbc.Button(
+                                                                            "?",
+                                                                            id="open_detail_feature",
+                                                                            size="sm",
+                                                                            color="warning",
                                                                         ),
-                                                                        dbc.ModalBody(
+                                                                        dbc.Popover(
+                                                                            "Click here to have more information on Detail Feature graph.",
+                                                                            target="open_detail_feature",
+                                                                            body=True,
+                                                                            trigger="hover",
+                                                                        ),
+                                                                        dbc.Modal(
                                                                             [
-                                                                                html.Div(
-                                                                                    # explanations
-                                                                                    dcc.Markdown(
-                                                                                        self.explanations.detail_feature
+                                                                                dbc.ModalHeader(
+                                                                                    dbc.ModalTitle("Detail feature")
+                                                                                ),
+                                                                                dbc.ModalBody(
+                                                                                    [
+                                                                                        dcc.Markdown(
+                                                                                            self.explanations.detail_feature
+                                                                                        ),
+                                                                                        html.A(
+                                                                                            "Click here for more details",
+                                                                                            href=(
+                                                                                                "https://github.com/MAIF/shapash/blob/master/"
+                                                                                                "tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb"
+                                                                                            ),
+                                                                                            target="_blank",
+                                                                                            style={
+                                                                                                "color": self.color[0]
+                                                                                            },
+                                                                                        ),
+                                                                                    ]
+                                                                                ),
+                                                                                dbc.ModalFooter(
+                                                                                    dbc.Button(
+                                                                                        "Close",
+                                                                                        id="close_detail_feature",
+                                                                                        color="warning",
                                                                                     )
                                                                                 ),
-                                                                                # Here to add link on the modal
-                                                                                html.A(
-                                                                                    "Click here for more details",
-                                                                                    href="https://github.com/MAIF/shapash/blob/master/tutorial/plot/tuto-plot01-local_plot-and-to_pandas.ipynb",
-                                                                                    # open new brother tab
-                                                                                    target="_blank",
-                                                                                    style={"color": self.color[0]},
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        dbc.ModalFooter(
-                                                                            # Button to close the modal
-                                                                            dbc.Button(
-                                                                                "Close",
-                                                                                id="close_detail_feature",
-                                                                                color="warning",
-                                                                            )
+                                                                            ],
+                                                                            id="modal_detail_feature",
+                                                                            centered=True,
+                                                                            size="lg",
                                                                         ),
                                                                     ],
-                                                                    id="modal_detail_feature",
-                                                                    centered=True,
-                                                                    size="lg",
+                                                                    style={
+                                                                        "marginTop": "auto",
+                                                                        "display": "flex",
+                                                                        "justifyContent": "flex-end",
+                                                                    },
                                                                 ),
                                                             ],
-                                                            # Position must be relative
-                                                            style={"position": "relative", "left": "96%"},
+                                                            className="card_filter",
+                                                            style={
+                                                                "borderLeft": "1px solid rgba(0,0,0,.12)",
+                                                                "padding": "20px 5px 0 20px",
+                                                                "flex": "1 1 auto",
+                                                                "display": "flex",
+                                                                "flexDirection": "column",
+                                                                "justifyContent": "flex-start",
+                                                                "backgroundColor": "white",
+                                                            },
+                                                            id="card_filter",
                                                         ),
-                                                    ]
-                                                )
-                                            ],
-                                            md=8,
-                                            align="center",
-                                        ),
-                                        dbc.Col(
-                                            [
-                                                html.Div(
-                                                    self.draw_filter(),
-                                                    className="card_filter",
-                                                    id="card_filter",
+                                                    ],
+                                                    width=3,
+                                                    style={"height": "100%", "display": "flex"},
                                                 ),
+                                                self.draw_fullscreen("graph", "detail_feature"),
                                             ],
-                                            md=4,
-                                            align="center",
+                                            id="card_detail_feature",
+                                            className="g-0",
+                                            style={"height": "100%"},
                                         ),
                                     ],
+                                    style={
+                                        "width": "100%",
+                                        "position": "relative",
+                                    },
                                 ),
                             ],
                             md=7,
-                            align="center",
                             style={"padding": "0px 10px"},
                         ),
                     ],
@@ -1315,7 +1621,7 @@ class SmartApp:
         else:
             raise ValueError(f"No rule defined for explainer case : {self.explainer._case}")
 
-    def draw_component(self, component_type, component_id, title=None):
+    def draw_component(self, component_type, component_id, title=None, is_draw_fullscreen=True):
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
@@ -1332,19 +1638,37 @@ class SmartApp:
         list
             list of components
             (combining for example Graph + embed button to get fullscreen
-             details)
+            details)
         """
         component = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
-        component.append(
-            html.A(
-                html.I("fullscreen", className="material-icons tiny", style={"marginTop": "8px", "marginLeft": "1px"}),
-                id=f"ember_{component_id}",
-                className="dock-expand",
-                **{"data-component-type": component_type},
-                # Get components'id
-                **{"data-component-id": component_id},
-            )
+        if is_draw_fullscreen:
+            component.append(self.draw_fullscreen(component_type, component_id))
+        return component
+
+    def draw_fullscreen(self, component_type, component_id):
+        """
+        Method which return a component from a type and id.
+        It's the method to insert component inside component container.
+        Parameters
+        ----------
+        component_type : string
+            Type of the component. Can be table, graph, ...
+        component_id : string
+            Id of the component. It must be unique.
+        Returns
+        -------
+        list
+            list of components
+            (combining for example Graph + embed button to get fullscreen
+            details)
+        """
+        component = html.A(
+            html.I("fullscreen", className="material-icons tiny", style={"marginTop": "8px", "marginLeft": "1px"}),
+            id=f"ember_{component_id}",
+            className="dock-expand",
+            **{"data-component-type": component_type},
+            **{"data-component-id": component_id},
         )
         return component
 
@@ -1367,15 +1691,11 @@ class SmartApp:
             list of components
         """
         filter = [
-            dbc.Container(
-                [
-                    dbc.Row([self.components["filter"]["index"]], align="center", style={"height": "4rem"}),
-                    dbc.Row([self.components["filter"]["threshold"]], align="center", style={"height": "5rem"}),
-                    dbc.Row([self.components["filter"]["max_contrib"]], align="center", style={"height": "5rem"}),
-                    dbc.Row([self.components["filter"]["positive_contrib"]], align="center", style={"height": "4rem"}),
-                    dbc.Row([self.components["filter"]["masked_contrib"]], align="center"),
-                ],
-            ),
+            html.Div([self.components["filter"]["index"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "8px"}),
         ]
         return filter
 
@@ -1417,7 +1737,14 @@ class SmartApp:
                     Input(f"ember_{component_id}", "data-component-id"),
                 ],
             )
-            def ember(click, data_component_type, data_component_id):
+            def ember(
+                click,
+                data_component_type,
+                data_component_id,
+                _component_id=component_id,
+                _component_type=component_type,
+                _component_property=component_property,
+            ):
                 """
                 Function used to set style of cards and components.
                 Prediction picking graph style is different than the other
@@ -1431,37 +1758,31 @@ class SmartApp:
                 """
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
+
                 if toggle_on:
                     # Style for graph
-                    style_component = {"height": "21.6rem"}
-                    this_style_card = {
-                        "height": "22rem",
-                        "zIndex": 900,
-                    }
-                    # Style for prediction picking graph
-                    if data_component_id == "prediction_picking":
-                        style_component = {
-                            "height": "20.6rem",
-                        }
-                        this_style_card = {
-                            "height": "20.8rem",
-                            "zIndex": 901,
-                        }
-                    # Style for the Dataset
-                    if data_component_type == "table":
-                        style_component = {
-                            "maxHeight": "23rem",
-                        }
-                        this_style_card = {
-                            "height": "24.1rem",
-                            "zIndex": 900,
-                        }
+                    style_component = {"height": "23.6rem"}
+                    this_style_card = {"height": "24rem", "zIndex": 900}
+                    id_str = data_component_id if isinstance(data_component_id, str) else data_component_id.get("index")
+
+                    if id_str == "global_feature_importance":
+                        style_component = {"height": "21.6rem"}
+                        this_style_card = {"height": "22rem", "zIndex": 901}
+
+                    if id_str == "clusters":
+                        style_component = {"height": "23rem"}
+                        this_style_card = {"height": "24.1rem", "zIndex": 901}
+
+                    if _component_type == "table":
+                        style_component = {"maxHeight": "23rem"}
+                        this_style_card = {"height": "24.1rem", "zIndex": 900}
+
                     return this_style_card, style_component
 
                 else:
                     # Style when zoom button is clicked
                     this_style_card = {
-                        "height": "70vh",
+                        "height": "93vh",
                         "width": "auto",
                         "zIndex": 998,
                         "position": "fixed",
@@ -1470,10 +1791,8 @@ class SmartApp:
                         "left": 0,
                         "right": 0,
                     }
-                    style_component = {
-                        "height": "89vh",
-                        "maxHeight": "89vh",
-                    }
+                    style_component = {"height": "89vh", "maxHeight": "89vh"}
+
                     return this_style_card, style_component
 
     def init_callback_settings(self):
@@ -1544,6 +1863,7 @@ class SmartApp:
             ],
             [
                 Input("prediction_picking", "selectedData"),
+                Input("clusters", "selectedData"),
                 Input("modal", "is_open"),
                 Input("apply_filter", "n_clicks"),
                 Input("reset_dropdown_button", "n_clicks"),
@@ -1567,7 +1887,8 @@ class SmartApp:
             ],
         )
         def update_datatable(
-            selected_data,
+            selected_data_prediction_picking,
+            selected_data_clusters,
             is_open,
             nclicks_apply,
             nclicks_reset,
@@ -1622,6 +1943,11 @@ class SmartApp:
             columns = self.components["table"]["dataset"].columns
             filtered_subset_info = None
             filtered_subset_color = None
+            selected_data = selected_data_prediction_picking or selected_data_clusters
+            prediction_tabs = [
+                "prediction_picking.selectedData",
+                "clusters.selectedData",
+            ]
             if ctx.triggered[0]["prop_id"] == "modal.is_open":
                 if is_open:
                     raise PreventUpdate
@@ -1634,7 +1960,7 @@ class SmartApp:
                         ]
                     df = self.round_dataframe
             elif (
-                (ctx.triggered[0]["prop_id"] == "prediction_picking.selectedData")
+                (ctx.triggered[0]["prop_id"] in prediction_tabs)
                 and (selected_data is not None)
                 and (len(selected_data) > 1)
             ):
@@ -1645,9 +1971,9 @@ class SmartApp:
             # If click on Apply filter
             elif (
                 (ctx.triggered[0]["prop_id"] == "apply_filter.n_clicks")
-                | ((ctx.triggered[0]["prop_id"] == "prediction_picking.selectedData") and (selected_data is None))
+                | ((ctx.triggered[0]["prop_id"] in prediction_tabs) and (selected_data is None))
                 | (
-                    (ctx.triggered[0]["prop_id"] == "prediction_picking.selectedData")
+                    (ctx.triggered[0]["prop_id"] in prediction_tabs)
                     and (
                         selected_data is not None
                         and len(selected_data) == 1
@@ -1726,6 +2052,7 @@ class SmartApp:
                 Input("select_label", "value"),
                 Input("dataset", "data"),
                 Input("prediction_picking", "selectedData"),
+                Input("clusters", "selectedData"),
                 Input("apply_filter", "n_clicks"),
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
@@ -1748,7 +2075,8 @@ class SmartApp:
         def update_feature_importance(
             label,
             data,
-            selected_data,
+            selected_data_prediction_picking,
+            selected_data_clusters,
             apply_filters,
             reset_filter,
             nclicks_del,
@@ -1942,6 +2270,7 @@ class SmartApp:
             [
                 Input("feature_selector", "clickData"),
                 Input("prediction_picking", "clickData"),
+                Input("clusters", "clickData"),
                 Input("dataset", "active_cell"),
                 Input("apply_filter", "n_clicks"),
                 Input("reset_dropdown_button", "n_clicks"),
@@ -1950,7 +2279,15 @@ class SmartApp:
             [State("dataset", "data"), State("index_id", "value")],  # Get the current value of the index
         )
         def update_index_id(
-            click_data, prediction_picking, cell, apply_filters, reset_filter, nclicks_del, data, current_index_id
+            click_data,
+            prediction_picking,
+            clusters,
+            cell,
+            apply_filters,
+            reset_filter,
+            nclicks_del,
+            data,
+            current_index_id,
         ):
             """
             This function is used to update index value according to
@@ -1977,6 +2314,8 @@ class SmartApp:
                     selected = click_data["points"][0]["customdata"][1]
                 elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData":
                     selected = prediction_picking["points"][0]["customdata"]
+                elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
+                    selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
                     selected = data[cell["row"]]["_index_"]
                 elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
@@ -2233,9 +2572,7 @@ class SmartApp:
                 for c in self.dataframe
                 if c in self.explainer.additional_features_dict
             ]
-            style_cell_conditional = [
-                {"if": {"column_id": c}, "width": "70px", "fontWeight": "bold"} for c in self.special_cols
-            ]
+            style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
             selected = check_row(data, index)
             if selected is not None:
@@ -2286,7 +2623,7 @@ class SmartApp:
                 or ("del_dropdown_button" in ctx.triggered[0]["prop_id"] and None not in nclicks_del)
             ):
                 selectedData = None
-            if selectedData is not None and len(selectedData["points"]) > 0:
+            if selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
                 raise PreventUpdate
             else:
                 subset = get_indexes_from_datatable(data)
@@ -2298,6 +2635,120 @@ class SmartApp:
                 MyGraph.adjust_graph_static(figure, x_ax="True Values", y_ax="Predicted Values")
 
             return figure, selectedData
+
+        @app.callback(
+            Output("toggle_points_on", "outline"),
+            Output("toggle_points_off", "outline"),
+            Input("points_visible_store", "data"),
+        )
+        def sync_points_toggle(points_visible: bool):
+            """
+            Synchronize ON/OFF button styles with stored state.
+            - If points_visible is True: ON is filled, OFF is outline.
+            - If points_visible is False: ON is outline, OFF is filled.
+            """
+            points_visible = bool(points_visible)
+            return (not points_visible, points_visible)
+
+        @app.callback(
+            Output("clusters", "figure"),
+            Output("clusters", "selectedData"),
+            Output("points_visible_store", "data"),
+            [
+                Input("dataset", "data"),
+                Input("apply_filter", "n_clicks"),
+                Input("reset_dropdown_button", "n_clicks"),
+                Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
+                Input("select_label", "value"),
+                Input("modal", "is_open"),
+                Input("ember_clusters", "n_clicks"),
+                Input("n_clusters_slider", "value"),
+                Input("toggle_points_on", "n_clicks"),
+                Input("toggle_points_off", "n_clicks"),
+                Input("color_param_clusters", "value"),
+            ],
+            [
+                State("points", "value"),
+                State("violin", "value"),
+                State("clusters", "selectedData"),
+                State("points_visible_store", "data"),
+            ],
+        )
+        def update_clusters(
+            data,
+            apply_filters,
+            reset_filter,
+            nclicks_del,
+            label,
+            is_open,
+            click_zoom,
+            n_clusters,
+            n_on,
+            n_off,
+            color_value,
+            points,
+            violin,
+            selectedData,
+            points_visible,
+        ):
+            """
+            Update clustering plot according to label, data, filters and settings.
+            Also stores ON/OFF state in points_visible_store.
+            """
+
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                raise PreventUpdate
+
+            triggered_prop = ctx.triggered[0]["prop_id"]
+            trigger = triggered_prop.split(".")[0]
+
+            if (
+                trigger == "apply_filter"
+                or trigger == "reset_dropdown_button"
+                or ("del_dropdown_button" in triggered_prop and None not in nclicks_del)
+            ):
+                selectedData = None
+
+            if selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
+                allowed = {
+                    "toggle_points_on",
+                    "toggle_points_off",
+                    "n_clusters_slider",
+                    "apply_filter",
+                    "reset_dropdown_button",
+                    "color_param_clusters",
+                    "select_label",
+                }
+                if trigger not in allowed:
+                    raise PreventUpdate
+                selectedData = None
+
+            subset = get_indexes_from_datatable(data)
+
+            show_points = bool(points_visible)
+            store_update = dash.no_update
+
+            if trigger == "toggle_points_on":
+                show_points = True
+                store_update = True
+            elif trigger == "toggle_points_off":
+                show_points = False
+                store_update = False
+
+            figure = self.explainer.plot.clustering_by_explainability_plot(
+                selection=subset,
+                max_points=points,
+                label=label,
+                color_value=color_value,
+                show_points=show_points,
+                n_clusters=n_clusters,
+                threshold_top_features=0.95,
+            )
+            figure["layout"].clickmode = "event+select"
+            MyGraph.adjust_graph_static(figure)
+
+            return figure, selectedData, store_update
 
         @app.callback(
             Output("modal_feature_importance", "is_open"),
@@ -2365,6 +2816,25 @@ class SmartApp:
             """
             Function used to open and close modal explication when we click
             on "?" button on prediction_picking graph
+            ---------------------------------------------------------------
+            n1: click on "?" button
+            n2: click on close button in modal
+            ---------------------------------------------------------------
+            return modal
+            """
+            if n1 or n2:
+                return not is_open
+            return is_open
+
+        @app.callback(
+            Output("modal_clusters", "is_open"),
+            [Input("open_clusters", "n_clicks"), Input("close_clusters", "n_clicks")],
+            [State("modal_clusters", "is_open")],
+        )
+        def toggle_modal_clusters(n1, n2, is_open):
+            """
+            Function used to open and close modal explication when we click
+            on "?" button on clusters graph
             ---------------------------------------------------------------
             n1: click on "?" button
             n2: click on close button in modal
@@ -2560,3 +3030,12 @@ class SmartApp:
                 else:
                     new_element = html.Div()
                 return new_element
+
+        @app.callback(
+            Output("n_clusters_label", "children"),
+            Input("n_clusters_slider", "value"),
+        )
+        def update_n_clusters_label(n_clusters: int) -> str:
+            if n_clusters is None:
+                return "Clusters: —"
+            return f"Clusters: {n_clusters}"

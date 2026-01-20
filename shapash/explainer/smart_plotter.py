@@ -8,6 +8,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_numeric_dtype
 from plotly import graph_objs as go
 from plotly.offline import plot
 
@@ -18,8 +19,10 @@ from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
 from shapash.plots.plot_correlations import plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
+    compute_kmeans_labels,
+    compute_tsne_projection,
+    plot_clustering_by_explainability,
     plot_confusion_matrix,
-    plot_contributions_projection,
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
@@ -39,6 +42,7 @@ from shapash.utils.utils import (
     top_contributors,
     truncate_str,
     tuning_colorscale,
+    tuning_round_digit,
 )
 
 
@@ -81,12 +85,9 @@ class SmartPlotter:
         """
         adapts the display of the number of digit to the distribution of points
         """
-        quantile = [0.25, 0.75]
         if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
-            desc_df = self._explainer.y_pred.describe(percentiles=quantile)
-            perc1, perc2 = list(desc_df.loc[[str(int(p * 100)) + "%" for p in quantile]].values)
-            p_diff = perc2 - perc1
-            self._round_digit = compute_digit_number(p_diff)
+            quantile = [0.25, 0.75]
+            self._round_digit = tuning_round_digit(self._explainer.y_pred, quantile)
         else:
             self._round_digit = 0
 
@@ -555,7 +556,7 @@ class SmartPlotter:
                 self._explainer.features_dict[f_name]: self._explainer.x_init.loc[list_ind, f_name]
                 for f_name in top_features_of_group
             }
-            text_group = "Features values were projected on the x axis using Umap"
+            text_group = "Features values were projected on the x axis using TSNE"
             # if group don't show addnote, if not, it's too long
             # if addnote is not None:
             #    addnote = add_text([addnote, text_group], sep=' - ')
@@ -1496,7 +1497,7 @@ class SmartPlotter:
         column_names = np.array([self._explainer.features_dict.get(x) for x in self._explainer.x_init.columns])
 
         def ordinal(n):
-            return "%d%s" % (n, "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])
+            return f"{n}{'tsnrhtdd'[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4]}"
 
         # Compute explanations for instance and neighbors
         g = self._explainer.local_neighbors["norm_shap"]
@@ -1992,21 +1993,18 @@ class SmartPlotter:
             auto_open=auto_open,
         )
 
-    def contributions_projection_plot(
+    def clustering_by_explainability_plot(
         self,
         color_value="predictions",
+        show_clusters=True,
+        show_points=True,
+        active_cluster=None,
+        n_clusters=10,
         keep_quantile=(0.05, 0.95),
         max_points=2000,
         selection=None,
         label=-1,
-        metric="euclidean",
-        threshold_top_features=0.9,
-        n_neighbors=200,
-        learning_rate=1,
-        min_dist=0.1,
-        spread=1,
-        n_components=2,
-        n_epochs=200,
+        threshold_top_features=0.95,
         random_state=79,
         marker_size=10,
         style_dict=None,
@@ -2017,9 +2015,9 @@ class SmartPlotter:
         auto_open=False,
     ):
         """
-        Generate a 2D UMAP projection plot (or multiple plots) based on SHAP-like feature contributions.
+        Generate a 2D TSNE projection plot (or multiple plots) based on SHAP-like feature contributions.
 
-        This function visualizes high-dimensional contribution data by projecting it into 2D space using UMAP.
+        This function visualizes high-dimensional contribution data by projecting it into 2D space using TSNE.
         It highlights similarities between observations and allows visual comparison by coloring points using selected values
         (e.g., predictions, targets, errors). Multiple color views can be displayed side by side, sharing a common color scale.
 
@@ -2031,6 +2029,18 @@ class SmartPlotter:
             - 'targets'
             - 'errors'
             If a list is provided, one subplot is created per item.
+
+        show_clusters : bool, optional, default=True
+            Whether to overlay cluster boundaries on the TSNE plot.
+
+        show_points : bool, optional, default=True
+            Whether to display individual data points on the plot.
+
+        active_cluster : int or None, optional, default=None
+            Index of the cluster to highlight. If None, no cluster is highlighted.
+
+        n_clusters : int, optional, default=10
+            Number of clusters to form using KMeans clustering.
 
         keep_quantile : tuple of float, optional, default=(0.05, 0.95)
             Tuple defining the lower and upper quantiles to keep when scaling colors. Useful to remove outliers.
@@ -2045,34 +2055,9 @@ class SmartPlotter:
         label : int or str, optional, default=-1
             Label to use in classification tasks (e.g., class index or name). Ignored in regression.
 
-        metric : str, optional, default="euclidean"
-            Distance metric used for UMAP. Can be one of:
-            'euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra', 'braycurtis', 'mahalanobis',
-            'wminkowski', 'seuclidean', 'cosine', 'correlation', 'haversine', 'hamming', 'jaccard',
-            'dice', 'russelrao', 'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
-            'sokalmichener', 'sokalsneath', 'yule'
-
         threshold_top_features : float, optional, default=0.9
             Feature selection threshold based on mean absolute contribution values. Only features contributing
             to the cumulative threshold are retained for projection.
-
-        n_neighbors : int, optional, default=200
-            UMAP parameter: size of the local neighborhood (affects local vs global structure).
-
-        learning_rate : float, optional, default=1
-            UMAP parameter: initial learning rate for optimization.
-
-        min_dist : float, optional, default=0.1
-            UMAP parameter: controls the minimum distance between points in the low-dimensional space.
-
-        spread : float, optional, default=1
-            UMAP parameter: controls the scale of the embedded space (used with min_dist).
-
-        n_components : int, optional, default=2
-            UMAP parameter: Dimension of the embedded space. Use 2 for 2D plots.
-
-        n_epochs : int, optional, default=200
-            UMAP parameter: Number of training epochs for UMAP optimization. If None, defaults are used based on dataset size.
 
         random_state : int, optional, default=79
             Random seed for reproducibility.
@@ -2101,7 +2086,7 @@ class SmartPlotter:
         Returns
         -------
         plotly.graph_objects.Figure
-            A Plotly figure object displaying the UMAP projection. If multiple color values are passed,
+            A Plotly figure object displaying the TSNE projection. If multiple color values are passed,
             a subplot layout is returned with one panel per value.
 
         Raises
@@ -2113,10 +2098,10 @@ class SmartPlotter:
         Examples
         --------
         >>> # Single color projection
-        >>> xpl.contributions_projection_plot(color_value="predictions")
+        >>> xpl.clustering_by_explainability_plot(color_value="predictions")
 
         >>> # Compare multiple color schemes side-by-side
-        >>> xpl.contributions_projection_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
+        >>> xpl.clustering_by_explainability_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
         """
 
         if not hasattr(self._explainer, "model"):
@@ -2131,128 +2116,367 @@ class SmartPlotter:
             raise ValueError("`self._explainer.contributions` is required but was not found on `self`.")
 
         if self._explainer._case == "classification":
-            label_num, _, label_value = self._explainer.check_label_name(label)
+            label_num, label_code, label_value = self._explainer.check_label_name(label)
         # Regression Case
         elif self._explainer._case == "regression":
-            label_num, label_value = None, None
+            label_num, label_code, label_value = None, None, None
 
         list_ind, addnote = subset_sampling(self._explainer.x_init, selection, max_points)
 
         subtitle = None
-        if self._explainer.features_imp is None:
-            self._explainer.compute_features_import()
+        if self._explainer.features_imp is None or getattr(self._explainer, "features_imp_local_lev2", None) is None:
+            self._explainer.compute_features_import(local=True)
 
         features_imp = (
             self._explainer.features_imp
             if isinstance(self._explainer.features_imp, pd.Series)
             else self._explainer.features_imp[0]
         )
-        top_contributors_col = top_contributors(features_imp, threshold=threshold_top_features)
+        features_imp_local_lev2 = (
+            self._explainer.features_imp_local_lev2
+            if isinstance(self._explainer.features_imp_local_lev2, pd.Series)
+            else self._explainer.features_imp_local_lev2[0]
+        )
+
+        top_global_contributors_col = top_contributors(features_imp, threshold=threshold_top_features)
+        top_local_contributors_col = top_contributors(features_imp_local_lev2, threshold=threshold_top_features)
+        top_contributors_col = list(set(top_global_contributors_col) | set(top_local_contributors_col))
 
         if not isinstance(color_value, list):
             color_value = [color_value]
         color_value_data = []
 
+        if getattr(self._explainer, "y_target", None) is None:
+            color_value = [el for el in color_value if el not in ("targets", "errors")]
+
+        if len(color_value) == 0:
+            fig = go.Figure()
+            fig.update_layout(
+                xaxis={"visible": False},
+                yaxis={"visible": False},
+                annotations=[
+                    {
+                        "text": "Provide the y_target argument in the compile() method to display this plot.",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {"size": 14},
+                    }
+                ],
+            )
+            return fig
+
         if self._explainer._case == "classification":
-            values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+            if len(self._explainer.contributions) <= 2:
+                values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
+            else:
+                contribs = [
+                    df.loc[list_ind, top_contributors_col].rename(columns=lambda c, i=i: f"{c}_{i}")
+                    for i, df in enumerate(self._explainer.contributions)
+                ]
+                values_to_project = pd.concat(contribs, axis=1, ignore_index=False)
+
+            to_compute = False
+            if not hasattr(self, "cluster_projections"):
+                to_compute = True
+            elif self.cluster_projections.shape[0] != len(list_ind):
+                to_compute = True
+
+            if not pd.Index(list_ind).equals(getattr(self, "cluster_index", None)):
+                to_compute = True
+                self.cluster_index = pd.Index(list_ind)
+
+            if n_clusters != getattr(self, "n_clusters", None):
+                to_compute = True
+                self.n_clusters = n_clusters
+
+            if to_compute:
+                self.cluster_projections = compute_tsne_projection(
+                    values_to_project=values_to_project,
+                    random_state=random_state,
+                )
+                self.cluster_labels, self.cluster_centers = compute_kmeans_labels(
+                    self.cluster_projections, n_clusters=n_clusters
+                )
 
             y_proba_values = self._explainer.proba_values.copy()
 
             # predict
             if y_proba_values is not None:
-                # Assign proba values of the target
-                y_proba_values["proba_target"] = y_proba_values.iloc[:, label_num]
-                y_proba_values = y_proba_values[["proba_target"]]
-                # Proba subset:
-                y_proba_values = y_proba_values.loc[list_ind, :]
-                target = self._explainer.y_target.iloc[:, [label_num]].loc[list_ind, :]
-                y_pred = self._explainer.y_pred.iloc[:, [label_num]].loc[list_ind, :]
-                df_pred = pd.concat(
-                    [y_proba_values.reset_index(), y_pred.reset_index(drop=True), target.reset_index(drop=True)], axis=1
+                # --- Extract proba values for the selected label
+                y_proba_target = (
+                    y_proba_values.iloc[:, [label_num]]
+                    .rename(columns={y_proba_values.columns[label_num]: "proba_values"})
+                    .loc[list_ind]
+                    .reset_index()
                 )
-                df_pred.set_index(df_pred.columns[0], inplace=True)
-                df_pred.columns = ["proba_values", "predict_class", "target"]
+
+                # --- Predicted classes
+                y_pred = self._explainer.y_pred.loc[list_ind].reset_index(drop=True)
+                if self._explainer.label_dict is not None:
+                    y_pred = y_pred.replace(self._explainer.label_dict)
+
+                # --- Base DataFrame parts
+                dfs = [y_proba_target, y_pred, pd.Series(self.cluster_labels)]
+                cols = ["proba_values", "predict_class", "cluster"]
+
+                # --- Add target only if available
+                if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                    y_target = self._explainer.y_target.loc[list_ind].reset_index(drop=True)
+                    if self._explainer.label_dict is not None:
+                        y_target = y_target.replace(self._explainer.label_dict)
+                    dfs.append(y_target)
+                    cols.append("target")
+
+                errors_classification = pd.DataFrame(
+                    np.abs(
+                        ((self._explainer.y_target.loc[list_ind].values.ravel() == label_code).astype(int))
+                        - self._explainer.proba_values.loc[list_ind].iloc[:, label_num]
+                    )
+                )
+                dfs.append(errors_classification.reset_index(drop=True))
+                cols.append("error")
+
+                col_name = list(set(color_value) - {"predictions", "targets", "errors"})
+                if len(col_name) > 0:
+                    if self._explainer.postprocessing_modifications:
+                        dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                    else:
+                        dfs.append(self._explainer.x_init[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                    cols.append(col_name[0])
+
+                # --- Combine everything
+                df_pred = pd.concat(dfs, axis=1).set_index(y_proba_target.columns[0])
+                df_pred.columns = cols
+
                 subtitle = f"Response: <b>{label_value}</b>"
+                hv_text = {"points": [], "clusters": []}
+                for el in color_value:
+                    # Build hover text
+                    hv_text_el = []
+                    for idx, row in df_pred.iterrows():
+                        text = f"Id: {idx}<br />"
+                        if el not in ["predictions", "targets", "errors"]:
+                            text += f"{el}: {row[el]}<br />"
+                        text += f"Predicted Value: {row['proba_values']:.{self._round_digit}f}<br />"
+                        if "error" in df_pred.columns:
+                            text += f"Error: {row['error']:.{self._round_digit}f}<br />"
+                        text += f"Predicted class: {row['predict_class']}<br />"
+                        if "target" in df_pred.columns:
+                            text += f"True Value: {row['target']}<br />"
+                        hv_text_el.append(text)
+                    hv_text["points"].append(hv_text_el)
 
-            hv_text_predict = [
-                f"Id: {x}<br />Predicted Values: {y:.3f}<br />Predicted class: {w}<br />True Values: {z}<br />"
-                for x, y, w, z in zip(
-                    df_pred.index,
-                    df_pred.proba_values.values.round(3).flatten(),
-                    df_pred.predict_class.values.flatten(),
-                    df_pred.target.values.flatten(),
-                )
-            ]
-
-            for el in color_value:
-                if el == "predictions":
-                    color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
-
-                elif el == "targets":
-                    color_value_data.append(self._explainer.y_target.iloc[:, [label_num]])
-
-                elif el == "errors":
-                    color_value_data.append(
-                        pd.DataFrame(
-                            np.abs(
-                                self._explainer.y_target.iloc[:, label_num]
-                                - self._explainer.proba_values.iloc[:, label_num]
-                            )
+                    for c in sorted(np.unique(self.cluster_labels)):
+                        hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(self.cluster_labels == c)}"
+                        if el not in ["predictions", "targets", "errors"]:
+                            is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
+                            n_unique = df_pred[el].nunique(dropna=True)
+                            if is_num and n_unique > 5:
+                                mean_el = df_pred.loc[df_pred["cluster"] == c, el].mean()
+                                std_el = df_pred.loc[df_pred["cluster"] == c, el].std()
+                                hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
+                                hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
+                            else:
+                                top_element = df_pred.loc[df_pred["cluster"] == c, el].mode()[0]
+                                top_element_percentage = (
+                                    np.sum(df_pred.loc[df_pred["cluster"] == c, el] == top_element)
+                                    / df_pred.loc[df_pred["cluster"] == c, el].size
+                                    * 100
+                                )
+                                hv_text_cluster += f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)"
+                        mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "proba_values"].mean()
+                        hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
+                        if "error" in df_pred.columns:
+                            mean_error = df_pred.loc[df_pred["cluster"] == c, "error"].mean()
+                            hv_text_cluster += f"<br />Mean error: {mean_error:.{compute_digit_number(mean_error, 3)}f}"
+                        top_predicted_class = df_pred.loc[df_pred["cluster"] == c, "predict_class"].mode()[0]
+                        top_predicted_class_percentage = (
+                            np.sum(df_pred.loc[df_pred["cluster"] == c, "predict_class"] == top_predicted_class)
+                            / df_pred.loc[df_pred["cluster"] == c, "predict_class"].size
+                            * 100
                         )
-                    )
-                else:
-                    raise ValueError(
-                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
-                    )
+                        hv_text_cluster += (
+                            f"<br />Top predicted class: {top_predicted_class} ({top_predicted_class_percentage:.1f}%)"
+                        )
+                        if "target" in df_pred.columns:
+                            top_target_value = df_pred.loc[df_pred["cluster"] == c, "target"].mode()[0]
+                            top_target_value_percentage = (
+                                np.sum(df_pred.loc[df_pred["cluster"] == c, "target"] == top_target_value)
+                                / df_pred.loc[df_pred["cluster"] == c, "target"].size
+                                * 100
+                            )
+                            hv_text_cluster += (
+                                f"<br />Top target value: {top_target_value} ({top_target_value_percentage:.1f}%)"
+                            )
+                        hv_text["clusters"].append(hv_text_cluster)
+
+                    if el == "predictions":
+                        color_value_data.append(self._explainer.proba_values.iloc[:, [label_num]])
+
+                    elif el == "targets":
+                        color_value_data.append((self._explainer.y_target == label_code).astype(int))
+
+                    elif el == "errors":
+                        color_value_data.append(errors_classification)
+                    else:
+                        if el in self._explainer.contributions[label_num].columns:
+                            color_value_data.append(self._explainer.contributions[label_num][[el]])
+                        else:
+                            raise ValueError(
+                                r"Select a color_value among the valid options ('predictions', 'targets', 'errors' or a column name within your data)."
+                            )
 
         elif self._explainer._case == "regression":
+            # Base data: contributions and top contributors
             values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
-            target = self._explainer.y_target.loc[list_ind, :]
-            y_pred = self._explainer.y_pred.loc[list_ind, :]
-            y_proba_values = None
-            prediction_error = self._explainer.prediction_error.loc[list_ind, :]
+            to_compute = False
+            if not hasattr(self, "cluster_projections"):
+                to_compute = True
+            elif self.cluster_projections.shape[0] != len(list_ind):
+                to_compute = True
 
-            hv_text_predict = [
-                f"Id: {x}<br />True Values: {y:,.{self._round_digit}f}<br />Predicted Values: {z:,.{self._round_digit}f}<br />Prediction Error: {w:,.2f}"
-                for x, y, z, w in zip(
-                    target.index, target.values.flatten(), y_pred.values.flatten(), prediction_error.values.flatten()
+            if not pd.Index(list_ind).equals(getattr(self, "cluster_index", None)):
+                to_compute = True
+                self.cluster_index = pd.Index(list_ind)
+
+            if n_clusters != getattr(self, "n_clusters", None):
+                to_compute = True
+                self.n_clusters = n_clusters
+
+            if to_compute:
+                self.cluster_projections = compute_tsne_projection(
+                    values_to_project=values_to_project,
+                    random_state=random_state,
                 )
-            ]
 
+                self.cluster_labels, self.cluster_centers = compute_kmeans_labels(
+                    self.cluster_projections, n_clusters=n_clusters
+                )
+
+            # Always available
+            y_pred = self._explainer.y_pred.loc[list_ind, :]
+
+            # Optional pair: y_target and prediction_error
+            y_target = getattr(self._explainer, "y_target", None)
+            prediction_error = getattr(self._explainer, "prediction_error", None)
+
+            # --- Base DataFrame parts
+            dfs = [y_pred.reset_index(drop=True), pd.Series(self.cluster_labels)]
+            cols = ["predict_value", "cluster"]
+
+            # If y_target exists, prediction_error must also exist
+            if y_target is not None and prediction_error is not None:
+                y_target = y_target.loc[list_ind, :]
+                prediction_error = prediction_error.loc[list_ind, :]
+                has_target_info = True
+                dfs.append(y_target.reset_index(drop=True))
+                cols.append("target")
+                dfs.append(prediction_error.reset_index(drop=True))
+                cols.append("error")
+            else:
+                has_target_info = False
+                y_target = None
+                prediction_error = None
+
+            y_proba_values = None  # not used in regression
+
+            col_name = list(set(color_value) - {"predictions", "targets", "errors"})
+            if len(col_name) > 0:
+                if self._explainer.postprocessing_modifications:
+                    dfs.append(self._explainer.x_contrib_plot[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                else:
+                    dfs.append(self._explainer.x_init[[col_name[0]]].loc[list_ind].reset_index(drop=True))
+                cols.append(col_name[0])
+
+            # --- Combine everything
+            df_pred = pd.concat(dfs, axis=1).set_index(y_pred.index)
+            df_pred.columns = cols
+
+            # --- Handle color_value selections robustly ---
+            hv_text = {"points": [], "clusters": []}
             for el in color_value:
+                # Build hover text
+                hv_text_el = []
+                for idx, row in df_pred.iterrows():
+                    text = f"Id: {idx}<br />"
+                    if el not in ["predictions", "targets", "errors"]:
+                        text += f"{el}: {row[el]}<br />"
+                    text += f"Predicted Value: {row['predict_value']:.{self._round_digit}f}<br />"
+                    if "error" in df_pred.columns:
+                        text += f"Error: {row['error']:.{compute_digit_number(row['error'])}f}<br />"
+                    if "target" in df_pred.columns:
+                        text += f"True Value: {row['target']}<br />"
+                    hv_text_el.append(text)
+                hv_text["points"].append(hv_text_el)
+
+                for c in sorted(np.unique(self.cluster_labels)):
+                    hv_text_cluster = f"Cluster {c}<br />Number of points: {np.sum(self.cluster_labels == c)}"
+                    if el not in ["predictions", "targets", "errors"]:
+                        is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
+                        n_unique = df_pred[el].nunique(dropna=True)
+                        if is_num and n_unique > 5:
+                            mean_el = df_pred.loc[df_pred["cluster"] == c, el].mean()
+                            std_el = df_pred.loc[df_pred["cluster"] == c, el].std()
+                            hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
+                            hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
+                        else:
+                            top_element = df_pred.loc[df_pred["cluster"] == c, el].mode()[0]
+                            top_element_percentage = (
+                                np.sum(df_pred.loc[df_pred["cluster"] == c, el] == top_element)
+                                / df_pred.loc[df_pred["cluster"] == c, el].size
+                                * 100
+                            )
+                            hv_text_cluster += f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)"
+                    mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "predict_value"].mean()
+                    hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
+                    if "error" in df_pred.columns:
+                        mean_error = df_pred.loc[df_pred["cluster"] == c, "error"].mean()
+                        hv_text_cluster += f"<br />Mean error: {mean_error:.{compute_digit_number(mean_error, 3)}f}"
+                    if "target" in df_pred.columns:
+                        mean_target_value = df_pred.loc[df_pred["cluster"] == c, "target"].mean()
+                        hv_text_cluster += f"<br />Mean target value: {mean_target_value:.{compute_digit_number(mean_target_value, 3)}f}"
+                    hv_text["clusters"].append(hv_text_cluster)
+
                 if el == "predictions":
-                    color_value_data.append(self._explainer.y_pred)
+                    color_value_data.append(y_pred)
 
                 elif el == "targets":
-                    color_value_data.append(self._explainer.y_target)
+                    if not has_target_info:
+                        raise ValueError("Cannot color by targets: y_target is None.")
+                    color_value_data.append(y_target)
 
                 elif el == "errors":
-                    color_value_data.append(
-                        pd.DataFrame(np.abs(self._explainer.y_target.iloc[:, 0] - self._explainer.y_pred.iloc[:, 0]))
-                    )
-                else:
-                    raise ValueError(
-                        r"Select a color_value among the valid options ('predictions', 'targets', 'errors')."
-                    )
+                    if not has_target_info:
+                        raise ValueError("Cannot color by errors: prediction_error is None.")
+                    color_value_data.append(prediction_error)
 
-        title = "Contributions Projection Plot"
+                else:
+                    if el in self._explainer.contributions.columns:
+                        color_value_data.append(self._explainer.contributions[[el]])
+                    else:
+                        raise ValueError(
+                            r"Select a color_value among the valid options ('predictions', 'targets', 'errors' or a column name within your data)."
+                        )
+
+        title = "Clustering by Explainability"
 
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]
 
-        return plot_contributions_projection(
+        return plot_clustering_by_explainability(
             values_to_project=values_to_project,
-            hv_text_predict=hv_text_predict,
+            hv_text=hv_text,
             color_value=color_value_data,
+            show_clusters=show_clusters,
+            show_points=show_points,
+            active_cluster=active_cluster,
+            n_clusters=n_clusters,
+            projections=self.cluster_projections,
+            labels=self.cluster_labels,
+            centers=self.cluster_centers,
             keep_quantile=keep_quantile,
-            metric=metric,
-            n_neighbors=n_neighbors,
-            learning_rate=learning_rate,
-            min_dist=min_dist,
-            spread=spread,
-            n_components=n_components,
-            n_epochs=n_epochs,
             random_state=random_state,
             marker_size=marker_size,
             style_dict=style_dict,

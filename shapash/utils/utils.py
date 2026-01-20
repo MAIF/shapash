@@ -228,6 +228,28 @@ def compute_digit_number(value, significant_digits: int = 4):
     return digit
 
 
+def tuning_round_digit(values: pd.DataFrame, quantile=(0.25, 0.75)):
+    """
+    return int, number of digits to display
+
+    Parameters
+    ----------
+    values : pd.DataFrame
+        one-column DataFrame containing the values to analyze
+    quantile : tuple, optional, default=(0.25, 0.75)
+        quantiles to compute the gap
+
+    Returns
+    -------
+    int
+        number of digits
+    """
+    desc_df = values.describe(percentiles=quantile)
+    perc1, perc2 = list(desc_df.loc[[str(int(p * 100)) + "%" for p in quantile]].values)
+    p_diff = perc2 - perc1
+    return compute_digit_number(p_diff)
+
+
 def add_text(text_list, sep):
     """
     return int, number of digits to display
@@ -379,7 +401,12 @@ def convert_string_to_int_keys(input_dict: dict) -> dict:
     return {int(k): v for k, v in input_dict.items()}
 
 
-def tuning_colorscale(init_colorscale, values, keep_quantile=None):
+def tuning_colorscale(
+    init_colorscale,
+    values,
+    keep_quantile=None,
+    quantile_linearization=False,
+):
     """
     Adjust the color scale based on the distribution of points.
 
@@ -393,11 +420,15 @@ def tuning_colorscale(init_colorscale, values, keep_quantile=None):
         A list of colors defining the base color scale.
     values : pd.DataFrame
         A one-column DataFrame containing the values for which quantiles need to be calculated.
-    keep_quantile : tuple of float or None, optional, default=None
+    keep_quantile : tuple of float or None, optional
         Tuple (low, high) defining the lower and upper quantiles to **keep** in the distribution.
         - If None: the full range of data is used.
         - Example: (0.05, 0.95) keeps the central 90% (removes bottom 5% and top 5%).
         - Example: (0.1, 0.9) keeps the central 80%.
+    quantile_linearization : bool, optional, default=False
+        If True, force the colorscale positions to be linearly spaced between 0 and 1,
+        while still computing colors from quantiles. This prevents the distribution-driven
+        non-linear spacing of colors.
 
     Returns
     -------
@@ -412,15 +443,24 @@ def tuning_colorscale(init_colorscale, values, keep_quantile=None):
 
     # Initialize variables for min and max values
     cmin, cmax = None, None
+    unique_vals = sorted(data.unique())
+    nunique = len(unique_vals)
+    n_colors = len(init_colorscale)
 
     # Case 1: All values identical
-    if data.nunique() == 1:
-        unique_value = data.iloc[0]
-        cmin, cmax = unique_value, unique_value
-        color_scale = [(i / (len(init_colorscale) - 1), color) for i, color in enumerate(init_colorscale)]
+    if nunique == 1:
+        unique_value = unique_vals[0]
+        color_scale = [(i / (n_colors - 1), c) for i, c in enumerate(init_colorscale)]
+        return color_scale, unique_value, unique_value
+
+    # Case 2: Number of unique values matches number of colors
+    if nunique in [2, n_colors]:
+        cmin, cmax = min(unique_vals), max(unique_vals)
+        positions = np.linspace(0, 1, n_colors)
+        color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale)]
         return color_scale, cmin, cmax
 
-    # Case 2: Filter based on quantile range if requested
+    # Case 3: Filter based on quantile range if requested
     if keep_quantile is not None:
         if not (0 <= keep_quantile[0] < keep_quantile[1] <= 1):
             raise ValueError("keep_quantile must be a tuple (low, high) with 0 <= low < high <= 1.")
@@ -432,15 +472,26 @@ def tuning_colorscale(init_colorscale, values, keep_quantile=None):
             data = data_tmp
         cmin, cmax = data.min(), data.max()
 
-    # Compute quantiles for the color scale
-    quantiles = data.quantile(np.linspace(0, 1, len(init_colorscale)))
+    # Quantiles used to "sample" the distribution for the colors
+    quantile_values = data.quantile(np.linspace(0, 1, n_colors)).to_numpy()
 
-    # Normalize quantiles between 0 and 1
-    min_pred, max_pred = quantiles.min(), quantiles.max()
-    normalized_quantiles = (quantiles - min_pred) / (max_pred - min_pred)
+    # If cmin/cmax not set (keep_quantile is None), use full-range bounds
+    if cmin is None or cmax is None:
+        cmin, cmax = float(data.min()), float(data.max())
 
-    # Build the final color scale
-    color_scale = [(value, color) for value, color in zip(normalized_quantiles, init_colorscale)]
+    # Build colorscale positions
+    if quantile_linearization:
+        # Linear positions: 0..1 regardless of distribution
+        positions = np.linspace(0, 1, n_colors)
+    else:
+        # Distribution-aware positions: normalize quantile values into 0..1
+        min_q, max_q = float(np.min(quantile_values)), float(np.max(quantile_values))
+        if max_q == min_q:
+            positions = np.linspace(0, 1, n_colors)
+        else:
+            positions = (quantile_values - min_q) / (max_q - min_q)
+
+    color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale)]
     return color_scale, cmin, cmax
 
 

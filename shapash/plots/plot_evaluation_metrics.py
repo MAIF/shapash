@@ -5,9 +5,20 @@ import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
-from umap import UMAP
 
 from shapash.style.style_utils import define_style, get_palette
+from shapash.utils.clustering import (
+    build_tsne_title,
+    compute_concave_hull,
+    compute_kmeans_labels,
+    compute_tsne_projection,
+    encode_color_value,
+    expand_polygons_independently,
+    move_points_towards_centroid,
+    scale_points_within_cluster,
+    smooth_polygon_contour,
+    value_to_rgba,
+)
 from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import adjust_title_height, truncate_str, tuning_colorscale
 
@@ -634,19 +645,19 @@ def plot_confusion_matrix(
     return fig
 
 
-def plot_contributions_projection(
+def plot_clustering_by_explainability(
     values_to_project,
-    hv_text_predict,
+    hv_text,
     color_value,
+    show_clusters=True,
+    show_points=True,
+    active_cluster=None,
+    n_clusters=10,
+    projections=None,
+    labels=None,
+    centers=None,
     keep_quantile=None,
-    metric="euclidean",
-    n_neighbors=200,
-    learning_rate=1,
-    min_dist=0.1,
-    spread=1,
-    n_components=2,
-    n_epochs=200,
-    random_state=None,
+    random_state=79,
     marker_size=10,
     style_dict=None,
     opacity=0.8,
@@ -660,7 +671,7 @@ def plot_contributions_projection(
     auto_open=False,
 ):
     """
-    Generate a 2D scatter plot using UMAP projection of high-dimensional data.
+    Generate a 2D scatter plot using TSNE projection of high-dimensional data.
 
     This visualization helps to explore data structure by reducing dimensions and highlighting clusters or relationships.
     Data points are colored according to a specified variable and include hover text for additional context.
@@ -669,33 +680,25 @@ def plot_contributions_projection(
     ----------
     values_to_project : pd.DataFrame
         DataFrame containing the high-dimensional data to be projected.
-    hv_text_predict : list of str
+    hv_text : list of str
         List of text values to show when hovering over each data point.
     color_value : pd.DataFrame or pd.Series
         1D data structure (e.g., Series) used to determine the color of each marker.
+    show_clusters : bool, optional, default=True
+        Whether to display cluster boundaries on the plot.
+    show_points : bool, optional, default=True
+        Whether to display individual data points on the plot.
+    active_cluster : int or None, optional, default=None
+        Index of the cluster to highlight. If None, no cluster is highlighted.
+    n_clusters : int, optional, default=10
+        Number of clusters to form using KMeans clustering.
+    projections : np.ndarray or None, optional, default=None
+        Precomputed 2D TSNE projections. If None, projections will be computed within the function.
+    labels
     keep_quantile : tuple of float, optional, default=(0.05, 0.95)
         Quantiles to retain for color scaling, helping to manage outliers.
-    metric : str, optional, default="euclidean"
-        Distance metric used for UMAP. Can be one of:
-        ['euclidean', 'manhattan', 'chebyshev', 'minkowski', 'canberra',
-        'braycurtis', 'mahalanobis', 'wminkowski', 'seuclidean', 'cosine',
-        'correlation', 'haversine', 'hamming', 'jaccard', 'dice', 'russelrao',
-        'kulsinski', 'll_dirichlet', 'hellinger', 'rogerstanimoto',
-        'sokalmichener', 'sokalsneath', 'yule']
-    n_neighbors : int, optional, default=200
-        Size of local neighborhood used for manifold approximation. Larger values capture more global structure.
-    learning_rate : float, optional, default=1
-        Initial learning rate used during UMAP embedding optimization.
-    min_dist : float, optional, default=0.1
-        Controls how tightly UMAP packs points together. Smaller values lead to tighter clusters.
-    spread : float, optional, default=1
-        Controls the scale of embedded points. Used in combination with `min_dist`.
-    n_components : int, optional, default=2
-        Number of dimensions in the reduced space (usually 2 for visualization).
-    n_epochs : int, optional, default=200
-        Number of training epochs for the UMAP optimization.
-    random_state : int or None, optional, default=None
-        Random seed for reproducibility. Accepts int or numpy RandomState.
+    random_state : int, optional, default=79
+        Random seed for reproducibility of the TSNE projection.
     marker_size : int, optional, default=10
         Size of the data point markers in the plot.
     style_dict : dict or None, optional, default=None
@@ -722,13 +725,13 @@ def plot_contributions_projection(
     Returns
     -------
     plotly.graph_objects.Figure
-        A Plotly Figure object representing the 2D UMAP projection.
+        A Plotly Figure object representing the 2D TSNE projection.
 
     Examples
     --------
-    >>> plot_contributions_projection(
+    >>> plot_clustering_by_explainability(
             values_to_project=data,
-            hv_text_predict=hover_labels,
+            hv_text=hover_labels,
             color_value=cluster_labels,
             random_state=79
         )
@@ -737,36 +740,28 @@ def plot_contributions_projection(
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
 
-    if not title:
-        title = "UMAP Projection Plot"
-    if subtitle and addnote:
-        title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
-    elif subtitle:
-        title += "<br><sup>" + subtitle + "</sup>"
-    elif addnote:
-        title += "<br><sup>" + addnote + "</sup>"
+    dict_title = build_tsne_title(title, subtitle, addnote, style_dict=style_dict, height=height)
 
-    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+    ### Dimensional Reduction with TSNE
+    if projections is None:
+        projections = compute_tsne_projection(
+            values_to_project=values_to_project,
+            random_state=random_state,
+        )
 
-    ### Dimensional Reduction with UMAP
-    umap = UMAP(
-        metric=metric,
-        n_neighbors=min(n_neighbors, len(values_to_project) - 1),
-        learning_rate=learning_rate,
-        min_dist=min_dist,
-        spread=spread,
-        n_components=n_components,
-        n_epochs=n_epochs,
-        random_state=random_state,
-        n_jobs=1,
-    )
-    projections = umap.fit_transform(values_to_project)
-    x, y = projections.T
+    if (labels is None) or (centers is None):
+        labels, centers = compute_kmeans_labels(projections, n_clusters=n_clusters)
+
+    projections_moved = move_points_towards_centroid(projections, labels, centers, factor=1.0)
 
     figures = []
 
+    color_series, _, _ = encode_color_value(color_value[0].iloc[:, 0])
     colorscale, cmin, cmax = tuning_colorscale(
-        init_colorscale=style_dict["init_contrib_colorscale"], values=color_value[0], keep_quantile=keep_quantile
+        init_colorscale=style_dict["init_contrib_colorscale"],
+        values=pd.DataFrame(color_series),
+        keep_quantile=keep_quantile,
+        quantile_linearization=True,
     )
     if colorbar_title and len(colorbar_title) == 1:
         colorbar_dict = dict(title={"text": colorbar_title[0]})
@@ -781,11 +776,82 @@ def plot_contributions_projection(
         ### Plotting
         fig = go.Figure()
 
-        # Plot parameters
+        raw_polys = []
+        centroids = []
+        valid_labels = []
+        cluster_color = []
 
+        color_series, _, _ = encode_color_value(color_value_el.iloc[:, 0])
+        point_values = color_series.values
+        for c in sorted(np.unique(labels)):
+            pts = projections_moved[labels == c]
+            cluster_color.append(point_values[labels == c].mean())
+
+            if pts.shape[0] < 3:
+                continue
+
+            poly = compute_concave_hull(pts, alpha=5)
+            if poly is None:
+                continue
+
+            poly = smooth_polygon_contour(poly)
+
+            raw_polys.append(poly)
+            centroids.append(pts.mean(axis=0))
+            valid_labels.append(c)
+
+        valid_labels = np.array(valid_labels)
+        cluster_label_to_index = {label: i for i, label in enumerate(valid_labels)}
+
+        expanded_polys, scales = expand_polygons_independently(
+            raw_polys,
+            centroids,
+            eps=0.02,
+            max_iter=600,
+        )
+
+        projections_final = scale_points_within_cluster(
+            projections_moved, labels, centers, scales * 0.8, cluster_label_to_index
+        )
+
+        if show_clusters:
+            for c, poly in enumerate(expanded_polys):
+                sx, sy = map(list, smooth_polygon_contour(poly).exterior.xy)
+
+                # Couleurs dynamiques pour le hover
+                c_n = c  # curve number
+                if c_n == active_cluster:
+                    fill = "rgba(255,0,0,0.30)"
+                    line_color = "rgba(200,0,0,1)"
+                else:
+                    if show_points:
+                        fill = "rgba(150,150,150,0.15)"
+                        line_color = "rgba(200,200,200,0.8)"
+                    else:
+                        fill = value_to_rgba(cluster_color[c], colorscale, cmin, cmax, alpha=0.99)
+                        line_color = value_to_rgba(cluster_color[c], colorscale, cmin, cmax, alpha=1)
+
+                # Zone (patate)
+                fig.add_trace(
+                    go.Scatter(
+                        x=sx,
+                        y=sy,
+                        fill="toself",
+                        fillcolor=fill,
+                        line=dict(color=line_color, width=2),
+                        mode="lines",
+                        hoveron="fills",
+                        hoverinfo="text",
+                        text=hv_text["clusters"][c],
+                        hovertemplate="<b>%{text}</b><extra></extra>",
+                        name=f"Cluster {c}",
+                    )
+                )
+
+        # Plot parameters
         marker_dict = dict(
             size=marker_size,
-            color=color_value_el.iloc[:, 0],
+            color=point_values if show_points else [cmin, cmax],
             colorscale=colorscale,
             cmin=cmin,
             cmax=cmax,
@@ -797,13 +863,14 @@ def plot_contributions_projection(
         # Displaying plot
         fig.add_trace(
             go.Scatter(
-                x=x,
-                y=y,
+                x=projections_final.T[0] if show_points else [None],
+                y=projections_final.T[1] if show_points else [None],
                 mode="markers",
                 marker=marker_dict,
-                hovertext=hv_text_predict,
-                hovertemplate="<b>%{hovertext}</b><br />",
+                hovertext=hv_text["points"][i - 1] if show_points else None,
+                hovertemplate="<b>%{hovertext}</b><br />" if show_points else None,
                 name="",
+                customdata=values_to_project.index.values if show_points else None,
             )
         )
 
@@ -820,7 +887,7 @@ def plot_contributions_projection(
 
     # Create a subplot with 1 row and N columns
     combined_fig = make_subplots(
-        rows=1, cols=n_figs, subplot_titles=colorbar_title if colorbar_title else [""] * n_figs
+        rows=1, cols=n_figs, subplot_titles=colorbar_title if (colorbar_title and n_figs > 1) else [""] * n_figs
     )
 
     # Add each figure's traces to the combined figure
@@ -828,12 +895,12 @@ def plot_contributions_projection(
         for trace in fig.data:
             combined_fig.add_trace(trace, row=1, col=i)
         # Also copy layout updates like axis titles if needed:
-        combined_fig.update_xaxes(automargin=True, showticklabels=False, row=1, col=i)
-        combined_fig.update_yaxes(automargin=True, showticklabels=False, row=1, col=i)
+        combined_fig.update_xaxes(automargin=True, showticklabels=False, zeroline=False, showline=False, row=1, col=i)
+        combined_fig.update_yaxes(automargin=True, showticklabels=False, zeroline=False, showline=False, row=1, col=i)
 
     # Optional: update global layout
     combined_fig.update_layout(
-        template="none", width=width, height=(height - 200) // n_figs + 200, title=dict_t, showlegend=False
+        template="none", width=width, height=(height - 200) // n_figs + 200, title=dict_title, showlegend=False
     )
 
     if file_name:
