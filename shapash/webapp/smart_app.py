@@ -1197,7 +1197,7 @@ class SmartApp:
                                                                                                 ),
                                                                                                 html.Div(
                                                                                                     html.Img(
-                                                                                                        src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
+                                                                                                        src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-cluster_by_explainability.gif?raw=true"
                                                                                                     )
                                                                                                 ),
                                                                                                 html.A(
