@@ -1387,7 +1387,7 @@ class SmartApp:
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "font-size": "0.7vw",
+                                                "font-size": "0.8vw",
                                                 "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
