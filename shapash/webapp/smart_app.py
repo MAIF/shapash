@@ -397,8 +397,7 @@ class SmartApp:
                                     title="settings",
                                     alt="Settings",
                                     src=self.app.get_asset_url("settings.png"),
-                                    height="40px",
-                                    style={"cursor": "pointer"},
+                                    style={"cursor": "pointer", "width": "2vw"},
                                 ),
                                 self.components["settings"]["modal"],
                             ]
@@ -439,15 +438,15 @@ class SmartApp:
             sort_mode="multi",
             style_table={"overflowY": "auto", "overflowX": "auto"},
             style_header={
-                "height": "60px",
+                "height": "3vw",
                 "textAlign": "center",
                 "overflow": "hidden",
                 "textOverflow": "ellipsis",
             },
             style_cell={
-                "minWidth": "90px",
-                "width": "105px",
-                "maxWidth": "200px",
+                "minWidth": "4.5vw",
+                "width": "5.3vw",
+                "maxWidth": "10vw",
                 "overflow": "hidden",
                 "textOverflow": "ellipsis",
             },
@@ -505,11 +504,14 @@ class SmartApp:
                                         target="open_filter",
                                         body=True,
                                         trigger="hover",
+                                        style={"font-size": "0.7vw"},
                                     ),
                                     # Modal associated to the explanation button
                                     dbc.Modal(
                                         [
-                                            dbc.ModalHeader(dbc.ModalTitle("Filters explanation")),
+                                            dbc.ModalHeader(
+                                                dbc.ModalTitle("Filters explanation", style={"font-size": "1.5vw"})
+                                            ),
                                             dbc.ModalBody([html.Div(dcc.Markdown(self.explanations.filter))]),
                                             dbc.ModalFooter(dbc.Button("Close", id="close_filter", color="warning")),
                                         ],
@@ -543,7 +545,7 @@ class SmartApp:
                     )
                 ),
             ],
-            style={"maxheight": "22rem", "height": "21rem", "zIndex": 800},
+            style={"height": "341.5vh", "zIndex": 800},
         )
 
         self.components["filter"]["index"] = dbc.Col(
@@ -558,7 +560,7 @@ class SmartApp:
                                 placeholder="_index_",
                                 debounce=True,
                                 persistence=True,
-                                style={"textAlign": "right"},
+                                style={"textAlign": "right", "padding": "0"},
                             )
                         ],
                         width={"size": 5},
@@ -571,8 +573,7 @@ class SmartApp:
                                 alt="Validate",
                                 title="Validate index",
                                 src=self.app.get_asset_url("reload.png"),
-                                height="30px",
-                                style={"cursor": "pointer"},
+                                style={"cursor": "pointer", "width": "1.5vw"},
                             )
                         ],
                         width={"size": 1},
@@ -593,13 +594,14 @@ class SmartApp:
                                 target="id_card",
                                 body=True,
                                 trigger="hover",
+                                style={"font-size": "0.7vw"},
                             ),
                             dbc.Modal(
                                 [
                                     dbc.ModalHeader(
                                         dbc.Col(
                                             [
-                                                dbc.ModalTitle("Identity Card"),
+                                                dbc.ModalTitle("Identity Card", style={"font-size": "1.5vw"}),
                                                 dbc.Row(
                                                     [
                                                         dbc.Label("Sort by:", align="center", width="auto"),
@@ -760,6 +762,14 @@ class SmartApp:
                     multi=True,
                     searchable=True,
                     id="masked_contrib_id",
+                    style={
+                        "fontSize": "0.7vw",
+                        "height": "1.4vw",
+                        "lineHeight": "1.4vw",
+                        "minHeight": "1.4vw",
+                        "paddingTop": "0",
+                        "paddingBottom": "0",
+                    },
                 ),
             ],
             className="filter_dashed",
@@ -777,7 +787,7 @@ class SmartApp:
                             html.A(
                                 dbc.Row(
                                     [
-                                        dbc.Col([html.Img(src=self.logo, height="40px")], className="col-1"),
+                                        dbc.Col([html.Img(src=self.logo, style={"width": "2.2vw"})], className="col-1"),
                                         dbc.Col([html.H4("Shapash Monitor", id="shapash_title")]),
                                     ],
                                     align="center",
@@ -867,8 +877,8 @@ class SmartApp:
                                                                         size="sm",
                                                                         color="warning",
                                                                         style={
-                                                                            "margin": "5px 0 5px 0",
-                                                                            "font-size": "12px",
+                                                                            "margin": "0.25vw 0 0.5vw 0",
+                                                                            "font-size": "0.6vw",
                                                                             "line-height": "1.2",
                                                                         },
                                                                     ),
@@ -891,8 +901,8 @@ class SmartApp:
                                                                         size="sm",
                                                                         color="warning",
                                                                         style={
-                                                                            "margin": "5px 0 5px 0",
-                                                                            "font-size": "12px",
+                                                                            "margin": "0.25vw 0 0.5vw 0",
+                                                                            "font-size": "0.6vw",
                                                                             "line-height": "1.2",
                                                                         },
                                                                     ),
@@ -925,12 +935,17 @@ class SmartApp:
                                                     target="open_feature_importance",
                                                     body=True,
                                                     trigger="hover",
+                                                    style={"font-size": "0.7vw"},
                                                 ),
                                                 # Create modal associated to the first button
                                                 dbc.Modal(
                                                     [
                                                         # Modal title
-                                                        dbc.ModalHeader(dbc.ModalTitle("Feature importance")),
+                                                        dbc.ModalHeader(
+                                                            dbc.ModalTitle(
+                                                                "Feature importance", style={"font-size": "1.5vw"}
+                                                            )
+                                                        ),
                                                         dbc.ModalBody(
                                                             [
                                                                 html.Div(
@@ -989,7 +1004,8 @@ class SmartApp:
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "height": "30px",
+                                                "font-size": "0.8vw",
+                                                "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
                                             },
@@ -1012,14 +1028,15 @@ class SmartApp:
                                                         style={"overflow-y": "scroll", "overflow-x": "hidden"},
                                                     )
                                                 ),
-                                                style={"height": "24.1rem"},
+                                                style={"height": "41.5vh"},
                                             ),
                                             # Tab name
                                             label="Dataset Filters",
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "height": "30px",
+                                                "font-size": "0.8vw",
+                                                "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
                                             },
@@ -1074,7 +1091,7 @@ class SmartApp:
                                                                                     "Points",
                                                                                     className="text-muted",
                                                                                     style={
-                                                                                        "fontSize": "1rem",
+                                                                                        "fontSize": "0.7vw",
                                                                                         "marginBottom": "4px",
                                                                                     },
                                                                                 ),
@@ -1086,9 +1103,9 @@ class SmartApp:
                                                                                             size="sm",
                                                                                             color="warning",
                                                                                             style={
-                                                                                                "font-size": "1rem",
+                                                                                                "font-size": "0.7vw",
                                                                                                 "line-height": "1.0",
-                                                                                                "padding": "2px 8px",
+                                                                                                "padding": "0.1vw 0.4vw",
                                                                                             },
                                                                                         ),
                                                                                         dbc.Button(
@@ -1098,9 +1115,9 @@ class SmartApp:
                                                                                             outline=True,
                                                                                             color="warning",
                                                                                             style={
-                                                                                                "font-size": "1rem",
+                                                                                                "font-size": "0.7vw",
                                                                                                 "line-height": "1.0",
-                                                                                                "padding": "2px 8px",
+                                                                                                "padding": "0.1vw 0.4vw",
                                                                                             },
                                                                                         ),
                                                                                     ],
@@ -1117,7 +1134,7 @@ class SmartApp:
                                                                                     "Colorscale",
                                                                                     className="text-muted",
                                                                                     style={
-                                                                                        "fontSize": "1rem",
+                                                                                        "fontSize": "0.7vw",
                                                                                         "marginBottom": "4px",
                                                                                     },
                                                                                 ),
@@ -1126,8 +1143,14 @@ class SmartApp:
                                                                                     options=self.cluster_colorscale_columns_options,
                                                                                     value="predictions",
                                                                                     clearable=False,
-                                                                                    className="dd-20",
-                                                                                    style={"fontSize": "1rem"},
+                                                                                    style={
+                                                                                        "fontSize": "0.7vw",
+                                                                                        "height": "1.4vw",
+                                                                                        "lineHeight": "1.4vw",
+                                                                                        "minHeight": "1.4vw",
+                                                                                        "paddingTop": "0",
+                                                                                        "paddingBottom": "0",
+                                                                                    },
                                                                                 ),
                                                                             ],
                                                                             style={"marginBottom": "14px"},
@@ -1139,7 +1162,7 @@ class SmartApp:
                                                                                     id="n_clusters_label",
                                                                                     className="text-muted",
                                                                                     style={
-                                                                                        "fontSize": "1rem",
+                                                                                        "fontSize": "0.7vw",
                                                                                         "marginBottom": "10px",
                                                                                     },
                                                                                 ),
@@ -1182,12 +1205,16 @@ class SmartApp:
                                                                                     target="open_clusters",
                                                                                     body=True,
                                                                                     trigger="hover",
+                                                                                    style={"font-size": "0.7vw"},
                                                                                 ),
                                                                                 dbc.Modal(
                                                                                     [
                                                                                         dbc.ModalHeader(
                                                                                             dbc.ModalTitle(
-                                                                                                "True values Vs Predicted values"
+                                                                                                "Clustering by explainability",
+                                                                                                style={
+                                                                                                    "font-size": "1.5vw"
+                                                                                                },
                                                                                             )
                                                                                         ),
                                                                                         dbc.ModalBody(
@@ -1197,7 +1224,10 @@ class SmartApp:
                                                                                                 ),
                                                                                                 html.Div(
                                                                                                     html.Img(
-                                                                                                        src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-cluster_by_explainability.gif?raw=true"
+                                                                                                        src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash-cluster_by_explainability.gif?raw=true",
+                                                                                                        style={
+                                                                                                            "maxWidth": "100%"
+                                                                                                        },
                                                                                                     )
                                                                                                 ),
                                                                                                 html.A(
@@ -1254,14 +1284,14 @@ class SmartApp:
                                                 id="card_clusters",
                                                 style={
                                                     "width": "100%",
-                                                    "height": "24.1rem",
                                                     "position": "relative",
                                                 },
                                             ),
                                             label="Clusters",
                                             label_style={
                                                 "color": "black",
-                                                "height": "30px",
+                                                "font-size": "0.8vw",
+                                                "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
                                             },
@@ -1295,12 +1325,14 @@ class SmartApp:
                                                                         target="open_prediction_picking",
                                                                         body=True,
                                                                         trigger="hover",
+                                                                        style={"font-size": "0.7vw"},
                                                                     ),
                                                                     dbc.Modal(
                                                                         [
                                                                             dbc.ModalHeader(
                                                                                 dbc.ModalTitle(
-                                                                                    "True values Vs Predicted values"
+                                                                                    "True values Vs Predicted values",
+                                                                                    style={"font-size": "1.5vw"},
                                                                                 )
                                                                             ),
                                                                             dbc.ModalBody(
@@ -1310,7 +1342,8 @@ class SmartApp:
                                                                                     ),
                                                                                     html.Div(
                                                                                         html.Img(
-                                                                                            src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true"
+                                                                                            src="https://github.com/MAIF/shapash/blob/master/docs/_static/shapash_select_subset.gif?raw=true",
+                                                                                            style={"maxWidth": "100%"},
                                                                                         )
                                                                                     ),
                                                                                     html.A(
@@ -1354,7 +1387,8 @@ class SmartApp:
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "height": "30px",
+                                                "font-size": "0.7vw",
+                                                "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
                                             },
@@ -1406,10 +1440,15 @@ class SmartApp:
                                                             target="open_feature_selector",
                                                             body=True,
                                                             trigger="hover",
+                                                            style={"font-size": "0.7vw"},
                                                         ),
                                                         dbc.Modal(
                                                             [
-                                                                dbc.ModalHeader(dbc.ModalTitle("Feature selector")),
+                                                                dbc.ModalHeader(
+                                                                    dbc.ModalTitle(
+                                                                        "Feature selector", style={"font-size": "1.5vw"}
+                                                                    )
+                                                                ),
                                                                 dbc.ModalBody(
                                                                     [
                                                                         dcc.Markdown(
@@ -1506,11 +1545,15 @@ class SmartApp:
                                                                             target="open_detail_feature",
                                                                             body=True,
                                                                             trigger="hover",
+                                                                            style={"font-size": "0.7vw"},
                                                                         ),
                                                                         dbc.Modal(
                                                                             [
                                                                                 dbc.ModalHeader(
-                                                                                    dbc.ModalTitle("Detail feature")
+                                                                                    dbc.ModalTitle(
+                                                                                        "Detail feature",
+                                                                                        style={"font-size": "1.5vw"},
+                                                                                    )
                                                                                 ),
                                                                                 dbc.ModalBody(
                                                                                     [
@@ -1664,7 +1707,7 @@ class SmartApp:
             details)
         """
         component = html.A(
-            html.I("fullscreen", className="material-icons tiny", style={"marginTop": "8px", "marginLeft": "1px"}),
+            html.I("fullscreen", className="material-icons tiny", style={"marginTop": "0.4vw", "marginLeft": "0.05vw"}),
             id=f"ember_{component_id}",
             className="dock-expand",
             **{"data-component-type": component_type},
@@ -1691,11 +1734,11 @@ class SmartApp:
             list of components
         """
         filter = [
-            html.Div([self.components["filter"]["index"]], style={"padding-bottom": "8px"}),
-            html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "8px"}),
-            html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "8px"}),
-            html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "8px"}),
-            html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "8px"}),
+            html.Div([self.components["filter"]["index"]], style={"padding-bottom": "0.4vw"}),
+            html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "0.4vw"}),
+            html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "0.4vw"}),
+            html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "0.4vw"}),
+            html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "0.4vw"}),
         ]
         return filter
 
@@ -1760,29 +1803,33 @@ class SmartApp:
                 toggle_on = True if click % 2 == 0 else False
 
                 if toggle_on:
-                    # Style for graph
-                    style_component = {"height": "23.6rem"}
-                    this_style_card = {"height": "24rem", "zIndex": 900}
+                    # Responsive Style for graph
+                    style_component = {"height": "41.5vh"}
+                    this_style_card = {"height": "43.5vh", "zIndex": 900}
                     id_str = data_component_id if isinstance(data_component_id, str) else data_component_id.get("index")
 
                     if id_str == "global_feature_importance":
-                        style_component = {"height": "21.6rem"}
-                        this_style_card = {"height": "22rem", "zIndex": 901}
+                        style_component = {"height": "37vh"}
+                        this_style_card = {"height": "38vh", "zIndex": 901}
 
-                    if id_str == "clusters":
-                        style_component = {"height": "23rem"}
-                        this_style_card = {"height": "24.1rem", "zIndex": 901}
+                    if id_str in ("clusters", "feature_selector", "detail_feature"):
+                        style_component = {"height": "39.5vh"}
+                        this_style_card = {"height": "41.5vh", "zIndex": 901}
 
                     if _component_type == "table":
-                        style_component = {"maxHeight": "23rem"}
-                        this_style_card = {"height": "24.1rem", "zIndex": 900}
+                        style_component = {"height": "39.5vh"}
+                        this_style_card = {"height": "41.5vh", "zIndex": 900}
+
+                    if id_str == "prediction_picking":
+                        style_component = {"height": "37.1vh"}
+                        this_style_card = {"height": "39.1vh", "zIndex": 901}
 
                     return this_style_card, style_component
 
                 else:
                     # Style when zoom button is clicked
                     this_style_card = {
-                        "height": "93vh",
+                        "height": "95vh",
                         "width": "auto",
                         "zIndex": 998,
                         "position": "fixed",
@@ -1791,7 +1838,7 @@ class SmartApp:
                         "left": 0,
                         "right": 0,
                     }
-                    style_component = {"height": "89vh", "maxHeight": "89vh"}
+                    style_component = {"height": "91vh", "maxHeight": "93vh"}
 
                     return this_style_card, style_component
 
