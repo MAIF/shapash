@@ -55,16 +55,18 @@ class MyGraph(dcc.Graph):
         ---------------------------------------
         """
         main_title, subtitle = split_title_and_subtitle(figure.layout.title.text)
-        title_html = f'<span style="font-size: 1.2vw;">{main_title}</span>'
+        title_html = f'<span style="font-size: calc(1.5vh + 0.5vw);">{main_title}</span>'
         if subtitle:
-            title_html += '<br><span style="display:block; font-size:1vw; margin-top:0.7em;">' + subtitle + "</span>"
+            title_html += (
+                '<br><span style="display:block; font-size:calc(1vh + 0.4vw);margin-top:1vh;">' + subtitle + "</span>"
+            )
         figure.update_layout(
             autosize=True,
             margin=dict(l=50, r=10, b=10, t=67, pad=0),
             width=None,
             height=None,
             title={
-                "y": 0.95,
+                "y": 0.94,
                 "x": 0.5,
                 "xanchor": "center",
                 "yanchor": "top",
