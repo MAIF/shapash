@@ -1,6 +1,14 @@
+h3 {
+    font-size: calc(0.6rem + 1.1vw) !important;
+}
+
+h4 {
+    font-size: calc(0.55rem + 0.95vw) !important;
+}
 :root {
     --main-color: #f4c000;
     --bkg-color: #343736;
+    --bs-body-font-size: calc(0.3rem + 0.5vw);
 }
 
 #shapash_title {
@@ -59,6 +67,10 @@
     border-color: var(--main-color);
 }
 
+.rc-slider-mark {
+    font-size: calc(0.25rem + 0.45vw);
+}
+
 
 /*   CHECKBOX     */
 .custom-control-input:checked~.custom-control-label::before {
@@ -75,6 +87,7 @@
 .Select--multi .Select-value {
     color: var(--bkg-color) !important;
     background-color: var(--main-color) !important;
+    margin-top: 1px !important;
 }
 
 /*   DATATABLE       */
@@ -92,6 +105,9 @@
     margin-left: 0 !important;
 }
 
+.dash-spreadsheet.dash-freeze-top, .dash-spreadsheet.dash-virtualized {
+    max-height: 100% !important;
+}
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td.cell--selected, td.focused {
     background-color : Transparent !important;
@@ -115,11 +131,11 @@
 /*   EXPAND      */
 
 .dock-expand {
-    width: 40px;
-    height: 40px;
+    width: 2vw;
+    height: 2vw;
     position: absolute;
-    top: -10px;
-    right: -10px;
+    top: -0.5vw;
+    right: -0.5vw;
     background-color: white;
     border-radius: 26px;
     box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
@@ -180,4 +196,56 @@
 .form-label
 {
     margin-bottom: 0;
+}
+
+.Select-placeholder, .Select__placeholder {
+    line-height: 1.4vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
+}
+
+.Select-control, .Select__control {
+    height: 1.4vw !important;
+    line-height: 1.4vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
+}
+
+.Select-value, .Select__single-value {
+    line-height: 0.9vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
+    margin-top: 0.3vw !important;
+}
+
+.Select-input{
+    padding: 0;
+    height: 1.4vw !important;
+    line-height: 1.4vw !important;
+}
+
+.Select-input input {
+    padding: 0;
+    height: 1.4vw !important;
+    line-height: 1.4vw !important;
+}
+
+.Select-clear {
+    font-size: calc(0.4rem + 0.65vw) !important;
+}
+
+.Select-multi-value-wrapper, .Select__value-container {
+    height: 1.4vw !important;
+    min-height: 1.4vw !important;
+    line-height: 1.4vw !important;
+}
+
+input.form-control-s, input.form-control-s.form-control {
+    height: 1.5vw !important;
+    line-height: 1.5vw !important;
+    font-size: 0.7vw !important;
+}
+
+button#id_card, .btn-warning {
+    height: 1.5vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
+    align-items: center;
+    padding-top: 0.2vw !important;
 }

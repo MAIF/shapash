@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shapash"
 version = "2.8.1"
+
 authors = [
     {name = "Yann Golhen"},
     {name = "Sebastien Bidault"},
@@ -43,7 +44,7 @@ dependencies = [
     "nbformat>5.8.0",
     "numba>=0.60.0",
     "numpy>=2.0.0",
-    "pandas>=2.2.2",
+    "pandas>=2.2.2,<3.0.0",
     "plotly>=5.0.0,<6.0.0",
     "scikit-learn>=1.4.2,<1.6.0",
     "scipy>=1.13.0",
