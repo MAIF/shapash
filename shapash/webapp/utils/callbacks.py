@@ -599,7 +599,10 @@ def create_dropdown_feature_filter(n_clicks_add: Optional[int], options: list) -
                     # div with dopdown button to select feature to filter
                     html.Div(
                         dcc.Dropdown(
-                            id={"type": "var_dropdown", "index": index_id}, options=options, placeholder="Variable"
+                            id={"type": "var_dropdown", "index": index_id},
+                            options=options,
+                            placeholder="Variable",
+                            style={"line-height": "1.2vh", "height": "1.2vh"},
                         ),
                         style={"width": "30%"},
                     ),

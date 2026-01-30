@@ -54,42 +54,78 @@ class MyGraph(dcc.Graph):
         y_ax: title of the y-axis
         ---------------------------------------
         """
-        new_title = update_title(figure.layout.title.text)
+        main_title, subtitle = split_title_and_subtitle(figure.layout.title.text)
+        title_html = f'<span style="font-size: calc(1.5vh + 0.5vw);">{main_title}</span>'
+        if subtitle:
+            title_html += (
+                '<br><span style="display:block; font-size:calc(1vh + 0.4vw);margin-top:1vh;">' + subtitle + "</span>"
+            )
         figure.update_layout(
             autosize=True,
             margin=dict(l=50, r=10, b=10, t=67, pad=0),
             width=None,
             height=None,
             title={
-                "y": 0.95,
+                "y": 0.94,
                 "x": 0.5,
                 "xanchor": "center",
                 "yanchor": "top",
-                # update title and font-size of the title
-                "text": '<span style="font-size: 1.2vw;">' + new_title + "</span>",
+                "text": title_html,
             },
         )
         # update x title and font-size of the title
-        figure.update_xaxes(title='<span style="font-size: 1vw;">' + x_ax + "</span>", automargin=True)
+        figure.update_xaxes(
+            title='<span style="font-size: calc(0.45rem + 0.7vw);">' + x_ax + "</span>", automargin=True
+        )
         # update y title and font-size of the title
-        figure.update_yaxes(title='<span style="font-size: 1vw;">' + y_ax + "</span>", automargin=True)
+        figure.update_yaxes(
+            title='<span style="font-size: calc(0.45rem + 0.7vw);">' + y_ax + "</span>", automargin=True
+        )
 
 
-def update_title(title):
+def split_title_and_subtitle(title: str):
     """
-    adapt title content the app layout
+    Split an HTML-formatted title into a main title and an optional subtitle.
+
+    The function searches for a specific separator in the input string:
+    a line break followed by either a <sup>...</sup> or <span ...>...</span> block,
+    i.e., "<br><sup>...</sup>" or "<br><span ...>...</span>". If the pattern is
+    present and the entire string matches this structure, it returns a tuple with
+    the text before the separator as the main title and the inner text of the
+    <sup> or <span> element as the subtitle. If no such pattern is found, it
+    returns the original title and None.
+
     Parameters
     ----------
     title : str
-        string to ba adapted
+        The full title string, optionally containing "<br><sup>...</sup>" or
+        "<br><span ...>...</span>" at the end.
+
     Returns
     -------
-    str
+    tuple[str, Optional[str]]
+        (main_title, subtitle) where subtitle is None when no subtitle is detected.
+        If a subtitle tag is present but empty, an empty string is returned.
+
+    Notes
+    -----
+    - The match is anchored to the start and end of the string; the subtitle (if any)
+    must appear as the final part of the title.
+    - Attributes inside the <span> tag are allowed and ignored.
+    - Whitespace is preserved as-is.
+
+    Examples
+    --------
+    >>> split_title_and_subtitle("Report<br><sup>Q1 2026</sup>")
+    ('Report', 'Q1 2026')
+    >>> split_title_and_subtitle('Sales<br><span class="sub">Forecast</span>')
+    ('Sales', 'Forecast')
+    >>> split_title_and_subtitle("Overview")
+    ('Overview', None)
     """
-    patt = re.compile("^(.+)<span.+?(Predict: .*|Proba: .*)?</span>$")
-    try:
-        list_non_empty_str_matches = [x for x in patt.findall(title)[0] if x != ""]
-        updated = " - ".join(map(str, list_non_empty_str_matches))
-    except Exception:
-        updated = title
-    return updated
+    match = re.match(r"^(.*?)(?:<br><(?:sup|span)[^>]*>(.*?)</(?:sup|span)>)?$", title)
+    if match:
+        main_title = match.group(1)
+        subtitle = match.group(2) if match.lastindex and match.lastindex >= 2 else None
+        return main_title, subtitle
+    return title, None
