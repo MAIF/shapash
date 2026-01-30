@@ -504,13 +504,15 @@ class SmartApp:
                                         target="open_filter",
                                         body=True,
                                         trigger="hover",
-                                        style={"font-size": "0.7vw"},
+                                        style={"font-size": "calc(0.3rem + 0.5vw)"},
                                     ),
                                     # Modal associated to the explanation button
                                     dbc.Modal(
                                         [
                                             dbc.ModalHeader(
-                                                dbc.ModalTitle("Filters explanation", style={"font-size": "1.5vw"})
+                                                dbc.ModalTitle(
+                                                    "Filters explanation", style={"font-size": "calc(0.6rem + 1.1vw)"}
+                                                )
                                             ),
                                             dbc.ModalBody([html.Div(dcc.Markdown(self.explanations.filter))]),
                                             dbc.ModalFooter(dbc.Button("Close", id="close_filter", color="warning")),
@@ -594,14 +596,16 @@ class SmartApp:
                                 target="id_card",
                                 body=True,
                                 trigger="hover",
-                                style={"font-size": "0.7vw"},
+                                style={"font-size": "calc(0.3rem + 0.5vw)"},
                             ),
                             dbc.Modal(
                                 [
                                     dbc.ModalHeader(
                                         dbc.Col(
                                             [
-                                                dbc.ModalTitle("Identity Card", style={"font-size": "1.5vw"}),
+                                                dbc.ModalTitle(
+                                                    "Identity Card", style={"font-size": "calc(0.6rem + 1.1vw)"}
+                                                ),
                                                 dbc.Row(
                                                     [
                                                         dbc.Label("Sort by:", align="center", width="auto"),
@@ -763,7 +767,7 @@ class SmartApp:
                     searchable=True,
                     id="masked_contrib_id",
                     style={
-                        "fontSize": "0.7vw",
+                        "fontSize": "calc(0.3rem + 0.5vw)",
                         "height": "1.4vw",
                         "lineHeight": "1.4vw",
                         "minHeight": "1.4vw",
@@ -878,7 +882,7 @@ class SmartApp:
                                                                         color="warning",
                                                                         style={
                                                                             "margin": "0.25vw 0 0.5vw 0",
-                                                                            "font-size": "0.6vw",
+                                                                            "font-size": "calc(0.25rem + 0.45vw)",
                                                                             "line-height": "1.2",
                                                                         },
                                                                     ),
@@ -902,7 +906,7 @@ class SmartApp:
                                                                         color="warning",
                                                                         style={
                                                                             "margin": "0.25vw 0 0.5vw 0",
-                                                                            "font-size": "0.6vw",
+                                                                            "font-size": "calc(0.25rem + 0.45vw)",
                                                                             "line-height": "1.2",
                                                                         },
                                                                     ),
@@ -935,7 +939,7 @@ class SmartApp:
                                                     target="open_feature_importance",
                                                     body=True,
                                                     trigger="hover",
-                                                    style={"font-size": "0.7vw"},
+                                                    style={"font-size": "calc(0.3rem + 0.5vw)"},
                                                 ),
                                                 # Create modal associated to the first button
                                                 dbc.Modal(
@@ -943,7 +947,8 @@ class SmartApp:
                                                         # Modal title
                                                         dbc.ModalHeader(
                                                             dbc.ModalTitle(
-                                                                "Feature importance", style={"font-size": "1.5vw"}
+                                                                "Feature importance",
+                                                                style={"font-size": "calc(0.6rem + 1.1vw)"},
                                                             )
                                                         ),
                                                         dbc.ModalBody(
@@ -1004,7 +1009,7 @@ class SmartApp:
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "font-size": "0.8vw",
+                                                "font-size": "calc(0.35rem + 0.55vw)",
                                                 "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
@@ -1035,7 +1040,7 @@ class SmartApp:
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "font-size": "0.8vw",
+                                                "font-size": "calc(0.35rem + 0.55vw)",
                                                 "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
@@ -1091,7 +1096,7 @@ class SmartApp:
                                                                                     "Points",
                                                                                     className="text-muted",
                                                                                     style={
-                                                                                        "fontSize": "0.7vw",
+                                                                                        "fontSize": "calc(0.3rem + 0.5vw)",
                                                                                         "marginBottom": "4px",
                                                                                     },
                                                                                 ),
@@ -1103,7 +1108,7 @@ class SmartApp:
                                                                                             size="sm",
                                                                                             color="warning",
                                                                                             style={
-                                                                                                "font-size": "0.7vw",
+                                                                                                "font-size": "calc(0.3rem + 0.5vw)",
                                                                                                 "line-height": "1.0",
                                                                                                 "padding": "0.1vw 0.4vw",
                                                                                             },
@@ -1115,7 +1120,7 @@ class SmartApp:
                                                                                             outline=True,
                                                                                             color="warning",
                                                                                             style={
-                                                                                                "font-size": "0.7vw",
+                                                                                                "font-size": "calc(0.3rem + 0.5vw)",
                                                                                                 "line-height": "1.0",
                                                                                                 "padding": "0.1vw 0.4vw",
                                                                                             },
@@ -1134,7 +1139,7 @@ class SmartApp:
                                                                                     "Colorscale",
                                                                                     className="text-muted",
                                                                                     style={
-                                                                                        "fontSize": "0.7vw",
+                                                                                        "fontSize": "calc(0.3rem + 0.5vw)",
                                                                                         "marginBottom": "4px",
                                                                                     },
                                                                                 ),
@@ -1144,7 +1149,7 @@ class SmartApp:
                                                                                     value="predictions",
                                                                                     clearable=False,
                                                                                     style={
-                                                                                        "fontSize": "0.7vw",
+                                                                                        "fontSize": "calc(0.3rem + 0.5vw)",
                                                                                         "height": "1.4vw",
                                                                                         "lineHeight": "1.4vw",
                                                                                         "minHeight": "1.4vw",
@@ -1162,7 +1167,7 @@ class SmartApp:
                                                                                     id="n_clusters_label",
                                                                                     className="text-muted",
                                                                                     style={
-                                                                                        "fontSize": "0.7vw",
+                                                                                        "fontSize": "calc(0.3rem + 0.5vw)",
                                                                                         "marginBottom": "10px",
                                                                                     },
                                                                                 ),
@@ -1205,7 +1210,9 @@ class SmartApp:
                                                                                     target="open_clusters",
                                                                                     body=True,
                                                                                     trigger="hover",
-                                                                                    style={"font-size": "0.7vw"},
+                                                                                    style={
+                                                                                        "font-size": "calc(0.3rem + 0.5vw)"
+                                                                                    },
                                                                                 ),
                                                                                 dbc.Modal(
                                                                                     [
@@ -1213,7 +1220,7 @@ class SmartApp:
                                                                                             dbc.ModalTitle(
                                                                                                 "Clustering by explainability",
                                                                                                 style={
-                                                                                                    "font-size": "1.5vw"
+                                                                                                    "font-size": "calc(0.6rem + 1.1vw)"
                                                                                                 },
                                                                                             )
                                                                                         ),
@@ -1290,7 +1297,7 @@ class SmartApp:
                                             label="Clusters",
                                             label_style={
                                                 "color": "black",
-                                                "font-size": "0.8vw",
+                                                "font-size": "calc(0.35rem + 0.55vw)",
                                                 "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
@@ -1325,14 +1332,16 @@ class SmartApp:
                                                                         target="open_prediction_picking",
                                                                         body=True,
                                                                         trigger="hover",
-                                                                        style={"font-size": "0.7vw"},
+                                                                        style={"font-size": "calc(0.3rem + 0.5vw)"},
                                                                     ),
                                                                     dbc.Modal(
                                                                         [
                                                                             dbc.ModalHeader(
                                                                                 dbc.ModalTitle(
                                                                                     "True values Vs Predicted values",
-                                                                                    style={"font-size": "1.5vw"},
+                                                                                    style={
+                                                                                        "font-size": "calc(0.6rem + 1.1vw)"
+                                                                                    },
                                                                                 )
                                                                             ),
                                                                             dbc.ModalBody(
@@ -1387,7 +1396,7 @@ class SmartApp:
                                             # Style of the tab
                                             label_style={
                                                 "color": "black",
-                                                "font-size": "0.8vw",
+                                                "font-size": "calc(0.35rem + 0.55vw)",
                                                 "height": "1.5vw",
                                                 "padding": "0px 5px",
                                                 "border": "2px solid #ddd",
@@ -1440,13 +1449,14 @@ class SmartApp:
                                                             target="open_feature_selector",
                                                             body=True,
                                                             trigger="hover",
-                                                            style={"font-size": "0.7vw"},
+                                                            style={"font-size": "calc(0.3rem + 0.5vw)"},
                                                         ),
                                                         dbc.Modal(
                                                             [
                                                                 dbc.ModalHeader(
                                                                     dbc.ModalTitle(
-                                                                        "Feature selector", style={"font-size": "1.5vw"}
+                                                                        "Feature selector",
+                                                                        style={"font-size": "calc(0.6rem + 1.1vw)"},
                                                                     )
                                                                 ),
                                                                 dbc.ModalBody(
@@ -1545,14 +1555,16 @@ class SmartApp:
                                                                             target="open_detail_feature",
                                                                             body=True,
                                                                             trigger="hover",
-                                                                            style={"font-size": "0.7vw"},
+                                                                            style={"font-size": "calc(0.3rem + 0.5vw)"},
                                                                         ),
                                                                         dbc.Modal(
                                                                             [
                                                                                 dbc.ModalHeader(
                                                                                     dbc.ModalTitle(
                                                                                         "Detail feature",
-                                                                                        style={"font-size": "1.5vw"},
+                                                                                        style={
+                                                                                            "font-size": "calc(0.6rem + 1.1vw)"
+                                                                                        },
                                                                                     )
                                                                                 ),
                                                                                 dbc.ModalBody(
@@ -1829,7 +1841,7 @@ class SmartApp:
                 else:
                     # Style when zoom button is clicked
                     this_style_card = {
-                        "height": "95vh",
+                        "height": "93.5vh",
                         "width": "auto",
                         "zIndex": 998,
                         "position": "fixed",
@@ -1838,7 +1850,7 @@ class SmartApp:
                         "left": 0,
                         "right": 0,
                     }
-                    style_component = {"height": "91vh", "maxHeight": "93vh"}
+                    style_component = {"height": "93.3vh"}
 
                     return this_style_card, style_component
 

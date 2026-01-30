@@ -1,14 +1,14 @@
 h3 {
-    font-size: 1.5vw !important;
+    font-size: calc(0.6rem + 1.1vw) !important;
 }
 
 h4 {
-    font-size: 1.3vw !important;
+    font-size: calc(0.55rem + 0.95vw) !important;
 }
 :root {
     --main-color: #f4c000;
     --bkg-color: #343736;
-    --bs-body-font-size: 0.7vw;
+    --bs-body-font-size: calc(0.3rem + 0.5vw);
 }
 
 #shapash_title {
@@ -68,7 +68,7 @@ h4 {
 }
 
 .rc-slider-mark {
-    font-size: 0.6vw;
+    font-size: calc(0.25rem + 0.45vw);
 }
 
 
@@ -87,6 +87,7 @@ h4 {
 .Select--multi .Select-value {
     color: var(--bkg-color) !important;
     background-color: var(--main-color) !important;
+    margin-top: 1px !important;
 }
 
 /*   DATATABLE       */
@@ -199,18 +200,19 @@ h4 {
 
 .Select-placeholder, .Select__placeholder {
     line-height: 1.4vw !important;
-    font-size: 0.7vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
 }
 
 .Select-control, .Select__control {
     height: 1.4vw !important;
     line-height: 1.4vw !important;
-    font-size: 0.7vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
 }
 
 .Select-value, .Select__single-value {
-    line-height: 1.4vw !important;
-    font-size: 0.7vw !important;
+    line-height: 0.9vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
+    margin-top: 0.3vw !important;
 }
 
 .Select-input{
@@ -226,7 +228,7 @@ h4 {
 }
 
 .Select-clear {
-    font-size: 0.9vw !important;
+    font-size: calc(0.4rem + 0.65vw) !important;
 }
 
 .Select-multi-value-wrapper, .Select__value-container {
@@ -243,7 +245,7 @@ input.form-control-s, input.form-control-s.form-control {
 
 button#id_card, .btn-warning {
     height: 1.5vw !important;
-    font-size: 0.7vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
     align-items: center;
     padding-top: 0.2vw !important;
 }

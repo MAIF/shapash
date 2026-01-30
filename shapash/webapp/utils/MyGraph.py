@@ -74,9 +74,13 @@ class MyGraph(dcc.Graph):
             },
         )
         # update x title and font-size of the title
-        figure.update_xaxes(title='<span style="font-size: 1vw;">' + x_ax + "</span>", automargin=True)
+        figure.update_xaxes(
+            title='<span style="font-size: calc(0.45rem + 0.7vw);">' + x_ax + "</span>", automargin=True
+        )
         # update y title and font-size of the title
-        figure.update_yaxes(title='<span style="font-size: 1vw;">' + y_ax + "</span>", automargin=True)
+        figure.update_yaxes(
+            title='<span style="font-size: calc(0.45rem + 0.7vw);">' + y_ax + "</span>", automargin=True
+        )
 
 
 def split_title_and_subtitle(title: str):
