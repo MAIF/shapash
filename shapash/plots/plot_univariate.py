@@ -177,11 +177,11 @@ def plot_continuous_distribution(
         if len(filtered_data_tmp) > 0.95 * len(filtered_data):
             filtered_data = filtered_data_tmp
         else:
-            filtered_data_tmp = filtered_data[(filtered_data < upper_quantile)]
+            filtered_data_tmp = filtered_data[(filtered_data[col] < upper_quantile)]
             if len(filtered_data_tmp) > 0.95 * len(filtered_data):
                 filtered_data = filtered_data_tmp
             else:
-                filtered_data_tmp = filtered_data[(filtered_data > lower_quantile)]
+                filtered_data_tmp = filtered_data[(filtered_data[col] > lower_quantile)]
                 if len(filtered_data_tmp) > 0.95 * len(filtered_data):
                     filtered_data = filtered_data_tmp
 
