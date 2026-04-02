@@ -1,6 +1,8 @@
+<meta name="readthedocs-addons-api-version" content="1" />
 
 <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/shapash-resize.png"
      width="60%" height="60%" style="margin-left: 10%; margin-top: auto; margin-bottom: 3em;">
+
 <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
     <a href="{{ pathto(master_doc)|e }}" title="{{ docstitle|striptags|e }}" class="md-nav__button md-logo">
@@ -13,10 +15,57 @@
     <a href="{{ pathto(master_doc)|e }}"
        title="{{ docstitle|striptags|e }}">{{ theme_nav_title or shorttitle }}</a>
   </label>
+
+  <div class="md-version-switcher" style="padding: 0 1rem 1rem 1rem;">
+    <label for="rtd-version-selector" style="display:block; margin-bottom:0.4rem; font-weight:600;">
+      Version
+    </label>
+    <select id="rtd-version-selector" style="width:100%; padding:0.4rem;">
+      <option value="">Chargement…</option>
+    </select>
+  </div>
+
   {%- if theme_repo_url %}
     <div class="md-nav__source">
       {% include "repo.html" %}
     </div>
   {% endif %}
+
   {% include "globaltoc.html" %}
 </nav>
+
+<script>
+document.addEventListener("readthedocs-addons-data-ready", function (event) {
+  const config = event.detail.data();
+  const selector = document.getElementById("rtd-version-selector");
+  if (!selector) return;
+
+  const current = config?.versions?.current;
+  const versions = config?.versions?.active || [];
+
+  selector.innerHTML = "";
+
+  versions.forEach(function (version) {
+    const option = document.createElement("option");
+    option.value = version.urls.documentation;
+    option.textContent = version.slug;
+    if (current && version.slug === current.slug) {
+      option.selected = true;
+    }
+    selector.appendChild(option);
+  });
+
+  if (!versions.length) {
+    const option = document.createElement("option");
+    option.textContent = current ? current.slug : "Aucune version disponible";
+    option.selected = true;
+    selector.appendChild(option);
+  }
+
+  selector.addEventListener("change", function () {
+    if (this.value) {
+      window.location.href = this.value;
+    }
+  });
+});
+</script>
