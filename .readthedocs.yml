@@ -26,3 +26,10 @@ build:
 python:
   install:
     - requirements: docs/requirements.txt
+
+versions:
+  only:
+    - main
+    - stable
+    - /^v\d+\.\d+\.\d+$/
+
