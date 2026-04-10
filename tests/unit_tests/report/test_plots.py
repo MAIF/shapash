@@ -9,6 +9,7 @@ from shapash.plots.plot_univariate import (
     plot_categorical_distribution,
     plot_continuous_distribution,
 )
+from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
 
 from plotly import graph_objects as go
 
@@ -227,3 +228,27 @@ class TestPlots(unittest.TestCase):
         assert fig.data[0].type == "bar"
         assert fig.data[1].type == "bar"
         assert len(fig.data[0]['x']) == 8
+
+    def test_plot_confusion_matrix_with_quantile_scale(self):
+        y_true = ["c01"] * 2 + ["c02"] * 4 + ["c03"] * 103
+        y_pred = ["c01"] * 2 + ["c01"] + ["c02"] * 3 + ["c01"] + ["c03"] * 102
+
+        fig = plot_confusion_matrix(y_true=y_true, y_pred=y_pred, quantile=0.95, use_quantile_scale=True)
+
+        expected_matrix = np.array([[2, 0, 0], [1, 3, 0], [1, 0, 102]])
+        assert np.array_equal(np.array(fig.data[0].z), expected_matrix)
+        assert fig.data[0].zmin == 0
+        assert fig.data[0].zmax == int(np.quantile(expected_matrix, 0.95))
+        assert fig.layout.annotations[8].text == "102"
+
+    def test_plot_confusion_matrix_without_quantile_scale(self):
+        y_true = ["c01"] * 2 + ["c02"] * 4 + ["c03"] * 103
+        y_pred = ["c01"] * 2 + ["c01"] + ["c02"] * 3 + ["c01"] + ["c03"] * 102
+
+        fig = plot_confusion_matrix(y_true=y_true, y_pred=y_pred, use_quantile_scale=False)
+
+        expected_matrix = np.array([[2, 0, 0], [1, 3, 0], [1, 0, 102]])
+        assert np.array_equal(np.array(fig.data[0].z), expected_matrix)
+        assert fig.data[0].zmin == 0
+        assert fig.data[0].zmax == 102
+        assert fig.layout.annotations[8].text == "102"
