@@ -570,10 +570,8 @@ def plot_confusion_matrix(
             raise ValueError("quantile must be in the interval ]0, 1].")
         # Clip extreme values for a more readable heatmap.
         zmax = int(np.quantile(z, quantile))
-        z_cliped = np.clip(z.astype(int), a_min=0, a_max=zmax)
     else:
         zmax = int(z.max())
-        z_cliped = z
 
     title = "Confusion Matrix"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
@@ -584,15 +582,10 @@ def plot_confusion_matrix(
     x_numeric = all(str(label).isdigit() for label in x_labels)
     y_numeric = all(str(label).isdigit() for label in y_labels)
 
-    hv_text = []
-    for y, row, row_cliped in zip(y_labels, z, z_cliped):
-        hover_row = []
-        for x, value, value_cliped in zip(x_labels, row, row_cliped):
-            text = f"Actual: {y}<br>Predicted: {x}<br>Count: {value}"
-            if value_cliped != value:
-                text += f"<br>Displayed: {value_cliped}"
-            hover_row.append(text)
-        hv_text.append(hover_row)
+    hv_text = [
+        [f"Actual: {y}<br>Predicted: {x}<br>Count: {value}" for x, value in zip(x_labels, row)]
+        for y, row in zip(y_labels, z)
+    ]
 
     if not x_numeric:
         if len(x_labels) < 6:
@@ -614,7 +607,7 @@ def plot_confusion_matrix(
 
     # Create the heatmap using go.Heatmap
     heatmap = go.Heatmap(
-        z=z_cliped,
+        z=z,
         x=x_labels,
         y=y_labels,
         colorscale=col_scale,
@@ -635,7 +628,7 @@ def plot_confusion_matrix(
                 dict(
                     x=x_label,
                     y=y_label,
-                    text=str(z_cliped[i][j]),
+                    text=str(z[i][j]),
                     showarrow=False,
                     # Use clipped values to keep the text contrast readable.
                     font=dict(color="black" if min(z[i][j], zmax) < zmax / 2 else "white"),
