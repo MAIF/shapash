@@ -89,7 +89,9 @@ def plot_scatter(
     feature_values = pd.DataFrame({column_name: feature_values_str})
 
     if pred is not None:
-        hv_text = [f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten(), strict=False)]
+        hv_text = [
+            f"Id: {x}<br />Predict: {y}" for x, y in zip(feature_values.index, pred.values.flatten(), strict=False)
+        ]
     else:
         hv_text = [f"Id: {x}" for x in feature_values.index]
 
@@ -679,7 +681,9 @@ def _prepare_hover_text(feature_values, pred, feature_name):
     hv_text = [
         f"Id: {id_val}{f'<br />Predict: {pred_val}' if pred is not None else ''}"
         for id_val, pred_val in zip(
-            feature_values.index, pred.values.flatten() if pred is not None else [""] * len(feature_values), strict=False
+            feature_values.index,
+            pred.values.flatten() if pred is not None else [""] * len(feature_values),
+            strict=False,
         )
     ]
 
