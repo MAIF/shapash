@@ -211,7 +211,7 @@ def plot_continuous_distribution(
             # Generate hovertext
             hv_text = [
                 f"{hue}: {level}<br>{col}: {format(x, f'.{max(0, compute_digit_number(x, 3))}f')}<br>Density: {y:.4f}"
-                for x, y in zip(x_values, y_values)
+                for x, y in zip(x_values, y_values, strict=False)
             ]
 
             color = style_dict.get(level, random_color())
@@ -242,7 +242,7 @@ def plot_continuous_distribution(
         # Generate hovertext
         hv_text = [
             f"{col}: {format(x, f'.{max(0, compute_digit_number(x, 3))}f')}<br>Density: {y:.4f}"
-            for x, y in zip(x_values, y_values)
+            for x, y in zip(x_values, y_values, strict=False)
         ]
 
         color = style_dict.get(col, random_color())

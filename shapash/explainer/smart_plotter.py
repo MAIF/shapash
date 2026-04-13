@@ -976,7 +976,7 @@ class SmartPlotter:
                     f"Response: <b>{label_value}</b> - "
                     + "Probas: "
                     + " ; ".join(
-                        [str(id) + ": <b>" + str(round(proba, 2)) + "</b>" for proba, id in zip(preds, line_reference)]
+                        [str(id) + ": <b>" + str(round(proba, 2)) + "</b>" for proba, id in zip(preds, line_reference, strict=False)]
                     )
                 )
 
@@ -987,7 +987,7 @@ class SmartPlotter:
             if show_predict:
                 preds = [self._explainer._local_pred(line) for line in line_reference]
                 subtitle = "Predictions: " + " ; ".join(
-                    [str(id) + ": <b>" + str(round(pred, 2)) + "</b>" for id, pred in zip(line_reference, preds)]
+                    [str(id) + ": <b>" + str(round(pred, 2)) + "</b>" for id, pred in zip(line_reference, preds, strict=False)]
                 )
 
         new_contrib = list()
@@ -1005,11 +1005,11 @@ class SmartPlotter:
         preds = [self._explainer.x_init.loc[id] for id in line_reference]
         dict_features = self._explainer.inv_features_dict
 
-        iteration_list = list(zip(new_contrib, feature_values))
+        iteration_list = list(zip(new_contrib, feature_values, strict=False))
         iteration_list.sort(key=lambda x: maximum_difference_sort_value(x), reverse=True)
         iteration_list = iteration_list[:max_features]
         iteration_list = iteration_list[::-1]
-        new_contrib, feature_values = list(zip(*iteration_list))
+        new_contrib, feature_values = list(zip(*iteration_list, strict=False))
 
         fig = plot_line_comparison(
             line_reference,
