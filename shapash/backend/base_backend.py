@@ -140,7 +140,7 @@ class BaseBackend(ABC):
     def format_and_aggregate_local_contributions(
         self,
         x: pd.DataFrame,
-        contributions: pd.DataFrame | np.array | list[pd.DataFrame] | list[np.array],
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray],
     ) -> pd.DataFrame | list[pd.DataFrame]:
         """
         This function allows to format and aggregate contributions in the right format
