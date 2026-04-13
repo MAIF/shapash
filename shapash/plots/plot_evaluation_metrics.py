@@ -269,7 +269,8 @@ def _prediction_classification_plot(
             df_correct_predict.index,
             df_correct_predict.proba_values.values.round(3).flatten(),
             df_correct_predict.predict_class.values.flatten(),
-            df_correct_predict.target.values.flatten(), strict=False,
+            df_correct_predict.target.values.flatten(),
+            strict=False,
         )
     ]
     hv_text_wrong_predict = [
@@ -278,7 +279,8 @@ def _prediction_classification_plot(
             df_wrong_predict.index,
             df_wrong_predict.proba_values.values.round(3).flatten(),
             df_wrong_predict.predict_class.values.flatten(),
-            df_wrong_predict.target.values.flatten(), strict=False,
+            df_wrong_predict.target.values.flatten(),
+            strict=False,
         )
     ]
     rng = np.random.default_rng(seed=79)
@@ -444,7 +446,9 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
 
         hv_text = [
             f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}"
-            for x, y, z, w in zip(y_target.index, y_target_values, y_pred.values.flatten(), prediction_error.flatten(), strict=False)
+            for x, y, z, w in zip(
+                y_target.index, y_target_values, y_pred.values.flatten(), prediction_error.flatten(), strict=False
+            )
         ]
 
         fig.add_scatter(
