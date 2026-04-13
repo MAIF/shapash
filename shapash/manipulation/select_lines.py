@@ -49,10 +49,10 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
 
     """
     if _case == "classification":
-        complete_sum = [list(x) for x in list(zip(*[df.values.tolist() for df in contributions]))]
+        complete_sum = [list(x) for x in list(zip(*[df.values.tolist() for df in contributions], strict=False))]
         indexclas = [_classes.index(x) for x in list(flatten(y_pred.values))]
         summary = pd.DataFrame(
-            [summar[ind] for ind, summar in zip(indexclas, complete_sum)],
+            [summar[ind] for ind, summar in zip(indexclas, complete_sum, strict=False)],
             columns=contributions[0].columns,
             index=contributions[0].index,
             dtype=object,
@@ -61,7 +61,7 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
             y_pred = y_pred.map(lambda x: label_dict[x])
         if proba_values is not None:
             y_proba = pd.DataFrame(
-                [proba[ind] for ind, proba in zip(indexclas, proba_values.values)],
+                [proba[ind] for ind, proba in zip(indexclas, proba_values.values, strict=False)],
                 columns=["proba"],
                 index=y_pred.index,
             )

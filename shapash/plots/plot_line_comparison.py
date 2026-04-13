@@ -89,7 +89,7 @@ def plot_line_comparison(
         margin={"l": 150, "r": 20, "t": topmargin, "b": 70},
     )
 
-    iteration_list = list(zip(contributions, feature_values))
+    iteration_list = list(zip(contributions, feature_values, strict=False))
     len_dic_color = len(style_dict["dict_compare_colors"])
     lines = list()
 

@@ -306,7 +306,7 @@ def plot_amplitude_vs_stability(
     yaxis_title = "Importance<span style='font-size: 12px;'><br />(Average contributions)</span>"
     hv_text = [
         f"<b>Feature: {col}</b><br />Importance: {y}<br />Variability: {x}"
-        for col, x, y in zip(column_names, mean_variability, mean_amplitude)
+        for col, x, y in zip(column_names, mean_variability, mean_amplitude, strict=False)
     ]
     hovertemplate = "%{hovertext}" + "<extra></extra>"
 
