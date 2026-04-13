@@ -127,7 +127,7 @@ def check_y(x=None, y=None, y_name="y_target"):
         Name of y ("y_target" or "y_pred")
     """
     if y is not None:
-        if not isinstance(y, (pd.DataFrame, pd.Series)):
+        if not isinstance(y, pd.DataFrame | pd.Series):
             raise ValueError(f"{y_name} must be a one column pd.Dataframe or pd.Series.")
         if not y.index.equals(x.index):
             raise ValueError(f"x and {y_name} should have the same index.")
@@ -140,7 +140,7 @@ def check_y(x=None, y=None, y_name="y_target"):
             if y.dtype not in [float, int, np.int32, np.float32, np.int64, np.float64]:
                 raise ValueError(f"{y_name} must contain int or float only")
             y = y.to_frame()
-            if isinstance(y.columns[0], (int, float)):
+            if isinstance(y.columns[0], int | float):
                 y.columns = [y_name]
     return y
 
@@ -159,7 +159,7 @@ def check_contribution_object(case, classes, contributions):
         List of labels if the model used is for classification problem, None otherwise.
     contributions : pandas.DataFrame, np.ndarray or list
     """
-    if (case == "regression") and (not isinstance(contributions, (np.ndarray, pd.DataFrame))):
+    if (case == "regression") and (not isinstance(contributions, np.ndarray | pd.DataFrame)):
         raise ValueError(
             """
             Type of contributions parameter specified is not compatible with

@@ -155,7 +155,7 @@ class SmartApp:
         """
         if hasattr(self.explainer, "y_pred"):
             self.dataframe = self.explainer.x_init.copy()
-            if isinstance(self.explainer.y_pred, (pd.Series, pd.DataFrame)):
+            if isinstance(self.explainer.y_pred, pd.Series | pd.DataFrame):
                 self.predict_col = self.explainer.y_pred.columns.to_list()[0]
                 self.dataframe = self.dataframe.join(self.explainer.y_pred)
             elif isinstance(self.explainer.y_pred, list):
