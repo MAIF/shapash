@@ -2074,7 +2074,7 @@ class SmartApp:
                     end_date,
                 )
                 filtered_subset_info = (
-                    f"Subset length: {len(df)} ({int(round(100*len(df)/self.explainer.x_init.shape[0]))}%)"
+                    f"Subset length: {len(df)} ({int(round(100 * len(df) / self.explainer.x_init.shape[0]))}%)"
                 )
                 if len(df) == 0:
                     filtered_subset_color = "danger"

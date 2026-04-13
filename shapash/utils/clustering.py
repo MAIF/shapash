@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 def compute_tsne_projection(
     values_to_project: pd.DataFrame,
     random_state: int = 79,
-    perplexity: Optional[int] = None,
+    perplexity: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute a 2D TSNE projection of high-dimensional data.
@@ -58,9 +57,9 @@ def compute_tsne_projection(
 
 
 def build_tsne_title(
-    title: Optional[str],
-    subtitle: Optional[str],
-    addnote: Optional[str],
+    title: str | None,
+    subtitle: str | None,
+    addnote: str | None,
     *,
     style_dict: dict,
     height: int,
