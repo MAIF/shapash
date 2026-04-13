@@ -4,7 +4,6 @@ Smart plotter module
 
 import math
 import random
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -1925,7 +1924,7 @@ class SmartPlotter:
     def distribution_plot(
         self,
         col: str,
-        hue: Optional[str] = None,
+        hue: str | None = None,
         width: int = 700,
         height: int = 500,
         nb_cat_max: int = 7,
@@ -2106,7 +2105,7 @@ class SmartPlotter:
 
         if not hasattr(self._explainer, "model"):
             raise AssertionError(
-                "Explainer object was not compiled. Please compile the explainer " "object using .compile(...) method."
+                "Explainer object was not compiled. Please compile the explainer object using .compile(...) method."
             )
 
         if not hasattr(self._explainer, "_case") or self._explainer._case not in {"classification", "regression"}:

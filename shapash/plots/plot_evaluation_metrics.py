@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -497,9 +495,9 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
 
 
 def plot_confusion_matrix(
-    y_true: Union[np.ndarray, list],
-    y_pred: Union[np.ndarray, list],
-    colors_dict: Optional[dict] = None,
+    y_true: np.ndarray | list,
+    y_pred: np.ndarray | list,
+    colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",

@@ -117,6 +117,6 @@ def assign_contributions(ranked):
     """
     if len(ranked) != 3:
         raise ValueError(
-            f"Expected lenght : 3, observed lenght : {len(ranked)}," "please check the outputs of rank_contributions."
+            f"Expected lenght : 3, observed lenght : {len(ranked)},please check the outputs of rank_contributions."
         )
     return {"contrib_sorted": ranked[0], "x_sorted": ranked[1], "var_dict": ranked[2]}

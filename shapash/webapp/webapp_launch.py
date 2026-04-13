@@ -238,11 +238,11 @@ y_target = pd.DataFrame(data=y, columns=y.columns.to_list(), index=titanic_enc.i
 # Tableau récapitulatif
 # -----------------------------
 if CASE == 1:
-    print(f"Mean Fare: {y_target.iloc[:,0].mean():.2f}")
+    print(f"Mean Fare: {y_target.iloc[:, 0].mean():.2f}")
 elif CASE == 2:
-    print(f"Survival Rate: {y_target.iloc[:,0].mean():.2f}")
+    print(f"Survival Rate: {y_target.iloc[:, 0].mean():.2f}")
 else:
-    print(f"Class distribution: {y_target.iloc[:,0].value_counts(normalize=True)}")
+    print(f"Class distribution: {y_target.iloc[:, 0].value_counts(normalize=True)}")
 
 print(df_metrics)
 
