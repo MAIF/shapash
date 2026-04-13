@@ -451,7 +451,7 @@ class SmartPlotter:
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
 
-        if not isinstance(col, (str, int)):
+        if not isinstance(col, str | int):
             raise ValueError("parameter col must be string or int.")
         if hasattr(self._explainer, "inv_features_dict"):
             col = self._explainer.inv_features_dict.get(col, col)
@@ -976,7 +976,10 @@ class SmartPlotter:
                     f"Response: <b>{label_value}</b> - "
                     + "Probas: "
                     + " ; ".join(
-                        [str(id) + ": <b>" + str(round(proba, 2)) + "</b>" for proba, id in zip(preds, line_reference, strict=False)]
+                        [
+                            str(id) + ": <b>" + str(round(proba, 2)) + "</b>"
+                            for proba, id in zip(preds, line_reference, strict=False)
+                        ]
                     )
                 )
 
@@ -987,7 +990,10 @@ class SmartPlotter:
             if show_predict:
                 preds = [self._explainer._local_pred(line) for line in line_reference]
                 subtitle = "Predictions: " + " ; ".join(
-                    [str(id) + ": <b>" + str(round(pred, 2)) + "</b>" for id, pred in zip(line_reference, preds, strict=False)]
+                    [
+                        str(id) + ": <b>" + str(round(pred, 2)) + "</b>"
+                        for id, pred in zip(line_reference, preds, strict=False)
+                    ]
                 )
 
         new_contrib = list()
@@ -1121,7 +1127,7 @@ class SmartPlotter:
         >>> xpl.plot.interactions_plot(0, 1)
         """
 
-        if not (isinstance(col1, (str, int)) or isinstance(col2, (str, int))):
+        if not (isinstance(col1, str | int) or isinstance(col2, str | int)):
             raise ValueError("parameters col1 and col2 must be string or int.")
 
         col_id1 = self._explainer.check_features_name([col1])[0]

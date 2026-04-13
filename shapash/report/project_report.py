@@ -566,7 +566,7 @@ class ProjectReport:
                 if isinstance(res, Number):
                     res = display_value(round_to_k(res, 3))
                     print_md(f"**{metric['name']} :** {res}")
-                elif isinstance(res, (list, tuple, np.ndarray)):
+                elif isinstance(res, list | tuple | np.ndarray):
                     print_md(f"**{metric['name']} :**")
                     print_html(pd.DataFrame(res).to_html(classes="greyGridTable"))
                 elif isinstance(res, str):
