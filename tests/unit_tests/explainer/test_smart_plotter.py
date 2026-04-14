@@ -658,7 +658,7 @@ class TestSmartPlotter(unittest.TestCase):
         bars = []
         for num, elem in enumerate(var_dict):
             bars.append(
-                go.Bar(x=[contributions[num]], y=["<b>{} :</b><br />{}".format(elem, x_val[num])], orientation="h")
+                go.Bar(x=[contributions[num]], y=[f"<b>{elem} :</b><br />{x_val[num]}"], orientation="h")
             )
         expected_output_fig = go.Figure(data=bars, layout=go.Layout(yaxis=dict(type="category")))
         self.smart_explainer._case = "regression"

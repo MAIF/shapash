@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as sch
@@ -14,7 +12,7 @@ from shapash.utils.utils import adjust_title_height, compute_top_correlations_fe
 
 def plot_correlations(
     df,
-    style_dict: Optional[dict] = None,
+    style_dict: dict | None = None,
     palette_name: str = "default",
     features_dict=None,
     optimized=False,
@@ -197,7 +195,7 @@ def plot_correlations(
                     coloraxis="coloraxis",
                     text=[
                         [
-                            f"Feature 1: {features_dict.get(y, y)} <br />" f"Feature 2: {features_dict.get(x, x)}"
+                            f"Feature 1: {features_dict.get(y, y)} <br />Feature 2: {features_dict.get(x, x)}"
                             for x in list_features
                         ]
                         for y in list_features
@@ -219,7 +217,7 @@ def plot_correlations(
                 coloraxis="coloraxis",
                 text=[
                     [
-                        f"Feature 1: {features_dict.get(y, y)} <br />" f"Feature 2: {features_dict.get(x, x)}"
+                        f"Feature 1: {features_dict.get(y, y)} <br />Feature 2: {features_dict.get(x, x)}"
                         for x in list_features
                     ]
                     for y in list_features

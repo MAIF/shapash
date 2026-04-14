@@ -75,9 +75,7 @@ class MultiDecorator:
             Raise if there is no argument.
         """
         if not args:
-            raise ValueError(
-                f"{name} is applied without arguments," "please check that you have specified contributions."
-            )
+            raise ValueError(f"{name} is applied without arguments,please check that you have specified contributions.")
 
     def check_method(self, method, name):
         """
@@ -177,7 +175,7 @@ class MultiDecorator:
         pd.Dataframe
             Combination of all masks.
         """
-        transposed_masks = list(map(list, zip(*masks)))
+        transposed_masks = list(map(list, zip(*masks, strict=False)))
         return self.delegate("combine_masks", transposed_masks)
 
     def compute_masked_contributions(self, s_contrib, masks):
@@ -197,7 +195,7 @@ class MultiDecorator:
         list
             List of masked contributions (pandas.Series).
         """
-        arg_tup = list(zip(s_contrib, masks))
+        arg_tup = list(zip(s_contrib, masks, strict=False))
         return self.delegate("compute_masked_contributions", arg_tup)
 
     def summarize(self, s_contribs, var_dicts, xs_sorted, masks, columns_dict, features_dict):
@@ -224,7 +222,7 @@ class MultiDecorator:
         list of pd.DataFrame
             Result of the summarize step
         """
-        arg_tup = list(zip(s_contribs, var_dicts, xs_sorted, masks))
+        arg_tup = list(zip(s_contribs, var_dicts, xs_sorted, masks, strict=False))
         return self.delegate("summarize", arg_tup, columns_dict, features_dict)
 
     def compute_features_import(self, contributions, norm=1):

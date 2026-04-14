@@ -1,5 +1,5 @@
 import datetime
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from shapash.explainer.smart_explainer import SmartExplainer
@@ -228,7 +228,7 @@ def get_feature_from_clicked_data(click_data: dict) -> str:
     return selected_feature
 
 
-def get_feature_from_features_groups(selected_feature: Optional[str], features_groups: dict) -> Optional[str]:
+def get_feature_from_features_groups(selected_feature: str | None, features_groups: dict) -> str | None:
     """Get the group feature name of the selected feature.
 
     Parameters
@@ -251,7 +251,7 @@ def get_feature_from_features_groups(selected_feature: Optional[str], features_g
     return selected_feature
 
 
-def get_indexes_from_datatable(data: list, list_index: Optional[list] = None) -> Optional[list]:
+def get_indexes_from_datatable(data: list, list_index: list | None = None) -> list | None:
     """Get the indexes of the data. If list_index is given and is the same length than
     the indexes, there is no subset selected.
 
@@ -313,7 +313,7 @@ def get_figure_zoom(click_zoom: int) -> bool:
     return zoom_active
 
 
-def get_feature_contributions_sign_to_show(positive: list, negative: list) -> Optional[bool]:
+def get_feature_contributions_sign_to_show(positive: list, negative: list) -> bool | None:
     """Get the feature contributions sign to show on plot.
 
     Parameters
@@ -561,7 +561,7 @@ def get_feature_filter_options(dataframe: pd.DataFrame, features_dict: dict, spe
     return options
 
 
-def create_dropdown_feature_filter(n_clicks_add: Optional[int], options: list) -> html.Div:
+def create_dropdown_feature_filter(n_clicks_add: int | None, options: list) -> html.Div:
     """Create a new dropdown for the filter feature selection.
 
     Parameters
@@ -698,7 +698,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     return new_element
 
 
-def handle_page_navigation(triggered_input: str, page: Union[int, str], selected_feature: str) -> tuple[int, str]:
+def handle_page_navigation(triggered_input: str, page: int | str, selected_feature: str) -> tuple[int, str]:
     """
     Handle the navigation between different pages based on user input.
 

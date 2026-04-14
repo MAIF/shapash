@@ -161,7 +161,7 @@ def add_line_break(value, nbchar, maxlen=150):
         else:
             last_char = "..."
 
-        new_string = "".join(sum(zip(input_word, final_sep + [""]), ())[:-1]) + last_char
+        new_string = "".join(sum(zip(input_word, final_sep + [""], strict=False), ())[:-1]) + last_char
         return new_string
     else:
         return value
@@ -457,7 +457,7 @@ def tuning_colorscale(
     if nunique in [2, n_colors]:
         cmin, cmax = min(unique_vals), max(unique_vals)
         positions = np.linspace(0, 1, n_colors)
-        color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale)]
+        color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale, strict=False)]
         return color_scale, cmin, cmax
 
     # Case 3: Filter based on quantile range if requested
@@ -491,7 +491,7 @@ def tuning_colorscale(
         else:
             positions = (quantile_values - min_q) / (max_q - min_q)
 
-    color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale)]
+    color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale, strict=False)]
     return color_scale, cmin, cmax
 
 
