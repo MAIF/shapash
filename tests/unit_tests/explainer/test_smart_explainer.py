@@ -635,13 +635,13 @@ class TestSmartExplainer(unittest.TestCase):
         temp, xpl = init_sme_to_pickle_test()
 
         current = Path(path.abspath(__file__)).parent.parent.parent
-        if str(sys.version)[0:4] == "3.11":
+        if sys.version_info[:2] == (3, 11):
             pkl_file = path.join(current, "data/xpl_to_load_311.pkl")
-        elif str(sys.version)[0:4] == "3.12":
+        elif sys.version_info[:2] == (3, 12):
             pkl_file = path.join(current, "data/xpl_to_load_312.pkl")
-        elif str(sys.version)[0:4] == "3.13":
+        elif sys.version_info[:2] == (3, 13):
             pkl_file = path.join(current, "data/xpl_to_load_313.pkl")
-        elif str(sys.version)[0:4] == "3.14":
+        elif sys.version_info[:2] == (3, 14):
             pkl_file = path.join(current, "data/xpl_to_load_314.pkl")
         else:
             raise NotImplementedError
