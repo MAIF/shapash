@@ -1,5 +1,4 @@
 import warnings
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -15,8 +14,8 @@ from shapash.utils.utils import adjust_title_height, compute_digit_number
 def plot_distribution(
     df_all: pd.DataFrame,
     col: str,
-    hue: Optional[str] = None,
-    colors_dict: Optional[dict] = None,
+    hue: str | None = None,
+    colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -119,8 +118,8 @@ def plot_distribution(
 def plot_continuous_distribution(
     df_all: pd.DataFrame,
     col: str,
-    hue: Optional[str] = None,
-    colors_dict: Optional[dict] = None,
+    hue: str | None = None,
+    colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -211,10 +210,8 @@ def plot_continuous_distribution(
 
             # Generate hovertext
             hv_text = [
-                f"{hue}: {level}<br>"
-                f"{col}: {format(x, f'.{max(0, compute_digit_number(x, 3))}f')}<br>"
-                f"Density: {y:.4f}"
-                for x, y in zip(x_values, y_values)
+                f"{hue}: {level}<br>{col}: {format(x, f'.{max(0, compute_digit_number(x, 3))}f')}<br>Density: {y:.4f}"
+                for x, y in zip(x_values, y_values, strict=False)
             ]
 
             color = style_dict.get(level, random_color())
@@ -244,8 +241,8 @@ def plot_continuous_distribution(
 
         # Generate hovertext
         hv_text = [
-            f"{col}: {format(x, f'.{max(0, compute_digit_number(x, 3))}f')}<br>" f"Density: {y:.4f}"
-            for x, y in zip(x_values, y_values)
+            f"{col}: {format(x, f'.{max(0, compute_digit_number(x, 3))}f')}<br>Density: {y:.4f}"
+            for x, y in zip(x_values, y_values, strict=False)
         ]
 
         color = style_dict.get(col, random_color())
@@ -296,10 +293,10 @@ def plot_continuous_distribution(
 def plot_categorical_distribution(
     df_all: pd.DataFrame,
     col: str,
-    hue: Optional[str] = None,
+    hue: str | None = None,
     nb_cat_max: int = 7,
     nb_hue_max: int = 7,
-    colors_dict: Optional[dict] = None,
+    colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -466,7 +463,7 @@ def plot_categorical_distribution(
     return fig
 
 
-def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: Optional[str], nb_cat_max: int) -> pd.DataFrame:
+def _merge_small_categories(df_cat: pd.DataFrame, col: str, hue: str | None, nb_cat_max: int) -> pd.DataFrame:
     """
     Merges smaller categories into a single "Other" category.
 

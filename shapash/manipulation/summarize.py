@@ -99,7 +99,7 @@ def summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
     summary = pd.concat([contrib_sum, var_dict_sum, x_sorted_sum], axis=1)
 
     # Ordering columns
-    ordered_columns = list(flatten(zip(var_dict_sum.columns, x_sorted_sum.columns, contrib_sum.columns)))
+    ordered_columns = list(flatten(zip(var_dict_sum.columns, x_sorted_sum.columns, contrib_sum.columns, strict=False)))
     summary = summary[ordered_columns]
     return summary
 

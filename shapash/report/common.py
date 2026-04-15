@@ -1,7 +1,6 @@
 import os
 from enum import Enum
 from numbers import Number
-from typing import Optional, Union
 
 import pandas as pd
 from pandas.api.types import is_bool_dtype, is_numeric_dtype, is_string_dtype
@@ -72,7 +71,7 @@ def numeric_is_continuous(s: pd.Series, threshold: int = 15) -> bool:
     return n_unique > threshold
 
 
-def compute_col_types(df_all: Optional[pd.DataFrame]) -> Optional[dict]:
+def compute_col_types(df_all: pd.DataFrame | None) -> dict | None:
     """
     Computes the type of each column and stores the result in a dict.
 
@@ -135,7 +134,7 @@ def get_callable(path: str):
         raise ValueError(f"Invalid type ({type(obj)}) found for {path}")
 
 
-def load_saved_df(path: str) -> Union[pd.DataFrame, None]:
+def load_saved_df(path: str) -> pd.DataFrame | None:
     """
     Loads a pandas DataFrame that was saved using pd.to_csv method.
 

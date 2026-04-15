@@ -1,12 +1,10 @@
-from typing import Optional
-
 import pandas as pd
 
 from shapash.report.common import VarType, display_value, replace_dict_values
 from shapash.webapp.utils.utils import round_to_k
 
 
-def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
+def perform_global_dataframe_analysis(df: pd.DataFrame | None) -> dict:
     """
     Returns a python dict containing global information about a pandas DataFrame :
     Number of features, Number of observations, missing values...
@@ -42,7 +40,7 @@ def perform_global_dataframe_analysis(df: Optional[pd.DataFrame]) -> dict:
     return global_d
 
 
-def perform_univariate_dataframe_analysis(df: Optional[pd.DataFrame], col_types: dict) -> dict:
+def perform_univariate_dataframe_analysis(df: pd.DataFrame | None, col_types: dict) -> dict:
     """
     Returns a python dict containing information about each column of a pandas DataFrame.
     The computed information depends on the type of the column.

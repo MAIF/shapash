@@ -30,7 +30,9 @@ class Consistency:
         desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
         min_pred, max_init = list(desc_df.loc[["min", "max"]].values)
         desc_pct_df = (desc_df.loc[~desc_df.index.isin(["count", "mean", "std"])] - min_pred) / (max_init - min_pred)
-        color_scale = list(map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"]))))
+        color_scale = list(
+            map(list, (zip(desc_pct_df.values.flatten(), self._style_dict["init_contrib_colorscale"], strict=False)))
+        )
         return color_scale
 
     def compile(self, contributions, x=None, preprocessing=None):
@@ -416,7 +418,9 @@ class Consistency:
             axes = np.array([axes])
         fig.suptitle("Examples of explanations' comparisons for various distances (L2 norm)")
 
-        for n, (i, j, k, l, m, o) in enumerate(zip(method_1, method_2, l2, index, backend_name_1, backend_name_2)):
+        for n, (i, j, k, l, m, o) in enumerate(
+            zip(method_1, method_2, l2, index, backend_name_1, backend_name_2, strict=False)
+        ):
             # Only keep top features according to both methods
             idx = np.flip(np.abs(np.concatenate([i, j])).argsort()) % len(i)
             _, first_occurrence_idx = np.unique(idx, return_index=True)
@@ -601,6 +605,7 @@ class Consistency:
                     weights[0][c].round(2),
                     weights[1][c].round(2),
                     (weights[0][c] - weights[1][c]).round(2),
+                    strict=False,
                 )
             ]
 

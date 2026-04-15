@@ -33,10 +33,10 @@ repos:
         args: [--fix]
       - id: ruff-format
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v2.7.2
+    rev: v3.21.2
     hooks:
     -   id: pyupgrade
-        args: [--py37-plus]
+        args: [--py311-plus]
 -   repo: https://github.com/asottile/blacken-docs
     rev: v1.8.0
     hooks:

@@ -28,16 +28,14 @@ class Test_load_smartpredictor(unittest.TestCase):
         predictor = xpl.to_smartpredictor()
 
         current = Path(path.abspath(__file__)).parent.parent.parent
-        if str(sys.version)[0:4] == "3.10":
-            pkl_file = path.join(current, "data/predictor_to_load_310.pkl")
-        elif str(sys.version)[0:3] == "3.9":
-            pkl_file = path.join(current, "data/predictor_to_load_39.pkl")
-        elif str(sys.version)[0:4] == "3.11":
+        if sys.version_info[:2] == (3, 11):
             pkl_file = path.join(current, "data/predictor_to_load_311.pkl")
-        elif str(sys.version)[0:4] == "3.12":
+        elif sys.version_info[:2] == (3, 12):
             pkl_file = path.join(current, "data/predictor_to_load_312.pkl")
-        elif str(sys.version)[0:4] == "3.13":
+        elif sys.version_info[:2] == (3, 13):
             pkl_file = path.join(current, "data/predictor_to_load_313.pkl")
+        elif sys.version_info[:2] == (3, 14):
+            pkl_file = path.join(current, "data/predictor_to_load_314.pkl")
         else:
             raise NotImplementedError
 

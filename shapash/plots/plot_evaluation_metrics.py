@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -272,6 +270,7 @@ def _prediction_classification_plot(
             df_correct_predict.proba_values.values.round(3).flatten(),
             df_correct_predict.predict_class.values.flatten(),
             df_correct_predict.target.values.flatten(),
+            strict=False,
         )
     ]
     hv_text_wrong_predict = [
@@ -281,6 +280,7 @@ def _prediction_classification_plot(
             df_wrong_predict.proba_values.values.round(3).flatten(),
             df_wrong_predict.predict_class.values.flatten(),
             df_wrong_predict.target.values.flatten(),
+            strict=False,
         )
     ]
     rng = np.random.default_rng(seed=79)
@@ -446,7 +446,9 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
 
         hv_text = [
             f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}"
-            for x, y, z, w in zip(y_target.index, y_target_values, y_pred.values.flatten(), prediction_error.flatten())
+            for x, y, z, w in zip(
+                y_target.index, y_target_values, y_pred.values.flatten(), prediction_error.flatten(), strict=False
+            )
         ]
 
         fig.add_scatter(
@@ -497,9 +499,9 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
 
 
 def plot_confusion_matrix(
-    y_true: Union[np.ndarray, list],
-    y_pred: Union[np.ndarray, list],
-    colors_dict: Optional[dict] = None,
+    y_true: np.ndarray | list,
+    y_pred: np.ndarray | list,
+    colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -550,7 +552,7 @@ def plot_confusion_matrix(
 
     init_colorscale = style_dict["init_confusion_matrix_colorscale"]
     linspace = np.linspace(0, 1, len(init_colorscale))
-    col_scale = [(value, color) for value, color in zip(linspace, init_colorscale)]
+    col_scale = [(value, color) for value, color in zip(linspace, init_colorscale, strict=False)]
 
     # Convert the DataFrame to a NumPy array
     x_labels = list(df_cm.columns)
@@ -567,8 +569,8 @@ def plot_confusion_matrix(
     y_numeric = all(str(label).isdigit() for label in y_labels)
 
     hv_text = [
-        [f"Actual: {y}<br>Predicted: {x}<br>Count: {value}" for x, value in zip(x_labels, row)]
-        for y, row in zip(y_labels, z)
+        [f"Actual: {y}<br>Predicted: {x}<br>Count: {value}" for x, value in zip(x_labels, row, strict=False)]
+        for y, row in zip(y_labels, z, strict=False)
     ]
 
     if not x_numeric:

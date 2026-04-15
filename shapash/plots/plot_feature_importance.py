@@ -362,7 +362,7 @@ def _plot_local_features_import(
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
     dict_style_bar = {}
-    for type_feat, i in zip(["global", "semi-local", "local"], [1, 3, 4]):
+    for type_feat, i in zip(["global", "semi-local", "local"], [1, 3, 4], strict=False):
         dict_style_bar[type_feat] = style_dict["dict_featimp_colors"][i]
 
     # Change bar color for groups of features
