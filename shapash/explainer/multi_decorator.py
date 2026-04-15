@@ -75,7 +75,9 @@ class MultiDecorator:
             Raise if there is no argument.
         """
         if not args:
-            raise ValueError(f"{name} is applied without arguments, please check that you have specified contributions.")
+            raise ValueError(
+                f"{name} is applied without arguments, please check that you have specified contributions."
+            )
 
     def check_method(self, method, name):
         """
