@@ -2641,7 +2641,7 @@ class SmartApp:
             style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
             # Use viewport_data (sorted/filtered) to find the correct row index for highlighting and not the index of the list
-            selected = check_row(viewport_data if viewport_data else data, index)
+            selected = check_row(viewport_data if viewport_data is not None else data, index)
             if selected is not None:
                 style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
