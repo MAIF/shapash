@@ -2383,7 +2383,18 @@ class SmartApp:
                 elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
                     selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
-                    selected = viewport_data[cell["row"]]["_index_"]
+                    displayed_data = viewport_data if viewport_data is not None else data
+                    row = cell.get("row") if isinstance(cell, dict) else None
+                    if (
+                        isinstance(displayed_data, list)
+                        and isinstance(row, int)
+                        and 0 <= row < len(displayed_data)
+                        and isinstance(displayed_data[row], dict)
+                        and "_index_" in displayed_data[row]
+                    ):
+                        selected = displayed_data[row]["_index_"]
+                    else:
+                        selected = current_index_id
                 elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
                     selected = current_index_id
             except KeyError:
