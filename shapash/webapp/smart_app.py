@@ -2340,7 +2340,7 @@ class SmartApp:
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
-            [State("dataset", "data"), State("index_id", "value")],  # Get the current value of the index
+            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
         def update_index_id(
             click_data,
@@ -2351,6 +2351,7 @@ class SmartApp:
             reset_filter,
             nclicks_del,
             data,
+            viewport_data,
             current_index_id,
         ):
             """
@@ -2364,7 +2365,8 @@ class SmartApp:
             apply_filters: click on Apply filter button
             reset_filter: click on reset filter button
             nclicks_del: click on del button
-            data: dataset
+            data: dataset (original order)
+            viewport_data: dataset as currently displayed (after sorting/filtering)
             current_index_id: the current value of the index
             ----------------------------------------------------------------
             return
@@ -2381,7 +2383,18 @@ class SmartApp:
                 elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
                     selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
-                    selected = data[cell["row"]]["_index_"]
+                    displayed_data = viewport_data if viewport_data is not None else data
+                    row = cell.get("row") if isinstance(cell, dict) else None
+                    if (
+                        isinstance(displayed_data, list)
+                        and isinstance(row, int)
+                        and 0 <= row < len(displayed_data)
+                        and isinstance(displayed_data[row], dict)
+                        and "_index_" in displayed_data[row]
+                    ):
+                        selected = displayed_data[row]["_index_"]
+                    else:
+                        selected = current_index_id
                 elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
                     selected = current_index_id
             except KeyError:
@@ -2614,9 +2627,9 @@ class SmartApp:
                 Output("dataset", "style_cell_conditional"),
             ],
             [Input("validation", "n_clicks")],
-            [State("dataset", "data"), State("index_id", "value")],
+            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
-        def datatable_layout(validation, data, index):
+        def datatable_layout(validation, data, viewport_data, index):
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "validation.n_clicks" and validation is not None:
                 pass
@@ -2638,7 +2651,8 @@ class SmartApp:
             ]
             style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
-            selected = check_row(data, index)
+            # Use viewport_data (sorted/filtered) to find the correct row index for highlighting and not the index of the list
+            selected = check_row(viewport_data if viewport_data is not None else data, index)
             if selected is not None:
                 style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
