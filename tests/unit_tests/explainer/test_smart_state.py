@@ -9,6 +9,8 @@ import pandas as pd
 
 from shapash.explainer.smart_state import SmartState
 
+from shapash.utils.transform import _normalize_str_dtypes
+
 
 class TestSmartState(unittest.TestCase):
     """
@@ -264,7 +266,7 @@ class TestSmartState(unittest.TestCase):
             index=[0, 1, 2],
             dtype=object,
         )
-        assert not pd.testing.assert_frame_equal(expected, output)
+        assert not pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), _normalize_str_dtypes(output))
 
     @patch("shapash.explainer.smart_state.compute_features_import")
     def test_compute_features_import(self, mock_compute_features_import):

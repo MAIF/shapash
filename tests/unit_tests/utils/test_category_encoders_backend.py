@@ -11,7 +11,7 @@ import pandas as pd
 import xgboost
 from sklearn.ensemble import GradientBoostingClassifier
 
-from shapash.utils.transform import apply_preprocessing, get_col_mapping_ce, inverse_transform
+from shapash.utils.transform import apply_preprocessing, get_col_mapping_ce, inverse_transform, _normalize_str_dtypes
 
 
 class TestInverseTransformCaterogyEncoder(unittest.TestCase):
@@ -113,7 +113,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
             result5, [enc_onehot, enc_binary, enc_ordinal, enc_basen, enc_target, input_dict1, list_dict]
         )
 
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_3(self):
         """
@@ -137,7 +137,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.TargetEncoder(cols=["city", "state"]).fit(train, y)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_4(self):
         """
@@ -150,7 +150,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_5(self):
         """
@@ -160,7 +160,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.OrdinalEncoder(handle_missing="value", handle_unknown="value")
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_6(self):
         """
@@ -170,7 +170,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.OrdinalEncoder(handle_missing="return_nan", handle_unknown="value")
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_7(self):
         """
@@ -182,7 +182,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_8(self):
         """
@@ -194,7 +194,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_9(self):
         """
@@ -221,7 +221,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.OrdinalEncoder(cols=["city", "state"])
         enc.fit(data)
         original = inverse_transform(test, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_11(self):
         """
@@ -240,7 +240,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.BinaryEncoder(cols=["city", "state"]).fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_12(self):
         """
@@ -250,7 +250,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.BaseNEncoder(base=2)
         result = enc.fit_transform(train)
         inversed_result = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, inversed_result)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), inversed_result)
 
     def test_inverse_transform_13(self):
         """
@@ -260,7 +260,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.BaseNEncoder(handle_missing="value", handle_unknown="value")
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_14(self):
         """
@@ -272,7 +272,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
 
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_15(self):
         """
@@ -286,7 +286,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         result = enc.transform(test)
         original = inverse_transform(result, enc)
 
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_16(self):
         """
@@ -299,7 +299,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_17(self):
         """
@@ -310,7 +310,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.BaseNEncoder(cols=["city", "state"], handle_missing="value", handle_unknown="return_nan")
         enc.fit(train)
         original = inverse_transform(test, enc)
-        pd.testing.assert_frame_equal(original, train)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_18(self):
         """
@@ -320,7 +320,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         value = pd.DataFrame({"match": pd.Series("box_-1"), "match_box": pd.Series(-1)})
         transformed = encoder.fit_transform(value)
         inversed_result = inverse_transform(transformed, encoder)
-        pd.testing.assert_frame_equal(value, inversed_result)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(value), inversed_result)
 
     def test_inverse_transform_19(self):
         """
@@ -330,7 +330,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         value = pd.DataFrame({"match": pd.Series("box_-1"), "match_box": pd.Series(-1)})
         transformed = encoder.fit_transform(value)
         inversed_result = inverse_transform(transformed, encoder)
-        pd.testing.assert_frame_equal(value, inversed_result)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(value), inversed_result)
 
     def test_inverse_transform_20(self):
         """
@@ -340,7 +340,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.OneHotEncoder(handle_missing="value", handle_unknown="value")
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_21(self):
         """
@@ -350,7 +350,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.OneHotEncoder(handle_missing="return_nan", handle_unknown="value")
         result = enc.fit_transform(train)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_22(self):
         """
@@ -363,7 +363,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_23(self):
         """
@@ -375,7 +375,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(train, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(train), original)
 
     def test_inverse_transform_24(self):
         """
@@ -388,7 +388,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc.fit(train)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_inverse_transform_25(self):
         """
@@ -406,7 +406,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
         input_dict["data_type"] = "object"
         result = inverse_transform(data, input_dict)
-        pd.testing.assert_frame_equal(result, expected)
+        pd.testing.assert_frame_equal(result, _normalize_str_dtypes(expected))
 
     def test_inverse_transform_26(self):
         """
@@ -500,7 +500,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
             result5, [enc_onehot, enc_binary, enc_ordinal, enc_basen, enc_target, input_dict1, list_dict]
         )
 
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), original)
 
     def test_transform_ce_1(self):
         """

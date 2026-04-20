@@ -26,6 +26,8 @@ from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 from shapash.utils.check import check_model
 
+from shapash.utils.transform import _normalize_str_dtypes
+
 
 def init_sme_to_pickle_test():
     """
@@ -208,6 +210,7 @@ class TestSmartExplainer(unittest.TestCase):
         df_encoded = encoder_fitted.transform(df)
         output = df[["x1", "x2"]].copy()
         output["x2"] = ["single", "married", "single", "divorced", "married"]
+        output = _normalize_str_dtypes(output)  # Ensure consistent string dtypes for comparison
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[["x1", "x2"]], df_encoded["y"])
 
         postprocessing_1 = {"x2": {"type": "transcoding", "rule": {"S": "single", "M": "married", "D": "divorced"}}}
@@ -234,8 +237,8 @@ class TestSmartExplainer(unittest.TestCase):
         assert hasattr(xpl_postprocessing2, "postprocessing")
         assert hasattr(xpl_postprocessing3, "preprocessing")
         assert hasattr(xpl_postprocessing3, "postprocessing")
-        pd.testing.assert_frame_equal(xpl_postprocessing1.x_init, output)
-        pd.testing.assert_frame_equal(xpl_postprocessing2.x_init, output)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(xpl_postprocessing1.x_init), output)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(xpl_postprocessing2.x_init), output)
         assert xpl_postprocessing1.preprocessing == encoder_fitted
         assert xpl_postprocessing2.preprocessing == encoder_fitted
         assert xpl_postprocessing1.postprocessing == postprocessing_1
@@ -795,7 +798,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        assert not pd.testing.assert_frame_equal(expected, output)
+        assert not pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), _normalize_str_dtypes(output))
 
     def predict_proba(self, arg1, arg2):
         """
@@ -941,7 +944,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_frame_equal(_normalize_str_dtypes(expected), _normalize_str_dtypes(output))
 
     def test_compute_features_import_1(self):
         """

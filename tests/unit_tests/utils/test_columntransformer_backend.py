@@ -21,7 +21,7 @@ from shapash.utils.columntransformer_backend import (
     get_list_features_names,
     get_names,
 )
-from shapash.utils.transform import apply_preprocessing, inverse_transform
+from shapash.utils.transform import apply_preprocessing, inverse_transform, _normalize_str_dtypes
 
 # TODO
 # StandardScaler return object vs float vs int
@@ -64,7 +64,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "col3_0", "col3_1", "col4_0", "col4_1"]
         result.index = ["index1", "index2", "index3"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_2(self):
         """
@@ -102,7 +102,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "col3_0", "col3_1", "col4_0", "col4_1", "other"]
         result.index = ["index1", "index2", "index3"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_3(self):
         """
@@ -157,7 +157,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         list_dict = [input_dict2, input_dict3]
 
         original = inverse_transform(result, [enc, input_dict1, list_dict])
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_4(self):
         """
@@ -194,7 +194,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_5(self):
         """
@@ -223,7 +223,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_6(self):
         """
@@ -245,7 +245,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_7(self):
         """
@@ -274,7 +274,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_8(self):
         """
@@ -296,7 +296,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_9(self):
         """
@@ -325,7 +325,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_10(self):
         """
@@ -346,7 +346,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_11(self):
         """
@@ -369,7 +369,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_12(self):
         """
@@ -390,7 +390,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_13(self):
         """
@@ -419,7 +419,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_14(self):
         """
@@ -440,7 +440,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_15(self):
         """
@@ -469,7 +469,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_16(self):
         """
@@ -490,7 +490,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_17(self):
         """
@@ -519,7 +519,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_18(self):
         """
@@ -546,7 +546,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_19(self):
         """
@@ -565,7 +565,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_20(self):
         """
@@ -589,7 +589,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["num1", "num2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_21(self):
         """
@@ -610,7 +610,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["num1", "num2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_22(self):
         """
@@ -637,7 +637,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["num1", "num2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_inv_transform_ct_23(self):
         """
@@ -658,7 +658,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["num1", "num2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, _normalize_str_dtypes(expected))
 
     def test_transform_ct_1(self):
         """
