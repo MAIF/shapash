@@ -7,7 +7,7 @@ from os.path import abspath, dirname, join
 import category_encoders as ce
 import pandas as pd
 
-from shapash.utils.transform import inverse_transform
+from shapash.utils.transform import inverse_transform, _normalize_str_dtypes
 
 
 class TestInverseTranform(unittest.TestCase):
@@ -38,7 +38,7 @@ class TestInverseTranform(unittest.TestCase):
         preprocessing = ce.BaseNEncoder(cols=["Age", "Sex"], return_df=True, base=3)
         fitted_dataset = preprocessing.fit_transform(self.ds_titanic_clean)
         output = inverse_transform(fitted_dataset, preprocessing)
-        pd.testing.assert_frame_equal(output, self.ds_titanic_clean)
+        pd.testing.assert_frame_equal(output, _normalize_str_dtypes(self.ds_titanic_clean))
 
     def test_inverse_transform_ce_onehot(self):
         """
@@ -47,7 +47,7 @@ class TestInverseTranform(unittest.TestCase):
         preprocessing = ce.OneHotEncoder(cols=["Age", "Sex"], return_df=True)
         fitted_dataset = preprocessing.fit_transform(self.ds_titanic_clean)
         output = inverse_transform(fitted_dataset, preprocessing)
-        pd.testing.assert_frame_equal(output, self.ds_titanic_clean)
+        pd.testing.assert_frame_equal(output, _normalize_str_dtypes(self.ds_titanic_clean))
 
     def test_inverse_transform_ce_binary(self):
         """
@@ -56,7 +56,7 @@ class TestInverseTranform(unittest.TestCase):
         preprocessing = ce.BinaryEncoder(cols=["Age", "Sex"], return_df=True)
         fitted_dataset = preprocessing.fit_transform(self.ds_titanic_clean)
         output = inverse_transform(fitted_dataset, preprocessing)
-        pd.testing.assert_frame_equal(output, self.ds_titanic_clean)
+        pd.testing.assert_frame_equal(output, _normalize_str_dtypes(self.ds_titanic_clean))
 
     def test_inverse_transform_ce_ordinal(self):
         """
@@ -65,4 +65,4 @@ class TestInverseTranform(unittest.TestCase):
         preprocessing = ce.OrdinalEncoder(cols=["Age", "Sex"], return_df=True)
         fitted_dataset = preprocessing.fit_transform(self.ds_titanic_clean)
         output = inverse_transform(fitted_dataset, preprocessing)
-        pd.testing.assert_frame_equal(output, self.ds_titanic_clean)
+        pd.testing.assert_frame_equal(output, _normalize_str_dtypes(self.ds_titanic_clean))
