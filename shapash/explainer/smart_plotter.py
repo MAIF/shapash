@@ -1127,7 +1127,7 @@ class SmartPlotter:
         >>> xpl.plot.interactions_plot(0, 1)
         """
 
-        if not (isinstance(col1, str | int) or isinstance(col2, str | int)):
+        if not (isinstance(col1, str | int) and isinstance(col2, str | int)):
             raise ValueError("parameters col1 and col2 must be string or int.")
 
         col_id1 = self._explainer.check_features_name([col1])[0]
