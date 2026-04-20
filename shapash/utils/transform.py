@@ -75,7 +75,26 @@ def inverse_transform(x_init, preprocessing=None):
                 x_inverse = inv_transform_ct(x_inverse, encoding)
             else:
                 x_inverse = inv_transform_ce(x_inverse, encoding)
-        return x_inverse
+        return _normalize_str_dtypes(x_inverse)
+
+
+def _normalize_str_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Cast any StringDtype variant to object dtype for compatibility across pandas 2.x and 3.x.
+    See: https://pandas.pydata.org/docs/whatsnew/v3.0.0.html#migration-guide
+    """
+    result = df.copy()
+
+    # Normalize the columns Index itself
+    if isinstance(result.columns.dtype, pd.StringDtype):
+        result.columns = result.columns.astype(object)
+
+    # Normalize column values
+    for col in result.columns:
+        if isinstance(result[col].dtype, pd.StringDtype):
+            result[col] = result[col].astype(object)
+
+    return result
 
 
 def apply_preprocessing(x_init, model, preprocessing=None):
