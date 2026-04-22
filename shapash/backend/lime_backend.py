@@ -45,7 +45,7 @@ class LimeBackend(BaseBackend):
                 num_classes = len(self._classes)
 
                 if num_classes <= 2:
-                    exp = explainer.explain_instance(x.loc[i], self.model.predict_proba, num_features=x.shape[1])
+                    exp = explainer.explain_instance(x.loc[i].values, self.model.predict_proba, num_features=x.shape[1])
                     lime_contrib.append({_transform_name(var_name[0], x): var_name[1] for var_name in exp.as_list()})
 
                 elif num_classes > 2:
@@ -66,7 +66,7 @@ class LimeBackend(BaseBackend):
                     return contribution
 
             else:
-                exp = explainer.explain_instance(x.loc[i], self.model.predict, num_features=x.shape[1])
+                exp = explainer.explain_instance(x.loc[i].values, self.model.predict, num_features=x.shape[1])
                 lime_contrib.append({_transform_name(var_name[0], x): var_name[1] for var_name in exp.as_list()})
 
         contributions = pd.DataFrame(lime_contrib, index=x.index)
