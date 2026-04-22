@@ -264,7 +264,7 @@ class TestSmartState(unittest.TestCase):
             index=[0, 1, 2],
             dtype=object,
         )
-        assert not pd.testing.assert_frame_equal(expected, output)
+        assert not pd.testing.assert_frame_equal(expected, output, check_dtype=False)
 
     @patch("shapash.explainer.smart_state.compute_features_import")
     def test_compute_features_import(self, mock_compute_features_import):

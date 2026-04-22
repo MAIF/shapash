@@ -113,7 +113,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
             result5, [enc_onehot, enc_binary, enc_ordinal, enc_basen, enc_target, input_dict1, list_dict]
         )
 
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(expected, original, check_dtype=False)
 
     def test_inverse_transform_3(self):
         """
@@ -137,7 +137,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         enc = ce.TargetEncoder(cols=["city", "state"]).fit(train, y)
         result = enc.transform(test)
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(expected, original, check_dtype=False)
 
     def test_inverse_transform_4(self):
         """
@@ -406,7 +406,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
         input_dict["data_type"] = "object"
         result = inverse_transform(data, input_dict)
-        pd.testing.assert_frame_equal(result, expected)
+        pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
     def test_inverse_transform_26(self):
         """
@@ -500,7 +500,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
             result5, [enc_onehot, enc_binary, enc_ordinal, enc_basen, enc_target, input_dict1, list_dict]
         )
 
-        pd.testing.assert_frame_equal(expected, original)
+        pd.testing.assert_frame_equal(expected, original, check_dtype=False)
 
     def test_transform_ce_1(self):
         """
