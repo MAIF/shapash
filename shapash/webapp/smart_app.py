@@ -859,6 +859,7 @@ class SmartApp:
                                         ),
                                         dcc.Store(id="clickdata-store"),
                                         dcc.Store(id="selected-clickdata-store"),
+                                        dcc.Location(id="url", refresh=False),
                                         html.Div(
                                             [
                                                 # Create a row to contain the buttons
@@ -3117,3 +3118,11 @@ class SmartApp:
             if n_clusters is None:
                 return "Clusters: —"
             return f"Clusters: {n_clusters}"
+
+        @app.callback(
+            Output("bool_groups", "on"),
+            Input("url", "pathname"),  # fires once on every page load
+            prevent_initial_call=False,
+        )
+        def reset_bool_groups_on_load(_):
+            return True
