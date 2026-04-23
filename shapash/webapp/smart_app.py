@@ -77,8 +77,8 @@ class SmartApp:
             SmartExplainer object
         settings : dict
             A dict describing the default webapp settings values to be used
-            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
-            Values should be positive ints
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
+            Values integer values should be positive.
         """
         # APP
         self.server = Flask(__name__)
@@ -101,12 +101,16 @@ class SmartApp:
             "points": 1000,
             "violin": 10,
             "features": 20,
+            "toggle_group": True,
         }
         if settings is not None:
             for k, v in self.settings_ini.items():
-                self.settings_ini[k] = (
-                    settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
-                )
+                if k == "toggle_group":
+                    self.settings_ini[k] = settings[k] if k in settings and isinstance(settings[k], bool) else v
+                else:
+                    self.settings_ini[k] = (
+                        settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
+                    )
         self.settings = self.settings_ini.copy()
 
         self.predict_col = ["_predict_"]
@@ -315,7 +319,7 @@ class SmartApp:
                         html.Div(
                             daq.BooleanSwitch(
                                 id="bool_groups",
-                                on=True,
+                                on=self.settings.get("toggle_group", True),
                                 style={"display": "none"} if self.explainer.features_groups is None else {},
                                 color=self.color[0],
                                 label={
@@ -3121,8 +3125,8 @@ class SmartApp:
 
         @app.callback(
             Output("bool_groups", "on"),
-            Input("url", "pathname"),  # fires once on every page load
+            Input("url", "pathname"),
             prevent_initial_call=False,
         )
         def reset_bool_groups_on_load(_):
-            return True
+            return self.settings.get("toggle_group", True)

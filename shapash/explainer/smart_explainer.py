@@ -1414,8 +1414,9 @@ class SmartExplainer:
             - `'points'` : int — number of points shown in scatter plots
             - `'violin'` : int — number of points displayed in violin plots
             - `'features'` : int — number of features shown in plots
+            - `'toggle_group'` : bool — default state of the group toggle in the UI
 
-            All values must be positive integers.
+            All integer values values must be positive.
 
         Returns
         -------
