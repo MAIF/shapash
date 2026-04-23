@@ -795,7 +795,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        assert not pd.testing.assert_frame_equal(expected, output, check_dtype=False)
+        pd.testing.assert_frame_equal(expected, output, check_dtype=False)
 
     def predict_proba(self, arg1, arg2):
         """
