@@ -49,4 +49,38 @@ class TestWebappSettings(unittest.TestCase):
         """
         settings = {"oui": 1, 1: 2, "a": []}
         self.xpl.init_app(settings)
-        assert all(k in ["rows", "points", "violin", "features"] for k in self.xpl.smartapp.settings)
+        assert all(k in ["rows", "points", "violin", "features", "toggle_group"] for k in self.xpl.smartapp.settings)
+
+    def test_toggle_group_true(self):
+        """
+        Test that toggle_group=True is correctly stored
+        """
+        settings = {"toggle_group": True}
+        self.xpl.init_app(settings)
+        assert self.xpl.smartapp.settings["toggle_group"] is True
+
+    def test_toggle_group_false(self):
+        """
+        Test that toggle_group=False is correctly stored
+        """
+        settings = {"toggle_group": False}
+        self.xpl.init_app(settings)
+        assert self.xpl.smartapp.settings["toggle_group"] is False
+
+    def test_toggle_group_default(self):
+        """
+        Test that toggle_group defaults to True when not provided
+        """
+        settings = {}
+        self.xpl.init_app(settings)
+        assert self.xpl.smartapp.settings["toggle_group"] is True
+
+    def test_toggle_group_invalid_values(self):
+        """
+        Test that invalid toggle_group values (non-bool) fall back to the default True
+        """
+        for invalid in [1, 0, "true", "false", None, 1.0, []]:
+            with self.subTest(invalid=invalid):
+                settings = {"toggle_group": invalid}
+                self.xpl.init_app(settings)
+                assert self.xpl.smartapp.settings["toggle_group"] is True
