@@ -30,7 +30,6 @@ class TestInverseTranform(unittest.TestCase):
         """
         data_path = dirname(dirname(abspath(__file__)))
         if int(pd.__version__.split(".")[0]) >= 3:
-            print("Using clean_titanic_pandas_3.pkl for pandas version >= 3")
             self.ds_titanic_clean = pd.read_pickle(join(data_path, "data", "clean_titanic_pandas_3.pkl"))
         else:
             self.ds_titanic_clean = pd.read_pickle(join(data_path, "data", "clean_titanic.pkl"))
