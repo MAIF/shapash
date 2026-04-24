@@ -1780,14 +1780,18 @@ class SmartExplainer:
                 x_train=x_train,
                 y_train=y_train,
                 y_test=y_test,
-                config=dict(
-                    title_story=title_story,
-                    title_description=title_description,
-                    metrics=metrics,
-                    max_points=max_points,
-                    display_interaction_plot=display_interaction_plot,
-                    nb_top_interactions=nb_top_interactions,
-                ),
+                config={
+                    k: v
+                    for k, v in dict(
+                        title_story=title_story,
+                        title_description=title_description,
+                        metrics=metrics,
+                        max_points=max_points,
+                        display_interaction_plot=display_interaction_plot,
+                        nb_top_interactions=nb_top_interactions,
+                    ).items()
+                    if v is not None
+                },
                 notebook_path=notebook_path,
                 kernel_name=kernel_name,
             )
