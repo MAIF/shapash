@@ -322,7 +322,7 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None,
                         feature_to_drop.extend(options[2])
 
     if len(feature_to_drop) != 0:
-        feature_to_drop = [columns_dict[index] for index in feature_to_drop]
+        feature_to_drop = [index if isinstance(index, str) else columns_dict[index] for index in feature_to_drop]
         features_dict_op = {key: value for key, value in features_dict.items() if key not in feature_to_drop}
 
         i = 0
