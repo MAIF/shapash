@@ -1743,7 +1743,7 @@ class TestSmartPlotter(unittest.TestCase):
         title_1 = "Compare plot - index : <b>A</b> ; <b>B</b><span style='font-size: 12px;'><br /></span>"
 
         fig_0 = list()
-        x0 = contributions1.to_numpy()
+        x0 = contributions1.to_numpy().copy()
         x0.sort(axis=1)
         for i in range(2):
             fig_0.append(
@@ -1761,7 +1761,7 @@ class TestSmartPlotter(unittest.TestCase):
             )
 
         fig_1 = list()
-        x1 = contributions2.to_numpy()
+        x1 = contributions2.to_numpy().copy()
         x1.sort(axis=1)
         for i in range(2):
             fig_1.append(
