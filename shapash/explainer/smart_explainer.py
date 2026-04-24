@@ -1416,7 +1416,7 @@ class SmartExplainer:
             - `'features'` : int — number of features shown in plots
             - `'toggle_group'` : bool — default state of the group toggle in the UI
 
-            All integer values values must be positive.
+            All integer values must be positive.
 
         Returns
         -------
