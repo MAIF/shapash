@@ -1873,6 +1873,8 @@ class SmartApp:
         self.components["settings"]["input_violin"]["violin"].value = self.settings["violin"]
 
         for id in self.settings.keys():
+            # if not isinstance(self.settings[id], int) or isinstance(self.settings[id], bool):
+            #     continue
 
             @app.callback([Output(f"{id}", "valid"), Output(f"{id}", "invalid")], [Input(f"{id}", "value")])
             def update_valid(value):
