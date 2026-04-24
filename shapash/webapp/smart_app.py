@@ -78,7 +78,7 @@ class SmartApp:
         settings : dict
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
-            Values integer values should be positive.
+            Integer values must be positive, and 'toggle_group' must be a boolean.
         """
         # APP
         self.server = Flask(__name__)
