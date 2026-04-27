@@ -45,7 +45,7 @@ dependencies = [
     "numpy>=2.0.0,<2.4.0",
     "pandas>=2.2.2,<4.0.0",
     "plotly>=5.0.0,<6.0.0",
-    "scikit-learn>=1.4.2,<=1.8.0",
+    "scikit-learn>=1.4.2,<1.9.0",
     "scipy>=1.13.0",
     "shap>=0.46.0",
     "shapely>=2.0.0",
