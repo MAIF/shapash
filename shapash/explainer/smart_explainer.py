@@ -10,6 +10,8 @@ import tempfile
 import numpy as np
 import pandas as pd
 
+import panel as pn
+
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.backend.shap_backend import get_shap_interaction_values
@@ -1805,6 +1807,86 @@ class SmartExplainer:
             if rm_working_dir:
                 shutil.rmtree(working_dir)
             raise e
+
+    def generate_report_with_panel(
+        self,
+        output_file=None,
+        project_info_file=None,
+        x_train=None,
+        y_train=None,
+        y_test=None,
+        title_story=None,
+        title_description=None,
+        metrics=None,
+        max_points=200,
+        display_interaction_plot=False,
+        nb_top_interactions=5,
+    ):
+        """
+        Generate an interactive report using Panel to summarize model explainability.
+
+        This method creates a simple interactive report using the Panel library,
+        allowing users to explore key insights about the model, its predictions,
+        and feature contributions directly in a Jupyter notebook or Python environment.
+
+        The report includes:
+        - A title and description section.
+        - A summary of the model’s predictions and feature contributions.
+        - Interactive widgets to filter and explore the explanations.
+
+        Parameters
+        ----------
+        output_file : str, optional
+            Path to save the generated report as an HTML file.
+            If `None`, the report will be displayed directly in the current environment.
+        project_info_file : str, optional
+            Path to a YAML file containing project metadata (not currently used in this method).
+        x_train : pandas.DataFrame, optional
+            Training dataset used to fit the model (not currently used in this method).
+        y_train : pandas.Series or pandas.DataFrame, optional
+            Target values corresponding to `x_train` (not currently used in this method).
+        y_test : pandas.Series or pandas.DataFrame, optional
+            Target values for the test dataset (not currently used in this method).
+        title_story : str, optional
+            Title displayed at the top of the report.
+        title_description : str, optional
+            Short descriptive text displayed below the main title.
+        metrics : list of dict, optional
+            List of metrics to compute and display in the performance section (not currently used in this method).
+        max_points : int, optional, default=200
+            Maximum number of points displayed in contribution plots (not currently used in this method).
+        display_interaction_plot : bool, optional, default=False
+            If True, includes interaction plots in the report (not currently used in this method).
+        nb_top_interactions : int, optional, default=5
+            Number of top feature interactions to include in the report (not currently used in this method).
+
+        Returns
+        -------
+        None
+            Displays the interactive report in the current environment.
+
+        Example
+        -------
+        >>> xpl.generate_raport_with_panel(
+        ...     title_story="Model Explainability Report",
+        ...     title_description="Explore predictions and feature contributions interactively."
+        ... )
+        """
+        if title_story is not None:
+            self.title_story = title_story
+        if title_description is not None:
+            self.title_description = title_description
+
+        title = pn.pane.Markdown(f"# {self.title_story}\n\n{self.title_description}")
+
+        summary = self.to_pandas(proba=False, features_to_hide=None, threshold=None, positive=None, max_contrib=None)
+        summary_panel = pn.widgets.DataFrame(summary, width=800, height=400)
+        report = pn.Column(title, summary_panel)
+
+        if output_file:
+            report.save(output_file)
+        else:
+            report.show()
 
     def _local_pred(self, index, label=None):
         """
