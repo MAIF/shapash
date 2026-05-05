@@ -9,7 +9,6 @@ import tempfile
 
 import numpy as np
 import pandas as pd
-
 import panel as pn
 
 import shapash.explainer.smart_predictor

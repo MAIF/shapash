@@ -1,0 +1,154 @@
+# report_config_extended.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Extended example with an extra custom block and test pie_chart entry.
+# Formatted to match report_config.yml style.
+# ─────────────────────────────────────────────────────────────────────────────
+
+sections:
+
+  # ── Page title ──────────────────────────────────────────────────────────────
+  - type: header
+    params:
+      title: "House Prices — Model Report"
+      subtitle: "Prototype · block-based report engine"
+
+  # ── Top-level callout ────────────────────────────────────────────────────────
+  - type: callout
+    params:
+      icon: "⚠"
+      body: >
+        This is a prototype report. Blocks are defined in Python and
+        composed here in YAML. Add, remove or reorder sections without
+        touching any Python code.
+      color: orange
+
+  # ── Divider ──────────────────────────────────────────────────────────────────
+  - type: divider
+    params:
+      label: "Project"
+
+  # ── Project metadata ─────────────────────────────────────────────────────────
+  - type: key_value
+    params:
+      title: "Project metadata"
+      color: purple
+      items:
+        Author: "Alice Martin"
+        Dataset: "Kaggle — House Prices"
+        Date: "2024-01-15"
+        Target: "SalePrice"
+        Task: "Regression"
+
+  # ── Free-text introduction ───────────────────────────────────────────────────
+  - type: text
+    params:
+      title: "Objective"
+      body: >
+        The goal of this project is to predict the final sale price of residential
+        homes in Ames, Iowa, using 79 explanatory variables describing almost every
+        aspect of those homes.
+      color: blue
+
+  # ── Divider ──────────────────────────────────────────────────────────────────
+  - type: divider
+    params:
+      label: "Model"
+
+  # ── Model summary ─────────────────────────────────────────────────────────────
+  - type: key_value
+    params:
+      title: "Model configuration"
+      color: blue
+      items:
+        Class: "RandomForestRegressor"
+        Library: "scikit-learn 1.4"
+        max_depth: "None (unlimited)"
+        n_estimators: 50
+        random_state: 1
+
+  # ── Key metrics as badges ─────────────────────────────────────────────────────
+  - type: badge_row
+    params:
+      title: "Performance snapshot"
+      badges:
+        - label: MAE
+          value: "18 432 $"
+          color: green
+        - label: RMSE
+          value: "27 891 $"
+          color: blue
+        - label: R²
+          value: "0.874"
+          color: purple
+        - label: Train size
+          value: "1 095 rows"
+          color: gray
+        - label: Test size
+          value: "365 rows"
+          color: gray
+
+  # ── Divider ──────────────────────────────────────────────────────────────────
+  - type: divider
+    params:
+      label: "Explainability"
+
+  # ── Top features — plain text block (no chart yet) ──────────────────────────
+  - type: text
+    params:
+      title: "Top contributing features"
+      body: >
+        Based on mean absolute SHAP values computed on the test set, the three
+        most influential features are OverallQual (overall material and finish quality),
+        GrLivArea (above-grade living area in sq ft), and TotalBsmtSF (total basement
+        area in sq ft).
+      color: green
+
+  # ── Feature importance as key/value table ────────────────────────────────────
+  - type: key_value
+    params:
+      title: "Mean |SHAP| — top 5 features"
+      color: green
+      items:
+        GarageCars: "0.121"
+        GrLivArea: "0.289"
+        OverallQual: "0.412"
+        TotalBsmtSF: "0.174"
+        YearBuilt: "0.098"
+
+  # ── Divider ──────────────────────────────────────────────────────────────────
+  - type: divider
+    params:
+      label: "Notes"
+
+  # ── Extended block example ───────────────────────────────────────────────────
+  - type: progress_bar
+    params:
+      title: "SHAP coverage by feature group"
+      color: green
+      items:
+        - label: "Overall quality features"
+          pct: 85
+        - label: "Area & size features"
+          pct: 70
+        - label: "Garage features"
+          pct: 45
+        - label: "Basement features"
+          pct: 38
+        - label: "Year / age features"
+          pct: 22
+
+  # ── Closing note ─────────────────────────────────────────────────────────────
+  - type: callout
+    params:
+      icon: "💡"
+      body: >
+        To add a new section, define a  block_my_section()  method in a
+        subclass of ReportBase — or point a  type: custom  entry at any
+        importable Python function. No other changes needed.
+      color: purple
+
+  # ── Test block (kept as-is) ──────────────────────────────────────────────────
+  - type: pie_chart
+    params:
+      title: "test"
+      color: purple
