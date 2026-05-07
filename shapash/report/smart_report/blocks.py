@@ -24,20 +24,24 @@ class ReportBlockMixin:
     """Reusable block rendering and data preparation helpers."""
 
     def block_header(self, title: str = "Report", subtitle: str = "") -> str:
+        """Return the HTML for the report header and its optional subtitle callout."""
         sub = f'<div class="shapash-callout"><p>{subtitle}</p></div>' if subtitle else ""
         return f'<div class="main-header"><h1>{title}</h1>{sub}</div>'
 
     def block_text(self, title: str = "", body: str = "", color: str = "gray") -> str:
+        """Return the HTML for a text section with an optional title."""
         h2 = f'<h2 class="section-title">{title}</h2>' if title else ""
         return f'<div class="content-block">{h2}<p>{body}</p></div>'
 
     def block_key_value(self, title: str = "", items: dict | None = None, color: str = "gold") -> str:
+        """Return the HTML for a table of key-value pairs."""
         items = items or {}
         rows = self._render_key_value_rows(items)
         h2 = f'<h2 class="section-title">{title}</h2>' if title else ""
         return f'<div class="content-block">{h2}<table class="kv-table">{rows}</table></div>'
 
     def block_badge_row(self, title: str = "", badges: list | None = None) -> str:
+        """Return the HTML for a row of badge-style metrics."""
         badges = badges or []
         pills = ""
         for badge in badges:
@@ -51,12 +55,19 @@ class ReportBlockMixin:
         return f'<div class="content-block">{h2}<div style="display:flex;flex-wrap:wrap;gap:10px">{pills}</div></div>'
 
     def block_callout(self, body: str = "", color: str = "gold", icon: str = "") -> str:
+        """Return the HTML for a highlighted callout paragraph."""
         return f'<div class="shapash-callout"><p>{body}</p></div>'
 
     def block_divider(self, label: str = "") -> str:
+        """Return the HTML for a visual divider between report sections."""
         return '<div class="shapash-divider"></div>'
 
     def block_global_analysis(self, title: str = "", color: str = "gray") -> str:
+        """Return the HTML for the global dataset statistics comparison table.
+
+        Requires prediction data on the report instance and includes training
+        data statistics when training data is available.
+        """
         self._require_train_test_data("global_analysis")
         test_stats = perform_global_dataframe_analysis(self.x_init)
         train_stats = perform_global_dataframe_analysis(self.x_train_pre) if self.x_train_pre is not None else None
@@ -79,6 +90,11 @@ class ReportBlockMixin:
         width: int = 700,
         height: int = 500,
     ) -> str:
+        """Return the HTML for a feature distribution plot across dataset splits.
+
+        The feature must be present in the prepared train/test dataframe stored
+        on the report instance.
+        """
         self._require_train_test_data("feature_distribution")
         if feature not in self.df_train_test.columns:
             raise ValueError(f"Unknown feature '{feature}' for feature_distribution block.")
@@ -101,6 +117,11 @@ class ReportBlockMixin:
         width: int | None = None,
         height: int = 500,
     ) -> str:
+        """Return the HTML for the explainer correlation plot.
+
+        When both training and prediction datasets are available, the plot is
+        faceted by dataset split.
+        """
         self._require_train_test_data("correlations_plot")
         explainer = self._require_explainer("correlations_plot")
         resolved_width = width or (900 if len(self.df_train_test["data_train_test"].unique()) > 1 else 500)
@@ -115,6 +136,7 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, self._plotly_html(fig))
 
     def block_feature_importance(self, title: str = "", color: str = "green", label=None) -> str:
+        """Return the HTML for the explainer feature-importance plot."""
         explainer = self._require_explainer("feature_importance")
         fig = explainer.plot.features_importance(label=label)
         return self._wrap_section_content(title, self._plotly_html(fig))
@@ -127,6 +149,11 @@ class ReportBlockMixin:
         label=None,
         max_points: int | None = None,
     ) -> str:
+        """Return the HTML for a feature contribution plot.
+
+        Requires an explainer with contribution values and uses the configured
+        maximum point count when no explicit limit is provided.
+        """
         explainer = self._require_explainer("contribution_plot")
         fig = explainer.plot.contribution_plot(feature, label=label, max_points=max_points or self.max_points)
         for trace in fig.data:
@@ -142,6 +169,11 @@ class ReportBlockMixin:
         col2: str | None = None,
         max_points: int | None = None,
     ) -> str:
+        """Return the HTML for an interaction plot between two features.
+
+        If no feature pair is provided, the strongest available interaction is
+        selected from the explainer output.
+        """
         explainer = self._require_explainer("interactions_plot")
         feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
         fig = explainer.plot.interactions_plot(
@@ -157,6 +189,11 @@ class ReportBlockMixin:
         width: int = 700,
         height: int = 500,
     ) -> str:
+        """Return the HTML for the true-versus-predicted target distribution plot.
+
+        Requires both ground-truth targets and predicted values on the report
+        instance.
+        """
         self._require_explainer("target_distribution")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("target_distribution block requires y_test and predicted values from the explainer.")
@@ -179,6 +216,11 @@ class ReportBlockMixin:
         return self._wrap_section_content(title or "Target distribution", self._plotly_html(fig))
 
     def block_confusion_matrix(self, title: str = "", color: str = "orange") -> str:
+        """Return the HTML for a classification confusion matrix.
+
+        Requires both ground-truth labels and predicted labels on the report
+        instance.
+        """
         explainer = self._require_explainer("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
