@@ -1,0 +1,81 @@
+# report_config_v1.yml
+# Notebook-parity configuration intended to mirror the legacy papermill report sections.
+
+sections:
+  - type: header
+    params:
+      title: "House prices report"
+      subtitle: >
+        This document is a data science report of the kaggle house prices tutorial project.
+        It was generated using the Shapash library.
+
+  - type: project_information
+    params:
+      title: "Project information"
+      color: gray
+
+  - type: model_analysis
+    params:
+      title: "Model information"
+      color: blue
+
+  - type: key_value
+    params:
+      title: "Model Training"
+      color: blue
+      items:
+        Used Algorithm: "We used a RandomForestRegressor algorithm (scikit-learn) but this model could be challenged with other interesting models such as XGBRegressor, Neural Networks, ..."
+        Parameters Choice: "We did not perform any hyperparameter optimisation and chose to use n_estimators=50. Future works should be planned to perform gridsearch optimizations"
+        Metrics: "Mean Squared Error metric"
+        Validation Strategy: "We splitted our data into train (75%) and test (25%)"
+        Path To Script: "https://github.com/MAIF/shapash/tree/master/tutorial/"
+
+  - type: global_analysis
+    params:
+      title: "Dataset analysis"
+      color: blue
+
+  - type: relationship_target
+    params:
+      title: "Relashionship with target variable"
+      feature: "OverallQual"
+      color: blue
+      max_y: 800000
+
+  - type: training_correlations
+    params:
+      title: "Relashionship between training variables"
+      color: blue
+      max_features: 30
+
+  - type: feature_importance
+    params:
+      title: "Model explainability"
+      color: gold
+
+  - type: performance_metrics
+    params:
+      title: "Model performance"
+      color: orange
+      metrics:
+        - path: "sklearn.metrics.mean_absolute_error"
+          name: "Mean absolute error"
+        - path: "sklearn.metrics.mean_squared_error"
+          name: "Mean squared error"
+
+  - type: text
+    params:
+      body: "<strong>The graph below represents y_pred vs y_test :</strong>"
+      color: gray
+
+  - type: pred_vs_true
+    params:
+      title: ""
+      color: orange
+
+  - type: callout
+    params:
+      body: >
+        You can add as many graphs, text, or other cells as you want.
+        The code will not be displayed. Only the markdown and output of the cells will be shown on the generated html file.
+      color: gray
