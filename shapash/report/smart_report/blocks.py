@@ -144,7 +144,9 @@ class ReportBlockMixin:
     ) -> str:
         explainer = self._require_explainer("interactions_plot")
         feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
-        fig = explainer.plot.interactions_plot(col1=feature_one, col2=feature_two, max_points=max_points or self.max_points)
+        fig = explainer.plot.interactions_plot(
+            col1=feature_one, col2=feature_two, max_points=max_points or self.max_points
+        )
         resolved_title = title or f"{self._feature_label(feature_one)} / {self._feature_label(feature_two)}"
         return self._wrap_section_content(resolved_title, self._plotly_html(fig))
 

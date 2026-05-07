@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from shapash.report.smart_report.blocks import PALETTE, ReportBlockMixin
+from shapash.report.smart_report.blocks import ReportBlockMixin
 from shapash.report.smart_report.layout import build_html_page, render_sections, resolve_logo_src
 from shapash.report.smart_report.validation import load_report_config, render_block_error_html
 
@@ -57,7 +57,9 @@ class ReportBase(ReportBlockMixin):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         body_html = "\n".join(rendered_blocks)
         logo_src = resolve_logo_src(out_path.parent)
-        out_path.write_text(build_html_page(body=body_html, sidebar_html=sidebar_html, logo_src=logo_src), encoding="utf-8")
+        out_path.write_text(
+            build_html_page(body=body_html, sidebar_html=sidebar_html, logo_src=logo_src), encoding="utf-8"
+        )
         logger.info("Report saved → %s", output_file)
 
     def render_block(self, block_cfg: dict) -> str:
