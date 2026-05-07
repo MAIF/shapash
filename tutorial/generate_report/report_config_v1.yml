@@ -79,3 +79,14 @@ sections:
         You can add as many graphs, text, or other cells as you want.
         The code will not be displayed. Only the markdown and output of the cells will be shown on the generated html file.
       color: gray
+
+  - type: feature_distribution
+    params:
+      title: "Feature distribution"
+      feature: "OverallQual"
+      color: blue
+      dataset_split: "data_train_test"
+      prediction_label: "test"
+      training_label: "train"
+      width: 900
+      height: 500

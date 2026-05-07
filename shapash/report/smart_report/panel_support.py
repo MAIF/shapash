@@ -3,28 +3,26 @@
 from __future__ import annotations
 
 import re
-from functools import lru_cache
 
 import panel as pn
 from panel.io.resources import CDN_DIST, Resources
 
 
-def render_plotly_pane_html(fig) -> str:
-    """Render a Plotly figure as a standalone Panel fragment."""
-    _enable_panel_plotly()
-    pane = pn.pane.Plotly(fig, config={"responsive": True})
+def render_bokeh_pane_html(fig) -> str:
+    """Render a Bokeh figure as a standalone Panel fragment."""
+    _enable_panel_extensions()
+    pane = pn.pane.Bokeh(fig)
     bundle = pane._repr_mimebundle_()
     data = bundle[0] if isinstance(bundle, tuple) else bundle
     html = data.get("text/html")
     if not html:
-        raise ValueError("Panel Plotly pane did not return HTML output.")
+        raise ValueError("Panel Bokeh pane did not return HTML output.")
     return f'<div class="panel-plot">{html}</div>'
 
 
-@lru_cache(maxsize=1)
 def panel_resource_tags() -> str:
     """Return the CSS and JS tags required to hydrate Panel panes."""
-    _enable_panel_plotly()
+    _enable_panel_extensions()
     resources = Resources(mode="cdn")
     css_html = _normalize_panel_css(resources.render_css())
     js_html = resources.render_js() if callable(resources.render_js) else resources.render_js
@@ -32,8 +30,8 @@ def panel_resource_tags() -> str:
     return "\n".join(part for part in [css_html, js_html] if part)
 
 
-def _enable_panel_plotly() -> None:
-    pn.extension("plotly")
+def _enable_panel_extensions() -> None:
+    pn.extension()
 
 
 def _normalize_panel_css(css_html: str) -> str:
