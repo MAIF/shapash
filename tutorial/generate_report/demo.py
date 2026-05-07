@@ -3,10 +3,8 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import yaml
-from bokeh.models import BasicTicker, ColorBar, ColumnDataSource, HoverTool, LinearColorMapper, Span
-from bokeh.palettes import RdYlBu11
-from bokeh.plotting import figure
 from category_encoders import OrdinalEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -83,57 +81,10 @@ class NotebookParityReport(ReportBase):
         df_train = self.x_train_pre.copy()
         df_train[target_name] = self.y_train
 
-        grouped = df_train.groupby(feature)[target_name]
-        q1 = grouped.quantile(0.25)
-        q2 = grouped.quantile(0.5)
-        q3 = grouped.quantile(0.75)
-        iqr = q3 - q1
-        upper = (q3 + 1.5 * iqr).clip(upper=grouped.max())
-        lower = (q1 - 1.5 * iqr).clip(lower=grouped.min())
-
-        cats = [str(c) for c in q1.index.tolist()]
-        source = ColumnDataSource(
-            data={
-                "cat": cats,
-                "q1": q1.values,
-                "q2": q2.values,
-                "q3": q3.values,
-                "upper": upper.values,
-                "lower": lower.values,
-            }
-        )
-
-        p = figure(
-            title=title,
-            x_range=cats,
-            width=900,
-            height=500,
-            tools="pan,wheel_zoom,box_zoom,reset,save",
-        )
-        p.segment("cat", "upper", "cat", "q3", source=source, line_color="#444444")
-        p.segment("cat", "lower", "cat", "q1", source=source, line_color="#444444")
-        p.vbar("cat", 0.7, "q2", "q3", source=source, fill_color="#9ecae1", line_color="#2b8cbe")
-        p.vbar("cat", 0.7, "q1", "q2", source=source, fill_color="#fdd0a2", line_color="#d95f0e")
-        p.rect("cat", "lower", 0.2, 0.001, source=source, line_color="#444444")
-        p.rect("cat", "upper", 0.2, 0.001, source=source, line_color="#444444")
-        p.add_tools(
-            HoverTool(
-                tooltips=[
-                    (feature, "@cat"),
-                    ("Q1", "@q1{0,0.00}"),
-                    ("Median", "@q2{0,0.00}"),
-                    ("Q3", "@q3{0,0.00}"),
-                    ("Lower", "@lower{0,0.00}"),
-                    ("Upper", "@upper{0,0.00}"),
-                ]
-            )
-        )
-        p.xaxis.major_label_orientation = 0.8
-        p.xaxis.axis_label = feature
-        p.yaxis.axis_label = target_name
+        fig = px.box(df_train, x=feature, y=target_name)
         if max_y is not None:
-            p.y_range.end = max_y
-        return self._wrap_section_content("", self._bokeh_html(p))
+            fig.update_yaxes(range=[0, max_y])
+        return self._wrap_section_content(title, self._plotly_html(fig))
 
     def block_training_correlations(
         self,
@@ -149,54 +100,8 @@ class NotebookParityReport(ReportBase):
         if max_features > 0 and corr.shape[0] > max_features:
             corr = corr.iloc[:max_features, :max_features]
 
-        corr = corr.fillna(0.0)
-        x_labels = list(corr.columns)
-        y_labels = list(corr.index)
-        corr_long = (
-            corr.stack()
-            .rename("corr")
-            .reset_index()
-            .rename(columns={"level_0": "y", "level_1": "x"})
-        )
-        source = ColumnDataSource(corr_long)
-
-        color_mapper = LinearColorMapper(palette=list(reversed(RdYlBu11)), low=-1, high=1)
-        p = figure(
-            title=title,
-            x_range=x_labels,
-            y_range=list(reversed(y_labels)),
-            width=950,
-            height=650,
-            tools="pan,wheel_zoom,box_zoom,reset,save",
-            toolbar_location="right",
-        )
-        renderer = p.rect(
-            x="x",
-            y="y",
-            width=1,
-            height=1,
-            source=source,
-            line_color=None,
-            fill_color={"field": "corr", "transform": color_mapper},
-        )
-
-        p.add_tools(
-            HoverTool(
-                renderers=[renderer],
-                tooltips=[("Feature X", "@x"), ("Feature Y", "@y"), ("Correlation", "@corr{0.000}")],
-            )
-        )
-        p.xaxis.major_label_orientation = 0.9
-        p.grid.grid_line_color = None
-
-        color_bar = ColorBar(
-            color_mapper=color_mapper,
-            ticker=BasicTicker(desired_num_ticks=7),
-            label_standoff=8,
-            location=(0, 0),
-        )
-        p.add_layout(color_bar, "right")
-        return self._wrap_section_content("", self._bokeh_html(p))
+        fig = px.imshow(corr, color_continuous_scale="YlGnBu", zmin=-1, zmax=1, aspect="auto")
+        return self._wrap_section_content(title, self._plotly_html(fig))
 
     def block_performance_metrics(
         self,
@@ -221,58 +126,13 @@ class NotebookParityReport(ReportBase):
 
         return self.block_badge_row(title=title, badges=metric_items)
 
-    def block_feature_importance(self, title: str = "Model explainability", color: str = "gold", label=None):
-        explainer = self._require_explainer("feature_importance")
-        if getattr(explainer, "features_imp", None) is None:
-            explainer.compute_features_import()
-
-        features_imp = explainer.features_imp
-        if isinstance(features_imp, list):
-            if not features_imp:
-                raise ValueError("features_imp is empty.")
-            features_imp = features_imp[0]
-
-        top_n = 20
-        ordered = features_imp.sort_values(ascending=False).head(top_n)
-        display_names = [explainer.features_dict.get(name, name) for name in ordered.index.tolist()]
-        source = ColumnDataSource(
-            data={
-                "feature": list(reversed(display_names)),
-                "importance": list(reversed(ordered.values.tolist())),
-            }
-        )
-
-        p = figure(
-            title=title,
-            y_range=list(reversed(display_names)),
-            width=900,
-            height=560,
-            tools="pan,wheel_zoom,box_zoom,reset,save",
-        )
-        renderer = p.hbar(y="feature", right="importance", height=0.7, source=source, color="#ffbb00")
-        p.xaxis.axis_label = "Importance"
-        p.yaxis.axis_label = "Feature"
-        p.grid.grid_line_alpha = 0.25
-        p.add_tools(HoverTool(renderers=[renderer], tooltips=[("Feature", "@feature"), ("Importance", "@importance{0.00}")]))
-        return self._wrap_section_content("", self._bokeh_html(p))
-
     def block_pred_vs_true(self, title: str = "y_pred vs y_test", color: str = "orange"):
         if self.y_test is None or self.y_pred is None:
             raise ValueError("pred_vs_true block requires y_test and y_pred.")
 
         scatter_df = pd.DataFrame({"y_test": self.y_test, "y_pred": self.y_pred})
-        source = ColumnDataSource(scatter_df)
-        min_v = float(min(scatter_df["y_test"].min(), scatter_df["y_pred"].min()))
-        max_v = float(max(scatter_df["y_test"].max(), scatter_df["y_pred"].max()))
-        p = figure(title=title, width=900, height=500, tools="pan,wheel_zoom,box_zoom,reset,save")
-        p.scatter("y_test", "y_pred", source=source, size=7, alpha=0.6, color="#2255aa")
-        ref_line = Span(location=0, dimension="width")
-        p.renderers.append(ref_line)
-        p.line([min_v, max_v], [min_v, max_v], line_dash="dashed", color="#777777", line_width=2)
-        p.xaxis.axis_label = "y_test"
-        p.yaxis.axis_label = "y_pred"
-        p.add_tools(HoverTool(tooltips=[("y_test", "@y_test{0,0.00}"), ("y_pred", "@y_pred{0,0.00}")]))
-        return self._wrap_section_content("", self._bokeh_html(p))
+        fig = px.scatter(scatter_df, x="y_test", y="y_pred")
+        return self._wrap_section_content(title, self._plotly_html(fig))
 
 
 def build_house_prices_explainer() -> tuple[SmartExplainer, pd.DataFrame, pd.Series, pd.Series]:

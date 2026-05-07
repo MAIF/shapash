@@ -103,7 +103,7 @@ REPORT_STYLES = """
     .shapash-divider { border-bottom: 1px solid #eee; margin: 50px 0; }
     .scroll-section { scroll-margin-top: 40px; }
     .panel-plot { width: 100%; overflow-x: auto; }
-    .panel-plot .bk-root { width: 100%; max-width: 100%; }
+    .panel-plot .bk-root, .panel-plot .plotly-graph-div { width: 100%; max-width: 100%; }
     @media (max-width: 900px) {
         .sidebar { display: none; }
         .container { margin-left: 0; padding: 30px 40px 40vh; }
