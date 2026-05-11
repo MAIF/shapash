@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 from pathlib import Path
+from uuid import uuid4
 
 import pandas as pd
 import plotly.express as px
@@ -44,6 +45,7 @@ class ReportBlockMixin:
         title: str = "Project information",
         color: str = "gray",
         project_info_file: str = "",
+        section_name: str | None = None,
     ) -> str:
         """Return project information loaded from an external YAML file."""
         if not project_info_file:
@@ -61,13 +63,18 @@ class ReportBlockMixin:
         if not isinstance(project_info, dict):
             raise ValueError("project_information YAML must define a top-level mapping.")
 
+        if section_name is not None:
+            if section_name not in project_info:
+                raise ValueError(f"Unknown project_information section: {section_name}")
+            project_info = {section_name: project_info[section_name]}
+
         sections_html = []
-        for section_name, section_values in project_info.items():
+        for current_section_name, section_values in project_info.items():
             if not isinstance(section_values, dict):
                 continue
             rows = self._render_key_value_rows(section_values)
             sections_html.append(
-                f'<div class="content-block"><h3 class="section-title" style="font-size:1.2rem">{section_name}</h3>'
+                f'<div class="content-block"><h3 class="section-title" style="font-size:1.2rem">{current_section_name}</h3>'
                 f'<table class="kv-table">{rows}</table></div>'
             )
 
@@ -325,23 +332,90 @@ class ReportBlockMixin:
 
     def block_contribution_plot(
         self,
-        feature: str,
+        feature: str | None = None,
         title: str = "",
         color: str = "green",
         label=None,
         max_points: int | None = None,
+        include_all_features: bool = False,
+        group_id: str = "contribution",
     ) -> str:
         """Return the HTML for a feature contribution plot.
 
         Requires an explainer with contribution values and uses the configured
         maximum point count when no explicit limit is provided.
+
+        When include_all_features is True, renders a dropdown and one plot per
+        feature so users can navigate contribution plots in-place. Plot type
+        selection (violin vs scatter) is delegated to explainer.plot.contribution_plot.
         """
         explainer = self._require_explainer("contribution_plot")
-        fig = explainer.plot.contribution_plot(feature, label=label, max_points=max_points or self.max_points)
-        for trace in fig.data:
-            if trace.type == "bar":
-                trace.marker.color = "lightgrey"
-        return self._wrap_section_content(title or self._feature_label(feature), self._plotly_html(fig))
+
+        if not include_all_features:
+            if feature is None:
+                raise ValueError("contribution_plot block requires 'feature' when include_all_features=False.")
+            fig = explainer.plot.contribution_plot(feature, label=label, max_points=max_points or self.max_points)
+            for trace in fig.data:
+                if trace.type == "bar":
+                    trace.marker.color = "lightgrey"
+            return self._wrap_section_content(title or self._feature_label(feature), self._plotly_html(fig))
+
+        if getattr(explainer, "x_init", None) is None:
+            raise ValueError("contribution_plot block with include_all_features=True requires explainer.x_init.")
+
+        feature_names = list(explainer.x_init.columns)
+        if not feature_names:
+            return self._wrap_section_content(title, '<div class="content-block"><p>No feature available.</p></div>')
+
+        sorted_features = sorted(
+            feature_names,
+            key=lambda current_feature: (str(self._feature_label(current_feature)).lower(), str(current_feature)),
+        )
+
+        instance_id = uuid4().hex[:8]
+        selector_id = f"{group_id}-selector-{instance_id}"
+        feature_panels = []
+        feature_options = []
+
+        for idx, feature_name in enumerate(sorted_features):
+            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=max_points or self.max_points)
+            for trace in fig.data:
+                if trace.type == "bar":
+                    trace.marker.color = "lightgrey"
+
+            feature_id = f"{group_id}-feature-{idx}-{instance_id}"
+            feature_label = self._feature_label(feature_name)
+            feature_options.append(f'<option value="{feature_id}">{feature_label}</option>')
+            feature_panels.append(
+                f'<div id="{feature_id}" class="section-block contribution-feature-panel" '
+                f'data-contribution-group="{selector_id}" style="display:none">'
+                f'{self._plotly_html(fig)}'
+                '</div>'
+            )
+
+        controls_html = (
+            '<div class="univariate-picker">'
+            f'<label for="{selector_id}">Choose a feature</label>'
+            f'<select id="{selector_id}" class="univariate-select">{"".join(feature_options)}</select>'
+            '</div>'
+        )
+        script_html = (
+            '<script>'
+            '(function(){'
+            f'const select=document.getElementById("{selector_id}");'
+            f'const panels=document.querySelectorAll("[data-contribution-group=\\"{selector_id}\\"]");'
+            'function update(){'
+            'panels.forEach((panel)=>{panel.style.display="none";});'
+            'const selected=select?document.getElementById(select.value):null;'
+            'if(selected){selected.style.display="block";}'
+            '}'
+            'if(select){select.addEventListener("change",update);update();}'
+            '})();'
+            '</script>'
+        )
+
+        resolved_title = title or "Features contribution plots"
+        return self._wrap_section_content(resolved_title, f'{controls_html}{"".join(feature_panels)}{script_html}')
 
     def block_interactions_plot(
         self,
@@ -397,6 +471,79 @@ class ReportBlockMixin:
         )
         return self._wrap_section_content(title or "Target distribution", self._plotly_html(fig))
 
+    def block_target_analysis(
+        self,
+        title: str = "Target analysis",
+        show_train: bool = True,
+        width: int = 700,
+        height: int = 500,
+    ) -> str:
+        """Return a univariate-style analysis block focused only on the target variable."""
+        from shapash.report.common import compute_col_types, series_dtype
+        from shapash.report.data_analysis import perform_univariate_dataframe_analysis
+
+        if self.y_test is None:
+            raise ValueError("target_analysis block requires y_test.")
+
+        target_name = self.target_name or "target"
+        y_test_series = pd.Series(self.y_test, name=target_name)
+        y_train_series = pd.Series(self.y_train, name=target_name) if self.y_train is not None and show_train else None
+
+        analysis_source = pd.DataFrame({target_name: y_test_series})
+        if y_train_series is not None:
+            analysis_source = pd.concat([analysis_source, pd.DataFrame({target_name: y_train_series})], ignore_index=True)
+
+        col_types = compute_col_types(analysis_source)
+        test_stats = perform_univariate_dataframe_analysis(pd.DataFrame({target_name: y_test_series}), col_types=col_types)
+        train_stats = (
+            perform_univariate_dataframe_analysis(pd.DataFrame({target_name: y_train_series}), col_types=col_types)
+            if y_train_series is not None
+            else None
+        )
+
+        names = ["Prediction dataset", "Training dataset"]
+        target_stats = stats_to_table(
+            test_stats=test_stats[target_name],
+            train_stats=train_stats[target_name] if train_stats is not None else None,
+            names=names,
+        )
+
+        distribution_df = pd.concat(
+            [
+                pd.DataFrame({target_name: y_test_series}).assign(data_train_test="test"),
+                pd.DataFrame({target_name: y_train_series}).assign(data_train_test="train")
+                if y_train_series is not None
+                else pd.DataFrame(columns=[target_name, "data_train_test"]),
+            ],
+            ignore_index=True,
+        )
+        fig = plot_distribution(
+            df_all=distribution_df,
+            col=target_name,
+            hue="data_train_test",
+            colors_dict=self._feature_distribution_colors(),
+            width=width,
+            height=height,
+        )
+
+        dtype_label = str(series_dtype(y_test_series))
+        target_header = (
+            '<div class="content-block">'
+            f'<p><strong>{target_name}</strong> '
+            f'<span style="font-weight:400;color:var(--text-light);font-size:12px">({dtype_label})</span></p>'
+            '</div>'
+        )
+        panel_html = (
+            '<div class="section-block univariate-feature-panel">'
+            '<div class="analysis-side-by-side">'
+            f'<div class="analysis-side-table">{target_stats.to_html(classes="kv-table", border=0)}</div>'
+            f'<div class="analysis-side-plot">{self._plotly_html(fig)}</div>'
+            '</div>'
+            '</div>'
+        )
+
+        return self._wrap_section_content(title, f'{target_header}{panel_html}')
+
     def block_confusion_matrix(self, title: str = "", color: str = "orange") -> str:
         """Return the HTML for a classification confusion matrix.
 
@@ -408,6 +555,120 @@ class ReportBlockMixin:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         fig = plot_confusion_matrix(y_true=self.y_test, y_pred=self.y_pred, colors_dict=explainer.colors_dict)
         return self._wrap_section_content(title or "Confusion matrix", self._plotly_html(fig))
+
+    def block_univariate_analysis(
+        self,
+        title: str = "Univariate analysis",
+        show_train: bool = True,
+        group_id: str = "univariate",
+    ) -> str:
+        """Return the HTML for a univariate analysis of all features.
+
+        For each feature, renders a distribution plot and a summary statistics
+        table. When training data is available and show_train is True, statistics
+        are shown for both prediction and training datasets side by side.
+
+        Parameters
+        ----------
+        title : str
+            Section title displayed above the analysis.
+        show_train : bool
+            Whether to include training data alongside prediction data.
+        group_id : str
+            HTML identifier prefix used to namespace the dropdown and feature panels.
+        """
+        from shapash.report.common import compute_col_types, series_dtype
+        from shapash.report.data_analysis import perform_univariate_dataframe_analysis
+
+        self._require_train_test_data("univariate_analysis")
+        explainer = self._require_explainer("univariate_analysis")
+
+        df = self.df_train_test
+        col_splitter = "data_train_test"
+        names = ["Prediction dataset", "Training dataset"]
+
+        col_types = compute_col_types(df)
+        n_splits = df[col_splitter].nunique()
+
+        test_stats = perform_univariate_dataframe_analysis(
+            df.loc[df[col_splitter] == "test"], col_types=col_types
+        )
+        train_stats = (
+            perform_univariate_dataframe_analysis(
+                df.loc[df[col_splitter] == "train"], col_types=col_types
+            )
+            if n_splits > 1 and show_train
+            else None
+        )
+
+        list_cols_labels = sorted(
+            explainer.features_dict.get(col, col)
+            for col in df.drop(col_splitter, axis=1).columns
+        )
+
+        feature_panels = []
+        feature_options = []
+        instance_id = uuid4().hex[:8]
+        selector_id = f"{group_id}-selector-{instance_id}"
+
+        for idx, col_label in enumerate(list_cols_labels):
+            col = explainer.inv_features_dict.get(col_label, col_label)
+            if col not in test_stats:
+                continue
+
+            fig = plot_distribution(
+                df_all=df,
+                col=col,
+                hue=col_splitter,
+                colors_dict=self._feature_distribution_colors(),
+            )
+            col_stats = stats_to_table(
+                test_stats=test_stats[col],
+                train_stats=train_stats[col] if train_stats is not None else None,
+                names=names,
+            )
+
+            feature_id = f"{group_id}-feature-{idx}-{instance_id}"
+            dtype_label = str(series_dtype(df[col]))
+
+            feature_options.append(
+                f'<option value="{feature_id}">{col_label} ({dtype_label})</option>'
+            )
+            feature_panels.append(
+                f'<div id="{feature_id}" class="section-block univariate-feature-panel" '
+                f'data-univariate-group="{selector_id}" style="display:none">'
+                '<div class="analysis-side-by-side">'
+                f'<div class="analysis-side-table">{col_stats.to_html(classes="kv-table", border=0)}</div>'
+                f'<div class="analysis-side-plot">{self._plotly_html(fig)}</div>'
+                '</div>'
+                f'</div>'
+            )
+
+        if not feature_panels:
+            return self._wrap_section_content(title, '<div class="content-block"><p>No feature available.</p></div>')
+
+        controls_html = (
+            '<div class="univariate-picker">'
+            f'<label for="{selector_id}">Choose a feature</label>'
+            f'<select id="{selector_id}" class="univariate-select">{"".join(feature_options)}</select>'
+            '</div>'
+        )
+        script_html = (
+            '<script>'
+            '(function(){'
+            f'const select=document.getElementById("{selector_id}");'
+            f'const panels=document.querySelectorAll("[data-univariate-group=\\"{selector_id}\\"]");'
+            'function update(){'
+            'panels.forEach((panel)=>{panel.style.display="none";});'
+            'const selected=select?document.getElementById(select.value):null;'
+            'if(selected){selected.style.display="block";}'
+            '}'
+            'if(select){select.addEventListener("change",update);update();}'
+            '})();'
+            '</script>'
+        )
+
+        return self._wrap_section_content(title, f'{controls_html}{"".join(feature_panels)}{script_html}')
 
     def _preprocess_train_data(self, x_train: pd.DataFrame | None) -> pd.DataFrame | None:
         if x_train is None or self.explainer is None:

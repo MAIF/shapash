@@ -6,8 +6,14 @@ import os
 import re
 from pathlib import Path
 
-from shapash.report.smart_report.assets import REPORT_SCRIPT, REPORT_STYLES
 from shapash.report.smart_report.panel_support import panel_resource_tags
+
+_ASSETS_DIR = Path(__file__).resolve().parent
+_STYLE_FILE = _ASSETS_DIR / "report_styles.css"
+_SCRIPT_FILE = _ASSETS_DIR / "report_script.js"
+
+REPORT_STYLES = _STYLE_FILE.read_text(encoding="utf-8")
+REPORT_SCRIPT = f"<script>\n{_SCRIPT_FILE.read_text(encoding='utf-8')}\n</script>"
 
 
 def resolve_logo_src(base_dir: Path | None) -> str:
@@ -49,29 +55,42 @@ def render_block_section(report, block_cfg: dict) -> tuple[str, str | None]:
     return block_html, None
 
 
-def render_group_section(report, block_cfg: dict) -> tuple[list[str], str | None]:
-    """Render a grouped section with a parent nav item and nested children."""
-    rendered_children = []
-    child_nav_links = []
+def render_section_tree(report, block_cfg: dict, depth: int = 0) -> tuple[list[str], list[str]]:
+    """Render one block tree (block or nested group) and its navigation entries."""
+    if block_cfg.get("type") != "group":
+        block_html, html_id = render_block_section(report, block_cfg)
+        nav_links: list[str] = []
+        if html_id:
+            extra_class = f"nav-child nav-level-{depth}" if depth > 0 else ""
+            nav_links.append(build_nav_link(block_title(block_cfg), html_id, extra_class=extra_class))
+        return [block_html], nav_links
 
+    rendered_blocks: list[str] = []
+    child_nav_links: list[str] = []
     for child_cfg in block_cfg.get("blocks", []):
-        child_html, child_section_id = render_block_section(report, child_cfg)
-        rendered_children.append(child_html)
-        if child_section_id:
-            child_nav_links.append(build_nav_link(block_title(child_cfg), child_section_id, extra_class="nav-child"))
+        child_blocks, child_nav = render_section_tree(report, child_cfg, depth=depth + 1)
+        rendered_blocks.extend(child_blocks)
+        child_nav_links.extend(child_nav)
 
     group_title = block_title(block_cfg)
     if not group_title:
-        return rendered_children, None
+        return rendered_blocks, child_nav_links
 
     group_id = section_id(group_title)
+    if depth == 0:
+        title_class = "nav-group-title"
+        children_class = "nav-children"
+    else:
+        title_class = f"nav-child nav-group-title nav-level-{depth}"
+        children_class = f"nav-children nav-level-{depth + 1}"
+
     nav_html = (
         '<div class="nav-group">'
-        f'{build_nav_link(group_title, group_id, extra_class="nav-group-title")}'
-        f'<div class="nav-children">{"".join(child_nav_links)}</div>'
+        f'{build_nav_link(group_title, group_id, extra_class=title_class)}'
+        f'<div class="{children_class}">{"".join(child_nav_links)}</div>'
         "</div>"
     )
-    return [wrap_section("", group_id), *rendered_children], nav_html
+    return [wrap_section("", group_id), *rendered_blocks], [nav_html]
 
 
 def render_sections(report, sections: list[dict]) -> tuple[list[str], str]:
@@ -80,17 +99,9 @@ def render_sections(report, sections: list[dict]) -> tuple[list[str], str]:
     nav_links: list[str] = []
 
     for block_cfg in sections:
-        if block_cfg.get("type") == "group":
-            group_blocks, group_nav = render_group_section(report, block_cfg)
-            rendered_blocks.extend(group_blocks)
-            if group_nav:
-                nav_links.append(group_nav)
-            continue
-
-        block_html, html_id = render_block_section(report, block_cfg)
-        rendered_blocks.append(block_html)
-        if html_id:
-            nav_links.append(build_nav_link(block_title(block_cfg), html_id))
+        block_tree, block_nav = render_section_tree(report, block_cfg)
+        rendered_blocks.extend(block_tree)
+        nav_links.extend(block_nav)
 
     return rendered_blocks, "\n".join(nav_links)
 

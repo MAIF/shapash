@@ -135,6 +135,30 @@ body,
     padding-left: 13px;
 }
 
+.nav-level-2 {
+    padding-left: 28px;
+}
+
+.nav-level-2.active {
+    padding-left: 25px;
+}
+
+.nav-level-3 {
+    padding-left: 40px;
+}
+
+.nav-level-3.active {
+    padding-left: 37px;
+}
+
+.nav-level-4 {
+    padding-left: 52px;
+}
+
+.nav-level-4.active {
+    padding-left: 49px;
+}
+
 /* Main content */
 .container {
     margin-left: 240px;
@@ -288,6 +312,57 @@ table.dataframe tbody tr:nth-child(even) td {
     min-width: 0;
 }
 
+/* Univariate analysis picker */
+.univariate-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 18px;
+}
+
+.univariate-picker label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.univariate-select {
+    min-width: 260px;
+    max-width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d8d8d8;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-main);
+    font-size: 13px;
+}
+
+.univariate-feature-panel {
+    margin-top: 4px;
+}
+
+.analysis-side-by-side {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.analysis-side-table {
+    flex: 1 1 360px;
+    min-width: 320px;
+}
+
+.analysis-side-plot {
+    flex: 1 1 480px;
+    min-width: 320px;
+}
+
+.analysis-side-table .kv-table {
+    margin-top: 0;
+}
+
 /* Plot wrappers */
 .scroll-section {
     scroll-margin-top: 40px;
@@ -313,6 +388,10 @@ table.dataframe tbody tr:nth-child(even) td {
     .model-analysis-table-col {
         flex: 0 1 calc(50% - 8px);
     }
+
+    .analysis-side-by-side {
+        gap: 16px;
+    }
 }
 
 @media (max-width: 900px) {
@@ -332,6 +411,12 @@ table.dataframe tbody tr:nth-child(even) td {
     }
 
     .model-analysis-table-col {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .analysis-side-table,
+    .analysis-side-plot {
         flex: 1 1 100%;
         min-width: 0;
     }

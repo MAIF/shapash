@@ -11,57 +11,94 @@ sections:
 
   - type: project_information
     params:
-      title: "Project information"
+      title: "General Information"
       color: gray
       project_info_file: "tutorial/generate_report/utils/project_info.yml"
+      section_name: "General information"
+
+  - type: project_information
+    params:
+      title: "Dataset Information"
+      color: gray
+      project_info_file: "tutorial/generate_report/utils/project_info.yml"
+      section_name: "Dataset information"
+
+  - type: project_information
+    params:
+      title: "Data Preparation"
+      color: gray
+      project_info_file: "tutorial/generate_report/utils/project_info.yml"
+      section_name: "Data Preparation"
+
+  - type: project_information
+    params:
+      title: "Model Training"
+      color: gray
+      project_info_file: "tutorial/generate_report/utils/project_info.yml"
+      section_name: "Model training"
 
   - type: model_analysis
     params:
-      title: "Model information"
+      title: "Model analysis"
       color: blue
 
-  - type: global_analysis
+  - type: group
     params:
       title: "Dataset analysis"
-      color: blue
+    blocks:
+      - type: global_analysis
+        params:
+          title: "Global analysis"
+          color: blue
 
-  - type: relationship_target
-    params:
-      title: "Relashionship with target variable"
-      feature: "OverallQual"
-      color: blue
-      max_y: 800000
+      - type: univariate_analysis
+        params:
+          title: "Univariate analysis"
 
-  - type: correlations_plot
-    params:
-      title: "Relashionship between training variables"
-      color: blue
-      max_features: 30
+      - type: target_analysis
+        params:
+          title: "Target analysis"
+          show_train: true
 
-  - type: feature_importance
+      - type: correlations_plot
+        params:
+          title: "Multivariate analysis"
+          color: blue
+          max_features: 30
+
+  - type: group
     params:
       title: "Model explainability"
-      color: gold
+    blocks:
+      - type: feature_importance
+        params:
+          title: "Global feature importance plot"
+          color: gold
 
-  - type: performance_metrics
+      - type: contribution_plot
+        params:
+          title: "Features contribution plots"
+          include_all_features: true
+          color: gold
+
+  - type: group
     params:
       title: "Model performance"
-      color: orange
-      metrics:
-        - path: "sklearn.metrics.mean_absolute_error"
-          name: "Mean absolute error"
-        - path: "sklearn.metrics.mean_squared_error"
-          name: "Mean squared error"
+    blocks:
+      - type: target_distribution
+        params:
+          title: "Univariate analysis of target variable"
+          color: orange
 
-  - type: text
-    params:
-      body: "<strong>The graph below represents y_pred vs y_test :</strong>"
-      color: gray
-
-  - type: pred_vs_true
-    params:
-      title: ""
-      color: orange
+      - type: performance_metrics
+        params:
+          title: "Metrics"
+          color: orange
+          metrics:
+            - path: "sklearn.metrics.mean_absolute_error"
+              name: "Mean absolute error"
+            - path: "sklearn.metrics.mean_squared_error"
+              name: "Mean squared error"
 
   - type: callout
     params:
