@@ -13,6 +13,7 @@ sections:
     params:
       title: "Project information"
       color: gray
+      project_info_file: "tutorial/generate_report/utils/project_info.yml"
 
   - type: model_analysis
     params:
@@ -42,7 +43,7 @@ sections:
       color: blue
       max_y: 800000
 
-  - type: training_correlations
+  - type: correlations_plot
     params:
       title: "Relashionship between training variables"
       color: blue

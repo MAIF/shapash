@@ -6,17 +6,17 @@ import copy
 import logging
 import shutil
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import panel as pn
+import yaml
 
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.manipulation.summarize import create_grouped_features_values
-from shapash.report import check_report_requirements
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.check import (
     check_additional_data,
@@ -1671,9 +1671,11 @@ class SmartExplainer:
         Generate an interactive HTML report summarizing the model and its explainability.
 
         This method produces a comprehensive HTML report containing visual and textual
-        insights about the project, dataset, and model performance.
-        It leverages a predefined or custom Jupyter notebook template to analyze
-        the model, generate plots, compute metrics, and export the final report.
+        insights about the project, dataset, and model performance using the
+        smart_report block-based HTML renderer.
+
+        A report configuration is provided through a YAML file. If no YAML file is
+        specified, a default configuration is generated automatically.
 
         A project information YAML file is required to describe key project details
         (e.g., model name, author, date, context).
@@ -1705,14 +1707,14 @@ class SmartExplainer:
             Example:
             `metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]`
         working_dir : str, optional
-            Directory used to temporarily store generated files (e.g., notebook, outputs).
+            Directory used to temporarily store generated files (e.g., report config).
             If `None`, a temporary directory is automatically created and deleted after report generation.
         notebook_path : str, optional
-            Path to a custom notebook used as a template for generating the report.
-            If `None`, the default Shapash report notebook is used.
+            Path to a custom YAML configuration file used to generate the report.
+            If `None`, a default YAML configuration is generated.
         kernel_name : str, optional
-            Name of the Jupyter kernel to use for report execution.
-            Useful when multiple kernels are available and the default one is incorrect.
+            Deprecated parameter kept for backward compatibility.
+            Ignored by the smart_report implementation.
         max_points : int, optional, default=200
             Maximum number of points displayed in contribution plots.
         display_interaction_plot : bool, optional, default=False
@@ -1735,7 +1737,7 @@ class SmartExplainer:
 
         Notes
         -----
-        - The method internally executes a notebook that generates the report content.
+        - The method renders the report from block definitions in a YAML configuration.
         - Temporary files are automatically cleaned up unless a custom `working_dir` is provided.
         - Interaction plots can be disabled to optimize runtime performance.
 
@@ -1757,11 +1759,13 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-        check_report_requirements()
+        from shapash.report.smart_report import ReportBase
+
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)
-        # Avoid Import Errors with requirements specific to the Shapash Report
-        from shapash.report.generation import execute_report, export_and_save_report
+
+        if kernel_name is not None:
+            logging.warning("'kernel_name' is ignored by the smart report implementation.")
 
         rm_working_dir = False
         if not working_dir:
@@ -1775,29 +1779,81 @@ class SmartExplainer:
             )
 
         try:
-            execute_report(
-                working_dir=working_dir,
+            config = {
+                "max_points": max_points,
+                "display_interaction_plot": display_interaction_plot,
+                "nb_top_interactions": nb_top_interactions,
+            }
+
+            report = ReportBase(
                 explainer=self,
-                project_info_file=project_info_file,
                 x_train=x_train,
                 y_train=y_train,
                 y_test=y_test,
-                config={
-                    k: v
-                    for k, v in dict(
-                        title_story=title_story,
-                        title_description=title_description,
-                        metrics=metrics,
-                        max_points=max_points,
-                        display_interaction_plot=display_interaction_plot,
-                        nb_top_interactions=nb_top_interactions,
-                    ).items()
-                    if v is not None
-                },
-                notebook_path=notebook_path,
-                kernel_name=kernel_name,
+                config=config,
             )
-            export_and_save_report(working_dir=working_dir, output_file=output_file)
+
+            if notebook_path is not None:
+                config_file = Path(notebook_path)
+            else:
+                config_file = Path(working_dir) / "report_config.yml"
+                sections = [
+                    {
+                        "type": "header",
+                        "params": {
+                            "title": title_story or self.title_story or "Shapash report",
+                            "subtitle": title_description or "",
+                        },
+                    },
+                    {
+                        "type": "project_information",
+                        "params": {
+                            "title": "Project information",
+                            "color": "gray",
+                            "project_info_file": project_info_file,
+                        },
+                    },
+                    {"type": "model_analysis", "params": {"title": "Model information", "color": "blue"}},
+                    {"type": "global_analysis", "params": {"title": "Dataset analysis", "color": "blue"}},
+                    {"type": "feature_importance", "params": {"title": "Model explainability", "color": "gold"}},
+                ]
+
+                if metrics:
+                    sections.append(
+                        {
+                            "type": "performance_metrics",
+                            "params": {
+                                "title": "Model performance",
+                                "color": "orange",
+                                "metrics": metrics,
+                            },
+                        }
+                    )
+
+                if y_test is not None:
+                    if self._case == "classification":
+                        sections.append(
+                            {"type": "confusion_matrix", "params": {"title": "Confusion matrix", "color": "orange"}}
+                        )
+                    else:
+                        sections.append({"type": "pred_vs_true", "params": {"title": "", "color": "orange"}})
+
+                if display_interaction_plot:
+                    sections.append(
+                        {
+                            "type": "interactions_plot",
+                            "params": {
+                                "title": "Top interactions",
+                                "color": "green",
+                                "max_points": max_points,
+                            },
+                        }
+                    )
+
+                with config_file.open("w", encoding="utf-8") as cfg_stream:
+                    yaml.safe_dump({"sections": sections}, cfg_stream, sort_keys=False, allow_unicode=True)
+
+            report.generate_report(config_file=str(config_file), output_file=output_file)
 
             if rm_working_dir:
                 shutil.rmtree(working_dir)
@@ -1806,86 +1862,6 @@ class SmartExplainer:
             if rm_working_dir:
                 shutil.rmtree(working_dir)
             raise e
-
-    def generate_report_with_panel(
-        self,
-        output_file=None,
-        project_info_file=None,
-        x_train=None,
-        y_train=None,
-        y_test=None,
-        title_story=None,
-        title_description=None,
-        metrics=None,
-        max_points=200,
-        display_interaction_plot=False,
-        nb_top_interactions=5,
-    ):
-        """
-        Generate an interactive report using Panel to summarize model explainability.
-
-        This method creates a simple interactive report using the Panel library,
-        allowing users to explore key insights about the model, its predictions,
-        and feature contributions directly in a Jupyter notebook or Python environment.
-
-        The report includes:
-        - A title and description section.
-        - A summary of the model’s predictions and feature contributions.
-        - Interactive widgets to filter and explore the explanations.
-
-        Parameters
-        ----------
-        output_file : str, optional
-            Path to save the generated report as an HTML file.
-            If `None`, the report will be displayed directly in the current environment.
-        project_info_file : str, optional
-            Path to a YAML file containing project metadata (not currently used in this method).
-        x_train : pandas.DataFrame, optional
-            Training dataset used to fit the model (not currently used in this method).
-        y_train : pandas.Series or pandas.DataFrame, optional
-            Target values corresponding to `x_train` (not currently used in this method).
-        y_test : pandas.Series or pandas.DataFrame, optional
-            Target values for the test dataset (not currently used in this method).
-        title_story : str, optional
-            Title displayed at the top of the report.
-        title_description : str, optional
-            Short descriptive text displayed below the main title.
-        metrics : list of dict, optional
-            List of metrics to compute and display in the performance section (not currently used in this method).
-        max_points : int, optional, default=200
-            Maximum number of points displayed in contribution plots (not currently used in this method).
-        display_interaction_plot : bool, optional, default=False
-            If True, includes interaction plots in the report (not currently used in this method).
-        nb_top_interactions : int, optional, default=5
-            Number of top feature interactions to include in the report (not currently used in this method).
-
-        Returns
-        -------
-        None
-            Displays the interactive report in the current environment.
-
-        Example
-        -------
-        >>> xpl.generate_raport_with_panel(
-        ...     title_story="Model Explainability Report",
-        ...     title_description="Explore predictions and feature contributions interactively."
-        ... )
-        """
-        if title_story is not None:
-            self.title_story = title_story
-        if title_description is not None:
-            self.title_description = title_description
-
-        title = pn.pane.Markdown(f"# {self.title_story}\n\n{self.title_description}")
-
-        summary = self.to_pandas(proba=False, features_to_hide=None, threshold=None, positive=None, max_contrib=None)
-        summary_panel = pn.widgets.DataFrame(summary, width=800, height=400)
-        report = pn.Column(title, summary_panel)
-
-        if output_file:
-            report.save(output_file)
-        else:
-            report.show()
 
     def _local_pred(self, index, label=None):
         """

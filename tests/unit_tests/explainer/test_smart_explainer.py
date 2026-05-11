@@ -1108,9 +1108,8 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.run_app()
         assert xpl.y_target is not None
 
-    @patch("shapash.report.generation.export_and_save_report")
-    @patch("shapash.report.generation.execute_report")
-    def test_generate_report(self, mock_execute_report, mock_export_and_save_report):
+    @patch("shapash.report.smart_report.ReportBase")
+    def test_generate_report(self, mock_report_base):
         """
         Test generate report method
         """
@@ -1123,8 +1122,8 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(clf)
         xpl.compile(x=df[["x1", "x2"]])
         xpl.generate_report(output_file="test", project_info_file="test")
-        mock_execute_report.assert_called_once()
-        mock_export_and_save_report.assert_called_once()
+        mock_report_base.assert_called_once()
+        mock_report_base.return_value.generate_report.assert_called_once()
 
     def test_compute_features_stability_1(self):
         df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list("ABCD"))

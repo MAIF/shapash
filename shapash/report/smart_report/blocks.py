@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
+from pathlib import Path
+
 import pandas as pd
+import plotly.express as px
+import yaml
 
 from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
 from shapash.plots.plot_univariate import plot_distribution
@@ -32,6 +37,44 @@ class ReportBlockMixin:
         """Return the HTML for a text section with an optional title."""
         h2 = f'<h2 class="section-title">{title}</h2>' if title else ""
         return f'<div class="content-block">{h2}<p>{body}</p></div>'
+
+    def block_project_information(
+        self,
+        title: str = "Project information",
+        color: str = "gray",
+        project_info_file: str = "",
+        exclude_sections: list[str] | None = None,
+    ) -> str:
+        """Return project information loaded from an external YAML file."""
+        if not project_info_file:
+            raise ValueError("project_information block requires the 'project_info_file' parameter.")
+
+        config_path = Path(project_info_file).expanduser()
+        if not config_path.is_absolute():
+            config_path = Path.cwd() / config_path
+        config_path = config_path.resolve()
+        if not config_path.exists():
+            raise ValueError(f"project_information file not found: {config_path}")
+
+        with config_path.open(encoding="utf-8") as stream:
+            project_info = yaml.safe_load(stream) or {}
+        if not isinstance(project_info, dict):
+            raise ValueError("project_information YAML must define a top-level mapping.")
+
+        excluded = {name.strip().lower() for name in (exclude_sections or ["model training"]) if isinstance(name, str)}
+        sections_html = []
+        for section_name, section_values in project_info.items():
+            if not isinstance(section_values, dict):
+                continue
+            if section_name.strip().lower() in excluded:
+                continue
+            rows = self._render_key_value_rows(section_values)
+            sections_html.append(
+                f'<div class="content-block"><h3 class="section-title" style="font-size:1.2rem">{section_name}</h3>'
+                f'<table class="kv-table">{rows}</table></div>'
+            )
+
+        return self._wrap_section_content(title, "".join(sections_html))
 
     def block_key_value(self, title: str = "", items: dict | None = None, color: str = "gold") -> str:
         """Return the HTML for a table of key-value pairs."""
@@ -78,6 +121,94 @@ class ReportBlockMixin:
         )
         table_html = stats_table.to_html(classes="kv-table", border=0)
         return self._wrap_section_content(title, table_html)
+
+    def block_model_analysis(self, title: str = "Model information", color: str = "blue") -> str:
+        """Return basic metadata about the fitted model and compiled explainer inputs."""
+        explainer = self._require_explainer("model_analysis")
+        model = explainer.model
+        details = {
+            "Model class": type(model).__name__,
+            "Task": getattr(explainer, "_case", "regression"),
+            "Feature count": len(explainer.x_init.columns),
+            "Prediction sample size": len(explainer.x_init),
+            "Training sample size": len(self.x_train_init) if self.x_train_init is not None else "n/a",
+        }
+        rows = self._render_key_value_rows(details)
+        return self._wrap_section_content(title, f'<table class="kv-table">{rows}</table>')
+
+    def block_relationship_target(
+        self,
+        title: str = "Relationship with target variable",
+        feature: str = "OverallQual",
+        color: str = "blue",
+        max_y: int | None = None,
+    ) -> str:
+        """Return a feature/target relationship plot on training data."""
+        self._require_train_test_data("relationship_target")
+        if self.x_train_pre is None or self.y_train is None:
+            raise ValueError("relationship_target block requires both training features and y_train.")
+        if feature not in self.x_train_pre.columns:
+            raise ValueError(f"Unknown feature '{feature}' for relationship_target block.")
+
+        target_name = self.target_name_train or "target"
+        df_train = self.x_train_pre.copy()
+        df_train[target_name] = self.y_train
+
+        fig = px.box(df_train, x=feature, y=target_name)
+        if max_y is not None:
+            fig.update_yaxes(range=[0, max_y])
+        return self._wrap_section_content(title, self._plotly_html(fig))
+
+    def block_training_correlations(
+        self,
+        title: str = "Relationship between training variables",
+        color: str = "blue",
+        max_features: int = 30,
+    ) -> str:
+        """Return training-only correlation heatmap (legacy notebook block name)."""
+        if self.x_train_pre is None:
+            raise ValueError("training_correlations block requires x_train.")
+
+        numeric_train = self.x_train_pre.select_dtypes(include="number")
+        corr = numeric_train.corr(numeric_only=True)
+        if max_features > 0 and corr.shape[0] > max_features:
+            corr = corr.iloc[:max_features, :max_features]
+
+        fig = px.imshow(corr, color_continuous_scale="YlGnBu", zmin=-1, zmax=1, aspect="auto")
+        return self._wrap_section_content(title, self._plotly_html(fig))
+
+    def block_performance_metrics(
+        self,
+        title: str = "Model performance",
+        color: str = "orange",
+        metrics: list | None = None,
+    ) -> str:
+        """Return a badge row with configured evaluation metrics computed on y_test/y_pred."""
+        if self.y_test is None or self.y_pred is None:
+            raise ValueError("performance_metrics block requires y_test and y_pred.")
+
+        metric_items = []
+        metrics = metrics or []
+        for metric_cfg in metrics:
+            metric_path = metric_cfg.get("path")
+            metric_name = metric_cfg.get("name", metric_path)
+            if not metric_path:
+                continue
+            module_path, fn_name = metric_path.rsplit(".", 1)
+            metric_fn = getattr(importlib.import_module(module_path), fn_name)
+            value = metric_fn(self.y_test, self.y_pred)
+            metric_items.append({"label": metric_name, "value": f"{value:,.2f}", "color": color})
+
+        return self.block_badge_row(title=title, badges=metric_items)
+
+    def block_pred_vs_true(self, title: str = "y_pred vs y_test", color: str = "orange") -> str:
+        """Return a scatter plot of predictions versus true target values."""
+        if self.y_test is None or self.y_pred is None:
+            raise ValueError("pred_vs_true block requires y_test and y_pred.")
+
+        scatter_df = pd.DataFrame({"y_test": self.y_test, "y_pred": self.y_pred})
+        fig = px.scatter(scatter_df, x="y_test", y="y_pred")
+        return self._wrap_section_content(title, self._plotly_html(fig))
 
     def block_feature_distribution(
         self,

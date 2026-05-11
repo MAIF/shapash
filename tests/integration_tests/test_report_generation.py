@@ -2,15 +2,16 @@ import os
 import shutil
 import tempfile
 import unittest
+from pathlib import Path
 
 import catboost as cb
 import category_encoders as ce
 import numpy as np
 import pandas as pd
+import yaml
 from category_encoders import OrdinalEncoder
 
 from shapash import SmartExplainer
-from shapash.report.generation import execute_report, export_and_save_report
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,122 +33,68 @@ class TestGeneration(unittest.TestCase):
         self.xpl.compile(x=df_encoded[["x1", "x2", "x3", "x4"]])
         self.df = df_encoded
 
-    def test_execute_report_1(self):
-        tmp_dir_path = tempfile.mkdtemp()
-
-        execute_report(
-            working_dir=tmp_dir_path,
-            explainer=self.xpl,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
-            config=None,
-            notebook_path=None,
-        )
-        assert os.path.exists(os.path.join(tmp_dir_path, "smart_explainer.pickle"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "base_report.ipynb"))
-
-        shutil.rmtree(tmp_dir_path)
-
-    def test_execute_report_2(self):
-        tmp_dir_path = tempfile.mkdtemp()
-
-        execute_report(
-            working_dir=tmp_dir_path,
-            explainer=self.xpl,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
-            x_train=self.df[["x1", "x2", "x3", "x4"]],
-            config=None,
-            notebook_path=None,
-        )
-        assert os.path.exists(os.path.join(tmp_dir_path, "x_train.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "smart_explainer.pickle"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "base_report.ipynb"))
-
-        shutil.rmtree(tmp_dir_path)
-
-    def test_execute_report_3(self):
-        tmp_dir_path = tempfile.mkdtemp()
-
-        execute_report(
-            working_dir=tmp_dir_path,
-            explainer=self.xpl,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
-            x_train=self.df[["x1", "x2", "x3", "x4"]],
-            y_test=self.df["y"],
-            config=None,
-            notebook_path=None,
-        )
-        assert os.path.exists(os.path.join(tmp_dir_path, "x_train.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "y_test.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "smart_explainer.pickle"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "base_report.ipynb"))
-
-        shutil.rmtree(tmp_dir_path)
-
-    def test_execute_report_4(self):
-        tmp_dir_path = tempfile.mkdtemp()
-
-        execute_report(
-            working_dir=tmp_dir_path,
-            explainer=self.xpl,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
-            x_train=self.df[["x1", "x2", "x3", "x4"]],
-            y_train=self.df["y"],
-            y_test=self.df["y"],
-            config=None,
-            notebook_path=None,
-        )
-        assert os.path.exists(os.path.join(tmp_dir_path, "x_train.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "y_test.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "y_train.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "smart_explainer.pickle"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "base_report.ipynb"))
-
-        shutil.rmtree(tmp_dir_path)
-
-    def test_execute_report_5(self):
-        tmp_dir_path = tempfile.mkdtemp()
-
-        self.xpl.palette_name = "eurybia"
-        execute_report(
-            working_dir=tmp_dir_path,
-            explainer=self.xpl,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
-            x_train=self.df[["x1", "x2", "x3", "x4"]],
-            y_train=self.df["y"],
-            y_test=self.df["y"],
-            notebook_path=None,
-        )
-        self.xpl.palette_name = "default"
-        assert os.path.exists(os.path.join(tmp_dir_path, "x_train.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "y_test.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "y_train.csv"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "smart_explainer.pickle"))
-        assert os.path.exists(os.path.join(tmp_dir_path, "base_report.ipynb"))
-
-        shutil.rmtree(tmp_dir_path)
-
-    def test_generate_report_1(self):
+    def test_generate_report_default_config(self):
         tmp_dir_path = tempfile.mkdtemp()
         outfile = os.path.join(tmp_dir_path, "report.html")
+
+        self.xpl.palette_name = "eurybia"
+        self.xpl.generate_report(
+            output_file=outfile,
+            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
+            x_train=self.df[["x1", "x2", "x3", "x4"]],
+            y_train=self.df["y"],
+            y_test=self.df["y"],
+            working_dir=tmp_dir_path,
+        )
+        self.xpl.palette_name = "default"
+        assert os.path.exists(outfile)
+        assert os.path.exists(os.path.join(tmp_dir_path, "report_config.yml"))
+
+        shutil.rmtree(tmp_dir_path)
+
+    def test_generate_report_with_custom_yaml_config(self):
+        tmp_dir_path = tempfile.mkdtemp()
+        cfg_path = Path(tmp_dir_path) / "custom_report_config.yml"
+        outfile = str(Path(tmp_dir_path) / "report_custom.html")
+
+        config = {
+            "sections": [
+                {
+                    "type": "header",
+                    "params": {"title": "Integration report", "subtitle": "custom yaml"},
+                },
+                {
+                    "type": "project_information",
+                    "params": {
+                        "title": "Project information",
+                        "project_info_file": os.path.join(current_path, "../data/metadata.yaml"),
+                    },
+                },
+            ]
+        }
+        with cfg_path.open("w", encoding="utf-8") as stream:
+            yaml.safe_dump(config, stream, sort_keys=False, allow_unicode=True)
 
         self.xpl.generate_report(
             output_file=outfile,
             project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
+            notebook_path=str(cfg_path),
         )
         assert os.path.exists(outfile)
 
         shutil.rmtree(tmp_dir_path)
 
-    def test_export_and_save_report_1(self):
+    def test_generate_report_interactions_enabled(self):
         tmp_dir_path = tempfile.mkdtemp()
+        outfile = os.path.join(tmp_dir_path, "report_interactions.html")
 
-        execute_report(
-            working_dir=tmp_dir_path,
-            explainer=self.xpl,
+        self.xpl.generate_report(
+            output_file=outfile,
             project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
+            x_train=self.df[["x1", "x2", "x3", "x4"]],
+            display_interaction_plot=True,
+            working_dir=tmp_dir_path,
         )
-
-        outfile = os.path.join(tmp_dir_path, "report.html")
-        export_and_save_report(working_dir=tmp_dir_path, output_file=outfile)
         assert os.path.exists(outfile)
+
         shutil.rmtree(tmp_dir_path)
