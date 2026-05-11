@@ -20,17 +20,6 @@ sections:
       title: "Model information"
       color: blue
 
-  - type: key_value
-    params:
-      title: "Model Training"
-      color: blue
-      items:
-        Used Algorithm: "We used a RandomForestRegressor algorithm (scikit-learn) but this model could be challenged with other interesting models such as XGBRegressor, Neural Networks, ..."
-        Parameters Choice: "We did not perform any hyperparameter optimisation and chose to use n_estimators=50. Future works should be planned to perform gridsearch optimizations"
-        Metrics: "Mean Squared Error metric"
-        Validation Strategy: "We splitted our data into train (75%) and test (25%)"
-        Path To Script: "https://github.com/MAIF/shapash/tree/master/tutorial/"
-
   - type: global_analysis
     params:
       title: "Dataset analysis"

@@ -1,7 +1,11 @@
 """
-This script can be used to generate the report example.
-For more information, please refer to the tutorial 'tuto-shapash-report01.ipynb'
-that generates the same report.
+Generate the report example with the new smart_report implementation.
+
+The report layout is driven by the YAML file `report_config_v1.yml` and rendered
+through `SmartExplainer.generate_report`.
+
+For more information, please refer to the tutorial
+`tuto-shapash-report01.ipynb` that generates the same report.
 """
 import os
 import sys
@@ -46,25 +50,13 @@ if __name__ == "__main__":
     )
     xpl.compile(x=Xtest, y_pred=y_pred, y_target=ytest)
 
+    report_config_file = os.path.join(cur_dir, "report_config_v1.yml")
+
     xpl.generate_report(
         output_file=os.path.join(cur_dir, "output", "report.html"),
         project_info_file=os.path.join(cur_dir, "utils", "project_info.yml"),
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
-        title_story="House prices report",
-        title_description="""This document is a data science report of the kaggle house prices tutorial project.
-            It was generated using the Shapash library.""",
-        metrics=[
-            {
-                "path": "sklearn.metrics.mean_absolute_error",
-                "name": "Mean absolute error",
-            },
-            {
-                "path": "sklearn.metrics.mean_squared_error",
-                "name": "Mean squared error",
-            },
-        ],
+        notebook_path=report_config_file,
     )
-
-    xpl.generate_report_with_panel(output_file=os.path.join(cur_dir, "output", "report_with_panel.html"), title_story="House prices report with panel", title_description="This document is a data science report of the kaggle house prices tutorial project. It was generated using the Shapash library and Panel.")

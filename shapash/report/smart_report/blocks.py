@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 from pathlib import Path
 
 import pandas as pd
@@ -43,7 +44,6 @@ class ReportBlockMixin:
         title: str = "Project information",
         color: str = "gray",
         project_info_file: str = "",
-        exclude_sections: list[str] | None = None,
     ) -> str:
         """Return project information loaded from an external YAML file."""
         if not project_info_file:
@@ -61,12 +61,9 @@ class ReportBlockMixin:
         if not isinstance(project_info, dict):
             raise ValueError("project_information YAML must define a top-level mapping.")
 
-        excluded = {name.strip().lower() for name in (exclude_sections or ["model training"]) if isinstance(name, str)}
         sections_html = []
         for section_name, section_values in project_info.items():
             if not isinstance(section_values, dict):
-                continue
-            if section_name.strip().lower() in excluded:
                 continue
             rows = self._render_key_value_rows(section_values)
             sections_html.append(
@@ -123,18 +120,72 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, table_html)
 
     def block_model_analysis(self, title: str = "Model information", color: str = "blue") -> str:
-        """Return basic metadata about the fitted model and compiled explainer inputs."""
+        """Return model metadata and parameters in a notebook-parity layout."""
         explainer = self._require_explainer("model_analysis")
         model = explainer.model
-        details = {
-            "Model class": type(model).__name__,
-            "Task": getattr(explainer, "_case", "regression"),
-            "Feature count": len(explainer.x_init.columns),
-            "Prediction sample size": len(explainer.x_init),
-            "Training sample size": len(self.x_train_init) if self.x_train_init is not None else "n/a",
-        }
-        rows = self._render_key_value_rows(details)
-        return self._wrap_section_content(title, f'<table class="kv-table">{rows}</table>')
+
+        model_module = model.__class__.__module__
+        model_package = model_module.split(".")[0]
+        package_name = "scikit-learn" if model_package == "sklearn" else model_package
+        try:
+            library_version = importlib.metadata.version(package_name)
+        except importlib.metadata.PackageNotFoundError:
+            library_version = f"not found for {model_package}"
+
+        model_params = getattr(model, "__dict__", {})
+        params_items = list(model_params.items())
+        split_idx = len(params_items) // 2
+
+        def _truncate(value, max_len):
+            text = str(value)
+            return text if len(text) <= max_len else text[: max_len - 3] + "..."
+
+        def _render_param_rows(items):
+            return "".join(
+                (
+                    "<tr>"
+                    f'<th scope="row" style="text-align:center">{_truncate(key, 50)}</th>'
+                    f'<td style="text-align:center">{_truncate(val, 300)}</td>'
+                    "</tr>"
+                )
+                for key, val in items
+            )
+
+        table_header = (
+            "<thead><tr>"
+            '<th scope="col" style="text-align:center">Parameter key</th>'
+            '<th scope="col" style="text-align:center">Parameter value</th>'
+            "</tr></thead>"
+        )
+
+        table_left = (
+            '<table class="kv-table" style="table-layout:fixed">'
+            f"{table_header}"
+            f"<tbody>{_render_param_rows(params_items[:split_idx])}</tbody>"
+            "</table>"
+        )
+        table_right = (
+            '<table class="kv-table" style="table-layout:fixed">'
+            f"{table_header}"
+            f"<tbody>{_render_param_rows(params_items[split_idx:])}</tbody>"
+            "</table>"
+        )
+
+        content = (
+            '<div class="model-analysis-meta">'
+            f'<p class="model-analysis-line"><strong>Model used :</strong> {model.__class__.__name__}</p>'
+            f'<p class="model-analysis-line"><strong>Library :</strong> {model_module}</p>'
+            f'<p class="model-analysis-line"><strong>Library version :</strong> {library_version}</p>'
+            '<p class="model-analysis-line"><strong>Model parameters :</strong></p>'
+            "</div>"
+            '<div class="model-analysis-tables">'
+            f'<div class="model-analysis-table-col">{table_left}</div>'
+            f'<div class="model-analysis-table-col">{table_right}</div>'
+            "</div>"
+            "<hr>"
+        )
+
+        return self._wrap_section_content(title, content)
 
     def block_relationship_target(
         self,

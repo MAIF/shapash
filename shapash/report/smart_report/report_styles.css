@@ -1,9 +1,11 @@
+/* Theme tokens */
 :root {
     --shapash-gold: #ffbb00;
     --text-main: #333;
     --text-light: #777;
 }
 
+/* Reset */
 *,
 *::before,
 *::after {
@@ -16,11 +18,12 @@ html {
     scroll-behavior: smooth;
 }
 
+/* Page shell */
 body,
 .report-shell {
     background: #fdfdfd;
     color: var(--text-main);
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: "Helvetica Neue", Arial, sans-serif;
 }
 
 .report-shell {
@@ -29,6 +32,7 @@ body,
     width: 100%;
 }
 
+/* Sidebar */
 .sidebar {
     width: 240px;
     background: #fff;
@@ -61,6 +65,7 @@ body,
     line-height: 1.2;
 }
 
+/* Navigation */
 .nav-item {
     color: var(--text-light);
     padding: 10px 0;
@@ -130,6 +135,7 @@ body,
     padding-left: 13px;
 }
 
+/* Main content */
 .container {
     margin-left: 240px;
     width: 100%;
@@ -166,6 +172,7 @@ body,
     font-size: 14px;
 }
 
+/* Callouts and separators */
 .shapash-callout {
     border-left: 4px solid var(--shapash-gold);
     background: #fff;
@@ -176,6 +183,12 @@ body,
     font-size: 15px;
 }
 
+.shapash-divider {
+    border-bottom: 1px solid #eee;
+    margin: 50px 0;
+}
+
+/* Generic key/value and dataframe tables */
 .kv-table,
 table.dataframe {
     width: 100%;
@@ -244,6 +257,7 @@ table.dataframe tbody tr:nth-child(even) td {
     color: var(--text-main);
 }
 
+/* Badges */
 .badge {
     display: inline-block;
     padding: 6px 14px;
@@ -253,11 +267,28 @@ table.dataframe tbody tr:nth-child(even) td {
     background: #fff;
 }
 
-.shapash-divider {
-    border-bottom: 1px solid #eee;
-    margin: 50px 0;
+/* Model analysis specific layout */
+.model-analysis-meta {
+    margin-bottom: 10px;
 }
 
+.model-analysis-line {
+    margin-bottom: 12px;
+}
+
+.model-analysis-tables {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.model-analysis-table-col {
+    flex: 0 1 calc(50% - 10px);
+    min-width: 0;
+}
+
+/* Plot wrappers */
 .scroll-section {
     scroll-margin-top: 40px;
 }
@@ -273,6 +304,17 @@ table.dataframe tbody tr:nth-child(even) td {
     max-width: 100%;
 }
 
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .model-analysis-tables {
+        gap: 16px;
+    }
+
+    .model-analysis-table-col {
+        flex: 0 1 calc(50% - 8px);
+    }
+}
+
 @media (max-width: 900px) {
     .sidebar {
         display: none;
@@ -281,5 +323,16 @@ table.dataframe tbody tr:nth-child(even) td {
     .container {
         margin-left: 0;
         padding: 30px 40px 40vh;
+    }
+}
+
+@media (max-width: 760px) {
+    .model-analysis-tables {
+        gap: 14px;
+    }
+
+    .model-analysis-table-col {
+        flex: 1 1 100%;
+        min-width: 0;
     }
 }
