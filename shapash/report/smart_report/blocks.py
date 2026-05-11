@@ -389,8 +389,8 @@ class ReportBlockMixin:
             feature_panels.append(
                 f'<div id="{feature_id}" class="section-block contribution-feature-panel" '
                 f'data-contribution-group="{selector_id}" style="display:none">'
-                f'{self._plotly_html(fig)}'
-                '</div>'
+                f"{self._plotly_html(fig)}"
+                "</div>"
             )
 
         controls_html = (
@@ -400,18 +400,18 @@ class ReportBlockMixin:
             '</div>'
         )
         script_html = (
-            '<script>'
-            '(function(){'
+            "<script>"
+            "(function(){"
             f'const select=document.getElementById("{selector_id}");'
             f'const panels=document.querySelectorAll("[data-contribution-group=\\"{selector_id}\\"]");'
-            'function update(){'
+            "function update(){"
             'panels.forEach((panel)=>{panel.style.display="none";});'
-            'const selected=select?document.getElementById(select.value):null;'
+            "const selected=select?document.getElementById(select.value):null;"
             'if(selected){selected.style.display="block";}'
-            '}'
+            "}"
             'if(select){select.addEventListener("change",update);update();}'
-            '})();'
-            '</script>'
+            "})();"
+            "</script>"
         )
 
         resolved_title = title or "Features contribution plots"
@@ -491,10 +491,14 @@ class ReportBlockMixin:
 
         analysis_source = pd.DataFrame({target_name: y_test_series})
         if y_train_series is not None:
-            analysis_source = pd.concat([analysis_source, pd.DataFrame({target_name: y_train_series})], ignore_index=True)
+            analysis_source = pd.concat(
+                [analysis_source, pd.DataFrame({target_name: y_train_series})], ignore_index=True
+            )
 
         col_types = compute_col_types(analysis_source)
-        test_stats = perform_univariate_dataframe_analysis(pd.DataFrame({target_name: y_test_series}), col_types=col_types)
+        test_stats = perform_univariate_dataframe_analysis(
+            pd.DataFrame({target_name: y_test_series}), col_types=col_types
+        )
         train_stats = (
             perform_univariate_dataframe_analysis(pd.DataFrame({target_name: y_train_series}), col_types=col_types)
             if y_train_series is not None
@@ -529,9 +533,9 @@ class ReportBlockMixin:
         dtype_label = str(series_dtype(y_test_series))
         target_header = (
             '<div class="content-block">'
-            f'<p><strong>{target_name}</strong> '
+            f"<p><strong>{target_name}</strong> "
             f'<span style="font-weight:400;color:var(--text-light);font-size:12px">({dtype_label})</span></p>'
-            '</div>'
+            "</div>"
         )
         panel_html = (
             '<div class="section-block univariate-feature-panel">'
@@ -542,7 +546,7 @@ class ReportBlockMixin:
             '</div>'
         )
 
-        return self._wrap_section_content(title, f'{target_header}{panel_html}')
+        return self._wrap_section_content(title, f"{target_header}{panel_html}")
 
     def block_confusion_matrix(self, title: str = "", color: str = "orange") -> str:
         """Return the HTML for a classification confusion matrix.
@@ -590,20 +594,15 @@ class ReportBlockMixin:
         col_types = compute_col_types(df)
         n_splits = df[col_splitter].nunique()
 
-        test_stats = perform_univariate_dataframe_analysis(
-            df.loc[df[col_splitter] == "test"], col_types=col_types
-        )
+        test_stats = perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == "test"], col_types=col_types)
         train_stats = (
-            perform_univariate_dataframe_analysis(
-                df.loc[df[col_splitter] == "train"], col_types=col_types
-            )
+            perform_univariate_dataframe_analysis(df.loc[df[col_splitter] == "train"], col_types=col_types)
             if n_splits > 1 and show_train
             else None
         )
 
         list_cols_labels = sorted(
-            explainer.features_dict.get(col, col)
-            for col in df.drop(col_splitter, axis=1).columns
+            explainer.features_dict.get(col, col) for col in df.drop(col_splitter, axis=1).columns
         )
 
         feature_panels = []
@@ -631,9 +630,7 @@ class ReportBlockMixin:
             feature_id = f"{group_id}-feature-{idx}-{instance_id}"
             dtype_label = str(series_dtype(df[col]))
 
-            feature_options.append(
-                f'<option value="{feature_id}">{col_label} ({dtype_label})</option>'
-            )
+            feature_options.append(f'<option value="{feature_id}">{col_label} ({dtype_label})</option>')
             feature_panels.append(
                 f'<div id="{feature_id}" class="section-block univariate-feature-panel" '
                 f'data-univariate-group="{selector_id}" style="display:none">'
@@ -654,18 +651,18 @@ class ReportBlockMixin:
             '</div>'
         )
         script_html = (
-            '<script>'
-            '(function(){'
+            "<script>"
+            "(function(){"
             f'const select=document.getElementById("{selector_id}");'
             f'const panels=document.querySelectorAll("[data-univariate-group=\\"{selector_id}\\"]");'
-            'function update(){'
+            "function update(){"
             'panels.forEach((panel)=>{panel.style.display="none";});'
-            'const selected=select?document.getElementById(select.value):null;'
+            "const selected=select?document.getElementById(select.value):null;"
             'if(selected){selected.style.display="block";}'
-            '}'
+            "}"
             'if(select){select.addEventListener("change",update);update();}'
-            '})();'
-            '</script>'
+            "})();"
+            "</script>"
         )
 
         return self._wrap_section_content(title, f'{controls_html}{"".join(feature_panels)}{script_html}')
