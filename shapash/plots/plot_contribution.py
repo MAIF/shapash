@@ -184,6 +184,40 @@ def plot_scatter(
 
     fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
+    nan_mask = pd.isna(feature_values.iloc[:, 0]).to_numpy()
+    if nan_mask.any() and feature_values.iloc[:, 0].dtype.kind in "biufc":
+        contributions_arr = contributions.values.flatten()
+        non_nan_arr = feature_values_array[~nan_mask].astype(float)
+        if non_nan_arr.size > 0:
+            vmin, vmax = float(non_nan_arr.min()), float(non_nan_arr.max())
+            nan_x = vmax + max((vmax - vmin) * 0.05, 1.0)
+        else:
+            nan_x = 0.0
+        nan_indices = np.where(nan_mask)[0]
+        fig.add_scatter(
+            x=[nan_x] * len(nan_indices),
+            y=contributions_arr[nan_mask],
+            mode="markers",
+            hovertext=[hv_text[i] for i in nan_indices],
+            hovertemplate=(
+                "<b>%{hovertext}</b><br />" + f"{feature_name}: missing<br />Contribution: %{{y:.4f}}<extra></extra>"
+            ),
+            customdata=np.stack(
+                ([nan_x] * len(nan_indices), feature_values.index[nan_mask].values),
+                axis=-1,
+            ),
+            showlegend=False,
+        )
+        fig.add_annotation(
+            x=nan_x,
+            y=0,
+            xref="x",
+            yref="paper",
+            text="missing",
+            showarrow=False,
+            yshift=-15,
+        )
+
     _update_contributions_fig(
         fig=fig,
         feature_name=feature_name,
@@ -289,10 +323,10 @@ def plot_violin(
 
     hv_text_df, hovertemplate = _prepare_hover_text(feature_values, pred, feature_name)
 
-    feature_values_counts = feature_values.value_counts()
+    feature_values_counts = feature_values.value_counts(dropna=False)
     xs = feature_values_counts.index.get_level_values(0).sort_values()
 
-    y_upper = (feature_values_counts.loc[xs] / feature_values_counts.sum()).values.flatten()
+    y_upper = (feature_values_counts.sort_index() / feature_values_counts.sum()).values.flatten()
     y_upper_max = y_upper.max()
 
     if case == "classification":
@@ -303,6 +337,13 @@ def plot_violin(
         colorpoints = None
 
     for i, c in enumerate(xs):
+        if pd.isna(c):
+            is_c = feature_values.iloc[:, 0].isna()
+            c_label = "missing"
+        else:
+            is_c = feature_values.iloc[:, 0] == c
+            c_label = c
+
         # Add Density Plot
         fig.add_trace(
             go.Bar(
@@ -322,7 +363,7 @@ def plot_violin(
 
         if pred is not None and case == "classification":
             # Negative case
-            feature_cond_neg = (pred.iloc[:, 0] != col_modality) & (feature_values.iloc[:, 0] == c)
+            feature_cond_neg = (pred.iloc[:, 0] != col_modality) & is_c
             _add_violin_and_scatter(
                 fig,
                 feature_cond_neg,
@@ -335,14 +376,14 @@ def plot_violin(
                 cmax,
                 hovertemplate,
                 i,
-                c,
+                c_label,
                 line_color=style_dict["violin_area_classif"][0],
                 secondary_y=True,
                 side="negative",
             )
 
             # Positive case
-            feature_cond_pos = (pred.iloc[:, 0] == col_modality) & (feature_values.iloc[:, 0] == c)
+            feature_cond_pos = (pred.iloc[:, 0] == col_modality) & is_c
             _add_violin_and_scatter(
                 fig,
                 feature_cond_pos,
@@ -355,14 +396,14 @@ def plot_violin(
                 cmax,
                 hovertemplate,
                 i,
-                c,
+                c_label,
                 line_color=style_dict["violin_area_classif"][1],
                 secondary_y=True,
                 side="positive",
             )
         else:
             # General case
-            feature_cond_other = feature_values.iloc[:, 0] == c
+            feature_cond_other = is_c
             _add_violin_and_scatter(
                 fig,
                 feature_cond_other,
@@ -375,7 +416,7 @@ def plot_violin(
                 cmax,
                 hovertemplate,
                 i,
-                c,
+                c_label,
                 line_color=style_dict["violin_default"],
                 secondary_y=True,
                 side="both",
@@ -413,7 +454,8 @@ def plot_violin(
     )
 
     # To change ticktext
-    _update_xaxis_labels(fig, xs, zoom)
+    xs_labels = ["missing" if pd.isna(x) else x for x in xs]
+    _update_xaxis_labels(fig, xs_labels, zoom)
 
     _update_contributions_fig(
         fig=fig,

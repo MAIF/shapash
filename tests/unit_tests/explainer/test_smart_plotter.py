@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from catboost import CatBoostClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from shapash import SmartExplainer
@@ -1123,6 +1124,54 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[1].type == "scatter"
         assert len(output.data[1].x) == 10
         self.setUp()
+
+    def _build_nan_explainer(self, low_cardinality=False):
+        rng = np.random.default_rng(0)
+        n, n_nan = 60, 5
+        if low_cardinality:
+            base = np.concatenate([np.full(20, -1.0), np.full(20, 1.0), np.full(n - 40 - n_nan, 2.0)])
+            num_feat = np.concatenate([base, [np.nan] * n_nan])
+        else:
+            num_feat = np.concatenate([rng.normal(size=n - n_nan), [np.nan] * n_nan])
+        x = pd.DataFrame({"num_feat": num_feat, "noise": rng.normal(size=n)})
+        y = pd.Series(np.where(np.isnan(num_feat), 1, (num_feat > 0).astype(int)), name="target")
+        model = HistGradientBoostingClassifier(max_iter=50, random_state=0).fit(x, y)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=x, y_target=y)
+        return xpl, n_nan
+
+    def test_contribution_plot_nan_numeric_scatter(self):
+        """
+        Numeric feature with NaN values must render on the scatter contribution plot.
+        Regression test for https://github.com/MAIF/shapash/issues/580
+        """
+        xpl, n_nan = self._build_nan_explainer(low_cardinality=False)
+        output = xpl.plot.contribution_plot("num_feat", violin_maxf=0, proba=False)
+
+        marker_traces = [t for t in output.data if t.type == "scatter" and t.mode == "markers"]
+        assert len(marker_traces) == 2
+        nan_trace = marker_traces[-1]
+        assert len(nan_trace.x) == n_nan
+        nan_x = float(nan_trace.x[0])
+        assert all(float(v) == nan_x for v in nan_trace.x)
+        non_nan_finite = np.asarray(marker_traces[0].x, dtype=float)
+        non_nan_finite = non_nan_finite[~np.isnan(non_nan_finite)]
+        assert nan_x > non_nan_finite.max()
+        annotations = [a.text for a in output.layout.annotations]
+        assert "missing" in annotations
+
+    def test_contribution_plot_nan_numeric_violin(self):
+        """
+        Low-cardinality numeric feature with NaN must expose 'missing' as a violin modality.
+        Regression test for https://github.com/MAIF/shapash/issues/580
+        """
+        xpl, _ = self._build_nan_explainer(low_cardinality=True)
+        output = xpl.plot.contribution_plot("num_feat", proba=False)
+
+        violin_names = {t.name for t in output.data if t.type == "violin"}
+        assert "missing" in violin_names
+        ticktext = list(output.layout.xaxis.ticktext) if output.layout.xaxis.ticktext else []
+        assert "missing" in ticktext
 
     def test_plot_features_import_1(self):
         """
