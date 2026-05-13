@@ -24,6 +24,7 @@ def render_plotly_pane_html(fig) -> str:
         raise ValueError("Panel Plotly pane did not return HTML output.")
     return f'<div class="panel-plot">{html}</div>'
 
+
 # @lru_cache is used to avoid redundant computation of resource tags across multiple panes.
 @lru_cache(maxsize=1)
 def panel_resource_tags() -> str:
@@ -34,6 +35,7 @@ def panel_resource_tags() -> str:
     js_html = resources.render_js() if callable(resources.render_js) else resources.render_js
     js_html = _ensure_panel_runtime(js_html)
     return "\n".join(part for part in [css_html, js_html] if part)
+
 
 @lru_cache(maxsize=1)
 def _enable_panel_plotly() -> None:

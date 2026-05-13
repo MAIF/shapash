@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import logging
 from pathlib import Path
-from typing import Type
 
 import pandas as pd
 
@@ -22,7 +21,7 @@ def create_block_runtime(
     y_train: pd.Series | pd.DataFrame | list | None = None,
     y_test: pd.Series | pd.DataFrame | list | None = None,
     config: dict | None = None,
-    block_class: Type[ReportBlockMixin] | None = None,
+    block_class: type[ReportBlockMixin] | None = None,
 ):
     """Create a runtime object that holds report state and block methods."""
     runtime_cls = type("BlockRuntime", (block_class or ReportBlockMixin,), {})
@@ -63,9 +62,7 @@ def generate_report(runtime, config_file: str, output_file: str) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     body_html = "\n".join(rendered_blocks)
     logo_src = resolve_logo_src(out_path.parent)
-    out_path.write_text(
-        build_html_page(body=body_html, sidebar_html=sidebar_html, logo_src=logo_src), encoding="utf-8"
-    )
+    out_path.write_text(build_html_page(body=body_html, sidebar_html=sidebar_html, logo_src=logo_src), encoding="utf-8")
     logger.info("Report saved → %s", output_file)
 
 
