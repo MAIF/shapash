@@ -1,5 +1,5 @@
-# default_report.yml
-# Notebook-parity configuration intended to mirror the legacy papermill report sections.
+# default_report_custom.yml
+# Custom report with a user-defined block example.
 
 sections:
   - type: header
@@ -8,6 +8,11 @@ sections:
       subtitle: >
         This document is a data science report of the kaggle house prices tutorial project.
         It was generated using the Shapash library.
+
+  - type: user_note
+    params:
+      title: "Custom user cell"
+      body: "This section was added by a user-defined block class."
 
   - type: project_information
     params:

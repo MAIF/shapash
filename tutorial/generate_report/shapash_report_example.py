@@ -19,6 +19,18 @@ sys.path.insert(0, "..")
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
+from shapash.report.smart_report.blocks import ReportBlockMixin
+
+# Custom block class can be defined by inheriting from ReportBlockMixin and implementing block methods.
+class UserReportBlocks(ReportBlockMixin):
+    """Example of user-defined custom blocks for report generation."""
+
+    def block_user_note(
+        self,
+        title: str = "Analyst note",
+        body: str = "This report includes a custom user cell.",
+    ) -> str:
+        return self.block_text(title=title, body=body)
 
 if __name__ == "__main__":
     house_df, house_dict = data_loading("house_prices")
@@ -52,7 +64,7 @@ if __name__ == "__main__":
 
     output_file = os.path.join(cur_dir, "output", "report.html")
     project_info_file = os.path.join(cur_dir, "config", "project_information.yml")
-    report_config_file = os.path.join(cur_dir, "config", "default_report.yml")
+    custom_report_config_file = os.path.join(cur_dir, "config", "default_report_custom.yml")
 
     xpl.generate_report(
         output_file=output_file,
@@ -60,5 +72,7 @@ if __name__ == "__main__":
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
-        yaml_path=report_config_file,
+        yaml_path=custom_report_config_file,
+        # Use the custom block class to enable user-defined blocks in the report.
+        block_class=UserReportBlocks,
     )

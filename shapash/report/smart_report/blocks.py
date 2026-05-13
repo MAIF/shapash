@@ -667,7 +667,7 @@ class ReportBlockMixin:
         if (test is not None and "data_train_test" in test.columns) or (
             train is not None and "data_train_test" in train.columns
         ):
-            raise ValueError('"data_train_test" column must be renamed as it is used in ReportBase')
+            raise ValueError('"data_train_test" column must be renamed as it is reserved by smart report runtime')
         if test is None and train is None:
             return None
         frames = []

@@ -1666,6 +1666,7 @@ class SmartExplainer:
         max_points=200,
         display_interaction_plot=False,
         nb_top_interactions=5,
+        block_class=None,
     ):
         """
         Generate an interactive HTML report summarizing the model and its explainability.
@@ -1722,6 +1723,9 @@ class SmartExplainer:
             (Note: this can increase computation time.)
         nb_top_interactions : int, optional, default=5
             Number of top feature interactions to include in the report.
+        block_class : type, optional
+            Optional custom class used to resolve block methods during report generation.
+            It should implement methods named `block_<type>` for YAML block entries.
 
         Returns
         -------
@@ -1759,7 +1763,7 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-        from shapash.report.smart_report import ReportBase
+        from shapash.report.smart_report.core import create_block_runtime, generate_report as generate_smart_report
 
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)
@@ -1785,12 +1789,13 @@ class SmartExplainer:
                 "nb_top_interactions": nb_top_interactions,
             }
 
-            report = ReportBase(
+            report_runtime = create_block_runtime(
                 explainer=self,
                 x_train=x_train,
                 y_train=y_train,
                 y_test=y_test,
                 config=config,
+                block_class=block_class,
             )
 
             if yaml_path is not None:
@@ -1853,7 +1858,7 @@ class SmartExplainer:
                 with config_file.open("w", encoding="utf-8") as cfg_stream:
                     yaml.safe_dump({"sections": sections}, cfg_stream, sort_keys=False, allow_unicode=True)
 
-            report.generate_report(config_file=str(config_file), output_file=output_file)
+            generate_smart_report(runtime=report_runtime, config_file=str(config_file), output_file=output_file)
 
             if rm_working_dir:
                 shutil.rmtree(working_dir)
