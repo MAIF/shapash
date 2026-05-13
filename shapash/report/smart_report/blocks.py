@@ -388,7 +388,7 @@ class ReportBlockMixin:
             feature_options.append(f'<option value="{feature_id}">{feature_label}</option>')
             feature_panels.append(
                 f'<div id="{feature_id}" class="section-block contribution-feature-panel" '
-                f'data-contribution-group="{selector_id}" style="display:none">'
+                f'data-panel-group="{selector_id}" style="display:none">'
                 f"{self._plotly_html(fig)}"
                 "</div>"
             )
@@ -396,26 +396,12 @@ class ReportBlockMixin:
         controls_html = (
             '<div class="univariate-picker">'
             f'<label for="{selector_id}">Choose a feature</label>'
-            f'<select id="{selector_id}" class="univariate-select">{"".join(feature_options)}</select>'
+            f'<select id="{selector_id}" class="univariate-select js-panel-select" data-panel-group="{selector_id}">{"".join(feature_options)}</select>'
             '</div>'
-        )
-        script_html = (
-            "<script>"
-            "(function(){"
-            f'const select=document.getElementById("{selector_id}");'
-            f'const panels=document.querySelectorAll("[data-contribution-group=\\"{selector_id}\\"]");'
-            "function update(){"
-            'panels.forEach((panel)=>{panel.style.display="none";});'
-            "const selected=select?document.getElementById(select.value):null;"
-            'if(selected){selected.style.display="block";}'
-            "}"
-            'if(select){select.addEventListener("change",update);update();}'
-            "})();"
-            "</script>"
         )
 
         resolved_title = title or "Features contribution plots"
-        return self._wrap_section_content(resolved_title, f'{controls_html}{"".join(feature_panels)}{script_html}')
+        return self._wrap_section_content(resolved_title, f'{controls_html}{"".join(feature_panels)}')
 
     def block_interactions_plot(
         self,
@@ -633,7 +619,7 @@ class ReportBlockMixin:
             feature_options.append(f'<option value="{feature_id}">{col_label} ({dtype_label})</option>')
             feature_panels.append(
                 f'<div id="{feature_id}" class="section-block univariate-feature-panel" '
-                f'data-univariate-group="{selector_id}" style="display:none">'
+                f'data-panel-group="{selector_id}" style="display:none">'
                 '<div class="analysis-side-by-side">'
                 f'<div class="analysis-side-table">{col_stats.to_html(classes="kv-table", border=0)}</div>'
                 f'<div class="analysis-side-plot">{self._plotly_html(fig)}</div>'
@@ -647,25 +633,11 @@ class ReportBlockMixin:
         controls_html = (
             '<div class="univariate-picker">'
             f'<label for="{selector_id}">Choose a feature</label>'
-            f'<select id="{selector_id}" class="univariate-select">{"".join(feature_options)}</select>'
+            f'<select id="{selector_id}" class="univariate-select js-panel-select" data-panel-group="{selector_id}">{"".join(feature_options)}</select>'
             '</div>'
         )
-        script_html = (
-            "<script>"
-            "(function(){"
-            f'const select=document.getElementById("{selector_id}");'
-            f'const panels=document.querySelectorAll("[data-univariate-group=\\"{selector_id}\\"]");'
-            "function update(){"
-            'panels.forEach((panel)=>{panel.style.display="none";});'
-            "const selected=select?document.getElementById(select.value):null;"
-            'if(selected){selected.style.display="block";}'
-            "}"
-            'if(select){select.addEventListener("change",update);update();}'
-            "})();"
-            "</script>"
-        )
 
-        return self._wrap_section_content(title, f'{controls_html}{"".join(feature_panels)}{script_html}')
+        return self._wrap_section_content(title, f'{controls_html}{"".join(feature_panels)}')
 
     def _preprocess_train_data(self, x_train: pd.DataFrame | None) -> pd.DataFrame | None:
         if x_train is None or self.explainer is None:

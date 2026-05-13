@@ -1,7 +1,7 @@
 """
 Generate the report example with the new smart_report implementation.
 
-The report layout is driven by the YAML file `report_config_v1.yml` and rendered
+The report layout is driven by the YAML file `default_report.yml` and rendered
 through `SmartExplainer.generate_report`.
 
 For more information, please refer to the tutorial
@@ -50,13 +50,15 @@ if __name__ == "__main__":
     )
     xpl.compile(x=Xtest, y_pred=y_pred, y_target=ytest)
 
-    report_config_file = os.path.join(cur_dir, "report_config_v1.yml")
+    output_file = os.path.join(cur_dir, "output", "report.html")
+    project_info_file = os.path.join(cur_dir, "config", "project_information.yml")
+    report_config_file = os.path.join(cur_dir, "config", "default_report.yml")
 
     xpl.generate_report(
-        output_file=os.path.join(cur_dir, "output", "report.html"),
-        project_info_file=os.path.join(cur_dir, "utils", "project_info.yml"),
+        output_file=output_file,
+        project_info_file=project_info_file,
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
-        notebook_path=report_config_file,
+        yaml_path=report_config_file,
     )

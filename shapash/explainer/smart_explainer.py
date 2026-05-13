@@ -1661,7 +1661,7 @@ class SmartExplainer:
         title_description=None,
         metrics=None,
         working_dir=None,
-        notebook_path=None,
+        yaml_path=None,
         kernel_name=None,
         max_points=200,
         display_interaction_plot=False,
@@ -1709,7 +1709,7 @@ class SmartExplainer:
         working_dir : str, optional
             Directory used to temporarily store generated files (e.g., report config).
             If `None`, a temporary directory is automatically created and deleted after report generation.
-        notebook_path : str, optional
+        yaml_path : str, optional
             Path to a custom YAML configuration file used to generate the report.
             If `None`, a default YAML configuration is generated.
         kernel_name : str, optional
@@ -1745,7 +1745,7 @@ class SmartExplainer:
         -------
         >>> xpl.generate_report(
         ...     output_file="report.html",
-        ...     project_info_file="utils/project_info.yml",
+        ...     project_info_file="config/project_information.yml",
         ...     x_train=x_train,
         ...     y_train=y_train,
         ...     y_test=y_test,
@@ -1793,8 +1793,8 @@ class SmartExplainer:
                 config=config,
             )
 
-            if notebook_path is not None:
-                config_file = Path(notebook_path)
+            if yaml_path is not None:
+                config_file = Path(yaml_path)
             else:
                 config_file = Path(working_dir) / "report_config.yml"
                 sections = [

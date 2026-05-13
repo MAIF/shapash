@@ -1,4 +1,4 @@
-# report_config_v1.yml
+# default_report.yml
 # Notebook-parity configuration intended to mirror the legacy papermill report sections.
 
 sections:
@@ -11,31 +11,9 @@ sections:
 
   - type: project_information
     params:
-      title: "General Information"
+      title: "Project information"
       color: gray
-      project_info_file: "tutorial/generate_report/utils/project_info.yml"
-      section_name: "General information"
-
-  - type: project_information
-    params:
-      title: "Dataset Information"
-      color: gray
-      project_info_file: "tutorial/generate_report/utils/project_info.yml"
-      section_name: "Dataset information"
-
-  - type: project_information
-    params:
-      title: "Data Preparation"
-      color: gray
-      project_info_file: "tutorial/generate_report/utils/project_info.yml"
-      section_name: "Data Preparation"
-
-  - type: project_information
-    params:
-      title: "Model Training"
-      color: gray
-      project_info_file: "tutorial/generate_report/utils/project_info.yml"
-      section_name: "Model training"
+      project_info_file: "tutorial/generate_report/config/project_information.yml"
 
   - type: model_analysis
     params:

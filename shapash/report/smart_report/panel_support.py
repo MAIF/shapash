@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import re
 from functools import lru_cache
 
@@ -13,14 +15,16 @@ def render_plotly_pane_html(fig) -> str:
     """Render a Plotly figure as a standalone Panel fragment."""
     _enable_panel_plotly()
     pane = pn.pane.Plotly(fig, config={"responsive": True})
-    bundle = pane._repr_mimebundle_()
+    # Panel may write empty lines to stdout/stderr while building mimebundle.
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        bundle = pane._repr_mimebundle_()
     data = bundle[0] if isinstance(bundle, tuple) else bundle
     html = data.get("text/html")
     if not html:
         raise ValueError("Panel Plotly pane did not return HTML output.")
     return f'<div class="panel-plot">{html}</div>'
 
-
+# @lru_cache is used to avoid redundant computation of resource tags across multiple panes.
 @lru_cache(maxsize=1)
 def panel_resource_tags() -> str:
     """Return the CSS and JS tags required to hydrate Panel panes."""
@@ -31,7 +35,7 @@ def panel_resource_tags() -> str:
     js_html = _ensure_panel_runtime(js_html)
     return "\n".join(part for part in [css_html, js_html] if part)
 
-
+@lru_cache(maxsize=1)
 def _enable_panel_plotly() -> None:
     pn.extension("plotly")
 

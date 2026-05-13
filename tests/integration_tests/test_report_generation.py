@@ -78,7 +78,7 @@ class TestGeneration(unittest.TestCase):
         self.xpl.generate_report(
             output_file=outfile,
             project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
-            notebook_path=str(cfg_path),
+            yaml_path=str(cfg_path),
         )
         assert os.path.exists(outfile)
 
