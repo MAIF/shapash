@@ -297,12 +297,9 @@ class Consistency:
         -------
         Coordinates of each method
         """
-        return MDS(
-            n_components=2,
-            dissimilarity="precomputed",
-            random_state=0,
-            n_init=4,
-        ).fit_transform(mean_distances)
+        return MDS(n_components=2, metric="precomputed", random_state=0, n_init=4, init="random").fit_transform(
+            mean_distances
+        )
 
     def plot_comparison(self, mean_distances):
         """
