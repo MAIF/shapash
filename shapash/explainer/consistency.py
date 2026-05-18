@@ -302,7 +302,6 @@ class Consistency:
             dissimilarity="precomputed",
             random_state=0,
             n_init=4,
-            init="random",
         ).fit_transform(mean_distances)
 
     def plot_comparison(self, mean_distances):
