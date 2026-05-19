@@ -20,10 +20,10 @@ from shapash.utils.transform import apply_postprocessing, handle_categorical_mis
 from shapash.utils.utils import compute_sorted_variables_interactions_list_indices
 
 PALETTE = {
-    "gold": {"bg": "#ffffff", "border": "#ffbb00", "title": "#ccac00", "text": "#333333"},
-    "blue": {"bg": "#ffffff", "border": "#2255aa", "title": "#2255aa", "text": "#333333"},
+    "gold": {"bg": "#ffffff", "border": "#f4c000", "title": "#f4c000", "text": "#343736"},
+    "blue": {"bg": "#ffffff", "border": "#2255aa", "title": "#2255aa", "text": "#343736"},
     "gray": {"bg": "#ffffff", "border": "#eeeeee", "title": "#666666", "text": "#666666"},
-    "orange": {"bg": "#fff9e6", "border": "#ffbb00", "title": "#cc8833", "text": "#444444"},
+    "orange": {"bg": "#fff9e6", "border": "#f4c000", "title": "#cc8833", "text": "#444444"},
 }
 
 
@@ -709,7 +709,7 @@ class ReportBlockMixin:
 
     @staticmethod
     def _performance_distribution_colors() -> dict:
-        return {"pred": "#2255aa", "true": "#ffbb00"}
+        return {"pred": "#2255aa", "true": "#f4c000"}
 
     @staticmethod
     def _plotly_html(fig) -> str:

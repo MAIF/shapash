@@ -37,7 +37,7 @@ def print_css_style():
         }
         table.greyGridTable tbody td {
             border: solid 1px #DEDDEE;
-            color: #333;
+            color: #343736;
             padding: 5px;
             margin-left: 10px;
             margin-right: 10px;

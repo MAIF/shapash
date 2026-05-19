@@ -1,7 +1,7 @@
 /* Theme tokens */
 :root {
-    --shapash-gold: #ffbb00;
-    --text-main: #333;
+    --shapash-gold: #f4c000;
+    --text-main: #343736;
     --text-light: #777;
 }
 
@@ -175,13 +175,13 @@ body,
 .main-header h1 {
     font-size: 2.4rem;
     font-weight: 500;
-    color: #000;
+    color: #343736;
     margin-bottom: 20px;
 }
 
 .section-title {
     font-size: 1.6rem;
-    color: #000;
+    color: #343736;
     margin: 40px 0 20px;
     font-weight: 700;
 }
@@ -202,7 +202,7 @@ body,
     background: #fff;
     padding: 15px 25px;
     margin: 30px 0;
-    color: #333;
+    color: #343736;
     line-height: 1.6;
     font-size: 15px;
 }
@@ -229,7 +229,7 @@ table.dataframe {
 .kv-table thead th,
 table.dataframe thead th {
     background: #fafafa;
-    color: #000;
+    color: #343736;
     font-weight: 700;
     text-align: left;
     border-bottom: 1px solid #ececec;
@@ -238,7 +238,7 @@ table.dataframe thead th {
 
 .kv-table tbody th,
 table.dataframe tbody th {
-    color: #000;
+    color: #343736;
     font-weight: 600;
     text-align: left;
     background: #fcfcfc;
@@ -268,7 +268,7 @@ table.dataframe tbody tr:nth-child(even) td {
 .kv-key {
     font-weight: 700;
     width: 220px;
-    color: #000;
+    color: #343736;
     white-space: nowrap;
 }
 

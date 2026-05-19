@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+import base64
 import re
 from pathlib import Path
 
@@ -17,11 +17,16 @@ REPORT_SCRIPT = f"<script>\n{_SCRIPT_FILE.read_text(encoding='utf-8')}\n</script
 
 
 def resolve_logo_src(base_dir: Path | None) -> str:
-    """Resolve the relative path to the bundled Shapash logo."""
+    """Resolve the bundled Shapash logo as an inline data URI.
+    """
     if base_dir is None:
         return ""
-    logo_path = Path(__file__).resolve().parents[3] / "docs" / "assets" / "images" / "svg" / "shapash-github.svg"
-    return os.path.relpath(logo_path, base_dir).replace(os.sep, "/") if logo_path.exists() else ""
+    logo_path = Path(__file__).resolve().parents[3] / "docs" / "assets" / "images" / "logos" / "shapash-fond-clair.png"
+    if not logo_path.exists():
+        return ""
+
+    encoded_svg = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded_svg}"
 
 
 def block_title(block_cfg: dict) -> str:
