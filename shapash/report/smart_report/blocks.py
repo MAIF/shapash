@@ -28,15 +28,73 @@ PALETTE = {
 
 
 class ReportBlockMixin:
-    """Reusable block rendering and data preparation helpers."""
+    """Base mixin providing built-in and user-extensible smart report blocks.
+
+    This mixin is consumed by the smart-report runtime to resolve YAML section
+    definitions into rendered HTML fragments. Each method named
+    ``block_<type>`` can be referenced by a YAML block with ``type: <type>``.
+
+    Example:
+        class MyBlocks(ReportBlockMixin):
+            def block_my_summary(self, title: str = "My summary") -> str:
+                return self._wrap_section_content(title, "<p>Custom content</p>")
+
+        xpl.generate_report(..., block_class=MyBlocks)
+
+    Runtime context
+    ---------------
+    During report generation, the runtime object exposes prepared attributes
+    that custom blocks can use, such as:
+    - `self.explainer`
+    - `self.x_init` and `self.x_train_pre`
+    - `self.df_train_test`
+    - `self.y_train`, `self.y_test`, `self.y_pred`
+    - `self.target_name`, `self.max_points`
+
+    Design notes
+    ------------
+    - Each `block_*` method should return an HTML string.
+    - Helper methods like `_wrap_section_content` and `_plotly_html` are
+      provided to keep custom blocks concise and consistent with built-in ones.
+    - Validation errors should raise `ValueError` with actionable messages.
+    """
 
     def block_header(self, title: str = "Report", subtitle: str = "") -> str:
-        """Return the HTML for the report header and its optional subtitle callout."""
+        """Render the report hero/header block.
+
+        Parameters
+        ----------
+        title : str, default="Report"
+            Main heading shown at the top of the report body.
+        subtitle : str, default=""
+            Optional descriptive text displayed in a callout below the title.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the title and optional subtitle.
+        """
         sub = f'<div class="shapash-callout"><p>{subtitle}</p></div>' if subtitle else ""
         return f'<div class="main-header"><h1>{title}</h1>{sub}</div>'
 
     def block_text(self, title: str = "", body: str = "", color: str = "gray") -> str:
-        """Return the HTML for a text section with an optional title."""
+        """Render a free-text content section.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        body : str, default=""
+            Raw text or HTML-compatible content to display.
+        color : str, default="gray"
+            Reserved palette key for config parity. Not currently used directly
+            by this block renderer.
+
+        Returns
+        -------
+        str
+            HTML fragment for a basic text paragraph section.
+        """
         h2 = f'<h2 class="section-title">{title}</h2>' if title else ""
         return f'<div class="content-block">{h2}<p>{body}</p></div>'
 
@@ -47,7 +105,31 @@ class ReportBlockMixin:
         project_info_file: str = "",
         section_name: str | None = None,
     ) -> str:
-        """Return project information loaded from an external YAML file."""
+        """Render a project-information section from a YAML metadata file.
+
+        Parameters
+        ----------
+        title : str, default="Project information"
+            Top-level section title.
+        color : str, default="gray"
+            Reserved palette key for config parity.
+        project_info_file : str, default=""
+            Path to a YAML file containing one or more mapping sections.
+        section_name : str or None, default=None
+            Optional section key to render. When omitted, all top-level mapping
+            sections are rendered.
+
+        Returns
+        -------
+        str
+            HTML fragment containing one table per selected YAML section.
+
+        Raises
+        ------
+        ValueError
+            If ``project_info_file`` is missing, not found, invalid, or if
+            ``section_name`` does not exist.
+        """
         if not project_info_file:
             raise ValueError("project_information block requires the 'project_info_file' parameter.")
 
@@ -81,14 +163,43 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, "".join(sections_html))
 
     def block_key_value(self, title: str = "", items: dict | None = None, color: str = "gold") -> str:
-        """Return the HTML for a table of key-value pairs."""
+        """Render a key-value table section.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        items : dict or None, default=None
+            Mapping of label to value rows.
+        color : str, default="gold"
+            Reserved palette key for config parity.
+
+        Returns
+        -------
+        str
+            HTML fragment containing a two-column key-value table.
+        """
         items = items or {}
         rows = self._render_key_value_rows(items)
         h2 = f'<h2 class="section-title">{title}</h2>' if title else ""
         return f'<div class="content-block">{h2}<table class="kv-table">{rows}</table></div>'
 
     def block_badge_row(self, title: str = "", badges: list | None = None) -> str:
-        """Return the HTML for a row of badge-style metrics."""
+        """Render a horizontal row of badge-style values.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        badges : list or None, default=None
+            List of dictionaries describing badges. Supported keys include
+            ``label``, ``value``, and ``color``.
+
+        Returns
+        -------
+        str
+            HTML fragment containing styled badges.
+        """
         badges = badges or []
         pills = ""
         for badge in badges:
@@ -102,18 +213,63 @@ class ReportBlockMixin:
         return f'<div class="content-block">{h2}<div style="display:flex;flex-wrap:wrap;gap:10px">{pills}</div></div>'
 
     def block_callout(self, body: str = "", color: str = "gold", icon: str = "") -> str:
-        """Return the HTML for a highlighted callout paragraph."""
+        """Render a highlighted callout paragraph.
+
+        Parameters
+        ----------
+        body : str, default=""
+            Callout content.
+        color : str, default="gold"
+            Reserved palette key for config parity.
+        icon : str, default=""
+            Reserved icon identifier for future visual customization.
+
+        Returns
+        -------
+        str
+            HTML fragment for a callout container.
+        """
         return f'<div class="shapash-callout"><p>{body}</p></div>'
 
     def block_divider(self, label: str = "") -> str:
-        """Return the HTML for a visual divider between report sections."""
+        """Render a horizontal divider between sections.
+
+        Parameters
+        ----------
+        label : str, default=""
+            Reserved label value for future divider variants.
+
+        Returns
+        -------
+        str
+            HTML fragment for a divider line.
+        """
         return '<div class="shapash-divider"></div>'
 
     def block_global_analysis(self, title: str = "", color: str = "gray") -> str:
-        """Return the HTML for the global dataset statistics comparison table.
+        """Render a global train/test descriptive statistics table.
 
-        Requires prediction data on the report instance and includes training
-        data statistics when training data is available.
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        color : str, default="gray"
+            Reserved palette key for config parity.
+
+        Returns
+        -------
+        str
+            HTML fragment containing a statistics summary table.
+
+        Raises
+        ------
+        ValueError
+            If required train/test runtime data is unavailable.
+
+        Notes
+        -----
+        When training data is available, both prediction and training dataset
+        statistics are included side by side.
         """
         self._require_train_test_data("global_analysis")
         test_stats = perform_global_dataframe_analysis(self.x_init)
@@ -127,7 +283,26 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, table_html)
 
     def block_model_analysis(self, title: str = "Model information", color: str = "blue") -> str:
-        """Return model metadata and parameters in a notebook-parity layout."""
+        """Render model metadata and parameter tables.
+
+        Parameters
+        ----------
+        title : str, default="Model information"
+            Section title.
+        color : str, default="blue"
+            Reserved palette key for config parity.
+
+        Returns
+        -------
+        str
+            HTML fragment including model type, library metadata, and parameter
+            key/value tables.
+
+        Raises
+        ------
+        ValueError
+            If the runtime does not expose an explainer instance.
+        """
         explainer = self._require_explainer("model_analysis")
         model = explainer.model
 
@@ -201,7 +376,29 @@ class ReportBlockMixin:
         color: str = "blue",
         max_y: int | None = None,
     ) -> str:
-        """Return a feature/target relationship plot on training data."""
+        """Render a feature-vs-target box plot on training data.
+
+        Parameters
+        ----------
+        title : str, default="Relationship with target variable"
+            Section title.
+        feature : str, default="OverallQual"
+            Feature name from ``x_train_pre`` used on the x-axis.
+        color : str, default="blue"
+            Reserved palette key for config parity.
+        max_y : int or None, default=None
+            Optional upper bound for y-axis range.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the rendered Plotly box chart.
+
+        Raises
+        ------
+        ValueError
+            If training data or target is missing, or if ``feature`` is unknown.
+        """
         self._require_train_test_data("relationship_target")
         if self.x_train_pre is None or self.y_train is None:
             raise ValueError("relationship_target block requires both training features and y_train.")
@@ -223,7 +420,27 @@ class ReportBlockMixin:
         color: str = "blue",
         max_features: int = 30,
     ) -> str:
-        """Return training-only correlation heatmap (legacy notebook block name)."""
+        """Render a training-only correlation heatmap.
+
+        Parameters
+        ----------
+        title : str, default="Relationship between training variables"
+            Section title.
+        color : str, default="blue"
+            Reserved palette key for config parity.
+        max_features : int, default=30
+            Maximum number of numeric features to keep on each heatmap axis.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the correlation heatmap.
+
+        Raises
+        ------
+        ValueError
+            If ``x_train_pre`` is unavailable.
+        """
         if self.x_train_pre is None:
             raise ValueError("training_correlations block requires x_train.")
 
@@ -241,7 +458,28 @@ class ReportBlockMixin:
         color: str = "orange",
         metrics: list | None = None,
     ) -> str:
-        """Return a badge row with configured evaluation metrics computed on y_test/y_pred."""
+        """Render configured performance metrics as badges.
+
+        Parameters
+        ----------
+        title : str, default="Model performance"
+            Section title.
+        color : str, default="orange"
+            Palette key used for badge accent color.
+        metrics : list or None, default=None
+            Metric configurations. Each item should contain ``path`` and may
+            define ``name``.
+
+        Returns
+        -------
+        str
+            HTML fragment containing one badge per computed metric.
+
+        Raises
+        ------
+        ValueError
+            If ``y_test`` or ``y_pred`` is missing.
+        """
         if self.y_test is None or self.y_pred is None:
             raise ValueError("performance_metrics block requires y_test and y_pred.")
 
@@ -260,7 +498,25 @@ class ReportBlockMixin:
         return self.block_badge_row(title=title, badges=metric_items)
 
     def block_pred_vs_true(self, title: str = "y_pred vs y_test", color: str = "orange") -> str:
-        """Return a scatter plot of predictions versus true target values."""
+        """Render a scatter plot comparing predictions to true values.
+
+        Parameters
+        ----------
+        title : str, default="y_pred vs y_test"
+            Section title.
+        color : str, default="orange"
+            Reserved palette key for config parity.
+
+        Returns
+        -------
+        str
+            HTML fragment containing a Plotly scatter plot.
+
+        Raises
+        ------
+        ValueError
+            If ``y_test`` or ``y_pred`` is missing.
+        """
         if self.y_test is None or self.y_pred is None:
             raise ValueError("pred_vs_true block requires y_test and y_pred.")
 
@@ -279,10 +535,36 @@ class ReportBlockMixin:
         width: int = 700,
         height: int = 500,
     ) -> str:
-        """Return the HTML for a feature distribution plot across dataset splits.
+        """Render a feature distribution plot across dataset splits.
 
-        The feature must be present in the prepared train/test dataframe stored
-        on the report instance.
+        Parameters
+        ----------
+        feature : str
+            Feature column to analyze.
+        title : str, default=""
+            Optional section title. If empty, uses feature label.
+        color : str, default="blue"
+            Reserved palette key for config parity.
+        dataset_split : str, default="data_train_test"
+            Name of the split column in ``df_train_test`` used for hue.
+        prediction_label : str, default="test"
+            Reserved label for prediction split compatibility.
+        training_label : str, default="train"
+            Reserved label for training split compatibility.
+        width : int, default=700
+            Plot width in pixels.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the rendered feature distribution plot.
+
+        Raises
+        ------
+        ValueError
+            If train/test runtime data is unavailable or ``feature`` is missing.
         """
         self._require_train_test_data("feature_distribution")
         if feature not in self.df_train_test.columns:
@@ -306,8 +588,34 @@ class ReportBlockMixin:
         width: int | None = None,
         height: int = 500,
     ) -> str:
-        """Return the HTML for the explainer correlation plot.
+        """Render the explainer correlation plot.
 
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        color : str, default="blue"
+            Reserved palette key for config parity.
+        max_features : int, default=20
+            Maximum number of features included in the correlation matrix.
+        width : int or None, default=None
+            Plot width in pixels. If ``None``, width is inferred from the number
+            of dataset splits.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the rendered correlation chart.
+
+        Raises
+        ------
+        ValueError
+            If required explainer or train/test data is unavailable.
+
+        Notes
+        -----
         When both training and prediction datasets are available, the plot is
         faceted by dataset split.
         """
@@ -325,7 +633,27 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, self._plotly_html(fig))
 
     def block_feature_importance(self, title: str = "", color: str = "green", label=None) -> str:
-        """Return the HTML for the explainer feature-importance plot."""
+        """Render the explainer feature-importance plot.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        color : str, default="green"
+            Reserved palette key for config parity.
+        label : object, optional
+            Optional class label used in classification contexts.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the feature-importance chart.
+
+        Raises
+        ------
+        ValueError
+            If the runtime does not expose an explainer instance.
+        """
         explainer = self._require_explainer("feature_importance")
         fig = explainer.plot.features_importance(label=label)
         return self._wrap_section_content(title, self._plotly_html(fig))
@@ -340,14 +668,37 @@ class ReportBlockMixin:
         include_all_features: bool = False,
         group_id: str = "contribution",
     ) -> str:
-        """Return the HTML for a feature contribution plot.
+        """Render contribution plot(s) for one feature or all features.
 
-        Requires an explainer with contribution values and uses the configured
-        maximum point count when no explicit limit is provided.
+        Parameters
+        ----------
+        feature : str or None, default=None
+            Feature to plot when ``include_all_features`` is ``False``.
+        title : str, default=""
+            Optional section title.
+        color : str, default="green"
+            Reserved palette key for config parity.
+        label : object, optional
+            Optional class label used in classification contexts.
+        max_points : int or None, default=None
+            Maximum number of points for plot sampling. Falls back to
+            ``self.max_points`` when omitted.
+        include_all_features : bool, default=False
+            If ``True``, renders a feature selector and one panel per feature.
+        group_id : str, default="contribution"
+            HTML prefix used to namespace selector and panel identifiers.
 
-        When include_all_features is True, renders a dropdown and one plot per
-        feature so users can navigate contribution plots in-place. Plot type
-        selection (violin vs scatter) is delegated to explainer.plot.contribution_plot.
+        Returns
+        -------
+        str
+            HTML fragment containing one contribution plot or an interactive
+            selector with multiple contribution plots.
+
+        Raises
+        ------
+        ValueError
+            If required explainer data is unavailable, or if ``feature`` is
+            missing when ``include_all_features`` is ``False``.
         """
         explainer = self._require_explainer("contribution_plot")
 
@@ -411,10 +762,31 @@ class ReportBlockMixin:
         col2: str | None = None,
         max_points: int | None = None,
     ) -> str:
-        """Return the HTML for an interaction plot between two features.
+        """Render a two-feature interaction plot.
 
-        If no feature pair is provided, the strongest available interaction is
-        selected from the explainer output.
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title. If empty, uses resolved feature labels.
+        color : str, default="green"
+            Reserved palette key for config parity.
+        col1 : str or None, default=None
+            First feature name. If omitted with ``col2``, an interaction pair is
+            auto-selected.
+        col2 : str or None, default=None
+            Second feature name.
+        max_points : int or None, default=None
+            Maximum number of points for plot sampling.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the interaction chart.
+
+        Raises
+        ------
+        ValueError
+            If no valid interaction pair can be resolved.
         """
         explainer = self._require_explainer("interactions_plot")
         feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
@@ -431,10 +803,28 @@ class ReportBlockMixin:
         width: int = 700,
         height: int = 500,
     ) -> str:
-        """Return the HTML for the true-versus-predicted target distribution plot.
+        """Render predicted-vs-true target distributions.
 
-        Requires both ground-truth targets and predicted values on the report
-        instance.
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        color : str, default="blue"
+            Reserved palette key for config parity.
+        width : int, default=700
+            Plot width in pixels.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the overlaid target distributions.
+
+        Raises
+        ------
+        ValueError
+            If target or prediction values are missing.
         """
         self._require_explainer("target_distribution")
         if self.y_test is None or self.y_pred is None:
@@ -464,7 +854,30 @@ class ReportBlockMixin:
         width: int = 700,
         height: int = 500,
     ) -> str:
-        """Return a univariate-style analysis block focused only on the target variable."""
+        """Render a univariate analysis focused on the target variable.
+
+        Parameters
+        ----------
+        title : str, default="Target analysis"
+            Section title.
+        show_train : bool, default=True
+            Whether to include training-target distribution and stats when
+            ``y_train`` is available.
+        width : int, default=700
+            Plot width in pixels.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        str
+            HTML fragment combining summary statistics and a distribution chart.
+
+        Raises
+        ------
+        ValueError
+            If ``y_test`` is missing.
+        """
         from shapash.report.common import compute_col_types, series_dtype
         from shapash.report.data_analysis import perform_univariate_dataframe_analysis
 
@@ -535,10 +948,24 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, f"{target_header}{panel_html}")
 
     def block_confusion_matrix(self, title: str = "", color: str = "orange") -> str:
-        """Return the HTML for a classification confusion matrix.
+        """Render a classification confusion matrix.
 
-        Requires both ground-truth labels and predicted labels on the report
-        instance.
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        color : str, default="orange"
+            Reserved palette key for config parity.
+
+        Returns
+        -------
+        str
+            HTML fragment containing the confusion-matrix chart.
+
+        Raises
+        ------
+        ValueError
+            If the explainer, ``y_test``, or ``y_pred`` is unavailable.
         """
         explainer = self._require_explainer("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
@@ -552,7 +979,7 @@ class ReportBlockMixin:
         show_train: bool = True,
         group_id: str = "univariate",
     ) -> str:
-        """Return the HTML for a univariate analysis of all features.
+        """Render a univariate analysis for all explainer features.
 
         For each feature, renders a distribution plot and a summary statistics
         table. When training data is available and show_train is True, statistics
@@ -566,6 +993,17 @@ class ReportBlockMixin:
             Whether to include training data alongside prediction data.
         group_id : str
             HTML identifier prefix used to namespace the dropdown and feature panels.
+
+        Returns
+        -------
+        str
+            HTML fragment with a feature selector and one analysis panel per
+            available feature.
+
+        Raises
+        ------
+        ValueError
+            If required explainer or train/test data is unavailable.
         """
         from shapash.report.common import compute_col_types, series_dtype
         from shapash.report.data_analysis import perform_univariate_dataframe_analysis
@@ -640,6 +1078,18 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, f'{controls_html}{"".join(feature_panels)}')
 
     def _preprocess_train_data(self, x_train: pd.DataFrame | None) -> pd.DataFrame | None:
+        """Apply inverse preprocessing and postprocessing to training data.
+
+        Parameters
+        ----------
+        x_train : pandas.DataFrame or None
+            Raw training frame in encoded/model-input space.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            Prepared training frame aligned with ``x_init`` representation.
+        """
         if x_train is None or self.explainer is None:
             return x_train
         x_train_pre = inverse_transform(x_train, self.explainer.preprocessing)
@@ -650,6 +1100,25 @@ class ReportBlockMixin:
 
     @staticmethod
     def _get_values_and_name(y: pd.DataFrame | pd.Series | list | None, default_name: str) -> tuple[object, str | None]:
+        """Normalize target-like input to value array/list and display name.
+
+        Parameters
+        ----------
+        y : pandas.DataFrame, pandas.Series, list, or None
+            Input target values.
+        default_name : str
+            Fallback display name when ``y`` is provided as a list.
+
+        Returns
+        -------
+        tuple[object, str or None]
+            Pair ``(values, name)`` where values is an array-like object.
+
+        Raises
+        ------
+        ValueError
+            If DataFrame input has more than one column or if type is unsupported.
+        """
         if y is None:
             return None, None
         if isinstance(y, pd.DataFrame):
@@ -664,6 +1133,26 @@ class ReportBlockMixin:
 
     @staticmethod
     def _create_train_test_df(test: pd.DataFrame | None, train: pd.DataFrame | None) -> pd.DataFrame | None:
+        """Build a combined train/test frame with split markers.
+
+        Parameters
+        ----------
+        test : pandas.DataFrame or None
+            Prediction/test dataset.
+        train : pandas.DataFrame or None
+            Training dataset.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            Concatenated frame with ``data_train_test`` marker column, or
+            ``None`` when both inputs are ``None``.
+
+        Raises
+        ------
+        ValueError
+            If input frames already contain reserved ``data_train_test`` column.
+        """
         if (test is not None and "data_train_test" in test.columns) or (
             train is not None and "data_train_test" in train.columns
         ):
@@ -678,15 +1167,63 @@ class ReportBlockMixin:
         return pd.concat(frames).reset_index(drop=True)
 
     def _require_explainer(self, block_type: str):
+        """Ensure an explainer is attached to the runtime.
+
+        Parameters
+        ----------
+        block_type : str
+            Calling block name for contextual error messaging.
+
+        Returns
+        -------
+        object
+            Runtime explainer.
+
+        Raises
+        ------
+        ValueError
+            If explainer is missing.
+        """
         if self.explainer is None:
             raise ValueError(f"{block_type} block requires an explainer on the report instance.")
         return self.explainer
 
     def _require_train_test_data(self, block_type: str) -> None:
+        """Ensure combined train/test data is available on the runtime.
+
+        Parameters
+        ----------
+        block_type : str
+            Calling block name for contextual error messaging.
+
+        Raises
+        ------
+        ValueError
+            If combined train/test dataframe is missing.
+        """
         if self.df_train_test is None:
             raise ValueError(f"{block_type} block requires x_train and explainer.x_init data on the report instance.")
 
     def _resolve_interaction_pair(self, col1: str | None, col2: str | None) -> tuple[str, str]:
+        """Resolve an interaction pair either explicitly or automatically.
+
+        Parameters
+        ----------
+        col1 : str or None
+            First feature name.
+        col2 : str or None
+            Second feature name.
+
+        Returns
+        -------
+        tuple[str, str]
+            Pair of resolved feature names.
+
+        Raises
+        ------
+        ValueError
+            If automatic selection cannot find any interaction pair.
+        """
         if col1 and col2:
             return col1, col2
         explainer = self._require_explainer("interactions_plot")
@@ -699,24 +1236,74 @@ class ReportBlockMixin:
         return explainer.columns_dict[first_idx], explainer.columns_dict[second_idx]
 
     def _feature_label(self, feature: str) -> str:
+        """Return display label for a technical feature name.
+
+        Parameters
+        ----------
+        feature : str
+            Technical feature identifier.
+
+        Returns
+        -------
+        str
+            Business/display feature label when available, otherwise ``feature``.
+        """
         if self.explainer is None:
             return feature
         return self.explainer.features_dict.get(feature, feature)
 
     def _feature_distribution_colors(self) -> dict:
+        """Return color mapping used by distribution blocks.
+
+        Returns
+        -------
+        dict
+            Color palette mapping from report style configuration.
+        """
         explainer = self._require_explainer("feature_distribution")
         return explainer.colors_dict["report_feature_distribution"]
 
     @staticmethod
     def _performance_distribution_colors() -> dict:
+        """Return default color mapping for predicted-vs-true target plots.
+
+        Returns
+        -------
+        dict
+            Static mapping with ``pred`` and ``true`` color values.
+        """
         return {"pred": "#2255aa", "true": "#f4c000"}
 
     @staticmethod
     def _plotly_html(fig) -> str:
+        """Convert a Plotly figure into embeddable HTML.
+
+        Parameters
+        ----------
+        fig : plotly.graph_objects.Figure
+            Plotly figure instance.
+
+        Returns
+        -------
+        str
+            HTML fragment that can be inserted into report blocks.
+        """
         return render_plotly_pane_html(fig)
 
     @staticmethod
     def _render_key_value_rows(items: dict) -> str:
+        """Render table rows for a key-value mapping.
+
+        Parameters
+        ----------
+        items : dict
+            Mapping of key to display value.
+
+        Returns
+        -------
+        str
+            HTML table-row fragment.
+        """
         return "".join(
             f'<tr><td class="kv-key"><span class="kv-key-label">{key}</span><span class="kv-key-sep"> :</span></td>'
             f'<td class="kv-val">{value}</td></tr>'
@@ -725,6 +1312,20 @@ class ReportBlockMixin:
 
     @staticmethod
     def _wrap_section_content(title: str, body_html: str) -> str:
+        """Wrap block body content in a standard report section container.
+
+        Parameters
+        ----------
+        title : str
+            Section title. If empty, no heading is rendered.
+        body_html : str
+            HTML fragment representing block content.
+
+        Returns
+        -------
+        str
+            Full HTML section fragment.
+        """
         parts = []
         if title:
             parts.append(f'<h2 class="section-title">{title}</h2>')
