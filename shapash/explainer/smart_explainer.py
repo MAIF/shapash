@@ -1662,7 +1662,6 @@ class SmartExplainer:
         metrics=None,
         working_dir=None,
         yaml_path=None,
-        kernel_name=None,
         max_points=200,
         display_interaction_plot=False,
         nb_top_interactions=5,
@@ -1713,9 +1712,6 @@ class SmartExplainer:
         yaml_path : str, optional
             Path to a custom YAML configuration file used to generate the report.
             If `None`, a default YAML configuration is generated.
-        kernel_name : str, optional
-            Deprecated parameter kept for backward compatibility.
-            Ignored by the smart_report implementation.
         max_points : int, optional, default=200
             Maximum number of points displayed in contribution plots.
         display_interaction_plot : bool, optional, default=False
@@ -1768,9 +1764,6 @@ class SmartExplainer:
 
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)
-
-        if kernel_name is not None:
-            logging.warning("'kernel_name' is ignored by the smart report implementation.")
 
         rm_working_dir = False
         if not working_dir:
