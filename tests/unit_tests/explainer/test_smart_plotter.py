@@ -1142,23 +1142,39 @@ class TestSmartPlotter(unittest.TestCase):
 
     def test_contribution_plot_nan_numeric_scatter(self):
         """
-        Numeric feature with NaN values must render on the scatter contribution plot.
+        Numeric feature with NaN values must render on the scatter contribution plot
+        as a grouped cluster past the data range using an "x" marker symbol, with
+        "missing" surfaced in the hover customdata.
         Regression test for https://github.com/MAIF/shapash/issues/580
         """
         xpl, n_nan = self._build_nan_explainer(low_cardinality=False)
         output = xpl.plot.contribution_plot("num_feat", violin_maxf=0, proba=False)
 
         marker_traces = [t for t in output.data if t.type == "scatter" and t.mode == "markers"]
-        assert len(marker_traces) == 2
-        nan_trace = marker_traces[-1]
-        assert len(nan_trace.x) == n_nan
-        nan_x = float(nan_trace.x[0])
-        assert all(float(v) == nan_x for v in nan_trace.x)
-        non_nan_finite = np.asarray(marker_traces[0].x, dtype=float)
-        non_nan_finite = non_nan_finite[~np.isnan(non_nan_finite)]
-        assert nan_x > non_nan_finite.max()
-        annotations = [a.text for a in output.layout.annotations]
-        assert "missing" in annotations
+        assert len(marker_traces) == 1
+        trace = marker_traces[0]
+
+        x_arr = np.asarray(trace.x, dtype=float)
+        assert len(x_arr) == 60
+        assert not np.isnan(x_arr).any()
+
+        symbols = list(trace.marker.symbol)
+        assert symbols.count("x") == n_nan
+        assert symbols.count("circle") == 60 - n_nan
+
+        nan_mask = np.array([s == "x" for s in symbols])
+        nan_x_values = x_arr[nan_mask]
+        non_nan_x_values = x_arr[~nan_mask]
+        assert len(np.unique(nan_x_values)) == 1
+        nan_x = float(nan_x_values[0])
+        non_nan_max = float(non_nan_x_values.max())
+        spread = non_nan_max - float(non_nan_x_values.min())
+        assert nan_x > non_nan_max
+        assert abs(nan_x - (non_nan_max + 0.2 * spread)) < 1e-9
+
+        customdata_col0 = [row[0] for row in trace.customdata]
+        nan_customdata = [v for v, s in zip(customdata_col0, symbols) if s == "x"]
+        assert all(v == "missing" for v in nan_customdata)
 
     def test_contribution_plot_nan_numeric_violin(self):
         """

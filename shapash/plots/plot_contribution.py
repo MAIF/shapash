@@ -8,6 +8,8 @@ from plotly.offline import plot
 from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
 from shapash.webapp.utils.utils import round_to_k
 
+NAN_PLACEHOLDER_K = 0.2
+
 
 def plot_scatter(
     feature_values,
@@ -162,6 +164,20 @@ def plot_scatter(
         # Add density plot
         fig.add_trace(density_plot)
 
+    nan_mask_arr = pd.isna(feature_values.iloc[:, 0]).to_numpy()
+    has_nan_numeric = bool(nan_mask_arr.any()) and feature_values.iloc[:, 0].dtype.kind in "biufc"
+    marker = None
+    if has_nan_numeric:
+        non_nan_arr = feature_values_array[~nan_mask_arr].astype(float)
+        if non_nan_arr.size > 0:
+            vmax = float(non_nan_arr.max())
+            spread = vmax - float(non_nan_arr.min())
+            nan_x = vmax + spread * NAN_PLACEHOLDER_K if spread > 0 else vmax + 1.0
+        else:
+            nan_x = 0.0
+        feature_values_array = np.where(nan_mask_arr, nan_x, feature_values_array)
+        marker = {"symbol": np.where(nan_mask_arr, "x", "circle").tolist()}
+
     fig.add_scatter(
         x=feature_values_array,
         y=contributions.values.flatten(),
@@ -169,6 +185,7 @@ def plot_scatter(
         hovertext=hv_text,
         hovertemplate=hovertemplate,
         text=text_groups_features,
+        marker=marker,
         showlegend=False,
     )
     # To change ticktext when the x label size is upper than 10 and zoom is False
@@ -180,43 +197,13 @@ def plot_scatter(
     # Customdata contains the values and index of feature_values.
     # The values are used in the hovertext and the indexes are used for
     # the interactions between the graphics.
-    customdata = np.stack((feature_values_array, feature_values.index.values), axis=-1)
+    customdata_values = feature_values_array
+    if has_nan_numeric:
+        customdata_values = feature_values_array.astype(object).copy()
+        customdata_values[nan_mask_arr] = "missing"
+    customdata = np.stack((customdata_values, feature_values.index.values), axis=-1)
 
     fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
-
-    nan_mask = pd.isna(feature_values.iloc[:, 0]).to_numpy()
-    if nan_mask.any() and feature_values.iloc[:, 0].dtype.kind in "biufc":
-        contributions_arr = contributions.values.flatten()
-        non_nan_arr = feature_values_array[~nan_mask].astype(float)
-        if non_nan_arr.size > 0:
-            vmin, vmax = float(non_nan_arr.min()), float(non_nan_arr.max())
-            nan_x = vmax + max((vmax - vmin) * 0.05, 1.0)
-        else:
-            nan_x = 0.0
-        nan_indices = np.where(nan_mask)[0]
-        fig.add_scatter(
-            x=[nan_x] * len(nan_indices),
-            y=contributions_arr[nan_mask],
-            mode="markers",
-            hovertext=[hv_text[i] for i in nan_indices],
-            hovertemplate=(
-                "<b>%{hovertext}</b><br />" + f"{feature_name}: missing<br />Contribution: %{{y:.4f}}<extra></extra>"
-            ),
-            customdata=np.stack(
-                ([nan_x] * len(nan_indices), feature_values.index[nan_mask].values),
-                axis=-1,
-            ),
-            showlegend=False,
-        )
-        fig.add_annotation(
-            x=nan_x,
-            y=0,
-            xref="x",
-            yref="paper",
-            text="missing",
-            showarrow=False,
-            yshift=-15,
-        )
 
     _update_contributions_fig(
         fig=fig,
