@@ -1,5 +1,5 @@
 # default_report.yml
-# Notebook-parity configuration intended to mirror the legacy papermill report sections.
+# Default smart report configuration based on block sections.
 
 sections:
   - type: header
@@ -81,6 +81,6 @@ sections:
   - type: callout
     params:
       body: >
-        You can add as many graphs, text, or other cells as you want.
-        The code will not be displayed. Only the markdown and output of the cells will be shown on the generated html file.
+        You can add as many blocks, charts, and text sections as you want.
+        The generated HTML renders report content only (no source code).
       color: gray

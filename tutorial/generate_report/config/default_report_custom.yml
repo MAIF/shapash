@@ -11,7 +11,7 @@ sections:
 
   - type: user_note
     params:
-      title: "Custom user cell"
+      title: "Custom user block"
       body: "This section was added by a user-defined block class."
 
   - type: project_information
@@ -86,6 +86,6 @@ sections:
   - type: callout
     params:
       body: >
-        You can add as many graphs, text, or other cells as you want.
-        The code will not be displayed. Only the markdown and output of the cells will be shown on the generated html file.
+        You can add as many blocks, charts, and text sections as you want.
+        The generated HTML renders report content only (no source code).
       color: gray
