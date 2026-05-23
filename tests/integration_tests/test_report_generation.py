@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 import catboost as cb
 import category_encoders as ce
@@ -151,3 +152,28 @@ class TestGeneration(unittest.TestCase):
         export_and_save_report(working_dir=tmp_dir_path, output_file=outfile)
         assert os.path.exists(outfile)
         shutil.rmtree(tmp_dir_path)
+
+    def test_export_and_save_report_writes_utf8(self):
+        """
+        Regression test for https://github.com/MAIF/shapash/issues/699:
+        export_and_save_report must pass encoding='utf-8' to open(), otherwise
+        on Windows (cp1252 default) any non-Latin1 character in the HTML body
+        raises UnicodeEncodeError.
+        """
+        fake_html = "café — déjà vu — résumé"
+        fake_exporter = MagicMock()
+        fake_exporter.from_filename.return_value = (fake_html, {})
+
+        m = mock_open()
+        with (
+            patch("shapash.report.generation.HTMLExporter", return_value=fake_exporter),
+            patch("shapash.report.generation.open", m, create=True),
+        ):
+            export_and_save_report(working_dir="dummy", output_file="dummy.html")
+
+        write_calls = [c for c in m.call_args_list if len(c.args) >= 2 and c.args[1] == "w"]
+        assert write_calls, "expected at least one write-mode open() call"
+        for call in write_calls:
+            assert call.kwargs.get("encoding") == "utf-8", (
+                f"export_and_save_report must call open(..., 'w', encoding='utf-8'); got {call}"
+            )
