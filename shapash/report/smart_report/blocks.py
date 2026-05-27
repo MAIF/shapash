@@ -157,7 +157,7 @@ class ReportBlockMixin:
             rows = self._render_key_value_rows(section_values)
             sections_html.append(
                 f'<div class="content-block"><h3 class="section-title" style="font-size:1.2rem">{current_section_name}</h3>'
-                f'<table class="kv-table">{rows}</table></div>'
+                f'<table class="kv-table project-info-table">{rows}</table></div>'
             )
 
         return self._wrap_section_content(title, "".join(sections_html))

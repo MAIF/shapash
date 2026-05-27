@@ -3,6 +3,7 @@
     --shapash-gold: #f4c000;
     --text-main: #343736;
     --text-light: #777;
+    --sidebar-width: 240px;
 }
 
 /* Reset */
@@ -34,7 +35,7 @@ body,
 
 /* Sidebar */
 .sidebar {
-    width: 240px;
+    width: var(--sidebar-width);
     background: #fff;
     border-right: 1px solid #eee;
     position: fixed;
@@ -161,10 +162,10 @@ body,
 
 /* Main content */
 .container {
-    margin-left: 240px;
-    width: 100%;
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
     padding: 60px 80px 60vh;
-    max-width: 1200px;
+    max-width: 1400px;
 }
 
 .main-header {
@@ -226,120 +227,27 @@ table.dataframe {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
 }
 
-.kv-table thead th,
-table.dataframe thead th {
-    background: #fafafa;
-    color: #343736;
-    font-weight: 700;
-    text-align: left;
-    border-bottom: 1px solid #ececec;
-    padding: 12px 16px;
+.project-info-table {
+    table-layout: fixed;
 }
 
-.kv-table tbody th,
-table.dataframe tbody th {
-    color: #343736;
-    font-weight: 600;
-    text-align: left;
-    background: #fcfcfc;
+.project-info-table .kv-key {
+    width: 42%;
+    min-width: 280px;
+    padding-left: 18px;
+    padding-right: 10px;
 }
 
-.kv-table td,
-.kv-table th,
-table.dataframe td,
-table.dataframe th {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f1f1f1;
-    vertical-align: top;
+.project-info-table .kv-key-label,
+.project-info-table .kv-key-sep {
+    overflow-wrap: normal;
+    word-break: keep-all;
+    hyphens: none;
 }
 
-.kv-table tbody tr:last-child td,
-.kv-table tbody tr:last-child th,
-table.dataframe tbody tr:last-child td,
-table.dataframe tbody tr:last-child th {
-    border-bottom: 0;
-}
-
-.kv-table tbody tr:nth-child(even) td,
-table.dataframe tbody tr:nth-child(even) td {
-    background: #fdfdfd;
-}
-
-.kv-key {
-    font-weight: 700;
-    width: 220px;
-    color: #343736;
-    white-space: nowrap;
-}
-
-.kv-key-label,
-.kv-key-sep {
-    white-space: nowrap;
-}
-
-.kv-val {
-    color: var(--text-main);
-}
-
-/* Badges */
-.badge {
-    display: inline-block;
-    padding: 6px 14px;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    font-size: 12px;
-    background: #fff;
-}
-
-/* Model analysis specific layout */
-.model-analysis-meta {
-    margin-bottom: 10px;
-}
-
-.model-analysis-line {
-    margin-bottom: 12px;
-}
-
-.model-analysis-tables {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    align-items: flex-start;
-}
-
-.model-analysis-table-col {
-    flex: 0 1 calc(50% - 10px);
-    min-width: 0;
-}
-
-/* Univariate analysis picker */
-.univariate-picker {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    margin: 8px 0 18px;
-}
-
-.univariate-picker label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-main);
-}
-
-.univariate-select {
-    min-width: 260px;
-    max-width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #d8d8d8;
-    border-radius: 8px;
-    background: #fff;
-    color: var(--text-main);
-    font-size: 13px;
-}
-
-.univariate-feature-panel {
-    margin-top: 4px;
+.project-info-table .kv-val {
+    padding-left: 10px;
+    padding-right: 18px;
 }
 
 .analysis-side-by-side {
@@ -379,8 +287,26 @@ table.dataframe tbody tr:nth-child(even) td {
     max-width: 100%;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1200px) {
+/* Desktop-only responsive adjustments */
+@media (max-width: 1600px) and (min-width: 1281px) {
+    .container {
+        padding: 52px 60px 50vh;
+    }
+}
+
+@media (max-width: 1366px) and (min-width: 1024px) {
+    .container {
+        padding: 44px 44px 44vh;
+    }
+
+    .main-header {
+        margin-bottom: 48px;
+    }
+
+    .main-header h1 {
+        font-size: 2.2rem;
+    }
+
     .model-analysis-tables {
         gap: 16px;
     }
@@ -394,20 +320,55 @@ table.dataframe tbody tr:nth-child(even) td {
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) and (min-width: 1024px) {
+    :root {
+        --sidebar-width: 220px;
+    }
+
     .sidebar {
-        display: none;
+        width: var(--sidebar-width);
+        padding: 24px 16px;
     }
 
     .container {
-        margin-left: 0;
-        padding: 30px 40px 40vh;
+        margin-left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
+        padding: 34px 30px 38vh;
+    }
+
+    .section-title {
+        font-size: 1.45rem;
+    }
+
+    .analysis-side-table {
+        min-width: 300px;
+    }
+
+    .analysis-side-plot {
+        min-width: 300px;
+    }
+
+    .kv-table,
+    table.dataframe {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
-@media (max-width: 760px) {
-    .model-analysis-tables {
-        gap: 14px;
+@media (max-width: 1100px) and (min-width: 1024px) {
+    :root {
+        --sidebar-width: 200px;
+    }
+
+    .sidebar-brand {
+        font-size: 16px;
+        margin-bottom: 28px;
+    }
+
+    .nav-item,
+    .nav-group-title {
+        font-size: 12px;
     }
 
     .model-analysis-table-col {
@@ -419,5 +380,17 @@ table.dataframe tbody tr:nth-child(even) td {
     .analysis-side-plot {
         flex: 1 1 100%;
         min-width: 0;
+    }
+
+    .univariate-select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .content-block,
+    .shapash-callout,
+    .kv-val {
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 }
