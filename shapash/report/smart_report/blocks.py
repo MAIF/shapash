@@ -8,7 +8,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pandas as pd
-import plotly.express as px
 import yaml
 
 from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
@@ -162,28 +161,6 @@ class ReportBlockMixin:
 
         return self._wrap_section_content(title, "".join(sections_html))
 
-    def block_key_value(self, title: str = "", items: dict | None = None, color: str = "gold") -> str:
-        """Render a key-value table section.
-
-        Parameters
-        ----------
-        title : str, default=""
-            Optional section title.
-        items : dict or None, default=None
-            Mapping of label to value rows.
-        color : str, default="gold"
-            Reserved palette key for config parity.
-
-        Returns
-        -------
-        str
-            HTML fragment containing a two-column key-value table.
-        """
-        items = items or {}
-        rows = self._render_key_value_rows(items)
-        h2 = f'<h2 class="section-title">{title}</h2>' if title else ""
-        return f'<div class="content-block">{h2}<table class="kv-table">{rows}</table></div>'
-
     def block_badge_row(self, title: str = "", badges: list | None = None) -> str:
         """Render a horizontal row of badge-style values.
 
@@ -230,21 +207,6 @@ class ReportBlockMixin:
             HTML fragment for a callout container.
         """
         return f'<div class="shapash-callout"><p>{body}</p></div>'
-
-    def block_divider(self, label: str = "") -> str:
-        """Render a horizontal divider between sections.
-
-        Parameters
-        ----------
-        label : str, default=""
-            Reserved label value for future divider variants.
-
-        Returns
-        -------
-        str
-            HTML fragment for a divider line.
-        """
-        return '<div class="shapash-divider"></div>'
 
     def block_global_analysis(self, title: str = "", color: str = "gray") -> str:
         """Render a global train/test descriptive statistics table.
@@ -369,89 +331,6 @@ class ReportBlockMixin:
 
         return self._wrap_section_content(title, content)
 
-    def block_relationship_target(
-        self,
-        title: str = "Relationship with target variable",
-        feature: str = "OverallQual",
-        color: str = "blue",
-        max_y: int | None = None,
-    ) -> str:
-        """Render a feature-vs-target box plot on training data.
-
-        Parameters
-        ----------
-        title : str, default="Relationship with target variable"
-            Section title.
-        feature : str, default="OverallQual"
-            Feature name from ``x_train_pre`` used on the x-axis.
-        color : str, default="blue"
-            Reserved palette key for config parity.
-        max_y : int or None, default=None
-            Optional upper bound for y-axis range.
-
-        Returns
-        -------
-        str
-            HTML fragment containing the rendered Plotly box chart.
-
-        Raises
-        ------
-        ValueError
-            If training data or target is missing, or if ``feature`` is unknown.
-        """
-        self._require_train_test_data("relationship_target")
-        if self.x_train_pre is None or self.y_train is None:
-            raise ValueError("relationship_target block requires both training features and y_train.")
-        if feature not in self.x_train_pre.columns:
-            raise ValueError(f"Unknown feature '{feature}' for relationship_target block.")
-
-        target_name = self.target_name_train or "target"
-        df_train = self.x_train_pre.copy()
-        df_train[target_name] = self.y_train
-
-        fig = px.box(df_train, x=feature, y=target_name)
-        if max_y is not None:
-            fig.update_yaxes(range=[0, max_y])
-        return self._wrap_section_content(title, self._plotly_html(fig))
-
-    def block_training_correlations(
-        self,
-        title: str = "Relationship between training variables",
-        color: str = "blue",
-        max_features: int = 30,
-    ) -> str:
-        """Render a training-only correlation heatmap.
-
-        Parameters
-        ----------
-        title : str, default="Relationship between training variables"
-            Section title.
-        color : str, default="blue"
-            Reserved palette key for config parity.
-        max_features : int, default=30
-            Maximum number of numeric features to keep on each heatmap axis.
-
-        Returns
-        -------
-        str
-            HTML fragment containing the correlation heatmap.
-
-        Raises
-        ------
-        ValueError
-            If ``x_train_pre`` is unavailable.
-        """
-        if self.x_train_pre is None:
-            raise ValueError("training_correlations block requires x_train.")
-
-        numeric_train = self.x_train_pre.select_dtypes(include="number")
-        corr = numeric_train.corr(numeric_only=True)
-        if max_features > 0 and corr.shape[0] > max_features:
-            corr = corr.iloc[:max_features, :max_features]
-
-        fig = px.imshow(corr, color_continuous_scale="YlGnBu", zmin=-1, zmax=1, aspect="auto")
-        return self._wrap_section_content(title, self._plotly_html(fig))
-
     def block_performance_metrics(
         self,
         title: str = "Model performance",
@@ -496,33 +375,6 @@ class ReportBlockMixin:
             metric_items.append({"label": metric_name, "value": f"{value:,.2f}", "color": color})
 
         return self.block_badge_row(title=title, badges=metric_items)
-
-    def block_pred_vs_true(self, title: str = "y_pred vs y_test", color: str = "orange") -> str:
-        """Render a scatter plot comparing predictions to true values.
-
-        Parameters
-        ----------
-        title : str, default="y_pred vs y_test"
-            Section title.
-        color : str, default="orange"
-            Reserved palette key for config parity.
-
-        Returns
-        -------
-        str
-            HTML fragment containing a Plotly scatter plot.
-
-        Raises
-        ------
-        ValueError
-            If ``y_test`` or ``y_pred`` is missing.
-        """
-        if self.y_test is None or self.y_pred is None:
-            raise ValueError("pred_vs_true block requires y_test and y_pred.")
-
-        scatter_df = pd.DataFrame({"y_test": self.y_test, "y_pred": self.y_pred})
-        fig = px.scatter(scatter_df, x="y_test", y="y_pred")
-        return self._wrap_section_content(title, self._plotly_html(fig))
 
     def block_feature_distribution(
         self,

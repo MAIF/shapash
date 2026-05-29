@@ -208,7 +208,7 @@ xpl.generate_report(
     x_train=xtrain,
     y_train=ytrain,
     y_test=ytest,
-  yaml_path="path/to/report_config.yml",  # Optional: custom block configuration
+    yaml_path="path/to/report_config.yml",  # Optional: custom block configuration
     title_story="House prices report",
     title_description="""This document is a data science report of the kaggle house prices tutorial project.
         It was generated using the Shapash library.""",

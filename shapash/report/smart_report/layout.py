@@ -17,8 +17,7 @@ REPORT_SCRIPT = f"<script>\n{_SCRIPT_FILE.read_text(encoding='utf-8')}\n</script
 
 
 def resolve_logo_src(base_dir: Path | None) -> str:
-    """Resolve the bundled Shapash logo as an inline data URI.
-    """
+    """Resolve the bundled Shapash logo as an inline data URI."""
     if base_dir is None:
         return ""
     logo_path = Path(__file__).resolve().parents[3] / "docs" / "assets" / "images" / "logos" / "shapash-fond-clair.png"
