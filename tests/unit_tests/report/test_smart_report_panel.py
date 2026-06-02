@@ -1,33 +1,35 @@
 import unittest
 
+import panel as pn
 import plotly.graph_objects as go
 
-from shapash.report.smart_report.layout import build_html_page
-from shapash.report.smart_report.panel_support import panel_resource_tags, render_plotly_pane_html
+from shapash.report.panel_support import apply_report_css, make_plotly_pane, report_css_text
 
 
 class TestSmartReportPanel(unittest.TestCase):
-    def test_panel_resource_tags_include_panel_dependencies(self):
-        tags = panel_resource_tags()
-
-        self.assertIn("cdn.holoviz.org/panel", tags)
-        self.assertIn("panel.min.js", tags)
-        self.assertIn("cdn.bokeh.org", tags)
-        self.assertIn("plotly", tags)
-
-    def test_render_plotly_pane_html_returns_panel_fragment(self):
+    def test_make_plotly_pane_returns_panel_plotly(self):
         fig = go.Figure(go.Scatter(x=[1, 2], y=[3, 4]))
 
-        html = render_plotly_pane_html(fig)
+        pane = make_plotly_pane(fig)
 
-        self.assertIn('class="panel-plot"', html)
-        self.assertIn("data-root-id=", html)
-        self.assertIn("panel.models.plotly.PlotlyPlot", html)
+        self.assertIsInstance(pane, pn.pane.Plotly)
+        self.assertEqual(pane.object, fig)
+        self.assertEqual(pane.sizing_mode, "stretch_width")
 
-    def test_build_html_page_includes_panel_resources(self):
-        html = build_html_page(body="<div>Body</div>")
+    def test_report_css_text_loads_stylesheet_content(self):
+        css = report_css_text()
 
-        self.assertIn("cdn.holoviz.org/panel", html)
-        self.assertIn("panel.min.js", html)
-        self.assertIn("cdn.bokeh.org", html)
-        self.assertNotIn("cdn.plot.ly", html)
+        self.assertIn(".kv-table", css)
+        self.assertIn("@media (max-width: 1200px)", css)
+
+    def test_apply_report_css_registers_styles_once(self):
+        css = report_css_text()
+
+        apply_report_css()
+        first_count = pn.config.raw_css.count(css)
+
+        apply_report_css()
+        second_count = pn.config.raw_css.count(css)
+
+        self.assertEqual(first_count, 1)
+        self.assertEqual(second_count, 1)

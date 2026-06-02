@@ -1,10 +1,11 @@
-"""Validation and lightweight utility helpers for HTML reports."""
+"""Validation of the yaml configuration and helper functions for report rendering."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 import pandas as pd
+import panel as pn
 import yaml
 
 
@@ -65,12 +66,12 @@ def _validate_block(block: object, idx: int, cfg_path: Path, parent: str = "sect
             _validate_block(child_block, child_idx, cfg_path, parent=f"{parent}[{idx}].blocks")
 
 
-def render_block_error_html(block_id: str, exc: Exception) -> str:
-    """Render a consistent HTML error box for block failures."""
-    return (
-        f'<div style="background:#fff1f1;border:1px solid #d9534f;padding:20px;border-radius:6px;margin:20px 0">'
-        f'<h2 style="color:#d9534f;font-size:1rem">⚠ Block "{block_id}" failed</h2>'
-        f'<pre style="color:#a94442;white-space:pre-wrap;font-size:12px">{exc}</pre></div>'
+def render_block_error(block_id: str, exc: Exception):
+    """Render a consistent error panel for block failures."""
+    return pn.pane.Alert(
+        f'Block "{block_id}" failed\n\n{exc}',
+        alert_type="danger",
+        sizing_mode="stretch_width",
     )
 
 

@@ -1,0 +1,122 @@
+:root {
+    --shapash-yellow: #f4c000;
+    --shapash-black: #343736;
+}
+
+.main-report {
+    padding: 24px 32px;
+}
+
+/* Generic key/value and dataframe tables */
+.kv-table,
+table.dataframe {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 12px 0 24px;
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.kv-table th,
+.kv-table td,
+table.dataframe th,
+table.dataframe td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.shapash-callout {
+    padding: 14px 20px;
+    border-left: 4px solid var(--shapash-yellow);
+}
+
+.badge-pill {
+    border: 1px solid #eeeeee;
+    border-radius: 999px;
+    padding: 6px 12px;
+    display: inline-block;
+}
+
+.badge-pill-gold {
+    border-color: var(--shapash-yellow);
+}
+
+.badge-pill-blue {
+    border-color: #2255aa;
+}
+
+.badge-pill-gray {
+    border-color: #eeeeee;
+}
+
+.badge-pill-orange {
+    border-color: var(--shapash-yellow);
+}
+
+.project-info-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+
+.project-info-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+}
+
+.project-info-card .kv-table {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+}
+
+.project-info-card .kv-table table.dataframe {
+    height: 100%;
+}
+
+.fit-content-table {
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.fit-content-table table.dataframe {
+    width: max-content;
+    table-layout: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+
+    .main-report {
+        padding: 16px;
+    }
+
+    .kv-table,
+    table.dataframe {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .kv-val,
+    .content-block {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .project-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .project-info-card {
+        width: 100%;
+        height: auto;
+    }
+}

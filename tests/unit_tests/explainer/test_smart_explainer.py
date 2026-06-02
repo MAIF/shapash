@@ -1108,8 +1108,8 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.run_app()
         assert xpl.y_target is not None
 
-    @patch("shapash.report.smart_report.core.generate_report")
-    @patch("shapash.report.smart_report.core.create_block_runtime")
+    @patch("shapash.report.core.generate_report")
+    @patch("shapash.report.core.create_block_runtime")
     def test_generate_report(self, mock_create_block_runtime, mock_generate_report):
         """
         Test generate report method

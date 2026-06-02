@@ -1759,8 +1759,8 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-        from shapash.report.smart_report.core import create_block_runtime
-        from shapash.report.smart_report.core import generate_report as generate_smart_report
+        from shapash.report.core import create_block_runtime
+        from shapash.report.core import generate_report as generate_smart_report
 
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)

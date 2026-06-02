@@ -19,7 +19,7 @@ sys.path.insert(0, "..")
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
-from shapash.report.smart_report.blocks import ReportBlockMixin
+from shapash.report.blocks import ReportBlockMixin
 
 # Custom block class can be defined by inheriting from ReportBlockMixin and implementing block methods.
 class UserReportBlocks(ReportBlockMixin):
