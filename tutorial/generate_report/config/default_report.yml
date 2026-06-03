@@ -12,13 +12,11 @@ sections:
   - type: project_information
     params:
       title: "Project information"
-      color: gray
       project_info_file: "tutorial/generate_report/config/project_information.yml"
 
   - type: model_analysis
     params:
       title: "Model analysis"
-      color: blue
 
   - type: group
     params:
@@ -27,7 +25,6 @@ sections:
       - type: global_analysis
         params:
           title: "Global analysis"
-          color: blue
 
       - type: univariate_analysis
         params:
@@ -41,7 +38,6 @@ sections:
       - type: correlations_plot
         params:
           title: "Multivariate analysis"
-          color: blue
           max_features: 20
 
   - type: group
@@ -51,13 +47,11 @@ sections:
       - type: feature_importance
         params:
           title: "Global feature importance plot"
-          color: gold
 
       - type: contribution_plot
         params:
           title: "Features contribution plots"
           include_all_features: true
-          color: gold
 
   - type: group
     params:
@@ -66,12 +60,10 @@ sections:
       - type: target_distribution
         params:
           title: "Univariate analysis of target variable"
-          color: orange
 
       - type: performance_metrics
         params:
           title: "Metrics"
-          color: orange
           metrics:
             - path: "sklearn.metrics.mean_absolute_error"
               name: "Mean absolute error"
@@ -83,4 +75,3 @@ sections:
       body: >
         You can add as many blocks, charts, and text sections as you want.
         The generated HTML renders report content only (no source code).
-      color: gray
