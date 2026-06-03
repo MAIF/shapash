@@ -1,8 +1,9 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const sections = document.querySelectorAll('.scroll-section[id]');
+function initReportInteractions() {
+    const sections = document.querySelectorAll('.scroll-anchor[id]');
     const navItems = document.querySelectorAll('.nav-item:not(.nav-group-title):not(.nav-child)');
     const navChildren = document.querySelectorAll('.nav-child');
     const navGroupTitles = document.querySelectorAll('.nav-group-title');
+    const navCurrentValue = document.querySelector('.nav-current-value');
     const panelSelectors = document.querySelectorAll('.js-panel-select[data-panel-group]');
 
     function clearActive() {
@@ -14,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function onScroll() {
         let currentId = '';
         sections.forEach(section => {
-            if (window.scrollY >= (section.offsetTop - 150)) {
+            if (window.scrollY >= (section.offsetTop - 120)) {
                 currentId = section.getAttribute('id');
             }
         });
@@ -25,10 +26,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         clearActive();
+        let matchedLabel = 'Top of report';
 
         navItems.forEach(item => {
             if (item.getAttribute('href') === '#' + currentId) {
                 item.classList.add('active');
+                matchedLabel = item.textContent.trim();
             }
         });
 
@@ -37,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (child.getAttribute('href') === '#' + currentId) {
                 child.classList.add('active');
                 childMatched = true;
+                matchedLabel = child.textContent.trim();
                 const group = child.closest('.nav-group');
                 if (group) {
                     const parentTitle = group.querySelector('.nav-group-title');
@@ -51,8 +55,13 @@ document.addEventListener('DOMContentLoaded', function () {
             navGroupTitles.forEach(title => {
                 if (title.getAttribute('href') === '#' + currentId) {
                     title.classList.add('active');
+                    matchedLabel = title.textContent.trim();
                 }
             });
+        }
+
+        if (navCurrentValue) {
+            navCurrentValue.textContent = matchedLabel || 'Top of report';
         }
     }
 
@@ -77,4 +86,10 @@ document.addEventListener('DOMContentLoaded', function () {
         select.addEventListener('change', updatePanels);
         updatePanels();
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReportInteractions);
+} else {
+    initReportInteractions();
+}

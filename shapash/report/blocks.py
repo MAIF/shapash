@@ -191,6 +191,7 @@ class ReportBlockMixin:
             ),
             pn.Row(
                 pn.pane.DataFrame(left_df, sizing_mode="stretch_width", css_classes=["kv-table"]),
+                pn.Spacer(width=24),
                 pn.pane.DataFrame(right_df, sizing_mode="stretch_width", css_classes=["kv-table"]),
                 sizing_mode="stretch_width",
             ),
@@ -628,6 +629,7 @@ class ReportBlockMixin:
         items = body_items if isinstance(body_items, list) else [body_items]
         blocks: list[pn.viewable.Viewable] = []
         if title:
-            blocks.append(pn.pane.Markdown(f"### {title}", css_classes=["section-title"]))
+            heading_prefix = "###" if getattr(self, "_inside_group", False) else "#"
+            blocks.append(pn.pane.Markdown(f"{heading_prefix} {title}", css_classes=["section-title"]))
         blocks.extend(self._coerce_viewable(item) for item in items if item is not None)
         return pn.Column(*blocks, css_classes=["section-block"], sizing_mode="stretch_width")
