@@ -13,7 +13,8 @@ import yaml
 
 from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
 from shapash.plots.plot_univariate import plot_distribution
-from shapash.report.data_analysis import perform_global_dataframe_analysis
+from shapash.report.common import compute_col_types, series_dtype
+from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.panel_support import make_plotly_pane
 from shapash.report.validation import stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
@@ -31,6 +32,24 @@ class ReportBlockMixin:
     """Base mixin providing built-in and user-extensible smart report blocks."""
 
     def block_header(self, title: str = "Report", subtitle: str = "") -> pn.Column:
+        """Render the report header section.
+
+        Parameters
+        ----------
+        title : str, default="Report"
+            Main report title displayed as a first-level heading.
+        subtitle : str, default=""
+            Optional markdown text displayed below the title.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the title and optional subtitle.
+
+        Examples
+        --------
+        >>> runtime.block_header(title="Model report", subtitle="Summary for Q2")
+        """
         blocks: list[pn.viewable.Viewable] = [pn.pane.Markdown(f"# {title}", css_classes=["main-header"])]
         if subtitle:
             blocks.append(
@@ -41,8 +60,25 @@ class ReportBlockMixin:
             )
         return pn.Column(*blocks, sizing_mode="stretch_width")
 
-    def block_text(self, title: str = "", body: str = "", color: str = "gray") -> pn.Column:
-        del color
+    def block_text(self, title: str = "", body: str = "") -> pn.Column:
+        """Render a markdown text section.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        body : str, default=""
+            Markdown content displayed in the block body.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the wrapped text section.
+
+        Examples
+        --------
+        >>> runtime.block_text(title="Context", body="This report compares train and test data.")
+        """
         content: list[pn.viewable.Viewable] = []
         if body:
             content.append(pn.pane.Markdown(body, css_classes=["content-block"]))
@@ -51,11 +87,29 @@ class ReportBlockMixin:
     def block_project_information(
         self,
         title: str = "Project information",
-        color: str = "gray",
         project_info_file: str = "",
         section_name: str | None = None,
     ) -> pn.Column:
-        del color
+        """Render project metadata from a YAML configuration file.
+
+        Parameters
+        ----------
+        title : str, default="Project information"
+            Section title displayed above the metadata cards.
+        project_info_file : str, default=""
+            Path to a YAML file containing top-level mapping sections.
+        section_name : str or None, default=None
+            Optional section key to render only one subsection from the YAML file.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing one or more key-value tables.
+
+        Examples
+        --------
+        >>> runtime.block_project_information(project_info_file="project_info.yaml")
+        """
         if not project_info_file:
             raise ValueError("project_information block requires the 'project_info_file' parameter.")
 
@@ -104,6 +158,24 @@ class ReportBlockMixin:
         return self._wrap_section_content(title, [project_info_grid])
 
     def block_badge_row(self, title: str = "", badges: list | None = None) -> pn.Column:
+        """Render a row of summary badges.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        badges : list or None, default=None
+            List of dictionaries with keys such as ``label``, ``value``, and ``color``.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing a horizontal row of badge elements.
+
+        Examples
+        --------
+        >>> runtime.block_badge_row(badges=[{"label": "AUC", "value": "0.89", "color": "blue"}])
+        """
         badges = badges or []
         pills: list[pn.viewable.Viewable] = []
         for badge in badges:
@@ -119,8 +191,23 @@ class ReportBlockMixin:
 
         return self._wrap_section_content(title, [pn.Row(*pills, sizing_mode="stretch_width")])
 
-    def block_callout(self, body: str = "", color: str = "gold", icon: str = "") -> pn.Column:
-        del color, icon
+    def block_callout(self, body: str = "") -> pn.Column:
+        """Render a highlighted callout message.
+
+        Parameters
+        ----------
+        body : str, default=""
+            Markdown message to emphasize in the report.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing a styled callout pane.
+
+        Examples
+        --------
+        >>> runtime.block_callout(body="Use this report for decision support only.")
+        """
         return pn.Column(
             pn.pane.Markdown(
                 body,
@@ -129,8 +216,23 @@ class ReportBlockMixin:
             sizing_mode="stretch_width",
         )
 
-    def block_global_analysis(self, title: str = "", color: str = "gray") -> pn.Column:
-        del color
+    def block_global_analysis(self, title: str = "") -> pn.Column:
+        """Render global summary statistics for prediction and training datasets.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing a global statistics comparison table.
+
+        Examples
+        --------
+        >>> runtime.block_global_analysis(title="Global dataset comparison")
+        """
         self._require_train_test_data("global_analysis")
         test_stats = perform_global_dataframe_analysis(self.x_init)
         train_stats = perform_global_dataframe_analysis(self.x_train_pre) if self.x_train_pre is not None else None
@@ -144,8 +246,23 @@ class ReportBlockMixin:
             [pn.pane.DataFrame(stats_table, sizing_mode="stretch_width", css_classes=["kv-table"])],
         )
 
-    def block_model_analysis(self, title: str = "Model information", color: str = "blue") -> pn.Column:
-        del color
+    def block_model_analysis(self, title: str = "Model information") -> pn.Column:
+        """Render model metadata and parameter tables.
+
+        Parameters
+        ----------
+        title : str, default="Model information"
+            Section title displayed above model details.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing model identity details and parameter tables.
+
+        Examples
+        --------
+        >>> runtime.block_model_analysis()
+        """
         explainer = self._require_explainer("model_analysis")
         model = explainer.model
 
@@ -205,6 +322,26 @@ class ReportBlockMixin:
         color: str = "orange",
         metrics: list | None = None,
     ) -> pn.Column:
+        """Compute and render selected evaluation metrics as badges.
+
+        Parameters
+        ----------
+        title : str, default="Model performance"
+            Section title displayed above metric badges.
+        color : str, default="orange"
+            Badge color name used for rendered metric pills.
+        metrics : list or None, default=None
+            Metric specifications with import path and optional display name.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing computed metric badges.
+
+        Examples
+        --------
+        >>> runtime.block_performance_metrics(metrics=[{"path": "sklearn.metrics.accuracy_score"}])
+        """
         if self.y_test is None or self.y_pred is None:
             raise ValueError("performance_metrics block requires y_test and y_pred.")
 
@@ -226,14 +363,34 @@ class ReportBlockMixin:
         self,
         feature: str,
         title: str = "",
-        color: str = "blue",
         dataset_split: str = "data_train_test",
-        prediction_label: str = "test",
-        training_label: str = "train",
         width: int = 700,
         height: int = 500,
     ) -> pn.Column:
-        del color, prediction_label, training_label
+        """Render feature distribution by dataset split.
+
+        Parameters
+        ----------
+        feature : str
+            Feature name to visualize.
+        title : str, default=""
+            Optional custom section title.
+        dataset_split : str, default="data_train_test"
+            Column used as hue to separate train/test distributions.
+        width : int, default=700
+            Plot width in pixels.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the feature distribution plot.
+
+        Examples
+        --------
+        >>> runtime.block_feature_distribution(feature="age")
+        """
         self._require_train_test_data("feature_distribution")
         if feature not in self.df_train_test.columns:
             raise ValueError(f"Unknown feature '{feature}' for feature_distribution block.")
@@ -251,12 +408,32 @@ class ReportBlockMixin:
     def block_correlations_plot(
         self,
         title: str = "",
-        color: str = "blue",
         max_features: int = 20,
         width: int | None = None,
         height: int = 500,
     ) -> pn.Column:
-        del color
+        """Render a feature correlation matrix.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        max_features : int, default=20
+            Maximum number of features included in the matrix.
+        width : int or None, default=None
+            Optional explicit plot width.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the correlations plot.
+
+        Examples
+        --------
+        >>> runtime.block_correlations_plot(max_features=15)
+        """
         self._require_train_test_data("correlations_plot")
         explainer = self._require_explainer("correlations_plot")
         resolved_width = width or (900 if len(self.df_train_test["data_train_test"].unique()) > 1 else 500)
@@ -270,8 +447,25 @@ class ReportBlockMixin:
         )
         return self._wrap_section_content(title, [self._plotly_pane(fig)])
 
-    def block_feature_importance(self, title: str = "", color: str = "green", label=None) -> pn.Column:
-        del color
+    def block_feature_importance(self, title: str = "", label=None) -> pn.Column:
+        """Render global feature importance.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        label : Any, default=None
+            Optional class/target label for label-specific importance.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the feature-importance figure.
+
+        Examples
+        --------
+        >>> runtime.block_feature_importance()
+        """
         explainer = self._require_explainer("feature_importance")
         fig = explainer.plot.features_importance(label=label)
         return self._wrap_section_content(title, [self._plotly_pane(fig)])
@@ -280,13 +474,35 @@ class ReportBlockMixin:
         self,
         feature: str | None = None,
         title: str = "",
-        color: str = "green",
         label=None,
         max_points: int | None = None,
         include_all_features: bool = False,
-        group_id: str = "contribution",
     ) -> pn.Column:
-        del color, group_id
+        """Render feature contribution plots.
+
+        Parameters
+        ----------
+        feature : str or None, default=None
+            Feature name for single-feature mode.
+        title : str, default=""
+            Optional section title.
+        label : Any, default=None
+            Optional class/target label.
+        max_points : int or None, default=None
+            Maximum number of points used by the plotting backend.
+        include_all_features : bool, default=False
+            If True, create an interactive selector over contribution plots for all features.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing one contribution plot or selector-driven plots.
+
+        Examples
+        --------
+        >>> runtime.block_contribution_plot(feature="age")
+        >>> runtime.block_contribution_plot(include_all_features=True)
+        """
         explainer = self._require_explainer("contribution_plot")
 
         if not include_all_features:
@@ -339,12 +555,32 @@ class ReportBlockMixin:
     def block_interactions_plot(
         self,
         title: str = "",
-        color: str = "green",
         col1: str | None = None,
         col2: str | None = None,
         max_points: int | None = None,
     ) -> pn.Column:
-        del color
+        """Render an interactions plot between two features.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        col1 : str or None, default=None
+            First feature. If None, the method picks a default interaction pair.
+        col2 : str or None, default=None
+            Second feature. If None, the method picks a default interaction pair.
+        max_points : int or None, default=None
+            Maximum number of points used by the plotting backend.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the interactions plot.
+
+        Examples
+        --------
+        >>> runtime.block_interactions_plot(col1="age", col2="income")
+        """
         explainer = self._require_explainer("interactions_plot")
         feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
         fig = explainer.plot.interactions_plot(
@@ -356,11 +592,29 @@ class ReportBlockMixin:
     def block_target_distribution(
         self,
         title: str = "",
-        color: str = "blue",
         width: int = 700,
         height: int = 500,
     ) -> pn.Column:
-        del color
+        """Render prediction-versus-true target distribution.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+        width : int, default=700
+            Plot width in pixels.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the target distribution comparison plot.
+
+        Examples
+        --------
+        >>> runtime.block_target_distribution()
+        """
         self._require_explainer("target_distribution")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("target_distribution block requires y_test and predicted values from the explainer.")
@@ -389,9 +643,28 @@ class ReportBlockMixin:
         width: int = 700,
         height: int = 500,
     ) -> pn.Column:
-        from shapash.report.common import compute_col_types, series_dtype
-        from shapash.report.data_analysis import perform_univariate_dataframe_analysis
+        """Render target statistics and target distribution analysis.
 
+        Parameters
+        ----------
+        title : str, default="Target analysis"
+            Section title displayed above target analysis elements.
+        show_train : bool, default=True
+            Whether training target information is included.
+        width : int, default=700
+            Plot width in pixels.
+        height : int, default=500
+            Plot height in pixels.
+
+        Returns
+        -------
+        pn.Column
+            Panel column combining a target statistics table and distribution plot.
+
+        Examples
+        --------
+        >>> runtime.block_target_analysis(show_train=False)
+        """
         if self.y_test is None:
             raise ValueError("target_analysis block requires y_test.")
 
@@ -451,8 +724,23 @@ class ReportBlockMixin:
         ]
         return self._wrap_section_content(title, content)
 
-    def block_confusion_matrix(self, title: str = "", color: str = "orange") -> pn.Column:
-        del color
+    def block_confusion_matrix(self, title: str = "") -> pn.Column:
+        """Render confusion matrix for classification predictions.
+
+        Parameters
+        ----------
+        title : str, default=""
+            Optional section title.
+
+        Returns
+        -------
+        pn.Column
+            Panel column containing the confusion matrix plot.
+
+        Examples
+        --------
+        >>> runtime.block_confusion_matrix()
+        """
         explainer = self._require_explainer("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
@@ -463,12 +751,25 @@ class ReportBlockMixin:
         self,
         title: str = "Univariate analysis",
         show_train: bool = True,
-        group_id: str = "univariate",
     ) -> pn.Column:
-        del group_id
-        from shapash.report.common import compute_col_types, series_dtype
-        from shapash.report.data_analysis import perform_univariate_dataframe_analysis
+        """Render per-feature univariate analysis with interactive selection.
 
+        Parameters
+        ----------
+        title : str, default="Univariate analysis"
+            Section title displayed above selector and analysis panel.
+        show_train : bool, default=True
+            Whether train statistics are shown alongside prediction statistics.
+
+        Returns
+        -------
+        pn.Column
+            Panel column with a feature selector and corresponding stats/plot content.
+
+        Examples
+        --------
+        >>> runtime.block_univariate_analysis()
+        """
         self._require_train_test_data("univariate_analysis")
         explainer = self._require_explainer("univariate_analysis")
 
@@ -486,7 +787,9 @@ class ReportBlockMixin:
             else None
         )
 
-        list_cols_labels = sorted(explainer.features_dict.get(col, col) for col in df.drop(col_splitter, axis=1).columns)
+        list_cols_labels = sorted(
+            explainer.features_dict.get(col, col) for col in df.drop(col_splitter, axis=1).columns
+        )
         feature_panels: dict[str, pn.viewable.Viewable] = {}
 
         for col_label in list_cols_labels:
