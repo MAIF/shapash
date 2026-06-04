@@ -112,7 +112,11 @@ def block(method):
         if resolved_title:
             heading_prefix = "###" if getattr(self, "_inside_group", False) else "#"
             blocks.append(_add_css_classes(pn.pane.Markdown(f"{heading_prefix} {resolved_title}"), "section-title"))
-        blocks.extend(_auto_style_viewable(self._coerce_viewable(item), method_name=method.__name__) for item in items if item is not None)
+        blocks.extend(
+            _auto_style_viewable(self._coerce_viewable(item), method_name=method.__name__)
+            for item in items
+            if item is not None
+        )
         return pn.Column(*blocks, css_classes=["section-block"], sizing_mode="stretch_width")
 
     return wrapped
@@ -231,14 +235,14 @@ class ReportBlockMixin:
             )
             blocks.append(
                 pn.Column(
-                        pn.pane.Markdown(f"### {current_section_name}"),
-                        pn.pane.DataFrame(df, index=False, sizing_mode="stretch_width"),
+                    pn.pane.Markdown(f"### {current_section_name}"),
+                    pn.pane.DataFrame(df, index=False, sizing_mode="stretch_width"),
                     sizing_mode="stretch_width",
                 )
             )
 
         if not blocks:
-                blocks = [pn.pane.Markdown("No project information available.")]
+            blocks = [pn.pane.Markdown("No project information available.")]
 
         project_info_grid = pn.Column(
             *blocks,
@@ -1015,4 +1019,3 @@ class ReportBlockMixin:
         if isinstance(item, str):
             return pn.pane.Markdown(item)
         return pn.panel(item)
-

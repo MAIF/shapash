@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yaml
 
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend, get_backend_cls_from_name
