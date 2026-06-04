@@ -24,11 +24,10 @@ def create_block_runtime(
     y_train: pd.Series | pd.DataFrame | list | None = None,
     y_test: pd.Series | pd.DataFrame | list | None = None,
     config: dict | None = None,
-    block_class: type[ReportBlockMixin] | None = None,
+    block_instance: ReportBlockMixin | None = None,
 ):
     """Create a runtime object that holds report state and block methods."""
-    runtime_cls = type("BlockRuntime", (block_class or ReportBlockMixin,), {})
-    runtime = runtime_cls()
+    runtime = block_instance or ReportBlockMixin()
 
     runtime.explainer = explainer
     runtime.config = config or {}

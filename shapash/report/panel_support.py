@@ -10,6 +10,7 @@ import panel as pn
 
 @lru_cache(maxsize=1)
 def _enable_panel_plotly() -> None:
+    """Enable Plotly support in Panel extension, cached to run only once per session."""
     pn.extension("plotly")
 
 

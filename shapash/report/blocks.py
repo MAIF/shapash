@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import inspect
+from functools import wraps
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,94 @@ PALETTE = {
     "gray": {"bg": "#ffffff", "border": "#eeeeee", "title": "#666666", "text": "#666666"},
     "orange": {"bg": "#fff9e6", "border": "#f4c000", "title": "#cc8833", "text": "#444444"},
 }
+
+TARGET_DISTRIBUTION_COLORS = {"pred": "#2255aa", "true": "#f4c000"}
+
+
+def _dedupe_css_classes(*class_groups: Any) -> list[str]:
+    classes: list[str] = []
+    for group in class_groups:
+        if not group:
+            continue
+        if isinstance(group, str):
+            items = [group]
+        else:
+            items = list(group)
+        for item in items:
+            if item and item not in classes:
+                classes.append(item)
+    return classes
+
+
+def _add_css_classes(viewable: pn.viewable.Viewable, *classes: str) -> pn.viewable.Viewable:
+    current = getattr(viewable, "css_classes", None)
+    merged = _dedupe_css_classes(current, classes)
+    if merged:
+        viewable.css_classes = merged
+    return viewable
+
+
+def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
+    if isinstance(viewable, pn.pane.Markdown):
+        return _add_css_classes(viewable, "content-block")
+
+    if isinstance(viewable, pn.pane.DataFrame):
+        classes = ["kv-table"]
+        if getattr(viewable, "width_policy", None) == "min":
+            classes.append("fit-content-table")
+        return _add_css_classes(viewable, *classes)
+
+    if isinstance(viewable, pn.Row):
+        if method_name == "block_badge_row":
+            for child in getattr(viewable, "objects", []):
+                if isinstance(child, pn.pane.Markdown):
+                    _add_css_classes(child, "badge-pill")
+        return viewable
+
+    if isinstance(viewable, pn.Column):
+        if method_name == "block_project_information":
+            _add_css_classes(viewable, "project-info-grid")
+            for child in getattr(viewable, "objects", []):
+                if isinstance(child, pn.Column):
+                    _add_css_classes(child, "project-info-card")
+                    for grandchild in getattr(child, "objects", []):
+                        _auto_style_viewable(grandchild, method_name=method_name)
+                else:
+                    _auto_style_viewable(child, method_name=method_name)
+            return viewable
+
+        for child in getattr(viewable, "objects", []):
+            _auto_style_viewable(child, method_name=method_name)
+        return viewable
+
+    return viewable
+
+
+def block(method):
+    """Wrap block output in a standard report section container."""
+    signature = inspect.signature(method)
+
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        bound = signature.bind_partial(self, *args, **kwargs)
+        bound.apply_defaults()
+        default_title = bound.arguments.get("title", "")
+        result = method(self, *args, **kwargs)
+
+        resolved_title = default_title
+        body_items = result
+        if isinstance(result, tuple) and len(result) == 2:
+            resolved_title, body_items = result
+
+        items = body_items if isinstance(body_items, list) else [body_items]
+        blocks: list[pn.viewable.Viewable] = []
+        if resolved_title:
+            heading_prefix = "###" if getattr(self, "_inside_group", False) else "#"
+            blocks.append(_add_css_classes(pn.pane.Markdown(f"{heading_prefix} {resolved_title}"), "section-title"))
+        blocks.extend(_auto_style_viewable(self._coerce_viewable(item), method_name=method.__name__) for item in items if item is not None)
+        return pn.Column(*blocks, css_classes=["section-block"], sizing_mode="stretch_width")
+
+    return wrapped
 
 
 class ReportBlockMixin:
@@ -60,6 +150,7 @@ class ReportBlockMixin:
             )
         return pn.Column(*blocks, sizing_mode="stretch_width")
 
+    @block
     def block_text(self, title: str = "", body: str = "") -> pn.Column:
         """Render a markdown text section.
 
@@ -81,9 +172,10 @@ class ReportBlockMixin:
         """
         content: list[pn.viewable.Viewable] = []
         if body:
-            content.append(pn.pane.Markdown(body, css_classes=["content-block"]))
-        return self._wrap_section_content(title, content)
+            content.append(pn.pane.Markdown(body))
+        return content
 
+    @block
     def block_project_information(
         self,
         title: str = "Project information",
@@ -139,15 +231,14 @@ class ReportBlockMixin:
             )
             blocks.append(
                 pn.Column(
-                    pn.pane.Markdown(f"### {current_section_name}"),
-                    pn.pane.DataFrame(df, index=False, sizing_mode="stretch_width", css_classes=["kv-table"]),
-                    css_classes=["content-block", "project-info-card"],
+                        pn.pane.Markdown(f"### {current_section_name}"),
+                        pn.pane.DataFrame(df, index=False, sizing_mode="stretch_width"),
                     sizing_mode="stretch_width",
                 )
             )
 
         if not blocks:
-            blocks = [pn.pane.Markdown("No project information available.", css_classes=["content-block"])]
+                blocks = [pn.pane.Markdown("No project information available.")]
 
         project_info_grid = pn.Column(
             *blocks,
@@ -155,8 +246,9 @@ class ReportBlockMixin:
             sizing_mode="stretch_width",
         )
 
-        return self._wrap_section_content(title, [project_info_grid])
+        return [project_info_grid]
 
+    @block
     def block_badge_row(self, title: str = "", badges: list | None = None) -> pn.Column:
         """Render a row of summary badges.
 
@@ -185,11 +277,11 @@ class ReportBlockMixin:
             pills.append(
                 pn.pane.Markdown(
                     f"**{badge.get('label', '')}**: {badge.get('value', '')}",
-                    css_classes=["badge-pill", f"badge-pill-{color_name}"],
+                    css_classes=[f"badge-pill-{color_name}"],
                 )
             )
 
-        return self._wrap_section_content(title, [pn.Row(*pills, sizing_mode="stretch_width")])
+        return [pn.Row(*pills, sizing_mode="stretch_width")]
 
     def block_callout(self, body: str = "") -> pn.Column:
         """Render a highlighted callout message.
@@ -216,6 +308,7 @@ class ReportBlockMixin:
             sizing_mode="stretch_width",
         )
 
+    @block
     def block_global_analysis(self, title: str = "") -> pn.Column:
         """Render global summary statistics for prediction and training datasets.
 
@@ -241,11 +334,9 @@ class ReportBlockMixin:
             train_stats=train_stats,
             names=["Prediction dataset", "Training dataset"],
         )
-        return self._wrap_section_content(
-            title,
-            [pn.pane.DataFrame(stats_table, sizing_mode="stretch_width", css_classes=["kv-table"])],
-        )
+        return [pn.pane.DataFrame(stats_table, sizing_mode="stretch_width", css_classes=["kv-table"])]
 
+    @block
     def block_model_analysis(self, title: str = "Model information") -> pn.Column:
         """Render model metadata and parameter tables.
 
@@ -307,14 +398,14 @@ class ReportBlockMixin:
                 )
             ),
             pn.Row(
-                pn.pane.DataFrame(left_df, sizing_mode="stretch_width", css_classes=["kv-table"]),
+                pn.pane.DataFrame(left_df, sizing_mode="stretch_width"),
                 pn.Spacer(width=24),
-                pn.pane.DataFrame(right_df, sizing_mode="stretch_width", css_classes=["kv-table"]),
+                pn.pane.DataFrame(right_df, sizing_mode="stretch_width"),
                 sizing_mode="stretch_width",
             ),
         ]
 
-        return self._wrap_section_content(title, content)
+        return content
 
     def block_performance_metrics(
         self,
@@ -359,6 +450,7 @@ class ReportBlockMixin:
 
         return self.block_badge_row(title=title, badges=metric_items)
 
+    @block
     def block_feature_distribution(
         self,
         feature: str,
@@ -403,8 +495,9 @@ class ReportBlockMixin:
             width=width,
             height=height,
         )
-        return self._wrap_section_content(title or self._feature_label(feature), [self._plotly_pane(fig)])
+        return title or self._feature_label(feature), [self._plotly_pane(fig)]
 
+    @block
     def block_correlations_plot(
         self,
         title: str = "",
@@ -445,8 +538,9 @@ class ReportBlockMixin:
             width=resolved_width,
             height=height,
         )
-        return self._wrap_section_content(title, [self._plotly_pane(fig)])
+        return [self._plotly_pane(fig)]
 
+    @block
     def block_feature_importance(self, title: str = "", label=None) -> pn.Column:
         """Render global feature importance.
 
@@ -468,8 +562,9 @@ class ReportBlockMixin:
         """
         explainer = self._require_explainer("feature_importance")
         fig = explainer.plot.features_importance(label=label)
-        return self._wrap_section_content(title, [self._plotly_pane(fig)])
+        return [self._plotly_pane(fig)]
 
+    @block
     def block_contribution_plot(
         self,
         feature: str | None = None,
@@ -512,14 +607,14 @@ class ReportBlockMixin:
             for trace in fig.data:
                 if trace.type == "bar":
                     trace.marker.color = "lightgrey"
-            return self._wrap_section_content(title or self._feature_label(feature), [self._plotly_pane(fig)])
+            return title or self._feature_label(feature), [self._plotly_pane(fig)]
 
         if getattr(explainer, "x_init", None) is None:
             raise ValueError("contribution_plot block with include_all_features=True requires explainer.x_init.")
 
         feature_names = list(explainer.x_init.columns)
         if not feature_names:
-            return self._wrap_section_content(title, [pn.pane.Markdown("No feature available.")])
+            return [pn.pane.Markdown("No feature available.")]
 
         sorted_features = sorted(
             feature_names,
@@ -550,8 +645,9 @@ class ReportBlockMixin:
         selected_panel = pn.bind(lambda selected: feature_panels[selected], feature_select)
 
         resolved_title = title or "Features contribution plots"
-        return self._wrap_section_content(resolved_title, [feature_select, selected_panel])
+        return resolved_title, [feature_select, selected_panel]
 
+    @block
     def block_interactions_plot(
         self,
         title: str = "",
@@ -587,8 +683,9 @@ class ReportBlockMixin:
             col1=feature_one, col2=feature_two, max_points=max_points or self.max_points
         )
         resolved_title = title or f"{self._feature_label(feature_one)} / {self._feature_label(feature_two)}"
-        return self._wrap_section_content(resolved_title, [self._plotly_pane(fig)])
+        return resolved_title, [self._plotly_pane(fig)]
 
+    @block
     def block_target_distribution(
         self,
         title: str = "",
@@ -630,12 +727,13 @@ class ReportBlockMixin:
             df_all=df_target,
             col=target_name,
             hue="_dataset",
-            colors_dict=self._performance_distribution_colors(),
+            colors_dict=TARGET_DISTRIBUTION_COLORS,
             width=width,
             height=height,
         )
-        return self._wrap_section_content(title or "Target distribution", [self._plotly_pane(fig)])
+        return title or "Target distribution", [self._plotly_pane(fig)]
 
+    @block
     def block_target_analysis(
         self,
         title: str = "Target analysis",
@@ -713,17 +811,14 @@ class ReportBlockMixin:
         content = [
             pn.pane.Markdown(f"**{target_name}** ({dtype_label})"),
             pn.Row(
-                pn.pane.DataFrame(
-                    target_stats,
-                    width_policy="min",
-                    css_classes=["kv-table", "fit-content-table"],
-                ),
+                pn.pane.DataFrame(target_stats, width_policy="min"),
                 self._plotly_pane(fig),
                 sizing_mode="stretch_width",
             ),
         ]
-        return self._wrap_section_content(title, content)
+        return content
 
+    @block
     def block_confusion_matrix(self, title: str = "") -> pn.Column:
         """Render confusion matrix for classification predictions.
 
@@ -745,8 +840,9 @@ class ReportBlockMixin:
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         fig = plot_confusion_matrix(y_true=self.y_test, y_pred=self.y_pred, colors_dict=explainer.colors_dict)
-        return self._wrap_section_content(title or "Confusion matrix", [self._plotly_pane(fig)])
+        return title or "Confusion matrix", [self._plotly_pane(fig)]
 
+    @block
     def block_univariate_analysis(
         self,
         title: str = "Univariate analysis",
@@ -812,11 +908,7 @@ class ReportBlockMixin:
             tab_body = pn.Column(
                 pn.pane.Markdown(f"**{col_label}** ({dtype_label})"),
                 pn.Row(
-                    pn.pane.DataFrame(
-                        col_stats,
-                        width_policy="min",
-                        css_classes=["kv-table", "fit-content-table"],
-                    ),
+                    pn.pane.DataFrame(col_stats, width_policy="min"),
                     self._plotly_pane(fig),
                     sizing_mode="stretch_width",
                 ),
@@ -832,7 +924,7 @@ class ReportBlockMixin:
             feature_panels[label_text] = tab_body
 
         if len(feature_panels) == 0:
-            return self._wrap_section_content(title, [pn.pane.Markdown("No feature available.")])
+            return [pn.pane.Markdown("No feature available.")]
 
         feature_select = pn.widgets.Select(
             name="Feature",
@@ -842,7 +934,7 @@ class ReportBlockMixin:
         )
         selected_panel = pn.bind(lambda selected: feature_panels[selected], feature_select)
 
-        return self._wrap_section_content(title, [feature_select, selected_panel])
+        return [feature_select, selected_panel]
 
     def _preprocess_train_data(self, x_train: pd.DataFrame | None) -> pd.DataFrame | None:
         if x_train is None or self.explainer is None:
@@ -913,10 +1005,6 @@ class ReportBlockMixin:
         return explainer.colors_dict["report_feature_distribution"]
 
     @staticmethod
-    def _performance_distribution_colors() -> dict:
-        return {"pred": "#2255aa", "true": "#f4c000"}
-
-    @staticmethod
     def _plotly_pane(fig) -> pn.pane.Plotly:
         return make_plotly_pane(fig)
 
@@ -928,11 +1016,3 @@ class ReportBlockMixin:
             return pn.pane.Markdown(item)
         return pn.panel(item)
 
-    def _wrap_section_content(self, title: str, body_items: Any) -> pn.Column:
-        items = body_items if isinstance(body_items, list) else [body_items]
-        blocks: list[pn.viewable.Viewable] = []
-        if title:
-            heading_prefix = "###" if getattr(self, "_inside_group", False) else "#"
-            blocks.append(pn.pane.Markdown(f"{heading_prefix} {title}", css_classes=["section-title"]))
-        blocks.extend(self._coerce_viewable(item) for item in items if item is not None)
-        return pn.Column(*blocks, css_classes=["section-block"], sizing_mode="stretch_width")

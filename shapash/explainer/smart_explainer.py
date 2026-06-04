@@ -1665,7 +1665,7 @@ class SmartExplainer:
         max_points=200,
         display_interaction_plot=False,
         nb_top_interactions=5,
-        block_class=None,
+        block_instance=None,
     ):
         """
         Generate an interactive HTML report summarizing the model and its explainability.
@@ -1719,8 +1719,8 @@ class SmartExplainer:
             (Note: this can increase computation time.)
         nb_top_interactions : int, optional, default=5
             Number of top feature interactions to include in the report.
-        block_class : type, optional
-            Optional custom class used to resolve block methods during report generation.
+        block_instance : object, optional
+            Optional custom block object used to resolve block methods during report generation.
             It should implement methods named `block_<type>` for YAML block entries.
 
         Returns
@@ -1789,68 +1789,14 @@ class SmartExplainer:
                 y_train=y_train,
                 y_test=y_test,
                 config=config,
-                block_class=block_class,
+                block_instance=block_instance,
             )
 
             if yaml_path is not None:
                 config_file = Path(yaml_path)
             else:
-                config_file = Path(working_dir) / "report_config.yml"
-                sections = [
-                    {
-                        "type": "header",
-                        "params": {
-                            "title": title_story or self.title_story or "Shapash report",
-                            "subtitle": title_description or "",
-                        },
-                    },
-                    {
-                        "type": "project_information",
-                        "params": {
-                            "title": "Project information",
-                            "color": "gray",
-                            "project_info_file": project_info_file,
-                        },
-                    },
-                    {"type": "model_analysis", "params": {"title": "Model information", "color": "blue"}},
-                    {"type": "global_analysis", "params": {"title": "Dataset analysis", "color": "blue"}},
-                    {"type": "feature_importance", "params": {"title": "Model explainability", "color": "gold"}},
-                ]
-
-                if metrics:
-                    sections.append(
-                        {
-                            "type": "performance_metrics",
-                            "params": {
-                                "title": "Model performance",
-                                "color": "orange",
-                                "metrics": metrics,
-                            },
-                        }
-                    )
-
-                if y_test is not None:
-                    if self._case == "classification":
-                        sections.append(
-                            {"type": "confusion_matrix", "params": {"title": "Confusion matrix", "color": "orange"}}
-                        )
-                    else:
-                        sections.append({"type": "pred_vs_true", "params": {"title": "", "color": "orange"}})
-
-                if display_interaction_plot:
-                    sections.append(
-                        {
-                            "type": "interactions_plot",
-                            "params": {
-                                "title": "Top interactions",
-                                "color": "green",
-                                "max_points": max_points,
-                            },
-                        }
-                    )
-
-                with config_file.open("w", encoding="utf-8") as cfg_stream:
-                    yaml.safe_dump({"sections": sections}, cfg_stream, sort_keys=False, allow_unicode=True)
+                yaml_path = Path(__file__).resolve().parent.parent / "report" / "default_report.yml"
+                config_file = yaml_path
 
             generate_smart_report(runtime=report_runtime, config_file=str(config_file), output_file=output_file)
 

@@ -12,6 +12,7 @@ import sys
 
 import pandas as pd
 from category_encoders import OrdinalEncoder
+import panel as pn
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
@@ -19,18 +20,19 @@ sys.path.insert(0, "..")
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
-from shapash.report.blocks import ReportBlockMixin
+from shapash.report.blocks import ReportBlockMixin, block
 
 # Custom block class can be defined by inheriting from ReportBlockMixin and implementing block methods.
 class UserReportBlocks(ReportBlockMixin):
     """Example of user-defined custom blocks for report generation."""
 
+    @block
     def block_user_note(
         self,
         title: str = "Analyst note",
         body: str = "This report includes a custom user cell.",
     ) -> str:
-        return self.block_text(title=title, body=body)
+        return title, [pn.pane.Markdown(body)]
 
 if __name__ == "__main__":
     house_df, house_dict = data_loading("house_prices")
@@ -72,7 +74,7 @@ if __name__ == "__main__":
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
-        yaml_path=custom_report_config_file,
+        #yaml_path=custom_report_config_file,
         # Use the custom block class to enable user-defined blocks in the report.
-        block_class=UserReportBlocks,
+        block_instance=UserReportBlocks(),
     )
