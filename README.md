@@ -236,7 +236,7 @@ This github repository offers many tutorials to allow you to easily get started 
 
 - [Launch the webapp with a concrete use case](tutorial/tutorial01-Shapash-Overview-Launch-WebApp.ipynb)
 - [Jupyter Overviews - The main outputs and methods available with the SmartExplainer object](tutorial/tutorial02-Shapash-overview-in-Jupyter.ipynb)
-- [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/tutorial03-Shapash-overview-model-in-production.ipynb)
+- [Shapash in production: From model training to deployment (API or Batch Mode)](tutorial/production_and_ops/tuto-prod01-overview-model-in-production.ipynb)
 - [Use groups of features](tutorial/common/tuto-common01-groups_of_features.ipynb)
 - [Deploy local explainability in production with SmartPredictor](tutorial/predictor_to_production/tuto-smartpredictor-introduction-to-SmartPredictor.ipynb)
 
