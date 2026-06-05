@@ -813,7 +813,6 @@ class SmartPlotter:
         subset_feat_imp = self._get_subset_importance(contributions_case, selection)
         if subset_feat_imp is not None:
             subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
-            subset_feat_imp.index = subset_feat_imp.index.map(self._explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
 
