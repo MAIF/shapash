@@ -1,0 +1,10 @@
+sections:
+  - type: header
+    params:
+      title: "Integration report"
+      subtitle: "default test config"
+
+  - type: project_information
+    params:
+      title: "Project information"
+      project_info_file: "tests/data/metadata.yaml"

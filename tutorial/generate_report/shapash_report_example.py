@@ -74,7 +74,7 @@ if __name__ == "__main__":
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
-        #yaml_path=custom_report_config_file,
+        # yaml_path=custom_report_config_file,
         # Use the custom block class to enable user-defined blocks in the report.
         block_instance=UserReportBlocks(),
     )

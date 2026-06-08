@@ -14,6 +14,7 @@ from category_encoders import OrdinalEncoder
 from shapash import SmartExplainer
 
 current_path = os.path.dirname(os.path.abspath(__file__))
+report_test_cfg_path = os.path.join(current_path, "../data/report_test_config.yml")
 
 
 class TestGeneration(unittest.TestCase):
@@ -45,10 +46,10 @@ class TestGeneration(unittest.TestCase):
             y_train=self.df["y"],
             y_test=self.df["y"],
             working_dir=tmp_dir_path,
+            yaml_path=report_test_cfg_path,
         )
         self.xpl.palette_name = "default"
         assert os.path.exists(outfile)
-        assert os.path.exists(os.path.join(tmp_dir_path, "report_config.yml"))
 
         shutil.rmtree(tmp_dir_path)
 
