@@ -77,8 +77,8 @@ class SmartApp:
             SmartExplainer object
         settings : dict
             A dict describing the default webapp settings values to be used
-            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
-            Values should be positive ints
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
+            Integer values must be positive, and 'toggle_group' must be a boolean.
         """
         # APP
         self.server = Flask(__name__)
@@ -101,12 +101,16 @@ class SmartApp:
             "points": 1000,
             "violin": 10,
             "features": 20,
+            "toggle_group": True,
         }
         if settings is not None:
             for k, v in self.settings_ini.items():
-                self.settings_ini[k] = (
-                    settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
-                )
+                if k == "toggle_group":
+                    self.settings_ini[k] = settings[k] if k in settings and isinstance(settings[k], bool) else v
+                else:
+                    self.settings_ini[k] = (
+                        settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
+                    )
         self.settings = self.settings_ini.copy()
 
         self.predict_col = ["_predict_"]
@@ -315,7 +319,7 @@ class SmartApp:
                         html.Div(
                             daq.BooleanSwitch(
                                 id="bool_groups",
-                                on=True,
+                                on=self.settings.get("toggle_group", True),
                                 style={"display": "none"} if self.explainer.features_groups is None else {},
                                 color=self.color[0],
                                 label={
@@ -859,6 +863,7 @@ class SmartApp:
                                         ),
                                         dcc.Store(id="clickdata-store"),
                                         dcc.Store(id="selected-clickdata-store"),
+                                        dcc.Location(id="url", refresh=False),
                                         html.Div(
                                             [
                                                 # Create a row to contain the buttons
@@ -1868,6 +1873,8 @@ class SmartApp:
         self.components["settings"]["input_violin"]["violin"].value = self.settings["violin"]
 
         for id in self.settings.keys():
+            # if not isinstance(self.settings[id], int) or isinstance(self.settings[id], bool):
+            #     continue
 
             @app.callback([Output(f"{id}", "valid"), Output(f"{id}", "invalid")], [Input(f"{id}", "value")])
             def update_valid(value):
@@ -2340,7 +2347,7 @@ class SmartApp:
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
-            [State("dataset", "data"), State("index_id", "value")],  # Get the current value of the index
+            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
         def update_index_id(
             click_data,
@@ -2351,6 +2358,7 @@ class SmartApp:
             reset_filter,
             nclicks_del,
             data,
+            viewport_data,
             current_index_id,
         ):
             """
@@ -2364,7 +2372,8 @@ class SmartApp:
             apply_filters: click on Apply filter button
             reset_filter: click on reset filter button
             nclicks_del: click on del button
-            data: dataset
+            data: dataset (original order)
+            viewport_data: dataset as currently displayed (after sorting/filtering)
             current_index_id: the current value of the index
             ----------------------------------------------------------------
             return
@@ -2381,7 +2390,18 @@ class SmartApp:
                 elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
                     selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
-                    selected = data[cell["row"]]["_index_"]
+                    displayed_data = viewport_data if viewport_data is not None else data
+                    row = cell.get("row") if isinstance(cell, dict) else None
+                    if (
+                        isinstance(displayed_data, list)
+                        and isinstance(row, int)
+                        and 0 <= row < len(displayed_data)
+                        and isinstance(displayed_data[row], dict)
+                        and "_index_" in displayed_data[row]
+                    ):
+                        selected = displayed_data[row]["_index_"]
+                    else:
+                        selected = current_index_id
                 elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
                     selected = current_index_id
             except KeyError:
@@ -2614,9 +2634,9 @@ class SmartApp:
                 Output("dataset", "style_cell_conditional"),
             ],
             [Input("validation", "n_clicks")],
-            [State("dataset", "data"), State("index_id", "value")],
+            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
-        def datatable_layout(validation, data, index):
+        def datatable_layout(validation, data, viewport_data, index):
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "validation.n_clicks" and validation is not None:
                 pass
@@ -2638,7 +2658,8 @@ class SmartApp:
             ]
             style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
-            selected = check_row(data, index)
+            # Use viewport_data (sorted/filtered) to find the correct row index for highlighting and not the index of the list
+            selected = check_row(viewport_data if viewport_data is not None else data, index)
             if selected is not None:
                 style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
@@ -3103,3 +3124,11 @@ class SmartApp:
             if n_clusters is None:
                 return "Clusters: —"
             return f"Clusters: {n_clusters}"
+
+        @app.callback(
+            Output("bool_groups", "on"),
+            Input("url", "pathname"),
+            prevent_initial_call=False,
+        )
+        def reset_bool_groups_on_load(_):
+            return self.settings.get("toggle_group", True)

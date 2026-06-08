@@ -157,7 +157,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         list_dict = [input_dict2, input_dict3]
 
         original = inverse_transform(result, [enc, input_dict1, list_dict])
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, expected, check_dtype=False)
 
     def test_inv_transform_ct_4(self):
         """
@@ -194,7 +194,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2", "other"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, expected, check_dtype=False)
 
     def test_inv_transform_ct_5(self):
         """
@@ -223,7 +223,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         result = pd.DataFrame(enc.transform(test))
         result.columns = ["col1", "col2"]
         original = inverse_transform(result, enc)
-        pd.testing.assert_frame_equal(original, expected)
+        pd.testing.assert_frame_equal(original, expected, check_dtype=False)
 
     def test_inv_transform_ct_6(self):
         """

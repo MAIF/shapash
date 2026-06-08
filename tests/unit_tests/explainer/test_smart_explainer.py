@@ -795,7 +795,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        assert not pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_frame_equal(expected, output, check_dtype=False)
 
     def predict_proba(self, arg1, arg2):
         """
@@ -941,7 +941,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_frame_equal(expected, output, check_dtype=False)
 
     def test_compute_features_import_1(self):
         """

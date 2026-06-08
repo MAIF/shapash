@@ -466,7 +466,10 @@ def get_col_mapping_ct(encoder, x_encoded):
                 raise NotImplementedError(f"Estimator not supported : {estimator}")
 
         elif isinstance(estimator, FunctionTransformer):
-            features_out = encoder.feature_names_in_[features]
+            if len(features) > 0 and isinstance(features[0], str):
+                features_out = features
+            else:
+                features_out = encoder.feature_names_in_[features]
             for f_name in features_out:
                 dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
                 idx_encoded += 1

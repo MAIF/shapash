@@ -126,6 +126,18 @@ class TestGeneration(unittest.TestCase):
 
         shutil.rmtree(tmp_dir_path)
 
+    def test_generate_report_1(self):
+        tmp_dir_path = tempfile.mkdtemp()
+        outfile = os.path.join(tmp_dir_path, "report.html")
+
+        self.xpl.generate_report(
+            output_file=outfile,
+            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
+        )
+        assert os.path.exists(outfile)
+
+        shutil.rmtree(tmp_dir_path)
+
     def test_export_and_save_report_1(self):
         tmp_dir_path = tempfile.mkdtemp()
 

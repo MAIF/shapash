@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from catboost import CatBoostClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from shapash import SmartExplainer
@@ -1124,6 +1125,70 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(output.data[1].x) == 10
         self.setUp()
 
+    def _build_nan_explainer(self, low_cardinality=False):
+        rng = np.random.default_rng(0)
+        n, n_nan = 60, 5
+        if low_cardinality:
+            base = np.concatenate([np.full(20, -1.0), np.full(20, 1.0), np.full(n - 40 - n_nan, 2.0)])
+            num_feat = np.concatenate([base, [np.nan] * n_nan])
+        else:
+            num_feat = np.concatenate([rng.normal(size=n - n_nan), [np.nan] * n_nan])
+        x = pd.DataFrame({"num_feat": num_feat, "noise": rng.normal(size=n)})
+        y = pd.Series(np.where(np.isnan(num_feat), 1, (num_feat > 0).astype(int)), name="target")
+        model = HistGradientBoostingClassifier(max_iter=50, random_state=0).fit(x, y)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=x, y_target=y)
+        return xpl, n_nan
+
+    def test_contribution_plot_nan_numeric_scatter(self):
+        """
+        Numeric feature with NaN values must render on the scatter contribution plot
+        as a grouped cluster past the data range using an "x" marker symbol, with
+        "missing" surfaced in the hover customdata.
+        Regression test for https://github.com/MAIF/shapash/issues/580
+        """
+        xpl, n_nan = self._build_nan_explainer(low_cardinality=False)
+        output = xpl.plot.contribution_plot("num_feat", violin_maxf=0, proba=False)
+
+        marker_traces = [t for t in output.data if t.type == "scatter" and t.mode == "markers"]
+        assert len(marker_traces) == 1
+        trace = marker_traces[0]
+
+        x_arr = np.asarray(trace.x, dtype=float)
+        assert len(x_arr) == 60
+        assert not np.isnan(x_arr).any()
+
+        symbols = list(trace.marker.symbol)
+        assert symbols.count("x") == n_nan
+        assert symbols.count("circle") == 60 - n_nan
+
+        nan_mask = np.array([s == "x" for s in symbols])
+        nan_x_values = x_arr[nan_mask]
+        non_nan_x_values = x_arr[~nan_mask]
+        assert len(np.unique(nan_x_values)) == 1
+        nan_x = float(nan_x_values[0])
+        non_nan_max = float(non_nan_x_values.max())
+        spread = non_nan_max - float(non_nan_x_values.min())
+        assert nan_x > non_nan_max
+        assert abs(nan_x - (non_nan_max + 0.2 * spread)) < 1e-9
+
+        customdata_col0 = [row[0] for row in trace.customdata]
+        nan_customdata = [v for v, s in zip(customdata_col0, symbols) if s == "x"]
+        assert all(v == "missing" for v in nan_customdata)
+
+    def test_contribution_plot_nan_numeric_violin(self):
+        """
+        Low-cardinality numeric feature with NaN must expose 'missing' as a violin modality.
+        Regression test for https://github.com/MAIF/shapash/issues/580
+        """
+        xpl, _ = self._build_nan_explainer(low_cardinality=True)
+        output = xpl.plot.contribution_plot("num_feat", proba=False)
+
+        violin_names = {t.name for t in output.data if t.type == "violin"}
+        assert "missing" in violin_names
+        ticktext = list(output.layout.xaxis.ticktext) if output.layout.xaxis.ticktext else []
+        assert "missing" in ticktext
+
     def test_plot_features_import_1(self):
         """
         Unit test plot features import 1
@@ -1743,7 +1808,7 @@ class TestSmartPlotter(unittest.TestCase):
         title_1 = "Compare plot - index : <b>A</b> ; <b>B</b><span style='font-size: 12px;'><br /></span>"
 
         fig_0 = list()
-        x0 = contributions1.to_numpy()
+        x0 = contributions1.to_numpy().copy()
         x0.sort(axis=1)
         for i in range(2):
             fig_0.append(
@@ -1761,7 +1826,7 @@ class TestSmartPlotter(unittest.TestCase):
             )
 
         fig_1 = list()
-        x1 = contributions2.to_numpy()
+        x1 = contributions2.to_numpy().copy()
         x1.sort(axis=1)
         for i in range(2):
             fig_1.append(
