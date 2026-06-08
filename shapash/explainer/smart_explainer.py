@@ -1758,7 +1758,7 @@ class SmartExplainer:
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)
         # Avoid Import Errors with requirements specific to the Shapash Report
-        from shapash.report.generation import execute_report, export_and_save_report
+        from shapash.report.generation import execute_report, export_and_save_report  # noqa: PLC0415
 
         rm_working_dir = False
         if not working_dir:
