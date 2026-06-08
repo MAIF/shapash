@@ -1013,7 +1013,7 @@ class SmartPlotter:
         dict_features = self._explainer.inv_features_dict
 
         iteration_list = list(zip(new_contrib, feature_values, strict=False))
-        iteration_list.sort(key=lambda x: maximum_difference_sort_value(x), reverse=True)
+        iteration_list.sort(key=maximum_difference_sort_value, reverse=True)
         iteration_list = iteration_list[:max_features]
         iteration_list = iteration_list[::-1]
         new_contrib, feature_values = list(zip(*iteration_list, strict=False))
