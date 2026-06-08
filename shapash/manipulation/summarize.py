@@ -9,6 +9,7 @@ import pandas as pd
 from pandas.core.common import flatten
 from sklearn.manifold import TSNE
 
+from shapash._optional import import_optional_module
 from shapash.utils.transform import get_features_transform_mapping
 
 
@@ -216,17 +217,14 @@ def compute_corr(df, compute_method):
     # Remove user warnings (when not enough values to compute correlation).
     warnings.filterwarnings("ignore")
     if compute_method == "phik":
-        try:
-            from phik import phik_matrix
-
-            return phik_matrix(df, verbose=False)
-        except ImportError:
-            warnings.warn(
-                'Cannot compute phik correlations. Falling back to pearson. Install phik using "pip install phik".',
-                UserWarning,
-            )
+        phik = import_optional_module(
+            "phik",
+            extra="Falling back to pearson. Install with: pip install phik",
+            errors="warn",
+        )
+        if phik is None:
             return df.corr()
-
+        return phik.phik_matrix(df, verbose=False)
     elif compute_method == "pearson":
         return df.corr()
     else:
