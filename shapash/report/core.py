@@ -27,17 +27,26 @@ def create_block_runtime(
     block_instance: ReportBlockMixin | None = None,
 ):
     """Create a runtime object that holds report state and block methods."""
-    runtime = block_instance or ReportBlockMixin()
+    if block_instance is None:
+        runtime = ReportBlockMixin()
+    else:
+        runtime = block_instance
 
     runtime.explainer = explainer
-    runtime.config = config or {}
+    if config is None:
+        runtime.config = {}
+    else:
+        runtime.config = config
     runtime.x_train_init = x_train
     runtime.x_train_pre = runtime._preprocess_train_data(x_train)
     runtime.x_init = getattr(explainer, "x_init", None)
     runtime.df_train_test = runtime._create_train_test_df(test=runtime.x_init, train=runtime.x_train_pre)
     runtime.y_train, runtime.target_name_train = runtime._get_values_and_name(y_train, "target")
     runtime.y_test, runtime.target_name_test = runtime._get_values_and_name(y_test, "target")
-    runtime.target_name = runtime.target_name_train or runtime.target_name_test
+    if runtime.target_name_train is not None:
+        runtime.target_name = runtime.target_name_train
+    else:
+        runtime.target_name = runtime.target_name_test
     runtime.max_points = runtime.config.get("max_points", 200)
     runtime._inside_group = False
 
@@ -154,11 +163,17 @@ def _slugify(text: str) -> str:
 def _block_label(block_cfg: dict) -> str:
     """Resolve a human-readable block label for the navigation bar."""
     params = block_cfg.get("params", {})
-    title = params.get("title") if isinstance(params, dict) else ""
+    if isinstance(params, dict):
+        title = params.get("title")
+    else:
+        title = ""
     if isinstance(title, str) and title.strip():
         return title.strip()
     block_type = block_cfg.get("type", "section")
-    return str(block_type).replace("_", " ").strip().title() or "Section"
+    label = str(block_type).replace("_", " ").strip().title()
+    if label:
+        return label
+    return "Section"
 
 
 def _assign_section_ids(blocks: list[dict], used: set[str] | None = None, prefix: str = "section") -> None:
@@ -166,7 +181,10 @@ def _assign_section_ids(blocks: list[dict], used: set[str] | None = None, prefix
     used_ids = used if used is not None else set()
     for idx, block in enumerate(blocks, start=1):
         label_slug = _slugify(_block_label(block))
-        base = label_slug or f"{prefix}-{idx}"
+        if label_slug:
+            base = label_slug
+        else:
+            base = f"{prefix}-{idx}"
         candidate = base
         suffix = 2
         while candidate in used_ids:

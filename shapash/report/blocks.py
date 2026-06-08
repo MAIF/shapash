@@ -217,7 +217,9 @@ class ReportBlockMixin:
             raise ValueError(f"project_information file not found: {config_path}")
 
         with config_path.open(encoding="utf-8") as stream:
-            project_info = yaml.safe_load(stream) or {}
+            project_info = yaml.safe_load(stream)
+        if project_info is None:
+            project_info = {}
         if not isinstance(project_info, dict):
             raise ValueError("project_information YAML must define a top-level mapping.")
 
@@ -272,7 +274,8 @@ class ReportBlockMixin:
         --------
         >>> runtime.block_badge_row(badges=[{"label": "AUC", "value": "0.89", "color": "blue"}])
         """
-        badges = badges or []
+        if badges is None:
+            badges = []
         pills: list[pn.viewable.Viewable] = []
         for badge in badges:
             color_name = badge.get("color", "gray")
@@ -441,7 +444,8 @@ class ReportBlockMixin:
             raise ValueError("performance_metrics block requires y_test and y_pred.")
 
         metric_items = []
-        metrics = metrics or []
+        if metrics is None:
+            metrics = []
         for metric_cfg in metrics:
             metric_path = metric_cfg.get("path")
             metric_name = metric_cfg.get("name", metric_path)
@@ -499,7 +503,9 @@ class ReportBlockMixin:
             width=width,
             height=height,
         )
-        return title or self._feature_label(feature), [self._plotly_pane(fig)]
+        if title is None:
+            return self._feature_label(feature), [self._plotly_pane(fig)]
+        return title, [self._plotly_pane(fig)]
 
     @block
     def block_correlations_plot(
@@ -533,7 +539,13 @@ class ReportBlockMixin:
         """
         self._require_train_test_data("correlations_plot")
         explainer = self._require_explainer("correlations_plot")
-        resolved_width = width or (900 if len(self.df_train_test["data_train_test"].unique()) > 1 else 500)
+        if width is None:
+            if len(self.df_train_test["data_train_test"].unique()) > 1:
+                resolved_width = 900
+            else:
+                resolved_width = 500
+        else:
+            resolved_width = width
         fig = explainer.plot.correlations_plot(
             self.df_train_test,
             optimized=True,
@@ -607,11 +619,17 @@ class ReportBlockMixin:
         if not include_all_features:
             if feature is None:
                 raise ValueError("contribution_plot block requires 'feature' when include_all_features=False.")
-            fig = explainer.plot.contribution_plot(feature, label=label, max_points=max_points or self.max_points)
+            if max_points is None:
+                effective_max_points = self.max_points
+            else:
+                effective_max_points = max_points
+            fig = explainer.plot.contribution_plot(feature, label=label, max_points=effective_max_points)
             for trace in fig.data:
                 if trace.type == "bar":
                     trace.marker.color = "lightgrey"
-            return title or self._feature_label(feature), [self._plotly_pane(fig)]
+            if title is None:
+                return self._feature_label(feature), [self._plotly_pane(fig)]
+            return title, [self._plotly_pane(fig)]
 
         if getattr(explainer, "x_init", None) is None:
             raise ValueError("contribution_plot block with include_all_features=True requires explainer.x_init.")
@@ -627,7 +645,11 @@ class ReportBlockMixin:
 
         feature_panels: dict[str, pn.viewable.Viewable] = {}
         for feature_name in sorted_features:
-            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=max_points or self.max_points)
+            if max_points is None:
+                effective_max_points = self.max_points
+            else:
+                effective_max_points = max_points
+            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
             for trace in fig.data:
                 if trace.type == "bar":
                     trace.marker.color = "lightgrey"
@@ -648,7 +670,10 @@ class ReportBlockMixin:
         )
         selected_panel = pn.bind(lambda selected: feature_panels[selected], feature_select)
 
-        resolved_title = title or "Features contribution plots"
+        if title is None:
+            resolved_title = "Features contribution plots"
+        else:
+            resolved_title = title
         return resolved_title, [feature_select, selected_panel]
 
     @block
@@ -683,10 +708,15 @@ class ReportBlockMixin:
         """
         explainer = self._require_explainer("interactions_plot")
         feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
-        fig = explainer.plot.interactions_plot(
-            col1=feature_one, col2=feature_two, max_points=max_points or self.max_points
-        )
-        resolved_title = title or f"{self._feature_label(feature_one)} / {self._feature_label(feature_two)}"
+        if max_points is None:
+            effective_max_points = self.max_points
+        else:
+            effective_max_points = max_points
+        fig = explainer.plot.interactions_plot(col1=feature_one, col2=feature_two, max_points=effective_max_points)
+        if title is None:
+            resolved_title = f"{self._feature_label(feature_one)} / {self._feature_label(feature_two)}"
+        else:
+            resolved_title = title
         return resolved_title, [self._plotly_pane(fig)]
 
     @block
@@ -720,7 +750,10 @@ class ReportBlockMixin:
         if self.y_test is None or self.y_pred is None:
             raise ValueError("target_distribution block requires y_test and predicted values from the explainer.")
 
-        target_name = self.target_name or "target"
+        if self.target_name is None:
+            target_name = "target"
+        else:
+            target_name = self.target_name
         df_target = pd.concat(
             [
                 pd.DataFrame({target_name: self.y_pred}).assign(_dataset="pred"),
@@ -735,7 +768,9 @@ class ReportBlockMixin:
             width=width,
             height=height,
         )
-        return title or "Target distribution", [self._plotly_pane(fig)]
+        if title is None:
+            return "Target distribution", [self._plotly_pane(fig)]
+        return title, [self._plotly_pane(fig)]
 
     @block
     def block_target_analysis(
@@ -770,7 +805,10 @@ class ReportBlockMixin:
         if self.y_test is None:
             raise ValueError("target_analysis block requires y_test.")
 
-        target_name = self.target_name or "target"
+        if self.target_name is None:
+            target_name = "target"
+        else:
+            target_name = self.target_name
         y_test_series = pd.Series(self.y_test, name=target_name)
         y_train_series = pd.Series(self.y_train, name=target_name) if self.y_train is not None and show_train else None
 
@@ -844,7 +882,9 @@ class ReportBlockMixin:
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         fig = plot_confusion_matrix(y_true=self.y_test, y_pred=self.y_pred, colors_dict=explainer.colors_dict)
-        return title or "Confusion matrix", [self._plotly_pane(fig)]
+        if title is None:
+            return "Confusion matrix", [self._plotly_pane(fig)]
+        return title, [self._plotly_pane(fig)]
 
     @block
     def block_univariate_analysis(
