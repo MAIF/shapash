@@ -1,5 +1,7 @@
+import builtins
 import os
 from enum import Enum
+from importlib import import_module
 from numbers import Number
 
 import pandas as pd
@@ -96,8 +98,6 @@ def get_callable(path: str):
     """
     if path == "":
         raise ImportError("Empty path")
-    import builtins
-    from importlib import import_module
 
     parts = [part for part in path.split(".") if part]
     module = None
