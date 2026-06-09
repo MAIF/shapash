@@ -1881,6 +1881,8 @@ class SmartPlotter:
         self,
         width: int = 700,
         height: int = 500,
+        quantile: float = 0.95,
+        use_quantile_scale: bool = True,
         file_name=None,
         auto_open=False,
     ):
@@ -1900,6 +1902,10 @@ class SmartPlotter:
             The width of the generated figure, in inches.
         height : int, optional, default=4
             The height of the generated figure, in inches.
+        quantile : float, optional, default=0.95
+            Upper quantile used to cap the heatmap color scale.
+        use_quantile_scale : bool, optional, default=True
+            Enable quantile-based color scaling for better contrast on imbalanced confusion matrices.
 
         Returns
         -------
@@ -1923,6 +1929,8 @@ class SmartPlotter:
             colors_dict=self._style_dict,
             width=width,
             height=height,
+            quantile=quantile,
+            use_quantile_scale=use_quantile_scale,
             file_name=file_name,
             auto_open=auto_open,
         )

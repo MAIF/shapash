@@ -505,6 +505,8 @@ def plot_confusion_matrix(
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
+    quantile: float = 0.95,
+    use_quantile_scale: bool = True,
     file_name=None,
     auto_open=False,
 ) -> go.Figure:
@@ -525,6 +527,12 @@ def plot_confusion_matrix(
         The height of the figure in pixels.
     palette_name : str, optional
         The color palette to use for the heatmap.
+    quantile : float, optional
+        Upper quantile used to cap the heatmap color scale when `use_quantile_scale=True`.
+        Values above this threshold keep their displayed count but are saturated for color rendering.
+    use_quantile_scale : bool, optional
+        If True: use a quantile-based upper bound for the heatmap colors to improve contrast on
+        imbalanced confusion matrices. If False: use the full value range.
     file_name: string, optional
         Specify the save path of html files. If None, no file will be saved.
     auto_open: bool, optional
@@ -558,6 +566,14 @@ def plot_confusion_matrix(
     x_labels = list(df_cm.columns)
     y_labels = list(df_cm.index)
     z = df_cm.loc[x_labels, y_labels].values
+
+    if use_quantile_scale:
+        if not 0 < quantile <= 1:
+            raise ValueError("quantile must be in the interval ]0, 1].")
+        # Clip extreme values for a more readable heatmap.
+        zmax = int(np.quantile(z, quantile))
+    else:
+        zmax = int(z.max())
 
     title = "Confusion Matrix"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
@@ -597,6 +613,8 @@ def plot_confusion_matrix(
         x=x_labels,
         y=y_labels,
         colorscale=col_scale,
+        zmin=0,
+        zmax=zmax,
         hovertext=hv_text,
         hovertemplate="%{hovertext}<extra></extra>",
         showscale=True,
@@ -614,7 +632,8 @@ def plot_confusion_matrix(
                     y=y_label,
                     text=str(z[i][j]),
                     showarrow=False,
-                    font=dict(color="black" if z[i][j] < z.max() / 2 else "white"),
+                    # Use clipped values to keep the text contrast readable.
+                    font=dict(color="black" if min(z[i][j], zmax) < zmax / 2 else "white"),
                 )
             )
 
