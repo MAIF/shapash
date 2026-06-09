@@ -65,6 +65,12 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
             classes.append("fit-content-table")
         return _add_css_classes(viewable, *classes)
 
+    if isinstance(viewable, pn.pane.Plotly):
+        return viewable
+
+    if isinstance(viewable, pn.widgets.Select):
+        return viewable
+
     if isinstance(viewable, pn.Row):
         if method_name == "block_badge_row":
             for child in getattr(viewable, "objects", []):
@@ -88,7 +94,12 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
             _auto_style_viewable(child, method_name=method_name)
         return viewable
 
-    return viewable
+    method_info = f" in '{method_name}'" if method_name else ""
+    allowed_types = "Markdown, DataFrame, Plotly, Select, Row, Column"
+    raise TypeError(
+        f"Unsupported Panel object type returned{method_info}: {type(viewable).__name__}. "
+        f"Allowed Panel return types: {allowed_types}."
+    )
 
 
 def block(method):
@@ -668,7 +679,7 @@ class ReportBlockMixin:
             value=next(iter(feature_panels)),
             sizing_mode="stretch_width",
         )
-        selected_panel = pn.bind(lambda selected: feature_panels[selected], feature_select)
+        selected_panel = pn.panel(pn.bind(lambda selected: feature_panels[selected], feature_select))
 
         if title is None:
             resolved_title = "Features contribution plots"
@@ -996,7 +1007,7 @@ class ReportBlockMixin:
             value=next(iter(feature_panels)),
             sizing_mode="stretch_width",
         )
-        selected_panel = pn.bind(lambda selected: feature_panels[selected], feature_select)
+        selected_panel = pn.panel(pn.bind(lambda selected: feature_panels[selected], feature_select))
 
         return [feature_select, selected_panel]
 
@@ -1078,4 +1089,7 @@ class ReportBlockMixin:
             return item
         if isinstance(item, str):
             return pn.pane.Markdown(item)
-        return pn.panel(item)
+        raise TypeError(
+            f"Unsupported block return type: {type(item).__name__}. "
+            "Blocks must return Panel objects (Markdown, DataFrame, Plotly, Select, Row, Column) or strings."
+        )
