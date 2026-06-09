@@ -82,17 +82,17 @@ class TestInverseContribCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "object"
+        input_dict1["data_type"] = "str"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "object"
+        input_dict2["data_type"] = "str"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "object"
+        input_dict3["data_type"] = "str"
         list_dict = [input_dict2, input_dict3]
 
         result1 = enc_onehot.transform(train)
@@ -177,17 +177,17 @@ class TestInverseContribCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "object"
+        input_dict1["data_type"] = "str"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "object"
+        input_dict2["data_type"] = "str"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "object"
+        input_dict3["data_type"] = "str"
         list_dict = [input_dict2, input_dict3]
 
         original = inverse_transform_contributions(contributions, [enc, input_dict1, list_dict])

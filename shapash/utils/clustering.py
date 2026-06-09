@@ -529,7 +529,7 @@ def encode_color_value(color_value):
     label_mapping : dict or None
     """
 
-    is_categorical = color_value.dtype == "object" or color_value.dtype.name == "category"
+    is_categorical = color_value.dtype == "str" or color_value.dtype.name == "category"
 
     if not is_categorical:
         return color_value.astype(float), False, None

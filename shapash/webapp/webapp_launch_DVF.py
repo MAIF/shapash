@@ -16,7 +16,7 @@ y_df = house_df["SalePrice"].to_frame()
 X_df = house_df[house_df.columns.difference(["SalePrice"])]
 house_df.head()
 
-categorical_features = [col for col in X_df.columns if X_df[col].dtype == "object"]
+categorical_features = [col for col in X_df.columns if X_df[col].dtype == "str"]
 encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(X_df)
 X_df = encoder.transform(X_df)
 
