@@ -184,7 +184,11 @@ def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocess
             ).fit_transform(feature_values)
             feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
         except Exception as e:
-            warnings.warn(f"Could not project group features values with t-SNE: {e}", UserWarning)
+            warnings.warn(
+                f"Could not project group features values with t-SNE: {e}",
+                UserWarning,
+                stacklevel=2,
+            )
             feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
 
     elif how == "dict_of_values":
