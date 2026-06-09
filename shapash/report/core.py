@@ -242,11 +242,7 @@ def build_navigation_bar(blocks: list[dict]) -> pn.pane.HTML:
 
     logo_path = Path(__file__).resolve().parent.parent / "style" / "shapash-fond-clair.png"
     logo_data = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-    logo_html = (
-        '<div class="nav-logo">'
-        f'<img src="data:image/png;base64,{logo_data}" alt="Shapash logo" />'
-        "</div>"
-    )
+    logo_html = '<div class="nav-logo">' f'<img src="data:image/png;base64,{logo_data}" alt="Shapash logo" />' "</div>"
 
     nav_scale = max(0.62, min(1.0, 24 / max(1, item_count)))
     nav_html = "".join(
