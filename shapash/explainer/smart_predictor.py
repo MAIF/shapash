@@ -226,12 +226,12 @@ class SmartPredictor:
             self.data["x_postprocessed"] = self.apply_postprocessing()
             try:
                 self.data["x_preprocessed"] = self.apply_preprocessing()
-            except BaseException:
+            except BaseException as err:
                 raise ValueError(
                     """
                     Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
                     """
-                )
+                ) from err
         else:
             if not hasattr(self, "data"):
                 raise ValueError("No dataset x specified.")
@@ -307,7 +307,7 @@ class SmartPredictor:
         x: pandas.DataFrame
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
-        if type(x) == dict:
+        if isinstance(x, dict):
             if not all([column in self.features_types.keys() for column in x.keys()]):
                 raise ValueError(
                     """
@@ -318,12 +318,12 @@ class SmartPredictor:
                 x = pd.DataFrame.from_dict(x, orient="index").T
                 for feature, type_feature in self.features_types.items():
                     x[feature] = x[feature].astype(type_feature)
-            except BaseException:
+            except BaseException as err:
                 raise ValueError(
                     """
                     The structure of the given dict x isn't at the right format.
                     """
-                )
+                ) from err
         return x
 
     def check_dataset_features(self, x):
@@ -335,15 +335,25 @@ class SmartPredictor:
         x: pandas.DataFrame (optional)
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
-        assert all(column in self.columns_dict.values() for column in x.columns)
-        if not all([type(key) == int for key in self.columns_dict.keys()]):
+        if not all(column in self.columns_dict.values() for column in x.columns):
+            raise ValueError(
+                """
+                All features from dataset x must be in the columns_dict initialized.
+                """
+            )
+        if not all([isinstance(key, int) for key in self.columns_dict.keys()]):
             raise ValueError("columns_dict must have only integers keys for features order.")
         features_order = []
         for order in range(min(self.columns_dict.keys()), max(self.columns_dict.keys()) + 1):
             features_order.append(self.columns_dict[order])
         x = x[features_order]
 
-        assert all(column in self.features_types.keys() for column in x.columns)
+        if not all(column in self.features_types.keys() for column in x.columns):
+            raise ValueError(
+                """
+                All features from dataset x must be in the features_types dict initialized.
+                """
+            )
         if not all([str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns]):
             raise ValueError(
                 """
