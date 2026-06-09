@@ -3,6 +3,7 @@ Smart predictor module
 """
 
 import copy
+from typing import Any
 
 import pandas as pd
 
@@ -35,7 +36,7 @@ from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
 
 
-def _dtypes_compatible(actual_dtype, expected_str):
+def _dtypes_compatible(actual_dtype: Any, expected_str: str) -> bool:
     """
     Return True if a column's actual dtype is compatible with the expected dtype string
     declared in ``features_types``.

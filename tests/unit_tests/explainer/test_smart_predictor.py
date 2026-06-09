@@ -1195,7 +1195,7 @@ class TestSmartPredictor(unittest.TestCase):
 
         predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"]}))
 
-    def test_check_dataset_features_accepts_nullable_dtype(self):
+    def test_check_dataset_features_accepts_nullable_dtype(self) -> None:
         """
         check_dataset_features should accept pandas nullable Int64 where the
         expected dtype string is 'int64' (semantic equivalence). Regression test
@@ -1205,7 +1205,7 @@ class TestSmartPredictor(unittest.TestCase):
         x = pd.DataFrame({"x1": pd.array([1], dtype="Int64"), "x2": ["M"]})
         predictor_1.check_dataset_features(x=x)
 
-    def test_check_dataset_features_accepts_pyarrow_backed_dtype(self):
+    def test_check_dataset_features_accepts_pyarrow_backed_dtype(self) -> None:
         """
         check_dataset_features should accept pyarrow-backed dtypes where the
         underlying numpy dtype matches the expected one (e.g. produced by
@@ -1218,7 +1218,7 @@ class TestSmartPredictor(unittest.TestCase):
         x = pd.DataFrame({"x1": pd.array([1], dtype="int64[pyarrow]"), "x2": ["M"]})
         predictor_1.check_dataset_features(x=x)
 
-    def test_check_dataset_features_rejects_mismatched_dtype(self):
+    def test_check_dataset_features_rejects_mismatched_dtype(self) -> None:
         """
         check_dataset_features must still raise on a genuinely mismatched dtype
         (e.g. float64 where int64 was declared). Regression test for
