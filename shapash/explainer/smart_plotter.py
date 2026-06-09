@@ -978,8 +978,8 @@ class SmartPlotter:
                     + "Probas: "
                     + " ; ".join(
                         [
-                            str(id) + ": <b>" + str(round(proba, 2)) + "</b>"
-                            for proba, id in zip(preds, line_reference, strict=False)
+                            str(line_id) + ": <b>" + str(round(proba, 2)) + "</b>"
+                            for proba, line_id in zip(preds, line_reference, strict=False)
                         ]
                     )
                 )
@@ -992,8 +992,8 @@ class SmartPlotter:
                 preds = [self._explainer._local_pred(line) for line in line_reference]
                 subtitle = "Predictions: " + " ; ".join(
                     [
-                        str(id) + ": <b>" + str(round(pred, 2)) + "</b>"
-                        for id, pred in zip(line_reference, preds, strict=False)
+                        str(line_id) + ": <b>" + str(round(pred, 2)) + "</b>"
+                        for pred, line_id in zip(preds, line_reference, strict=False)
                     ]
                 )
 
@@ -1009,7 +1009,7 @@ class SmartPlotter:
                 feature_name = self._explainer.features_dict[name]
                 feature_values[i] = feature_name
 
-        preds = [self._explainer.x_init.loc[id] for id in line_reference]
+        preds = [self._explainer.x_init.loc[line_id] for line_id in line_reference]
         dict_features = self._explainer.inv_features_dict
 
         iteration_list = list(zip(new_contrib, feature_values, strict=False))
@@ -1496,7 +1496,8 @@ class SmartPlotter:
         fig
             The figure that will be displayed
         """
-        assert index in self._explainer.x_init.index, "index must exist in pandas dataframe"
+        if index not in self._explainer.x_init.index:
+            raise ValueError("Index must exist in pandas dataframe")
 
         self._explainer.compute_features_stability([index])
 
