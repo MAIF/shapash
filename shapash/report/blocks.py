@@ -848,6 +848,16 @@ class ReportBlockMixin:
             width=width,
             height=height,
         )
+        fig.update_layout(
+            title={
+                **fig.layout.title.to_plotly_json(),
+                "x": 0.5,
+                "xanchor": "center",
+                "y": 0.0,
+                "yanchor": "bottom",
+            },
+            margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
+        )
 
         dtype_label = str(series_dtype(y_test_series))
         content = [
@@ -942,6 +952,16 @@ class ReportBlockMixin:
                 col=col,
                 hue=col_splitter,
                 colors_dict=self._feature_distribution_colors(),
+            )
+            fig.update_layout(
+                title={
+                    **fig.layout.title.to_plotly_json(),
+                    "x": 0.5,
+                    "xanchor": "center",
+                    "y": 0.0,
+                    "yanchor": "bottom",
+                },
+                margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
             )
             col_stats = stats_to_table(
                 test_stats=test_stats[col],

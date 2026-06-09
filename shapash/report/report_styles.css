@@ -135,6 +135,20 @@ table.dataframe td {
     height: 0;
 }
 
+.nav-logo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: calc(4px * var(--nav-scale, 1));
+    margin-bottom: calc(6px * var(--nav-scale, 1));
+}
+
+.nav-logo img {
+    display: block;
+    width: min(70px, 100%);
+    height: auto;
+}
+
 .nav-current {
     display: flex;
     flex-direction: column;

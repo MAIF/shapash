@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import importlib
 import logging
@@ -239,10 +240,19 @@ def build_navigation_bar(blocks: list[dict]) -> pn.pane.HTML:
         item_count += 1
         items_html.append(f'<a class="nav-item" href="#{section_id}">{label}</a>')
 
+    logo_path = Path(__file__).resolve().parent.parent / "style" / "shapash-fond-clair.png"
+    logo_data = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    logo_html = (
+        '<div class="nav-logo">'
+        f'<img src="data:image/png;base64,{logo_data}" alt="Shapash logo" />'
+        "</div>"
+    )
+
     nav_scale = max(0.62, min(1.0, 24 / max(1, item_count)))
     nav_html = "".join(
         [
             f'<nav class="report-nav" style="--nav-scale: {nav_scale:.3f};">',
+            logo_html,
             '<div class="nav-current" aria-live="polite">',
             '<span class="nav-current-label">You are here</span>',
             '<span class="nav-current-value">Top of report</span>',
