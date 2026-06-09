@@ -100,7 +100,7 @@ if CASE == 1:
     for col in list(postprocess.keys()):
         if col not in features:
             del postprocess[col]
-    encoder = one_hot.OneHotEncoder(titanic_df, cols=["Embarked", "Sex"])
+    encoder = one_hot.OneHotEncoder(cols=["Embarked", "Sex"])
 
     X = titanic_df[features]
     y = titanic_df["Fare"].to_frame()
@@ -121,7 +121,7 @@ elif CASE == 2:
     for col in list(postprocess.keys()):
         if col not in features:
             del postprocess[col]
-    encoder = one_hot.OneHotEncoder(titanic_df, cols=["Sex"])
+    encoder = one_hot.OneHotEncoder(cols=["Sex"])
 
     X = titanic_df[features]
     y = titanic_df["Survived"].to_frame()
@@ -149,7 +149,7 @@ else:
         if col not in features:
             del postprocess[col]
 
-    encoder = one_hot.OneHotEncoder(titanic_df, cols=["Embarked", "Sex"])
+    encoder = one_hot.OneHotEncoder(cols=["Embarked", "Sex"])
 
     X = titanic_df[features]
     y = titanic_df["Pclass"].to_frame()

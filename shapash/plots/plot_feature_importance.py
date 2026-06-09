@@ -23,6 +23,8 @@ def plot_feature_importance(
     title="",
     addnote="",
     subtitle="",
+    global_feat_imp_name="Global",
+    subset_feat_imp_name="Subset",
     width=900,
     height=500,
     file_name=None,
@@ -65,6 +67,10 @@ def plot_feature_importance(
         Additional notes to be added to the plot, by default "".
     subtitle : str, optional
         Subtitle of the plot, by default "".
+    global_feat_imp_name : str, optional
+        Name for the global feature importance series in the legend, by default "Global".
+    subset_feat_imp_name : str, optional
+        Name for the subset feature importance series in the legend, by default "Subset".
     width : int, optional
         Width of the plot, by default 900.
     height : int, optional
@@ -108,6 +114,8 @@ def plot_feature_importance(
         if mode == "global-local":
             local_imp_lev1.index = local_imp_lev1.index.map(features_dict)
             local_imp_lev2.index = local_imp_lev2.index.map(features_dict)
+        if subset_feat_imp is not None:
+            subset_feat_imp.index = subset_feat_imp.index.map(features_dict)
 
     if inv_features_dict is None:
         inv_features_dict = {}
@@ -127,19 +135,21 @@ def plot_feature_importance(
     """Generate the feature importance plot based on the mode."""
     if mode == "global":
         return _plot_features_import(
-            global_feat_imp,
-            style_dict,
-            inv_features_dict,
-            features_groups_keys,
-            subset_feat_imp,
-            title,
-            addnote,
-            subtitle,
-            width,
-            height,
-            file_name,
-            auto_open,
-            zoom,
+            feature_imp1=global_feat_imp,
+            style_dict=style_dict,
+            inv_features_dict=inv_features_dict,
+            features_groups_keys=features_groups_keys,
+            feature_imp2=subset_feat_imp,
+            title=title,
+            addnote=addnote,
+            subtitle=subtitle,
+            feature_imp1_name=global_feat_imp_name,
+            feature_imp2_name=subset_feat_imp_name,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+            zoom=zoom,
         )
     elif mode == "global-local":
         feat_imp = {"global": global_feat_imp, "semi-local": local_imp_lev1, "local": local_imp_lev2}
@@ -187,6 +197,8 @@ def _plot_features_import(
     title="Features Importance",
     addnote=None,
     subtitle=None,
+    feature_imp1_name="Global",
+    feature_imp2_name="Subset",
     width=900,
     height=500,
     file_name=None,
@@ -223,6 +235,10 @@ def _plot_features_import(
         open automatically the plot
     zoom: bool (default=False)
         graph is currently zoomed
+    feature_imp1_name: str (default="Global")
+        Name of the first feature importance series
+    feature_imp2_name: str (default="Subset")
+        Name of the second feature importance series
     """
 
     topmargin = 80
@@ -276,7 +292,7 @@ def _plot_features_import(
         x=feature_imp1.round(4),
         y=feature_imp1.index,
         orientation="h",
-        name="Global",
+        name=feature_imp1_name,
         marker=dict_style_bar1,
         marker_color=marker_color,
         hovertemplate="Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>",
@@ -287,7 +303,7 @@ def _plot_features_import(
             x=feature_imp2.round(4),
             y=feature_imp2.index,
             orientation="h",
-            name="Subset",
+            name=feature_imp2_name,
             marker=dict_style_bar2,
             hovertemplate="Feature: %{customdata}<br />Contribution: %{x:.4f}<extra></extra>",
             customdata=feature_imp2.index,

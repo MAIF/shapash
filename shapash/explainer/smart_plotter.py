@@ -813,7 +813,6 @@ class SmartPlotter:
         subset_feat_imp = self._get_subset_importance(contributions_case, selection)
         if subset_feat_imp is not None:
             subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
-            subset_feat_imp.index = subset_feat_imp.index.map(self._explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
 
@@ -825,27 +824,29 @@ class SmartPlotter:
 
         # Generate and return the plot
         return plot_feature_importance(
-            mode,
-            global_feat_imp,
-            contributions_case,
-            self._style_dict,
-            features_groups_keys,
-            self._explainer.features_dict,
-            self._explainer.inv_features_dict,
-            local_imp_lev1,
-            local_imp_lev2,
-            subset_feat_imp,
-            display_groups,
-            title,
-            addnote,
-            subtitle,
-            width,
-            height,
-            file_name,
-            auto_open,
-            zoom,
-            normalize_by_nb_samples,
-            degree,
+            mode=mode,
+            global_feat_imp=global_feat_imp,
+            contributions_case=contributions_case,
+            style_dict=self._style_dict,
+            features_groups_keys=features_groups_keys,
+            features_dict=self._explainer.features_dict,
+            inv_features_dict=self._explainer.inv_features_dict,
+            local_imp_lev1=local_imp_lev1,
+            local_imp_lev2=local_imp_lev2,
+            subset_feat_imp=subset_feat_imp,
+            display_groups=display_groups,
+            title=title,
+            addnote=addnote,
+            subtitle=subtitle,
+            global_feat_imp_name="Global",
+            subset_feat_imp_name="Subset",
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+            zoom=zoom,
+            normalize_by_nb_samples=normalize_by_nb_samples,
+            degree=degree,
         )
 
     def _get_group_feature_importance(self, group_name):
