@@ -9,57 +9,12 @@ import logging
 import re
 from pathlib import Path
 
-import pandas as pd
 import panel as pn
 
-from shapash.report.blocks import ReportBlockMixin
 from shapash.report.panel_support import apply_report_css, report_js_text
 from shapash.report.validation import load_report_config, render_block_error
 
 logger = logging.getLogger(__name__)
-
-
-def create_block_runtime(
-    explainer=None,
-    x_train: pd.DataFrame | None = None,
-    y_train: pd.Series | pd.DataFrame | list | None = None,
-    y_test: pd.Series | pd.DataFrame | list | None = None,
-    config: dict | None = None,
-    block_instance: ReportBlockMixin | None = None,
-):
-    """Create a runtime object that holds report state and block methods."""
-    if block_instance is None:
-        runtime = ReportBlockMixin()
-    else:
-        runtime = block_instance
-
-    runtime.explainer = explainer
-    if config is None:
-        runtime.config = {}
-    else:
-        runtime.config = config
-    runtime.x_train_init = x_train
-    runtime.x_train_pre = runtime._preprocess_train_data(x_train)
-    runtime.x_init = getattr(explainer, "x_init", None)
-    runtime.df_train_test = runtime._create_train_test_df(test=runtime.x_init, train=runtime.x_train_pre)
-    runtime.y_train, runtime.target_name_train = runtime._get_values_and_name(y_train, "target")
-    runtime.y_test, runtime.target_name_test = runtime._get_values_and_name(y_test, "target")
-    if runtime.target_name_train is not None:
-        runtime.target_name = runtime.target_name_train
-    else:
-        runtime.target_name = runtime.target_name_test
-    runtime.max_points = runtime.config.get("max_points", 200)
-    runtime._inside_group = False
-
-    if explainer is not None:
-        if explainer.y_pred is not None:
-            runtime.y_pred, _ = runtime._get_values_and_name(explainer.y_pred, "prediction")
-        else:
-            runtime.y_pred = explainer.model.predict(explainer.x_encoded)
-    else:
-        runtime.y_pred = None
-
-    return runtime
 
 
 def generate_report(runtime, config_file: str, output_file: str) -> None:

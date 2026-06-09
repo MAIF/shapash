@@ -1758,7 +1758,7 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-        from shapash.report.core import create_block_runtime
+        from shapash.report.blocks import ReportBlockMixin
         from shapash.report.core import generate_report as generate_smart_report
 
         if x_train is not None:
@@ -1782,14 +1782,24 @@ class SmartExplainer:
                 "nb_top_interactions": nb_top_interactions,
             }
 
-            report_runtime = create_block_runtime(
-                explainer=self,
-                x_train=x_train,
-                y_train=y_train,
-                y_test=y_test,
-                config=config,
-                block_instance=block_instance,
-            )
+            if block_instance is None:
+                report_runtime = ReportBlockMixin(
+                    explainer=self,
+                    x_train=x_train,
+                    y_train=y_train,
+                    y_test=y_test,
+                    config=config,
+                )
+            else:
+                report_runtime = block_instance
+                ReportBlockMixin.__init__(
+                    report_runtime,
+                    explainer=self,
+                    x_train=x_train,
+                    y_train=y_train,
+                    y_test=y_test,
+                    config=config,
+                )
 
             if yaml_path is not None:
                 config_file = Path(yaml_path)

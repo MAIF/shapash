@@ -136,6 +136,34 @@ def block(method):
 class ReportBlockMixin:
     """Base mixin providing built-in and user-extensible smart report blocks."""
 
+    def __init__(
+        self,
+        explainer=None,
+        x_train: pd.DataFrame | None = None,
+        y_train: pd.Series | pd.DataFrame | list | None = None,
+        y_test: pd.Series | pd.DataFrame | list | None = None,
+        config: dict | None = None,
+    ) -> None:
+        self.explainer = explainer
+        self.config = {} if config is None else config
+        self.x_train_init = x_train
+        self.x_train_pre = self._preprocess_train_data(x_train)
+        self.x_init = getattr(explainer, "x_init", None)
+        self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
+        self.y_train, self.target_name_train = self._get_values_and_name(y_train, "target")
+        self.y_test, self.target_name_test = self._get_values_and_name(y_test, "target")
+        self.target_name = self.target_name_train if self.target_name_train is not None else self.target_name_test
+        self.max_points = self.config.get("max_points", 200)
+        self._inside_group = False
+
+        if explainer is not None:
+            if explainer.y_pred is not None:
+                self.y_pred, _ = self._get_values_and_name(explainer.y_pred, "prediction")
+            else:
+                self.y_pred = explainer.model.predict(explainer.x_encoded)
+        else:
+            self.y_pred = None
+
     def block_header(self, title: str = "Report", subtitle: str = "") -> pn.Column:
         """Render the report header section.
 

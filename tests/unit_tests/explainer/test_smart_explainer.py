@@ -1109,8 +1109,7 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl.y_target is not None
 
     @patch("shapash.report.core.generate_report")
-    @patch("shapash.report.core.create_block_runtime")
-    def test_generate_report(self, mock_create_block_runtime, mock_generate_report):
+    def test_generate_report(self, mock_generate_report):
         """
         Test generate report method
         """
@@ -1123,9 +1122,10 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(clf)
         xpl.compile(x=df[["x1", "x2"]])
         xpl.generate_report(output_file="test", project_info_file="test")
-        mock_create_block_runtime.assert_called_once()
+        runtime_arg = mock_generate_report.call_args.kwargs["runtime"]
+        assert runtime_arg.explainer is xpl
         mock_generate_report.assert_called_once_with(
-            runtime=mock_create_block_runtime.return_value,
+            runtime=runtime_arg,
             config_file=unittest.mock.ANY,
             output_file="test",
         )
