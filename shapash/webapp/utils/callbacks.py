@@ -638,30 +638,31 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
     html.Div
         Div containing the modalities selection options
     """
-    if type(round_dataframe[value].iloc[0]) is np.bool_ or type(round_dataframe[value].iloc[0]) is bool:
+    _non_null = round_dataframe[value].dropna()
+    _first = _non_null.iloc[0] if len(_non_null) > 0 else None
+
+    if type(_first) is np.bool_ or type(_first) is bool:
         new_element = html.Div(
             dcc.RadioItems(
-                [{"label": str(val), "value": val} for val in round_dataframe[value].unique()],
+                [{"label": str(val), "value": val} for val in round_dataframe[value].dropna().unique()],
                 id={"type": "dynamic-bool", "index": filter_id["index"]},
-                value=round_dataframe[value].iloc[0],
+                value=_first,
                 inline=False,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (isinstance(round_dataframe[value].iloc[0], str)) | (
-        (isinstance(round_dataframe[value].iloc[0], np.int64)) & (len(round_dataframe[value].unique()) <= 20)
+    elif (isinstance(_first, str)) | (
+        (isinstance(_first, np.int64)) & (len(round_dataframe[value].dropna().unique()) <= 20)
     ):
         new_element = html.Div(
             dcc.Dropdown(
                 id={"type": "dynamic-str", "index": filter_id["index"]},
-                options=[{"label": i, "value": i} for i in np.sort(round_dataframe[value].unique())],
+                options=[{"label": i, "value": i} for i in np.sort(round_dataframe[value].dropna().unique())],
                 multi=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) is pd.Timestamp) | (
-        type(round_dataframe[value].iloc[0]) is datetime.datetime
-    ):
+    elif (type(_first) is pd.Timestamp) | (type(_first) is datetime.datetime):
         new_element = html.Div(
             dcc.DatePickerRange(
                 id={"type": "dynamic-date", "index": filter_id["index"]},
