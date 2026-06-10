@@ -241,9 +241,13 @@ def _prediction_classification_plot(
         subtitle = f"Response: <b>{label_value}</b>"
 
     # Plot distribution
+    violin_x = df_pred["target"].values.flatten()
+    if np.issubdtype(np.asarray(violin_x).dtype, np.integer):
+        violin_x = np.asarray(violin_x, dtype=np.int64)
+
     fig.add_trace(
         go.Violin(
-            x=df_pred["target"].values.flatten(),
+            x=violin_x,
             y=df_pred["proba_values"].values.flatten(),
             points=False,
             legendgroup="M",
@@ -405,6 +409,8 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
                         y_target = y_target_tmp
 
         y_target_values = y_target.values.flatten()
+        if np.issubdtype(np.asarray(y_target_values).dtype, np.integer):
+            y_target_values = np.asarray(y_target_values, dtype=np.int64)
 
         y_pred = y_pred.loc[y_target.index]
         prediction_error = np.array(prediction_error.loc[y_target.index])

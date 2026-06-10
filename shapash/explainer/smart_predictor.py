@@ -344,6 +344,40 @@ class SmartPredictor:
         x = x[features_order]
 
         assert all(column in self.features_types.keys() for column in x.columns)
+        for feature in x.columns:
+            expected_dtype = self.features_types[feature]
+            if str(x[feature].dtypes) == expected_dtype:
+                continue
+
+            try:
+                if expected_dtype.startswith("int") or expected_dtype.startswith("uint"):
+                    if not pd.api.types.is_integer_dtype(x[feature].dtypes):
+                        raise ValueError
+                    x[feature] = x[feature].astype(expected_dtype)
+                elif expected_dtype.startswith("float"):
+                    if not pd.api.types.is_float_dtype(x[feature].dtypes):
+                        raise ValueError
+                    x[feature] = x[feature].astype(expected_dtype)
+                elif expected_dtype == "bool":
+                    if not pd.api.types.is_bool_dtype(x[feature].dtypes):
+                        raise ValueError
+                    x[feature] = x[feature].astype(expected_dtype)
+                elif expected_dtype in ["object", "string", "str"]:
+                    if not (
+                        pd.api.types.is_object_dtype(x[feature].dtypes)
+                        or pd.api.types.is_string_dtype(x[feature].dtypes)
+                    ):
+                        raise ValueError
+                    if expected_dtype != "str":
+                        x[feature] = x[feature].astype(expected_dtype)
+            except Exception:
+                raise ValueError(
+                    """
+                    Types of features in x doesn't match with the expected one in features_types.
+                    x input must be initial dataset without preprocessing applied.
+                    """
+                )
+
         if not all([str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns]):
             raise ValueError(
                 """

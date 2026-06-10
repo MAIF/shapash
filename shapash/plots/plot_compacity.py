@@ -1,3 +1,4 @@
+import numpy as np
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
@@ -70,9 +71,13 @@ def plot_compacity(
     fig.update_annotations(font=style_dict["dict_title_compacity"]["font"])
 
     # First plot: number of features required for a given approximation
+    features_needed_plot = np.asarray(features_needed)
+    if np.issubdtype(features_needed_plot.dtype, np.integer):
+        features_needed_plot = features_needed_plot.astype(np.int64)
+
     fig.add_trace(
         go.Histogram(
-            x=features_needed,
+            x=features_needed_plot,
             histnorm="percent",
             cumulative={"enabled": True},
             name="",

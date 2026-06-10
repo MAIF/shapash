@@ -6,6 +6,7 @@ import copy
 import logging
 import shutil
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,6 @@ from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.manipulation.summarize import create_grouped_features_values
-from shapash.report import check_report_requirements
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.check import (
     check_additional_data,
@@ -1658,19 +1658,21 @@ class SmartExplainer:
         title_description=None,
         metrics=None,
         working_dir=None,
-        notebook_path=None,
-        kernel_name=None,
+        yaml_path=None,
         max_points=200,
         display_interaction_plot=False,
         nb_top_interactions=5,
+        block_instance=None,
     ):
         """
         Generate an interactive HTML report summarizing the model and its explainability.
 
         This method produces a comprehensive HTML report containing visual and textual
-        insights about the project, dataset, and model performance.
-        It leverages a predefined or custom Jupyter notebook template to analyze
-        the model, generate plots, compute metrics, and export the final report.
+        insights about the project, dataset, and model performance using the
+        smart_report block-based HTML renderer.
+
+        A report configuration is provided through a YAML file. If no YAML file is
+        specified, a default configuration is generated automatically.
 
         A project information YAML file is required to describe key project details
         (e.g., model name, author, date, context).
@@ -1702,14 +1704,11 @@ class SmartExplainer:
             Example:
             `metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]`
         working_dir : str, optional
-            Directory used to temporarily store generated files (e.g., notebook, outputs).
+            Directory used to temporarily store generated files (e.g., report config).
             If `None`, a temporary directory is automatically created and deleted after report generation.
-        notebook_path : str, optional
-            Path to a custom notebook used as a template for generating the report.
-            If `None`, the default Shapash report notebook is used.
-        kernel_name : str, optional
-            Name of the Jupyter kernel to use for report execution.
-            Useful when multiple kernels are available and the default one is incorrect.
+        yaml_path : str, optional
+            Path to a custom YAML configuration file used to generate the report.
+            If `None`, a default YAML configuration is generated.
         max_points : int, optional, default=200
             Maximum number of points displayed in contribution plots.
         display_interaction_plot : bool, optional, default=False
@@ -1717,6 +1716,9 @@ class SmartExplainer:
             (Note: this can increase computation time.)
         nb_top_interactions : int, optional, default=5
             Number of top feature interactions to include in the report.
+        block_instance : object, optional
+            Optional custom block object used to resolve block methods during report generation.
+            It should implement methods named `block_<type>` for YAML block entries.
 
         Returns
         -------
@@ -1732,7 +1734,7 @@ class SmartExplainer:
 
         Notes
         -----
-        - The method internally executes a notebook that generates the report content.
+        - The method renders the report from block definitions in a YAML configuration.
         - Temporary files are automatically cleaned up unless a custom `working_dir` is provided.
         - Interaction plots can be disabled to optimize runtime performance.
 
@@ -1740,7 +1742,7 @@ class SmartExplainer:
         -------
         >>> xpl.generate_report(
         ...     output_file="report.html",
-        ...     project_info_file="utils/project_info.yml",
+        ...     project_info_file="config/project_information.yml",
         ...     x_train=x_train,
         ...     y_train=y_train,
         ...     y_test=y_test,
@@ -1754,11 +1756,11 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-        check_report_requirements()
+        from shapash.report.blocks import ReportBlockMixin
+        from shapash.report.core import generate_report as generate_smart_report
+
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)
-        # Avoid Import Errors with requirements specific to the Shapash Report
-        from shapash.report.generation import execute_report, export_and_save_report
 
         rm_working_dir = False
         if not working_dir:
@@ -1772,29 +1774,38 @@ class SmartExplainer:
             )
 
         try:
-            execute_report(
-                working_dir=working_dir,
-                explainer=self,
-                project_info_file=project_info_file,
-                x_train=x_train,
-                y_train=y_train,
-                y_test=y_test,
-                config={
-                    k: v
-                    for k, v in dict(
-                        title_story=title_story,
-                        title_description=title_description,
-                        metrics=metrics,
-                        max_points=max_points,
-                        display_interaction_plot=display_interaction_plot,
-                        nb_top_interactions=nb_top_interactions,
-                    ).items()
-                    if v is not None
-                },
-                notebook_path=notebook_path,
-                kernel_name=kernel_name,
-            )
-            export_and_save_report(working_dir=working_dir, output_file=output_file)
+            config = {
+                "max_points": max_points,
+                "display_interaction_plot": display_interaction_plot,
+                "nb_top_interactions": nb_top_interactions,
+            }
+
+            if block_instance is None:
+                report_runtime = ReportBlockMixin(
+                    explainer=self,
+                    x_train=x_train,
+                    y_train=y_train,
+                    y_test=y_test,
+                    config=config,
+                )
+            else:
+                report_runtime = block_instance
+                ReportBlockMixin.__init__(
+                    report_runtime,
+                    explainer=self,
+                    x_train=x_train,
+                    y_train=y_train,
+                    y_test=y_test,
+                    config=config,
+                )
+
+            if yaml_path is not None:
+                config_file = Path(yaml_path)
+            else:
+                yaml_path = Path(__file__).resolve().parent.parent / "report" / "default_report.yml"
+                config_file = yaml_path
+
+            generate_smart_report(runtime=report_runtime, config_file=str(config_file), output_file=output_file)
 
             if rm_working_dir:
                 shutil.rmtree(working_dir)

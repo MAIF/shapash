@@ -90,8 +90,8 @@ The 4 steps to display results:
     app = xpl.run_app()
 
 - Step 4: Generate the Shapash Report
-  > This step allows to generate a standalone html report of your project using the different splits
-   of your dataset and also the metrics you used:
+  > This step generates a standalone HTML report from a configurable block-based layout.
+  > You can provide a YAML configuration file to customize sections and blocks.
 
 .. code:: ipython
 
@@ -101,6 +101,7 @@ The 4 steps to display results:
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
+      yaml_path='path/to/report_config.yml', # Optional: custom block configuration
         title_story="House prices report",
         title_description="""This document is a data science report of the kaggle house prices tutorial project.
             It was generated using the Shapash library.""",
