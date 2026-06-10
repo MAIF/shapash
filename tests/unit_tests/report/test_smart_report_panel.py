@@ -68,6 +68,12 @@ class _DummyBlocks(ReportBlockMixin):
         return [pn.pane.Plotly(fig)]
 
     @block
+    def block_bind_allowed(self, title: str = "Bind"):
+        selector = pn.widgets.Select(name="Feature", options=["a", "b"], value="a")
+        selected_panel = pn.panel(pn.bind(lambda selected: pn.pane.Markdown(selected), selector))
+        return [selector, selected_panel]
+
+    @block
     def block_panel_type_not_allowed(self, title: str = "HTML"):
         return [pn.pane.HTML("<b>html</b>")]
 
@@ -134,6 +140,14 @@ class TestBlockDecorator(unittest.TestCase):
 
         self.assertIsInstance(select_result.objects[1], pn.widgets.Select)
         self.assertIsInstance(plotly_result.objects[1], pn.pane.Plotly)
+
+    def test_block_decorator_allows_bind_param_function(self):
+        runtime = _DummyBlocks()
+
+        result = runtime.block_bind_allowed()
+
+        self.assertIsInstance(result.objects[1], pn.widgets.Select)
+        self.assertEqual(type(result.objects[2]).__name__, "ParamFunction")
 
     def test_block_decorator_rejects_panel_type_without_style_definition(self):
         runtime = _DummyBlocks()

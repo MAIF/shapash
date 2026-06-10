@@ -71,6 +71,14 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
     if isinstance(viewable, pn.widgets.Select):
         return viewable
 
+    param_function_type = getattr(pn.param, "ParamFunction", None)
+    if param_function_type is not None and isinstance(viewable, param_function_type):
+        return viewable
+
+    param_method_type = getattr(pn.param, "ParamMethod", None)
+    if param_method_type is not None and isinstance(viewable, param_method_type):
+        return viewable
+
     if isinstance(viewable, pn.Row):
         if method_name == "block_badge_row":
             for child in getattr(viewable, "objects", []):
@@ -95,7 +103,7 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
         return viewable
 
     method_info = f" in '{method_name}'" if method_name else ""
-    allowed_types = "Markdown, DataFrame, Plotly, Select, Row, Column"
+    allowed_types = "Markdown, DataFrame, Plotly, Select, ParamFunction, ParamMethod, Row, Column"
     raise TypeError(
         f"Unsupported Panel object type returned{method_info}: {type(viewable).__name__}. "
         f"Allowed Panel return types: {allowed_types}."
