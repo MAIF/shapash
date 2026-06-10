@@ -43,6 +43,11 @@ class UserReportBlocks(ReportBlockMixin):
         color_feature: str | None = None,
     ) -> str:
         """Display a richer custom block with complementary prediction graphs."""
+
+        ##############################
+        #------data preparation------#
+        ##############################
+
         if self.y_test is None or self.y_pred is None:
             return title, [pn.pane.Markdown("Prediction diagnostics requires both y_test and y_pred.")]
 
@@ -103,17 +108,18 @@ class UserReportBlocks(ReportBlockMixin):
         residual_hist.add_vline(x=0, line_dash="dash", line_color="#666666")
         residual_hist.update_layout(margin=dict(l=20, r=20, t=50, b=20))
 
+        ###################################
+        #------block rendering logic------#
+        ###################################
+
         summary = pn.pane.Markdown(
-            (
                 "**Quick diagnostics:** "
                 f"MAE = {diagnostics['abs_error'].mean():.2f}, "
                 f"mean residual = {diagnostics['residual'].mean():.2f}, "
                 f"max absolute error = {diagnostics['abs_error'].max():.2f}"
-            )
         )
 
-        # Avoid stretch_both here: Panel standalone export can compute a collapsed row
-        # height, which makes the next section overlap these figures.
+        # Avoid using stretch_both here: it can cause rendering issues.
         scatter_pane = pn.pane.Plotly(
             scatter,
             config={"displayModeBar": False, "responsive": True},
@@ -127,6 +133,8 @@ class UserReportBlocks(ReportBlockMixin):
             height=360,
         )
         charts = pn.Row(scatter_pane, residual_pane, sizing_mode="stretch_width")
+
+        # Return a title, and a list of Panel objects to be rendered in the report.
         return title, [summary, charts]
 
 if __name__ == "__main__":
@@ -134,6 +142,7 @@ if __name__ == "__main__":
     y_df = house_df["SalePrice"]
     X_df = house_df[house_df.columns.difference(["SalePrice"])].copy()
 
+    # Ensure non-numeric columns are treated as categorical before encoding.
     for col in X_df.columns:
         if not pd.api.types.is_numeric_dtype(X_df[col]):
             X_df[col] = X_df[col].astype(object)
@@ -148,6 +157,7 @@ if __name__ == "__main__":
 
     regressor = RandomForestRegressor(n_estimators=50).fit(Xtrain, ytrain)
 
+    # Keep y_pred as dataframe to match SmartExplainer report expectations.
     y_pred = pd.DataFrame(regressor.predict(Xtest), columns=["pred"], index=Xtest.index)
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -157,6 +167,7 @@ if __name__ == "__main__":
         preprocessing=encoder,  # Optional: compile step can use inverse_transform method
         features_dict=house_dict,
     )
+    # Compile once before report generation.
     xpl.compile(x=Xtest, y_pred=y_pred, y_target=ytest)
 
     output_file = os.path.join(cur_dir, "output", "report.html")
@@ -169,6 +180,7 @@ if __name__ == "__main__":
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
+        # Load tutorial-specific report layout where custom block types are declared.
         yaml_path=custom_report_config_file,
         # Use the custom block class to enable user-defined blocks in the report.
         block_instance=UserReportBlocks(),
