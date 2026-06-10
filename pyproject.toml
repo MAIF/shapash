@@ -98,6 +98,10 @@ where = ["."]
 pythonpath = ["."]
 testpaths = ["tests"]
 
+[tool.coverage.report]
+show_missing = true
+fail_under = 75
+
 [tool.mypy]
 exclude = ["tests", "tutorial"]
 ignore_missing_imports = true
