@@ -456,6 +456,37 @@ class TestCallbacks(unittest.TestCase):
         assert page == 3
         assert selected_feature == "column1"
 
+    def test_create_filter_modalities_selection_nan_first_value(self):
+        # String column where the first row is NaN — type detection must not misidentify it
+        df = pd.DataFrame({"col": [np.nan, "b", "c", "b", "c"]})
+        new_element = create_filter_modalities_selection("col", {"type": "var_dropdown", "index": 1}, df)
+        assert type(new_element.children) == dcc.Dropdown
+
+    def test_create_filter_modalities_selection_nan_excluded_from_options(self):
+        # NaN must not appear in dropdown options and np.sort must not crash
+        df = pd.DataFrame({"col": ["a", np.nan, "c", "a", np.nan]})
+        new_element = create_filter_modalities_selection("col", {"type": "var_dropdown", "index": 1}, df)
+        option_values = [opt["value"] for opt in new_element.children.options]
+        assert np.nan not in option_values
+        assert sorted(option_values) == ["a", "c"]
+
+    def test_select_data_from_str_filters_with_nan(self):
+        # Filtering a column that contains NaN values should return only matching non-null rows
+        df = pd.DataFrame(
+            {
+                "col": ["a", np.nan, "c", np.nan, "e"],
+                "other": [1, 2, 3, 4, 5],
+            }
+        )
+        feature_id = [1]
+        id_str_modality = [{"type": "dynamic-str", "index": 1}]
+        val_feature = ["col"]
+        val_str_modality = [["a", "c"]]
+
+        result = select_data_from_str_filters(df, feature_id, id_str_modality, val_feature, val_str_modality)
+        assert list(result.index) == [0, 2]
+        assert list(result["col"]) == ["a", "c"]
+
     def test_create_dropdown_feature_filter(self):
         dropdown = create_dropdown_feature_filter(1, [])
         assert type(dropdown) == html.Div
