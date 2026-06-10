@@ -83,7 +83,7 @@ doc = [
     "sphinxcontrib-serializinghtml==1.1.5",
 ]
 
-all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc]"]
+all = ["shapash[dev, test, report, xgboost, lightgbm, catboost, lime, doc]"]
 
 [project.urls]
 Homepage = "https://github.com/MAIF/shapash"
