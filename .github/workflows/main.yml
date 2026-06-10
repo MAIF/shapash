@@ -1,36 +1,64 @@
-name: Build & Test
-on: push
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  # Cancel older runs for the same PR/branch when new commits arrive.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build_test_publish:
-    name: "Build & Test"
+  code_quality:
+    name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - name: Git checkout
+      uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: pip
+        cache-dependency-path: pyproject.toml # it would be better on a lock file
+    - name: Install dev dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install '.[dev]'
+    - name: Check linting
+      run: make lint
+    - name: Check formatting
+      run: make format
+
+  test:
+    name: Build & Test
+    needs: code_quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
-      max-parallel: 1
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: pyproject.toml
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install .[all]
-    - name: Run pre-commit hook
-      run: pre-commit run --all-files
-    - name: Test with pytest
-      run: |
-        python -m pytest
+        python -m pip install '.[all]'
     - name: Build python package
       run: |
         python -m pip install --upgrade build
         python -m build
-    - name: Deploy to PyPI
-      if: success() && startsWith(github.ref, 'refs/tags') && matrix.python-version == '3.11'
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Test and coverage
+      run: make coverage
