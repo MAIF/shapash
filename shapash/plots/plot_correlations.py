@@ -157,6 +157,8 @@ def plot_correlations(
         features_to_hide = []
 
     if optimized:
+        # Avoid mutating the caller-provided dataframe when bucketing categories.
+        df = df.copy()
         categorical_columns = list(df.select_dtypes(include=["string", "category"]).columns)
         categorical_columns += [
             col
