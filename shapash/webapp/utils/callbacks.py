@@ -205,7 +205,7 @@ def select_data_from_date_filters(
         for i in range(len(feature_id)):
             if feature_id[i] in date_id:
                 position = np.where(np.array(date_id) == feature_id[i])[0][0]
-                if (position is not None) & (start_date[position] < end_date[position]):
+                if (position is not None) & (start_date[position] <= end_date[position]):
                     df = df[((df[val_feature[i]] >= start_date[position]) & (df[val_feature[i]] <= end_date[position]))]
 
     return df
@@ -638,37 +638,40 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
     html.Div
         Div containing the modalities selection options
     """
-    if type(round_dataframe[value].iloc[0]) is np.bool_ or type(round_dataframe[value].iloc[0]) is bool:
+    _non_null = round_dataframe[value].dropna()
+    _first = _non_null.iloc[0] if len(_non_null) > 0 else None
+
+    if type(_first) is np.bool_ or type(_first) is bool:
         new_element = html.Div(
             dcc.RadioItems(
-                [{"label": str(val), "value": val} for val in round_dataframe[value].unique()],
+                [{"label": str(val), "value": val} for val in _non_null.unique()],
                 id={"type": "dynamic-bool", "index": filter_id["index"]},
-                value=round_dataframe[value].iloc[0],
+                value=_first,
                 inline=False,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (isinstance(round_dataframe[value].iloc[0], str)) | (
-        (isinstance(round_dataframe[value].iloc[0], np.int64)) & (len(round_dataframe[value].unique()) <= 20)
-    ):
+    elif isinstance(_first, str) or (isinstance(_first, int | np.int64) and (len(_non_null.unique()) <= 20)):
+        # If feature has integer type with at most 20 values or string type (no limits on number of values),
+        # then display Dropdown component
+        # Notice that integer column with NaN values is considered as float, so it will not be displayed as Dropdown.
         new_element = html.Div(
             dcc.Dropdown(
                 id={"type": "dynamic-str", "index": filter_id["index"]},
-                options=[{"label": i, "value": i} for i in np.sort(round_dataframe[value].unique())],
+                options=[{"label": i, "value": i} for i in np.sort(_non_null.unique())],
                 multi=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) is pd.Timestamp) | (
-        type(round_dataframe[value].iloc[0]) is datetime.datetime
-    ):
+    elif (type(_first) is pd.Timestamp) | (type(_first) is datetime.datetime):
         new_element = html.Div(
             dcc.DatePickerRange(
                 id={"type": "dynamic-date", "index": filter_id["index"]},
-                min_date_allowed=round_dataframe[value].min(),
-                max_date_allowed=round_dataframe[value].max(),
-                start_date=round_dataframe[value].min(),
-                end_date=round_dataframe[value].max(),
+                min_date_allowed=_non_null.min(),
+                max_date_allowed=_non_null.max(),
+                start_date=_non_null.min(),
+                end_date=_non_null.max(),
+                minimum_nights=0,
                 clearable=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
