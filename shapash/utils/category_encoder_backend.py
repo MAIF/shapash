@@ -112,7 +112,7 @@ def inv_transform_target(x_in, enc_target):
         transco = {
             "col": name_target,
             "mapping": pd.Series(data=aggregate.index, index=aggregate.values),
-            "data_type": "str",
+            "data_type": "string",
         }
         x_in = inv_transform_ordinal(x_in, [transco])
     return x_in

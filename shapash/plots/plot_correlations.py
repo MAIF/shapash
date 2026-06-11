@@ -161,7 +161,7 @@ def plot_correlations(
         categorical_columns += [
             col
             for col in df.select_dtypes(include=["object"]).columns
-            if df[col].dropna().map(lambda value: isinstance(value, str)).all()
+            if pd.api.types.infer_dtype(df[col], skipna=True) in ("string", "unicode", "empty")
         ]
 
         for col in categorical_columns:
