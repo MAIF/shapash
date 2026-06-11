@@ -79,7 +79,7 @@ doc = [
     "sphinxcontrib-serializinghtml==1.1.5",
 ]
 
-all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc]"]
+all = ["shapash[dev, test, report, xgboost, lightgbm, catboost, lime, doc]"]
 
 [project.urls]
 Homepage = "https://github.com/MAIF/shapash"
@@ -97,6 +97,10 @@ where = ["."]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 75
 
 [tool.mypy]
 exclude = ["tests", "tutorial"]
