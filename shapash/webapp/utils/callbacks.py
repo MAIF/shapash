@@ -205,7 +205,7 @@ def select_data_from_date_filters(
         for i in range(len(feature_id)):
             if feature_id[i] in date_id:
                 position = np.where(np.array(date_id) == feature_id[i])[0][0]
-                if (position is not None) & (start_date[position] < end_date[position]):
+                if (position is not None) & (start_date[position] <= end_date[position]):
                     df = df[((df[val_feature[i]] >= start_date[position]) & (df[val_feature[i]] <= end_date[position]))]
 
     return df
