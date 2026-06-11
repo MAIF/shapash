@@ -40,17 +40,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "onehot_ce_city"
         input_dict1["mapping"] = pd.Series(data=["chicago", "paris"], index=["CH", "PR"])
-        input_dict1["data_type"] = "str"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "other"
         input_dict2["mapping"] = pd.Series(data=["A", "B", "C"], index=["A-B", "A-B", "C"])
-        input_dict2["data_type"] = "str"
+        input_dict2["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "onehot_ce_state"
         input_dict3["mapping"] = pd.Series(data=["US", "FR"], index=["US-FR", "US-FR"])
-        input_dict3["data_type"] = "str"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         test_encoded.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "col3_0", "col3_1", "col4_0", "col4_1"]
@@ -120,17 +120,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "onehot_ce_city"
         input_dict1["mapping"] = pd.Series(data=["chicago", "paris"], index=["CH", "PR"])
-        input_dict1["data_type"] = "str"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "other"
         input_dict2["mapping"] = pd.Series(data=["A", "B", "C"], index=["A-B", "A-B", "C"])
-        input_dict2["data_type"] = "str"
+        input_dict2["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "onehot_ce_state"
         input_dict3["mapping"] = pd.Series(data=["US", "FR"], index=["US-FR", "US-FR"])
-        input_dict3["data_type"] = "str"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         test_encoded.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "col3_0", "col3_1", "col4_0", "col4_1"]

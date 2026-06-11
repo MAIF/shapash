@@ -101,17 +101,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "str"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "str"
+        input_dict2["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "str"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         result1 = enc_onehot.transform(test)
@@ -415,7 +415,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict = dict()
         input_dict["col"] = "state"
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
-        input_dict["data_type"] = "str"
+        input_dict["data_type"] = "string"
         result = inverse_transform(data, input_dict)
         pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
@@ -488,17 +488,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "str"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "str"
+        input_dict2["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "str"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         result1 = enc_onehot.transform(test)

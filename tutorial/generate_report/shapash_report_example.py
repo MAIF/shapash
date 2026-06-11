@@ -23,7 +23,7 @@ if __name__ == "__main__":
     X_df = house_df[house_df.columns.difference(["SalePrice"])]
 
     categorical_features = [
-        col for col in X_df.columns if is_string_dtype(X_df[col]) or X_df[col].dtype.name == "object"
+        col for col in X_df.columns if is_string_dtype(X_df[col]) or X_df[col].dtype.name in ("object", "category")
     ]
 
     encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(X_df)
