@@ -462,6 +462,13 @@ class TestCallbacks(unittest.TestCase):
         new_element = create_filter_modalities_selection("col", {"type": "var_dropdown", "index": 1}, df)
         assert type(new_element.children) == dcc.Dropdown
 
+    def test_create_filter_modalities_selection_timestamp_with_nan(self):
+        # Timestamp column with NaN must render DatePickerRange, not Dropdown
+        dates = pd.date_range("2023-01-01", periods=4).tolist()
+        df = pd.DataFrame({"col": [np.nan] + dates})
+        new_element = create_filter_modalities_selection("col", {"type": "var_dropdown", "index": 1}, df)
+        assert type(new_element.children) == dcc.DatePickerRange
+
     def test_create_filter_modalities_selection_nan_excluded_from_options(self):
         # NaN must not appear in dropdown options and np.sort must not crash
         df = pd.DataFrame({"col": ["a", np.nan, "c", "a", np.nan]})
