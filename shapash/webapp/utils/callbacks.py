@@ -651,7 +651,10 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (isinstance(_first, str) | isinstance(_first, np.int64)) & len(_non_null.unique()) <= 20:
+    elif isinstance(_first, str) or (isinstance(_first, int | np.int64) and (len(_non_null.unique()) <= 20)):
+        # If feature has integer type with at most 20 values or string type (no limits on number of values),
+        # then display Dropdown component
+        # Notice that integer column with NaN values is considered as float, so it will not be displayed as Dropdown.
         new_element = html.Div(
             dcc.Dropdown(
                 id={"type": "dynamic-str", "index": filter_id["index"]},
