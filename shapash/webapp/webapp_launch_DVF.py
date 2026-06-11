@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
+from shapash.explainer.smart_explainer import DEFAULT_HOST
 
 house_df, house_dict = data_loading("house_prices")
 y_df = house_df["SalePrice"].to_frame()
@@ -37,4 +38,4 @@ xpl.init_app()
 app = xpl.smartapp.app
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=8080)
+    app.run(debug=False, host=DEFAULT_HOST, port=8080)

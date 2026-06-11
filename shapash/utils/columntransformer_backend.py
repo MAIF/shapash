@@ -341,7 +341,7 @@ def get_names(name, trans, column, column_transformer):
                 return column_transformer._df_columns[column]
         else:
             indices = np.arange(column_transformer._n_features)
-            return ["x%d" % i for i in indices[column]]
+            return [f"x{i}" for i in indices[column]]
     if not hasattr(trans, "get_feature_names_out"):
         if column is None:
             return []
@@ -401,9 +401,6 @@ def get_list_features_names(list_preprocessing, columns_dict):
 
         elif str(type(enc)) in columntransformer:
             feature_expected = get_feature_names(enc)
-
-        elif str(type(enc)) in ("<class 'list'>"):
-            feature_expected = feature_expected
 
     return feature_expected
 

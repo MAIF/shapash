@@ -621,14 +621,14 @@ def create_dropdown_feature_filter(n_clicks_add: int | None, options: list) -> h
     return subset_filter
 
 
-def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd.DataFrame) -> html.Div:
+def create_filter_modalities_selection(value: str, filter_id: dict, round_dataframe: pd.DataFrame) -> html.Div:
     """Create the modalities filter according to the feature type.
 
     Parameters
     ----------
     value : str
         feature name
-    id : dict
+    filter_id : dict
         id of the filter
     round_dataframe : pd.DataFrame
         Dataframe
@@ -642,18 +642,18 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
         new_element = html.Div(
             dcc.RadioItems(
                 [{"label": str(val), "value": val} for val in round_dataframe[value].unique()],
-                id={"type": "dynamic-bool", "index": id["index"]},
+                id={"type": "dynamic-bool", "index": filter_id["index"]},
                 value=round_dataframe[value].iloc[0],
                 inline=False,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) == str) | (
-        (type(round_dataframe[value].iloc[0]) == np.int64) & (len(round_dataframe[value].unique()) <= 20)
+    elif (isinstance(round_dataframe[value].iloc[0], str)) | (
+        (isinstance(round_dataframe[value].iloc[0], np.int64)) & (len(round_dataframe[value].unique()) <= 20)
     ):
         new_element = html.Div(
             dcc.Dropdown(
-                id={"type": "dynamic-str", "index": id["index"]},
+                id={"type": "dynamic-str", "index": filter_id["index"]},
                 options=[{"label": i, "value": i} for i in np.sort(round_dataframe[value].unique())],
                 multi=True,
             ),
@@ -664,7 +664,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     ):
         new_element = html.Div(
             dcc.DatePickerRange(
-                id={"type": "dynamic-date", "index": id["index"]},
+                id={"type": "dynamic-date", "index": filter_id["index"]},
                 min_date_allowed=round_dataframe[value].min(),
                 max_date_allowed=round_dataframe[value].max(),
                 start_date=round_dataframe[value].min(),
@@ -679,14 +679,14 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
         new_element = html.Div(
             [
                 dcc.Input(
-                    id={"type": "lower", "index": id["index"]},
+                    id={"type": "lower", "index": filter_id["index"]},
                     value=lower_value,
                     type="number",
                     style={"width": "60px"},
                 ),
                 f" <= {value} in [{round_dataframe[value].min()}, {round_dataframe[value].max()}]<= ",
                 dcc.Input(
-                    id={"type": "upper", "index": id["index"]},
+                    id={"type": "upper", "index": filter_id["index"]},
                     value=upper_value,
                     type="number",
                     style={"width": "60px"},

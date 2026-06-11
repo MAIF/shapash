@@ -23,17 +23,11 @@ def perform_global_dataframe_analysis(df: pd.DataFrame | None) -> dict:
         return dict()
     missing_values = df.isna().sum().sum()
     global_d = {
-        "number of features": len(df.columns),
-        "number of observations": df.shape[0],
-        "missing values": missing_values,
-        "% missing values": missing_values / (df.shape[0] * df.shape[1]),
+        "number of features": int(len(df.columns)),
+        "number of observations": int(df.shape[0]),
+        "missing values": int(missing_values),
+        "% missing values": round_to_k(missing_values / (df.shape[0] * df.shape[1]), 3),
     }
-
-    for stat in global_d.keys():
-        if stat == "number of observations":
-            global_d[stat] = int(global_d[stat])  # Keeping the exact number
-        elif isinstance(global_d[stat], float):
-            global_d[stat] = round_to_k(global_d[stat], 3)
 
     replace_dict_values(global_d, display_value, ",", ".")
 
