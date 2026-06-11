@@ -10,6 +10,12 @@ from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import check_transformers, preprocessing_tolist
 
 
+def _is_string_dtype_metadata(dtype_value):
+    if not isinstance(dtype_value, str):
+        return False
+    return dtype_value in {"object", "str", "string"} or dtype_value.startswith("string[")
+
+
 def check_preprocessing(preprocessing=None):
     """
     Check that all transformation of the preprocessing are supported.
@@ -395,7 +401,7 @@ def check_postprocessing(x, postprocessing=None):
                     raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
 
                 if isinstance(x, dict):
-                    if x[key] not in {"object", "str", "string"}:
+                    if not _is_string_dtype_metadata(x[key]):
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
@@ -408,7 +414,7 @@ def check_postprocessing(x, postprocessing=None):
                         f" must be 'in' and 'out'."
                     )
                 if isinstance(x, dict):
-                    if x[key] not in {"object", "str", "string"}:
+                    if not _is_string_dtype_metadata(x[key]):
                         raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):

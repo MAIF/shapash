@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as sch
-from pandas.api.types import is_string_dtype
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
@@ -158,13 +157,19 @@ def plot_correlations(
         features_to_hide = []
 
     if optimized:
-        categorical_columns = [
-            col for col in df.columns if is_string_dtype(df[col]) or df[col].dtype.name == "category"
+        categorical_columns = list(df.select_dtypes(include=["string", "category"]).columns)
+        categorical_columns += [
+            col
+            for col in df.select_dtypes(include=["object"]).columns
+            if df[col].dropna().map(lambda value: isinstance(value, str)).all()
         ]
 
         for col in categorical_columns:
             top_categories = df[col].value_counts().nlargest(200).index
-            df[col] = df[col].where(df[col].isin(top_categories), other="Other")
+            keep_mask = df[col].isna() | df[col].isin(top_categories)
+            if isinstance(df[col].dtype, pd.CategoricalDtype) and "Other" not in df[col].cat.categories:
+                df[col] = df[col].cat.add_categories(["Other"])
+            df[col] = df[col].where(keep_mask, other="Other")
 
         if len(df) > 10000:
             df = df.sample(n=10000, random_state=1)
