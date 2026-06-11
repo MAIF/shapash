@@ -667,10 +667,11 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
         new_element = html.Div(
             dcc.DatePickerRange(
                 id={"type": "dynamic-date", "index": filter_id["index"]},
-                min_date_allowed=round_dataframe[value].min(),
-                max_date_allowed=round_dataframe[value].max(),
-                start_date=round_dataframe[value].min(),
-                end_date=round_dataframe[value].max(),
+                min_date_allowed=_non_null.min(),
+                max_date_allowed=_non_null.max(),
+                start_date=_non_null.min(),
+                end_date=_non_null.max(),
+                minimum_nights=0,
                 clearable=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
