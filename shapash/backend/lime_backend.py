@@ -39,6 +39,11 @@ class LimeBackend(BaseBackend):
         data = self.data if self.data is not None else x
         explainer = lime_tabular.LimeTabularExplainer(data.values, feature_names=x.columns, mode=self._case)
 
+        def _with_feature_names(values, predict_fn):
+            if isinstance(values, pd.DataFrame):
+                return predict_fn(values)
+            return predict_fn(pd.DataFrame(values, columns=x.columns))
+
         lime_contrib = []
         for i in x.index:
             if self._case == "classification":
@@ -46,7 +51,9 @@ class LimeBackend(BaseBackend):
 
                 if num_classes <= 2:
                     exp = explainer.explain_instance(
-                        x.loc[i].to_numpy(), self.model.predict_proba, num_features=x.shape[1]
+                        x.loc[i].to_numpy(),
+                        lambda values: _with_feature_names(values, self.model.predict_proba),
+                        num_features=x.shape[1],
                     )
                     lime_contrib.append({_transform_name(var_name[0], x): var_name[1] for var_name in exp.as_list()})
 
@@ -58,7 +65,7 @@ class LimeBackend(BaseBackend):
                         for idx in x.index:
                             exp = explainer.explain_instance(
                                 x.loc[idx].to_numpy(),
-                                self.model.predict_proba,
+                                lambda values: _with_feature_names(values, self.model.predict_proba),
                                 top_labels=num_classes,
                                 num_features=x.shape[1],
                             )
@@ -71,7 +78,11 @@ class LimeBackend(BaseBackend):
                     return contribution
 
             else:
-                exp = explainer.explain_instance(x.loc[i].to_numpy(), self.model.predict, num_features=x.shape[1])
+                exp = explainer.explain_instance(
+                    x.loc[i].to_numpy(),
+                    lambda values: _with_feature_names(values, self.model.predict),
+                    num_features=x.shape[1],
+                )
                 lime_contrib.append({_transform_name(var_name[0], x): var_name[1] for var_name in exp.as_list()})
 
         contributions = pd.DataFrame(lime_contrib, index=x.index)

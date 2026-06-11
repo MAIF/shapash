@@ -395,7 +395,7 @@ def check_postprocessing(x, postprocessing=None):
                     raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
 
                 if isinstance(x, dict):
-                    if x[key] != "object":
+                    if x[key] not in {"object", "str", "string"}:
                         raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
@@ -408,7 +408,7 @@ def check_postprocessing(x, postprocessing=None):
                         f" must be 'in' and 'out'."
                     )
                 if isinstance(x, dict):
-                    if x[key] != "object":
+                    if x[key] not in {"object", "str", "string"}:
                         raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):

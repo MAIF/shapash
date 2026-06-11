@@ -83,7 +83,7 @@ class TestContributions(unittest.TestCase):
         [type]
             [description]
         """
-        model.fit(self.x_train, self.y_train)
+        model.fit(self.x_train, self.y_train.values.ravel())
         if args:
             return model.predict(self.x_test, **args)
         else:
@@ -94,7 +94,7 @@ class TestContributions(unittest.TestCase):
         Unit test rank contributions 1
         """
         model = RandomForestClassifier(n_estimators=3)
-        model.fit(self.x_train, self.y_train)
+        model.fit(self.x_train, self.y_train.values.ravel())
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(self.x_test)
         slist = [
