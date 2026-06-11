@@ -109,10 +109,11 @@ def inv_transform_target(x_in, enc_target):
             # print("Warning in inverse TargetEncoder - col " + str(name_target) + ": Multiple label for the same value, "
             #                                                                   "each label will be separate using : / ")
 
+        data_type = tgt_enc.get("data_type") or "string"
         transco = {
             "col": name_target,
             "mapping": pd.Series(data=aggregate.index, index=aggregate.values),
-            "data_type": "string",
+            "data_type": data_type,
         }
         x_in = inv_transform_ordinal(x_in, [transco])
     return x_in
