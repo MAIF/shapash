@@ -42,7 +42,10 @@ class LimeBackend(BaseBackend):
         def _with_feature_names(values, predict_fn):
             if isinstance(values, pd.DataFrame):
                 return predict_fn(values)
-            return predict_fn(pd.DataFrame(values, columns=x.columns))
+            try:
+                return predict_fn(pd.DataFrame(values, columns=x.columns))
+            except (TypeError, ValueError):
+                return predict_fn(values)
 
         lime_contrib = []
         if self._case == "classification":
