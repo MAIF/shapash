@@ -409,7 +409,7 @@ def check_postprocessing(x, postprocessing=None):
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(
-                            f"Expected a string dtype to apply upper/lower in {key} dict, " f"got {x[key].dtype!r}"
+                            f"Expected a string dtype to apply upper/lower on column {key}, " f"got {x[key].dtype!r}"
                         )
 
             if dict_post["type"] == "regex":
@@ -427,7 +427,7 @@ def check_postprocessing(x, postprocessing=None):
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
                         raise ValueError(
-                            f"Expected a string dtype to apply regex methods in {key} dict, " f"got {x[key].dtype!r}"
+                            f"Expected a string dtype to apply regex methods on column {key}, " f"got {x[key].dtype!r}"
                         )
 
 
