@@ -89,22 +89,22 @@ class TestCheck(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "object"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "object"
+        input_dict2["data_type"] = "string"
 
         input_dict = dict()
         input_dict["col"] = "state"
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
-        input_dict["data_type"] = "object"
+        input_dict["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "object"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         y = pd.DataFrame(data=[0, 1], columns=["y"])
@@ -507,9 +507,9 @@ class TestCheck(unittest.TestCase):
             train_3[["city_1", "city_2", "state_1", "state_2", "other"]], train_3["y"]
         )
 
-        dict_4 = {"col": "state", "mapping": pd.Series(data=[1, 2], index=["US", "FR"]), "data_type": "object"}
+        dict_4 = {"col": "state", "mapping": pd.Series(data=[1, 2], index=["US", "FR"]), "data_type": "string"}
 
-        dict_5 = {"col": "city", "mapping": pd.Series(data=[1, 2], index=["chicago", "paris"]), "data_type": "object"}
+        dict_5 = {"col": "city", "mapping": pd.Series(data=[1, 2], index=["chicago", "paris"]), "data_type": "string"}
 
         enc_4 = [enc_3, [dict_4]]
 
@@ -574,6 +574,15 @@ class TestCheck(unittest.TestCase):
             check_postprocessing(features_types, postprocessing4)
             check_postprocessing(features_types, postprocessing5)
             check_postprocessing(features_types, postprocessing6)
+
+    def test_check_postprocessing_accepts_pandas_string_metadata(self):
+        """Unit test pandas string dtype metadata validation for postprocessing."""
+        features_types = {"Col1": "string[python]", "Col2": "string[pyarrow]"}
+        case_postprocessing = {"Col1": {"type": "case", "rule": "lower"}}
+        regex_postprocessing = {"Col2": {"type": "regex", "rule": {"in": "A", "out": "a"}}}
+
+        check_postprocessing(features_types, case_postprocessing)
+        check_postprocessing(features_types, regex_postprocessing)
 
     def test_check_preprocessing_options_1(self):
         """

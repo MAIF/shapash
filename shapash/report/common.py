@@ -39,6 +39,8 @@ def series_dtype(s: pd.Series, cat_num_threshold: int = 15) -> VarType:
     """
     if is_bool_dtype(s):
         return VarType.TYPE_CAT
+    elif isinstance(s.dtype, pd.CategoricalDtype):
+        return VarType.TYPE_CAT
     elif is_string_dtype(s):
         return VarType.TYPE_CAT
     elif s.dtype.name == "object":

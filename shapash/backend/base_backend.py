@@ -102,7 +102,10 @@ class BaseBackend(ABC):
 
         local_contributions = explain_data["contributions"]
         if subset is not None:
-            local_contributions = local_contributions.loc[subset]
+            if isinstance(local_contributions, list):
+                local_contributions = [c[subset] for c in local_contributions]
+            else:
+                local_contributions = local_contributions.loc[subset]
         local_contributions = self.format_and_aggregate_local_contributions(x, local_contributions)
         return local_contributions
 

@@ -40,17 +40,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "onehot_ce_city"
         input_dict1["mapping"] = pd.Series(data=["chicago", "paris"], index=["CH", "PR"])
-        input_dict1["data_type"] = "object"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "other"
         input_dict2["mapping"] = pd.Series(data=["A", "B", "C"], index=["A-B", "A-B", "C"])
-        input_dict2["data_type"] = "object"
+        input_dict2["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "onehot_ce_state"
         input_dict3["mapping"] = pd.Series(data=["US", "FR"], index=["US-FR", "US-FR"])
-        input_dict3["data_type"] = "object"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         test_encoded.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "col3_0", "col3_1", "col4_0", "col4_1"]
@@ -120,17 +120,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "onehot_ce_city"
         input_dict1["mapping"] = pd.Series(data=["chicago", "paris"], index=["CH", "PR"])
-        input_dict1["data_type"] = "object"
+        input_dict1["data_type"] = "string"
 
         input_dict2 = dict()
         input_dict2["col"] = "other"
         input_dict2["mapping"] = pd.Series(data=["A", "B", "C"], index=["A-B", "A-B", "C"])
-        input_dict2["data_type"] = "object"
+        input_dict2["data_type"] = "string"
 
         input_dict3 = dict()
         input_dict3["col"] = "onehot_ce_state"
         input_dict3["mapping"] = pd.Series(data=["US", "FR"], index=["US-FR", "US-FR"])
-        input_dict3["data_type"] = "object"
+        input_dict3["data_type"] = "string"
         list_dict = [input_dict2, input_dict3]
 
         test_encoded.columns = ["col1_0", "col1_1", "col2_0", "col2_1", "col3_0", "col3_1", "col4_0", "col4_1"]
@@ -270,3 +270,48 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         )
 
         assert_frame_equal(df_test, df_expected)
+
+    def test_handle_categorical_missing_string_dtype(self):
+        """Fill pd.NA for pandas StringDtype columns."""
+        df_test = pd.DataFrame(
+            {
+                "city": pd.Series([pd.NA, "paris", "chicago"], dtype="string"),
+                "state": ["US", "FR", "FR"],
+            }
+        )
+
+        df_result = handle_categorical_missing(df_test)
+
+        df_expected = pd.DataFrame(
+            {
+                "city": pd.Series(["missing", "paris", "chicago"], dtype="string"),
+                "state": ["US", "FR", "FR"],
+            }
+        )
+
+        assert_frame_equal(df_result, df_expected)
+
+    def test_handle_categorical_missing_category_dtype(self):
+        """Add 'missing' category and fill NaN for category columns."""
+        df_test = pd.DataFrame(
+            {
+                "city": pd.Series(
+                    pd.Categorical([np.nan, "paris", "chicago"], categories=["paris", "chicago"])
+                ),
+                "state": ["US", "FR", "FR"],
+            }
+        )
+
+        df_result = handle_categorical_missing(df_test)
+
+        self.assertEqual(df_result["city"].dtype.name, "category")
+        self.assertIn("missing", df_result["city"].cat.categories)
+        self.assertFalse(df_result["city"].isna().any())
+
+        expected_city = pd.Series(
+            pd.Categorical(
+                ["missing", "paris", "chicago"],
+                categories=["paris", "chicago", "missing"],
+            )
+        )
+        pd.testing.assert_series_equal(df_result["city"], expected_city, check_names=False)

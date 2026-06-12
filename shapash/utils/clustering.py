@@ -3,6 +3,7 @@ import re
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
 from plotly.colors import get_colorscale
 from scipy.interpolate import splev, splprep
 from shapely.geometry import MultiPoint, Polygon
@@ -529,7 +530,7 @@ def encode_color_value(color_value):
     label_mapping : dict or None
     """
 
-    is_categorical = color_value.dtype == "object" or color_value.dtype.name == "category"
+    is_categorical = is_string_dtype(color_value) or color_value.dtype.name in ("object", "category")
 
     if not is_categorical:
         return color_value.astype(float), False, None
