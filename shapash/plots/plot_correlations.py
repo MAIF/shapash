@@ -165,6 +165,8 @@ def plot_correlations(
             for col in df.select_dtypes(include=["object"]).columns
             if pd.api.types.infer_dtype(df[col], skipna=True) in ("string", "unicode", "empty")
         ]
+        if facet_col:
+            categorical_columns = [col for col in categorical_columns if col != facet_col]
 
         for col in categorical_columns:
             top_categories = df[col].value_counts().nlargest(200).index
