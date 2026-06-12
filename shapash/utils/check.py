@@ -402,10 +402,15 @@ def check_postprocessing(x, postprocessing=None):
 
                 if isinstance(x, dict):
                     if not _is_string_dtype_metadata(x[key]):
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                        raise ValueError(
+                            f"Expected string dtype metadata (object/str/string/string[...]) "
+                            f"to apply upper/lower in {key} dict, got {x[key]!r}"
+                        )
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                        raise ValueError(
+                            f"Expected a string dtype to apply upper/lower in {key} dict, " f"got {x[key].dtype!r}"
+                        )
 
             if dict_post["type"] == "regex":
                 if set(dict_post["rule"].keys()) != {"in", "out"}:
@@ -415,10 +420,15 @@ def check_postprocessing(x, postprocessing=None):
                     )
                 if isinstance(x, dict):
                     if not _is_string_dtype_metadata(x[key]):
-                        raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
+                        raise ValueError(
+                            f"Expected string dtype metadata (object/str/string/string[...]) "
+                            f"to apply regex methods in {key} dict, got {x[key]!r}"
+                        )
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                        raise ValueError(
+                            f"Expected a string dtype to apply regex methods in {key} dict, " f"got {x[key].dtype!r}"
+                        )
 
 
 def check_features_name(columns_dict, features_dict, features):
