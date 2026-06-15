@@ -255,12 +255,12 @@ class SmartPredictor:
             self.data["x_postprocessed"] = self.apply_postprocessing()
             try:
                 self.data["x_preprocessed"] = self.apply_preprocessing()
-            except BaseException:
+            except BaseException as err:
                 raise ValueError(
                     """
                     Preprocessing has failed. The preprocessing specified or the dataset doesn't match.
                     """
-                )
+                ) from err
         else:
             if not hasattr(self, "data"):
                 raise ValueError("No dataset x specified.")
@@ -336,7 +336,7 @@ class SmartPredictor:
         x: pandas.DataFrame
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
-        if type(x) == dict:
+        if isinstance(x, dict):
             if not all([column in self.features_types.keys() for column in x.keys()]):
                 raise ValueError(
                     """
@@ -347,12 +347,12 @@ class SmartPredictor:
                 x = pd.DataFrame.from_dict(x, orient="index").T
                 for feature, type_feature in self.features_types.items():
                     x[feature] = x[feature].astype(type_feature)
-            except BaseException:
+            except BaseException as err:
                 raise ValueError(
                     """
                     The structure of the given dict x isn't at the right format.
                     """
-                )
+                ) from err
         return x
 
     def check_dataset_features(self, x):
@@ -370,7 +370,7 @@ class SmartPredictor:
                 f"x contains columns not declared in columns_dict: {unknown_columns}. "
                 f"Expected columns: {sorted(self.columns_dict.values())}"
             )
-        if not all([type(key) == int for key in self.columns_dict.keys()]):
+        if not all([isinstance(key, int) for key in self.columns_dict.keys()]):
             raise ValueError("columns_dict must have only integers keys for features order.")
         features_order = []
         for order in range(min(self.columns_dict.keys()), max(self.columns_dict.keys()) + 1):
@@ -380,8 +380,7 @@ class SmartPredictor:
         missing_types = [c for c in x.columns if c not in self.features_types.keys()]
         if missing_types:
             raise ValueError(
-                f"x contains columns not declared in features_types: {missing_types}. "
-                f"Declare a dtype for each column in features_types."
+                f"All features from dataset x must be in the features_types dict initialized: {missing_types}."
             )
         mismatched = [
             (feature, str(x[feature].dtype), self.features_types[feature])

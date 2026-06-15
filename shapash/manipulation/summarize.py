@@ -9,6 +9,7 @@ import pandas as pd
 from pandas.core.common import flatten
 from sklearn.manifold import TSNE
 
+from shapash._optional import import_optional_module
 from shapash.utils.transform import get_features_transform_mapping
 
 
@@ -183,7 +184,11 @@ def project_feature_values_1d(feature_values, col, x_init, x_encoded, preprocess
             ).fit_transform(feature_values)
             feature_values = pd.Series(feature_values_proj_1d[:, 0], name=col, index=feature_values.index)
         except Exception as e:
-            warnings.warn(f"Could not project group features values with t-SNE: {e}", UserWarning)
+            warnings.warn(
+                f"Could not project group features values with t-SNE: {e}",
+                UserWarning,
+                stacklevel=2,
+            )
             feature_values = pd.Series(feature_values.iloc[:, 0], name=col, index=feature_values.index)
 
     elif how == "dict_of_values":
@@ -216,17 +221,14 @@ def compute_corr(df, compute_method):
     # Remove user warnings (when not enough values to compute correlation).
     warnings.filterwarnings("ignore")
     if compute_method == "phik":
-        try:
-            from phik import phik_matrix
-
-            return phik_matrix(df, verbose=False)
-        except ImportError:
-            warnings.warn(
-                'Cannot compute phik correlations. Falling back to pearson. Install phik using "pip install phik".',
-                UserWarning,
-            )
+        phik = import_optional_module(
+            "phik",
+            extra="Falling back to pearson. Install with: pip install phik",
+            errors="warn",
+        )
+        if phik is None:
             return df.corr()
-
+        return phik.phik_matrix(df, verbose=False)
     elif compute_method == "pearson":
         return df.corr()
     else:

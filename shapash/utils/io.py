@@ -62,7 +62,7 @@ def load_pickle(path):
         )
 
     with open(path, "rb") as file:
-        pklobj = pickle.load(file)
+        pklobj = pickle.load(file)  # noqa: S301 — caller is responsible for providing trusted paths
 
     return pklobj
 

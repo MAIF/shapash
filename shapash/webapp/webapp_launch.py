@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
+from shapash.explainer.smart_explainer import DEFAULT_HOST
 
 LANG = "FR"  # "FR" or "EN"
 CASE = 2  # 1: Regression, 2: Binary classification, 3: Multi class classification
@@ -100,7 +101,7 @@ if CASE == 1:
     for col in list(postprocess.keys()):
         if col not in features:
             del postprocess[col]
-    encoder = one_hot.OneHotEncoder(titanic_df, cols=["Embarked", "Sex"])
+    encoder = one_hot.OneHotEncoder(cols=["Embarked", "Sex"])
 
     X = titanic_df[features]
     y = titanic_df["Fare"].to_frame()
@@ -121,7 +122,7 @@ elif CASE == 2:
     for col in list(postprocess.keys()):
         if col not in features:
             del postprocess[col]
-    encoder = one_hot.OneHotEncoder(titanic_df, cols=["Sex"])
+    encoder = one_hot.OneHotEncoder(cols=["Sex"])
 
     X = titanic_df[features]
     y = titanic_df["Survived"].to_frame()
@@ -149,7 +150,7 @@ else:
         if col not in features:
             del postprocess[col]
 
-    encoder = one_hot.OneHotEncoder(titanic_df, cols=["Embarked", "Sex"])
+    encoder = one_hot.OneHotEncoder(cols=["Embarked", "Sex"])
 
     X = titanic_df[features]
     y = titanic_df["Pclass"].to_frame()
@@ -267,4 +268,4 @@ xpl.init_app()
 app = xpl.smartapp.app
 
 if __name__ == "__main__":
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    app.run(debug=False, host=DEFAULT_HOST, port=8080)

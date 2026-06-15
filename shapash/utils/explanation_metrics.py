@@ -274,7 +274,8 @@ def get_min_nb_features(selection, contributions, mode, distance):
     features_needed : list
         List of minimum number of required features (for each instance) to be close enough to the prediction (ex: [4, 7, 8...])
     """
-    assert 0 <= distance <= 1
+    if not (0 <= distance <= 1):
+        raise ValueError("Distance should be between 0 and 1")
 
     if mode == "classification" and len(contributions) == 2:
         contributions = contributions[1]
@@ -331,8 +332,10 @@ def get_distance(selection, contributions, mode, nb_features):
     """
     if mode == "classification" and len(contributions) == 2:
         contributions = contributions[1]
-    assert nb_features <= contributions.shape[1]
-
+    if nb_features > contributions.shape[1]:
+        raise ValueError(
+            f"nb_features ({nb_features}) exceeds the number of available features ({contributions.shape[1]})"
+        )
     contributions = contributions.loc[selection].values
     top_features = np.array([sorted(row, key=abs, reverse=True) for row in contributions])[:, :nb_features]
     output_top_features = np.sum(top_features[:, :], axis=1)

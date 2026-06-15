@@ -2,6 +2,7 @@
 Main class of Web application Shapash
 """
 
+import ast
 import copy
 import random
 import re
@@ -48,12 +49,12 @@ from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 
 
-def _create_input_modal(id, label, tooltip):
+def _create_input_modal(component_id, label, tooltip):
     return dbc.Row(
         [
-            dbc.Label(label, id=f"{id}_label", html_for=id, width=8),
-            dbc.Col(dbc.Input(id=id, type="number", value=0), width=4),
-            dbc.Tooltip(tooltip, target=f"{id}_label", placement="bottom"),
+            dbc.Label(label, id=f"{component_id}_label", html_for=component_id, width=8),
+            dbc.Col(dbc.Input(id=component_id, type="number", value=0), width=4),
+            dbc.Tooltip(tooltip, target=f"{component_id}_label", placement="bottom"),
         ],
         className="g-3",
     )
@@ -217,7 +218,7 @@ class SmartApp:
         self.round_dataframe = self.dataframe.copy()
         for col in list(self.dataframe.columns):
             typ = self.dataframe[col].dtype
-            if typ == float:
+            if typ is float:
                 std = self.dataframe[col].std()
                 if isfinite(std) and std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
@@ -241,27 +242,27 @@ class SmartApp:
         """
 
         self.components["settings"]["input_rows"] = _create_input_modal(
-            id="rows",
+            component_id="rows",
             label="Number of rows for subset",
             tooltip="Set max number of lines for subset (datatable). \
                     Filter will be apply on this subset.",
         )
 
         self.components["settings"]["input_points"] = _create_input_modal(
-            id="points",
+            component_id="points",
             label="Number of points for plot",
             tooltip="Set max number of points in feature contribution plots.",
         )
 
         self.components["settings"]["input_features"] = _create_input_modal(
-            id="features",
+            component_id="features",
             label="Number of features to plot",
             tooltip="Set max number of features to plot in features \
                     importance and local explanation plots.",
         )
 
         self.components["settings"]["input_violin"] = _create_input_modal(
-            id="violin",
+            component_id="violin",
             label="Max number of labels for violin plot",
             tooltip="Set max number of labels to display a violin plot \
                     for feature contribution plot (otherwise a scatter \
@@ -462,16 +463,16 @@ class SmartApp:
         )
 
         self.components["graph"]["global_feature_importance"] = MyGraph(
-            figure=go.Figure(), id="global_feature_importance"
+            figure=go.Figure(), component_id="global_feature_importance"
         )
 
-        self.components["graph"]["feature_selector"] = MyGraph(figure=go.Figure(), id="feature_selector")
+        self.components["graph"]["feature_selector"] = MyGraph(figure=go.Figure(), component_id="feature_selector")
 
         # Component for the graph prediction picking
-        self.components["graph"]["prediction_picking"] = MyGraph(figure=go.Figure(), id="prediction_picking")
-        self.components["graph"]["clusters"] = MyGraph(figure=go.Figure(), id="clusters")
+        self.components["graph"]["prediction_picking"] = MyGraph(figure=go.Figure(), component_id="prediction_picking")
+        self.components["graph"]["clusters"] = MyGraph(figure=go.Figure(), component_id="clusters")
 
-        self.components["graph"]["detail_feature"] = MyGraph(figure=go.Figure(), id="detail_feature")
+        self.components["graph"]["detail_feature"] = MyGraph(figure=go.Figure(), component_id="detail_feature")
 
         # Component create to filter the dataset
         self.components["filter"]["filter_dataset"] = dbc.Col(
@@ -1755,14 +1756,14 @@ class SmartApp:
         list
             list of components
         """
-        filter = [
+        filter_components = [
             html.Div([self.components["filter"]["index"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "0.4vw"}),
         ]
-        return filter
+        return filter_components
 
     @staticmethod
     def select_point(figure, click_data):
@@ -1872,11 +1873,14 @@ class SmartApp:
         self.components["settings"]["input_features"]["features"].value = self.settings["features"]
         self.components["settings"]["input_violin"]["violin"].value = self.settings["violin"]
 
-        for id in self.settings.keys():
-            # if not isinstance(self.settings[id], int) or isinstance(self.settings[id], bool):
+        for component_id in self.settings.keys():
+            # if not isinstance(self.settings[component_id], int) or isinstance(self.settings[component_id], bool):
             #     continue
 
-            @app.callback([Output(f"{id}", "valid"), Output(f"{id}", "invalid")], [Input(f"{id}", "value")])
+            @app.callback(
+                [Output(f"{component_id}", "valid"), Output(f"{component_id}", "invalid")],
+                [Input(f"{component_id}", "value")],
+            )
             def update_valid(value):
                 """
                 actualise valid and invalid icon in input component
@@ -2436,8 +2440,10 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    value, max, marks = update_features_to_display(features, len(self.explainer.x_init.columns), value)
-                    return value, max, marks
+                    value, nb_max_col, marks = update_features_to_display(
+                        features, len(self.explainer.x_init.columns), value
+                    )
+                    return value, nb_max_col, marks
 
         @app.callback(
             Output(component_id="detail_feature", component_property="figure"),
@@ -2994,7 +3000,7 @@ class SmartApp:
                 return [html.Div(id={"type": "bloc_div", "index": 0}, children=[])]
             # Removal of an existing filter
             else:
-                filter_id_to_remove = eval(button_id)["index"]
+                filter_id_to_remove = ast.literal_eval(button_id)["index"]
                 return [gr for gr in currents_filters if gr["props"]["id"]["index"] != filter_id_to_remove]
 
         @app.callback(
@@ -3083,7 +3089,7 @@ class SmartApp:
                 Input("add_dropdown_button", "n_clicks"),
             ],
         )
-        def display_output(value, id, add_click):
+        def display_output(value, component_id, add_click):
             """
             Function used to create modalities choices. Componenents are different
             according to the type of the selected variable.
@@ -3095,7 +3101,7 @@ class SmartApp:
             Else: components are lower and upper values
             ---------------------------------------------------------------
             value: value selected on the var dropdown button
-            id: id of the var dropdown button
+            component_id: id of the var dropdown button
             add_click: click on add_dropdown_button
             ---------------------------------------------------------------
             return modalities components. If the component is new, value
@@ -3111,7 +3117,7 @@ class SmartApp:
             # Creation on modalities dropdown button
             else:
                 if value is not None:
-                    new_element = create_filter_modalities_selection(value, id, self.round_dataframe)
+                    new_element = create_filter_modalities_selection(value, component_id, self.round_dataframe)
                 else:
                     new_element = html.Div()
                 return new_element

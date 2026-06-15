@@ -59,13 +59,13 @@ def plot_line_comparison(
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
 
     if len(index) == 0:
-        warnings.warn("No individuals matched", UserWarning)
+        warnings.warn("No individuals matched", UserWarning, stacklevel=2)
         title = "Compare plot - <b>No Matching Reference Entry</b>"
     elif len(index) < 2:
-        warnings.warn("Comparison needs at least 2 individuals", UserWarning)
-        title = "Compare plot - index : " + " ; ".join(["<b>" + str(id) + "</b>" for id in index])
+        warnings.warn("Comparison needs at least 2 individuals", UserWarning, stacklevel=2)
+        title = "Compare plot - index : " + " ; ".join(["<b>" + str(index_id) + "</b>" for index_id in index])
     else:
-        title = "Compare plot - index : " + " ; ".join(["<b>" + str(id) + "</b>" for id in index])
+        title = "Compare plot - index : " + " ; ".join(["<b>" + str(index_id) + "</b>" for index_id in index])
         dict_xaxis["text"] = "Contributions"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 

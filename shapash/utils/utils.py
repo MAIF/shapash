@@ -4,6 +4,7 @@ Utils is a group of function for the library
 
 import math
 import socket
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -331,7 +332,6 @@ def get_project_root():
     """
     Returns project root absolute path.
     """
-    from pathlib import Path
 
     current_path = Path(__file__)
 

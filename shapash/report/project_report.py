@@ -29,7 +29,7 @@ from shapash.webapp.utils.utils import round_to_k
 logging.basicConfig(level=logging.INFO)
 
 template_loader = jinja2.FileSystemLoader(searchpath=os.path.join(get_project_root(), "shapash", "report", "html"))
-template_env = jinja2.Environment(loader=template_loader)
+template_env = jinja2.Environment(loader=template_loader, autoescape=True)
 
 
 class ProjectReport:
@@ -158,7 +158,8 @@ class ProjectReport:
         if y is None:
             return None, None
         elif isinstance(y, pd.DataFrame):
-            assert len(y.columns) == 1, "Number of columns found is greater than 1"
+            if len(y.columns) != 1:
+                raise ValueError("Number of columns found is greater than 1")
             name = y.columns[0]
             values = y.values[:, 0]
         elif isinstance(y, pd.Series):

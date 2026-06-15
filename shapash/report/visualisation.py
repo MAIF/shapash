@@ -1,3 +1,6 @@
+import base64
+import io
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import HTML, Latex, Markdown, display
@@ -121,14 +124,11 @@ def print_javascript_misc():
 
 def convert_fig_to_html(fig):
     """Convert Matplotlib figure 'fig' into a <img> tag for HTML use using base64 encoding."""
-    import base64
-    import io
-
     s = io.BytesIO()
     fig.savefig(s, format="png", bbox_inches="tight")
     plt.close()
     s = base64.b64encode(s.getvalue()).decode("utf-8").replace("\n", "")
-    return '<img align="left" src="data:image/png;base64,%s">' % s
+    return f'<img align="left" src="data:image/png;base64,{s}">'
 
 
 def html_str_df_and_image(df: pd.DataFrame, fig: plt.Figure) -> str:
