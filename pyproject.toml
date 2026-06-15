@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "shapash"
-version = "2.9.0"
+dynamic = ["version"]
 
 authors = [
     {name = "Yann Golhen"},
@@ -94,9 +94,10 @@ package-dir = {"" = "."}
 [tool.setuptools.packages.find]
 where = ["."]
 
-
 [tool.setuptools.package-data]
 "*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png", "*.ico", "*.ipynb", "*.html", "*.j2"]
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
