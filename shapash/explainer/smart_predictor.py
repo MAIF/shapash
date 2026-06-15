@@ -31,7 +31,7 @@ from shapash.utils.check import (
     check_y,
 )
 from shapash.utils.columntransformer_backend import columntransformer
-from shapash.utils.io import save_pickle
+from shapash.utils.io import _build_predictor_manifest, _save_manifest, save_pickle
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
 
@@ -577,8 +577,16 @@ class SmartPredictor:
         >>> predictor.save('path_to_pkl/predictor.pkl')
         >>> from shapash.utils.load_smartpredictor import load_smartpredictor
         >>> predictor_load = load_smartpredictor('path_to_pkl/predictor.pkl')
+
+        A sidecar manifest ``path + ".manifest.json"`` is written alongside the pickle
+        with the shapash version, model framework version, and a schema fingerprint.
+        ``load_smartpredictor`` uses it to detect version skew or schema tampering at
+        load time. The pickle remains a valid standalone artifact: predictors saved by
+        older versions of shapash without a manifest still load, with a
+        ``DeprecationWarning``.
         """
         save_pickle(self, path)
+        _save_manifest(_build_predictor_manifest(self), path)
 
     def apply_preprocessing(self):
         """

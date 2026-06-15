@@ -793,6 +793,9 @@ class TestSmartPredictor(unittest.TestCase):
         predictor.save(pkl_file)
         assert path.exists(pkl_file)
         os.remove(pkl_file)
+        manifest_file = pkl_file + ".manifest.json"
+        if path.exists(manifest_file):
+            os.remove(manifest_file)
 
     @patch("shapash.explainer.smart_predictor.SmartPredictor.check_model")
     @patch("shapash.utils.check.check_preprocessing_options")
