@@ -3,6 +3,7 @@ Smart predictor module
 """
 
 import copy
+from typing import Any
 
 import pandas as pd
 
@@ -33,6 +34,34 @@ from shapash.utils.columntransformer_backend import columntransformer
 from shapash.utils.io import save_pickle
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
+
+
+def _dtypes_compatible(actual_dtype: Any, expected_str: str) -> bool:
+    """
+    Return True if a column's actual dtype is compatible with the expected dtype string
+    declared in ``features_types``.
+
+    Compatibility is checked in order:
+
+    1. Exact string equality (preserves the legacy behavior).
+    2. ``pandas.api.types.is_dtype_equal`` — handles dtype aliases (e.g. ``"int"`` vs
+       ``"int64"`` on a 64-bit platform) and pandas-internal dtype identity such as
+       ``CategoricalDtype`` vs ``"category"``.
+    3. Extension dtypes that expose ``.numpy_dtype`` (pandas nullable types
+       ``Int64`` / ``Float64`` / ``Boolean``, pyarrow-backed dtypes such as
+       ``int64[pyarrow]``) are treated as compatible with their underlying numpy dtype.
+    """
+    if str(actual_dtype) == expected_str:
+        return True
+    try:
+        if pd.api.types.is_dtype_equal(actual_dtype, expected_str):
+            return True
+    except TypeError:
+        pass
+    numpy_dtype = getattr(actual_dtype, "numpy_dtype", None)
+    if numpy_dtype is not None and str(numpy_dtype) == expected_str:
+        return True
+    return False
 
 
 class SmartPredictor:
@@ -335,11 +364,11 @@ class SmartPredictor:
         x: pandas.DataFrame (optional)
             Raw dataset used by the model to perform the prediction (not preprocessed).
         """
-        if not all(column in self.columns_dict.values() for column in x.columns):
+        unknown_columns = [c for c in x.columns if c not in self.columns_dict.values()]
+        if unknown_columns:
             raise ValueError(
-                """
-                All features from dataset x must be in the columns_dict initialized.
-                """
+                f"x contains columns not declared in columns_dict: {unknown_columns}. "
+                f"Expected columns: {sorted(self.columns_dict.values())}"
             )
         if not all([isinstance(key, int) for key in self.columns_dict.keys()]):
             raise ValueError("columns_dict must have only integers keys for features order.")
@@ -348,18 +377,21 @@ class SmartPredictor:
             features_order.append(self.columns_dict[order])
         x = x[features_order]
 
-        if not all(column in self.features_types.keys() for column in x.columns):
+        missing_types = [c for c in x.columns if c not in self.features_types.keys()]
+        if missing_types:
             raise ValueError(
-                """
-                All features from dataset x must be in the features_types dict initialized.
-                """
+                f"All features from dataset x must be in the features_types dict initialized: {missing_types}."
             )
-        if not all([str(x[feature].dtypes) == self.features_types[feature] for feature in x.columns]):
+        mismatched = [
+            (feature, str(x[feature].dtype), self.features_types[feature])
+            for feature in x.columns
+            if not _dtypes_compatible(x[feature].dtype, self.features_types[feature])
+        ]
+        if mismatched:
             raise ValueError(
-                """
-                Types of features in x doesn't match with the expected one in features_types.
-                x input must be initial dataset without preprocessing applied.
-                """
+                "Types of features in x don't match the expected types in features_types. "
+                "x input must be initial dataset without preprocessing applied. "
+                f"Mismatched (feature, actual, expected): {mismatched}"
             )
         return x
 
