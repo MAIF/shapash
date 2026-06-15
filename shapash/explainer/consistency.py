@@ -390,7 +390,7 @@ class Consistency:
             arrowprops=dict(arrowstyle="<->"),
         )
         ax.annotate(
-            "%.2f" % dst,
+            f"{dst:.2f}",
             xy=(0.5 * (a[0] + b[0]), 0.5 * (a[1] + b[1])),
             xycoords="data",
             textcoords="data",
@@ -421,24 +421,24 @@ class Consistency:
             axes = np.array([axes])
         fig.suptitle("Examples of explanations' comparisons for various distances (L2 norm)")
 
-        for n, (i, j, k, l, m, o) in enumerate(
+        for n, (raw_1, raw_2, k, idx_val, m, o) in enumerate(
             zip(method_1, method_2, l2, index, backend_name_1, backend_name_2, strict=False)
         ):
             # Only keep top features according to both methods
-            idx = np.flip(np.abs(np.concatenate([i, j])).argsort()) % len(i)
+            idx = np.flip(np.abs(np.concatenate([raw_1, raw_2])).argsort()) % len(raw_1)
             _, first_occurrence_idx = np.unique(idx, return_index=True)
             idx, y = idx[np.sort(first_occurrence_idx)][:max_features], y[:max_features]
-            i, j = i[idx], j[idx]
+            contribs_1, contribs_2 = raw_1[idx], raw_2[idx]
             # Sort by method_1 (no abs)
-            idx = np.flip(i.argsort())
-            i, j = i[idx], j[idx]
+            idx = np.flip(contribs_1.argsort())
+            contribs_1, contribs_2 = contribs_1[idx], contribs_2[idx]
 
-            axes[n].barh(y, i, label="method 1", left=0, color=f"#{255:02x}{166:02x}{17:02x}")
+            axes[n].barh(y, contribs_1, label="method 1", left=0, color=f"#{255:02x}{166:02x}{17:02x}")
             axes[n].barh(
                 y,
-                j,
+                contribs_2,
                 label="method 2",
-                left=np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i) / 3,
+                left=np.abs(np.max(contribs_1)) + np.abs(np.min(contribs_2)) + np.max(contribs_1) / 3,
                 color=f"#{117:02x}{152:02x}{189:02x}",
             )  # /3 to add space
 
@@ -448,13 +448,13 @@ class Consistency:
             axes[n].grid(color="w", linestyle="solid")
 
             axes[n].set(
-                title="{}: {}".format(self.index.name if self.index.name is not None else "Id", l)
+                title="{}: {}".format(self.index.name if self.index.name is not None else "Id", idx_val)
                 + "\n$d_{L2}$ = "
                 + str(round(k, 2))
             )
             axes[n].set_xlabel("Contributions")
             axes[n].set_ylabel(f"Top {max_features} features")
-            axes[n].set_xticks([0, np.abs(np.max(i)) + np.abs(np.min(j)) + np.max(i) / 3])
+            axes[n].set_xticks([0, np.abs(np.max(contribs_1)) + np.abs(np.min(contribs_2)) + np.max(contribs_1) / 3])
             axes[n].set_xticklabels([m, o])
             axes[n].set_yticks([])
 
@@ -604,8 +604,8 @@ class Consistency:
                 feature_value = x[c].map(inverse_mapping)
 
             hv_text = [
-                f"<b>Feature value</b>: {i}<br><b>{methods[0]}</b>: {j}<br><b>{methods[1]}</b>: {k}<br><b>Diff</b>: {l}"
-                for i, j, k, l in zip(
+                f"<b>Feature value</b>: {i}<br><b>{methods[0]}</b>: {j}<br><b>{methods[1]}</b>: {k}<br><b>Diff</b>: {diff}"
+                for i, j, k, diff in zip(
                     feature_value if switch else x[c].round(3),
                     weights[0][c].round(2),
                     weights[1][c].round(2),
@@ -629,7 +629,7 @@ class Consistency:
             fig.add_trace(
                 go.Scatter(
                     x=(weights[0][c] - weights[1][c]).values,
-                    y=len(x) * [i] + np.random.normal(0, 0.1, len(x)),
+                    y=len(x) * [i] + np.random.default_rng().normal(0, 0.1, len(x)),
                     mode="markers",
                     marker={"color": x[c].values, "colorscale": self.tuning_colorscale(x[c]), "opacity": 0.7},
                     name=c,

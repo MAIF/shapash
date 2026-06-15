@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
+from plotly.subplots import make_subplots
+from sklearn.neighbors import KernelDensity
 
 from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
 from shapash.webapp.utils.utils import round_to_k
@@ -135,7 +137,6 @@ def plot_scatter(
         if feature_values.iloc[:, 0].dtype.kind in "biufc":
             feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
             val_inter = feature_values_max - feature_values_min
-            from sklearn.neighbors import KernelDensity
 
             feature_np = np.array(feature_values_array)
             feature_np = feature_np[~np.isnan(feature_np)][:, None]
@@ -290,8 +291,6 @@ def plot_violin(
     zoom: bool (default=False)
         graph is currently zoomed
     """
-    from plotly.subplots import make_subplots
-
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     column_name = feature_values.columns[0]

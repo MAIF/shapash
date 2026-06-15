@@ -77,8 +77,8 @@ class TestBaseBackend(unittest.TestCase):
         Explain data should be a dict
         """
         explain_data = [np.array([0])]
-        with self.assertRaises(AssertionError):
-            res = self.test_backend.get_local_contributions(pd.DataFrame([0]), explain_data)
+        with self.assertRaises(TypeError):
+            self.test_backend.get_local_contributions(pd.DataFrame([0]), explain_data)
 
     def test_get_global_features_importance(self):
         self.test_backend.state = SmartState()

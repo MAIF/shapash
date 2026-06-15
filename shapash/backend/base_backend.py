@@ -91,7 +91,8 @@ class BaseBackend(ABC):
         local_contributions : pd.DataFrame
             The local contributions computed by the backend.
         """
-        assert isinstance(explain_data, dict), "The _run_explainer method should return a dict"
+        if not isinstance(explain_data, dict):
+            raise TypeError("The _run_explainer method should return a dict")
         if "contributions" not in explain_data.keys():
             raise ValueError(
                 "The _run_explainer method should return a dict"

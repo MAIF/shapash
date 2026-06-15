@@ -1172,7 +1172,7 @@ class TestSmartPredictor(unittest.TestCase):
         """
         predictor_1 = self.predictor_1
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"], "x3": ["M"]}))
 
         with self.assertRaises(ValueError):

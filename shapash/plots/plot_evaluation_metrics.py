@@ -3,6 +3,7 @@ import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
+from sklearn.neighbors import KernelDensity
 
 from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.clustering import (
@@ -418,7 +419,6 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
 
             feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
             val_inter = feature_values_max - feature_values_min
-            from sklearn.neighbors import KernelDensity
 
             feature_np = np.array(feature_values_array)
             feature_np = feature_np[~np.isnan(feature_np)][:, None]
