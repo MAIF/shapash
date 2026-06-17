@@ -1651,17 +1651,17 @@ class SmartExplainer:
 
     def generate_report(
         self,
-        output_file,
-        x_train=None,
-        y_train=None,
-        y_test=None,
-        working_dir=None,
-        yaml_path=None,
-        max_points=200,
-        display_interaction_plot=False,
-        nb_top_interactions=5,
-        block_instance=None,
-    ):
+        output_file: str,
+        x_train: pd.DataFrame | None = None,
+        y_train: pd.Series | pd.DataFrame | list | None = None,
+        y_test: pd.Series | pd.DataFrame | list | None = None,
+        working_dir: str | Path | None = None,
+        yaml_path: str | Path | None = None,
+        max_points: int = 200,
+        display_interaction_plot: bool = False,
+        nb_top_interactions: int = 5,
+        block_instance: object | None = None,
+    ) -> None:
         """
         Generate an interactive HTML report summarizing the model and its explainability.
 
