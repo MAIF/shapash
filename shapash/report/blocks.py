@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
-import inspect
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -112,16 +111,11 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
 
 def block(method):
     """Wrap block output in a standard report section container."""
-    signature = inspect.signature(method)
-
     @wraps(method)
     def wrapped(self, *args, **kwargs):
-        bound = signature.bind_partial(self, *args, **kwargs)
-        bound.apply_defaults()
-        default_title = bound.arguments.get("title", "")
         result = method(self, *args, **kwargs)
 
-        resolved_title = default_title
+        resolved_title = ""
         body_items = result
         if isinstance(result, tuple) and len(result) == 2:
             resolved_title, body_items = result
@@ -224,7 +218,7 @@ class ReportBlockMixin:
         content: list[pn.viewable.Viewable] = []
         if body:
             content.append(pn.pane.Markdown(body))
-        return content
+        return title, content
 
     @block
     def block_project_information(
@@ -335,7 +329,7 @@ class ReportBlockMixin:
                 )
             )
 
-        return [pn.Row(*pills, sizing_mode="stretch_width")]
+        return title, [pn.Row(*pills, sizing_mode="stretch_width")]
 
     def block_callout(self, body: str = "") -> pn.Column:
         """Render a highlighted callout message.
@@ -388,7 +382,7 @@ class ReportBlockMixin:
             train_stats=train_stats,
             names=["Prediction dataset", "Training dataset"],
         )
-        return [pn.pane.DataFrame(stats_table, sizing_mode="stretch_width", css_classes=["kv-table"])]
+        return title, [pn.pane.DataFrame(stats_table, sizing_mode="stretch_width", css_classes=["kv-table"])]
 
     @block
     def block_model_analysis(self, title: str = "Model information") -> pn.Column:
@@ -459,7 +453,7 @@ class ReportBlockMixin:
             ),
         ]
 
-        return content
+        return title, content
 
     def block_performance_metrics(
         self,
@@ -601,7 +595,7 @@ class ReportBlockMixin:
             width=resolved_width,
             height=height,
         )
-        return [self._plotly_pane(fig)]
+        return title, [self._plotly_pane(fig)]
 
     @block
     def block_feature_importance(self, title: str = "", label=None) -> pn.Column:
@@ -625,7 +619,7 @@ class ReportBlockMixin:
         """
         explainer = self._require_explainer("feature_importance")
         fig = explainer.plot.features_importance(label=label)
-        return [self._plotly_pane(fig)]
+        return title, [self._plotly_pane(fig)]
 
     @block
     def block_contribution_plot(
@@ -683,7 +677,7 @@ class ReportBlockMixin:
 
         feature_names = list(explainer.x_init.columns)
         if not feature_names:
-            return [pn.pane.Markdown("No feature available.")]
+            return title, [pn.pane.Markdown("No feature available.")]
 
         sorted_features = sorted(
             feature_names,
@@ -915,7 +909,7 @@ class ReportBlockMixin:
                 sizing_mode="stretch_width",
             ),
         ]
-        return content
+        return title, content
 
     @block
     def block_confusion_matrix(self, title: str = "") -> pn.Column:
@@ -1035,7 +1029,7 @@ class ReportBlockMixin:
             feature_panels[label_text] = tab_body
 
         if len(feature_panels) == 0:
-            return [pn.pane.Markdown("No feature available.")]
+            return title, [pn.pane.Markdown("No feature available.")]
 
         feature_select = pn.widgets.Select(
             name="Feature",
@@ -1045,7 +1039,7 @@ class ReportBlockMixin:
         )
         selected_panel = pn.panel(pn.bind(lambda selected: feature_panels[selected], feature_select))
 
-        return [feature_select, selected_panel]
+        return title, [feature_select, selected_panel]
 
     def _preprocess_train_data(self, x_train: pd.DataFrame | None) -> pd.DataFrame | None:
         if x_train is None or self.explainer is None:
