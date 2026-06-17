@@ -41,7 +41,6 @@ class TestGeneration(unittest.TestCase):
         self.xpl.palette_name = "eurybia"
         self.xpl.generate_report(
             output_file=outfile,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
             x_train=self.df[["x1", "x2", "x3", "x4"]],
             y_train=self.df["y"],
             y_test=self.df["y"],
@@ -78,7 +77,6 @@ class TestGeneration(unittest.TestCase):
 
         self.xpl.generate_report(
             output_file=outfile,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
             yaml_path=str(cfg_path),
         )
         assert os.path.exists(outfile)
@@ -91,7 +89,6 @@ class TestGeneration(unittest.TestCase):
 
         self.xpl.generate_report(
             output_file=outfile,
-            project_info_file=os.path.join(current_path, "../data/metadata.yaml"),
             x_train=self.df[["x1", "x2", "x3", "x4"]],
             display_interaction_plot=True,
             working_dir=tmp_dir_path,

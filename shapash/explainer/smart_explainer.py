@@ -1652,13 +1652,9 @@ class SmartExplainer:
     def generate_report(
         self,
         output_file,
-        project_info_file,
         x_train=None,
         y_train=None,
         y_test=None,
-        title_story=None,
-        title_description=None,
-        metrics=None,
         working_dir=None,
         yaml_path=None,
         max_points=200,
@@ -1676,16 +1672,10 @@ class SmartExplainer:
         A report configuration is provided through a YAML file. If no YAML file is
         specified, a default configuration is generated automatically.
 
-        A project information YAML file is required to describe key project details
-        (e.g., model name, author, date, context).
-
         Parameters
         ----------
         output_file : str
             Path to the output HTML file where the report will be saved.
-        project_info_file : str
-            Path to a YAML file containing project metadata to be displayed in the report
-            (e.g., project name, author, date, description).
         x_train : pandas.DataFrame, optional
             Training dataset used to fit the model.
             Used for generating feature summaries and training-related analyses.
@@ -1693,18 +1683,6 @@ class SmartExplainer:
             Target values corresponding to `x_train`.
         y_test : pandas.Series or pandas.DataFrame, optional
             Target values for the test dataset.
-        title_story : str, optional
-            Title displayed at the top of the report.
-        title_description : str, optional
-            Short descriptive text displayed below the main title.
-        metrics : list of dict, optional
-            List of metrics to compute and display in the performance section.
-            Each dictionary should include:
-            - `'path'`: str — import path to the metric function (e.g., `"sklearn.metrics.f1_score"`)
-            - `'name'`: str, optional — display name for the metric
-            - `'use_proba_values'`: bool, optional — if True, use predicted probabilities instead of labels
-            Example:
-            `metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]`
         working_dir : str, optional
             Directory used to temporarily store generated files (e.g., report config).
             If `None`, a temporary directory is automatically created and deleted after report generation.
@@ -1744,16 +1722,9 @@ class SmartExplainer:
         -------
         >>> xpl.generate_report(
         ...     output_file="report.html",
-        ...     project_info_file="config/project_information.yml",
         ...     x_train=x_train,
         ...     y_train=y_train,
         ...     y_test=y_test,
-        ...     title_story="House Prices Project Report",
-        ...     title_description="Comprehensive interpretability analysis for the Kaggle house prices dataset.",
-        ...     metrics=[
-        ...         {"path": "sklearn.metrics.mean_squared_error", "name": "Mean Squared Error"},
-        ...         {"path": "sklearn.metrics.mean_absolute_error", "name": "Mean Absolute Error"},
-        ...     ],
         ...     display_interaction_plot=True,
         ...     nb_top_interactions=5,
         ... )
