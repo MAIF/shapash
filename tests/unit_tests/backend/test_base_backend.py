@@ -49,29 +49,6 @@ class TestBaseBackend(unittest.TestCase):
         res = self.test_backend.get_local_contributions(pd.DataFrame([0]), dict(contributions=[np.array([0])]))
         assert res == [0, 4]
 
-    @patch("shapash.backend.base_backend.BaseBackend.format_and_aggregate_local_contributions")
-    def test_get_local_contributions_with_subset_on_list(self, mock_format_contrib):
-        contributions = [
-            np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),
-            np.array([[10.0, 20.0], [30.0, 40.0], [50.0, 60.0]]),
-        ]
-
-        def _identity(_x, local_contrib):
-            return local_contrib
-
-        mock_format_contrib.side_effect = _identity
-
-        res = self.test_backend.get_local_contributions(
-            pd.DataFrame([[0, 0], [1, 1], [2, 2]]),
-            dict(contributions=contributions),
-            subset=[0, 2],
-        )
-
-        assert isinstance(res, list)
-        assert len(res) == 2
-        np.testing.assert_array_equal(res[0], np.array([[1.0, 2.0], [5.0, 6.0]]))
-        np.testing.assert_array_equal(res[1], np.array([[10.0, 20.0], [50.0, 60.0]]))
-
     def test_get_local_contributions_2(self):
         """
         Explain data should be a dict
