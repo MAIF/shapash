@@ -18,7 +18,7 @@ from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
 from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, series_dtype
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.panel_support import make_plotly_pane
+from shapash.report.panel_support import _enable_panel_plotly
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 from shapash.utils.utils import compute_sorted_variables_interactions_list_indices
@@ -118,6 +118,7 @@ def block(method):
 
     @wraps(method)
     def wrapped(self, *args, **kwargs):
+        _enable_panel_plotly()
         result = method(self, *args, **kwargs)
 
         resolved_title = ""
@@ -1197,7 +1198,7 @@ class ReportBlockMixin:
 
     @staticmethod
     def _plotly_pane(fig) -> pn.pane.Plotly:
-        return make_plotly_pane(fig)
+        return pn.pane.Plotly(fig, config={"responsive": True}, sizing_mode="stretch_width")
 
     @staticmethod
     def _coerce_viewable(item: Any) -> pn.viewable.Viewable:

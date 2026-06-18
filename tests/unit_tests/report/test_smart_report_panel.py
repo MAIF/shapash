@@ -7,14 +7,14 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from shapash.report.blocks import ReportBlockMixin, block
-from shapash.report.panel_support import apply_report_css, make_plotly_pane
+from shapash.report.panel_support import apply_report_css
 
 
 class TestSmartReportPanel(unittest.TestCase):
-    def test_make_plotly_pane_returns_panel_plotly(self):
+    def test_panel_plotly_pane_is_responsive(self):
         fig = go.Figure(go.Scatter(x=[1, 2], y=[3, 4]))
 
-        pane = make_plotly_pane(fig)
+        pane = pn.pane.Plotly(fig, config={"responsive": True}, sizing_mode="stretch_width")
 
         self.assertIsInstance(pane, pn.pane.Plotly)
         self.assertEqual(pane.object, fig)

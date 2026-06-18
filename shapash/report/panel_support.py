@@ -30,7 +30,7 @@ def _resolve_custom_css_paths(
         return []
 
     values: Iterable[str | Path]
-    if isinstance(custom_css, (str, Path)):
+    if isinstance(custom_css, str | Path):
         values = [custom_css]
     else:
         values = custom_css
@@ -63,9 +63,3 @@ def apply_report_css(
         css = css_path.read_text(encoding="utf-8")
         if css not in pn.config.raw_css:
             pn.config.raw_css.append(css)
-
-
-def make_plotly_pane(fig) -> pn.pane.Plotly:
-    """Build a responsive Plotly pane for report blocks."""
-    _enable_panel_plotly()
-    return pn.pane.Plotly(fig, config={"responsive": True}, sizing_mode="stretch_width")
