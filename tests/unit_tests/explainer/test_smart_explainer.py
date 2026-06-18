@@ -1130,6 +1130,32 @@ class TestSmartExplainer(unittest.TestCase):
             output_file="test",
         )
 
+    @patch("shapash.report.core.generate_report")
+    def test_generate_report_with_user_block_instance(self, mock_generate_report):
+        """Custom block runtime provided by user must be passed through unchanged."""
+        df = pd.DataFrame(range(0, 21), columns=["id"])
+        df["y"] = df["id"].apply(lambda x: 1 if x < 10 else 0)
+        df["x1"] = np.random.randint(1, 123, df.shape[0])
+        df["x2"] = np.random.randint(1, 3, df.shape[0])
+        df = df.set_index("id")
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(df[["x1", "x2"]], df["y"])
+        xpl = SmartExplainer(clf)
+        xpl.compile(x=df[["x1", "x2"]])
+
+        class _UserRuntime:
+            def __init__(self):
+                self.user_initialized = True
+
+            def render_block(self, block_cfg):
+                return None
+
+        block_instance = _UserRuntime()
+        xpl.generate_report(output_file="test", block_instance=block_instance)
+
+        runtime_arg = mock_generate_report.call_args.kwargs["runtime"]
+        assert runtime_arg is block_instance
+        assert runtime_arg.user_initialized is True
+
     def test_compute_features_stability_1(self):
         df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list("ABCD"))
         selection = [1, 3]

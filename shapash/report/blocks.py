@@ -159,10 +159,9 @@ class ReportBlockMixin:
         x_train: pd.DataFrame | None = None,
         y_train: pd.Series | pd.DataFrame | list | None = None,
         y_test: pd.Series | pd.DataFrame | list | None = None,
-        config: dict | None = None,
+        max_points: int = 200,
     ) -> None:
         self.explainer = explainer
-        self.config = {} if config is None else config
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
         self.x_init = getattr(explainer, "x_init", None)
@@ -170,7 +169,7 @@ class ReportBlockMixin:
         self.y_train, self.target_name_train = self._get_values_and_name(y_train, "target")
         self.y_test, self.target_name_test = self._get_values_and_name(y_test, "target")
         self.target_name = self.target_name_train if self.target_name_train is not None else self.target_name_test
-        self.max_points = self.config.get("max_points", 200)
+        self.max_points = max_points
         self._inside_group = False
 
         if explainer is not None:

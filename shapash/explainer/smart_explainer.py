@@ -1697,8 +1697,9 @@ class SmartExplainer:
         nb_top_interactions : int, optional, default=5
             Number of top feature interactions to include in the report.
         block_instance : object, optional
-            Optional custom block object used to resolve block methods during report generation.
-            It should implement methods named `block_<type>` for YAML block entries.
+            Optional custom block runtime used to resolve block methods during report generation.
+            The instance must already be fully initialized by the user and should implement
+            methods named `block_<type>` for YAML block entries.
 
         Returns
         -------
@@ -1747,30 +1748,16 @@ class SmartExplainer:
             )
 
         try:
-            config = {
-                "max_points": max_points,
-                "display_interaction_plot": display_interaction_plot,
-                "nb_top_interactions": nb_top_interactions,
-            }
-
             if block_instance is None:
                 report_runtime = ReportBlockMixin(
                     explainer=self,
                     x_train=x_train,
                     y_train=y_train,
                     y_test=y_test,
-                    config=config,
+                    max_points=max_points,
                 )
             else:
                 report_runtime = block_instance
-                ReportBlockMixin.__init__(
-                    report_runtime,
-                    explainer=self,
-                    x_train=x_train,
-                    y_train=y_train,
-                    y_test=y_test,
-                    config=config,
-                )
 
             if yaml_path is not None:
                 config_file = Path(yaml_path)
