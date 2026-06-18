@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import inspect
+import logging
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -17,9 +19,11 @@ from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, series_dtype
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
 from shapash.report.panel_support import make_plotly_pane
-from shapash.report.validation import stats_to_table
+from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 from shapash.utils.utils import compute_sorted_variables_interactions_list_indices
+
+logger = logging.getLogger(__name__)
 
 PALETTE = {
     "gold": {"bg": "#ffffff", "border": "#f4c000", "title": "#f4c000", "text": "#343736"},
@@ -111,6 +115,7 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
 
 def block(method):
     """Wrap block output in a standard report section container."""
+
     @wraps(method)
     def wrapped(self, *args, **kwargs):
         result = method(self, *args, **kwargs)
@@ -119,6 +124,16 @@ def block(method):
         body_items = result
         if isinstance(result, tuple) and len(result) == 2:
             resolved_title, body_items = result
+
+        if not resolved_title:
+            try:
+                bound_args = inspect.signature(method).bind(self, *args, **kwargs)
+                bound_args.apply_defaults()
+                title_value = bound_args.arguments.get("title", "")
+            except (TypeError, ValueError):
+                title_value = kwargs.get("title", "")
+            if isinstance(title_value, str) and title_value.strip():
+                resolved_title = title_value.strip()
 
         items = body_items if isinstance(body_items, list) else [body_items]
         blocks: list[pn.viewable.Viewable] = []
@@ -165,6 +180,67 @@ class ReportBlockMixin:
                 self.y_pred = explainer.model.predict(explainer.x_encoded)
         else:
             self.y_pred = None
+
+    def render_block(self, block_cfg: dict):
+        """Dispatch one YAML block entry to the matching block_* method."""
+        from shapash.report.core import _wrap_section_anchor
+
+        block_type = block_cfg.get("type", "")
+        params = block_cfg.get("params", {})
+
+        if block_type == "group":
+            previous_inside_group = getattr(self, "_inside_group", False)
+            self._inside_group = True
+            try:
+                children = [self.render_block(child_cfg) for child_cfg in block_cfg.get("blocks", [])]
+            finally:
+                self._inside_group = previous_inside_group
+            children = [child for child in children if child is not None]
+            group_title = params.get("title", "")
+            section_id = block_cfg.get("_section_id")
+            if group_title:
+                group_content = pn.Column(
+                    pn.pane.Markdown(f"## {group_title}", css_classes=["group-title"]),
+                    *children,
+                    sizing_mode="stretch_width",
+                )
+                return _wrap_section_anchor(group_content, section_id)
+            return _wrap_section_anchor(pn.Column(*children, sizing_mode="stretch_width"), section_id)
+
+        method = getattr(self, f"block_{block_type}", None)
+        if method is None:
+            if block_type == "custom":
+                return self._render_custom(block_cfg)
+            logger.warning("Unknown block type '%s' - skipped.", block_type)
+            return None
+
+        try:
+            result = method(**params)
+            if isinstance(result, pn.viewable.Viewable):
+                return _wrap_section_anchor(result, block_cfg.get("_section_id"))
+            if isinstance(result, str):
+                return _wrap_section_anchor(pn.pane.Markdown(result), block_cfg.get("_section_id"))
+            return _wrap_section_anchor(pn.panel(result), block_cfg.get("_section_id"))
+        except Exception as exc:
+            logger.error("Block '%s' raised: %s", block_type, exc)
+            return render_block_error(block_type, exc)
+
+    def _render_custom(self, block_cfg: dict):
+        """Call an arbitrary importable function."""
+        func_path = block_cfg.get("function", "")
+        params = block_cfg.get("params", {})
+        try:
+            mod_path, fn_name = func_path.rsplit(".", 1)
+            fn = getattr(importlib.import_module(mod_path), fn_name)
+            result = fn(self, **params)
+            if isinstance(result, pn.viewable.Viewable):
+                return result
+            if isinstance(result, str):
+                return pn.pane.Markdown(result)
+            return pn.panel(result)
+        except Exception as exc:
+            logger.error("Custom block '%s' raised: %s", func_path, exc)
+            return render_block_error(func_path, exc)
 
     def block_header(self, title: str = "Report", subtitle: str = "") -> pn.Column:
         """Render the report header section.

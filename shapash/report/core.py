@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import html
-import importlib
 import logging
 import re
 from pathlib import Path
@@ -12,7 +11,7 @@ from pathlib import Path
 import panel as pn
 
 from shapash.report.panel_support import apply_report_css, report_js_text
-from shapash.report.validation import load_report_config, render_block_error
+from shapash.report.validation import load_report_config
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +24,7 @@ def generate_report(runtime, config_file: str, output_file: str) -> None:
 
     _assign_section_ids(cfg["sections"])
 
-    runtime.render_block = lambda block_cfg: render_block(runtime, block_cfg)
-    rendered_blocks = [render_block(runtime, block_cfg) for block_cfg in cfg["sections"]]
+    rendered_blocks = [runtime.render_block(block_cfg) for block_cfg in cfg["sections"]]
     nav_bar = build_navigation_bar(cfg["sections"])
 
     out_path = Path(output_file).resolve()
@@ -47,67 +45,6 @@ def generate_report(runtime, config_file: str, output_file: str) -> None:
     report_layout.append(pn.pane.HTML(f"<script>{report_js_text()}</script>", sizing_mode="stretch_width"))
     report_layout.save(str(out_path), embed=True, resources="cdn")
     logger.info("Report saved → %s", output_file)
-
-
-def render_block(runtime, block_cfg: dict):
-    """Dispatch one YAML block entry to the matching block_* method."""
-    block_type = block_cfg.get("type", "")
-    params = block_cfg.get("params", {})
-
-    if block_type == "group":
-        previous_inside_group = getattr(runtime, "_inside_group", False)
-        runtime._inside_group = True
-        try:
-            children = [render_block(runtime, child_cfg) for child_cfg in block_cfg.get("blocks", [])]
-        finally:
-            runtime._inside_group = previous_inside_group
-        children = [child for child in children if child is not None]
-        group_title = params.get("title", "")
-        section_id = block_cfg.get("_section_id")
-        if group_title:
-            group_content = pn.Column(
-                pn.pane.Markdown(f"## {group_title}", css_classes=["group-title"]),
-                *children,
-                sizing_mode="stretch_width",
-            )
-            return _wrap_section_anchor(group_content, section_id)
-        return _wrap_section_anchor(pn.Column(*children, sizing_mode="stretch_width"), section_id)
-
-    method = getattr(runtime, f"block_{block_type}", None)
-    if method is None:
-        if block_type == "custom":
-            return _render_custom(runtime, block_cfg)
-        logger.warning("Unknown block type '%s' — skipped.", block_type)
-        return None
-
-    try:
-        result = method(**params)
-        if isinstance(result, pn.viewable.Viewable):
-            return _wrap_section_anchor(result, block_cfg.get("_section_id"))
-        if isinstance(result, str):
-            return _wrap_section_anchor(pn.pane.Markdown(result), block_cfg.get("_section_id"))
-        return _wrap_section_anchor(pn.panel(result), block_cfg.get("_section_id"))
-    except Exception as exc:
-        logger.error("Block '%s' raised: %s", block_type, exc)
-        return render_block_error(block_type, exc)
-
-
-def _render_custom(runtime, block_cfg: dict):
-    """Call an arbitrary importable function."""
-    func_path = block_cfg.get("function", "")
-    params = block_cfg.get("params", {})
-    try:
-        mod_path, fn_name = func_path.rsplit(".", 1)
-        fn = getattr(importlib.import_module(mod_path), fn_name)
-        result = fn(runtime, **params)
-        if isinstance(result, pn.viewable.Viewable):
-            return result
-        if isinstance(result, str):
-            return pn.pane.Markdown(result)
-        return pn.panel(result)
-    except Exception as exc:
-        logger.error("Custom block '%s' raised: %s", func_path, exc)
-        return render_block_error(func_path, exc)
 
 
 def _slugify(text: str) -> str:
