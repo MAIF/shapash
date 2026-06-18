@@ -171,17 +171,18 @@ if __name__ == "__main__":
     xpl.compile(x=Xtest, y_pred=y_pred, y_target=ytest)
 
     output_file = os.path.join(cur_dir, "output", "report.html")
-    project_info_file = os.path.join(cur_dir, "config", "project_information.yml")
     custom_report_config_file = os.path.join(cur_dir, "config", "default_report_custom.yml")
-
-    xpl.generate_report(
-        output_file=output_file,
-        project_info_file=project_info_file,
+    report_blocks = UserReportBlocks(
+        explainer=xpl,
         x_train=Xtrain,
         y_train=ytrain,
         y_test=ytest,
+    )
+
+    xpl.generate_report(
+        output_file=output_file,
         # Load tutorial-specific report layout where custom block types are declared.
         yaml_path=custom_report_config_file,
         # Use the custom block class to enable user-defined blocks in the report.
-        block_instance=UserReportBlocks(),
+        block_instance=report_blocks,
     )

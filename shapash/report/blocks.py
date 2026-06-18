@@ -349,7 +349,8 @@ class ReportBlockMixin:
             if not isinstance(section_values, dict):
                 continue
             df = pd.DataFrame(
-                {"Key": list(section_values.keys()), "Value": [str(value) for value in section_values.values()]}
+                [(key, str(value)) for key, value in section_values.items()],
+                columns=["", ""],
             )
             blocks.append(
                 pn.Column(
@@ -490,24 +491,39 @@ class ReportBlockMixin:
 
         model_params = getattr(model, "__dict__", {})
         params_items = list(model_params.items())
-        split_idx = len(params_items) // 2
 
         def _truncate(value: Any, max_len: int) -> str:
             text = str(value)
             return text if len(text) <= max_len else text[: max_len - 3] + "..."
 
-        left_df = pd.DataFrame(
-            {
-                "Parameter key": [_truncate(key, 50) for key, _ in params_items[:split_idx]],
-                "Parameter value": [_truncate(val, 300) for _, val in params_items[:split_idx]],
-            }
-        )
-        right_df = pd.DataFrame(
-            {
-                "Parameter key": [_truncate(key, 50) for key, _ in params_items[split_idx:]],
-                "Parameter value": [_truncate(val, 300) for _, val in params_items[split_idx:]],
-            }
-        )
+        if len(params_items) > 15:
+            split_idx = len(params_items) // 2
+            left_df = pd.DataFrame(
+                {
+                    "Parameter": [_truncate(key, 50) for key, _ in params_items[:split_idx]],
+                    "Value": [_truncate(val, 300) for _, val in params_items[:split_idx]],
+                }
+            )
+            right_df = pd.DataFrame(
+                {
+                    "Parameter": [_truncate(key, 50) for key, _ in params_items[split_idx:]],
+                    "Value": [_truncate(val, 300) for _, val in params_items[split_idx:]],
+                }
+            )
+            params_table = pn.Row(
+                pn.pane.DataFrame(left_df, sizing_mode="stretch_width"),
+                pn.Spacer(width=24),
+                pn.pane.DataFrame(right_df, sizing_mode="stretch_width"),
+                sizing_mode="stretch_width",
+            )
+        else:
+            params_df = pd.DataFrame(
+                {
+                    "Parameter": [_truncate(key, 50) for key, _ in params_items],
+                    "Value": [_truncate(val, 300) for _, val in params_items],
+                }
+            )
+            params_table = pn.pane.DataFrame(params_df, sizing_mode="stretch_width")
 
         content: list[pn.viewable.Viewable] = [
             pn.pane.Markdown(
@@ -520,12 +536,7 @@ class ReportBlockMixin:
                     ]
                 )
             ),
-            pn.Row(
-                pn.pane.DataFrame(left_df, sizing_mode="stretch_width"),
-                pn.Spacer(width=24),
-                pn.pane.DataFrame(right_df, sizing_mode="stretch_width"),
-                sizing_mode="stretch_width",
-            ),
+            params_table,
         ]
 
         return title, content

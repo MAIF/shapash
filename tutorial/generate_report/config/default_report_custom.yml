@@ -1,7 +1,7 @@
 # default_report_custom.yml
 # Custom report with a user-defined block example.
 
-custom_css: "tutorial/generate_report/config/custom_report.css"
+custom_css: "custom_report.css"
 
 sections:
   - type: header
