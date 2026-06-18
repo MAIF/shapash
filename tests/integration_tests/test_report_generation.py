@@ -55,9 +55,14 @@ class TestGeneration(unittest.TestCase):
     def test_generate_report_with_custom_yaml_config(self):
         tmp_dir_path = tempfile.mkdtemp()
         cfg_path = Path(tmp_dir_path) / "custom_report_config.yml"
+        custom_css_path = Path(tmp_dir_path) / "custom_report.css"
         outfile = str(Path(tmp_dir_path) / "report_custom.html")
 
+        custom_css_marker = ".integration-custom-css-marker{border:0;}"
+        custom_css_path.write_text(custom_css_marker, encoding="utf-8")
+
         config = {
+            "custom_css": str(custom_css_path),
             "sections": [
                 {
                     "type": "header",
@@ -80,6 +85,8 @@ class TestGeneration(unittest.TestCase):
             yaml_path=str(cfg_path),
         )
         assert os.path.exists(outfile)
+        report_html = Path(outfile).read_text(encoding="utf-8")
+        assert custom_css_marker in report_html
 
         shutil.rmtree(tmp_dir_path)
 

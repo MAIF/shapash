@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+import tempfile
 
 import panel as pn
 import pandas as pd
@@ -38,6 +39,16 @@ class TestSmartReportPanel(unittest.TestCase):
 
         self.assertEqual(first_count, 1)
         self.assertEqual(second_count, 1)
+
+    def test_apply_report_css_accepts_custom_css_file(self):
+        marker_css = ".custom-report-marker{outline:1px solid #f00;}"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            custom_css_path = Path(tmp_dir) / "custom.css"
+            custom_css_path.write_text(marker_css, encoding="utf-8")
+
+            apply_report_css(custom_css="custom.css", base_dir=tmp_dir)
+
+        self.assertIn(marker_css, pn.config.raw_css)
 
 
 class _DummyBlocks(ReportBlockMixin):

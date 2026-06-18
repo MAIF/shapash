@@ -30,7 +30,7 @@ def generate_report(runtime, config_file: str, output_file: str) -> None:
     out_path = Path(output_file).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    apply_report_css()
+    apply_report_css(custom_css=cfg.get("custom_css"), base_dir=cfg_path.parent)
     report_content = pn.Column(
         *[block for block in rendered_blocks if block is not None],
         css_classes=["report-content"],
