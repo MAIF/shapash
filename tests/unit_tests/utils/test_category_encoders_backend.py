@@ -19,11 +19,11 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
     def test_inv_transform_ordinal_string_dtype_preserves_missing(self):
         """Check pandas string dtype keeps missing values as <NA> on inverse transform."""
         x_in = pd.DataFrame({"city": [1, 2, 3]})
-        encoding = [{"col": "city", "mapping": {"A": 1, "B": 2}, "data_type": "object"}]
+        encoding = [{"col": "city", "mapping": {"A": 1, "B": 2}, "data_type": "string"}]
 
         result = inv_transform_ordinal(x_in, encoding)
 
-        expected = pd.DataFrame({"city": pd.Series(["A", "B", pd.NA], dtype="object")})
+        expected = pd.DataFrame({"city": pd.Series(["A", "B", pd.NA], dtype="string")})
         pd.testing.assert_frame_equal(result, expected)
 
     def test_inverse_transform_1(self):
