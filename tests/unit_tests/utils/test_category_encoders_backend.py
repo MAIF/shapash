@@ -19,11 +19,11 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
     def test_inv_transform_ordinal_string_dtype_preserves_missing(self):
         """Check pandas string dtype keeps missing values as <NA> on inverse transform."""
         x_in = pd.DataFrame({"city": [1, 2, 3]})
-        encoding = [{"col": "city", "mapping": {"A": 1, "B": 2}, "data_type": "string"}]
+        encoding = [{"col": "city", "mapping": {"A": 1, "B": 2}, "data_type": "object"}]
 
         result = inv_transform_ordinal(x_in, encoding)
 
-        expected = pd.DataFrame({"city": pd.Series(["A", "B", pd.NA], dtype="string")})
+        expected = pd.DataFrame({"city": pd.Series(["A", "B", pd.NA], dtype="object")})
         pd.testing.assert_frame_equal(result, expected)
 
     def test_inverse_transform_1(self):
@@ -101,17 +101,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "string"
+        input_dict1["data_type"] = "object"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "string"
+        input_dict2["data_type"] = "object"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "string"
+        input_dict3["data_type"] = "object"
         list_dict = [input_dict2, input_dict3]
 
         result1 = enc_onehot.transform(test)
@@ -415,7 +415,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict = dict()
         input_dict["col"] = "state"
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
-        input_dict["data_type"] = "string"
+        input_dict["data_type"] = "object"
         result = inverse_transform(data, input_dict)
         pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
@@ -488,17 +488,17 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "string"
+        input_dict1["data_type"] = "object"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "string"
+        input_dict2["data_type"] = "object"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "string"
+        input_dict3["data_type"] = "object"
         list_dict = [input_dict2, input_dict3]
 
         result1 = enc_onehot.transform(test)

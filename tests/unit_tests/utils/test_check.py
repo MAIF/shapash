@@ -89,22 +89,22 @@ class TestCheck(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "Onehot2"
         input_dict1["mapping"] = pd.Series(data=["C", "D", np.nan], index=["C", "D", "missing"])
-        input_dict1["data_type"] = "string"
+        input_dict1["data_type"] = "object"
 
         input_dict2 = dict()
         input_dict2["col"] = "Binary2"
         input_dict2["mapping"] = pd.Series(data=["G", "H", np.nan], index=["G", "H", "missing"])
-        input_dict2["data_type"] = "string"
+        input_dict2["data_type"] = "object"
 
         input_dict = dict()
         input_dict["col"] = "state"
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
-        input_dict["data_type"] = "string"
+        input_dict["data_type"] = "object"
 
         input_dict3 = dict()
         input_dict3["col"] = "Ordinal2"
         input_dict3["mapping"] = pd.Series(data=["K", "L", np.nan], index=["K", "L", "missing"])
-        input_dict3["data_type"] = "string"
+        input_dict3["data_type"] = "object"
         list_dict = [input_dict2, input_dict3]
 
         y = pd.DataFrame(data=[0, 1], columns=["y"])
@@ -507,9 +507,9 @@ class TestCheck(unittest.TestCase):
             train_3[["city_1", "city_2", "state_1", "state_2", "other"]], train_3["y"]
         )
 
-        dict_4 = {"col": "state", "mapping": pd.Series(data=[1, 2], index=["US", "FR"]), "data_type": "string"}
+        dict_4 = {"col": "state", "mapping": pd.Series(data=[1, 2], index=["US", "FR"]), "data_type": "object"}
 
-        dict_5 = {"col": "city", "mapping": pd.Series(data=[1, 2], index=["chicago", "paris"]), "data_type": "string"}
+        dict_5 = {"col": "city", "mapping": pd.Series(data=[1, 2], index=["chicago", "paris"]), "data_type": "object"}
 
         enc_4 = [enc_3, [dict_4]]
 
