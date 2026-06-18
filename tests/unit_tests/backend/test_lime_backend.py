@@ -67,3 +67,37 @@ class TestLimeBackend(unittest.TestCase):
                 assert len(features_imp[0]) == len(self.x_df.columns)
             else:
                 assert len(features_imp) == len(self.x_df.columns)
+
+    def test_run_explainer_multiclass_returns_list_contributions(self):
+        """Test multiclass (>2) branch returns a list-like contributions payload."""
+        x_multi = pd.DataFrame(
+            {
+                "x1": [10, 11, 20, 21, 30, 31],
+                "x2": [1, 2, 1, 2, 1, 2],
+            },
+            index=[0, 1, 2, 3, 4, 5],
+        )
+        y_multi = pd.Series([0, 0, 1, 1, 2, 2], index=x_multi.index)
+
+        model = ske.RandomForestClassifier(n_estimators=5, random_state=42)
+        model.fit(x_multi.values, y_multi)
+
+        backend_xpl = LimeBackend(model, data=x_multi)
+        explain_data = backend_xpl.run_explainer(x_multi)
+
+        assert isinstance(explain_data, dict)
+        assert "contributions" in explain_data
+
+        contributions = explain_data["contributions"]
+        assert isinstance(contributions, list)
+        assert len(contributions) == 3
+        for class_contrib in contributions:
+            assert isinstance(class_contrib, np.ndarray)
+            assert class_contrib.shape == (len(x_multi), x_multi.shape[1])
+
+        local_contrib = backend_xpl.get_local_contributions(x_multi, explain_data)
+        assert isinstance(local_contrib, list)
+        assert len(local_contrib) == 3
+        for class_contrib_df in local_contrib:
+            assert isinstance(class_contrib_df, pd.DataFrame)
+            assert class_contrib_df.shape == (len(x_multi), x_multi.shape[1])
