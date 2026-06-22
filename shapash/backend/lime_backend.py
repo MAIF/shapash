@@ -37,13 +37,14 @@ class LimeBackend(BaseBackend):
             dict containing local contributions
         """
         data = self.data if self.data is not None else x
-        explainer = lime_tabular.LimeTabularExplainer(data.values, feature_names=x.columns, mode=self._case)
+        feature_names = list(x.columns)
+        explainer = lime_tabular.LimeTabularExplainer(data.values, feature_names=feature_names, mode=self._case)
 
         def _with_feature_names(values, predict_fn):
             if isinstance(values, pd.DataFrame):
                 return predict_fn(values)
             try:
-                return predict_fn(pd.DataFrame(values, columns=x.columns))
+                return predict_fn(pd.DataFrame(values, columns=feature_names))
             except (TypeError, ValueError):
                 return predict_fn(values)
 
@@ -51,22 +52,19 @@ class LimeBackend(BaseBackend):
         if self._case == "classification":
             num_classes = len(self._classes)
             if num_classes > 2:
-                contribution = []
-                for j in range(num_classes):
-                    list_contrib = []
-                    for idx in x.index:
-                        exp = explainer.explain_instance(
-                            x.loc[idx].to_numpy(),
-                            lambda values: _with_feature_names(values, self.model.predict_proba),
-                            top_labels=num_classes,
-                            num_features=x.shape[1],
-                        )
-                        list_contrib.append(
+                contribution = [[] for _ in range(num_classes)]
+                for idx in x.index:
+                    exp = explainer.explain_instance(
+                        x.loc[idx].to_numpy(),
+                        lambda values: _with_feature_names(values, self.model.predict_proba),
+                        top_labels=num_classes,
+                        num_features=x.shape[1],
+                    )
+                    for j in range(num_classes):
+                        contribution[j].append(
                             {_transform_name(var_name[0], x): var_name[1] for var_name in exp.as_list(j)}
                         )
-                    df_contrib = pd.DataFrame(list_contrib)
-                    df_contrib = df_contrib[list(x.columns)]
-                    contribution.append(df_contrib.values)
+                contribution = [pd.DataFrame(class_contrib)[list(x.columns)].values for class_contrib in contribution]
                 return dict(contributions=contribution)
 
         for i in x.index:
@@ -88,7 +86,7 @@ class LimeBackend(BaseBackend):
         contributions = pd.DataFrame(lime_contrib, index=x.index)
         contributions = contributions[list(x.columns)]
 
-        explain_data = dict(contributions=contributions)
+        explain_data = dict(contributions=contributions.values)
 
         return explain_data
 
