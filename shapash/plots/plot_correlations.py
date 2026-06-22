@@ -4,6 +4,7 @@ import scipy.cluster.hierarchy as sch
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
+from scipy.spatial.distance import pdist
 
 from shapash.manipulation.summarize import compute_corr
 from shapash.style.style_utils import define_style, get_palette
@@ -99,7 +100,7 @@ def plot_correlations(
             return corr
 
         # Compute pairwise distances based on transformed correlation matrix
-        pairwise_distances = sch.distance.pdist(np.abs(corr) ** degree)
+        pairwise_distances = pdist(np.abs(corr) ** degree)
 
         # Replace non-finite values (NaN, inf) with the maximum valid distance or 0 if all are invalid
         finite_mask = np.isfinite(pairwise_distances)
