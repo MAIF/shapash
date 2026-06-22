@@ -92,7 +92,7 @@ class TestLimeBackend(unittest.TestCase):
         assert isinstance(contributions, list)
         assert len(contributions) == 3
         for class_contrib in contributions:
-            assert isinstance(class_contrib, np.ndarray)
+            assert isinstance(class_contrib, pd.DataFrame)
             assert class_contrib.shape == (len(x_multi), x_multi.shape[1])
 
         local_contrib = backend_xpl.get_local_contributions(x_multi, explain_data)
