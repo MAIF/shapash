@@ -255,7 +255,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
 
         self.assertDictEqual(mapping, expected_mapping)
 
-    def handle_categorical_missing(self):
+    def test_handle_categorical_missing(self):
         """
         test handle_categorical_missing
         """

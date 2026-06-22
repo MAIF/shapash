@@ -155,6 +155,8 @@ def plot_correlations(
 
     if features_to_hide is None:
         features_to_hide = []
+    else:
+        features_to_hide = list(features_to_hide)
 
     if optimized:
         # Avoid mutating the caller-provided dataframe when bucketing categories.
@@ -179,7 +181,8 @@ def plot_correlations(
             df = df.sample(n=10000, random_state=1)
 
     if facet_col:
-        features_to_hide += [facet_col]
+        if facet_col not in features_to_hide:
+            features_to_hide.append(facet_col)
 
     compute_method = how
 
