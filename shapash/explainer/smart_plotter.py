@@ -2227,7 +2227,7 @@ class SmartPlotter:
                 dfs = [y_proba_target, y_pred, pd.Series(self.cluster_labels)]
                 cols = ["proba_values", "predict_class", "cluster"]
 
-                # --- Add target only if available
+                # --- Add target and error only if available
                 if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
                     y_target = self._explainer.y_target.loc[list_ind].reset_index(drop=True)
                     if self._explainer.label_dict is not None:
@@ -2235,14 +2235,14 @@ class SmartPlotter:
                     dfs.append(y_target)
                     cols.append("target")
 
-                errors_classification = pd.DataFrame(
-                    np.abs(
-                        ((self._explainer.y_target.loc[list_ind].values.ravel() == label_code).astype(int))
-                        - self._explainer.proba_values.loc[list_ind].iloc[:, label_num]
+                    errors_classification = pd.DataFrame(
+                        np.abs(
+                            ((self._explainer.y_target.loc[list_ind].values.ravel() == label_code).astype(int))
+                            - self._explainer.proba_values.loc[list_ind].iloc[:, label_num]
+                        )
                     )
-                )
-                dfs.append(errors_classification.reset_index(drop=True))
-                cols.append("error")
+                    dfs.append(errors_classification.reset_index(drop=True))
+                    cols.append("error")
 
                 col_name = list(set(color_value) - {"predictions", "targets", "errors"})
                 if len(col_name) > 0:

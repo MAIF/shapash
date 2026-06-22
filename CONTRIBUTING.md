@@ -21,7 +21,7 @@ An issue will open a discussion to evaluate if the problem / feature that you su
 Check on the project tab if your issue / feature is not already created. In this tab, you will find the roadmap of Shapash.
 
 A Pull Request must be linked to an issue.
-Before you open an issue, please check the current opened issues to insure there are no duplicate. Define if it's a feature or a bugfix.
+Before you open an issue, please check the current opened issues to ensure there are no duplicate. Define if it's a feature or a bugfix.
 
 Next, the Shapash team, or the community, will give you a feedback on whether your issue must be implemented in Shapash, or if it can be resolved easily without a pull request.
 
@@ -52,6 +52,26 @@ git remote add upstream https://github.com/MAIF/shapash.git
 git pull upstream master
 ```
 
+## Install dependencies and setup your virtual environment
+Python `>=3.11, <3.15` is required.
+
+After creating a virtual environment, run
+```
+pip install -e ".[dev,test-full]"
+```
+
+Otherwise, we recommend to use `uv`
+```
+uv sync --extra dev --extra test-full
+```
+Take a look at `pyproject.toml` for other dependency groups.
+
+## Pre-commit
+We use pre-commit hooks to automatically identify issues before committing. After installing dev dependencies, make sure to set up the git hook scripts to run automatically on `git commit`
+```
+pre-commit install
+```
+
 ## Start your contribution code
 
 To contribute to Shapash, you will need to create a personal branch.
@@ -62,32 +82,37 @@ We recommand to use a convention of naming branch.
 - **feature/your_feature_name** if you are creating a feature
 - **hotfix/your_bug_fix** if you are fixing a bug
 
+## Tests & Build
+
+Run pytest to check that all tests pass (and get coverage):
+```
+pytest --cov=shapash
+```
+Make sure that Shapash builds correctly:
+```
+python -m build
+
+or
+
+uv build
+```
+
+## Code Quality
+Check your code quality (linting and formatting) with ruff:
+```
+ruff check
+ruff format
+```
+
 ## Commit your changes
 
-Before committing your modifications, we have some recommendations :
+We recommend committing with clear messages and grouping your commits by modifications dependencies.
 
-- Execute pytest to check that all tests pass
-```
-pytest
-```
-- Try to build Shapash
-```
-python setup.py bdist_wheel
-```
-- Check your code with **flake8**
-
-*We will soon add **pre commit** to automatically check your code quality during commit*
+Once all of the previous steps succeed (code quality, tests and build), push your local modifications to your remote repository.
 
 ```
-flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-```
-In addition, we recommend committing with clear messages and grouping your commits by modifications dependencies.
-
-Once all of these steps succeed, push your local modifications to your remote repository.
-
-```
-git add .
-git commit -m ‘fixed a bug’
+git add <file>
+git commit -m 'fixed a bug'
 git push origin feature/my-contribution-branch
 ```
 
