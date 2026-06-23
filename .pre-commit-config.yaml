@@ -27,21 +27,19 @@ repos:
     -   id: check-added-large-files
         args: ['--maxkb=3000']
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.2
+    rev: v0.15.18
     hooks:
-      - id: ruff
+      # Run the linter
+      - id: ruff-check
         args: [--fix]
+      # Run the formatter
       - id: ruff-format
--   repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.2
-    hooks:
-    -   id: pyupgrade
-        args: [--py311-plus]
--   repo: https://github.com/asottile/blacken-docs
-    rev: v1.8.0
+        types_or: [python, pyi, markdown]
+-   repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.20.0
     hooks:
     -   id: blacken-docs
-        additional_dependencies: [black==21.12b0]
+        additional_dependencies: [black==26.5.1]
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.3.0
     hooks:
