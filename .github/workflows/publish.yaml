@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
-      name: pypi
+      name: pypi-release
       url: https://pypi.org/project/shapash/
     permissions:
       id-token: write
