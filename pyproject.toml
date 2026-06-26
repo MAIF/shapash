@@ -65,8 +65,7 @@ lime = ["lime>=0.2.0.0"]
 
 dev = ["pre-commit", "mypy", "ruff"]
 
-test = ["pytest", "pytest-cov"]
-test-full = ["shapash[test,xgboost,catboost,lightgbm,lime,report]"]
+test = ["pytest", "pytest-cov", "shapash[xgboost,catboost,lightgbm,lime,report]"]
 
 doc = [
     "nbsphinx==0.8.8",
@@ -110,7 +109,7 @@ legacy_tox_ini = """
 envlist = py311, py312, py313, py314
 
 [testenv]
-extras = test-full
+extras = test
 commands = pytest {posargs}
 """
 

@@ -57,12 +57,12 @@ Python `>=3.11, <3.15` is required.
 
 After creating a virtual environment, run
 ```
-pip install -e ".[dev,test-full]"
+pip install -e ".[dev,test]"
 ```
 
 Otherwise, we recommend to use `uv`
 ```
-uv sync --extra dev --extra test-full
+uv sync --extra dev --extra test
 ```
 Take a look at `pyproject.toml` for other dependency groups.
 
