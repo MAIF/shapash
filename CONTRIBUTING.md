@@ -88,6 +88,15 @@ Run pytest to check that all tests pass (and get coverage):
 ```
 pytest --cov=shapash
 ```
+
+To test against multiple Python versions at once, use `tox`:
+```
+pipx install tox
+pipx inject tox tox-uv
+tox
+```
+`tox-uv` lets tox use `uv` for interpreter and environment management. Missing Python versions are skipped automatically.
+
 Make sure that Shapash builds correctly:
 ```
 python -m build
