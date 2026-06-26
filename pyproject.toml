@@ -104,6 +104,16 @@ testpaths = ["tests"]
 show_missing = true
 fail_under = 75
 
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py311, py312, py313, py314
+
+[testenv]
+extras = test-full
+commands = pytest {posargs}
+"""
+
 [tool.mypy]
 exclude = ["tests", "tutorial"]
 ignore_missing_imports = true
