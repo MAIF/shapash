@@ -68,9 +68,6 @@ dev = ["pre-commit", "mypy", "ruff"]
 test = ["pytest", "pytest-cov"]
 test-full = ["shapash[test,xgboost,catboost,lightgbm,lime,report]"]
 
-mypy = ["mypy"]
-ruff = ["ruff"]
-
 doc = [
     "nbsphinx==0.8.8",
     "sphinx_material==0.0.35",
