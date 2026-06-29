@@ -2119,6 +2119,20 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(output.data[0].y) == 3
         assert output.data[0].z.shape == (3, 3)
 
+    def test_correlations_does_not_mutate_features_to_hide(self):
+        smart_explainer = self.smart_explainer
+
+        df = pd.DataFrame(
+            {"A": [8, 90, 10, 110], "B": [4.3, 7.4, 10.2, 15.7], "C": ["C8", "C8", "C9", "C9"], "D": [1, -3, -5, -10]},
+            index=[8, 9, 10, 11],
+        )
+        features_to_hide = ["D"]
+
+        output = smart_explainer.plot.correlations_plot(df, max_features=3, features_to_hide=features_to_hide, facet_col="C")
+
+        assert len(output.data) == 2
+        assert features_to_hide == ["D"]
+
     def test_stability_plot_1(self):
         np.random.seed(42)
         df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
