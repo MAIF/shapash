@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "shapash"
-version = "2.9.0"
+dynamic = ["version"]
 
 authors = [
     {name = "Yann Golhen"},
@@ -40,7 +40,7 @@ dependencies = [
     "nbformat>5.8.0",
     "numba>=0.60.0",
     "numpy>=2.0.0,<2.6.0",
-    "pandas>=2.2.2,<4.0.0",
+    "pandas>=2.2.2,<3.0.4",
     "plotly>=5.0.0,<6.0.0",
     "scikit-learn>=1.8.0,<1.9.0",
     "scipy>=1.13.0",
@@ -64,9 +64,9 @@ lightgbm = ["lightgbm>=4.4.0"]
 lime = ["lime>=0.2.0.0"]
 
 dev = ["pre-commit", "mypy", "ruff"]
-test = ["pytest", "pytest-cov"]
-mypy = ["mypy"]
-ruff = ["ruff"]
+
+test = ["pytest", "pytest-cov", "shapash[xgboost,catboost,lightgbm,lime,report]"]
+
 doc = [
     "nbsphinx==0.8.8",
     "sphinx_material==0.0.35",
@@ -79,7 +79,7 @@ doc = [
     "sphinxcontrib-serializinghtml==1.1.5",
 ]
 
-all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc]"]
+all = ["shapash[dev, test, doc]"]
 
 [project.urls]
 Homepage = "https://github.com/MAIF/shapash"
@@ -90,13 +90,28 @@ package-dir = {"" = "."}
 [tool.setuptools.packages.find]
 where = ["."]
 
-
 [tool.setuptools.package-data]
 "*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png", "*.ico", "*.ipynb", "*.html", "*.j2"]
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 75
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py311, py312, py313, py314
+
+[testenv]
+extras = test
+commands = pytest {posargs}
+"""
 
 [tool.mypy]
 exclude = ["tests", "tutorial"]

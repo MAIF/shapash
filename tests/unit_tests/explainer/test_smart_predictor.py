@@ -13,6 +13,7 @@ import catboost as cb
 import category_encoders as ce
 import numpy as np
 import pandas as pd
+import pytest
 import shap
 import sklearn.preprocessing as skp
 from catboost import Pool
@@ -792,6 +793,9 @@ class TestSmartPredictor(unittest.TestCase):
         predictor.save(pkl_file)
         assert path.exists(pkl_file)
         os.remove(pkl_file)
+        manifest_file = pkl_file + ".manifest.json"
+        if path.exists(manifest_file):
+            os.remove(manifest_file)
 
     @patch("shapash.explainer.smart_predictor.SmartPredictor.check_model")
     @patch("shapash.utils.check.check_preprocessing_options")
@@ -1193,6 +1197,45 @@ class TestSmartPredictor(unittest.TestCase):
         assert all(x.columns == features_order)
 
         predictor_1.check_dataset_features(x=pd.DataFrame({"x1": [1], "x2": ["M"]}))
+
+    def test_check_dataset_features_accepts_nullable_dtype(self) -> None:
+        """
+        check_dataset_features should accept pandas nullable Int64 where the
+        expected dtype string is 'int64' (semantic equivalence). Regression test
+        for https://github.com/MAIF/shapash/issues/707 (Gap 2).
+        """
+        predictor_1 = self.predictor_1
+        x = pd.DataFrame({"x1": pd.array([1], dtype="Int64"), "x2": ["M"]})
+        predictor_1.check_dataset_features(x=x)
+
+    def test_check_dataset_features_accepts_pyarrow_backed_dtype(self) -> None:
+        """
+        check_dataset_features should accept pyarrow-backed dtypes where the
+        underlying numpy dtype matches the expected one (e.g. produced by
+        pd.read_parquet(..., dtype_backend='pyarrow')). Skipped when pyarrow
+        isn't available in the test environment. Regression test for
+        https://github.com/MAIF/shapash/issues/707 (Gap 2).
+        """
+        pytest.importorskip("pyarrow")
+        predictor_1 = self.predictor_1
+        x = pd.DataFrame({"x1": pd.array([1], dtype="int64[pyarrow]"), "x2": ["M"]})
+        predictor_1.check_dataset_features(x=x)
+
+    def test_check_dataset_features_rejects_mismatched_dtype(self) -> None:
+        """
+        check_dataset_features must still raise on a genuinely mismatched dtype
+        (e.g. float64 where int64 was declared). Regression test for
+        https://github.com/MAIF/shapash/issues/707 (Gap 2).
+        """
+        predictor_1 = self.predictor_1
+        x = pd.DataFrame({"x1": [1.0], "x2": ["M"]})
+        with self.assertRaises(ValueError) as ctx:
+            predictor_1.check_dataset_features(x=x)
+        assert (
+            "Mismatched" in str(ctx.exception)
+            or "doesn't match" in str(ctx.exception).lower()
+            or "don't match" in str(ctx.exception)
+        )
 
     def test_to_smartexplainer(self):
         """

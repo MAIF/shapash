@@ -98,7 +98,6 @@ def plot_correlations(
 
         if corr.shape[0] < 2:
             return corr
-
         # Compute pairwise distances based on transformed correlation matrix
         pairwise_distances = pdist(np.abs(corr) ** degree)
 
