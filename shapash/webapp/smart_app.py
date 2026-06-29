@@ -122,13 +122,13 @@ class SmartApp:
         if self.explainer._case == "classification":
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, "num")[1]
             self.selected_feature = self.explainer.features_imp[-1].idxmax()
-            self.max_threshold = int(
-                max([x.map(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions])
+            self.max_threshold = max(
+                [x.map(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions]
             )
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max())
+            self.max_threshold = self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max()
         self.list_index = []
         self.subset = None
         self.last_click_data = None
@@ -697,9 +697,11 @@ class SmartApp:
                     min=0,
                     max=self.max_threshold,
                     value=0,
-                    step=0.1,
+                    step=round_to_k(self.max_threshold / 20, k=1),
                     marks={
-                        f"{round(self.max_threshold * mark / 4)}": f"{round(self.max_threshold * mark / 4)}"
+                        round_to_k(
+                            self.max_threshold * mark / 4, k=2
+                        ): f"{round_to_k(self.max_threshold * mark / 4, k=2)}"
                         for mark in range(5)
                     },
                     id="threshold_id",
