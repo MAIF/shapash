@@ -11,7 +11,9 @@ import sys
 import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
-from typing import Any, Optional
+from typing import Any
+
+from shapash.__version__ import __version__ as shapash_version
 
 try:
     import yaml
@@ -114,7 +116,7 @@ def load_yml(path):
     return d
 
 
-def _try_package_version(package_name: Optional[str]) -> Optional[str]:
+def _try_package_version(package_name: str | None) -> str | None:
     """Return the installed version of ``package_name`` via importlib.metadata, or ``None``."""
     if not package_name:
         return None
@@ -163,15 +165,13 @@ def _compute_schema_fingerprint(predictor: Any) -> str:
 
 def _build_predictor_manifest(predictor: Any) -> dict:
     """Return the manifest dict describing the runtime state used to save ``predictor``."""
-    from shapash.__version__ import __version__ as shapash_version
-
     return {
         "shapash_version": shapash_version,
         "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         "model_framework": _detect_model_framework(predictor.model),
         "shap_version": _try_package_version("shap"),
         "schema_fingerprint": _compute_schema_fingerprint(predictor),
-        "saved_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "saved_at": datetime.datetime.now(datetime.UTC).isoformat(),
     }
 
 
@@ -183,7 +183,7 @@ def _save_manifest(manifest: dict, predictor_path: str) -> str:
     return manifest_path
 
 
-def _load_manifest(predictor_path: str) -> Optional[dict]:
+def _load_manifest(predictor_path: str) -> dict | None:
     """Read the sidecar manifest for ``predictor_path``. Returns ``None`` if absent."""
     manifest_path = predictor_path + MANIFEST_SUFFIX
     if not os.path.exists(manifest_path):
@@ -192,7 +192,7 @@ def _load_manifest(predictor_path: str) -> Optional[dict]:
         return json.load(f)
 
 
-def _parse_major_minor(version_str: str) -> Optional[tuple]:
+def _parse_major_minor(version_str: str) -> tuple | None:
     """Parse a dotted version string into ``(major, minor)``. Returns ``None`` if unparseable."""
     if not version_str:
         return None
@@ -211,8 +211,6 @@ def _check_predictor_manifest(manifest: dict, predictor: Any) -> None:
     critical mismatches (schema fingerprint, major shapash version) and emits
     ``UserWarning`` for minor skews (minor shapash version, model framework version).
     """
-    from shapash.__version__ import __version__ as current_shapash
-
     expected_fp = manifest.get("schema_fingerprint")
     actual_fp = _compute_schema_fingerprint(predictor)
     if expected_fp and expected_fp != actual_fp:
@@ -224,16 +222,16 @@ def _check_predictor_manifest(manifest: dict, predictor: Any) -> None:
 
     saved_shapash = manifest.get("shapash_version", "") or ""
     saved_v = _parse_major_minor(saved_shapash)
-    current_v = _parse_major_minor(current_shapash)
+    current_v = _parse_major_minor(shapash_version)
     if saved_v is not None and current_v is not None:
         if saved_v[0] != current_v[0]:
             raise ValueError(
-                f"SmartPredictor saved with shapash {saved_shapash}, current is {current_shapash}. "
+                f"SmartPredictor saved with shapash {saved_shapash}, current is {shapash_version}. "
                 "Major version mismatch — re-fit and re-save the predictor."
             )
         if saved_v[1] != current_v[1]:
             warnings.warn(
-                f"SmartPredictor saved with shapash {saved_shapash}, current is {current_shapash}. "
+                f"SmartPredictor saved with shapash {saved_shapash}, current is {shapash_version}. "
                 "Minor version skew; behaviour should still be compatible.",
                 UserWarning,
                 stacklevel=3,
