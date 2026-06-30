@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from category_encoders import OrdinalEncoder
+from pandas.api.types import is_string_dtype
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
@@ -576,7 +577,9 @@ class Consistency:
         if isinstance(self.preprocessing, OrdinalEncoder):
             encoder = self.preprocessing
         else:
-            categorical_features = [col for col in x.columns if x[col].dtype == "object"]
+            categorical_features = [
+                col for col in x.columns if is_string_dtype(x[col]) or x[col].dtype.name in ("object", "category")
+            ]
             encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(x)
             x = encoder.transform(x)
 

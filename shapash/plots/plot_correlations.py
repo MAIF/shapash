@@ -159,11 +159,23 @@ def plot_correlations(
         features_to_hide = list(features_to_hide)
 
     if optimized:
-        categorical_columns = df.select_dtypes(include=["object", "category"]).columns
+        # Avoid mutating the caller-provided dataframe when bucketing categories.
+        df = df.copy()
+        categorical_columns = list(df.select_dtypes(include=["string", "category"]).columns)
+        categorical_columns += [
+            col
+            for col in df.select_dtypes(include=["object"]).columns
+            if pd.api.types.infer_dtype(df[col], skipna=True) in ("string", "unicode", "empty")
+        ]
+        if facet_col:
+            categorical_columns = [col for col in categorical_columns if col != facet_col]
 
         for col in categorical_columns:
             top_categories = df[col].value_counts().nlargest(200).index
-            df[col] = df[col].where(df[col].isin(top_categories), other="Other")
+            keep_mask = df[col].isna() | df[col].isin(top_categories)
+            if isinstance(df[col].dtype, pd.CategoricalDtype) and "Other" not in df[col].cat.categories:
+                df[col] = df[col].cat.add_categories(["Other"])
+            df[col] = df[col].where(keep_mask, other="Other")
 
         if len(df) > 10000:
             df = df.sample(n=10000, random_state=1)

@@ -8,6 +8,7 @@ import sys
 
 import pandas as pd
 from category_encoders import OrdinalEncoder
+from pandas.api.types import is_string_dtype
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
@@ -21,7 +22,9 @@ if __name__ == "__main__":
     y_df = house_df["SalePrice"]
     X_df = house_df[house_df.columns.difference(["SalePrice"])]
 
-    categorical_features = [col for col in X_df.columns if X_df[col].dtype == "str"]
+    categorical_features = [
+        col for col in X_df.columns if is_string_dtype(X_df[col]) or X_df[col].dtype.name in ("object", "category")
+    ]
 
     encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(X_df)
 

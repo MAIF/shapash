@@ -22,6 +22,22 @@ class TestCommon(unittest.TestCase):
 
         assert series_dtype(s) == VarType.TYPE_CAT
 
+    def test_series_dtype_1_object_strings_with_nan(self):
+        """
+        Test object string series with missing values
+        """
+        s = pd.Series(["a", None, "b"], dtype=object)
+
+        assert series_dtype(s) == VarType.TYPE_CAT
+
+    def test_series_dtype_1_object_non_string(self):
+        """
+        Test object series with non-string values
+        """
+        s = pd.Series([["a"], {"b": 1}], dtype=object)
+
+        assert series_dtype(s) == VarType.TYPE_UNSUPPORTED
+
     def test_series_dtype_2(self):
         """
         Test bool series

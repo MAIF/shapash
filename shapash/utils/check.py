@@ -10,6 +10,12 @@ from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import check_transformers, preprocessing_tolist
 
 
+def _is_string_dtype_metadata(dtype_value):
+    if not isinstance(dtype_value, str):
+        return False
+    return dtype_value in {"object", "str", "string"} or dtype_value.startswith("string[")
+
+
 def check_preprocessing(preprocessing=None):
     """
     Check that all transformation of the preprocessing are supported.
@@ -395,11 +401,16 @@ def check_postprocessing(x, postprocessing=None):
                     raise ValueError("Case modification unknown. Available ones are 'lower', 'upper'.")
 
                 if isinstance(x, dict):
-                    if x[key] != "object":
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                    if not _is_string_dtype_metadata(x[key]):
+                        raise ValueError(
+                            f"Expected string dtype metadata (object/str/string/string[...]) "
+                            f"to apply upper/lower in {key} dict, got {x[key]!r}"
+                        )
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                        raise ValueError(
+                            f"Expected a string dtype to apply upper/lower on column {key}, got {x[key].dtype!r}"
+                        )
 
             if dict_post["type"] == "regex":
                 if set(dict_post["rule"].keys()) != {"in", "out"}:
@@ -408,11 +419,16 @@ def check_postprocessing(x, postprocessing=None):
                         f" must be 'in' and 'out'."
                     )
                 if isinstance(x, dict):
-                    if x[key] != "object":
-                        raise ValueError(f"Expected string object to modify with regex methods in {key} dict")
+                    if not _is_string_dtype_metadata(x[key]):
+                        raise ValueError(
+                            f"Expected string dtype metadata (object/str/string/string[...]) "
+                            f"to apply regex methods in {key} dict, got {x[key]!r}"
+                        )
                 else:
                     if not pd.api.types.is_string_dtype(x[key]):
-                        raise ValueError(f"Expected string object to modify with upper/lower method in {key} dict")
+                        raise ValueError(
+                            f"Expected a string dtype to apply regex methods on column {key}, got {x[key].dtype!r}"
+                        )
 
 
 def check_features_name(columns_dict, features_dict, features):

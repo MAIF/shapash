@@ -39,10 +39,15 @@ def series_dtype(s: pd.Series, cat_num_threshold: int = 15) -> VarType:
     """
     if is_bool_dtype(s):
         return VarType.TYPE_CAT
+    elif isinstance(s.dtype, pd.CategoricalDtype):
+        return VarType.TYPE_CAT
     elif is_string_dtype(s):
         return VarType.TYPE_CAT
     elif s.dtype.name == "object":
-        return VarType.TYPE_CAT
+        inferred_dtype = pd.api.types.infer_dtype(s, skipna=True)
+        if inferred_dtype in ("string", "unicode", "empty"):
+            return VarType.TYPE_CAT
+        return VarType.TYPE_UNSUPPORTED
     elif is_numeric_dtype(s):
         if numeric_is_continuous(s, threshold=cat_num_threshold):
             return VarType.TYPE_NUM
