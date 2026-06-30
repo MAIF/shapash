@@ -29,7 +29,7 @@ repos:
     -   id: check-added-large-files
         args: ['--maxkb=3000']
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.18
+    rev: v0.15.20
     hooks:
       # Run the linter
       - id: ruff-check
