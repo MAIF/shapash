@@ -90,5 +90,5 @@ def export_and_save_report(working_dir: str, output_file: str):
     )
     (body, resources) = exporter.from_filename(filename=os.path.join(working_dir, "base_report.ipynb"))
 
-    with open(output_file, "w") as file:
+    with open(output_file, "w", encoding="utf-8") as file:
         file.write(body)
