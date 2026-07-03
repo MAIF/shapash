@@ -22,6 +22,7 @@ from shapash.plots.plot_evaluation_metrics import (
     compute_tsne_projection,
     plot_clustering_by_explainability,
     plot_confusion_matrix,
+    plot_lift_curve,
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
@@ -1929,6 +1930,71 @@ class SmartPlotter:
             auto_open=auto_open,
         )
 
+    def lift_curve_plot(
+        self,
+        selection: list | None = None,
+        label: int | str = -1,
+        nb: int = 100,
+        max_points: int = 2000,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
+        """
+        Display a Plotly lift curve for classification predictions.
+
+        Parameters
+        ----------
+        selection: list, optional
+            Contains list of index, subset of the input DataFrame that we want to plot.
+        label: integer or string (default -1)
+            If the label is of string type, check if it can be changed to integer to select the
+            good dataframe object.
+        nb: int, optional
+            Number of intervals used to build the curve, by default 100.
+        max_points: int, optional
+            Maximum number of observations used in the plot, by default 2000.
+        width : int (default: 900)
+            Plotly figure - layout width.
+        height : int (default: 600)
+            Plotly figure - layout height.
+        file_name: string (optional)
+            Specify the save path of html files. If it is not provided, no file will be saved.
+        auto_open: bool (default=False)
+            open automatically the plot.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Lift curve figure.
+        """
+
+        if self._explainer._case != "classification":
+            raise ValueError("Lift curve is only available for classification case")
+
+        label_num, label_code, label_value = self._explainer.check_label_name(label)
+
+        if self._explainer.proba_values is None:
+            self._explainer.predict_proba()
+
+        return plot_lift_curve(
+            x_data=self._explainer.x_init,
+            y_target=self._explainer.y_target,
+            y_proba_values=self._explainer.proba_values,
+            style_dict=self._style_dict,
+            selection=selection,
+            label_num=label_num,
+            label_code=label_code,
+            label_value=label_value,
+            nb=nb,
+            max_points=max_points,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+        )
+
     def distribution_plot(
         self,
         col: str,
@@ -2472,6 +2538,8 @@ class SmartPlotter:
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
         colorbar_title = [el.capitalize() for el in color_value]
 
+        effective_style_dict = self._style_dict if style_dict is None else style_dict
+
         return plot_clustering_by_explainability(
             values_to_project=values_to_project,
             hv_text=hv_text,
@@ -2486,7 +2554,7 @@ class SmartPlotter:
             keep_quantile=keep_quantile,
             random_state=random_state,
             marker_size=marker_size,
-            style_dict=style_dict,
+            style_dict=effective_style_dict,
             opacity=opacity,
             width=width,
             height=height,

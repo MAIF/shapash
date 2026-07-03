@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -20,6 +22,190 @@ from shapash.utils.clustering import (
 )
 from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import adjust_title_height, truncate_str, tuning_colorscale
+
+
+def _compute_lift_curve(
+    y_true_binary: np.ndarray | pd.Series,
+    y_score: np.ndarray | pd.Series,
+    nb: int = 100,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    y_true_binary = np.asarray(y_true_binary).astype(int)
+    y_score = np.asarray(y_score).astype(float)
+
+    order = np.argsort(y_score)[::-1]
+    y_sorted = y_true_binary[order]
+
+    total_positive = y_sorted.sum()
+    if total_positive == 0:
+        raise ValueError("Unable to compute lift curve: no positive samples found for the selected label.")
+
+    cum_positive = np.concatenate(([0], np.cumsum(y_sorted)))
+    fractions = np.linspace(0.0, 1.0, nb + 1)
+    cutoffs = np.rint(fractions * y_sorted.shape[0]).astype(int)
+    cutoffs = np.clip(cutoffs, 0, y_sorted.shape[0])
+
+    lift_curve = cum_positive[cutoffs] / total_positive
+
+    top_decile_count = max(1, int(round(y_sorted.shape[0] / 10)))
+    lift_10 = cum_positive[top_decile_count] / total_positive
+
+    return fractions, lift_curve, lift_10
+
+
+def plot_lift_curve(
+    x_data: pd.DataFrame,
+    y_target: pd.Series | pd.DataFrame | None,
+    y_proba_values: pd.DataFrame,
+    style_dict: dict[str, Any],
+    selection: list[Any] | None = None,
+    label_num: int | None = None,
+    label_code: Any | None = None,
+    label_value: Any | None = None,
+    nb: int = 100,
+    max_points: int = 2000,
+    width: int = 900,
+    height: int = 600,
+    file_name: str | None = None,
+    auto_open: bool = False,
+) -> go.Figure:
+    """
+    Generate a Plotly lift curve for classification probabilities.
+
+    Parameters
+    ----------
+    x_data : pandas.DataFrame
+        Feature dataset used to align sampling indices.
+    y_target : pandas.Series or pandas.DataFrame
+        True target values.
+    y_proba_values : pandas.DataFrame
+        Predicted probabilities for each class.
+    style_dict : dict
+        Dictionary containing style settings used in Shapash plots.
+        Lift curve colors can be customized through ``style_dict["lift_curve_colors"]``
+        with keys ``curve``, ``random``, and ``perfect``.
+    selection : list, optional
+        Subset of indices to display.
+    label_num : int, optional
+        Numeric class index in probability columns.
+    label_code : object, optional
+        Class code in original target space.
+    label_value : str, optional
+        Human-readable label for plot subtitle.
+    nb : int, optional
+        Number of intervals used to compute the curve.
+    max_points : int, optional
+        Maximum number of observations used in plot.
+    width : int, optional
+        Plotly figure width.
+    height : int, optional
+        Plotly figure height.
+    file_name : str, optional
+        File path to save html output.
+    auto_open : bool, optional
+        Whether to open the saved plot automatically.
+
+    Returns
+    -------
+    go.Figure
+        Plotly lift curve figure.
+    """
+    if y_target is None:
+        fig = go.Figure()
+        fig.update_layout(
+            xaxis={"visible": False},
+            yaxis={"visible": False},
+            annotations=[
+                {
+                    "text": "Provide the y_target argument in the compile() method to display this plot.",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "showarrow": False,
+                    "font": {"size": 14},
+                }
+            ],
+        )
+        return fig
+
+    if label_num is None or label_code is None:
+        raise ValueError("Label information is required to compute the lift curve.")
+
+    list_ind, addnote = subset_sampling(x_data, selection, max_points)
+
+    if isinstance(y_target, pd.DataFrame):
+        y_true = y_target.iloc[:, 0].loc[list_ind]
+    else:
+        y_true = y_target.loc[list_ind]
+
+    y_score = y_proba_values.iloc[:, label_num].loc[list_ind]
+    y_true_binary = (y_true == label_code).astype(int)
+
+    fractions, curve_values, lift_10 = _compute_lift_curve(y_true_binary=y_true_binary, y_score=y_score, nb=nb)
+
+    positive_rate = y_true_binary.mean() * 100
+    subtitle = f"Response: <b>{label_value}</b> - Lift@10%: <b>{lift_10:.3f}</b>"
+    if addnote:
+        subtitle += f" - {addnote}"
+
+    lift_curve_colors = style_dict.get("lift_curve_colors", {})
+    lift_curve_color = lift_curve_colors.get("curve", style_dict["prediction_plot"][1])
+    random_model_color = lift_curve_colors.get("random", style_dict["prediction_plot"][0])
+    perfect_model_color = lift_curve_colors.get("perfect", style_dict["dict_stability_bar_colors"][0])
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=100 * fractions,
+            y=curve_values,
+            mode="lines",
+            name="Lift curve",
+            line={"color": lift_curve_color, "width": 3},
+            hovertemplate="Population: %{x:.1f}%<br>Positives captured: %{y:.3f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 100],
+            y=[0, 1],
+            mode="lines",
+            name="Random model",
+            line={"color": random_model_color, "dash": "dot", "width": 2},
+            hovertemplate="Population: %{x:.1f}%<br>Positives captured: %{y:.3f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0, positive_rate, 100],
+            y=[0, 1, 1],
+            mode="lines",
+            name="Perfect model",
+            line={"color": perfect_model_color, "dash": "dash", "width": 2},
+            hovertemplate="Population: %{x:.1f}%<br>Positives captured: %{y:.3f}<extra></extra>",
+        )
+    )
+
+    title = "Lift Curve"
+    title += f"<br><sup>{subtitle}</sup>"
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+    dict_xaxis = style_dict["dict_xaxis"] | {"text": "Share of population targeted (%)"}
+    dict_yaxis = style_dict["dict_yaxis"] | {"text": "Share of positives captured"}
+
+    fig.update_layout(
+        template="none",
+        title=dict_t,
+        width=width,
+        height=height,
+        xaxis_title=dict_xaxis,
+        yaxis_title=dict_yaxis,
+        hovermode="closest",
+    )
+
+    fig.update_yaxes(range=[0, 1.05], automargin=True)
+    fig.update_xaxes(range=[0, 100], automargin=True)
+
+    if file_name:
+        plot(fig, filename=file_name, auto_open=auto_open)
+
+    return fig
 
 
 def plot_scatter_prediction(

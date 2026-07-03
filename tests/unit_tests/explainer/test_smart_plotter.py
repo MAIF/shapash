@@ -2408,6 +2408,46 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[2].type == "scatter"
         assert f"True Values" in output.data[1].hovertext[0]
 
+    def test_lift_curve_plot_1(self):
+        """
+        Classification
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 2, size=(100, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list("ABC"))
+        y_test = pd.DataFrame(np.random.randint(0, 2, size=(100, 1)))
+
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test, y_target=y_test)
+
+        output = xpl.plot.lift_curve_plot(nb=50)
+
+        assert len(output.data) == 3
+        assert output.data[0].type == "scatter"
+        assert output.data[1].type == "scatter"
+        assert output.data[2].type == "scatter"
+        assert len(output.data[0].x) == 51
+        assert np.isclose(output.data[0].y[-1], 1.0)
+        assert "Lift Curve" in output.layout.title.text
+
+    def test_lift_curve_plot_2(self):
+        """
+        Regression
+        """
+        df_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X_train = df_train.iloc[:, :-1]
+        y_train = df_train.iloc[:, -1]
+        df_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X_test = df_test.iloc[:, :-1]
+
+        model = DecisionTreeRegressor().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test)
+
+        with self.assertRaises(ValueError):
+            xpl.plot.lift_curve_plot()
+
     def test_subset_sampling_1(self):
         """
         test _subset_sampling
