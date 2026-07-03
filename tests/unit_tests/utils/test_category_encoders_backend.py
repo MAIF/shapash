@@ -404,7 +404,7 @@ class TestInverseTransformCaterogyEncoder(unittest.TestCase):
         input_dict = dict()
         input_dict["col"] = "state"
         input_dict["mapping"] = pd.Series(data=["US", "FR-1", "FR-2"], index=["US", "FR", "FR"])
-        input_dict["data_type"] = "str"
+        input_dict["data_type"] = "object"
         result = inverse_transform(data, input_dict)
         pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 

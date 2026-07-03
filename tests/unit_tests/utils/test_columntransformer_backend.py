@@ -776,7 +776,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         input_dict3 = dict()
         input_dict3["col"] = "state"
         input_dict3["mapping"] = pd.Series(data=["US FR"], index=["US-FR"])
-        input_dict3["data_type"] = "str"
+        input_dict3["data_type"] = "object"
 
         transform_input_3 = pd.Series(data=input_dict3.get("mapping").values, index=input_dict3.get("mapping").index)
         train_preprocessed[input_dict3.get("col")] = (
