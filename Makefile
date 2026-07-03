@@ -50,20 +50,23 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-lint: ## check style with flake8
-	flake8 shapash tests
+lint: ## check style with ruff
+	ruff check
+
+format: ## check formatting with ruff
+	ruff format --check
 
 test: ## run tests quickly with the default Python
-	py.test
+	pytest
 
 test-all: ## run tests on every Python version with tox
 	tox
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source shapash -m pytest
-	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
+coverage: ## run tests with coverage
+	pytest --cov=shapash
+
+coverage-report: ## run tests with coverage and generate html report
+	pytest --cov=shapash --cov-report=html
 
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/shapash.rst

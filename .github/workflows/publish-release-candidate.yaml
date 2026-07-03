@@ -1,0 +1,100 @@
+name: Publish Release Candidate
+
+on:
+  push:
+    tags:
+      - "v*rc*"
+
+concurrency:
+  group: testpypi-publish
+  cancel-in-progress: false
+
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Build package
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-to-testpypi:
+    name: Publish Python distribution to TestPyPI
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: pypi-release-candidate
+      url: https://test.pypi.org/project/shapash/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distribution to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  smoke-test-testpypi:
+    name: Smoke test install from TestPyPI
+    needs: [publish-to-testpypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions: {}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Resolve package version from tag
+        id: package-version
+        run: |
+          # Parse the version from the built wheel filename rather than the git tag:
+          # dynamic versioning normalizes the tag to PEP 440 (e.g. v1.2.0-rc1 -> 1.2.0rc1),
+          # so the wheel name holds the exact version string published to the index.
+          VERSION=$(python -c "import pathlib; print(next(pathlib.Path('dist').glob('*.whl')).name.split('-')[1])")
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+      - name: Install and import from TestPyPI
+        env:
+          RELEASE_VERSION: ${{ steps.package-version.outputs.version }}
+        run: |
+          python3 -m venv .venv-smoke
+          . .venv-smoke/bin/activate
+          for attempt in 1 2 3 4 5; do
+            if pip install --pre -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "shapash==${RELEASE_VERSION}"; then
+              break
+            fi
+            if [ "${attempt}" -eq 5 ]; then
+              echo "Failed to install shapash==${RELEASE_VERSION} from TestPyPI after retries."
+              exit 1
+            fi
+            echo "Install not available yet on TestPyPI, retrying in 30s (attempt ${attempt}/5)..."
+            sleep 30
+          done
+          python -c "import shapash; print(shapash.__version__)"

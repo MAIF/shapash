@@ -2,12 +2,13 @@
 Unit test of summarize
 """
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from shapash.manipulation.summarize import compute_features_import, group_contributions, summarize_el
+from shapash.manipulation.summarize import compute_corr, compute_features_import, group_contributions, summarize_el
 
 
 class TestSummarize(unittest.TestCase):
@@ -124,3 +125,34 @@ class TestSummarize(unittest.TestCase):
             [[0.5, -0.02], [0.1, -0.03], [-0.6, 0.4]], columns=["group1", "group2"], index=index_list
         )
         assert_frame_equal(output, expected)
+
+
+class TestComputeCorr(unittest.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame(
+            {
+                "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+                "b": [2.0, 4.0, 6.0, 8.0, 10.0],
+                "c": [5.0, 3.0, 1.0, 3.0, 5.0],
+            }
+        )
+
+    def test_compute_corr_pearson(self):
+        result = compute_corr(self.df, "pearson")
+        assert_frame_equal(result, self.df.corr())
+
+    def test_compute_corr_phik(self):
+        result = compute_corr(self.df, "phik")
+        assert result.shape == (len(self.df.columns), len(self.df.columns))
+        assert list(result.columns) == list(self.df.columns)
+        assert list(result.index) == list(self.df.columns)
+        assert (result.values >= 0).all() and (result.values <= 1).all()
+
+    def test_compute_corr_phik_fallback_to_pearson_when_not_installed(self):
+        with patch("shapash.manipulation.summarize.import_optional_module", return_value=None):
+            result = compute_corr(self.df, "phik")
+        assert_frame_equal(result, self.df.corr())
+
+    def test_compute_corr_unknown_method_raises(self):
+        with self.assertRaises(NotImplementedError):
+            compute_corr(self.df, "spearman")
