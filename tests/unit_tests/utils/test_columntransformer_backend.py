@@ -143,17 +143,17 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "onehot_ce_city"
         input_dict1["mapping"] = pd.Series(data=["chicago", "paris"], index=["CH", "PR"])
-        input_dict1["data_type"] = "str"
+        input_dict1["data_type"] = "object"
 
         input_dict2 = dict()
         input_dict2["col"] = "other"
         input_dict2["mapping"] = pd.Series(data=["A", "B", "C"], index=["A-B", "A-B", "C"])
-        input_dict2["data_type"] = "str"
+        input_dict2["data_type"] = "object"
 
         input_dict3 = dict()
         input_dict3["col"] = "onehot_ce_state"
         input_dict3["mapping"] = pd.Series(data=["US", "FR"], index=["US-FR", "US-FR"])
-        input_dict3["data_type"] = "str"
+        input_dict3["data_type"] = "object"
         list_dict = [input_dict2, input_dict3]
 
         original = inverse_transform(result, [enc, input_dict1, list_dict])
@@ -752,7 +752,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         input_dict1 = dict()
         input_dict1["col"] = "city"
         input_dict1["mapping"] = pd.Series(data=["chicago", "paris"], index=["CH", "PR"])
-        input_dict1["data_type"] = "str"
+        input_dict1["data_type"] = "object"
 
         transform_input_1 = pd.Series(data=input_dict1.get("mapping").values, index=input_dict1.get("mapping").index)
         train_preprocessed[input_dict1.get("col")] = (
@@ -764,7 +764,7 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         input_dict2 = dict()
         input_dict2["col"] = "other"
         input_dict2["mapping"] = pd.Series(data=["A", "C"], index=["A-B", "C"])
-        input_dict2["data_type"] = "str"
+        input_dict2["data_type"] = "object"
 
         transform_input_2 = pd.Series(data=input_dict2.get("mapping").values, index=input_dict2.get("mapping").index)
         train_preprocessed[input_dict2.get("col")] = (
