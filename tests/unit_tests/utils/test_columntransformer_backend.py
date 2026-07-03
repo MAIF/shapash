@@ -1027,9 +1027,9 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         train_3 = enc_3.transform(train)
         train_3["y"] = np.array([1, 0])
 
-        dict_4 = {"col": "state", "mapping": pd.Series(data=[1, 2], index=["US", "FR"]), "data_type": "str"}
+        dict_4 = {"col": "state", "mapping": pd.Series(data=[1, 2], index=["US", "FR"]), "data_type": "object"}
 
-        dict_5 = {"col": "city", "mapping": pd.Series(data=[1, 2], index=["chicago", "paris"]), "data_type": "str"}
+        dict_5 = {"col": "city", "mapping": pd.Series(data=[1, 2], index=["chicago", "paris"]), "data_type": "object"}
 
         enc_4 = [enc_3, [dict_4]]
 
