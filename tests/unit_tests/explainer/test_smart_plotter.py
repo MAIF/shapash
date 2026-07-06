@@ -2570,3 +2570,29 @@ class TestSmartPlotter(unittest.TestCase):
         assert type(output) is go.Figure
         assert len(output.data) == 1
         assert output.data[0].type == "scatter"
+
+    def test_confusion_matrix_plot(self):
+        """
+        Classification - compare default behavior and quantile capping
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.array([0] * 45 + [1] * 5))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+
+        output_default = xpl.plot.confusion_matrix_plot()
+        output_capped = xpl.plot.confusion_matrix_plot(use_quantile_scale=True, quantile=0.95)
+        z = np.array(output_default.data[0].z)
+
+        # colors: full range by default, saturate at the quantile when capped
+        assert output_default.data[0].zmax == z.max()
+        assert output_capped.data[0].zmax == np.quantile(z, 0.95)
+        # colorbar: automatic ticks by default, true values when capped
+        assert output_default.data[0].colorbar.tickvals is None
+        assert float(output_capped.data[0].colorbar.ticktext[-1]) == z.max()
+        # warning when use_quantile_scale and quantile are not set together
+        with self.assertWarns(UserWarning):
+            xpl.plot.confusion_matrix_plot(use_quantile_scale=True)
+        with self.assertWarns(UserWarning):
+            xpl.plot.confusion_matrix_plot(quantile=0.95)
