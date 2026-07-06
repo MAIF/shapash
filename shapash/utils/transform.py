@@ -391,7 +391,6 @@ def handle_categorical_missing(df: pd.DataFrame) -> pd.DataFrame:
     df : pd.DataFrame
         Pandas dataframe on which we will replace the missing values
     """
-    # Use pandas-compatible selectors across versions (pandas 2/3).
     categorical_cols = df.select_dtypes(include=["object"]).columns
     df_handle_missing = df.copy()
     df_handle_missing[categorical_cols] = df_handle_missing[categorical_cols].fillna("missing")
