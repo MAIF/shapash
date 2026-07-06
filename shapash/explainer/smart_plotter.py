@@ -4,7 +4,6 @@ Smart plotter module
 
 import math
 import random
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -452,7 +451,7 @@ class SmartPlotter:
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
 
-        if not isinstance(col, (str, int)):
+        if not isinstance(col, str | int):
             raise ValueError("parameter col must be string or int.")
         if hasattr(self._explainer, "inv_features_dict"):
             col = self._explainer.inv_features_dict.get(col, col)
@@ -814,7 +813,6 @@ class SmartPlotter:
         subset_feat_imp = self._get_subset_importance(contributions_case, selection)
         if subset_feat_imp is not None:
             subset_feat_imp = subset_feat_imp.reindex(global_feat_imp.index)
-            subset_feat_imp.index = subset_feat_imp.index.map(self._explainer.features_dict)
             if subset_feat_imp.dropna().shape[0] == 0:
                 raise ValueError("selection argument doesn't return any row")
 
@@ -826,27 +824,29 @@ class SmartPlotter:
 
         # Generate and return the plot
         return plot_feature_importance(
-            mode,
-            global_feat_imp,
-            contributions_case,
-            self._style_dict,
-            features_groups_keys,
-            self._explainer.features_dict,
-            self._explainer.inv_features_dict,
-            local_imp_lev1,
-            local_imp_lev2,
-            subset_feat_imp,
-            display_groups,
-            title,
-            addnote,
-            subtitle,
-            width,
-            height,
-            file_name,
-            auto_open,
-            zoom,
-            normalize_by_nb_samples,
-            degree,
+            mode=mode,
+            global_feat_imp=global_feat_imp,
+            contributions_case=contributions_case,
+            style_dict=self._style_dict,
+            features_groups_keys=features_groups_keys,
+            features_dict=self._explainer.features_dict,
+            inv_features_dict=self._explainer.inv_features_dict,
+            local_imp_lev1=local_imp_lev1,
+            local_imp_lev2=local_imp_lev2,
+            subset_feat_imp=subset_feat_imp,
+            display_groups=display_groups,
+            title=title,
+            addnote=addnote,
+            subtitle=subtitle,
+            global_feat_imp_name="Global",
+            subset_feat_imp_name="Subset",
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+            zoom=zoom,
+            normalize_by_nb_samples=normalize_by_nb_samples,
+            degree=degree,
         )
 
     def _get_group_feature_importance(self, group_name):
@@ -977,7 +977,10 @@ class SmartPlotter:
                     f"Response: <b>{label_value}</b> - "
                     + "Probas: "
                     + " ; ".join(
-                        [str(id) + ": <b>" + str(round(proba, 2)) + "</b>" for proba, id in zip(preds, line_reference)]
+                        [
+                            str(line_id) + ": <b>" + str(round(proba, 2)) + "</b>"
+                            for proba, line_id in zip(preds, line_reference, strict=False)
+                        ]
                     )
                 )
 
@@ -988,7 +991,10 @@ class SmartPlotter:
             if show_predict:
                 preds = [self._explainer._local_pred(line) for line in line_reference]
                 subtitle = "Predictions: " + " ; ".join(
-                    [str(id) + ": <b>" + str(round(pred, 2)) + "</b>" for id, pred in zip(line_reference, preds)]
+                    [
+                        str(line_id) + ": <b>" + str(round(pred, 2)) + "</b>"
+                        for pred, line_id in zip(preds, line_reference, strict=False)
+                    ]
                 )
 
         new_contrib = list()
@@ -1003,14 +1009,14 @@ class SmartPlotter:
                 feature_name = self._explainer.features_dict[name]
                 feature_values[i] = feature_name
 
-        preds = [self._explainer.x_init.loc[id] for id in line_reference]
+        preds = [self._explainer.x_init.loc[line_id] for line_id in line_reference]
         dict_features = self._explainer.inv_features_dict
 
-        iteration_list = list(zip(new_contrib, feature_values))
-        iteration_list.sort(key=lambda x: maximum_difference_sort_value(x), reverse=True)
+        iteration_list = list(zip(new_contrib, feature_values, strict=False))
+        iteration_list.sort(key=maximum_difference_sort_value, reverse=True)
         iteration_list = iteration_list[:max_features]
         iteration_list = iteration_list[::-1]
-        new_contrib, feature_values = list(zip(*iteration_list))
+        new_contrib, feature_values = list(zip(*iteration_list, strict=False))
 
         fig = plot_line_comparison(
             line_reference,
@@ -1122,7 +1128,7 @@ class SmartPlotter:
         >>> xpl.plot.interactions_plot(0, 1)
         """
 
-        if not (isinstance(col1, (str, int)) or isinstance(col2, (str, int))):
+        if not (isinstance(col1, str | int) and isinstance(col2, str | int)):
             raise ValueError("parameters col1 and col2 must be string or int.")
 
         col_id1 = self._explainer.check_features_name([col1])[0]
@@ -1490,7 +1496,8 @@ class SmartPlotter:
         fig
             The figure that will be displayed
         """
-        assert index in self._explainer.x_init.index, "index must exist in pandas dataframe"
+        if index not in self._explainer.x_init.index:
+            raise ValueError("Index must exist in pandas dataframe")
 
         self._explainer.compute_features_stability([index])
 
@@ -1933,7 +1940,7 @@ class SmartPlotter:
     def distribution_plot(
         self,
         col: str,
-        hue: Optional[str] = None,
+        hue: str | None = None,
         width: int = 700,
         height: int = 500,
         nb_cat_max: int = 7,
@@ -2114,7 +2121,7 @@ class SmartPlotter:
 
         if not hasattr(self._explainer, "model"):
             raise AssertionError(
-                "Explainer object was not compiled. Please compile the explainer " "object using .compile(...) method."
+                "Explainer object was not compiled. Please compile the explainer object using .compile(...) method."
             )
 
         if not hasattr(self._explainer, "_case") or self._explainer._case not in {"classification", "regression"}:
@@ -2228,7 +2235,7 @@ class SmartPlotter:
                 dfs = [y_proba_target, y_pred, pd.Series(self.cluster_labels)]
                 cols = ["proba_values", "predict_class", "cluster"]
 
-                # --- Add target only if available
+                # --- Add target and error only if available
                 if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
                     y_target = self._explainer.y_target.loc[list_ind].reset_index(drop=True)
                     if self._explainer.label_dict is not None:
@@ -2236,14 +2243,14 @@ class SmartPlotter:
                     dfs.append(y_target)
                     cols.append("target")
 
-                errors_classification = pd.DataFrame(
-                    np.abs(
-                        ((self._explainer.y_target.loc[list_ind].values.ravel() == label_code).astype(int))
-                        - self._explainer.proba_values.loc[list_ind].iloc[:, label_num]
+                    errors_classification = pd.DataFrame(
+                        np.abs(
+                            ((self._explainer.y_target.loc[list_ind].values.ravel() == label_code).astype(int))
+                            - self._explainer.proba_values.loc[list_ind].iloc[:, label_num]
+                        )
                     )
-                )
-                dfs.append(errors_classification.reset_index(drop=True))
-                cols.append("error")
+                    dfs.append(errors_classification.reset_index(drop=True))
+                    cols.append("error")
 
                 col_name = list(set(color_value) - {"predictions", "targets", "errors"})
                 if len(col_name) > 0:

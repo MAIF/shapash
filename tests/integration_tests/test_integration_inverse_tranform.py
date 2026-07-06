@@ -29,7 +29,10 @@ class TestInverseTranform(unittest.TestCase):
             [description]
         """
         data_path = dirname(dirname(abspath(__file__)))
-        self.ds_titanic_clean = pd.read_pickle(join(data_path, "data", "clean_titanic.pkl"))
+        if int(pd.__version__.split(".")[0]) >= 3:
+            self.ds_titanic_clean = pd.read_pickle(join(data_path, "data", "clean_titanic_pandas_3.pkl"))
+        else:
+            self.ds_titanic_clean = pd.read_pickle(join(data_path, "data", "clean_titanic.pkl"))
 
     def test_inverse_transform_ce_basen(self):
         """

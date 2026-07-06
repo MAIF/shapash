@@ -2,6 +2,7 @@
 Main class of Web application Shapash
 """
 
+import ast
 import copy
 import random
 import re
@@ -48,12 +49,12 @@ from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 
 
-def _create_input_modal(id, label, tooltip):
+def _create_input_modal(component_id, label, tooltip):
     return dbc.Row(
         [
-            dbc.Label(label, id=f"{id}_label", html_for=id, width=8),
-            dbc.Col(dbc.Input(id=id, type="number", value=0), width=4),
-            dbc.Tooltip(tooltip, target=f"{id}_label", placement="bottom"),
+            dbc.Label(label, id=f"{component_id}_label", html_for=component_id, width=8),
+            dbc.Col(dbc.Input(id=component_id, type="number", value=0), width=4),
+            dbc.Tooltip(tooltip, target=f"{component_id}_label", placement="bottom"),
         ],
         className="g-3",
     )
@@ -77,8 +78,8 @@ class SmartApp:
             SmartExplainer object
         settings : dict
             A dict describing the default webapp settings values to be used
-            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features'
-            Values should be positive ints
+            Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
+            Integer values must be positive, and 'toggle_group' must be a boolean.
         """
         # APP
         self.server = Flask(__name__)
@@ -101,12 +102,16 @@ class SmartApp:
             "points": 1000,
             "violin": 10,
             "features": 20,
+            "toggle_group": True,
         }
         if settings is not None:
             for k, v in self.settings_ini.items():
-                self.settings_ini[k] = (
-                    settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
-                )
+                if k == "toggle_group":
+                    self.settings_ini[k] = settings[k] if k in settings and isinstance(settings[k], bool) else v
+                else:
+                    self.settings_ini[k] = (
+                        settings[k] if k in settings and isinstance(settings[k], int) and 0 < settings[k] else v
+                    )
         self.settings = self.settings_ini.copy()
 
         self.predict_col = ["_predict_"]
@@ -117,13 +122,13 @@ class SmartApp:
         if self.explainer._case == "classification":
             self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, "num")[1]
             self.selected_feature = self.explainer.features_imp[-1].idxmax()
-            self.max_threshold = int(
-                max([x.map(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions])
+            self.max_threshold = max(
+                [x.map(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions]
             )
         else:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = int(self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max())
+            self.max_threshold = self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max()
         self.list_index = []
         self.subset = None
         self.last_click_data = None
@@ -155,9 +160,14 @@ class SmartApp:
         """
         if hasattr(self.explainer, "y_pred"):
             self.dataframe = self.explainer.x_init.copy()
-            if isinstance(self.explainer.y_pred, (pd.Series, pd.DataFrame)):
-                self.predict_col = self.explainer.y_pred.columns.to_list()[0]
-                self.dataframe = self.dataframe.join(self.explainer.y_pred)
+            if isinstance(self.explainer.y_pred, pd.Series):
+                y_pred = self.explainer.y_pred.to_frame()
+                self.predict_col = y_pred.columns.to_list()[0]
+                self.dataframe = self.dataframe.join(y_pred)
+            elif isinstance(self.explainer.y_pred, pd.DataFrame):
+                y_pred = self.explainer.y_pred
+                self.predict_col = y_pred.columns.to_list()[0]
+                self.dataframe = self.dataframe.join(y_pred)
             elif isinstance(self.explainer.y_pred, list):
                 self.dataframe = self.dataframe.join(
                     pd.DataFrame(
@@ -208,7 +218,7 @@ class SmartApp:
         self.round_dataframe = self.dataframe.copy()
         for col in list(self.dataframe.columns):
             typ = self.dataframe[col].dtype
-            if typ == float:
+            if typ is float:
                 std = self.dataframe[col].std()
                 if isfinite(std) and std != 0:
                     digit = max(round(log10(1 / std) + 1) + 2, 0)
@@ -232,27 +242,27 @@ class SmartApp:
         """
 
         self.components["settings"]["input_rows"] = _create_input_modal(
-            id="rows",
+            component_id="rows",
             label="Number of rows for subset",
             tooltip="Set max number of lines for subset (datatable). \
                     Filter will be apply on this subset.",
         )
 
         self.components["settings"]["input_points"] = _create_input_modal(
-            id="points",
+            component_id="points",
             label="Number of points for plot",
             tooltip="Set max number of points in feature contribution plots.",
         )
 
         self.components["settings"]["input_features"] = _create_input_modal(
-            id="features",
+            component_id="features",
             label="Number of features to plot",
             tooltip="Set max number of features to plot in features \
                     importance and local explanation plots.",
         )
 
         self.components["settings"]["input_violin"] = _create_input_modal(
-            id="violin",
+            component_id="violin",
             label="Max number of labels for violin plot",
             tooltip="Set max number of labels to display a violin plot \
                     for feature contribution plot (otherwise a scatter \
@@ -310,7 +320,7 @@ class SmartApp:
                         html.Div(
                             daq.BooleanSwitch(
                                 id="bool_groups",
-                                on=True,
+                                on=self.settings.get("toggle_group", True),
                                 style={"display": "none"} if self.explainer.features_groups is None else {},
                                 color=self.color[0],
                                 label={
@@ -453,16 +463,16 @@ class SmartApp:
         )
 
         self.components["graph"]["global_feature_importance"] = MyGraph(
-            figure=go.Figure(), id="global_feature_importance"
+            figure=go.Figure(), component_id="global_feature_importance"
         )
 
-        self.components["graph"]["feature_selector"] = MyGraph(figure=go.Figure(), id="feature_selector")
+        self.components["graph"]["feature_selector"] = MyGraph(figure=go.Figure(), component_id="feature_selector")
 
         # Component for the graph prediction picking
-        self.components["graph"]["prediction_picking"] = MyGraph(figure=go.Figure(), id="prediction_picking")
-        self.components["graph"]["clusters"] = MyGraph(figure=go.Figure(), id="clusters")
+        self.components["graph"]["prediction_picking"] = MyGraph(figure=go.Figure(), component_id="prediction_picking")
+        self.components["graph"]["clusters"] = MyGraph(figure=go.Figure(), component_id="clusters")
 
-        self.components["graph"]["detail_feature"] = MyGraph(figure=go.Figure(), id="detail_feature")
+        self.components["graph"]["detail_feature"] = MyGraph(figure=go.Figure(), component_id="detail_feature")
 
         # Component create to filter the dataset
         self.components["filter"]["filter_dataset"] = dbc.Col(
@@ -687,9 +697,11 @@ class SmartApp:
                     min=0,
                     max=self.max_threshold,
                     value=0,
-                    step=0.1,
+                    step=round_to_k(self.max_threshold / 20, k=1),
                     marks={
-                        f"{round(self.max_threshold * mark / 4)}": f"{round(self.max_threshold * mark / 4)}"
+                        round_to_k(
+                            self.max_threshold * mark / 4, k=2
+                        ): f"{round_to_k(self.max_threshold * mark / 4, k=2)}"
                         for mark in range(5)
                     },
                     id="threshold_id",
@@ -854,6 +866,7 @@ class SmartApp:
                                         ),
                                         dcc.Store(id="clickdata-store"),
                                         dcc.Store(id="selected-clickdata-store"),
+                                        dcc.Location(id="url", refresh=False),
                                         html.Div(
                                             [
                                                 # Create a row to contain the buttons
@@ -1745,14 +1758,14 @@ class SmartApp:
         list
             list of components
         """
-        filter = [
+        filter_components = [
             html.Div([self.components["filter"]["index"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["positive_contrib"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["masked_contrib"]], style={"padding-bottom": "0.4vw"}),
         ]
-        return filter
+        return filter_components
 
     @staticmethod
     def select_point(figure, click_data):
@@ -1862,9 +1875,14 @@ class SmartApp:
         self.components["settings"]["input_features"]["features"].value = self.settings["features"]
         self.components["settings"]["input_violin"]["violin"].value = self.settings["violin"]
 
-        for id in self.settings.keys():
+        for component_id in self.settings.keys():
+            # if not isinstance(self.settings[component_id], int) or isinstance(self.settings[component_id], bool):
+            #     continue
 
-            @app.callback([Output(f"{id}", "valid"), Output(f"{id}", "invalid")], [Input(f"{id}", "value")])
+            @app.callback(
+                [Output(f"{component_id}", "valid"), Output(f"{component_id}", "invalid")],
+                [Input(f"{component_id}", "value")],
+            )
             def update_valid(value):
                 """
                 actualise valid and invalid icon in input component
@@ -2074,7 +2092,7 @@ class SmartApp:
                     end_date,
                 )
                 filtered_subset_info = (
-                    f"Subset length: {len(df)} ({int(round(100*len(df)/self.explainer.x_init.shape[0]))}%)"
+                    f"Subset length: {len(df)} ({int(round(100 * len(df) / self.explainer.x_init.shape[0]))}%)"
                 )
                 if len(df) == 0:
                     filtered_subset_color = "danger"
@@ -2335,7 +2353,7 @@ class SmartApp:
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
-            [State("dataset", "data"), State("index_id", "value")],  # Get the current value of the index
+            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
         def update_index_id(
             click_data,
@@ -2346,6 +2364,7 @@ class SmartApp:
             reset_filter,
             nclicks_del,
             data,
+            viewport_data,
             current_index_id,
         ):
             """
@@ -2359,7 +2378,8 @@ class SmartApp:
             apply_filters: click on Apply filter button
             reset_filter: click on reset filter button
             nclicks_del: click on del button
-            data: dataset
+            data: dataset (original order)
+            viewport_data: dataset as currently displayed (after sorting/filtering)
             current_index_id: the current value of the index
             ----------------------------------------------------------------
             return
@@ -2376,7 +2396,18 @@ class SmartApp:
                 elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
                     selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
-                    selected = data[cell["row"]]["_index_"]
+                    displayed_data = viewport_data if viewport_data is not None else data
+                    row = cell.get("row") if isinstance(cell, dict) else None
+                    if (
+                        isinstance(displayed_data, list)
+                        and isinstance(row, int)
+                        and 0 <= row < len(displayed_data)
+                        and isinstance(displayed_data[row], dict)
+                        and "_index_" in displayed_data[row]
+                    ):
+                        selected = displayed_data[row]["_index_"]
+                    else:
+                        selected = current_index_id
                 elif ("del_dropdown_button" in ctx.triggered[0]["prop_id"]) & (None in nclicks_del):
                     selected = current_index_id
             except KeyError:
@@ -2411,8 +2442,10 @@ class SmartApp:
                 if is_open:
                     raise PreventUpdate
                 else:
-                    value, max, marks = update_features_to_display(features, len(self.explainer.x_init.columns), value)
-                    return value, max, marks
+                    value, nb_max_col, marks = update_features_to_display(
+                        features, len(self.explainer.x_init.columns), value
+                    )
+                    return value, nb_max_col, marks
 
         @app.callback(
             Output(component_id="detail_feature", component_property="figure"),
@@ -2609,9 +2642,9 @@ class SmartApp:
                 Output("dataset", "style_cell_conditional"),
             ],
             [Input("validation", "n_clicks")],
-            [State("dataset", "data"), State("index_id", "value")],
+            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
-        def datatable_layout(validation, data, index):
+        def datatable_layout(validation, data, viewport_data, index):
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "validation.n_clicks" and validation is not None:
                 pass
@@ -2633,7 +2666,8 @@ class SmartApp:
             ]
             style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
-            selected = check_row(data, index)
+            # Use viewport_data (sorted/filtered) to find the correct row index for highlighting and not the index of the list
+            selected = check_row(viewport_data if viewport_data is not None else data, index)
             if selected is not None:
                 style_data_conditional += [{"if": {"row_index": selected}, "backgroundColor": self.color[0]}]
 
@@ -2968,7 +3002,7 @@ class SmartApp:
                 return [html.Div(id={"type": "bloc_div", "index": 0}, children=[])]
             # Removal of an existing filter
             else:
-                filter_id_to_remove = eval(button_id)["index"]
+                filter_id_to_remove = ast.literal_eval(button_id)["index"]
                 return [gr for gr in currents_filters if gr["props"]["id"]["index"] != filter_id_to_remove]
 
         @app.callback(
@@ -3057,7 +3091,7 @@ class SmartApp:
                 Input("add_dropdown_button", "n_clicks"),
             ],
         )
-        def display_output(value, id, add_click):
+        def display_output(value, component_id, add_click):
             """
             Function used to create modalities choices. Componenents are different
             according to the type of the selected variable.
@@ -3069,7 +3103,7 @@ class SmartApp:
             Else: components are lower and upper values
             ---------------------------------------------------------------
             value: value selected on the var dropdown button
-            id: id of the var dropdown button
+            component_id: id of the var dropdown button
             add_click: click on add_dropdown_button
             ---------------------------------------------------------------
             return modalities components. If the component is new, value
@@ -3085,7 +3119,7 @@ class SmartApp:
             # Creation on modalities dropdown button
             else:
                 if value is not None:
-                    new_element = create_filter_modalities_selection(value, id, self.round_dataframe)
+                    new_element = create_filter_modalities_selection(value, component_id, self.round_dataframe)
                 else:
                     new_element = html.Div()
                 return new_element
@@ -3098,3 +3132,11 @@ class SmartApp:
             if n_clusters is None:
                 return "Clusters: —"
             return f"Clusters: {n_clusters}"
+
+        @app.callback(
+            Output("bool_groups", "on"),
+            Input("url", "pathname"),
+            prevent_initial_call=False,
+        )
+        def reset_bool_groups_on_load(_):
+            return self.settings.get("toggle_group", True)

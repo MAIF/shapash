@@ -38,6 +38,8 @@ from .smart_plotter import SmartPlotter
 
 logging.basicConfig(level=logging.INFO)
 
+DEFAULT_HOST = "127.0.0.1"
+
 
 class SmartExplainer:
     """
@@ -810,11 +812,11 @@ class SmartExplainer:
             else:
                 raise ValueError
 
-        except ValueError:
-            raise Exception({"message": "Origin must be 'num', 'code' or 'value'."})
+        except ValueError as err:
+            raise Exception({"message": "Origin must be 'num', 'code' or 'value'."}) from err
 
-        except Exception:
-            raise Exception({"message": f"Label ({label}) not found for origin ({origin})"})
+        except Exception as err:
+            raise Exception({"message": f"Label ({label}) not found for origin ({origin})"}) from err
 
         return label_num, label_code, label_value
 
@@ -1414,8 +1416,9 @@ class SmartExplainer:
             - `'points'` : int — number of points shown in scatter plots
             - `'violin'` : int — number of points displayed in violin plots
             - `'features'` : int — number of features shown in plots
+            - `'toggle_group'` : bool — default state of the group toggle in the UI
 
-            All values must be positive integers.
+            All integer values must be positive.
 
         Returns
         -------
@@ -1457,7 +1460,7 @@ class SmartExplainer:
             Defaults to `8050` if not specified.
         host : str, optional
             Host address for the WebApp server.
-            Defaults to `"0.0.0.0"`, allowing external access.
+            Defaults to local host `"127.0.0.1"`.
         title_story : str, optional
             Custom title to display in the WebApp interface.
             This title can also be reused in reports or other visualizations.
@@ -1493,16 +1496,14 @@ class SmartExplainer:
         if hasattr(self, "_case"):
             self.smartapp = SmartApp(self, settings)
             if host is None:
-                host = "0.0.0.0"
+                host = DEFAULT_HOST
             if port is None:
                 port = 8050
             host_name = get_host_name()
-            server_instance = CustomThread(
-                target=lambda: self.smartapp.app.run_server(debug=False, host=host, port=port)
-            )
+            server_instance = CustomThread(target=lambda: self.smartapp.app.run(debug=False, host=host, port=port))
             if host_name is None:
                 host_name = host
-            elif host != "0.0.0.0":
+            elif host != DEFAULT_HOST:
                 host_name = host
             server_instance.start()
             logging.info(f"Your Shapash application run on http://{host_name}:{port}/")
@@ -1759,7 +1760,7 @@ class SmartExplainer:
         if x_train is not None:
             x_train = handle_categorical_missing(x_train)
         # Avoid Import Errors with requirements specific to the Shapash Report
-        from shapash.report.generation import execute_report, export_and_save_report
+        from shapash.report.generation import execute_report, export_and_save_report  # noqa: PLC0415
 
         rm_working_dir = False
         if not working_dir:
@@ -1780,14 +1781,18 @@ class SmartExplainer:
                 x_train=x_train,
                 y_train=y_train,
                 y_test=y_test,
-                config=dict(
-                    title_story=title_story,
-                    title_description=title_description,
-                    metrics=metrics,
-                    max_points=max_points,
-                    display_interaction_plot=display_interaction_plot,
-                    nb_top_interactions=nb_top_interactions,
-                ),
+                config={
+                    k: v
+                    for k, v in dict(
+                        title_story=title_story,
+                        title_description=title_description,
+                        metrics=metrics,
+                        max_points=max_points,
+                        display_interaction_plot=display_interaction_plot,
+                        nb_top_interactions=nb_top_interactions,
+                    ).items()
+                    if v is not None
+                },
                 notebook_path=notebook_path,
                 kernel_name=kernel_name,
             )

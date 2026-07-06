@@ -43,7 +43,7 @@ class SmartState:
         pandas.DataFrame
             Local contributions on the original feature space (no encoding).
         """
-        if not isinstance(contributions, (np.ndarray, pd.DataFrame)):
+        if not isinstance(contributions, np.ndarray | pd.DataFrame):
             raise ValueError("Type of contributions must be pd.DataFrame or np.ndarray")
         if isinstance(contributions, np.ndarray):
             return pd.DataFrame(contributions, columns=x_init.columns, index=x_init.index)

@@ -3,7 +3,6 @@ Report generation helper module.
 """
 
 import os
-from typing import Optional, Union
 
 import pandas as pd
 import papermill as pm
@@ -16,12 +15,12 @@ def execute_report(
     working_dir: str,
     explainer: object,
     project_info_file: str,
-    x_train: Optional[pd.DataFrame] = None,
-    y_train: Optional[pd.DataFrame] = None,
-    y_test: Optional[Union[pd.Series, pd.DataFrame]] = None,
-    config: Optional[dict] = None,
-    notebook_path: Optional[str] = None,
-    kernel_name: Optional[str] = None,
+    x_train: pd.DataFrame | None = None,
+    y_train: pd.DataFrame | None = None,
+    y_test: pd.Series | pd.DataFrame | None = None,
+    config: dict | None = None,
+    notebook_path: str | None = None,
+    kernel_name: str | None = None,
 ):
     """
     Executes the base_report.ipynb notebook and saves the results in working_dir.

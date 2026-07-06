@@ -101,7 +101,7 @@ def plot_bar_chart(
             margin={"l": 150, "r": 20, "t": topmargin, "b": 70},
         )
         bars = []
-        for num, expl in enumerate(zip(var_dict, x_val, contrib)):
+        for num, expl in enumerate(zip(var_dict, x_val, contrib, strict=False)):
             feat_name, x_val_el, contrib_value = expl
             is_grouped = False
             if x_val_el == "":

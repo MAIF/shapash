@@ -4,7 +4,10 @@ from pandas.api.types import is_any_real_numeric_dtype
 
 def round_to_k(x, k):
     """
-    round float to k significant figure
+    Round float to k significant digits.
+
+    Remark that integers are also rounded: for example, round_to_k(123456789, 3) will return 123000000.
+
     Parameters
     ----------
     x : float
@@ -18,11 +21,8 @@ def round_to_k(x, k):
 
     """
     x = float(x)
-    new_x = float("%s" % float(f"%.{k}g" % x))  # Rounding to k important figures
-    if new_x % 1 == 0:
-        return int(new_x)  # Avoid the '.0' that can mislead the user that it may be a round number
-    else:
-        return new_x
+    new_x = float(f"{x:.{k}g}")
+    return int(new_x) if new_x % 1 == 0 else new_x
 
 
 def get_index_type(data):

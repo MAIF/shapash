@@ -1,11 +1,10 @@
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as sch
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
+from scipy.spatial.distance import pdist
 
 from shapash.manipulation.summarize import compute_corr
 from shapash.style.style_utils import define_style, get_palette
@@ -14,7 +13,7 @@ from shapash.utils.utils import adjust_title_height, compute_top_correlations_fe
 
 def plot_correlations(
     df,
-    style_dict: Optional[dict] = None,
+    style_dict: dict | None = None,
     palette_name: str = "default",
     features_dict=None,
     optimized=False,
@@ -99,9 +98,8 @@ def plot_correlations(
 
         if corr.shape[0] < 2:
             return corr
-
         # Compute pairwise distances based on transformed correlation matrix
-        pairwise_distances = sch.distance.pdist(np.abs(corr) ** degree)
+        pairwise_distances = pdist(np.abs(corr) ** degree)
 
         # Replace non-finite values (NaN, inf) with the maximum valid distance or 0 if all are invalid
         finite_mask = np.isfinite(pairwise_distances)
@@ -157,6 +155,8 @@ def plot_correlations(
 
     if features_to_hide is None:
         features_to_hide = []
+    else:
+        features_to_hide = list(features_to_hide)
 
     if optimized:
         categorical_columns = df.select_dtypes(include=["object", "category"]).columns
@@ -169,7 +169,8 @@ def plot_correlations(
             df = df.sample(n=10000, random_state=1)
 
     if facet_col:
-        features_to_hide += [facet_col]
+        if facet_col not in features_to_hide:
+            features_to_hide.append(facet_col)
 
     compute_method = how
 
@@ -197,7 +198,7 @@ def plot_correlations(
                     coloraxis="coloraxis",
                     text=[
                         [
-                            f"Feature 1: {features_dict.get(y, y)} <br />" f"Feature 2: {features_dict.get(x, x)}"
+                            f"Feature 1: {features_dict.get(y, y)} <br />Feature 2: {features_dict.get(x, x)}"
                             for x in list_features
                         ]
                         for y in list_features
@@ -219,7 +220,7 @@ def plot_correlations(
                 coloraxis="coloraxis",
                 text=[
                     [
-                        f"Feature 1: {features_dict.get(y, y)} <br />" f"Feature 2: {features_dict.get(x, x)}"
+                        f"Feature 1: {features_dict.get(y, y)} <br />Feature 2: {features_dict.get(x, x)}"
                         for x in list_features
                     ]
                     for y in list_features

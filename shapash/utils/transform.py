@@ -300,7 +300,7 @@ def adapt_contributions(case, contributions):
     if isinstance(contributions, np.ndarray) and contributions.ndim == 3:
         contributions = [contributions[:, :, i] for i in range(contributions.shape[-1])]
     if (isinstance(contributions, pd.DataFrame) and case == "classification") or (
-        isinstance(contributions, (np.ndarray, list)) and case == "classification" and np.array(contributions).ndim == 2
+        isinstance(contributions, np.ndarray | list) and case == "classification" and np.array(contributions).ndim == 2
     ):
         return [contributions * -1, contributions]
     else:

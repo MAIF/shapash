@@ -1,5 +1,5 @@
 import datetime
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from shapash.explainer.smart_explainer import SmartExplainer
@@ -205,7 +205,7 @@ def select_data_from_date_filters(
         for i in range(len(feature_id)):
             if feature_id[i] in date_id:
                 position = np.where(np.array(date_id) == feature_id[i])[0][0]
-                if (position is not None) & (start_date[position] < end_date[position]):
+                if (position is not None) & (start_date[position] <= end_date[position]):
                     df = df[((df[val_feature[i]] >= start_date[position]) & (df[val_feature[i]] <= end_date[position]))]
 
     return df
@@ -228,7 +228,7 @@ def get_feature_from_clicked_data(click_data: dict) -> str:
     return selected_feature
 
 
-def get_feature_from_features_groups(selected_feature: Optional[str], features_groups: dict) -> Optional[str]:
+def get_feature_from_features_groups(selected_feature: str | None, features_groups: dict) -> str | None:
     """Get the group feature name of the selected feature.
 
     Parameters
@@ -251,7 +251,7 @@ def get_feature_from_features_groups(selected_feature: Optional[str], features_g
     return selected_feature
 
 
-def get_indexes_from_datatable(data: list, list_index: Optional[list] = None) -> Optional[list]:
+def get_indexes_from_datatable(data: list, list_index: list | None = None) -> list | None:
     """Get the indexes of the data. If list_index is given and is the same length than
     the indexes, there is no subset selected.
 
@@ -313,7 +313,7 @@ def get_figure_zoom(click_zoom: int) -> bool:
     return zoom_active
 
 
-def get_feature_contributions_sign_to_show(positive: list, negative: list) -> Optional[bool]:
+def get_feature_contributions_sign_to_show(positive: list, negative: list) -> bool | None:
     """Get the feature contributions sign to show on plot.
 
     Parameters
@@ -561,7 +561,7 @@ def get_feature_filter_options(dataframe: pd.DataFrame, features_dict: dict, spe
     return options
 
 
-def create_dropdown_feature_filter(n_clicks_add: Optional[int], options: list) -> html.Div:
+def create_dropdown_feature_filter(n_clicks_add: int | None, options: list) -> html.Div:
     """Create a new dropdown for the filter feature selection.
 
     Parameters
@@ -621,14 +621,14 @@ def create_dropdown_feature_filter(n_clicks_add: Optional[int], options: list) -
     return subset_filter
 
 
-def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd.DataFrame) -> html.Div:
+def create_filter_modalities_selection(value: str, filter_id: dict, round_dataframe: pd.DataFrame) -> html.Div:
     """Create the modalities filter according to the feature type.
 
     Parameters
     ----------
     value : str
         feature name
-    id : dict
+    filter_id : dict
         id of the filter
     round_dataframe : pd.DataFrame
         Dataframe
@@ -638,37 +638,40 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     html.Div
         Div containing the modalities selection options
     """
-    if type(round_dataframe[value].iloc[0]) is np.bool_ or type(round_dataframe[value].iloc[0]) is bool:
+    _non_null = round_dataframe[value].dropna()
+    _first = _non_null.iloc[0] if len(_non_null) > 0 else None
+
+    if type(_first) is np.bool_ or type(_first) is bool:
         new_element = html.Div(
             dcc.RadioItems(
-                [{"label": str(val), "value": val} for val in round_dataframe[value].unique()],
-                id={"type": "dynamic-bool", "index": id["index"]},
-                value=round_dataframe[value].iloc[0],
+                [{"label": str(val), "value": val} for val in _non_null.unique()],
+                id={"type": "dynamic-bool", "index": filter_id["index"]},
+                value=_first,
                 inline=False,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) == str) | (
-        (type(round_dataframe[value].iloc[0]) == np.int64) & (len(round_dataframe[value].unique()) <= 20)
-    ):
+    elif isinstance(_first, str) or (isinstance(_first, int | np.int64) and (len(_non_null.unique()) <= 20)):
+        # If feature has integer type with at most 20 values or string type (no limits on number of values),
+        # then display Dropdown component
+        # Notice that integer column with NaN values is considered as float, so it will not be displayed as Dropdown.
         new_element = html.Div(
             dcc.Dropdown(
-                id={"type": "dynamic-str", "index": id["index"]},
-                options=[{"label": i, "value": i} for i in np.sort(round_dataframe[value].unique())],
+                id={"type": "dynamic-str", "index": filter_id["index"]},
+                options=[{"label": i, "value": i} for i in np.sort(_non_null.unique())],
                 multi=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
         )
-    elif (type(round_dataframe[value].iloc[0]) is pd.Timestamp) | (
-        type(round_dataframe[value].iloc[0]) is datetime.datetime
-    ):
+    elif (type(_first) is pd.Timestamp) | (type(_first) is datetime.datetime):
         new_element = html.Div(
             dcc.DatePickerRange(
-                id={"type": "dynamic-date", "index": id["index"]},
-                min_date_allowed=round_dataframe[value].min(),
-                max_date_allowed=round_dataframe[value].max(),
-                start_date=round_dataframe[value].min(),
-                end_date=round_dataframe[value].max(),
+                id={"type": "dynamic-date", "index": filter_id["index"]},
+                min_date_allowed=_non_null.min(),
+                max_date_allowed=_non_null.max(),
+                start_date=_non_null.min(),
+                end_date=_non_null.max(),
+                minimum_nights=0,
                 clearable=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
@@ -679,14 +682,14 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
         new_element = html.Div(
             [
                 dcc.Input(
-                    id={"type": "lower", "index": id["index"]},
+                    id={"type": "lower", "index": filter_id["index"]},
                     value=lower_value,
                     type="number",
                     style={"width": "60px"},
                 ),
                 f" <= {value} in [{round_dataframe[value].min()}, {round_dataframe[value].max()}]<= ",
                 dcc.Input(
-                    id={"type": "upper", "index": id["index"]},
+                    id={"type": "upper", "index": filter_id["index"]},
                     value=upper_value,
                     type="number",
                     style={"width": "60px"},
@@ -698,7 +701,7 @@ def create_filter_modalities_selection(value: str, id: dict, round_dataframe: pd
     return new_element
 
 
-def handle_page_navigation(triggered_input: str, page: Union[int, str], selected_feature: str) -> tuple[int, str]:
+def handle_page_navigation(triggered_input: str, page: int | str, selected_feature: str) -> tuple[int, str]:
     """
     Handle the navigation between different pages based on user input.
 

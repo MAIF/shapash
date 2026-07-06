@@ -635,16 +635,14 @@ class TestSmartExplainer(unittest.TestCase):
         temp, xpl = init_sme_to_pickle_test()
 
         current = Path(path.abspath(__file__)).parent.parent.parent
-        if str(sys.version)[0:3] == "3.9":
-            pkl_file = path.join(current, "data/xpl_to_load_39.pkl")
-        elif str(sys.version)[0:4] == "3.10":
-            pkl_file = path.join(current, "data/xpl_to_load_310.pkl")
-        elif str(sys.version)[0:4] == "3.11":
+        if sys.version_info[:2] == (3, 11):
             pkl_file = path.join(current, "data/xpl_to_load_311.pkl")
-        elif str(sys.version)[0:4] == "3.12":
+        elif sys.version_info[:2] == (3, 12):
             pkl_file = path.join(current, "data/xpl_to_load_312.pkl")
-        elif str(sys.version)[0:4] == "3.13":
+        elif sys.version_info[:2] == (3, 13):
             pkl_file = path.join(current, "data/xpl_to_load_313.pkl")
+        elif sys.version_info[:2] == (3, 14):
+            pkl_file = path.join(current, "data/xpl_to_load_314.pkl")
         else:
             raise NotImplementedError
 
@@ -797,7 +795,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        assert not pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_frame_equal(expected, output, check_dtype=False)
 
     def predict_proba(self, arg1, arg2):
         """
@@ -943,7 +941,7 @@ class TestSmartExplainer(unittest.TestCase):
             dtype=object,
         )
         expected["pred"] = expected["pred"].astype(int)
-        pd.testing.assert_frame_equal(expected, output)
+        pd.testing.assert_frame_equal(expected, output, check_dtype=False)
 
     def test_compute_features_import_1(self):
         """

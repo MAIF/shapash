@@ -341,7 +341,7 @@ def get_names(name, trans, column, column_transformer):
                 return column_transformer._df_columns[column]
         else:
             indices = np.arange(column_transformer._n_features)
-            return ["x%d" % i for i in indices[column]]
+            return [f"x{i}" for i in indices[column]]
     if not hasattr(trans, "get_feature_names_out"):
         if column is None:
             return []
@@ -401,9 +401,6 @@ def get_list_features_names(list_preprocessing, columns_dict):
 
         elif str(type(enc)) in columntransformer:
             feature_expected = get_feature_names(enc)
-
-        elif str(type(enc)) in ("<class 'list'>"):
-            feature_expected = feature_expected
 
     return feature_expected
 
@@ -466,7 +463,10 @@ def get_col_mapping_ct(encoder, x_encoded):
                 raise NotImplementedError(f"Estimator not supported : {estimator}")
 
         elif isinstance(estimator, FunctionTransformer):
-            features_out = encoder.feature_names_in_[features]
+            if len(features) > 0 and isinstance(features[0], str):
+                features_out = features
+            else:
+                features_out = encoder.feature_names_in_[features]
             for f_name in features_out:
                 dict_col_mapping[f_name] = [x_encoded.columns.to_list()[idx_encoded]]
                 idx_encoded += 1

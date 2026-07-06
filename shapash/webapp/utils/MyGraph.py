@@ -6,9 +6,9 @@ from dash import dcc
 class MyGraph(dcc.Graph):
     """Class inherited from dcc.Graph. Add one method for updating graph layout."""
 
-    def __init__(self, figure, id, style=None, **kwds):
+    def __init__(self, figure, component_id, style=None, **kwds):
         super().__init__(
-            id=id,
+            id=component_id,
             figure=figure,
             style=style if style is not None else {},
             **kwds,
@@ -16,7 +16,7 @@ class MyGraph(dcc.Graph):
 
         self.figure = figure
 
-        if id in ["prediction_picking", "clusters"]:
+        if component_id in ["prediction_picking", "clusters"]:
             self.config = {
                 "responsive": True,
                 "modeBarButtonsToRemove": [

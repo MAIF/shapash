@@ -4,7 +4,6 @@ import os
 import sys
 from datetime import date
 from numbers import Number
-from typing import Optional, Union
 
 import jinja2
 import numpy as np
@@ -30,7 +29,7 @@ from shapash.webapp.utils.utils import round_to_k
 logging.basicConfig(level=logging.INFO)
 
 template_loader = jinja2.FileSystemLoader(searchpath=os.path.join(get_project_root(), "shapash", "report", "html"))
-template_env = jinja2.Environment(loader=template_loader)
+template_env = jinja2.Environment(loader=template_loader, autoescape=True)
 
 
 class ProjectReport:
@@ -70,10 +69,10 @@ class ProjectReport:
         self,
         explainer: SmartExplainer,
         project_info_file: str,
-        x_train: Optional[pd.DataFrame] = None,
-        y_train: Optional[pd.DataFrame] = None,
-        y_test: Optional[pd.DataFrame] = None,
-        config: Optional[dict] = None,
+        x_train: pd.DataFrame | None = None,
+        y_train: pd.DataFrame | None = None,
+        y_test: pd.DataFrame | None = None,
+        config: dict | None = None,
     ):
         self.explainer = explainer
         self.metadata = load_yml(path=project_info_file)
@@ -136,8 +135,8 @@ class ProjectReport:
 
     @staticmethod
     def _get_values_and_name(
-        y: Optional[Union[pd.DataFrame, pd.Series, list]], default_name: str
-    ) -> Union[tuple[list, str], tuple[None, None]]:
+        y: pd.DataFrame | pd.Series | list | None, default_name: str
+    ) -> tuple[list, str] | tuple[None, None]:
         """
         Extracts vales and column name from a Pandas Series, DataFrame, or assign a default
         name if y is a list of values.
@@ -159,7 +158,8 @@ class ProjectReport:
         if y is None:
             return None, None
         elif isinstance(y, pd.DataFrame):
-            assert len(y.columns) == 1, "Number of columns found is greater than 1"
+            if len(y.columns) != 1:
+                raise ValueError("Number of columns found is greater than 1")
             name = y.columns[0]
             values = y.values[:, 0]
         elif isinstance(y, pd.Series):
@@ -173,7 +173,7 @@ class ProjectReport:
         return values, name
 
     @staticmethod
-    def _create_train_test_df(test: Optional[pd.DataFrame], train: Optional[pd.DataFrame]) -> Union[pd.DataFrame, None]:
+    def _create_train_test_df(test: pd.DataFrame | None, train: pd.DataFrame | None) -> pd.DataFrame | None:
         """
         Creates a DataFrame that contains train and test dataset with the column 'data_train_test'
         allowing to distinguish the values.
@@ -400,7 +400,7 @@ class ProjectReport:
     def _stats_to_table(
         test_stats: dict,
         names: list,
-        train_stats: Optional[dict] = None,
+        train_stats: dict | None = None,
     ) -> pd.DataFrame:
         if train_stats is not None:
             return pd.DataFrame({names[1]: pd.Series(train_stats), names[0]: pd.Series(test_stats)})
@@ -567,7 +567,7 @@ class ProjectReport:
                 if isinstance(res, Number):
                     res = display_value(round_to_k(res, 3))
                     print_md(f"**{metric['name']} :** {res}")
-                elif isinstance(res, (list, tuple, np.ndarray)):
+                elif isinstance(res, list | tuple | np.ndarray):
                     print_md(f"**{metric['name']} :**")
                     print_html(pd.DataFrame(res).to_html(classes="greyGridTable"))
                 elif isinstance(res, str):

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ class BaseBackend(ABC):
     support_groups = True
     supported_cases = ["classification", "regression"]
 
-    def __init__(self, model: Any, preprocessing: Optional[Any] = None):
+    def __init__(self, model: Any, preprocessing: Any | None = None):
         """Create a backend instance using a given implementation.
 
         Parameters
@@ -63,13 +63,12 @@ class BaseBackend(ABC):
             dict containing local contributions
         """
         raise NotImplementedError(
-            f"`{self.__class__.__name__}` is a subclass of BaseBackend and "
-            f"must implement the `_run_explainer` method"
+            f"`{self.__class__.__name__}` is a subclass of BaseBackend and must implement the `_run_explainer` method"
         )
 
     def get_local_contributions(
-        self, x: pd.DataFrame, explain_data: Any, subset: Optional[list[int]] = None
-    ) -> Union[pd.DataFrame, list[pd.DataFrame]]:
+        self, x: pd.DataFrame, explain_data: Any, subset: list[int] | None = None
+    ) -> pd.DataFrame | list[pd.DataFrame]:
         """Get local contributions using the explainer data computed in the `run_explainer`
         method.
 
@@ -92,7 +91,8 @@ class BaseBackend(ABC):
         local_contributions : pd.DataFrame
             The local contributions computed by the backend.
         """
-        assert isinstance(explain_data, dict), "The _run_explainer method should return a dict"
+        if not isinstance(explain_data, dict):
+            raise TypeError("The _run_explainer method should return a dict")
         if "contributions" not in explain_data.keys():
             raise ValueError(
                 "The _run_explainer method should return a dict"
@@ -102,17 +102,20 @@ class BaseBackend(ABC):
 
         local_contributions = explain_data["contributions"]
         if subset is not None:
-            local_contributions = local_contributions.loc[subset]
+            if isinstance(local_contributions, list):
+                local_contributions = [c[subset] for c in local_contributions]
+            else:
+                local_contributions = local_contributions.loc[subset]
         local_contributions = self.format_and_aggregate_local_contributions(x, local_contributions)
         return local_contributions
 
     def get_global_features_importance(
         self,
         contributions: pd.DataFrame,
-        explain_data: Optional[dict] = None,
-        subset: Optional[list[int]] = None,
+        explain_data: dict | None = None,
+        subset: list[int] | None = None,
         norm: int = 1,
-    ) -> Union[pd.Series, list[pd.Series]]:
+    ) -> pd.Series | list[pd.Series]:
         """Get global contributions using the explainer data computed in the `run_explainer`
         method.
 
@@ -141,8 +144,8 @@ class BaseBackend(ABC):
     def format_and_aggregate_local_contributions(
         self,
         x: pd.DataFrame,
-        contributions: Union[pd.DataFrame, np.array, list[pd.DataFrame], list[np.array]],
-    ) -> Union[pd.DataFrame, list[pd.DataFrame]]:
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray],
+    ) -> pd.DataFrame | list[pd.DataFrame]:
         """
         This function allows to format and aggregate contributions in the right format
         (pd.DataFrame or list of pd.DataFrame).
@@ -175,8 +178,8 @@ class BaseBackend(ABC):
         return contributions
 
     def _apply_preprocessing(
-        self, contributions: Union[pd.DataFrame, list[pd.DataFrame]]
-    ) -> Union[pd.DataFrame, list[pd.DataFrame]]:
+        self, contributions: pd.DataFrame | list[pd.DataFrame]
+    ) -> pd.DataFrame | list[pd.DataFrame]:
         """
         Reconstruct contributions for original features, taken into account a preprocessing.
 

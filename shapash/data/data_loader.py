@@ -6,9 +6,35 @@ import json
 import os
 from pathlib import Path
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 import pandas as pd
+
+
+def _safe_urlopen(url: str, **kwargs):
+    """Open an HTTPS URL safely with forwarded request options.
+
+    Parameters
+    ----------
+    url : str
+        URL to open. Only HTTPS schemes are allowed.
+    **kwargs
+        Keyword arguments forwarded to :func:`urllib.request.urlopen`.
+
+    Returns
+    -------
+    file-like
+        The response object returned by :func:`urllib.request.urlopen`.
+
+    Raises
+    ------
+    ValueError
+        If the URL scheme is not HTTPS.
+    """
+    if urlparse(url).scheme != "https":
+        raise ValueError(f"Only HTTPS URLs are permitted: {url}")
+    return urlopen(url, **kwargs)  # noqa: S310
 
 
 def _find_file(data_path, github_data_url, filename):
@@ -33,9 +59,10 @@ def _find_file(data_path, github_data_url, filename):
     if os.path.isfile(file) is False:
         file = github_data_url + filename
         try:
-            urlopen(file)
-        except URLError:
-            raise Exception(f"Internet connection is required to download: {file}")
+            with _safe_urlopen(file, timeout=10):
+                pass
+        except URLError as exc:
+            raise ConnectionError(f"Internet connection is required to download: {file}") from exc
     return file
 
 
@@ -71,7 +98,7 @@ def data_loading(dataset):
         dict_house_prices_path = _find_file(data_path, github_data_url, "house_prices_labels.json")
         data = pd.read_csv(data_house_prices_path, header=0, index_col=0, engine="python")
         if github_data_url in dict_house_prices_path:
-            with urlopen(dict_house_prices_path) as openfile:
+            with _safe_urlopen(dict_house_prices_path) as openfile:
                 dic = json.load(openfile)
         else:
             with open(dict_house_prices_path) as openfile:
@@ -84,7 +111,7 @@ def data_loading(dataset):
         dict_titanic_path = _find_file(data_path, github_data_url, "titaniclabels.json")
         data = pd.read_csv(data_titanic_path, header=0, index_col=0, engine="python")
         if github_data_url in dict_titanic_path:
-            with urlopen(dict_titanic_path) as openfile:
+            with _safe_urlopen(dict_titanic_path) as openfile:
                 dic = json.load(openfile)
         else:
             with open(dict_titanic_path) as openfile:

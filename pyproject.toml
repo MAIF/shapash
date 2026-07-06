@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "shapash"
-version = "2.8.1"
+dynamic = ["version"]
 
 authors = [
     {name = "Yann Golhen"},
@@ -17,36 +17,32 @@ authors = [
 ]
 description = "Shapash is a Python library which aims to make machine learning interpretable and understandable by everyone."
 readme = "README.md"
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.11, <3.15"
 license = {text = "Apache Software License 2.0"}
 keywords = ["shapash"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
     "category_encoders>=2.6.0",
-    "dash-bootstrap-components>=1.1.0",
-    "dash-core-components>=2.0.0",
-    "dash-daq>=0.5.0",
-    "dash-html-components>=2.0.0",
+    "dash-bootstrap-components>=2.0.0",
+    "dash-daq>=0.6.0",
     "dash-renderer==1.8.3",
-    "dash-table>=5.0.0",
-    "dash>=2.3.1,<3.0.0",
+    "dash>=3.0.0,<4.0.0",
     "Flask>=1.0.4",
     "matplotlib>=3.8.4",
     "nbformat>5.8.0",
     "numba>=0.60.0",
-    "numpy>=2.0.0,<2.4.0",
-    "pandas>=2.2.2,<3.0.0",
+    "numpy>=2.0.0,<2.6.0",
+    "pandas>=2.2.2,<3.0.4",
     "plotly>=5.0.0,<6.0.0",
-    "scikit-learn>=1.4.2,<1.6.0",
+    "scikit-learn>=1.8.0,<1.9.0",
     "scipy>=1.13.0",
     "shap>=0.46.0",
     "shapely>=2.0.0",
@@ -62,15 +58,15 @@ report = [
     "phik>=0.12.4",
     "pyarrow>=17.0.0",
 ]
-xgboost = ["xgboost>=2.1.0,<3.1.0"]
+xgboost = ["xgboost>=2.1.0"]
 catboost = ["catboost>=1.2.8"]
 lightgbm = ["lightgbm>=4.4.0"]
 lime = ["lime>=0.2.0.0"]
 
 dev = ["pre-commit", "mypy", "ruff"]
-test = ["pytest", "pytest-cov"]
-mypy = ["mypy"]
-ruff = ["ruff"]
+
+test = ["pytest", "pytest-cov", "shapash[xgboost,catboost,lightgbm,lime,report]"]
+
 doc = [
     "nbsphinx==0.8.8",
     "sphinx_material==0.0.35",
@@ -83,7 +79,7 @@ doc = [
     "sphinxcontrib-serializinghtml==1.1.5",
 ]
 
-all = ["shapash[dev, test, mypy, ruff, report, xgboost, lightgbm, catboost, lime, doc]"]
+all = ["shapash[dev, test, doc]"]
 
 [project.urls]
 Homepage = "https://github.com/MAIF/shapash"
@@ -94,13 +90,28 @@ package-dir = {"" = "."}
 [tool.setuptools.packages.find]
 where = ["."]
 
-
 [tool.setuptools.package-data]
 "*" = ["*.csv", "*json", "*.yml", "*.css", "*.js", "*.png", "*.ico", "*.ipynb", "*.html", "*.j2"]
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 75
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py311, py312, py313, py314
+
+[testenv]
+extras = test
+commands = pytest {posargs}
+"""
 
 [tool.mypy]
 exclude = ["tests", "tutorial"]
@@ -136,26 +147,3 @@ exclude = ["tests/*", "*.ipynb"]
 [tool.ruff.lint.per-file-ignores]
 "shapash/__init__.py" = ["F401"]
 "shapash/backend/__init__.py" = ["F401"]
-"shapash/backend/base_backend.py" = ["S101"]
-"shapash/backend/lime_backend.py" = ["PLW2901"]
-"shapash/data/data_loader.py" = ["S310", "B904"]
-"shapash/explainer/consistency.py" = ["PLW2901", "NPY002", "UP031", "E741"]
-"shapash/explainer/smart_explainer.py" = ["S104", "B904"]
-"shapash/explainer/smart_plotter.py" = ["PLW3301", "A001", "S101"]
-"shapash/explainer/smart_predictor.py" = ["S101", "B904", "E721"]
-"shapash/manipulation/summarize.py" = ["B028"]
-"shapash/plots/plot_line_comparison.py" = ["B028", "A001"]
-"shapash/plots/plot_scatter_prediction.py" = ["PLW0127", "PLW3301"]
-"shapash/report/__init__.py" = ["B904"]
-"shapash/report/plots.py" = ["A002"]
-"shapash/report/visualisation.py" = ["UP031"]
-"shapash/report/project_report.py" = ["S101", "S701"]
-"shapash/utils/columntransformer_backend.py" = ["PLW0127"]
-"shapash/utils/explanation_metrics.py" = ["S101"]
-"shapash/utils/io.py" = ["S301"]
-"shapash/webapp/utils/callbacks.py" = ["A002", "E721"]
-"shapash/webapp/utils/utils.py" = ["UP031"]
-"shapash/webapp/utils/MyGraph.py" = ["A002"]
-"shapash/webapp/smart_app.py" = ["A002", "S307", "E721", "A001"]
-"shapash/webapp/webapp_launch_DVF.py" = ["S104"]
-"shapash/webapp/webapp_launch.py" = ["S104", "S301"]
