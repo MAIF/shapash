@@ -1883,6 +1883,8 @@ class SmartPlotter:
         self,
         width: int = 700,
         height: int = 500,
+        use_quantile_scale: bool = False,
+        quantile: float | None = None,
         file_name=None,
         auto_open=False,
     ):
@@ -1902,6 +1904,11 @@ class SmartPlotter:
             The width of the generated figure, in inches.
         height : int, optional, default=4
             The height of the generated figure, in inches.
+        use_quantile_scale : bool, optional, default=False
+            If True, the color scale of the confusion matrix will be based on quantiles of the
+            confusion matrix values. If False, the color scale will be based on the actual values.
+        quantile : float, optional, default=None
+            If use_quantile_scale is True, this parameter specifies the quantile to use for scaling the color scale.
 
         Returns
         -------
@@ -1925,6 +1932,8 @@ class SmartPlotter:
             colors_dict=self._style_dict,
             width=width,
             height=height,
+            use_quantile_scale=use_quantile_scale,
+            quantile=quantile,
             file_name=file_name,
             auto_open=auto_open,
         )

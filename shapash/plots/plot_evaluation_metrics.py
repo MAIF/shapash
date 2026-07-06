@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -504,6 +506,8 @@ def plot_confusion_matrix(
     colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
+    use_quantile_scale: bool = False,
+    quantile: float | None = None,
     palette_name: str = "default",
     file_name=None,
     auto_open=False,
@@ -523,6 +527,10 @@ def plot_confusion_matrix(
         The width of the figure in pixels.
     height : int, optional
         The height of the figure in pixels.
+    use_quantile_scale : bool, optional
+        Whether to use a quantile-based color scale for the heatmap.
+    quantile : float, optional
+        The quantile value to use for color scaling if `use_quantile_scale` is True.
     palette_name : str, optional
         The color palette to use for the heatmap.
     file_name: string, optional
@@ -590,6 +598,25 @@ def plot_confusion_matrix(
 
         # Shorten labels that exceed the threshold
         y_labels = [x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in y_labels]
+    if use_quantile_scale != (quantile is not None):
+        warnings.warn(
+            "quantile and use_quantile_scale must be set together: the color scale is not capped",
+            UserWarning,
+            stacklevel=1,
+        )
+    # Cap the cell colors at the given quantile: colors saturate at the cap,
+    # while the colorbar ticks keep showing the true value range
+    color_zmax = z.max()
+    colorbar = None
+    if use_quantile_scale and quantile is not None:
+        capped_zmax = np.quantile(z, quantile)
+        if 0 < capped_zmax < color_zmax:
+            colorbar = dict(
+                tickmode="array",
+                tickvals=np.linspace(0, capped_zmax, 6),
+                ticktext=[f"{v:.0f}" for v in np.linspace(0, color_zmax, 6)],
+            )
+            color_zmax = capped_zmax
 
     # Create the heatmap using go.Heatmap
     heatmap = go.Heatmap(
@@ -597,11 +624,13 @@ def plot_confusion_matrix(
         x=x_labels,
         y=y_labels,
         colorscale=col_scale,
+        zmin=0,
+        zmax=color_zmax,
+        colorbar=colorbar,
         hovertext=hv_text,
         hovertemplate="%{hovertext}<extra></extra>",
         showscale=True,
     )
-
     fig = go.Figure(data=[heatmap])
 
     # Add annotations for each cell
@@ -614,7 +643,7 @@ def plot_confusion_matrix(
                     y=y_label,
                     text=str(z[i][j]),
                     showarrow=False,
-                    font=dict(color="black" if z[i][j] < z.max() / 2 else "white"),
+                    font=dict(color="black" if z[i][j] < color_zmax / 2 else "white"),
                 )
             )
 
