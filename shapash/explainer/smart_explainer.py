@@ -9,6 +9,7 @@ import tempfile
 
 import numpy as np
 import pandas as pd
+from werkzeug.serving import make_server
 
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend, get_backend_cls_from_name
@@ -1500,7 +1501,14 @@ class SmartExplainer:
             if port is None:
                 port = 8050
             host_name = get_host_name()
-            server_instance = CustomThread(target=lambda: self.smartapp.app.run(debug=False, host=host, port=port))
+            wsgi_server = make_server(host, port, self.smartapp.server)
+            server_instance = CustomThread(target=wsgi_server.serve_forever)
+
+            def _kill():
+                wsgi_server.shutdown()
+                server_instance.killed = True
+
+            server_instance.kill = _kill
             if host_name is None:
                 host_name = host
             elif host != DEFAULT_HOST:

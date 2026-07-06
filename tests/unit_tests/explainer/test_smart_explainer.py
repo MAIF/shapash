@@ -1077,8 +1077,9 @@ class TestSmartExplainer(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
+    @patch("shapash.explainer.smart_explainer.make_server")
     @patch("shapash.explainer.smart_explainer.get_host_name")
-    def test_run_app_1(self, mock_get_host_name, mock_custom_thread, mock_smartapp):
+    def test_run_app_1(self, mock_get_host_name, mock_make_server, mock_custom_thread, mock_smartapp):
         """
         Test that when y_pred is not given, y_pred is automatically computed.
         """
@@ -1094,8 +1095,9 @@ class TestSmartExplainer(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
+    @patch("shapash.explainer.smart_explainer.make_server")
     @patch("shapash.explainer.smart_explainer.get_host_name")
-    def test_run_app_2(self, mock_get_host_name, mock_custom_thread, mock_smartapp):
+    def test_run_app_2(self, mock_get_host_name, mock_make_server, mock_custom_thread, mock_smartapp):
         """
         Test that when y_target is given
         """
