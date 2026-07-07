@@ -504,7 +504,7 @@ def plot_confusion_matrix(
     colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
-    use_quantile_scale: float | None = None,
+    color_quantile_cap: float | None = None,
     palette_name: str = "default",
     file_name=None,
     auto_open=False,
@@ -524,7 +524,7 @@ def plot_confusion_matrix(
         The width of the figure in pixels.
     height : int, optional
         The height of the figure in pixels.
-    use_quantile_scale : float, optional
+    color_quantile_cap : float, optional
         Upper quantile used to cap the cell color. If None (default),the full value range is used.
     palette_name : str, optional
         The color palette to use for the heatmap.
@@ -597,8 +597,8 @@ def plot_confusion_matrix(
     # while the colorbar ticks keep showing the true value range
     color_zmax = z.max()
     colorbar = None
-    if use_quantile_scale is not None:
-        capped_zmax = np.quantile(z, use_quantile_scale)
+    if color_quantile_cap is not None:
+        capped_zmax = np.quantile(z, color_quantile_cap)
         if 0 < capped_zmax < color_zmax:
             colorbar = dict(
                 tickmode="array",

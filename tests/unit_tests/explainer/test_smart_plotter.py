@@ -2582,7 +2582,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.compile(x=X_train, y_target=y_train)
 
         output_default = xpl.plot.confusion_matrix_plot()
-        output_capped = xpl.plot.confusion_matrix_plot(use_quantile_scale=0.95)
+        output_capped = xpl.plot.confusion_matrix_plot(color_quantile_cap=0.95)
         z = np.array(output_default.data[0].z)
 
         # colors: full range by default, saturate at the quantile when capped
