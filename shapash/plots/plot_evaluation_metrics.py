@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -506,8 +504,7 @@ def plot_confusion_matrix(
     colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
-    use_quantile_scale: bool = False,
-    quantile: float | None = None,
+    use_quantile_scale: float | None = None,
     palette_name: str = "default",
     file_name=None,
     auto_open=False,
@@ -527,10 +524,8 @@ def plot_confusion_matrix(
         The width of the figure in pixels.
     height : int, optional
         The height of the figure in pixels.
-    use_quantile_scale : bool, optional
-        Whether to use a quantile-based color scale for the heatmap.
-    quantile : float, optional
-        The quantile value to use for color scaling if `use_quantile_scale` is True.
+    use_quantile_scale : float, optional
+        Upper quantile used to cap the cell color. If None (default),the full value range is used.
     palette_name : str, optional
         The color palette to use for the heatmap.
     file_name: string, optional
@@ -598,18 +593,12 @@ def plot_confusion_matrix(
 
         # Shorten labels that exceed the threshold
         y_labels = [x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in y_labels]
-    if use_quantile_scale != (quantile is not None):
-        warnings.warn(
-            "quantile and use_quantile_scale must be set together: the color scale is not capped",
-            UserWarning,
-            stacklevel=1,
-        )
     # Cap the cell colors at the given quantile: colors saturate at the cap,
     # while the colorbar ticks keep showing the true value range
     color_zmax = z.max()
     colorbar = None
-    if use_quantile_scale and quantile is not None:
-        capped_zmax = np.quantile(z, quantile)
+    if use_quantile_scale is not None:
+        capped_zmax = np.quantile(z, use_quantile_scale)
         if 0 < capped_zmax < color_zmax:
             colorbar = dict(
                 tickmode="array",

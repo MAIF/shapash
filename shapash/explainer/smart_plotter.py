@@ -1883,8 +1883,7 @@ class SmartPlotter:
         self,
         width: int = 700,
         height: int = 500,
-        use_quantile_scale: bool = False,
-        quantile: float | None = None,
+        use_quantile_scale: float | None = None,
         file_name=None,
         auto_open=False,
     ):
@@ -1904,11 +1903,9 @@ class SmartPlotter:
             The width of the generated figure, in inches.
         height : int, optional, default=4
             The height of the generated figure, in inches.
-        use_quantile_scale : bool, optional, default=False
-            If True, the color scale of the confusion matrix will be based on quantiles of the
-            confusion matrix values. If False, the color scale will be based on the actual values.
-        quantile : float, optional, default=None
-            If use_quantile_scale is True, this parameter specifies the quantile to use for scaling the color scale.
+        use_quantile_scale : float, optional, default=None
+            Upper quantile used to cap the cell color, useful on
+            imbalanced datasets. If None (default), the full value range is used.
 
         Returns
         -------
@@ -1933,7 +1930,6 @@ class SmartPlotter:
             width=width,
             height=height,
             use_quantile_scale=use_quantile_scale,
-            quantile=quantile,
             file_name=file_name,
             auto_open=auto_open,
         )
