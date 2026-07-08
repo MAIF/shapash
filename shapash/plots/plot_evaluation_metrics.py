@@ -645,17 +645,15 @@ def plot_confusion_matrix(
         xaxis=dict(
             title=dict_xaxis,
             tickangle=45,
-            type="category",
             tickmode="array" if x_numeric else "linear",
-            tickvals=x_labels if x_numeric else None,
+            tickvals=[int(label) for label in x_labels] if x_numeric else None,
             ticktext=x_labels if x_numeric else None,
         ),
         yaxis=dict(
             title=dict_yaxis,
             autorange="reversed",  # Reverse y-axis to match conventional confusion matrix
-            type="category",  # force a categorical axis, so labels aren't read as numbers
             tickmode="array" if y_numeric else "linear",
-            tickvals=y_labels if y_numeric else None,
+            tickvals=[int(label) for label in y_labels] if y_numeric else None,
             ticktext=y_labels if y_numeric else None,
         ),
         width=width,

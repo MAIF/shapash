@@ -2602,10 +2602,10 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].x == ("1", "2", "10")
         assert output.data[0].y == ("1", "2", "10")
         assert np.array(output.data[0].z).tolist() == [[1, 1, 0], [0, 1, 1], [1, 0, 1]]
-        assert output.layout.xaxis.type == "category"
-        assert output.layout.yaxis.type == "category"
-        assert output.layout.xaxis.tickvals == ("1", "2", "10")
-        assert output.layout.yaxis.tickvals == ("1", "2", "10")
+        assert output.layout.xaxis.tickvals == (1, 2, 10)
+        assert output.layout.yaxis.tickvals == (1, 2, 10)
+        assert output.layout.xaxis.ticktext == ("1", "2", "10")
+        assert output.layout.yaxis.ticktext == ("1", "2", "10")
 
         assert {annotation.x for annotation in output.layout.annotations} == {0, 1, 2}
         assert {annotation.y for annotation in output.layout.annotations} == {0, 1, 2}
@@ -2613,4 +2613,4 @@ class TestSmartPlotter(unittest.TestCase):
         # for the text labels
         output_str = plot_confusion_matrix(y_true=["A", "B", "C"], y_pred=["B", "B", "C"])
         assert output_str.data[0].x == ("A", "B", "C")
-        assert output_str.layout.xaxis.type == "category"
+        assert output_str.layout.xaxis.tickvals is None
