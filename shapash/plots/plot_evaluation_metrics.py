@@ -558,9 +558,10 @@ def plot_confusion_matrix(
     col_scale = [(value, color) for value, color in zip(linspace, init_colorscale, strict=False)]
 
     # Convert the DataFrame to a NumPy array
-    x_labels = list(df_cm.columns)
-    y_labels = list(df_cm.index)
-    z = df_cm.loc[x_labels, y_labels].values
+    # Cast labels to strings so Plotly treats them as categories, not a continuous numeric range
+    x_labels = [str(label) for label in df_cm.columns]
+    y_labels = [str(label) for label in df_cm.index]
+    z = df_cm.values
 
     title = "Confusion Matrix"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
@@ -568,8 +569,8 @@ def plot_confusion_matrix(
     dict_yaxis = style_dict["dict_yaxis"] | {"text": se_y_true.name}
 
     # Determine if labels are numeric
-    x_numeric = all(str(label).isdigit() for label in x_labels)
-    y_numeric = all(str(label).isdigit() for label in y_labels)
+    x_numeric = all(label.isdigit() for label in x_labels)
+    y_numeric = all(label.isdigit() for label in y_labels)
 
     hv_text = [
         [f"Actual: {y}<br>Predicted: {x}<br>Count: {value}" for x, value in zip(x_labels, row, strict=False)]
@@ -622,14 +623,15 @@ def plot_confusion_matrix(
     )
     fig = go.Figure(data=[heatmap])
 
-    # Add annotations for each cell
+    # Add cell annotations positioned by index, not label: on a category axis a
+    # numeric looking label could be read as a position and land off-grid
     annotations = []
-    for i, y_label in enumerate(y_labels):
-        for j, x_label in enumerate(x_labels):
+    for i in range(len(y_labels)):
+        for j in range(len(x_labels)):
             annotations.append(
                 dict(
-                    x=x_label,
-                    y=y_label,
+                    x=j,
+                    y=i,
                     text=str(z[i][j]),
                     showarrow=False,
                     font=dict(color="black" if z[i][j] < color_zmax / 2 else "white"),
