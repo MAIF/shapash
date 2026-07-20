@@ -4,12 +4,10 @@ Unit test smart predictor
 
 import json
 import os
-import sys
 import tempfile
 import unittest
 import warnings
 from os import path
-from pathlib import Path
 
 import catboost as cb
 import numpy as np
@@ -38,20 +36,10 @@ class Test_load_smartpredictor(unittest.TestCase):
         xpl.compile(x=dataframe_x, y_pred=y_pred)
         predictor = xpl.to_smartpredictor()
 
-        current = Path(path.abspath(__file__)).parent.parent.parent
-        if sys.version_info[:2] == (3, 11):
-            pkl_file = path.join(current, "data/predictor_to_load_311.pkl")
-        elif sys.version_info[:2] == (3, 12):
-            pkl_file = path.join(current, "data/predictor_to_load_312.pkl")
-        elif sys.version_info[:2] == (3, 13):
-            pkl_file = path.join(current, "data/predictor_to_load_313.pkl")
-        elif sys.version_info[:2] == (3, 14):
-            pkl_file = path.join(current, "data/predictor_to_load_314.pkl")
-        else:
-            raise NotImplementedError
-
-        predictor.save(pkl_file)
-        predictor2 = load_smartpredictor(pkl_file)
+        with tempfile.TemporaryDirectory() as tmp:
+            pkl_file = path.join(tmp, "predictor_to_load.pkl")
+            predictor.save(pkl_file)
+            predictor2 = load_smartpredictor(pkl_file)
 
         attrib_predictor = [element for element in predictor.__dict__.keys()]
         attrib_predictor2 = [element for element in predictor2.__dict__.keys()]
