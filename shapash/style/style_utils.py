@@ -153,6 +153,11 @@ def define_style(palette):
     style_dict["interactions_discrete_colors"] = palette["interaction_discrete"]
     style_dict["dict_stability_bar_colors"] = convert_string_to_int_keys(palette["stability_bar"])
     style_dict["dict_compacity_bar_colors"] = convert_string_to_int_keys(palette["compacity_bar"])
+    style_dict["lift_curve_colors"] = {
+        "curve": style_dict["prediction_plot"][1],
+        "random": style_dict["prediction_plot"][0],
+        "perfect": style_dict["dict_stability_bar_colors"][0],
+    }
     style_dict["webapp_button"] = convert_string_to_int_keys(palette["webapp_button"])
     style_dict["webapp_bkg"] = palette["webapp_bkg"]
     style_dict["webapp_title"] = palette["webapp_title"]
