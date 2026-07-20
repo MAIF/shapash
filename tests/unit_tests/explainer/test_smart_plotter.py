@@ -2431,6 +2431,23 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.isclose(output.data[0].y[-1], 1.0)
         assert "Lift Curve" in output.layout.title.text
 
+    def test_lift_curve_plot_custom_target_fraction(self):
+        """
+        Classification with custom lift threshold
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 2, size=(100, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(100, 3)), columns=list("ABC"))
+        y_test = pd.DataFrame(np.random.randint(0, 2, size=(100, 1)))
+
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test, y_target=y_test)
+
+        output = xpl.plot.lift_curve_plot(target_fraction=0.2)
+
+        assert "Lift@20%" in output.layout.title.text
+
     def test_lift_curve_plot_2(self):
         """
         Regression

@@ -1935,6 +1935,7 @@ class SmartPlotter:
         selection: list | None = None,
         label: int | str = -1,
         nb: int = 100,
+        target_fraction: float = 0.1,
         max_points: int = 2000,
         width: int = 900,
         height: int = 600,
@@ -1953,6 +1954,9 @@ class SmartPlotter:
             good dataframe object.
         nb: int, optional
             Number of intervals used to build the curve, by default 100.
+        target_fraction: float, optional
+            Share of the ranked population used to compute the summary capture metric,
+            by default 0.1 for Lift@10%.
         max_points: int, optional
             Maximum number of observations used in the plot, by default 2000.
         width : int (default: 900)
@@ -1988,6 +1992,7 @@ class SmartPlotter:
             label_code=label_code,
             label_value=label_value,
             nb=nb,
+            target_fraction=target_fraction,
             max_points=max_points,
             width=width,
             height=height,

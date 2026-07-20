@@ -28,7 +28,40 @@ def _compute_lift_curve(
     y_true_binary: np.ndarray | pd.Series,
     y_score: np.ndarray | pd.Series,
     nb: int = 100,
+    target_fraction: float = 0.1,
 ) -> tuple[np.ndarray, np.ndarray, float]:
+    """
+    Compute lift curve coordinates and the capture rate at 10% of the population.
+
+    Parameters
+    ----------
+    y_true_binary : numpy.ndarray or pandas.Series
+        Binary ground-truth labels where positive samples are encoded as 1.
+    y_score : numpy.ndarray or pandas.Series
+        Predicted scores or probabilities used to rank samples from most to least likely
+        to belong to the positive class.
+    nb : int, optional
+        Number of evenly spaced population fractions used to evaluate the curve.
+    target_fraction : float, optional
+        Share of the ranked population used to compute the summary capture metric.
+        The default value of ``0.1`` corresponds to the top 10% of samples.
+
+    Returns
+    -------
+    tuple[numpy.ndarray, numpy.ndarray, float]
+        Population fractions, cumulative share of positives captured at each fraction,
+        and the share of positives captured within the top 10% ranked samples.
+
+    Raises
+    ------
+    ValueError
+        If the selected label contains no positive samples.
+    ValueError
+        If ``target_fraction`` is not strictly between 0 and 1.
+    """
+    if not 0 < target_fraction < 1:
+        raise ValueError("target_fraction must be strictly between 0 and 1.")
+
     y_true_binary = np.asarray(y_true_binary).astype(int)
     y_score = np.asarray(y_score).astype(float)
 
@@ -46,10 +79,10 @@ def _compute_lift_curve(
 
     lift_curve = cum_positive[cutoffs] / total_positive
 
-    top_decile_count = max(1, int(round(y_sorted.shape[0] / 10)))
-    lift_10 = cum_positive[top_decile_count] / total_positive
+    target_count = max(1, int(round(y_sorted.shape[0] * target_fraction)))
+    target_capture = cum_positive[target_count] / total_positive
 
-    return fractions, lift_curve, lift_10
+    return fractions, lift_curve, target_capture
 
 
 def plot_lift_curve(
@@ -62,6 +95,7 @@ def plot_lift_curve(
     label_code: Any | None = None,
     label_value: Any | None = None,
     nb: int = 100,
+    target_fraction: float = 0.1,
     max_points: int = 2000,
     width: int = 900,
     height: int = 600,
@@ -93,6 +127,9 @@ def plot_lift_curve(
         Human-readable label for plot subtitle.
     nb : int, optional
         Number of intervals used to compute the curve.
+    target_fraction : float, optional
+        Share of the ranked population used to compute the summary capture metric.
+        The default value of ``0.1`` corresponds to Lift@10%.
     max_points : int, optional
         Maximum number of observations used in plot.
     width : int, optional
@@ -139,10 +176,16 @@ def plot_lift_curve(
     y_score = y_proba_values.iloc[:, label_num].loc[list_ind]
     y_true_binary = (y_true == label_code).astype(int)
 
-    fractions, curve_values, lift_10 = _compute_lift_curve(y_true_binary=y_true_binary, y_score=y_score, nb=nb)
+    fractions, curve_values, target_capture = _compute_lift_curve(
+        y_true_binary=y_true_binary,
+        y_score=y_score,
+        nb=nb,
+        target_fraction=target_fraction,
+    )
 
     positive_rate = y_true_binary.mean() * 100
-    subtitle = f"Response: <b>{label_value}</b> - Lift@10%: <b>{lift_10:.3f}</b>"
+    target_percentage = target_fraction * 100
+    subtitle = f"Response: <b>{label_value}</b> - Lift@{target_percentage:g}%: <b>{target_capture:.3f}</b>"
     if addnote:
         subtitle += f" - {addnote}"
 
