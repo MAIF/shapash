@@ -1884,12 +1884,18 @@ class SmartPlotter:
         self,
         width: int = 700,
         height: int = 500,
+        color_quantile_cap: float | None = None,
         file_name=None,
         auto_open=False,
     ):
         """
         Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
         y_pred parameters.
+
+        On imbalanced datasets, the dominant class can crush the color scale and
+        make the other cells look identical. Set the optional `color_quantile_cap` parameter
+        to cap the heatmap colors at that quantile and restore the
+        contrast: only the colors are affected on the other hand the displayed counts, hover and colorbar ticks keep the true values
 
         Parameters
         ----------
@@ -1903,6 +1909,9 @@ class SmartPlotter:
             The width of the generated figure, in inches.
         height : int, optional, default=4
             The height of the generated figure, in inches.
+        color_quantile_cap : float, optional, default=None
+            Upper quantile used to cap the cell color, useful on
+            imbalanced datasets. If None (default), the full value range is used.
 
         Returns
         -------
@@ -1926,6 +1935,7 @@ class SmartPlotter:
             colors_dict=self._style_dict,
             width=width,
             height=height,
+            color_quantile_cap=color_quantile_cap,
             file_name=file_name,
             auto_open=auto_open,
         )

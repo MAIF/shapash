@@ -733,6 +733,7 @@ def plot_confusion_matrix(
     colors_dict: dict | None = None,
     width: int = 700,
     height: int = 500,
+    color_quantile_cap: float | None = None,
     palette_name: str = "default",
     file_name=None,
     auto_open=False,
@@ -752,6 +753,8 @@ def plot_confusion_matrix(
         The width of the figure in pixels.
     height : int, optional
         The height of the figure in pixels.
+    color_quantile_cap : float, optional
+        Upper quantile used to cap the cell color. If None (default),the full value range is used.
     palette_name : str, optional
         The color palette to use for the heatmap.
     file_name: string, optional
@@ -784,9 +787,10 @@ def plot_confusion_matrix(
     col_scale = [(value, color) for value, color in zip(linspace, init_colorscale, strict=False)]
 
     # Convert the DataFrame to a NumPy array
-    x_labels = list(df_cm.columns)
-    y_labels = list(df_cm.index)
-    z = df_cm.loc[x_labels, y_labels].values
+    # Cast labels to strings so Plotly treats them as categories, not a continuous numeric range
+    x_labels = [str(label) for label in df_cm.columns]
+    y_labels = [str(label) for label in df_cm.index]
+    z = df_cm.values
 
     title = "Confusion Matrix"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
@@ -794,8 +798,8 @@ def plot_confusion_matrix(
     dict_yaxis = style_dict["dict_yaxis"] | {"text": se_y_true.name}
 
     # Determine if labels are numeric
-    x_numeric = all(str(label).isdigit() for label in x_labels)
-    y_numeric = all(str(label).isdigit() for label in y_labels)
+    x_numeric = all(label.isdigit() for label in x_labels)
+    y_numeric = all(label.isdigit() for label in y_labels)
 
     hv_text = [
         [f"Actual: {y}<br>Predicted: {x}<br>Count: {value}" for x, value in zip(x_labels, row, strict=False)]
@@ -819,6 +823,19 @@ def plot_confusion_matrix(
 
         # Shorten labels that exceed the threshold
         y_labels = [x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in y_labels]
+    # Cap the cell colors at the given quantile: colors saturate at the cap,
+    # while the colorbar ticks keep showing the true value range
+    color_zmax = z.max()
+    colorbar = None
+    if color_quantile_cap is not None:
+        capped_zmax = np.quantile(z, color_quantile_cap)
+        if 0 < capped_zmax < color_zmax:
+            colorbar = dict(
+                tickmode="array",
+                tickvals=np.linspace(0, capped_zmax, 6),
+                ticktext=[f"{v:.0f}" for v in np.linspace(0, color_zmax, 6)],
+            )
+            color_zmax = capped_zmax
 
     # Create the heatmap using go.Heatmap
     heatmap = go.Heatmap(
@@ -826,24 +843,27 @@ def plot_confusion_matrix(
         x=x_labels,
         y=y_labels,
         colorscale=col_scale,
+        zmin=0,
+        zmax=color_zmax,
+        colorbar=colorbar,
         hovertext=hv_text,
         hovertemplate="%{hovertext}<extra></extra>",
         showscale=True,
     )
-
     fig = go.Figure(data=[heatmap])
 
-    # Add annotations for each cell
+    # Add cell annotations positioned by index, not label: on a category axis a
+    # numeric looking label could be read as a position and land off-grid
     annotations = []
-    for i, y_label in enumerate(y_labels):
-        for j, x_label in enumerate(x_labels):
+    for i in range(len(y_labels)):
+        for j in range(len(x_labels)):
             annotations.append(
                 dict(
-                    x=x_label,
-                    y=y_label,
+                    x=j,
+                    y=i,
                     text=str(z[i][j]),
                     showarrow=False,
-                    font=dict(color="black" if z[i][j] < z.max() / 2 else "white"),
+                    font=dict(color="black" if z[i][j] < color_zmax / 2 else "white"),
                 )
             )
 

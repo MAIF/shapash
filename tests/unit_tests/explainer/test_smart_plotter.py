@@ -19,6 +19,7 @@ from shapash.backend import ShapBackend
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 from shapash.plots.plot_bar_chart import plot_bar_chart
+from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
 from shapash.plots.plot_feature_importance import _plot_features_import
 from shapash.plots.plot_line_comparison import plot_line_comparison
 from shapash.style.style_utils import get_palette
@@ -2627,3 +2628,46 @@ class TestSmartPlotter(unittest.TestCase):
         assert type(output) is go.Figure
         assert len(output.data) == 1
         assert output.data[0].type == "scatter"
+
+    def test_confusion_matrix_plot(self):
+        """
+        Classification - compare default behavior and quantile capping
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.array([0] * 45 + [1] * 5))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+
+        output_default = xpl.plot.confusion_matrix_plot()
+        output_capped = xpl.plot.confusion_matrix_plot(color_quantile_cap=0.95)
+        z = np.array(output_default.data[0].z)
+
+        # colors: full range by default, saturate at the quantile when capped
+        assert output_default.data[0].zmax == z.max()
+        assert output_capped.data[0].zmax == np.quantile(z, 0.95)
+        # colorbar: automatic ticks by default, true values when capped
+        assert output_default.data[0].colorbar.tickvals is None
+        assert float(output_capped.data[0].colorbar.ticktext[-1]) == z.max()
+
+    def test_confusion_matrix_plot_categorical_labels(self):
+        """
+        Numeric labels are plotted as categories, not as a numeric range
+        """
+        output = plot_confusion_matrix(y_true=[1, 1, 2, 10, 10, 2], y_pred=[1, 2, 2, 10, 1, 10])
+
+        assert output.data[0].x == ("1", "2", "10")
+        assert output.data[0].y == ("1", "2", "10")
+        assert np.array(output.data[0].z).tolist() == [[1, 1, 0], [0, 1, 1], [1, 0, 1]]
+        assert output.layout.xaxis.tickvals == (1, 2, 10)
+        assert output.layout.yaxis.tickvals == (1, 2, 10)
+        assert output.layout.xaxis.ticktext == ("1", "2", "10")
+        assert output.layout.yaxis.ticktext == ("1", "2", "10")
+
+        assert {annotation.x for annotation in output.layout.annotations} == {0, 1, 2}
+        assert {annotation.y for annotation in output.layout.annotations} == {0, 1, 2}
+
+        # for the text labels
+        output_str = plot_confusion_matrix(y_true=["A", "B", "C"], y_pred=["B", "B", "C"])
+        assert output_str.data[0].x == ("A", "B", "C")
+        assert output_str.layout.xaxis.tickvals is None

@@ -111,7 +111,7 @@ ENV/
 init
 install
 install-dev
-/catboost_info/
+catboost_info/
 
 # Data
 shapash/data/telco_customer_churn.csv
