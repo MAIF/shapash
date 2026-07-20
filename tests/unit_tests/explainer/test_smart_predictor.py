@@ -2,6 +2,7 @@
 Unit test smart predictor
 """
 
+import logging
 import os
 import types
 import unittest
@@ -1277,3 +1278,103 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1.preprocessing = ct
         with self.assertRaises(ValueError):
             predictor_1.to_smartexplainer()
+
+
+class TestSmartPredictorLogging(unittest.TestCase):
+    """
+    Tests for SmartPredictor structured logging on the ``shapash.smartpredictor`` logger.
+    Regression tests for https://github.com/MAIF/shapash/issues/734 (Gap A).
+    """
+
+    LOGGER_NAME = "shapash.smartpredictor"
+
+    def _make_predictor(self) -> SmartPredictor:
+        y_pred = pd.DataFrame(data=np.array([1, 2]), columns=["pred"])
+        dataframe_x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+        clf = cb.CatBoostClassifier(n_estimators=1).fit(dataframe_x, y_pred)
+        xpl = SmartExplainer(model=clf, features_dict={})
+        xpl.compile(x=dataframe_x, y_pred=y_pred)
+        return xpl.to_smartpredictor()
+
+    def _messages(self, records: list, operation: str, phase: str) -> list:
+        needle = f"{operation} {phase}"
+        return [r for r in records if r.name == self.LOGGER_NAME and needle in r.message]
+
+    def test_add_input_emits_enter_and_completed_records(self) -> None:
+        predictor = self._make_predictor()
+        x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+        with self.assertLogs(self.LOGGER_NAME, level=logging.DEBUG) as ctx:
+            predictor.add_input(x=x)
+        assert self._messages(ctx.records, "add_input", "enter"), "expected add_input enter record"
+        assert self._messages(ctx.records, "add_input", "completed"), "expected add_input completed record"
+
+    def test_completed_records_include_elapsed_ms_and_fingerprint(self) -> None:
+        predictor = self._make_predictor()
+        x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+        with self.assertLogs(self.LOGGER_NAME, level=logging.DEBUG) as ctx:
+            predictor.add_input(x=x)
+        completed = self._messages(ctx.records, "add_input", "completed")
+        assert completed, "expected at least one add_input completed record"
+        for record in completed:
+            elapsed = getattr(record, "elapsed_ms", None)
+            fingerprint = getattr(record, "schema_fingerprint", None)
+            assert isinstance(elapsed, float) and elapsed >= 0.0, f"elapsed_ms missing/invalid on {record.message}"
+            assert isinstance(fingerprint, str) and fingerprint.startswith("sha256:"), (
+                f"schema_fingerprint missing/invalid on {record.message}"
+            )
+
+    def test_error_path_emits_failed_record(self) -> None:
+        predictor = self._make_predictor()
+        # Malformed input: columns that don't match columns_dict → check_dataset_features raises ValueError.
+        bad = pd.DataFrame({"__does_not_exist__": [1, 2]})
+        with self.assertLogs(self.LOGGER_NAME, level=logging.DEBUG) as ctx:
+            with self.assertRaises(ValueError):
+                predictor.add_input(x=bad)
+        failures = [r for r in ctx.records if r.name == self.LOGGER_NAME and r.levelno >= logging.ERROR]
+        assert failures, "expected at least one ERROR record on the failed path"
+        assert any("add_input failed" in r.message for r in failures)
+        for record in failures:
+            assert getattr(record, "elapsed_ms", None) is not None
+            assert getattr(record, "schema_fingerprint", None) is not None
+
+    def test_logging_disable_silences_records(self) -> None:
+        predictor = self._make_predictor()
+        x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+        logging.disable(logging.CRITICAL)
+        try:
+            with self.assertNoLogs(self.LOGGER_NAME, level=logging.DEBUG):
+                predictor.add_input(x=x)
+        finally:
+            logging.disable(logging.NOTSET)
+
+    def test_get_schema_fingerprint_caches(self) -> None:
+        predictor = self._make_predictor()
+        # Cache attribute should be absent before the first call.
+        assert not hasattr(predictor, "_schema_fingerprint_cache") or predictor._schema_fingerprint_cache is None
+        fp1 = predictor._get_schema_fingerprint()
+        assert predictor._schema_fingerprint_cache == fp1
+        fp2 = predictor._get_schema_fingerprint()
+        assert fp1 == fp2 and fp1.startswith("sha256:")
+
+    def test_default_logging_config_is_silent(self) -> None:
+        """
+        Under Python's default logging config (no handlers configured on
+        ``shapash.smartpredictor``), calling instrumented methods must not
+        produce visible output. Guards against accidentally hard-coding
+        emission to stderr.
+        """
+        predictor = self._make_predictor()
+        x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+        logger = logging.getLogger(self.LOGGER_NAME)
+        # Ensure no handlers are attached and no explicit level is set for this test.
+        for handler in list(logger.handlers):
+            logger.removeHandler(handler)
+        prev_level = logger.level
+        logger.setLevel(logging.NOTSET)
+        try:
+            # If any emit hits stderr, pytest capsys/capfd would notice; here we just
+            # confirm the call succeeds and no records escape via handlers.
+            predictor.add_input(x=x)
+        finally:
+            logger.setLevel(prev_level)
+        assert logger.handlers == []

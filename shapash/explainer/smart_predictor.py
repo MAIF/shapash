@@ -3,7 +3,10 @@ Smart predictor module
 """
 
 import copy
-from typing import Any
+import functools
+import logging
+import time
+from typing import Any, Callable
 
 import pandas as pd
 
@@ -31,9 +34,59 @@ from shapash.utils.check import (
     check_y,
 )
 from shapash.utils.columntransformer_backend import columntransformer
-from shapash.utils.io import _build_predictor_manifest, _save_manifest, save_pickle
+from shapash.utils.io import _build_predictor_manifest, _compute_schema_fingerprint, _save_manifest, save_pickle
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
+
+_logger = logging.getLogger("shapash.smartpredictor")
+
+
+def _instrument(operation: str) -> Callable[..., Any]:
+    """
+    Wrap a ``SmartPredictor`` method with enter / exit / error logging on the
+    ``shapash.smartpredictor`` logger.
+
+    Emits three log records per call:
+      - ``DEBUG`` on enter,
+      - ``INFO`` on successful exit with ``elapsed_ms``,
+      - ``ERROR`` on unhandled exception (with exception info attached via ``logger.exception``).
+
+    Every record carries the predictor's schema fingerprint in ``extra={"schema_fingerprint": ...}``
+    so downstream log aggregators (Datadog, CloudWatch, OpenTelemetry, ...) can correlate log
+    records to the deployed predictor version. Applications that don't configure the
+    ``shapash.smartpredictor`` logger see no output by default (Python's logging default).
+    """
+
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(fn)
+        def wrapper(self: "SmartPredictor", *args: Any, **kwargs: Any) -> Any:
+            fingerprint = self._get_schema_fingerprint()
+            extras = {"schema_fingerprint": fingerprint}
+            _logger.debug("%s enter", operation, extra=extras)
+            start = time.perf_counter()
+            try:
+                result = fn(self, *args, **kwargs)
+            except Exception:
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                _logger.exception(
+                    "%s failed elapsed_ms=%.1f",
+                    operation,
+                    elapsed_ms,
+                    extra={**extras, "elapsed_ms": elapsed_ms},
+                )
+                raise
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            _logger.info(
+                "%s completed elapsed_ms=%.1f",
+                operation,
+                elapsed_ms,
+                extra={**extras, "elapsed_ms": elapsed_ms},
+            )
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 def _dtypes_compatible(actual_dtype: Any, expected_str: str) -> bool:
@@ -221,6 +274,7 @@ class SmartPredictor:
         """
         return check_mask_params(self.mask_params)
 
+    @_instrument("add_input")
     def add_input(self, x=None, ypred=None, contributions=None):
         """
         The add_input method is the first step to add a dataset for prediction and explainability.
@@ -249,6 +303,12 @@ class SmartPredictor:
         contributions: pandas.DataFrame (regression) or list (classification) (optional)
             local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
         """
+        if x is not None and hasattr(x, "shape"):
+            _logger.debug(
+                "add_input x shape=%s",
+                tuple(getattr(x, "shape", ())),
+                extra={"schema_fingerprint": self._get_schema_fingerprint()},
+            )
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
             self.data = self.clean_data(x)
@@ -463,6 +523,7 @@ class SmartPredictor:
             "x_postprocessed": None,
         }
 
+    @_instrument("predict_proba")
     def predict_proba(self):
         """
         The predict_proba compute the probabilities predicted for each x row defined in add_input.
@@ -480,6 +541,7 @@ class SmartPredictor:
         """
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
+    @_instrument("compute_contributions")
     def compute_contributions(self, contributions=None, use_groups=None):
         """
         The compute_contributions compute the contributions associated to data ypred specified.
@@ -559,6 +621,22 @@ class SmartPredictor:
         y_pred, detail_contrib = self.compute_contributions(contributions=contributions, use_groups=use_groups)
         return pd.concat([y_pred, detail_contrib], axis=1)
 
+    def _get_schema_fingerprint(self) -> str:
+        """
+        Return this predictor's schema fingerprint, cached on first access.
+
+        Matches the fingerprint written by ``save()`` into the manifest sidecar (see
+        ``shapash.utils.io._compute_schema_fingerprint``). Used by the
+        ``shapash.smartpredictor`` logger to correlate records to the deployed predictor
+        version. The cache attribute (``_schema_fingerprint_cache``) is populated lazily,
+        so predictors loaded from older pickles that predate this helper still work.
+        """
+        fingerprint = getattr(self, "_schema_fingerprint_cache", None)
+        if fingerprint is None:
+            fingerprint = _compute_schema_fingerprint(self)
+            self._schema_fingerprint_cache = fingerprint
+        return fingerprint
+
     def save(self, path):
         """
         Save method allows users to save SmartPredictor object on disk using a pickle file.
@@ -616,6 +694,7 @@ class SmartPredictor:
             self.mask = cutoff_contributions(mask=self.mask, k=self.mask_params["max_contrib"])
         self.masked_contributions = compute_masked_contributions(self.summary["contrib_sorted"], self.mask)
 
+    @_instrument("summarize")
     def summarize(self, use_groups=None):
         """
         The summarize method allows to display the summary of local explainability.
@@ -737,6 +816,7 @@ class SmartPredictor:
             if attribute is not None:
                 self.mask_params[label] = attribute
 
+    @_instrument("predict")
     def predict(self):
         """
         The predict method compute the predicted values for each x row defined in add_input.
