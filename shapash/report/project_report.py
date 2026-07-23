@@ -98,22 +98,22 @@ class ProjectReport:
         self.target_name = target_name_train or target_name_test
 
         if "max_points" in self.config.keys():
-            self.max_points = config["max_points"]
+            self.max_points = self.config["max_points"]
         else:
             self.max_points = 200
 
         if "display_interaction_plot" in self.config.keys():
-            self.display_interaction_plot = config["display_interaction_plot"]
+            self.display_interaction_plot = self.config["display_interaction_plot"]
         else:
             self.display_interaction_plot = False
 
         if "nb_top_interactions" in self.config.keys():
-            self.nb_top_interactions = config["nb_top_interactions"]
+            self.nb_top_interactions = self.config["nb_top_interactions"]
         else:
             self.nb_top_interactions = 5
 
         if "title_story" in self.config.keys():
-            self.title_story = config["title_story"]
+            self.title_story = self.config["title_story"]
         elif self.explainer.title_story != "":
             self.title_story = self.explainer.title_story
         else:
