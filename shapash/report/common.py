@@ -1,5 +1,6 @@
 import builtins
 import os
+from collections.abc import Callable
 from enum import Enum
 from importlib import import_module
 from numbers import Number
@@ -73,7 +74,7 @@ def numeric_is_continuous(s: pd.Series, threshold: int = 15) -> bool:
     return n_unique > threshold
 
 
-def compute_col_types(df_all: pd.DataFrame | None) -> dict | None:
+def compute_col_types(df_all: pd.DataFrame | None) -> dict:
     """
     Computes the type of each column and stores the result in a dict.
 
@@ -181,7 +182,7 @@ def display_value(value: float, thousands_separator: str = ",", decimal_separato
     return value_str.replace("/thousands/", thousands_separator).replace("/decimal/", decimal_separator)
 
 
-def replace_dict_values(obj: dict, replace_fn: callable, *args) -> dict:
+def replace_dict_values(obj: dict, replace_fn: Callable, *args) -> dict:
     """
     Recursively iterates over all values of obj and changes its values using the replace_fn
 

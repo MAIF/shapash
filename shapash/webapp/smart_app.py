@@ -7,6 +7,7 @@ import copy
 import random
 import re
 from math import isfinite, log10
+from typing import Any
 
 import dash
 import dash_bootstrap_components as dbc
@@ -69,7 +70,7 @@ class SmartApp:
         SmartExplainer instance to point to.
     """
 
-    def __init__(self, explainer, settings: dict = None):
+    def __init__(self, explainer, settings: dict | None = None):
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
@@ -129,7 +130,7 @@ class SmartApp:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
             self.max_threshold = self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max()
-        self.list_index = []
+        self.list_index: list = []
         self.subset = None
         self.last_click_data = None
 
@@ -141,11 +142,17 @@ class SmartApp:
         self.init_data()
 
         # COMPONENTS
-        self.components = {"menu": {}, "table": {}, "graph": {}, "filter": {}, "settings": {}}
+        self.components: dict[str, dict[str, Any]] = {
+            "menu": {},
+            "table": {},
+            "graph": {},
+            "filter": {},
+            "settings": {},
+        }
         self.init_components()
 
         # LAYOUT
-        self.skeleton = {"navbar": {}, "body": {}}
+        self.skeleton: dict[str, Any] = {"navbar": {}, "body": {}}
         self.make_skeleton()
         self.app.layout = html.Div([self.skeleton["navbar"], self.skeleton["body"]])
 

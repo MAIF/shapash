@@ -3,6 +3,7 @@ Report generation helper module.
 """
 
 import os
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import papermill as pm
@@ -10,10 +11,13 @@ from nbconvert import HTMLExporter
 
 from shapash.utils.utils import get_project_root
 
+if TYPE_CHECKING:
+    from shapash.explainer.smart_explainer import SmartExplainer
+
 
 def execute_report(
     working_dir: str,
-    explainer: object,
+    explainer: "SmartExplainer",
     project_info_file: str,
     x_train: pd.DataFrame | None = None,
     y_train: pd.DataFrame | None = None,

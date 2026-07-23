@@ -352,7 +352,7 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
     list
     """
     sorted_corr = corr.abs().unstack().sort_values(kind="quicksort")[::-1]
-    set_features = set()
+    set_features: set = set()
     i = 0
     while len(set_features) < max_features and i < len(sorted_corr):
         if sorted_corr.index[i][0] != sorted_corr.index[i][1]:

@@ -6,6 +6,7 @@ import copy
 import logging
 import shutil
 import tempfile
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -195,7 +196,7 @@ class SmartExplainer:
         features_groups=None,
         features_dict=None,
         label_dict=None,
-        title_story: str = None,
+        title_story: str | None = None,
         palette_name=None,
         colors_dict=None,
         **backend_kwargs,
@@ -246,7 +247,7 @@ class SmartExplainer:
         self.features_compacity = None
         self.contributions = None
         self.explain_data = None
-        self.features_imp = None
+        self.features_imp: Any = None
 
     def compile(
         self,
@@ -386,7 +387,7 @@ class SmartExplainer:
             raise AssertionError(f"Selected backend ({self.backend.name}) does not support groups of features.")
         # Compute contributions for groups of features
         self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
-        self.features_imp_groups = None
+        self.features_imp_groups: Any = None
         # Update features dict with groups names
         self._update_features_dict_with_groups(features_groups=features_groups)
         # Compute t-sne projections for groups of features
@@ -478,7 +479,7 @@ class SmartExplainer:
         y_target=None,
         label_dict=None,
         features_dict=None,
-        title_story: str = None,
+        title_story: str | None = None,
         columns_order=None,
         additional_data=None,
         additional_features_dict=None,
@@ -1400,7 +1401,7 @@ class SmartExplainer:
 
         self.features_compacity = {"features_needed": features_needed, "distance_reached": distance_reached}
 
-    def init_app(self, settings: dict = None):
+    def init_app(self, settings: dict | None = None):
         """
         Initialize a SmartApp instance for the current SmartExplainer object.
 
@@ -1436,10 +1437,10 @@ class SmartExplainer:
 
     def run_app(
         self,
-        port: int = None,
-        host: str = None,
-        title_story: str = None,
-        settings: dict = None,
+        port: int | None = None,
+        host: str | None = None,
+        title_story: str | None = None,
+        settings: dict | None = None,
     ) -> CustomThread:
         """
         Launch the Shapash interpretability WebApp associated with this SmartExplainer.
