@@ -1502,13 +1502,7 @@ class SmartExplainer:
                 port = 8050
             host_name = get_host_name()
             wsgi_server = make_server(host, port, self.smartapp.server)
-            server_instance = CustomThread(target=wsgi_server.serve_forever)
-
-            def _kill():
-                wsgi_server.shutdown()
-                server_instance.killed = True
-
-            server_instance.kill = _kill
+            server_instance = CustomThread(target=wsgi_server.serve_forever, on_kill=wsgi_server.shutdown)
             if host_name is None:
                 host_name = host
             elif host != DEFAULT_HOST:
