@@ -334,7 +334,7 @@ class TestSmartExplainer(unittest.TestCase):
         mockstate.compute_masked_contributions.assert_called()
         assert hasattr(xpl, "masked_contributions")
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.check_features_name")
+    @patch("shapash.explainer.explainer.Explainer.check_features_name")
     def test_filter_1(self, mock_check_features_name):
         """
         Unit test filter 1

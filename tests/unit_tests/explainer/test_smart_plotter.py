@@ -128,8 +128,8 @@ class TestSmartPlotter(unittest.TestCase):
         assert hasattr(self.smart_explainer.plot, "_style_dict")
         assert len(list(self.smart_explainer.plot._style_dict.keys())) > 0
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer.filter")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_1(self, local_pred, filter):
         """
         Unit test Local plot 1
@@ -194,9 +194,9 @@ class TestSmartPlotter(unittest.TestCase):
             output.layout.annotations[0].text == "Select a valid single sample to display<br />Local Explanation plot."
         )
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
+    @patch("shapash.explainer.explainer.Explainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_4(self, local_pred, select_lines, filter):
         """
         Unit test local plot 4
@@ -258,9 +258,9 @@ class TestSmartPlotter(unittest.TestCase):
         tit = "Local Explanation - Id: <b>B</b><br><sup>Response: <b>1</b> - Proba: <b>0.5800</b></sup>"
         assert output.layout.title.text == tit
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
+    @patch("shapash.explainer.explainer.Explainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_5(self, local_pred, select_lines, filter):
         """
         Unit test local plot 5
@@ -353,9 +353,9 @@ class TestSmartPlotter(unittest.TestCase):
         assert expected_output.data[-1].x == output3.data[-1].x
         assert expected_output.data[-2].x == output3.data[-2].x
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
+    @patch("shapash.explainer.explainer.Explainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_groups_features(self, local_pred, select_lines, filter):
         """
         Unit test local plot 6 for groups of features
@@ -521,9 +521,9 @@ class TestSmartPlotter(unittest.TestCase):
 
         assert len(output_fig.data) == 3
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
+    @patch("shapash.explainer.explainer.Explainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_multi_index(self, local_pred, select_lines, filter):
         """
         Unit test local plot multi index
@@ -1627,7 +1627,7 @@ class TestSmartPlotter(unittest.TestCase):
         xpl.proba_values = pd.DataFrame(
             data=np.array([[0.4, 0.6], [0.3, 0.7]]), columns=["class_1", "class_2"], index=xpl.x_encoded.index.values
         )
-        output = xpl._local_pred("person_A", label=0)
+        output = xpl.explainer._local_pred("person_A", label=0)
         assert isinstance(output, float)
 
     def test_plot_line_comparison_1(self):
@@ -2250,7 +2250,7 @@ class TestSmartPlotter(unittest.TestCase):
             assert actual_shape == expected_shape
             assert np.array(list(output.data[0].x)).dtype == "float"
 
-    @patch("shapash.explainer.smart_explainer.SmartExplainer.compute_features_compacity")
+    @patch("shapash.explainer.explainer.Explainer.compute_features_compacity")
     def test_compacity_plot(self, compute_features_compacity):
 
         compute_features_compacity.return_value = None

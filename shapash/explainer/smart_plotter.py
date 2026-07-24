@@ -54,7 +54,7 @@ class SmartPlotter:
     just use the following syntax
     Attributes :
     explainer: object
-        SmartExplainer instance to point to.
+        Explainer compute object (delegating to SmartExplainer state).
     Example
     --------
     >>> xpl.plot.my_plot_method(param=value)
