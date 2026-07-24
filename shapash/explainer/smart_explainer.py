@@ -6,10 +6,14 @@ import copy
 import logging
 import shutil
 import tempfile
+from typing import Any, cast
 
+import numpy as np
+import pandas as pd
 from werkzeug.serving import make_server
 
 import shapash.explainer.smart_predictor
+from shapash.backend import BaseBackend
 from shapash.report import check_report_requirements
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.custom_thread import CustomThread
@@ -174,18 +178,18 @@ class SmartExplainer:
 
     def __init__(
         self,
-        model,
-        backend="shap",
-        preprocessing=None,
-        postprocessing=None,
-        features_groups=None,
-        features_dict=None,
-        label_dict=None,
-        title_story: str = None,
-        palette_name=None,
-        colors_dict=None,
-        **backend_kwargs,
-    ):
+        model: Any,
+        backend: str | BaseBackend = "shap",
+        preprocessing: Any | None = None,
+        postprocessing: dict[str, Any] | None = None,
+        features_groups: dict[str, list[str]] | None = None,
+        features_dict: dict[str, str] | None = None,
+        label_dict: dict[Any, Any] | None = None,
+        title_story: str | None = None,
+        palette_name: str | None = None,
+        colors_dict: dict[str, Any] | None = None,
+        **backend_kwargs: Any,
+    ) -> None:
         if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
                 """
@@ -198,6 +202,7 @@ class SmartExplainer:
                 label_dict must be a dict
                 """
             )
+        self.smartapp: Any = None
         self.model = model
         title_story = title_story if title_story is not None else ""
         self.palette_name = palette_name if palette_name else "default"
@@ -219,14 +224,14 @@ class SmartExplainer:
         self.plot = SmartPlotter(self.explainer, self.colors_dict)
         self.explainer.plot = self.plot
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Delegate compute/state attributes to the embedded Explainer."""
         explainer = self.__dict__.get("explainer")
         if explainer is None:
             raise AttributeError(name)
         return getattr(explainer, name)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         """Route compute/state assignments to the embedded Explainer."""
         if name in _FACADE_ATTRS or name.startswith("__"):
             object.__setattr__(self, name, value)
@@ -243,15 +248,15 @@ class SmartExplainer:
 
     def compile(
         self,
-        x,
-        contributions=None,
-        y_pred=None,
-        proba_values=None,
-        y_target=None,
-        columns_order=None,
-        additional_data=None,
-        additional_features_dict=None,
-    ):
+        x: pd.DataFrame,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+        y_pred: pd.Series | pd.DataFrame | None = None,
+        proba_values: pd.Series | pd.DataFrame | None = None,
+        y_target: pd.Series | pd.DataFrame | None = None,
+        columns_order: list[str] | None = None,
+        additional_data: pd.DataFrame | None = None,
+        additional_features_dict: dict[str, str] | None = None,
+    ) -> None:
         """
         Prepare and structure all data needed for interpreting the model and its predictions.
 
@@ -318,7 +323,7 @@ class SmartExplainer:
             additional_features_dict=additional_features_dict,
         )
 
-    def define_style(self, palette_name=None, colors_dict=None):
+    def define_style(self, palette_name: str | None = None, colors_dict: dict[str, Any] | None = None) -> None:
         """
         Set the color set to use in plots.
         """
@@ -333,16 +338,16 @@ class SmartExplainer:
 
     def add(
         self,
-        y_pred=None,
-        proba_values=None,
-        y_target=None,
-        label_dict=None,
-        features_dict=None,
-        title_story: str = None,
-        columns_order=None,
-        additional_data=None,
-        additional_features_dict=None,
-    ):
+        y_pred: pd.Series | pd.DataFrame | None = None,
+        proba_values: pd.Series | pd.DataFrame | None = None,
+        y_target: pd.Series | pd.DataFrame | None = None,
+        label_dict: dict[Any, Any] | None = None,
+        features_dict: dict[str, str] | None = None,
+        title_story: str | None = None,
+        columns_order: list[str] | None = None,
+        additional_data: pd.DataFrame | None = None,
+        additional_features_dict: dict[str, str] | None = None,
+    ) -> None:
         """
         Add or update metadata and outputs without recompiling the explainer.
 
@@ -411,7 +416,7 @@ class SmartExplainer:
             additional_features_dict=additional_features_dict,
         )
 
-    def check_attributes(self, attribute):
+    def check_attributes(self, attribute: str) -> Any:
         """
         Verify that the SmartExplainer instance contains the specified attribute.
 
@@ -438,7 +443,14 @@ class SmartExplainer:
 
         return getattr(self, attribute)
 
-    def filter(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, display_groups=None):
+    def filter(
+        self,
+        features_to_hide: list[str] | None = None,
+        threshold: float | None = None,
+        positive: bool | None = None,
+        max_contrib: int | None = None,
+        display_groups: bool | None = None,
+    ) -> None:
         """
         Apply filtering rules to summarize local explainability results.
 
@@ -499,7 +511,7 @@ class SmartExplainer:
             display_groups=display_groups,
         )
 
-    def save(self, path):
+    def save(self, path: str) -> None:
         """
         Save the SmartExplainer object to disk as a pickle file.
 
@@ -527,7 +539,7 @@ class SmartExplainer:
         save_pickle(self, path)
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: str) -> "SmartExplainer":
         """
         Load a previously saved SmartExplainer object from a pickle file.
 
@@ -568,13 +580,13 @@ class SmartExplainer:
 
     def to_pandas(
         self,
-        features_to_hide=None,
-        threshold=None,
-        positive=None,
-        max_contrib=None,
-        proba=False,
-        use_groups=None,
-    ):
+        features_to_hide: list[str] | None = None,
+        threshold: float | None = None,
+        positive: bool | None = None,
+        max_contrib: int | None = None,
+        proba: bool = False,
+        use_groups: bool | None = None,
+    ) -> pd.DataFrame:
         """
         Export a summarized view of local explainability results as a pandas DataFrame.
 
@@ -654,7 +666,7 @@ class SmartExplainer:
             use_groups=use_groups,
         )
 
-    def init_app(self, settings: dict = None):
+    def init_app(self, settings: dict[str, Any] | None = None):
         """
         Initialize a SmartApp instance for the current SmartExplainer object.
 
@@ -690,10 +702,10 @@ class SmartExplainer:
 
     def run_app(
         self,
-        port: int = None,
-        host: str = None,
-        title_story: str = None,
-        settings: dict = None,
+        port: int | None = None,
+        host: str | None = None,
+        title_story: str | None = None,
+        settings: dict[str, Any] | None = None,
     ) -> CustomThread:
         """
         Launch the Shapash interpretability WebApp associated with this SmartExplainer.
@@ -762,7 +774,7 @@ class SmartExplainer:
                 wsgi_server.shutdown()
                 server_instance.killed = True
 
-            server_instance.kill = _kill
+            cast(Any, server_instance).kill = _kill
             if host_name is None:
                 host_name = host
             elif host != DEFAULT_HOST:
@@ -775,7 +787,7 @@ class SmartExplainer:
         else:
             raise ValueError("Explainer must be compiled before running app.")
 
-    def to_smartpredictor(self):
+    def to_smartpredictor(self) -> Any:
         """
         Create and return a SmartPredictor object derived from the current SmartExplainer instance.
 
@@ -863,7 +875,7 @@ class SmartExplainer:
 
         return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
 
-    def check_x_y_attributes(self, x_str, y_str):
+    def check_x_y_attributes(self, x_str: str, y_str: str) -> list[Any]:
         """
         Validate and retrieve two attributes from the SmartExplainer instance.
 
@@ -913,21 +925,21 @@ class SmartExplainer:
 
     def generate_report(
         self,
-        output_file,
-        project_info_file,
-        x_train=None,
-        y_train=None,
-        y_test=None,
-        title_story=None,
-        title_description=None,
-        metrics=None,
-        working_dir=None,
-        notebook_path=None,
-        kernel_name=None,
-        max_points=200,
-        display_interaction_plot=False,
-        nb_top_interactions=5,
-    ):
+        output_file: str,
+        project_info_file: str,
+        x_train: pd.DataFrame | None = None,
+        y_train: pd.Series | pd.DataFrame | None = None,
+        y_test: pd.Series | pd.DataFrame | None = None,
+        title_story: str | None = None,
+        title_description: str | None = None,
+        metrics: list[dict[str, Any]] | None = None,
+        working_dir: str | None = None,
+        notebook_path: str | None = None,
+        kernel_name: str | None = None,
+        max_points: int = 200,
+        display_interaction_plot: bool = False,
+        nb_top_interactions: int = 5,
+    ) -> None:
         """
         Generate an interactive HTML report summarizing the model and its explainability.
 

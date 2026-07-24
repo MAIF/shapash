@@ -1,7 +1,7 @@
 """Compute-focused Explainer class used by SmartExplainer."""
 
 import copy
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -52,7 +52,8 @@ class Explainer:
 
         self.model = model
         self.preprocessing = preprocessing
-        self.backend_name = None
+        self.backend_name: str | None = None
+        self.backend: BaseBackend | None = None
         if isinstance(backend, str):
             self.backend_name = backend
         elif isinstance(backend, BaseBackend):
@@ -62,32 +63,63 @@ class Explainer:
         else:
             raise NotImplementedError(f"Unknown backend : {backend}")
 
-        self.backend_kwargs = backend_kwargs
-        self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
-        self.label_dict = label_dict
+        self.backend_kwargs: dict[str, Any] = backend_kwargs
+        self.features_dict: dict[str, str] = dict() if features_dict is None else copy.deepcopy(features_dict)
+        self.label_dict: dict[Any, Any] | None = label_dict
         self.title_story = title_story if title_story is not None else ""
 
         self._case, self._classes = check_model(self.model)
-        self.postprocessing = postprocessing
+        self.postprocessing: dict[str, dict[str, Any]] | None = postprocessing
         self.check_label_dict()
+        self.inv_label_dict: dict[Any, Any] = {}
         if self.label_dict:
             self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
 
-        self.features_groups = features_groups
-        self.local_neighbors = None
-        self.features_stability = None
-        self.features_compacity = None
-        self.contributions = None
-        self.explain_data = None
-        self.features_imp = None
+        self.features_groups: dict[str, list[str]] | None = features_groups
+        self.local_neighbors: dict[str, np.ndarray] | None = None
+        self.features_stability: dict[str, np.ndarray] | None = None
+        self.features_compacity: dict[str, np.ndarray] | None = None
+        self.contributions: pd.DataFrame | list[pd.DataFrame] | None = None
+        self.explain_data: dict[str, Any] | None = None
+        self.features_imp: pd.Series | list[pd.Series] | None = None
+        self.features_imp_groups: pd.Series | list[pd.Series] | None = None
+        self.state: Any = None
+        self.data: dict[str, pd.DataFrame | list[pd.DataFrame]] = {}
+        self.data_groups: dict[str, pd.DataFrame | list[pd.DataFrame]] = {}
+        self.columns_dict: dict[int, str] = {}
+        self.columns_dict_groups: dict[int, str] = {}
+        self.features_desc: dict[str, int] = {}
+        self.additional_features_dict: dict[str, str] = {}
+        self.additional_data: pd.DataFrame | None = None
+        self.columns_order: list[str] | None = None
+        self.postprocessing_modifications: bool = False
+        self.mask: pd.DataFrame | list[pd.DataFrame] = pd.DataFrame()
+        self.masked_contributions: pd.DataFrame | list[pd.DataFrame] = pd.DataFrame()
+        self.mask_params: dict[str, list[Any] | float | bool | int | None] = {
+            "features_to_hide": None,
+            "threshold": None,
+            "positive": None,
+            "max_contrib": None,
+        }
+        self.x_encoded: pd.DataFrame = pd.DataFrame()
+        self.x_init: pd.DataFrame = pd.DataFrame()
+        self.x_init_groups: pd.DataFrame = pd.DataFrame()
+        self.x_contrib_plot: pd.DataFrame | None = None
+        self.y_pred: pd.Series | pd.DataFrame | None = None
+        self.proba_values: pd.Series | pd.DataFrame | None = None
+        self.y_target: pd.Series | pd.DataFrame | None = None
+        self.prediction_error: pd.Series | pd.DataFrame | np.ndarray | None = None
+        self.x_interaction: pd.DataFrame | None = None
+        self.interaction_values: np.ndarray | None = None
+        self.plot: Any = None
 
     def compile(
         self,
         x: pd.DataFrame,
         contributions: Any | None = None,
-        y_pred: pd.Series | pd.DataFrame | np.ndarray | None = None,
-        proba_values: pd.Series | pd.DataFrame | np.ndarray | None = None,
-        y_target: pd.Series | pd.DataFrame | np.ndarray | None = None,
+        y_pred: pd.Series | pd.DataFrame | None = None,
+        proba_values: pd.Series | pd.DataFrame | None = None,
+        y_target: pd.Series | pd.DataFrame | None = None,
         columns_order: list[str] | None = None,
         additional_data: pd.DataFrame | None = None,
         additional_features_dict: dict[str, str] | None = None,
@@ -172,11 +204,14 @@ class Explainer:
             self.plot._tuning_round_digit()
 
     def _get_contributions_from_backend_or_user(self, x: pd.DataFrame, contributions: Any | None) -> None:
+        if self.backend is None:
+            raise RuntimeError("Backend is not initialized")
+
         if contributions is None:
             self.explain_data = self.backend.run_explainer(x=x)
             self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
         else:
-            self.explain_data = contributions
+            self.explain_data = {"contributions": contributions}
             self.contributions = self.backend.format_and_aggregate_local_contributions(x=x, contributions=contributions)
         self.state = self.backend.state
 
@@ -190,6 +225,9 @@ class Explainer:
         self.x_init = self.apply_postprocessing(postprocessing)
 
     def _compile_features_groups(self, features_groups: dict[str, list[str]]) -> None:
+        if self.backend is None:
+            raise RuntimeError("Backend is not initialized")
+
         if self.backend.support_groups is False:
             raise AssertionError(f"Selected backend ({self.backend.name}) does not support groups of features.")
         self.contributions_groups = self.state.compute_grouped_contributions(self.contributions, features_groups)
@@ -265,13 +303,14 @@ class Explainer:
             for key in postprocessing.keys():
                 if key in self.features_dict:
                     new_dic[key] = postprocessing[key]
-                elif key in self.columns_dict.keys():
+                elif isinstance(key, int) and key in self.columns_dict.keys():
                     new_dic[self.columns_dict[key]] = postprocessing[key]
                 elif key in self.inv_features_dict:
                     new_dic[self.inv_features_dict[key]] = postprocessing[key]
                 else:
                     raise ValueError(f"Feature name '{key}' not found in the dataset.")
             return new_dic
+        return None
 
     def apply_postprocessing(self, postprocessing: dict[str, dict[str, Any]] | None = None) -> pd.DataFrame:
         """Apply postprocessing rules to the inverse-transformed dataset view."""
@@ -279,10 +318,10 @@ class Explainer:
             return apply_postprocessing(self.x_init, postprocessing)
         return self.x_init
 
-    def check_label_dict(self) -> Any:
+    def check_label_dict(self) -> None:
         """Validate the optional label mapping against the model problem type and classes."""
         if self._case != "regression":
-            return check_label_dict(self.label_dict, self._case, self._classes)
+            check_label_dict(self.label_dict, self._case, self._classes)
 
     def check_features_dict(self) -> None:
         """Align business feature names with the current compiled dataset columns."""
@@ -352,9 +391,9 @@ class Explainer:
 
     def add(
         self,
-        y_pred: pd.Series | pd.DataFrame | np.ndarray | None = None,
-        proba_values: pd.Series | pd.DataFrame | np.ndarray | None = None,
-        y_target: pd.Series | pd.DataFrame | np.ndarray | None = None,
+        y_pred: pd.Series | pd.DataFrame | None = None,
+        proba_values: pd.Series | pd.DataFrame | None = None,
+        y_target: pd.Series | pd.DataFrame | None = None,
         label_dict: dict[Any, Any] | None = None,
         features_dict: dict[str, str] | None = None,
         title_story: str | None = None,
@@ -448,12 +487,17 @@ class Explainer:
         if selection:
             x = x.loc[selection]
 
-        if hasattr(self, "x_interaction"):
+        if self.x_interaction is not None:
             if self.x_interaction.equals(x[:n_samples_max]):
+                if self.interaction_values is None:
+                    raise RuntimeError("interaction_values cache is unexpectedly empty")
                 return self.interaction_values
 
         self.x_interaction = x[:n_samples_max]
-        self.interaction_values = get_shap_interaction_values(self.x_interaction, self.backend.explainer)
+        if self.backend is None:
+            raise RuntimeError("Backend is not initialized")
+        backend_explainer = getattr(self.backend, "explainer", None)
+        self.interaction_values = get_shap_interaction_values(self.x_interaction, cast(Any, backend_explainer))
         return self.interaction_values
 
     def filter(
@@ -602,19 +646,20 @@ class Explainer:
         if self.y_pred is None:
             raise ValueError("You have to specify y_pred argument. Please use add() or compile() method")
 
+        is_compatible_cached_mask = (
+            isinstance(data["contrib_sorted"], pd.DataFrame)
+            and isinstance(self.mask, pd.DataFrame)
+            and len(data["contrib_sorted"].columns) == len(self.mask.columns)
+        ) or (
+            isinstance(data["contrib_sorted"], list)
+            and isinstance(self.mask, list)
+            and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns)
+        )
+
         if (
             all(var is None for var in [features_to_hide, threshold, positive, max_contrib])
             and hasattr(self, "mask_params")
-            and (
-                (
-                    isinstance(data["contrib_sorted"], pd.DataFrame)
-                    and len(data["contrib_sorted"].columns) == len(self.mask.columns)
-                )
-                or (
-                    isinstance(data["contrib_sorted"], list)
-                    and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns)
-                )
-            )
+            and is_compatible_cached_mask
         ):
             print("to_pandas params: " + str(self.mask_params))
         else:
@@ -660,6 +705,9 @@ class Explainer:
         None
             Stores features_imp and optional grouped/local variants.
         """
+        if self.backend is None:
+            raise RuntimeError("Backend is not initialized")
+
         self.features_imp = self.backend.get_global_features_importance(
             contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=1
         )

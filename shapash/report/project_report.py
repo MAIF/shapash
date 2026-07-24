@@ -71,8 +71,8 @@ class ProjectReport:
         explainer: SmartExplainer,
         project_info_file: str,
         x_train: pd.DataFrame | None = None,
-        y_train: pd.DataFrame | None = None,
-        y_test: pd.DataFrame | None = None,
+        y_train: pd.Series | pd.DataFrame | None = None,
+        y_test: pd.Series | pd.DataFrame | None = None,
         config: dict | None = None,
     ):
         self.explainer = explainer
