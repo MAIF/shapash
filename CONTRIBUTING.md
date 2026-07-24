@@ -113,6 +113,11 @@ ruff check
 ruff format
 ```
 
+Check your type annotations with mypy:
+```
+mypy shapash
+```
+
 ## Commit your changes
 
 We recommend committing with clear messages and grouping your commits by modifications dependencies.
