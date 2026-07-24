@@ -67,7 +67,7 @@ class SmartApp:
     Attributes
     ----------
     explainer: object
-        SmartExplainer instance to point to.
+        Explainer instance to point to.
     """
 
     def __init__(self, explainer, settings: dict | None = None, title_story: str | None = None):
@@ -75,8 +75,8 @@ class SmartApp:
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
-        explainer : SmartExplainer
-            SmartExplainer object
+        explainer : Explainer
+            Explainer object
         settings : dict
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
