@@ -56,6 +56,9 @@ lint: ## check style with ruff
 format: ## check formatting with ruff
 	ruff format --check
 
+typecheck: ## check type annotations with mypy
+	mypy shapash
+
 test: ## run tests quickly with the default Python
 	pytest
 

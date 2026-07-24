@@ -34,6 +34,8 @@ jobs:
       run: make lint
     - name: Check formatting
       run: make format
+    - name: Check type annotations
+      run: make typecheck
 
   test:
     name: Build & Test
