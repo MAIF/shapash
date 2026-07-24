@@ -4,6 +4,7 @@ import os
 import sys
 from datetime import date
 from numbers import Number
+from typing import cast
 
 import jinja2
 import numpy as np
@@ -88,7 +89,9 @@ class ProjectReport:
         self.x_init = self.explainer.x_init
         self.config = config if config is not None else dict()
         self.col_names = list(self.explainer.columns_dict.values())
-        self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
+        # x_init is always set on a compiled explainer, so `test` is never None here and
+        # `_create_train_test_df` cannot return None.
+        self.df_train_test = cast(pd.DataFrame, self._create_train_test_df(test=self.x_init, train=self.x_train_pre))
         if self.explainer.y_pred is not None:
             self.y_pred = np.array(self.explainer.y_pred.T)[0]
         else:
@@ -98,22 +101,22 @@ class ProjectReport:
         self.target_name = target_name_train or target_name_test
 
         if "max_points" in self.config.keys():
-            self.max_points = config["max_points"]
+            self.max_points = self.config["max_points"]
         else:
             self.max_points = 200
 
         if "display_interaction_plot" in self.config.keys():
-            self.display_interaction_plot = config["display_interaction_plot"]
+            self.display_interaction_plot = self.config["display_interaction_plot"]
         else:
             self.display_interaction_plot = False
 
         if "nb_top_interactions" in self.config.keys():
-            self.nb_top_interactions = config["nb_top_interactions"]
+            self.nb_top_interactions = self.config["nb_top_interactions"]
         else:
             self.nb_top_interactions = 5
 
         if "title_story" in self.config.keys():
-            self.title_story = config["title_story"]
+            self.title_story = self.config["title_story"]
         elif self.explainer.title_story != "":
             self.title_story = self.explainer.title_story
         else:
@@ -136,7 +139,7 @@ class ProjectReport:
     @staticmethod
     def _get_values_and_name(
         y: pd.DataFrame | pd.Series | list | None, default_name: str
-    ) -> tuple[list, str] | tuple[None, None]:
+    ) -> tuple[list | None, str | None]:
         """
         Extracts vales and column name from a Pandas Series, DataFrame, or assign a default
         name if y is a list of values.

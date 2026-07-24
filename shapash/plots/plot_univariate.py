@@ -411,7 +411,7 @@ def plot_categorical_distribution(
     else:
         color = style_dict.get(col, random_color())
 
-        customdata = subset.apply(
+        customdata = df_cat.apply(
             lambda row: (
                 f"{col}: {row[col]}<br>"
                 f"Percentage: {format(row.Percent, f'.{max(0, compute_digit_number(row.Percent, 3))}f')}%"

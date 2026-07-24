@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 try:
     from lime import lime_tabular
 
@@ -115,7 +117,7 @@ class LimeBackend(BaseBackend):
         self,
         x: pd.DataFrame,
         feature_names: list,
-        predict_fn: callable,
+        predict_fn: Callable,
         num_classes: int,
     ) -> list[pd.DataFrame]:
         """
@@ -152,7 +154,7 @@ class LimeBackend(BaseBackend):
         self,
         x: pd.DataFrame,
         feature_names: list,
-        predict_fn: callable,
+        predict_fn: Callable,
     ) -> pd.DataFrame:
         """
         Compute LIME contributions for binary classification or regression.
