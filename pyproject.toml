@@ -38,8 +38,9 @@ dependencies = [
     "Flask>=1.0.4",
     "matplotlib>=3.8.4",
     "nbformat>5.8.0",
-    "numba>=0.64.0",
-    "numpy>=2.0.0,<2.5.0",
+    "numba>=0.60.0",
+    "numpy>=2.0.0",
+    # 3.0.4 yanked upstream: segfaults in datetime ops (pandas #66083)
     "pandas>=2.2.2,!=3.0.4,<4.0.0",
     "plotly>=5.0.0,<6.0.0",
     "scikit-learn>=1.8.0,<1.9.0",
