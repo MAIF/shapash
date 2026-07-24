@@ -19,12 +19,16 @@ class ShapBackend(BaseBackend):
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
 
+        shap_parameters = {"model": model, "masker": self.masker, **self.explainer_args}
+
         if self.explainer_args:
             if "explainer" in self.explainer_args.keys():
-                shap_parameters = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
-                self.explainer = self.explainer_args["explainer"](**shap_parameters)
+                # For explicit explainer classes, keep user-provided kwargs only.
+                # Some SHAP explainers (e.g. TreeExplainer) do not accept `masker`.
+                explainer_args = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
+                self.explainer = self.explainer_args["explainer"](**explainer_args)
             else:
-                self.explainer = shap.Explainer(**self.explainer_args)
+                self.explainer = shap.Explainer(**shap_parameters)
         else:
             if shap.explainers.Linear.supports_model_with_masker(model, self.masker):
                 self.explainer = shap.Explainer(model=model, masker=self.masker)

@@ -174,9 +174,15 @@ class SmartPlotter:
         """
         if hasattr(self._explainer, "masked_contributions"):
             if isinstance(self._explainer.masked_contributions, list):
-                ext_contrib = self._explainer.masked_contributions[label].loc[line[0], :].values
+                masked_contrib = self._explainer.masked_contributions[label]
             else:
-                ext_contrib = self._explainer.masked_contributions.loc[line[0], :].values
+                masked_contrib = self._explainer.masked_contributions
+
+            # No hidden contributions are available until a filter computation fills this structure.
+            if masked_contrib.empty or line[0] not in masked_contrib.index:
+                return var_dict, x_val, contrib
+
+            ext_contrib = masked_contrib.loc[line[0], :].values
 
             ext_var_dict = ["Hidden Negative Contributions", "Hidden Positive Contributions"]
             ext_x = ["", ""]

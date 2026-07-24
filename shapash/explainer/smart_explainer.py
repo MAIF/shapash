@@ -29,8 +29,6 @@ logging.basicConfig(level=logging.INFO)
 
 DEFAULT_HOST = "127.0.0.1"
 
-_FACADE_ATTRS = {"explainer", "plot", "palette_name", "colors_dict", "model"}
-
 
 class SmartExplainer:
     """
@@ -205,6 +203,7 @@ class SmartExplainer:
         self.smartapp: Any = None
         self.model = model
         title_story = title_story if title_story is not None else ""
+        self.title_story = title_story
         self.palette_name = palette_name if palette_name else "default"
         self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
         if colors_dict is not None:
@@ -218,33 +217,10 @@ class SmartExplainer:
             features_groups=features_groups,
             features_dict=features_dict,
             label_dict=label_dict,
-            title_story=title_story,
             **backend_kwargs,
         )
         self.plot = SmartPlotter(self.explainer, self.colors_dict)
         self.explainer.plot = self.plot
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate compute/state attributes to the embedded Explainer."""
-        explainer = self.__dict__.get("explainer")
-        if explainer is None:
-            raise AttributeError(name)
-        return getattr(explainer, name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Route compute/state assignments to the embedded Explainer."""
-        if name in _FACADE_ATTRS or name.startswith("__"):
-            object.__setattr__(self, name, value)
-            return
-
-        explainer = self.__dict__.get("explainer")
-        if explainer is not None and not hasattr(type(self), name):
-            setattr(explainer, name, value)
-            if name in self.__dict__:
-                object.__setattr__(self, name, value)
-            return
-
-        object.__setattr__(self, name, value)
 
     def compile(
         self,
@@ -404,13 +380,15 @@ class SmartExplainer:
         >>> xpl.add(y_pred=preds, features_dict=feat_dict)
         >>> xpl.plot.local_plot(index=5)
         """
+        if title_story is not None:
+            self.title_story = title_story
+
         self.explainer.add(
             y_pred=y_pred,
             proba_values=proba_values,
             y_target=y_target,
             label_dict=label_dict,
             features_dict=features_dict,
-            title_story=title_story,
             columns_order=columns_order,
             additional_data=additional_data,
             additional_features_dict=additional_features_dict,
@@ -438,10 +416,13 @@ class SmartExplainer:
         ValueError
             If the specified attribute does not exist in the current explainer.
         """
-        if not hasattr(self, attribute):
+        if hasattr(self, attribute):
+            return getattr(self, attribute)
+
+        if not hasattr(self.explainer, attribute):
             raise ValueError(f"The attribute '{attribute}' does not exist in this SmartExplainer instance.")
 
-        return getattr(self, attribute)
+        return getattr(self.explainer, attribute)
 
     def filter(
         self,
@@ -499,12 +480,13 @@ class SmartExplainer:
         >>> xpl.filter(features_to_hide=['Age', 'Gender'], threshold=0.01, max_contrib=10)
         >>> xpl.plot.local_plot(index=5)
         """
+        features_to_hide_values: list[Any] | None = features_to_hide
         if features_to_hide is not None:
-            use_groups = True if (display_groups is not False and self.features_groups is not None) else False
-            features_to_hide = self.check_features_name(features_to_hide, use_groups=use_groups)
+            use_groups = True if (display_groups is not False and self.explainer.features_groups is not None) else False
+            features_to_hide_values = self.explainer.check_features_name(features_to_hide, use_groups=use_groups)
 
         self.explainer.filter(
-            features_to_hide=features_to_hide,
+            features_to_hide=features_to_hide_values,
             threshold=threshold,
             positive=positive,
             max_contrib=max_contrib,
@@ -698,7 +680,7 @@ class SmartExplainer:
         >>> xpl.init_app(settings={"rows": 100, "features": 10})
         >>> xpl.smartapp.run()
         """
-        self.smartapp = SmartApp(self, settings)
+        self.smartapp = SmartApp(self.explainer, settings, title_story=self.title_story)
 
     def run_app(
         self,
@@ -760,8 +742,8 @@ class SmartExplainer:
 
         if title_story is not None:
             self.title_story = title_story
-        if hasattr(self, "_case"):
-            self.smartapp = SmartApp(self, settings)
+        if hasattr(self.explainer, "_case"):
+            self.smartapp = SmartApp(self.explainer, settings, title_story=self.title_story)
             if host is None:
                 host = DEFAULT_HOST
             if port is None:
@@ -844,7 +826,7 @@ class SmartExplainer:
         >>> sp.predict(data_sample)
         >>> sp.explain(data_sample)
         """
-        if self.backend is None:
+        if self.explainer.backend is None:
             raise ValueError(
                 """
                 SmartPredictor needs a backend (explainer).
@@ -853,14 +835,15 @@ class SmartExplainer:
                 """
             )
 
-        self.features_types = {features: str(self.x_init[features].dtypes) for features in self.x_init.columns}
+        features_types = {
+            features: str(self.explainer.x_init[features].dtypes) for features in self.explainer.x_init.columns
+        }
 
         listattributes = [
             "features_dict",
             "model",
             "columns_dict",
             "backend",
-            "features_types",
             "label_dict",
             "preprocessing",
             "postprocessing",
@@ -868,10 +851,13 @@ class SmartExplainer:
         ]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
+        params_smartpredictor.insert(4, features_types)
 
-        if not hasattr(self, "mask_params"):
-            self.mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
-        params_smartpredictor.append(self.mask_params)
+        if hasattr(self.explainer, "mask_params"):
+            mask_params = self.explainer.mask_params
+        else:
+            mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
+        params_smartpredictor.append(mask_params)
 
         return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
 
@@ -917,8 +903,8 @@ class SmartExplainer:
         attributs_explainer = [x_str, y_str]
 
         for attribut in attributs_explainer:
-            if hasattr(self, attribut):
-                params_checkypred.append(self.__dict__[attribut])
+            if hasattr(self.explainer, attribut):
+                params_checkypred.append(getattr(self.explainer, attribut))
             else:
                 params_checkypred.append(None)
         return params_checkypred
