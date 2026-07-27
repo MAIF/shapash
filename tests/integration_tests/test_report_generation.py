@@ -24,7 +24,7 @@ class TestGeneration(unittest.TestCase):
         df["x3"] = np.random.choice(["A", "B", "C", "D"], df.shape[0])
         df["x4"] = np.random.choice(["A", "B", "C", np.nan], df.shape[0])
         df = df.set_index("id")
-        encoder = ce.OrdinalEncoder(cols=["x3", "x4"], handle_unknown="None")
+        encoder = ce.OrdinalEncoder(cols=["x3", "x4"], handle_unknown="return_nan")
         encoder_fitted = encoder.fit(df)
         df_encoded = encoder_fitted.transform(df)
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[["x1", "x2", "x3", "x4"]], df_encoded["y"])

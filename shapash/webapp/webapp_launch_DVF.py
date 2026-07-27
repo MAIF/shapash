@@ -18,7 +18,7 @@ X_df = house_df[house_df.columns.difference(["SalePrice"])]
 house_df.head()
 
 categorical_features = [col for col in X_df.columns if X_df[col].dtype == "object"]
-encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(X_df)
+encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(X_df)
 X_df = encoder.transform(X_df)
 
 Xtrain, Xtest, ytrain, ytest = train_test_split(X_df, y_df, train_size=0.75, random_state=1)
