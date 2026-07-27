@@ -3,7 +3,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_string_dtype
 from plotly.colors import get_colorscale
 from scipy.interpolate import splev, splprep
 from shapely.geometry import MultiPoint, Polygon
@@ -12,6 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import LabelEncoder
 
+from shapash.utils.dtypes import is_text_like
 from shapash.utils.utils import adjust_title_height
 
 logger = logging.getLogger(__name__)
@@ -530,7 +530,7 @@ def encode_color_value(color_value):
     label_mapping : dict or None
     """
 
-    is_categorical = is_string_dtype(color_value) or color_value.dtype.name in ("object", "category")
+    is_categorical = is_text_like(color_value, strict_object=False)
 
     if not is_categorical:
         return color_value.astype(float), False, None

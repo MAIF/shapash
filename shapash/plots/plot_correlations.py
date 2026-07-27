@@ -8,6 +8,7 @@ from scipy.spatial.distance import pdist
 
 from shapash.manipulation.summarize import compute_corr
 from shapash.style.style_utils import define_style, get_palette
+from shapash.utils.dtypes import text_like_columns
 from shapash.utils.utils import adjust_title_height, compute_top_correlations_features, suffix_duplicates
 
 
@@ -161,12 +162,7 @@ def plot_correlations(
     if optimized:
         # Avoid mutating the caller-provided dataframe when bucketing categories.
         df = df.copy()
-        categorical_columns = list(df.select_dtypes(include=["string", "category"]).columns)
-        categorical_columns += [
-            col
-            for col in df.select_dtypes(include=["object"]).columns
-            if pd.api.types.infer_dtype(df[col], skipna=True) in ("string", "unicode", "empty")
-        ]
+        categorical_columns = text_like_columns(df, strict_object=True)
         if facet_col:
             categorical_columns = [col for col in categorical_columns if col != facet_col]
 

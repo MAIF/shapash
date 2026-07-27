@@ -38,6 +38,22 @@ class TestCommon(unittest.TestCase):
 
         assert series_dtype(s) == VarType.TYPE_UNSUPPORTED
 
+    def test_series_dtype_1_object_datetime_is_unsupported(self):
+        """
+        Test object datetime-like series is unsupported.
+        """
+        s = pd.Series([pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-02")], dtype=object)
+
+        assert series_dtype(s) == VarType.TYPE_UNSUPPORTED
+
+    def test_series_dtype_1_object_empty_is_categorical(self):
+        """
+        Test empty object series remains categorical.
+        """
+        s = pd.Series([None, None], dtype=object)
+
+        assert series_dtype(s) == VarType.TYPE_CAT
+
     def test_series_dtype_2(self):
         """
         Test bool series

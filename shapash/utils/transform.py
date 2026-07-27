@@ -21,6 +21,7 @@ from shapash.utils.columntransformer_backend import (
     supported_sklearn,
     transform_ct,
 )
+from shapash.utils.dtypes import text_like_columns
 
 # TODO
 # encode targeted variable ? from sklearn.preprocessing import LabelEncoder
@@ -391,7 +392,7 @@ def handle_categorical_missing(df: pd.DataFrame) -> pd.DataFrame:
     df : pd.DataFrame
         Pandas dataframe on which we will replace the missing values
     """
-    categorical_cols = df.select_dtypes(include=["object", "string", "category"]).columns
+    categorical_cols = text_like_columns(df, strict_object=False)
     df_handle_missing = df.copy()
 
     categorical_dtype_cols = df_handle_missing.select_dtypes(include=["category"]).columns
