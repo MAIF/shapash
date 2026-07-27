@@ -577,7 +577,7 @@ class Consistency:
             encoder = self.preprocessing
         else:
             categorical_features = [col for col in x.columns if x[col].dtype == "object"]
-            encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(x)
+            encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(x)
             x = encoder.transform(x)
 
         xaxis_title = (

@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     categorical_features = [col for col in X_df.columns if X_df[col].dtype == "object"]
 
-    encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(X_df)
+    encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(X_df)
 
     X_df = encoder.transform(X_df)
 

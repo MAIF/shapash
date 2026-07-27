@@ -87,7 +87,7 @@ class TestSmartPlotter(unittest.TestCase):
             index=["person_A", "person_B"],
         )
         self.features_compacity = {"features_needed": [1, 1], "distance_reached": np.array([0.12, 0.16])}
-        encoder = ce.OrdinalEncoder(cols=["X1"], handle_unknown="None").fit(self.x_init)
+        encoder = ce.OrdinalEncoder(cols=["X1"], handle_unknown="return_nan").fit(self.x_init)
         model = CatBoostClassifier().fit(encoder.transform(self.x_init), [0, 1])
         self.model = model
         # Declare explainer object
