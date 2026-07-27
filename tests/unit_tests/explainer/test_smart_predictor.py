@@ -57,7 +57,7 @@ class TestSmartPredictor(unittest.TestCase):
         df["x1"] = np.random.randint(1, 123, df.shape[0])
         df["x2"] = ["S", "M", "S", "D", "M"]
         df = df.set_index("id")
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="return_nan")
         encoder_fitted = encoder.fit(df[["x1", "x2"]])
         df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
         clf = cb.CatBoostClassifier(n_estimators=1).fit(df_encoded[["x1", "x2"]], df["y"])
@@ -101,7 +101,7 @@ class TestSmartPredictor(unittest.TestCase):
         )
         self.predictor_1.backend.state = SmartState()
         df["x2"] = np.random.randint(1, 100, df.shape[0])
-        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="None")
+        encoder = ce.OrdinalEncoder(cols=["x2"], handle_unknown="return_nan")
         encoder_fitted = encoder.fit(df[["x1", "x2"]])
         df_encoded = encoder_fitted.transform(df[["x1", "x2"]])
 

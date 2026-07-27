@@ -26,7 +26,7 @@ if __name__ == "__main__":
         col for col in X_df.columns if is_string_dtype(X_df[col]) or X_df[col].dtype.name in ("object", "category")
     ]
 
-    encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="ignore", return_df=True).fit(X_df)
+    encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(X_df)
 
     X_df = encoder.transform(X_df)
 
