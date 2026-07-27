@@ -8,7 +8,6 @@ import sys
 
 import pandas as pd
 from category_encoders import OrdinalEncoder
-from pandas.api.types import is_string_dtype
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
@@ -16,15 +15,14 @@ sys.path.insert(0, "..")
 
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
+from shapash.utils.dtypes import text_like_columns
 
 if __name__ == "__main__":
     house_df, house_dict = data_loading("house_prices")
     y_df = house_df["SalePrice"]
     X_df = house_df[house_df.columns.difference(["SalePrice"])]
 
-    categorical_features = [
-        col for col in X_df.columns if is_string_dtype(X_df[col]) or X_df[col].dtype.name in ("object", "category")
-    ]
+    categorical_features = text_like_columns(X_df, strict_object=False)
 
     encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(X_df)
 
