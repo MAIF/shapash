@@ -6,7 +6,9 @@ from importlib import import_module
 from numbers import Number
 
 import pandas as pd
-from pandas.api.types import is_bool_dtype, is_numeric_dtype, is_string_dtype
+from pandas.api.types import is_bool_dtype, is_numeric_dtype
+
+from shapash.utils.dtypes import is_text_like
 
 
 class VarType(Enum):
@@ -40,9 +42,7 @@ def series_dtype(s: pd.Series, cat_num_threshold: int = 15) -> VarType:
     """
     if is_bool_dtype(s):
         return VarType.TYPE_CAT
-    elif is_string_dtype(s):
-        return VarType.TYPE_CAT
-    elif s.dtype.name == "object":
+    elif is_text_like(s, strict_object=True):
         return VarType.TYPE_CAT
     elif is_numeric_dtype(s):
         if numeric_is_continuous(s, threshold=cat_num_threshold):

@@ -11,13 +11,14 @@ from sklearn.model_selection import train_test_split
 from shapash import SmartExplainer
 from shapash.data.data_loader import data_loading
 from shapash.explainer.smart_explainer import DEFAULT_HOST
+from shapash.utils.dtypes import text_like_columns
 
 house_df, house_dict = data_loading("house_prices")
 y_df = house_df["SalePrice"].to_frame()
 X_df = house_df[house_df.columns.difference(["SalePrice"])]
 house_df.head()
 
-categorical_features = [col for col in X_df.columns if X_df[col].dtype == "object"]
+categorical_features = text_like_columns(X_df, strict_object=False)
 encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(X_df)
 X_df = encoder.transform(X_df)
 

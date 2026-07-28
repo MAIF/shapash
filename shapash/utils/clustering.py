@@ -11,6 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import LabelEncoder
 
+from shapash.utils.dtypes import is_text_like
 from shapash.utils.utils import adjust_title_height
 
 logger = logging.getLogger(__name__)
@@ -529,7 +530,7 @@ def encode_color_value(color_value):
     label_mapping : dict or None
     """
 
-    is_categorical = color_value.dtype == "object" or color_value.dtype.name == "category"
+    is_categorical = is_text_like(color_value, strict_object=False)
 
     if not is_categorical:
         return color_value.astype(float), False, None

@@ -10,6 +10,7 @@ from plotly.subplots import make_subplots
 from sklearn.manifold import MDS
 
 from shapash.style.style_utils import colors_loading, define_style, select_palette
+from shapash.utils.dtypes import text_like_columns
 from shapash.utils.utils import adjust_title_height
 
 
@@ -576,7 +577,7 @@ class Consistency:
         if isinstance(self.preprocessing, OrdinalEncoder):
             encoder = self.preprocessing
         else:
-            categorical_features = [col for col in x.columns if x[col].dtype == "object"]
+            categorical_features = text_like_columns(x, strict_object=False)
             encoder = OrdinalEncoder(cols=categorical_features, handle_unknown="return_nan", return_df=True).fit(x)
             x = encoder.transform(x)
 
