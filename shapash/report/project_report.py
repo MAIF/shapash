@@ -71,31 +71,32 @@ class ProjectReport:
         explainer: SmartExplainer,
         project_info_file: str,
         x_train: pd.DataFrame | None = None,
-        y_train: pd.DataFrame | None = None,
-        y_test: pd.DataFrame | None = None,
+        y_train: pd.Series | pd.DataFrame | None = None,
+        y_test: pd.Series | pd.DataFrame | None = None,
         config: dict | None = None,
     ):
         self.explainer = explainer
+        self.compute = explainer.explainer
         self.metadata = load_yml(path=project_info_file)
         self.x_train_init = x_train
         if x_train is not None:
-            x_train_pre = inverse_transform(x_train, self.explainer.preprocessing)
+            x_train_pre = inverse_transform(x_train, self.compute.preprocessing)
             self.x_train_pre = handle_categorical_missing(x_train_pre)
 
-            if self.explainer.postprocessing:
-                self.x_train_pre = apply_postprocessing(self.x_train_pre, self.explainer.postprocessing)
+            if self.compute.postprocessing:
+                self.x_train_pre = apply_postprocessing(self.x_train_pre, self.compute.postprocessing)
         else:
             self.x_train_pre = None
-        self.x_init = self.explainer.x_init
+        self.x_init = self.compute.x_init
         self.config = config if config is not None else dict()
-        self.col_names = list(self.explainer.columns_dict.values())
+        self.col_names = list(self.compute.columns_dict.values())
         # x_init is always set on a compiled explainer, so `test` is never None here and
         # `_create_train_test_df` cannot return None.
         self.df_train_test = cast(pd.DataFrame, self._create_train_test_df(test=self.x_init, train=self.x_train_pre))
-        if self.explainer.y_pred is not None:
-            self.y_pred = np.array(self.explainer.y_pred.T)[0]
+        if self.compute.y_pred is not None:
+            self.y_pred = np.array(self.compute.y_pred.T)[0]
         else:
-            self.y_pred = self.explainer.model.predict(self.explainer.x_encoded)
+            self.y_pred = self.compute.model.predict(self.compute.x_encoded)
         self.y_test, target_name_test = self._get_values_and_name(y_test, "target")
         self.y_train, target_name_train = self._get_values_and_name(y_train, "target")
         self.target_name = target_name_train or target_name_test
@@ -233,16 +234,16 @@ class ProjectReport:
         Displays information about the model used : class name, library name, library version,
         model parameters, ...
         """
-        print_md(f"**Model used :** {self.explainer.model.__class__.__name__}")
+        print_md(f"**Model used :** {self.compute.model.__class__.__name__}")
 
-        print_md(f"**Library :** {self.explainer.model.__class__.__module__}")
+        print_md(f"**Library :** {self.compute.model.__class__.__module__}")
 
         for _, module in sorted(sys.modules.items()):
             if not hasattr(module, "__name__"):
                 continue
 
             module_name = module.__name__.split(".")[0]
-            expected_name = self.explainer.model.__class__.__module__.split(".")[0]
+            expected_name = self.compute.model.__class__.__module__.split(".")[0]
 
             if expected_name == module_name:
                 try:
@@ -254,7 +255,7 @@ class ProjectReport:
                 break
 
         print_md("**Model parameters :** ")
-        model_params = self.explainer.model.__dict__
+        model_params = self.compute.model.__dict__
         table_template = template_env.get_template("double_table.html")
         print_html(
             table_template.render(
@@ -359,7 +360,7 @@ class ProjectReport:
     ):
         col_types = compute_col_types(df)
         n_splits = df[col_splitter].nunique()
-        inv_columns_dict = {v: k for k, v in self.explainer.columns_dict.items()}
+        inv_columns_dict = {v: k for k, v in self.compute.columns_dict.items()}
         test_stats_univariate = perform_univariate_dataframe_analysis(
             df.loc[df[col_splitter] == split_values[0]], col_types=col_types
         )
@@ -371,10 +372,10 @@ class ProjectReport:
         univariate_template = template_env.get_template("univariate.html")
         univariate_features_desc = list()
         list_cols_labels = [
-            self.explainer.features_dict.get(col, col) for col in df.drop(col_splitter, axis=1).columns.to_list()
+            self.compute.features_dict.get(col, col) for col in df.drop(col_splitter, axis=1).columns.to_list()
         ]
         for col_label in sorted(list_cols_labels):
-            col = self.explainer.inv_features_dict.get(col_label, col_label)
+            col = self.compute.inv_features_dict.get(col_label, col_label)
             fig = plot_distribution(
                 df_all=df,
                 col=col,
@@ -416,21 +417,21 @@ class ProjectReport:
         """
         print_md("*Note : the explainability graphs were generated using the test set only.*")
         explainability_template = template_env.get_template("explainability.html")
-        inv_columns_dict = {v: k for k, v in self.explainer.columns_dict.items()}
+        inv_columns_dict = {v: k for k, v in self.compute.columns_dict.items()}
         explain_data = list()
-        multiclass = True if (self.explainer._classes and len(self.explainer._classes) > 2) else False
-        c_list = self.explainer._classes if multiclass else [1]  # list just used for multiclass
+        multiclass = True if (self.compute._classes and len(self.compute._classes) > 2) else False
+        c_list = self.compute._classes if multiclass else [1]  # list just used for multiclass
         for index_label, label in enumerate(c_list):  # Iterating over all labels in multiclass case
-            label_value = self.explainer.check_label_name(label)[2] if multiclass else ""
+            label_value = self.compute.check_label_name(label)[2] if multiclass else ""
 
             # Feature Importance
             fig_features_importance = self.explainer.plot.features_importance(label=label)
 
             # Contribution Plot
             explain_contrib_data = list()
-            list_cols_labels = [self.explainer.features_dict.get(col, col) for col in self.col_names]
+            list_cols_labels = [self.compute.features_dict.get(col, col) for col in self.col_names]
             for feature_label in sorted(list_cols_labels):
-                feature = self.explainer.inv_features_dict.get(feature_label, feature_label)
+                feature = self.compute.inv_features_dict.get(feature_label, feature_label)
                 fig = self.explainer.plot.contribution_plot(feature, label=label, max_points=self.max_points)
                 # Apparently matkers are not supported during conversion into html
                 for el in fig.data:
@@ -440,7 +441,7 @@ class ProjectReport:
                     {
                         "feature_index": int(inv_columns_dict[feature]),
                         "name": feature,
-                        "description": self.explainer.features_dict[feature],
+                        "description": self.compute.features_dict[feature],
                         "plot": plotly.io.to_html(fig, include_plotlyjs=False, full_html=False),
                     }
                 )
@@ -451,7 +452,7 @@ class ProjectReport:
                 list_ind, _ = self.explainer.plot._select_indices_interactions_plot(
                     selection=None, max_points=self.max_points
                 )
-                interaction_values = self.explainer.get_interaction_values(selection=list_ind)
+                interaction_values = self.compute.get_interaction_values(selection=list_ind)
                 sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
                 indices_to_plot = sorted_top_features_indices[: self.nb_top_interactions]
 
@@ -459,18 +460,18 @@ class ProjectReport:
                     id0, id1 = ids
 
                     fig_one_interaction = self.explainer.plot.interactions_plot(
-                        col1=self.explainer.columns_dict[id0],
-                        col2=self.explainer.columns_dict[id1],
+                        col1=self.compute.columns_dict[id0],
+                        col2=self.compute.columns_dict[id1],
                         max_points=self.max_points,
                     )
 
                     explain_contrib_data_interaction.append(
                         {
                             "feature_index": i,
-                            "name": self.explainer.columns_dict[id0] + " / " + self.explainer.columns_dict[id1],
-                            "description": self.explainer.features_dict[self.explainer.columns_dict[id0]]
+                            "name": self.compute.columns_dict[id0] + " / " + self.compute.columns_dict[id1],
+                            "description": self.compute.features_dict[self.compute.columns_dict[id0]]
                             + " / "
-                            + self.explainer.features_dict[self.explainer.columns_dict[id1]],
+                            + self.compute.features_dict[self.compute.columns_dict[id1]],
                             "plot": plotly.io.to_html(fig_one_interaction, include_plotlyjs=False, full_html=False),
                         }
                     )
@@ -560,7 +561,7 @@ class ProjectReport:
                     metric_fn = get_callable(path=metric["path"])
                     #  Look if we should use proba values instead of predicted values
                     if "use_proba_values" in metric.keys() and metric["use_proba_values"] is True:
-                        y_pred = self.explainer.proba_values
+                        y_pred = self.compute.proba_values
                     else:
                         y_pred = self.y_pred
                     res = metric_fn(self.y_test, y_pred)

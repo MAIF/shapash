@@ -1255,16 +1255,16 @@ class TestSmartPredictor(unittest.TestCase):
         xpl = predictor_1.to_smartexplainer()
 
         assert str(type(xpl)) == "<class 'shapash.explainer.smart_explainer.SmartExplainer'>"
-        assert xpl.x_encoded.equals(predictor_1.data["x_preprocessed"])
-        assert predictor_1.model == xpl.model
-        assert predictor_1.backend == xpl.backend
-        assert predictor_1.features_dict == xpl.features_dict
-        assert predictor_1.label_dict == xpl.label_dict
-        assert predictor_1._case == xpl._case
-        assert predictor_1._classes == xpl._classes
-        assert predictor_1.columns_dict == xpl.columns_dict
-        assert predictor_1.preprocessing == xpl.preprocessing
-        assert predictor_1.postprocessing == xpl.postprocessing
+        assert xpl.explainer.x_encoded.equals(predictor_1.data["x_preprocessed"])
+        assert predictor_1.model == xpl.explainer.model
+        assert predictor_1.backend == xpl.explainer.backend
+        assert predictor_1.features_dict == xpl.explainer.features_dict
+        assert predictor_1.label_dict == xpl.explainer.label_dict
+        assert predictor_1._case == xpl.explainer._case
+        assert predictor_1._classes == xpl.explainer._classes
+        assert predictor_1.columns_dict == xpl.explainer.columns_dict
+        assert predictor_1.preprocessing == xpl.explainer.preprocessing
+        assert predictor_1.postprocessing == xpl.explainer.postprocessing
 
         ct = ColumnTransformer(
             transformers=[
