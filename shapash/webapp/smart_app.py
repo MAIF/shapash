@@ -47,7 +47,7 @@ from shapash.webapp.utils.callbacks import (
 )
 from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.MyGraph import MyGraph
-from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
+from shapash.webapp.utils.utils import check_row, get_datatable_data_and_tooltips, get_index_type, round_to_k
 
 
 def _create_input_modal(component_id, label, tooltip):
@@ -431,13 +431,11 @@ class SmartApp:
 
         self.adjust_menu()
 
+        table_data, table_tooltip_data = get_datatable_data_and_tooltips(self.round_dataframe, self.dataframe)
         self.components["table"]["dataset"] = dash_table.DataTable(
             id="dataset",
-            data=self.round_dataframe.to_dict("records"),
-            tooltip_data=[
-                {column: {"value": str(value), "type": "text"} for column, value in row.items()}
-                for row in self.dataframe.to_dict("index").values()
-            ],
+            data=table_data,
+            tooltip_data=table_tooltip_data,
             tooltip_duration=2000,
             columns=[{"name": i, "id": i} for i in self.dataframe.columns],
             tooltip_header={
@@ -2108,11 +2106,7 @@ class SmartApp:
                 df = self.round_dataframe
             else:
                 raise dash.exceptions.PreventUpdate
-            data = df.to_dict("records")
-            tooltip_data = [
-                {column: {"value": str(value), "type": "text"} for column, value in row.items()}
-                for row in df.to_dict("index").values()
-            ]
+            data, tooltip_data = get_datatable_data_and_tooltips(df)
             return (
                 data,
                 tooltip_data,

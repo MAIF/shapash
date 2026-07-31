@@ -1,7 +1,7 @@
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
+from shapash.utils.utils import add_line_break, adjust_title_height, format_missing_value, truncate_str
 
 
 def plot_bar_chart(
@@ -103,6 +103,7 @@ def plot_bar_chart(
         bars = []
         for num, expl in enumerate(zip(var_dict, x_val, contrib, strict=False)):
             feat_name, x_val_el, contrib_value = expl
+            x_val_el = format_missing_value(x_val_el)
             is_grouped = False
             if x_val_el == "":
                 ylabel = f"<i>{feat_name}</i>"
@@ -116,7 +117,7 @@ def plot_bar_chart(
                     feat_groups_values = x_init[features_groups[group_name]].loc[index_value[0]]
                     hoverlabel = "<br />".join(
                         [
-                            f"<b>{add_line_break(features_dict.get(f_name, f_name), 40, maxlen=120)} :</b>{add_line_break(f_value, 40, maxlen=160)}"
+                            f"<b>{add_line_break(features_dict.get(f_name, f_name), 40, maxlen=120)} :</b>{add_line_break(format_missing_value(f_value), 40, maxlen=160)}"
                             for f_name, f_value in feat_groups_values.to_dict().items()
                         ]
                     )

@@ -11,6 +11,7 @@ from dash import dcc, html
 from dash.exceptions import PreventUpdate
 from plotly.graph_objs import Figure
 
+from shapash.utils.utils import format_missing_value
 from shapash.webapp.utils.MyGraph import MyGraph
 
 
@@ -506,7 +507,7 @@ def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict:
             dbc.Row(
                 [
                     dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style),
-                    dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
+                    dbc.Col(dbc.Label(format_missing_value(row["feature_value"])), width=5, className="id_card_solid"),
                     dbc.Col(width=1),
                     (
                         dbc.Col(
