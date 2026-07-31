@@ -8,6 +8,7 @@ from scipy.spatial.distance import pdist
 
 from shapash.manipulation.summarize import compute_corr
 from shapash.style.style_utils import define_style, get_palette
+from shapash.utils.dtypes import text_like_columns
 from shapash.utils.utils import adjust_title_height, compute_top_correlations_features, suffix_duplicates
 
 
@@ -159,11 +160,18 @@ def plot_correlations(
         features_to_hide = list(features_to_hide)
 
     if optimized:
-        categorical_columns = df.select_dtypes(include=["object", "category"]).columns
+        # Avoid mutating the caller-provided dataframe when bucketing categories.
+        df = df.copy()
+        categorical_columns = text_like_columns(df, strict_object=True)
+        if facet_col:
+            categorical_columns = [col for col in categorical_columns if col != facet_col]
 
         for col in categorical_columns:
             top_categories = df[col].value_counts().nlargest(200).index
-            df[col] = df[col].where(df[col].isin(top_categories), other="Other")
+            keep_mask = df[col].isna() | df[col].isin(top_categories)
+            if isinstance(df[col].dtype, pd.CategoricalDtype) and "Other" not in df[col].cat.categories:
+                df[col] = df[col].cat.add_categories(["Other"])
+            df[col] = df[col].where(keep_mask, other="Other")
 
         if len(df) > 10000:
             df = df.sample(n=10000, random_state=1)

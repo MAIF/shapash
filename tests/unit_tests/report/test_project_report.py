@@ -162,7 +162,7 @@ class TestProjectReport(unittest.TestCase):
         df = self.df.copy()
         df["x1"] = "a"
         df["x2"] = df["x2"].astype(str)
-        encoder = OrdinalEncoder(cols=["x1", "x2"], handle_unknown="ignore", return_df=True).fit(df)
+        encoder = OrdinalEncoder(cols=["x1", "x2"], handle_unknown="return_nan", return_df=True).fit(df)
 
         df = encoder.transform(df)
 

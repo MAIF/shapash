@@ -38,6 +38,7 @@ from shapash.utils.utils import (
     adjust_title_height,
     compute_digit_number,
     compute_sorted_variables_interactions_list_indices,
+    format_missing_value,
     maximum_difference_sort_value,
     top_contributors,
     truncate_str,
@@ -2345,7 +2346,7 @@ class SmartPlotter:
                     for idx, row in df_pred.iterrows():
                         text = f"Id: {idx}<br />"
                         if el not in ["predictions", "targets", "errors"]:
-                            text += f"{el}: {row[el]}<br />"
+                            text += f"{el}: {format_missing_value(row[el])}<br />"
                         text += f"Predicted Value: {row['proba_values']:.{self._round_digit}f}<br />"
                         if "error" in df_pred.columns:
                             text += f"Error: {row['error']:.{self._round_digit}f}<br />"
@@ -2360,19 +2361,30 @@ class SmartPlotter:
                         if el not in ["predictions", "targets", "errors"]:
                             is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
                             n_unique = df_pred[el].nunique(dropna=True)
+                            cluster_values = df_pred.loc[df_pred["cluster"] == c, el]
                             if is_num and n_unique > 5:
-                                mean_el = df_pred.loc[df_pred["cluster"] == c, el].mean()
-                                std_el = df_pred.loc[df_pred["cluster"] == c, el].std()
-                                hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
-                                hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
+                                mean_el = cluster_values.mean()
+                                std_el = cluster_values.std()
+                                if pd.isna(mean_el) or pd.isna(std_el):
+                                    hv_text_cluster += f"<br />{el} mean: {format_missing_value(mean_el)}"
+                                    hv_text_cluster += f"<br />{el} std: {format_missing_value(std_el)}"
+                                else:
+                                    hv_text_cluster += (
+                                        f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
+                                    )
+                                    hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
                             else:
-                                top_element = df_pred.loc[df_pred["cluster"] == c, el].mode()[0]
-                                top_element_percentage = (
-                                    np.sum(df_pred.loc[df_pred["cluster"] == c, el] == top_element)
-                                    / df_pred.loc[df_pred["cluster"] == c, el].size
-                                    * 100
+                                # dropna=False so that null values can be reported as the top modality
+                                top_element = cluster_values.mode(dropna=False).iloc[0]
+                                if pd.isna(top_element):
+                                    top_element_count = cluster_values.isna().sum()
+                                else:
+                                    top_element_count = np.sum(cluster_values == top_element)
+                                top_element_percentage = top_element_count / cluster_values.size * 100
+                                hv_text_cluster += (
+                                    f"<br />{el} top: {format_missing_value(top_element)}"
+                                    f" ({top_element_percentage:.1f}%)"
                                 )
-                                hv_text_cluster += f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)"
                         mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "proba_values"].mean()
                         hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
                         if "error" in df_pred.columns:
@@ -2490,7 +2502,7 @@ class SmartPlotter:
                 for idx, row in df_pred.iterrows():
                     text = f"Id: {idx}<br />"
                     if el not in ["predictions", "targets", "errors"]:
-                        text += f"{el}: {row[el]}<br />"
+                        text += f"{el}: {format_missing_value(row[el])}<br />"
                     text += f"Predicted Value: {row['predict_value']:.{self._round_digit}f}<br />"
                     if "error" in df_pred.columns:
                         text += f"Error: {row['error']:.{compute_digit_number(row['error'])}f}<br />"
@@ -2504,19 +2516,27 @@ class SmartPlotter:
                     if el not in ["predictions", "targets", "errors"]:
                         is_num = is_numeric_dtype(df_pred[el]) and not is_bool_dtype(df_pred[el])
                         n_unique = df_pred[el].nunique(dropna=True)
+                        cluster_values = df_pred.loc[df_pred["cluster"] == c, el]
                         if is_num and n_unique > 5:
-                            mean_el = df_pred.loc[df_pred["cluster"] == c, el].mean()
-                            std_el = df_pred.loc[df_pred["cluster"] == c, el].std()
-                            hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
-                            hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
+                            mean_el = cluster_values.mean()
+                            std_el = cluster_values.std()
+                            if pd.isna(mean_el) or pd.isna(std_el):
+                                hv_text_cluster += f"<br />{el} mean: {format_missing_value(mean_el)}"
+                                hv_text_cluster += f"<br />{el} std: {format_missing_value(std_el)}"
+                            else:
+                                hv_text_cluster += f"<br />{el} mean: {mean_el:.{compute_digit_number(mean_el, 3)}f}"
+                                hv_text_cluster += f"<br />{el} std: {std_el:.{compute_digit_number(std_el, 3)}f}"
                         else:
-                            top_element = df_pred.loc[df_pred["cluster"] == c, el].mode()[0]
-                            top_element_percentage = (
-                                np.sum(df_pred.loc[df_pred["cluster"] == c, el] == top_element)
-                                / df_pred.loc[df_pred["cluster"] == c, el].size
-                                * 100
+                            # dropna=False so that null values can be reported as the top modality
+                            top_element = cluster_values.mode(dropna=False).iloc[0]
+                            if pd.isna(top_element):
+                                top_element_count = cluster_values.isna().sum()
+                            else:
+                                top_element_count = np.sum(cluster_values == top_element)
+                            top_element_percentage = top_element_count / cluster_values.size * 100
+                            hv_text_cluster += (
+                                f"<br />{el} top: {format_missing_value(top_element)} ({top_element_percentage:.1f}%)"
                             )
-                            hv_text_cluster += f"<br />{el} top: {top_element} ({top_element_percentage:.1f}%)"
                     mean_predicted_value = df_pred.loc[df_pred["cluster"] == c, "predict_value"].mean()
                     hv_text_cluster += f"<br />Mean predicted value: {mean_predicted_value:.{compute_digit_number(mean_predicted_value, 3)}f}"
                     if "error" in df_pred.columns:

@@ -88,6 +88,19 @@ class TestPlots(unittest.TestCase):
         assert fig.data[1].type == "bar"
         assert len(fig.data[0]['x']) == 2
 
+    def test_plot_categorical_distribution_no_hue(self):
+        """
+        Test that the plot can be generated without a hue/col_splitter column.
+        """
+        df = pd.DataFrame({"int_data": [0, 0, 0, 1, 1, 0]})
+
+        fig = plot_categorical_distribution(df, "int_data")
+
+        assert isinstance(fig, go.Figure)
+        assert len(fig.data) == 1
+        assert fig.data[0].type == "bar"
+        assert len(fig.data[0]["x"]) == 2
+
     def test_plot_categorical_distribution_2(self):
         df = pd.DataFrame(
             {"int_data": [0, 0, 0, 1, 1, 0], "data_train_test": ["train", "train", "train", "train", "train", "train"]}

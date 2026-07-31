@@ -7,6 +7,7 @@ import copy
 import random
 import re
 from math import isfinite, log10
+from typing import Any
 
 import dash
 import dash_bootstrap_components as dbc
@@ -46,7 +47,7 @@ from shapash.webapp.utils.callbacks import (
 )
 from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.MyGraph import MyGraph
-from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
+from shapash.webapp.utils.utils import check_row, get_datatable_data_and_tooltips, get_index_type, round_to_k
 
 
 def _create_input_modal(component_id, label, tooltip):
@@ -69,7 +70,7 @@ class SmartApp:
         SmartExplainer instance to point to.
     """
 
-    def __init__(self, explainer, settings: dict = None):
+    def __init__(self, explainer, settings: dict | None = None):
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
@@ -129,7 +130,7 @@ class SmartApp:
             self.label = None
             self.selected_feature = self.explainer.features_imp.idxmax()
             self.max_threshold = self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max()
-        self.list_index = []
+        self.list_index: list = []
         self.subset = None
         self.last_click_data = None
 
@@ -141,11 +142,17 @@ class SmartApp:
         self.init_data()
 
         # COMPONENTS
-        self.components = {"menu": {}, "table": {}, "graph": {}, "filter": {}, "settings": {}}
+        self.components: dict[str, dict[str, Any]] = {
+            "menu": {},
+            "table": {},
+            "graph": {},
+            "filter": {},
+            "settings": {},
+        }
         self.init_components()
 
         # LAYOUT
-        self.skeleton = {"navbar": {}, "body": {}}
+        self.skeleton: dict[str, Any] = {"navbar": {}, "body": {}}
         self.make_skeleton()
         self.app.layout = html.Div([self.skeleton["navbar"], self.skeleton["body"]])
 
@@ -424,13 +431,11 @@ class SmartApp:
 
         self.adjust_menu()
 
+        table_data, table_tooltip_data = get_datatable_data_and_tooltips(self.round_dataframe, self.dataframe)
         self.components["table"]["dataset"] = dash_table.DataTable(
             id="dataset",
-            data=self.round_dataframe.to_dict("records"),
-            tooltip_data=[
-                {column: {"value": str(value), "type": "text"} for column, value in row.items()}
-                for row in self.dataframe.to_dict("index").values()
-            ],
+            data=table_data,
+            tooltip_data=table_tooltip_data,
             tooltip_duration=2000,
             columns=[{"name": i, "id": i} for i in self.dataframe.columns],
             tooltip_header={
@@ -2101,11 +2106,7 @@ class SmartApp:
                 df = self.round_dataframe
             else:
                 raise dash.exceptions.PreventUpdate
-            data = df.to_dict("records")
-            tooltip_data = [
-                {column: {"value": str(value), "type": "text"} for column, value in row.items()}
-                for row in df.to_dict("index").values()
-            ]
+            data, tooltip_data = get_datatable_data_and_tooltips(df)
             return (
                 data,
                 tooltip_data,

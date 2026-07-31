@@ -93,6 +93,8 @@ else:
         },
     }
 
+additional_features_dict: dict | None = None
+
 if CASE == 1:
     features = ["Pclass", "Survived", "Embarked", "Sex", "Age", "SibSp", "Parch"]
     for col in list(feature_dict.keys()):

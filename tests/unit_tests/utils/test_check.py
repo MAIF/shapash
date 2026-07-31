@@ -575,6 +575,15 @@ class TestCheck(unittest.TestCase):
             check_postprocessing(features_types, postprocessing5)
             check_postprocessing(features_types, postprocessing6)
 
+    def test_check_postprocessing_accepts_pandas_string_metadata(self):
+        """Unit test pandas string dtype metadata validation for postprocessing."""
+        features_types = {"Col1": "string[python]", "Col2": "string[pyarrow]"}
+        case_postprocessing = {"Col1": {"type": "case", "rule": "lower"}}
+        regex_postprocessing = {"Col2": {"type": "regex", "rule": {"in": "A", "out": "a"}}}
+
+        check_postprocessing(features_types, case_postprocessing)
+        check_postprocessing(features_types, regex_postprocessing)
+
     def test_check_preprocessing_options_1(self):
         """
         Unit test check_preprocessing_options 1

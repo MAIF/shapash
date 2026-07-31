@@ -41,7 +41,7 @@ class BaseBackend(ABC):
         self.model = model
         self.preprocessing = preprocessing
         self.explain_data: Any = None
-        self.state = None
+        self.state: Any = None
         self._case, self._classes = check_model(model)
         if self._case not in self.supported_cases:
             raise ValueError(f"Model not supported by the backend as it does not cover {self._case} case")

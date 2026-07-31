@@ -199,6 +199,34 @@ def truncate_str(text, maxlen=40):
     return text
 
 
+MISSING_VALUE_DISPLAY = "missing"
+
+
+def format_missing_value(value, missing_display=MISSING_VALUE_DISPLAY):
+    """
+    return a unified display value for null entries
+
+    Parameters
+    ----------
+    value : any
+        value to display, can be null (NaN, None, NaT, pd.NA)
+    missing_display : str
+        text displayed in place of null values
+
+    Returns
+    -------
+    any
+        missing_display if the value is null, the original value otherwise
+    """
+    try:
+        if pd.isna(value):
+            return missing_display
+    except (TypeError, ValueError):
+        # non-scalar values (list, array, ...) are kept unchanged
+        pass
+    return value
+
+
 def compute_digit_number(value, significant_digits: int = 4):
     """
     return int, number of digits to display
@@ -352,7 +380,7 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
     list
     """
     sorted_corr = corr.abs().unstack().sort_values(kind="quicksort")[::-1]
-    set_features = set()
+    set_features: set = set()
     i = 0
     while len(set_features) < max_features and i < len(sorted_corr):
         if sorted_corr.index[i][0] != sorted_corr.index[i][1]:

@@ -11,6 +11,7 @@ from dash import dcc, html
 from dash.exceptions import PreventUpdate
 from plotly.graph_objs import Figure
 
+from shapash.utils.utils import format_missing_value
 from shapash.webapp.utils.MyGraph import MyGraph
 
 
@@ -269,7 +270,7 @@ def get_indexes_from_datatable(data: list, list_index: list | None = None) -> li
     """
     indexes = [d["_index_"] for d in data]
     if list_index is not None and (len(indexes) == len(list_index) or len(indexes) == 0):
-        indexes = None
+        return None
     return indexes
 
 
@@ -399,7 +400,7 @@ def get_id_card_features(data: list, selected: int, special_cols: list, features
 
 
 def get_id_card_contrib(
-    data: dict, index: int, features_dict: dict, columns_dict: dict, label_num: int = None
+    data: dict, index: int, features_dict: dict, columns_dict: dict, label_num: int | None = None
 ) -> pd.DataFrame:
     """Get the contributions of the selected index for the identity card.
 
@@ -506,7 +507,7 @@ def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict:
             dbc.Row(
                 [
                     dbc.Col(dbc.Label(row["feature_name"]), width=3, style=label_style),
-                    dbc.Col(dbc.Label(row["feature_value"]), width=5, className="id_card_solid"),
+                    dbc.Col(dbc.Label(format_missing_value(row["feature_value"])), width=5, className="id_card_solid"),
                     dbc.Col(width=1),
                     (
                         dbc.Col(
@@ -642,9 +643,10 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
     _first = _non_null.iloc[0] if len(_non_null) > 0 else None
 
     if type(_first) is np.bool_ or type(_first) is bool:
+        radio_options: list[dcc.RadioItems.Options] = [{"label": str(val), "value": val} for val in _non_null.unique()]
         new_element = html.Div(
             dcc.RadioItems(
-                [{"label": str(val), "value": val} for val in _non_null.unique()],
+                radio_options,
                 id={"type": "dynamic-bool", "index": filter_id["index"]},
                 value=_first,
                 inline=False,
@@ -655,10 +657,11 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
         # If feature has integer type with at most 20 values or string type (no limits on number of values),
         # then display Dropdown component
         # Notice that integer column with NaN values is considered as float, so it will not be displayed as Dropdown.
+        dropdown_options: list[dcc.Dropdown.Options] = [{"label": i, "value": i} for i in np.sort(_non_null.unique())]
         new_element = html.Div(
             dcc.Dropdown(
                 id={"type": "dynamic-str", "index": filter_id["index"]},
-                options=[{"label": i, "value": i} for i in np.sort(_non_null.unique())],
+                options=dropdown_options,
                 multi=True,
             ),
             style={"width": "65%", "margin-left": "20px"},
@@ -701,17 +704,19 @@ def create_filter_modalities_selection(value: str, filter_id: dict, round_datafr
     return new_element
 
 
-def handle_page_navigation(triggered_input: str, page: int | str, selected_feature: str) -> tuple[int, str]:
+def handle_page_navigation(
+    triggered_input: str, page: int | str, selected_feature: str | None
+) -> tuple[int, str | None]:
     """
     Handle the navigation between different pages based on user input.
 
     Args:
         triggered_input (str): The input that triggered the navigation.
         page (Union[int, str]): The current page number.
-        selected_feature (str): The currently selected feature.
+        selected_feature (Optional[str]): The currently selected feature.
 
     Returns:
-        tuple[int, str]: Updated page number and selected feature.
+        tuple[int, Optional[str]]: Updated page number and selected feature.
     """
     page = int(page)
     if triggered_input == "page_left.n_clicks":
@@ -746,7 +751,7 @@ def update_click_data_on_subset_changes_if_needed(click_data: dict, triggered_in
     return click_data
 
 
-def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str:
+def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str | None:
     """
     Retrieve the selected feature from the click data.
 
@@ -755,7 +760,7 @@ def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str:
         inv_features_dict (dict): Dictionary mapping feature IDs to feature names.
 
     Returns:
-        str: The selected feature, if any.
+        Optional[str]: The selected feature, if any.
     """
     return inv_features_dict.get(get_feature_from_clicked_data(click_data)) if click_data else None
 
@@ -763,28 +768,29 @@ def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str:
 def handle_group_display_logic(
     bool_group: bool,
     triggered_input: str,
-    selected_feature: str,
+    selected_feature: str | None,
     selected_click_data,
-    click_data: dict,
+    click_data: dict | None,
     click_data_store: dict,
     selected_click_data_store,
     features_groups: dict,
     features_dict: dict,
-) -> tuple[str, str, dict]:
+) -> tuple[str | None, str | None, dict | None, object]:
     """
     Handle the display logic for feature groups.
 
     Args:
         bool_group (bool): Whether to display feature groups.
         triggered_input (str): The input that triggered the update.
-        selected_feature (str): The currently selected feature.
-        click_data (dict): The current click data.
+        selected_feature (Optional[str]): The currently selected feature.
+        click_data (Optional[dict]): The current click data.
         click_data_store (dict): Stored click data.
         features_groups (dict): Dictionary of feature groups.
         features_dict (dict): Dictionary of features.
 
     Returns:
-        tuple[str, str, dict]: Updated selected feature, group name, and click data.
+        tuple[Optional[str], Optional[str], Optional[dict], object]: Updated selected feature,
+        group name, click data, and selected click data.
     """
     group_name = None
     selected_feature_group = None
@@ -823,7 +829,7 @@ def handle_group_display_logic(
 
 def determine_total_pages_and_display(
     explainer: "SmartExplainer", features: int, bool_group: bool, group_name: str, page: int
-) -> tuple[int, str, int]:
+) -> tuple[int, dict[str, str], int]:
     """
     Determine the total number of pages and the display properties.
 
@@ -835,7 +841,7 @@ def determine_total_pages_and_display(
         page (int): Current page number.
 
     Returns:
-        tuple[int, str, int]: Total pages, display properties, and updated page number.
+        tuple[int, dict[str, str], int]: Total pages, display properties, and updated page number.
     """
     display_groups = explainer.features_groups is not None and bool_group
     if explainer._case == "classification":
