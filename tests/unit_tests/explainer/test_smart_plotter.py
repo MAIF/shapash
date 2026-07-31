@@ -19,6 +19,7 @@ from shapash.backend import ShapBackend
 from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 from shapash.plots.plot_bar_chart import plot_bar_chart
+from shapash.plots.plot_contribution import plot_scatter
 from shapash.plots.plot_evaluation_metrics import plot_confusion_matrix
 from shapash.plots.plot_feature_importance import _plot_features_import
 from shapash.plots.plot_line_comparison import plot_line_comparison
@@ -1189,6 +1190,71 @@ class TestSmartPlotter(unittest.TestCase):
         assert "missing" in violin_names
         ticktext = list(output.layout.xaxis.ticktext) if output.layout.xaxis.ticktext else []
         assert "missing" in ticktext
+
+        # the hover text of the scatter points of the "missing" modality must also show "missing"
+        missing_scatters = [
+            t for t in output.data if t.type == "scatter" and t.mode == "markers" and t.name == "missing"
+        ]
+        assert len(missing_scatters) > 0
+        for trace in missing_scatters:
+            assert all(row[0] == "missing" for row in trace.customdata)
+
+    def test_contribution_plot_nan_object_scatter(self):
+        """
+        Object feature with null values must render on the scatter contribution plot
+        as an explicit "missing" modality with an "x" marker symbol, with "missing"
+        surfaced in the hover customdata.
+        Regression test for https://github.com/MAIF/shapash/issues/721
+        """
+        n_val, n_nan = 8, 2
+        feature_values = pd.DataFrame(
+            {"str_feat": ["a", "b", None, "c", "b", None, "d", "e"]}, index=list(range(n_val))
+        )
+        contributions = pd.DataFrame({"str_feat": [0.1, -0.2, 0.3, 0.4, -0.1, 0.2, 0.15, -0.3]})
+        output = plot_scatter(
+            feature_values,
+            contributions,
+            "str_feat",
+            "regression",
+            self.smart_explainer.plot._style_dict,
+        )
+
+        marker_traces = [t for t in output.data if t.type == "scatter" and t.mode == "markers"]
+        assert len(marker_traces) == 1
+        trace = marker_traces[0]
+
+        x_arr = list(trace.x)
+        assert len(x_arr) == n_val
+        assert all(isinstance(x, str) for x in x_arr)
+        assert x_arr.count("missing") == n_nan
+
+        symbols = list(trace.marker.symbol)
+        assert symbols.count("x") == n_nan
+        assert symbols.count("circle") == n_val - n_nan
+
+        customdata_col0 = [row[0] for row in trace.customdata]
+        nan_customdata = [v for v, s in zip(customdata_col0, symbols) if s == "x"]
+        assert all(v == "missing" for v in nan_customdata)
+
+    def test_plot_bar_chart_nan_display(self):
+        """
+        Null feature values must be displayed as "missing" in the local plot
+        y-axis labels and hover text.
+        Regression test for https://github.com/MAIF/shapash/issues/721
+        """
+        var_dict = ["X1", "X2"]
+        x_val = [np.nan, "PhD"]
+        contributions = [-3.4, 0.78]
+        self.smart_explainer._case = "regression"
+        fig_output = plot_bar_chart("ind", var_dict, x_val, contributions, self.smart_explainer.plot._style_dict)
+
+        ylabels = [bar.y[0] for bar in fig_output.data]
+        assert "<b>X1 :</b><br />missing" in ylabels
+        assert not any("nan" in str(label) for label in ylabels)
+
+        hoverlabels = [bar.customdata[0] for bar in fig_output.data]
+        assert any("missing" in label for label in hoverlabels)
+        assert not any("nan" in str(label) for label in hoverlabels)
 
     def test_plot_features_import_1(self):
         """
