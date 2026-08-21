@@ -1,6 +1,35 @@
 import pandas as pd
 from pandas.api.types import is_any_real_numeric_dtype
 
+from shapash.utils.utils import format_missing_value
+
+
+def get_datatable_data_and_tooltips(data_df, tooltip_df=None):
+    """
+    Build the data records and tooltips of the dataset DataTable,
+    with a unified display of missing values.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        Dataframe used for the cells of the datatable
+    tooltip_df : pd.DataFrame (optional)
+        Dataframe used for the tooltips of the datatable, data_df if not provided
+
+    Returns
+    -------
+    tuple
+        data records and tooltip_data of the datatable
+    """
+    if tooltip_df is None:
+        tooltip_df = data_df
+    data = [{col: format_missing_value(val) for col, val in row.items()} for row in data_df.to_dict("records")]
+    tooltip_data = [
+        {col: {"value": str(format_missing_value(val)), "type": "text"} for col, val in row.items()}
+        for row in tooltip_df.to_dict("records")
+    ]
+    return data, tooltip_data
+
 
 def round_to_k(x, k):
     """

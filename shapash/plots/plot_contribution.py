@@ -7,7 +7,13 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 from sklearn.neighbors import KernelDensity
 
-from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
+from shapash.utils.utils import (
+    MISSING_VALUE_DISPLAY,
+    add_line_break,
+    adjust_title_height,
+    format_missing_value,
+    truncate_str,
+)
 from shapash.webapp.utils.utils import round_to_k
 
 NAN_PLACEHOLDER_K = 0.2
@@ -166,7 +172,8 @@ def plot_scatter(
         fig.add_trace(density_plot)
 
     nan_mask_arr = pd.isna(feature_values.iloc[:, 0]).to_numpy()
-    has_nan_numeric = bool(nan_mask_arr.any()) and feature_values.iloc[:, 0].dtype.kind in "biufc"
+    has_nan = bool(nan_mask_arr.any())
+    has_nan_numeric = has_nan and feature_values.iloc[:, 0].dtype.kind in "biufc"
     marker = None
     if has_nan_numeric:
         non_nan_arr = feature_values_array[~nan_mask_arr].astype(float)
@@ -177,6 +184,11 @@ def plot_scatter(
         else:
             nan_x = 0.0
         feature_values_array = np.where(nan_mask_arr, nan_x, feature_values_array)
+        marker = {"symbol": np.where(nan_mask_arr, "x", "circle").tolist()}
+    elif has_nan:
+        # non-numeric columns: display null values as an explicit "missing" modality
+        feature_values_array = feature_values_array.astype(object).copy()
+        feature_values_array[nan_mask_arr] = MISSING_VALUE_DISPLAY
         marker = {"symbol": np.where(nan_mask_arr, "x", "circle").tolist()}
 
     fig.add_scatter(
@@ -199,9 +211,9 @@ def plot_scatter(
     # The values are used in the hovertext and the indexes are used for
     # the interactions between the graphics.
     customdata_values = feature_values_array
-    if has_nan_numeric:
+    if has_nan:
         customdata_values = feature_values_array.astype(object).copy()
-        customdata_values[nan_mask_arr] = "missing"
+        customdata_values[nan_mask_arr] = MISSING_VALUE_DISPLAY
     customdata = np.stack((customdata_values, feature_values.index.values), axis=-1)
 
     fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
@@ -325,7 +337,7 @@ def plot_violin(
     for i, c in enumerate(xs):
         if pd.isna(c):
             is_c = feature_values.iloc[:, 0].isna()
-            c_label = "missing"
+            c_label = MISSING_VALUE_DISPLAY
         else:
             is_c = feature_values.iloc[:, 0] == c
             c_label = c
@@ -440,7 +452,7 @@ def plot_violin(
     )
 
     # To change ticktext
-    xs_labels = ["missing" if pd.isna(x) else x for x in xs]
+    xs_labels = [format_missing_value(x) for x in xs]
     _update_xaxis_labels(fig, xs_labels, zoom)
 
     _update_contributions_fig(
@@ -754,8 +766,12 @@ def _add_violin_and_scatter(
         x = _create_jittered_points(x, percentage_series, side=side)
         if colorpoints is not None:
             colorpoints_selected = colorpoints.loc[feature_cond].values.flatten()
+        # display null values as "missing" in the hover text
+        point_values = np.array(
+            [format_missing_value(v) for v in feature_values.loc[feature_cond].values.flatten()], dtype=object
+        )
         customdata = np.stack(
-            (feature_values.loc[feature_cond].values.flatten(), contributions.loc[feature_cond].index.values),
+            (point_values, contributions.loc[feature_cond].index.values),
             axis=-1,
         )
         marker = None
