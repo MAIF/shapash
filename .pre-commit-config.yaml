@@ -41,10 +41,9 @@ repos:
     -   id: mypy
         name: mypy
         # Runs from the local dev venv (not an isolated pre-commit env) so it sees
-        # shapash's actual dependencies (dash, pandas, sklearn, ...); pyproject.toml
-        # sets ignore_missing_imports=true, which would silently mask them as Any
-        # otherwise. Requires `.venv` to be set up.
-        entry: mypy shapash
+        # shapash's actual dependencies. Path is explicit (not just `mypy`) so it
+        # also works from GUI clients like VSCode, whose PATH isn't venv-activated.
+        entry: .venv/bin/mypy shapash
         language: system
         pass_filenames: false
         files: ^shapash/.*\.py$
