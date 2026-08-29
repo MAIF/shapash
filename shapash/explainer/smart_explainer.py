@@ -29,6 +29,7 @@ from shapash.utils.check import (
     check_y,
 )
 from shapash.utils.custom_thread import CustomThread
+from shapash.utils.drift import compute_schema_distribution
 from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
 from shapash.utils.io import load_pickle, save_pickle
 from shapash.utils.model import predict, predict_error, predict_proba
@@ -1565,6 +1566,9 @@ class SmartExplainer:
           List of class labels for classification models, `None` for regression.
         - **mask_params** : dict, optional
           Parameters defining contribution filters used to summarize local explainability.
+        - **schema_distribution** : dict
+          Compact numeric and categorical summaries computed from the reference dataset
+          and used to warn about drift in new SmartPredictor input batches.
 
         Example
         -------
@@ -1601,6 +1605,8 @@ class SmartExplainer:
         if not hasattr(self, "mask_params"):
             self.mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
         params_smartpredictor.append(self.mask_params)
+
+        params_smartpredictor.append(compute_schema_distribution(self.x_init))
 
         return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
 
