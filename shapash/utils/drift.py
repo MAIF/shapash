@@ -86,7 +86,7 @@ def _numeric_reasons(reference: dict[str, Any], current: dict[str, Any]) -> list
     current_median = current.get("median")
     reference_q25 = reference.get("q25")
     reference_q75 = reference.get("q75")
-    if None in (reference_median, current_median, reference_q25, reference_q75):
+    if reference_median is None or current_median is None or reference_q25 is None or reference_q75 is None:
         return []
 
     iqr = float(reference_q75) - float(reference_q25)
