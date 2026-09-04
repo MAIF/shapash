@@ -996,6 +996,47 @@ class TestSmartExplainer(unittest.TestCase):
         assert expect1.round(8).equals(xpl.features_imp[0].round(8))
         assert expect2.round(8).equals(xpl.features_imp[1].round(8))
 
+    def test_compute_features_import_force_recomputes_groups(self):
+        """
+        Unit test compute_features_import with force=True
+
+        The grouped importances are cached, and `force` is documented to
+        recompute even when the value already exists.
+        """
+        contributions = pd.DataFrame(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]],
+            columns=["contribution_0", "contribution_1", "contribution_2", "contribution_3"],
+            index=[0, 1, 2],
+        )
+
+        def build():
+            xpl = SmartExplainer(self.model)
+            xpl.features_imp = None
+            xpl.contributions = contributions
+            xpl.contributions_groups = contributions
+            xpl.features_groups = {"group_0": ["contribution_0", "contribution_1"]}
+            xpl.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
+            xpl.backend.state = SmartState()
+            xpl.state = SmartState()
+            xpl.explain_data = None
+            xpl._case = "regression"
+            return xpl
+
+        expected = contributions.abs().sum().sort_values(ascending=True)
+        expected = expected / expected.sum()
+
+        # force=True must refresh an already-populated cache
+        xpl = build()
+        xpl.features_imp_groups = "stale"
+        xpl.compute_features_import(force=True)
+        assert expected.equals(xpl.features_imp_groups)
+
+        # force=False leaves an existing value alone, as before
+        xpl = build()
+        xpl.features_imp_groups = "stale"
+        xpl.compute_features_import()
+        assert xpl.features_imp_groups == "stale"
+
     def test_to_smartpredictor_1(self):
         """
         Unit test 1  to_smartpredictor
