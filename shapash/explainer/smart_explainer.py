@@ -1254,7 +1254,7 @@ class SmartExplainer:
             contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=1
         )
 
-        if self.features_groups is not None and self.features_imp_groups is None:
+        if self.features_groups is not None and (force or self.features_imp_groups is None):
             self.features_imp_groups = self.state.compute_features_import(self.contributions_groups, norm=1)
 
         if local:
