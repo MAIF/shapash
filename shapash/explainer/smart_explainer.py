@@ -15,6 +15,7 @@ from werkzeug.serving import make_server
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.backend.shap_backend import get_shap_interaction_values
+from shapash.manipulation.mask import compute_mask
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.manipulation.summarize import create_grouped_features_values
 from shapash.report import check_report_requirements
@@ -877,7 +878,14 @@ class SmartExplainer:
 
         return self.__dict__[attribute]
 
-    def filter(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, display_groups=None):
+    def filter(
+        self,
+        features_to_hide: list[str] | None = None,
+        threshold: float | None = None,
+        positive: bool | None = None,
+        max_contrib: int | None = None,
+        display_groups: bool | None = None,
+    ) -> None:
         """
         Apply filtering rules to summarize local explainability results.
 
@@ -931,28 +939,18 @@ class SmartExplainer:
             data = self.data_groups
         else:
             data = self.data
-        mask = [self.state.init_mask(data["contrib_sorted"], True)]
-        if features_to_hide:
-            mask.append(
-                self.state.hide_contributions(
-                    data["var_dict"],
-                    features_list=self.check_features_name(features_to_hide, use_groups=display_groups),
-                )
-            )
-        if threshold:
-            mask.append(self.state.cap_contributions(data["contrib_sorted"], threshold=threshold))
-        if positive is not None:
-            mask.append(self.state.sign_contributions(data["contrib_sorted"], positive=positive))
-        self.mask = self.state.combine_masks(mask)
-        if max_contrib:
-            self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
-        self.masked_contributions = self.state.compute_masked_contributions(data["contrib_sorted"], self.mask)
-        self.mask_params = {
-            "features_to_hide": features_to_hide,
-            "threshold": threshold,
-            "positive": positive,
-            "max_contrib": max_contrib,
-        }
+        features_list = (
+            self.check_features_name(features_to_hide, use_groups=display_groups) if features_to_hide else None
+        )
+        self.mask, self.masked_contributions, self.mask_params = compute_mask(
+            self.state,
+            data,
+            features_list=features_list,
+            threshold=threshold,
+            positive=positive,
+            max_contrib=max_contrib,
+        )
+        self.mask_params["features_to_hide"] = features_to_hide
 
     def save(self, path):
         """
