@@ -329,7 +329,7 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         runtime = _build_runtime()
 
         with patch.object(runtime.explainer.plot, "top_interactions_plot", wraps=runtime.explainer.plot.top_interactions_plot) as mocked_top:
-            runtime.block_top_interactions_plot(title="Top interactions", nb_top_interaction=3, label="class_1")
+            runtime.block_top_interactions_plot(title="Top interactions", nb_top_interaction=3, class_label="class_1")
 
         self.assertEqual(mocked_top.call_args.kwargs["label"], "class_1")
 
