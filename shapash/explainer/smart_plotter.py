@@ -4,6 +4,7 @@ Smart plotter module
 
 import math
 import random
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ from pandas.api.types import is_bool_dtype, is_numeric_dtype
 from plotly import graph_objs as go
 from plotly.offline import plot
 
+from shapash.manipulation.mask import compute_mask
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import project_feature_values_1d
 from shapash.plots import plot_compacity
@@ -117,7 +119,15 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
-    def _apply_mask_one_line(self, line, var_dict, x_val, contrib, label=None):
+    def _apply_mask_one_line(
+        self,
+        line: list,
+        var_dict: np.ndarray,
+        x_val: np.ndarray,
+        contrib: np.ndarray,
+        label: int | None = None,
+        mask_state: dict[str, Any] | None = None,
+    ) -> tuple[list, list, list]:
         """
         An auxiliary function to select the mask to apply before plotting local
         explanation.
@@ -134,17 +144,28 @@ class SmartPlotter:
             Unidimensional numpy array containing the values for the observation of interest.
         label: integer (default None)
             specify the pd.DataFrame of the mask list (classification case) to apply
+        mask_state: dict (default None)
+            `{"mask": ..., "masked_contributions": ..., "mask_params": ...}` computed locally
+            (e.g. via `compute_mask`). When given, it is used instead of reading `mask` off the
+            explainer, so a one-off mask never has to be stored there.
         Returns
         -------
-        lists
-            Masked input lists.
+        var_dict: list
+            `var_dict`, restricted to the unmasked positions.
+        x_val: list
+            `x_val`, restricted to the unmasked positions.
+        contrib: list
+            `contrib`, restricted to the unmasked positions.
         """
         mask = np.array([True] * len(contrib))
-        if hasattr(self._explainer, "mask"):
-            if isinstance(self._explainer.mask, list):
-                mask = self._explainer.mask[label].loc[line[0], :].values
+        explainer_mask = mask_state["mask"] if mask_state is not None else getattr(self._explainer, "mask", None)
+        if explainer_mask is not None:
+            if isinstance(explainer_mask, list):
+                # a list of masks only occurs in the classification case, where `label` is
+                # always resolved to an int (see SmartExplainer.check_label_name) before reaching here
+                mask = explainer_mask[cast(int, label)].loc[line[0], :].values
             else:
-                mask = self._explainer.mask.loc[line[0], :].values
+                mask = explainer_mask.loc[line[0], :].values
 
         contrib = contrib[mask]
         x_val = x_val[mask]
@@ -152,31 +173,61 @@ class SmartPlotter:
 
         return var_dict.tolist(), x_val.tolist(), contrib.tolist()
 
-    def _check_masked_contributions(self, line, var_dict, x_val, contrib, label=None):
+    def _check_masked_contributions(
+        self,
+        line: list,
+        var_dict: list,
+        x_val: list,
+        contrib: list,
+        label: int | None = None,
+        mask_state: dict[str, Any] | None = None,
+    ) -> tuple[list, list, list]:
         """
         Check for masked contributions and update features_values and contrib
         to take the sum of masked contributions into account.
+
         Parameters
         ----------
         line: list
             If the label is of string type, check if it can be changed to integer to select the
             good dataframe object.
-        var_dict: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
-        x_val: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
-        contrib: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
+        var_dict: list
+            List containing the values for the observation of interest, as returned by
+            `_apply_mask_one_line`.
+        x_val: list
+            List containing the values for the observation of interest, as returned by
+            `_apply_mask_one_line`.
+        contrib: list
+            List containing the values for the observation of interest, as returned by
+            `_apply_mask_one_line`.
+        label: integer (default None)
+            specify the pd.DataFrame of the masked_contributions list (classification case) to apply
+        mask_state: dict (default None)
+            `{"mask": ..., "masked_contributions": ..., "mask_params": ...}` computed locally
+            (e.g. via `compute_mask`). When given, it is used instead of reading
+            `masked_contributions` off the explainer.
+
         Returns
         -------
-        numpy arrays
-            Input arrays updated with masked contributions.
+        var_dict: list
+            `var_dict`, extended with a label per hidden contribution that was masked.
+        x_val: list
+            `x_val`, extended with a placeholder value per hidden contribution that was masked.
+        contrib: list
+            `contrib`, extended with the summed value of each hidden contribution that was masked.
         """
-        if hasattr(self._explainer, "masked_contributions"):
-            if isinstance(self._explainer.masked_contributions, list):
-                ext_contrib = self._explainer.masked_contributions[label].loc[line[0], :].values
+        explainer_masked_contributions = (
+            mask_state["masked_contributions"]
+            if mask_state is not None
+            else getattr(self._explainer, "masked_contributions", None)
+        )
+        if explainer_masked_contributions is not None:
+            if isinstance(explainer_masked_contributions, list):
+                # a list of masked contributions only occurs in the classification case, where
+                # `label` is always resolved to an int before reaching here
+                ext_contrib = explainer_masked_contributions[cast(int, label)].loc[line[0], :].values
             else:
-                ext_contrib = self._explainer.masked_contributions.loc[line[0], :].values
+                ext_contrib = explainer_masked_contributions.loc[line[0], :].values
 
             ext_var_dict = ["Hidden Negative Contributions", "Hidden Positive Contributions"]
             ext_x = ["", ""]
@@ -210,6 +261,7 @@ class SmartPlotter:
         file_name=None,
         auto_open=False,
         zoom=False,
+        mask_state: dict[str, Any] | None = None,
     ):
         """
         The local_plot method is used to display the local contributions of
@@ -219,6 +271,7 @@ class SmartPlotter:
         preprocessing is used here to make this graph more intelligible
         index, row_num or query parameter can be used to select the local explanations to display
         local_plot tutorial offers a lot of examples (please check tutorial part of this doc)
+
         Parameters
         ----------
         index: string, int, float, ... type of index in x_val input matrix (default None)
@@ -253,10 +306,18 @@ class SmartPlotter:
             Indicate whether to open the bar plot or not.
         zoom: bool (default=False)
             graph is currently zoomed
+        mask_state: dict (optional)
+            `{"mask": ..., "masked_contributions": ..., "mask_params": ...}`, as returned by
+            `shapash.manipulation.mask.compute_mask`. When given, it is used for this plot
+            instead of reading (or implicitly computing and storing) a mask on the explainer -
+            useful for callers, such as a UI slider, that need a one-off mask without mutating
+            the explainer.
+
         Returns
         -------
         Plotly Figure Object
-            Input arrays updated with masked contributions.
+            The local contribution bar chart for the selected observation.
+
         Example
         --------
         >>> xpl.plot.local_plot(row_num=0)
@@ -291,20 +352,31 @@ class SmartPlotter:
             var_dict = []
 
         else:
-            # apply filter if the method have not yet been asked in order to limit the number of feature to display
-            if (
-                not hasattr(self._explainer, "mask_params")  # If the filter method has not been called yet
-                # Or if the already computed mask was not updated with current display_groups parameter
-                or (
+            # Resolve the mask to use for this plot without ever mutating the explainer:
+            # 1. an explicit mask_state passed by the caller (e.g. a UI control's current state)
+            # 2. the mask already stored via an explicit filter() call, if still valid for the
+            #    current display_groups parameter
+            # 3. otherwise a locally computed default mask (max_contrib=20), never stored
+            if mask_state is not None:
+                pass
+            elif hasattr(self._explainer, "mask_params") and (
+                (
                     isinstance(data["contrib_sorted"], pd.DataFrame)
-                    and len(data["contrib_sorted"].columns) != len(self._explainer.mask.columns)
+                    and len(data["contrib_sorted"].columns) == len(self._explainer.mask.columns)
                 )
                 or (
                     isinstance(data["contrib_sorted"], list)
-                    and len(data["contrib_sorted"][0].columns) != len(self._explainer.mask[0].columns)
+                    and len(data["contrib_sorted"][0].columns) == len(self._explainer.mask[0].columns)
                 )
             ):
-                self._explainer.filter(max_contrib=20, display_groups=display_groups)
+                mask_state = {
+                    "mask": self._explainer.mask,
+                    "masked_contributions": self._explainer.masked_contributions,
+                    "mask_params": self._explainer.mask_params,
+                }
+            else:
+                mask, masked_contributions, mask_params = compute_mask(self._explainer.state, data, max_contrib=20)
+                mask_state = {"mask": mask, "masked_contributions": masked_contributions, "mask_params": mask_params}
 
             if self._explainer._case == "classification":
                 if label is None:

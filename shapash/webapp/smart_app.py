@@ -19,6 +19,7 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask
 
+from shapash.manipulation.mask import compute_mask
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.callbacks import (
     adjust_figure_layout,
@@ -2510,13 +2511,30 @@ class SmartApp:
                 selected = None
             threshold = threshold if threshold != 0 else None
             sign = get_feature_contributions_sign_to_show(positive, negative)
-            self.explainer.filter(
+            # Compute the mask locally instead of calling self.explainer.filter(): the explainer
+            # is shared by every visitor of this app, so storing the mask on it would leak one
+            # user's slider position into every other user's view (and into to_pandas()/plots).
+            display_groups: bool = (
+                True if (bool_group is not False and self.explainer.features_groups is not None) else False
+            )
+            filter_data: dict[str, Any] = self.explainer.data_groups if display_groups else self.explainer.data
+            features_list: list[int] | None = (
+                self.explainer.check_features_name(masked, use_groups=display_groups) if masked else None
+            )
+            mask, masked_contributions, mask_params = compute_mask(
+                self.explainer.state,
+                filter_data,
+                features_list=features_list,
                 threshold=threshold,
-                features_to_hide=masked,
                 positive=sign,
                 max_contrib=max_contrib,
-                display_groups=bool_group,
             )
+            mask_params["features_to_hide"] = masked
+            mask_state: dict[str, Any] = {
+                "mask": mask,
+                "masked_contributions": masked_contributions,
+                "mask_params": mask_params,
+            }
             figure = self.explainer.plot.local_plot(
                 index=selected,
                 label=label,
@@ -2524,6 +2542,7 @@ class SmartApp:
                 yaxis_max_label=8,
                 display_groups=bool_group,
                 zoom=zoom_active,
+                mask_state=mask_state,
             )
             if selected is not None:
                 # Adjust graph with adding x axis titles
