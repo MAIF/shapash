@@ -2044,7 +2044,7 @@ class TestSmartPlotter(unittest.TestCase):
         explainer.features_desc = dict(explainer.x_init.nunique())
         explainer.columns_dict = {0: "Pclass", 1: "X1"}
 
-        output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
 
         assert list(output.layout.xaxis.ticktext) == ["1.0", "2.0", "3.0"]
         scatter_traces = [trace for trace in output.data if trace.type == "scatter"]
@@ -2084,7 +2084,7 @@ class TestSmartPlotter(unittest.TestCase):
         interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
         explainer.interaction_values = interaction_values
 
-        output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
 
         assert list(output.layout.xaxis.ticktext) == ["female", "male"]
 
