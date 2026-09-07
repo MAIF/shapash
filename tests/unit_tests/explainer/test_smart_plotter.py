@@ -2024,25 +2024,25 @@ class TestSmartPlotter(unittest.TestCase):
         """
         col1 = "Pclass"
         col2 = "X1"
-        smart_explainer = self.smart_explainer
+        explainer = self.smart_explainer.explainer
 
         n_rows = 45
         idx = [f"person_{i}" for i in range(n_rows)]
         x1_vals = ["A", "B", "A"] * 15
         pclass_vals = ([1, 2, 3] * 15)[:n_rows]
-        smart_explainer.x_encoded = smart_explainer.x_init = pd.DataFrame(
+        explainer.x_encoded = explainer.x_init = pd.DataFrame(
             data={"Pclass": pclass_vals, "X1": x1_vals}, index=idx
         )
-        smart_explainer.x_encoded["Pclass"] = smart_explainer.x_encoded["Pclass"].astype(float)
+        explainer.x_encoded["Pclass"] = explainer.x_encoded["Pclass"].astype(float)
 
         interaction_values = np.zeros((n_rows, 2, 2), dtype=float)
         interaction_values[:, 0, 1] = np.linspace(-0.8, 0.8, n_rows)
         interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
 
-        smart_explainer.interaction_values = interaction_values
-        smart_explainer.x_interaction = smart_explainer.x_encoded
-        smart_explainer.features_desc = dict(smart_explainer.x_init.nunique())
-        smart_explainer.columns_dict = {0: "Pclass", 1: "X1"}
+        explainer.interaction_values = interaction_values
+        explainer.x_interaction = explainer.x_encoded
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "Pclass", 1: "X1"}
 
         output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
 
@@ -2059,30 +2059,30 @@ class TestSmartPlotter(unittest.TestCase):
         """
         col1 = "sex"
         col2 = "X2"
-        smart_explainer = self.smart_explainer
+        explainer = self.smart_explainer.explainer
 
         idx = ["person_A", "person_B", "person_C", "person_D"]
-        smart_explainer.x_init = pd.DataFrame(
+        explainer.x_init = pd.DataFrame(
             data={"sex": ["male", "female", "male", "female"], "X2": [34.0, 27.0, 41.0, 30.0]},
             index=idx,
         )
-        smart_explainer.x_encoded = pd.DataFrame(
+        explainer.x_encoded = pd.DataFrame(
             data={"sex": [1.0, 0.0, 1.0, 0.0], "X2": [34.0, 27.0, 41.0, 30.0]},
             index=idx,
         )
-        smart_explainer.x_contrib_plot = pd.DataFrame(
+        explainer.x_contrib_plot = pd.DataFrame(
             data={"sex": [1.0, 0.0, 1.0, 0.0], "X2": [34.0, 27.0, 41.0, 30.0]},
             index=idx,
         )
-        smart_explainer.x_interaction = smart_explainer.x_encoded
-        smart_explainer.postprocessing_modifications = True
-        smart_explainer.features_desc = dict(smart_explainer.x_init.nunique())
-        smart_explainer.columns_dict = {0: "sex", 1: "X2"}
+        explainer.x_interaction = explainer.x_encoded
+        explainer.postprocessing_modifications = True
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "sex", 1: "X2"}
 
         interaction_values = np.zeros((4, 2, 2), dtype=float)
         interaction_values[:, 0, 1] = np.array([-0.7, -0.1, 0.2, 0.5])
         interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
-        smart_explainer.interaction_values = interaction_values
+        explainer.interaction_values = interaction_values
 
         output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
 
@@ -2180,7 +2180,7 @@ class TestSmartPlotter(unittest.TestCase):
         """
         top_interactions_plot buttons must keep x-axis tick labels for categorical interactions.
         """
-        smart_explainer = self.smart_explainer
+        explainer = self.smart_explainer.explainer
         idx = [f"person_{i}" for i in range(40)]
 
         sex_labels = ["male", "female"] * 20
@@ -2188,25 +2188,25 @@ class TestSmartPlotter(unittest.TestCase):
         pclass_vals = ([1, 2, 3, 1] * 10)[:40]
         fare_vals = np.linspace(5, 80, 40)
 
-        smart_explainer.x_init = pd.DataFrame(
+        explainer.x_init = pd.DataFrame(
             data={"sex": sex_labels, "Pclass": pclass_vals, "Fare": fare_vals},
             index=idx,
         )
-        smart_explainer.x_encoded = pd.DataFrame(
+        explainer.x_encoded = pd.DataFrame(
             data={"sex": sex_encoded, "Pclass": pclass_vals, "Fare": fare_vals},
             index=idx,
         )
-        smart_explainer.x_interaction = smart_explainer.x_encoded
-        smart_explainer.postprocessing_modifications = True
-        smart_explainer.features_desc = dict(smart_explainer.x_init.nunique())
-        smart_explainer.columns_dict = {0: "sex", 1: "Pclass", 2: "Fare"}
+        explainer.x_interaction = explainer.x_encoded
+        explainer.postprocessing_modifications = True
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "sex", 1: "Pclass", 2: "Fare"}
 
         interaction_values = np.zeros((40, 3, 3), dtype=float)
         interaction_values[:, 0, 1] = np.linspace(-0.9, 0.9, 40)
         interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
         interaction_values[:, 0, 2] = np.linspace(0.2, 1.0, 40)
         interaction_values[:, 2, 0] = interaction_values[:, 0, 2]
-        smart_explainer.interaction_values = interaction_values
+        explainer.interaction_values = interaction_values
 
         output = smart_explainer.plot.top_interactions_plot(nb_top_interactions=2, violin_maxf=10)
 
@@ -2222,20 +2222,20 @@ class TestSmartPlotter(unittest.TestCase):
         """
         With two categorical features, x-axis should be the one with more categories.
         """
-        smart_explainer = self.smart_explainer
-        smart_explainer.x_init = pd.DataFrame(
+        explainer = self.smart_explainer.explainer
+        explainer.x_init = pd.DataFrame(
             data={"X1": ["A", "A", "B", "B"], "X2": ["k1", "k2", "k3", "k1"]},
             index=["person_A", "person_B", "person_C", "person_D"],
         )
-        smart_explainer.x_encoded = smart_explainer.x_init.copy()
-        smart_explainer.x_interaction = smart_explainer.x_encoded
-        smart_explainer.features_desc = dict(smart_explainer.x_init.nunique())
-        smart_explainer.columns_dict = {0: "X1", 1: "X2"}
+        explainer.x_encoded = explainer.x_init.copy()
+        explainer.x_interaction = explainer.x_encoded
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "X1", 1: "X2"}
 
         interaction_values = np.zeros((4, 2, 2), dtype=float)
         interaction_values[:, 0, 1] = np.array([-0.3, -0.1, 0.2, 0.4])
         interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
-        smart_explainer.interaction_values = interaction_values
+        explainer.interaction_values = interaction_values
 
         output = smart_explainer.plot.interactions_plot("X1", "X2", violin_maxf=0, auto_order=True)
 
@@ -2247,20 +2247,20 @@ class TestSmartPlotter(unittest.TestCase):
         """
         With two numeric features, preserve user input order on x-axis.
         """
-        smart_explainer = self.smart_explainer
-        smart_explainer.x_init = pd.DataFrame(
+        explainer = self.smart_explainer.explainer
+        explainer.x_init = pd.DataFrame(
             data={"X1": [1.0, 2.0, 3.0, 4.0], "X2": [10.0, 20.0, 30.0, 40.0]},
             index=["person_A", "person_B", "person_C", "person_D"],
         )
-        smart_explainer.x_encoded = smart_explainer.x_init.copy()
-        smart_explainer.x_interaction = smart_explainer.x_encoded
-        smart_explainer.features_desc = dict(smart_explainer.x_init.nunique())
-        smart_explainer.columns_dict = {0: "X1", 1: "X2"}
+        explainer.x_encoded = explainer.x_init.copy()
+        explainer.x_interaction = explainer.x_encoded
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "X1", 1: "X2"}
 
         interaction_values = np.zeros((4, 2, 2), dtype=float)
         interaction_values[:, 0, 1] = np.array([-0.3, -0.1, 0.2, 0.4])
         interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
-        smart_explainer.interaction_values = interaction_values
+        explainer.interaction_values = interaction_values
 
         output = smart_explainer.plot.interactions_plot("X2", "X1", violin_maxf=0)
 
@@ -2275,16 +2275,16 @@ class TestSmartPlotter(unittest.TestCase):
         """
         col1 = "X1"
         col2 = "X2"
-        smart_explainer = self.smart_explainer
-        smart_explainer.x_encoded = smart_explainer.x_init = pd.DataFrame(
+        explainer = self.smart_explainer.explainer
+        explainer.x_encoded = explainer.x_init = pd.DataFrame(
             data=np.array([["PhD", 34], ["Master", 27]]), columns=["X1", "X2"], index=["person_A", "person_B"]
         )
-        smart_explainer.x_encoded["X2"] = smart_explainer.x_encoded["X2"].astype(float)
+        explainer.x_encoded["X2"] = explainer.x_encoded["X2"].astype(float)
 
         interaction_values = np.array([[[0.1, -0.7], [-0.7, 0.3]], [[0.2, -0.1], [-0.1, 0.1]]])
 
-        smart_explainer.interaction_values = interaction_values
-        smart_explainer.x_interaction = smart_explainer.x_encoded
+        explainer.interaction_values = interaction_values
+        explainer.x_interaction = explainer.x_encoded
 
         output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0, auto_order=True)
 
@@ -2301,12 +2301,12 @@ class TestSmartPlotter(unittest.TestCase):
         interactions_plot should pass selected class label to get_interaction_values.
         """
         smart_explainer = self.smart_explainer
-        smart_explainer._case = "classification"
-        smart_explainer._classes = [0, 1]
+        smart_explainer.explainer._case = "classification"
+        smart_explainer.explainer._classes = [0, 1]
 
         interaction_values = np.array([[[0.1, -0.7], [-0.7, 0.3]], [[0.2, -0.1], [-0.1, 0.1]]])
 
-        with patch.object(smart_explainer, "get_interaction_values", return_value=interaction_values) as mocked_get:
+        with patch.object(smart_explainer.explainer, "get_interaction_values", return_value=interaction_values) as mocked_get:
             smart_explainer.plot.interactions_plot("X1", "X2", label=1, violin_maxf=0, max_points=10)
 
         assert mocked_get.call_args.kwargs["label"] == 1
@@ -2316,15 +2316,15 @@ class TestSmartPlotter(unittest.TestCase):
         top_interactions_plot should pass selected class label to get_interaction_values.
         """
         smart_explainer = self.smart_explainer
-        smart_explainer._case = "classification"
-        smart_explainer._classes = [0, 1]
+        smart_explainer.explainer._case = "classification"
+        smart_explainer.explainer._classes = [0, 1]
 
-        n_samples = len(smart_explainer.x_init)
-        n_features = len(smart_explainer.x_init.columns)
+        n_samples = len(smart_explainer.explainer.x_init)
+        n_features = len(smart_explainer.explainer.x_init.columns)
         interaction_values = np.zeros((n_samples, n_features, n_features), dtype=float)
         interaction_values[:, 1, 0] = np.linspace(-0.2, 0.2, n_samples)
 
-        with patch.object(smart_explainer, "get_interaction_values", return_value=interaction_values) as mocked_get:
+        with patch.object(smart_explainer.explainer, "get_interaction_values", return_value=interaction_values) as mocked_get:
             smart_explainer.plot.top_interactions_plot(nb_top_interactions=1, label=1, max_points=10, violin_maxf=0)
 
         assert mocked_get.call_args.kwargs["label"] == 1

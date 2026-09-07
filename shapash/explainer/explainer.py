@@ -465,7 +465,10 @@ class Explainer:
             self.columns_order = self._compile_columns_order(columns_order)
 
     def get_interaction_values(
-        self, n_samples_max: int | None = None, selection: list[Any] | None = None
+        self,
+        n_samples_max: int | None = None,
+        selection: list[Any] | None = None,
+        label: int | str | None = None,
     ) -> np.ndarray:
         """
         Compute SHAP interaction values on the encoded dataset.
@@ -476,6 +479,9 @@ class Explainer:
             Maximum number of rows to use.
         selection : list, optional
             Explicit row indices to keep before applying n_samples_max.
+        label : int or str, optional
+            Class label to select in classification settings.
+            If None, interaction values are aggregated across classes/outputs.
 
         Returns
         -------
@@ -483,21 +489,37 @@ class Explainer:
             Interaction tensor with shape (n_samples, n_features, n_features).
         """
         x = copy.deepcopy(self.x_encoded)
+        label_num = None
+
+        if self._case == "classification" and label is not None:
+            label_num = self.check_label_name(label)[0]
 
         if selection:
             x = x.loc[selection]
 
         if self.x_interaction is not None:
             if self.x_interaction.equals(x[:n_samples_max]):
-                if self.interaction_values is None:
-                    raise RuntimeError("interaction_values cache is unexpectedly empty")
-                return self.interaction_values
+                # Backward compatibility: tests or custom workflows may inject
+                # precomputed interactions without label-aware cache metadata.
+                if not hasattr(self, "_interaction_label"):
+                    if self.interaction_values is None:
+                        raise RuntimeError("interaction_values cache is unexpectedly empty")
+                    return self.interaction_values
+                if self._interaction_label == label_num:
+                    if self.interaction_values is None:
+                        raise RuntimeError("interaction_values cache is unexpectedly empty")
+                    return self.interaction_values
 
         self.x_interaction = x[:n_samples_max]
         if self.backend is None:
             raise RuntimeError("Backend is not initialized")
         backend_explainer = getattr(self.backend, "explainer", None)
-        self.interaction_values = get_shap_interaction_values(self.x_interaction, cast(Any, backend_explainer))
+        self.interaction_values = get_shap_interaction_values(
+            self.x_interaction,
+            cast(Any, backend_explainer),
+            class_index=label_num,
+        )
+        self._interaction_label = label_num
         return self.interaction_values
 
     def filter(
