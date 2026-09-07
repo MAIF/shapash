@@ -111,6 +111,7 @@ class Explainer:
         self.prediction_error: pd.Series | pd.DataFrame | np.ndarray | None = None
         self.x_interaction: pd.DataFrame | None = None
         self.interaction_values: np.ndarray | None = None
+        self._interaction_label: int | None = None
         self.plot: Any = None
 
     def compile(
