@@ -368,10 +368,12 @@ class SmartPlotter:
             elif hasattr(self._explainer, "mask_params") and (
                 (
                     isinstance(data["contrib_sorted"], pd.DataFrame)
+                    and isinstance(self._explainer.mask, pd.DataFrame)
                     and len(data["contrib_sorted"].columns) == len(self._explainer.mask.columns)
                 )
                 or (
                     isinstance(data["contrib_sorted"], list)
+                    and isinstance(self._explainer.mask, list)
                     and len(data["contrib_sorted"][0].columns) == len(self._explainer.mask[0].columns)
                 )
             ):

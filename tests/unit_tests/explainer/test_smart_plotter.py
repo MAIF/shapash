@@ -147,6 +147,7 @@ class TestSmartPlotter(unittest.TestCase):
         local_pred.return_value = 12.88
         filter.return_value = None
         self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.state = SmartState()
         output = self.smart_explainer.plot.local_plot(index="person_B")
         output_data = output.data
 
