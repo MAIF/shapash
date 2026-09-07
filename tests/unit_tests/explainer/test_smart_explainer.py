@@ -495,6 +495,35 @@ class TestSmartExplainer(unittest.TestCase):
         expected_param_dict = {"features_to_hide": None, "threshold": 0.5, "positive": None, "max_contrib": 2}
         self.assertDictEqual(expected_param_dict, xpl.mask_params)
 
+    def test_local_plot_does_not_mutate_explainer(self):
+        """
+        Regression test for issue #752: drawing a plot must not store a mask on the explainer,
+        since that silently changes what to_pandas() returns for anyone using the object
+        afterwards (see the issue's "drawing a chart changes to_pandas()" reproduction).
+        """
+        rng = np.random.default_rng(0)
+        n = 30
+        x = pd.DataFrame({f"x{i}": rng.normal(size=n) for i in range(25)})
+        y = pd.Series((x["x0"] + rng.normal(size=n) * 0.3 > 0).astype(int), name="y", index=x.index)
+        model = cb.CatBoostClassifier(n_estimators=5).fit(x, y)
+
+        def make_explainer():
+            xpl = SmartExplainer(model)
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x), index=x.index, name="pred"))
+            return xpl
+
+        baseline_pandas = make_explainer().to_pandas()
+        # sanity check: with 25 features and no explicit max_contrib, nothing is hidden yet
+        assert (baseline_pandas.shape[1] - 1) // 3 == 25
+
+        xpl = make_explainer()
+        xpl.plot.local_plot(row_num=0)
+
+        assert not hasattr(xpl, "mask")
+        assert not hasattr(xpl, "masked_contributions")
+        assert not hasattr(xpl, "mask_params")
+        assert_frame_equal(baseline_pandas, xpl.to_pandas())
+
     def test_check_label_name_1(self):
         """
         Unit test check label name 1
