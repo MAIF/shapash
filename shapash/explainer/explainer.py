@@ -112,6 +112,7 @@ class Explainer:
         self.x_interaction: pd.DataFrame | None = None
         self.interaction_values: np.ndarray | None = None
         self._interaction_label: int | None = None
+        self._interaction_cache_loaded: bool = False
         self.plot: Any = None
 
     def compile(
@@ -502,7 +503,7 @@ class Explainer:
             if self.x_interaction.equals(x[:n_samples_max]):
                 # Backward compatibility: tests or custom workflows may inject
                 # precomputed interactions without label-aware cache metadata.
-                if not hasattr(self, "_interaction_label"):
+                if not self._interaction_cache_loaded:
                     if self.interaction_values is None:
                         raise RuntimeError("interaction_values cache is unexpectedly empty")
                     return self.interaction_values
@@ -521,6 +522,7 @@ class Explainer:
             class_index=label_num,
         )
         self._interaction_label = label_num
+        self._interaction_cache_loaded = True
         return self.interaction_values
 
     def filter(
