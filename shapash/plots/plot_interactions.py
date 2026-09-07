@@ -1,14 +1,35 @@
+from __future__ import annotations
+
 import pandas as pd
 import plotly.express as px
 from plotly import graph_objs as go
 from plotly.offline import plot
 
+from shapash.plots.plot_contribution import _calculate_percentage_intervals, _create_jittered_points
 from shapash.utils.utils import add_text, adjust_title_height, truncate_str
 
 
-def plot_interactions_scatter(x_name, y_name, col_name, x_values, y_values, col_values, col_scale, style_dict):
+def plot_interactions_scatter(
+    x_name: str,
+    y_name: str,
+    col_name: str,
+    x_values: pd.DataFrame,
+    y_values: pd.DataFrame,
+    col_values: pd.DataFrame,
+    col_scale: list,
+    style_dict: dict,
+    cmin: float | None = None,
+    cmax: float | None = None,
+    x_values_hover: pd.DataFrame | None = None,
+) -> go.Figure:
     """
-    Function used to generate a scatter plot figure for the interactions plots.
+    Generate a scatter-plot figure for interactions.
+
+    Supports both categorical and continuous color encoding. When continuous
+    color is used, optional `cmin`/`cmax` bounds can be applied.
+    The x-values used in hover can differ from plotted x-values via
+    `x_values_hover` (useful when plotted x is jittered).
+
     Parameters
     ----------
     x_name : str
@@ -27,16 +48,27 @@ def plot_interactions_scatter(x_name, y_name, col_name, x_values, y_values, col_
         color scale
     style_dict: dict
         the different styles used in the different outputs of Shapash
+    cmin : float, optional
+        Lower bound of the continuous color range.
+    cmax : float, optional
+        Upper bound of the continuous color range.
+    x_values_hover : pd.DataFrame, optional
+        Values displayed in hover for x-axis. If None, `x_values` are used.
+
     Returns
     -------
     go.Figure
     """
+
+    if x_values_hover is None:
+        x_values_hover = x_values
 
     data_df = pd.DataFrame(
         {
             x_name: x_values.values.flatten(),
             y_name: y_values.values.flatten(),
             col_name: col_values.values.flatten(),
+            "__x_hover__": x_values_hover.values.flatten(),
         }
     )
 
@@ -47,18 +79,46 @@ def plot_interactions_scatter(x_name, y_name, col_name, x_values, y_values, col_
             y=y_name,
             color=col_name,
             color_discrete_sequence=style_dict["interactions_discrete_colors"],
+            hover_data={x_name: False, "__x_hover__": True},
+            labels={"__x_hover__": x_name},
         )
     else:
-        fig = px.scatter(data_df, x=x_name, y=y_name, color=col_name, color_continuous_scale=col_scale)
+        scatter_args = {
+            "data_frame": data_df,
+            "x": x_name,
+            "y": y_name,
+            "color": col_name,
+            "color_continuous_scale": col_scale,
+            "hover_data": {x_name: False, "__x_hover__": True},
+            "labels": {"__x_hover__": x_name},
+        }
+        if cmin is not None and cmax is not None:
+            scatter_args["range_color"] = [cmin, cmax]
+        fig = px.scatter(**scatter_args)
 
     fig.update_traces(mode="markers")
 
     return fig
 
 
-def plot_interactions_violin(x_name, y_name, col_name, x_values, y_values, col_values, col_scale, style_dict):
+def plot_interactions_violin(
+    x_name: str,
+    y_name: str,
+    col_name: str,
+    x_values: pd.DataFrame,
+    y_values: pd.DataFrame,
+    col_values: pd.DataFrame,
+    col_scale: list,
+    style_dict: dict,
+    cmin: float | None = None,
+    cmax: float | None = None,
+) -> go.Figure:
     """
-    Function used to generate a violin plot figure for the interactions plots.
+    Generate a violin-plot figure for interactions with point dispersion.
+
+    For each x-modality, a violin is drawn and a jittered scatter layer is
+    overlaid to spread points. Hover displays the original x value (non-jittered).
+
     Parameters
     ----------
     x_name : str
@@ -77,6 +137,11 @@ def plot_interactions_violin(x_name, y_name, col_name, x_values, y_values, col_v
         color scale
     style_dict: dict
         the different styles used in the different outputs of Shapash
+    cmin : float, optional
+        Lower bound of the continuous color range used by the scatter overlay.
+    cmax : float, optional
+        Upper bound of the continuous color range used by the scatter overlay.
+
     Returns
     -------
     go.Figure
@@ -87,26 +152,47 @@ def plot_interactions_violin(x_name, y_name, col_name, x_values, y_values, col_v
     uniq_l = list(pd.unique(x_values.values.flatten()))
     uniq_l.sort()
 
-    for i in uniq_l:
+    x_numeric = pd.Series(index=x_values.index, dtype=float)
+    x_jittered = pd.Series(index=x_values.index, dtype=float)
+
+    for idx, modality in enumerate(uniq_l):
+        if pd.isna(modality):
+            x_cond = x_values.iloc[:, 0].isna()
+        else:
+            x_cond = x_values.iloc[:, 0] == modality
+
+        x_numeric.loc[x_cond] = idx
+
+        percentage_series = _calculate_percentage_intervals(y_values.loc[x_cond].iloc[:, 0], bins=20)
+        x_jittered.loc[x_cond] = _create_jittered_points(
+            x_numeric.loc[x_cond].to_numpy(), percentage_series, side="both"
+        )
+
         fig.add_trace(
             go.Violin(
-                x=x_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
-                y=y_values.loc[x_values.iloc[:, 0] == i].values.flatten(),
+                x=x_numeric.loc[x_cond].to_numpy(),
+                y=y_values.loc[x_cond].values.flatten(),
+                name="missing" if pd.isna(modality) else modality,
                 line_color=style_dict["violin_default"],
                 showlegend=False,
                 meanline_visible=True,
                 scalemode="count",
             )
         )
+
+    x_values_dispersion = pd.DataFrame({x_name: x_jittered}, index=x_values.index)
     scatter_fig = plot_interactions_scatter(
         x_name=x_name,
         y_name=y_name,
         col_name=col_name,
-        x_values=x_values,
+        x_values=x_values_dispersion,
         y_values=y_values,
         col_values=col_values,
         col_scale=col_scale,
         style_dict=style_dict,
+        cmin=cmin,
+        cmax=cmax,
+        x_values_hover=x_values,
     )
     for trace in scatter_fig.data:
         fig.add_trace(trace)
@@ -117,17 +203,36 @@ def plot_interactions_violin(x_name, y_name, col_name, x_values, y_values, col_v
         violingap=0.05,
         violingroupgap=0,
         violinmode="overlay",
-        xaxis_type="category",
+        xaxis_type="linear",
     )
 
+    xs_labels = ["missing" if pd.isna(x) else x for x in uniq_l]
+    fig.update_xaxes(tickmode="array", tickvals=list(range(len(uniq_l))), ticktext=xs_labels)
     fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
 
     return fig
 
 
-def update_interactions_fig(fig, col_name1, col_name2, addnote, width, height, file_name, auto_open, style_dict):
+def update_interactions_fig(
+    fig: go.Figure,
+    col_name1: str,
+    col_name2: str,
+    addnote: str | None,
+    width: int,
+    height: int,
+    file_name: str | None,
+    auto_open: bool,
+    style_dict: dict,
+    col_scale: list | None = None,
+    cmin: float | None = None,
+    cmax: float | None = None,
+) -> go.Figure:
     """
-    Function used for the interactions plot to update the layout of the plotly figure.
+    Update the final layout for interactions figures.
+
+    Handles title, axes, marker style, and color axis formatting for
+    continuous color encodings.
+
     Parameters
     ----------
     col_name1 : str
@@ -146,6 +251,12 @@ def update_interactions_fig(fig, col_name1, col_name2, addnote, width, height, f
         Indicate whether to open the bar plot or not.
     style_dict: dict
         the different styles used in the different outputs of Shapash
+    col_scale : list, optional
+        Colorscale to apply for continuous color encoding.
+    cmin : float, optional
+        Lower bound of the continuous color range.
+    cmax : float, optional
+        Upper bound of the continuous color range.
 
     Returns
     -------
@@ -153,7 +264,10 @@ def update_interactions_fig(fig, col_name1, col_name2, addnote, width, height, f
     """
 
     if fig.data[-1]["showlegend"] is False:  # Case where col2 is not categorical
-        fig.layout.coloraxis.colorscale = style_dict["interactions_col_scale"]
+        fig.layout.coloraxis.colorscale = col_scale if col_scale is not None else style_dict["interactions_col_scale"]
+        if cmin is not None and cmax is not None:
+            fig.layout.coloraxis.cmin = cmin
+            fig.layout.coloraxis.cmax = cmax
     else:
         fig.update_layout(legend=dict(title=dict(text=col_name2)))
 

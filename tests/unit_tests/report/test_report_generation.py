@@ -67,7 +67,7 @@ class _DummyExplainer:
         self.y_target = [1, 0, 1]
         self.proba_values = None
 
-    def get_interaction_values(self, selection=None):
+    def get_interaction_values(self, selection=None, label=None):
         return np.array([[0.0, 0.5], [0.5, 0.0]])
 
     def check_label_name(self, label):
@@ -316,18 +316,6 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(all_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(all_result.objects[2]).__name__, "ParamFunction")
 
-    def test_block_interactions_plot_default_pair_uses_resolved_labels(self):
-        runtime = _build_runtime()
-
-        with patch(
-            "shapash.report.blocks.compute_sorted_variables_interactions_list_indices", return_value=[(0, 1)]
-        ):
-            result = runtime.block_interactions_plot(title=None)
-
-        self.assertIsInstance(result, pn.Column)
-        self.assertIn("Age / Income", result.objects[0].object)
-        self.assertIsInstance(result.objects[1], pn.pane.Plotly)
-
     def test_block_top_interactions_plot_renders_plotly(self):
         runtime = _build_runtime()
 
@@ -336,6 +324,14 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(result, pn.Column)
         self.assertIn("Top interactions", result.objects[0].object)
         self.assertIsInstance(result.objects[1], pn.pane.Plotly)
+
+    def test_block_top_interactions_plot_passes_label_to_plotter(self):
+        runtime = _build_runtime()
+
+        with patch.object(runtime.explainer.plot, "top_interactions_plot", wraps=runtime.explainer.plot.top_interactions_plot) as mocked_top:
+            runtime.block_top_interactions_plot(title="Top interactions", nb_top_interaction=3, class_label="class_1")
+
+        self.assertEqual(mocked_top.call_args.kwargs["label"], "class_1")
 
     def test_block_target_distribution_and_analysis_render(self):
         runtime = _build_runtime()
