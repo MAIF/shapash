@@ -2180,7 +2180,8 @@ class TestSmartPlotter(unittest.TestCase):
         """
         top_interactions_plot buttons must keep x-axis tick labels for categorical interactions.
         """
-        explainer = self.smart_explainer.explainer
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
         idx = [f"person_{i}" for i in range(40)]
 
         sex_labels = ["male", "female"] * 20
@@ -2222,7 +2223,8 @@ class TestSmartPlotter(unittest.TestCase):
         """
         With two categorical features, x-axis should be the one with more categories.
         """
-        explainer = self.smart_explainer.explainer
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
         explainer.x_init = pd.DataFrame(
             data={"X1": ["A", "A", "B", "B"], "X2": ["k1", "k2", "k3", "k1"]},
             index=["person_A", "person_B", "person_C", "person_D"],
@@ -2247,7 +2249,8 @@ class TestSmartPlotter(unittest.TestCase):
         """
         With two numeric features, preserve user input order on x-axis.
         """
-        explainer = self.smart_explainer.explainer
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
         explainer.x_init = pd.DataFrame(
             data={"X1": [1.0, 2.0, 3.0, 4.0], "X2": [10.0, 20.0, 30.0, 40.0]},
             index=["person_A", "person_B", "person_C", "person_D"],
@@ -2275,7 +2278,8 @@ class TestSmartPlotter(unittest.TestCase):
         """
         col1 = "X1"
         col2 = "X2"
-        explainer = self.smart_explainer.explainer
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
         explainer.x_encoded = explainer.x_init = pd.DataFrame(
             data=np.array([["PhD", 34], ["Master", 27]]), columns=["X1", "X2"], index=["person_A", "person_B"]
         )
