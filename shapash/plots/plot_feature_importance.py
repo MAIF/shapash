@@ -215,7 +215,7 @@ def _plot_features_import(
         the different styles used in the different outputs of Shapash
     inv_features_dict: dict
         Inverse features_dict mapping.
-    features_groups : dict, optional (default: None)
+    features_groups_keys : dict, optional (default: None)
         Keys of the dictionnary containing features that should be grouped together.
     feature_imp2 : pd.Series, optional (default: None)
         The contributions associate
@@ -347,7 +347,7 @@ def _plot_local_features_import(
         Inverse features_dict mapping.
     title : str
         Title of the plot, default set to 'Features Importance'
-    features_groups : dict, optional (default: None)
+    features_groups_keys : dict, optional (default: None)
         Keys of the dictionnary containing features that should be grouped together.
     addnote : String (default: None)
         Specify a note to display
