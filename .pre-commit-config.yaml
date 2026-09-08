@@ -40,10 +40,9 @@ repos:
     hooks:
     -   id: mypy
         name: mypy
-        # Runs from the local dev venv (not an isolated pre-commit env) so it sees
-        # shapash's actual dependencies. Path is explicit (not just `mypy`) so it
-        # also works from GUI clients like VSCode, whose PATH isn't venv-activated.
-        entry: .venv/bin/mypy shapash
+        # Runs from the local environment (not an isolated pre-commit env) so it sees
+        # shapash's actual dependencies.
+        entry: mypy shapash
         language: system
         pass_filenames: false
         files: ^shapash/.*\.py$

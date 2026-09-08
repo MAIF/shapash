@@ -16,7 +16,7 @@ from shapash.manipulation.summarize import project_feature_values_1d
 from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import plot_scatter, plot_violin
-from shapash.plots.plot_correlations import plot_correlations
+from shapash.plots.plot_correlations import plot_contributions_correlations, plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
     compute_kmeans_labels,
     compute_tsne_projection,
@@ -1465,6 +1465,86 @@ class SmartPlotter:
 
         return fig
 
+    def contributions_correlations_plot(
+        self,
+        df=None,
+        label=None,
+        optimized=False,
+        max_features=20,
+        features_to_hide=None,
+        facet_col=None,
+        width=900,
+        height=500,
+        degree=2.5,
+        decimals=2,
+        file_name=None,
+        auto_open=False,
+    ):
+        """
+        Contribution-weighted correlations matrix heatmap plot.
+
+        Parameters
+        ----------
+        df : pd.DataFrame, optional
+            DataFrame used for faceting when `facet_col` is provided. Will use x_init by default.
+        label : int or str, optional
+            Label to select in classification mode. If omitted, the first label is used.
+        optimized : boolean, optional
+            True if we want to potentially accelerate the computation by reducing the number of rows.
+        max_features : int (default: 10)
+            Max number of features to show on the matrix.
+        features_to_hide : list (optional)
+            List of features that will not appear on the graph.
+        facet_col : str (optional)
+            Name of the column used to split the graph in two (or more) plots.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        degree  : int, optional, (default 2.5)
+            degree applied on the correlation matrix in order to focus more or less the clustering
+            on strong correlated variables
+        decimals : int, optional, (default 2)
+            number of decimals to plot for correlation values
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+        """
+        if df is None:
+            df = self._explainer.x_init.copy()
+
+        if self._explainer._case == "classification":
+            if label is None:
+                label = 0
+            label_num, _, _ = self._explainer.check_label_name(label)
+            contributions = self._explainer.contributions[label_num]
+        else:
+            contributions = self._explainer.contributions
+
+        fig = plot_contributions_correlations(
+            contributions=contributions,
+            df=df,
+            style_dict=self._style_dict,
+            features_dict=self._explainer.features_dict,
+            optimized=optimized,
+            max_features=max_features,
+            features_to_hide=features_to_hide,
+            facet_col=facet_col,
+            width=width,
+            height=height,
+            degree=degree,
+            decimals=decimals,
+            file_name=file_name,
+            auto_open=auto_open,
+        )
+
+        return fig
+
     def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False, height="auto", width=900):
         """
         The Local_neighbors_plot has the main objective of increasing confidence \
@@ -2029,7 +2109,7 @@ class SmartPlotter:
         height: int = 500,
         nb_cat_max: int = 7,
         nb_hue_max: int = 7,
-        cat_num_threshold: int = 200,
+        cat_num_threshold: int = 15,
         file_name=None,
         auto_open=False,
     ) -> go.Figure:
@@ -2060,7 +2140,7 @@ class SmartPlotter:
         nb_hue_max : int, optional, default=7
             Maximum number of hue categories to display. Categories beyond this limit
             are grouped into a new 'Other' category.
-        cat_num_threshold : int, optional, default=200
+        cat_num_threshold : int, optional, default=15
             Threshold on the number of unique values used to decide whether a numeric
             series is treated as categorical or continuous.
         file_name : str, optional
