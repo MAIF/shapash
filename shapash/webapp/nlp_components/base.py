@@ -69,16 +69,28 @@ def available_capabilities(explanation: NlpExplanation, engine: InteractiveEngin
     return frozenset(caps)
 
 
-def error_positions(explanation: NlpExplanation) -> set[int] | None:
-    """Positional indices of the samples the model got wrong, or ``None`` without ground truth.
+def error_mask(explanation: NlpExplanation) -> np.ndarray | None:
+    """Boolean array, ``True`` where the prediction disagrees with the ground truth.
 
-    Compared as strings, the same way the dataset table's "Model Errors" filter does, so every
-    panel that scopes itself to errors scopes to exactly the same rows.
+    ``None`` when either is unavailable. Compared as strings, the same way the dataset table's
+    "Model Errors" filter does, so every panel that scopes itself to errors scopes to exactly the
+    same rows. :func:`error_positions` is this same comparison, shaped as a set of positions instead
+    of a boolean array — use whichever shape the caller needs, they must never drift apart.
     """
     y_true, y_pred = explanation.y_true, explanation.y_pred
     if y_true is None or y_pred is None:
         return None
-    mask = np.asarray(y_true).astype(str) != np.asarray(y_pred).astype(str)
+    return np.asarray(y_true).astype(str) != np.asarray(y_pred).astype(str)
+
+
+def error_positions(explanation: NlpExplanation) -> set[int] | None:
+    """Positional indices of the samples the model got wrong, or ``None`` without ground truth.
+
+    See :func:`error_mask` for the boolean-array shape of the same comparison.
+    """
+    mask = error_mask(explanation)
+    if mask is None:
+        return None
     return set(np.where(mask)[0].tolist())
 
 
@@ -135,7 +147,9 @@ class WebappComponent(ABC):
         """
 
     @abstractmethod
-    def register_callbacks(self, app, explanation: NlpExplanation, engine: InteractiveEngine, stores: dict) -> None:
+    def register_callbacks(
+        self, app, explanation: NlpExplanation, engine: InteractiveEngine | None, stores: dict
+    ) -> None:
         """Register this component's Dash callbacks.
 
         Parameters
@@ -144,8 +158,9 @@ class WebappComponent(ABC):
             The Dash application.
         explanation : NlpExplanation
             The immutable artifact to read (never written to).
-        engine : InteractiveEngine
-            Live engine for prediction / counterfactual generation.
+        engine : InteractiveEngine or None
+            Live engine for prediction / counterfactual generation, or ``None`` for a snapshot with
+            no live model — only reached for a component whose ``requires`` needs no engine capability.
         stores : dict
             Shared ``dcc.Store`` ids the What-if Lab wires between components
             (e.g. ``{"apply": "whatif-apply-store"}``).

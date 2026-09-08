@@ -362,6 +362,8 @@ class NlpExplainer:
                     is_additive=backend_cls.is_additive,
                     reference_kind=backend_cls.reference_kind,
                     output_space=backend_cls.output_space,
+                    model_id=getattr(self._text_model, "checkpoint", None),
+                    architecture=getattr(self._text_model, "architecture", None),
                 )
                 if cache_path is not None:
                     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -501,6 +503,9 @@ class NlpExplainer:
         host: str = "127.0.0.1",
         scatter_xy=None,
         url_base_pathname: str | None = None,
+        palette_name: str = "default",
+        colors_dict: dict[str, str] | None = None,
+        info: dict[str, str] | None = None,
     ) -> None:
         """Launch the NLP explanation webapp for ``explanation``.
 
@@ -539,10 +544,30 @@ class NlpExplainer:
             routes a subpath (e.g. ``"/shapash-nlp-explainer/"``) to this process. Must match the
             proxied path exactly; see :class:`~shapash.webapp.nlp_app.NlpWebApp`. ``None`` serves
             at ``/``.
+        palette_name, colors_dict
+            Theme the webapp's header band — see :class:`~shapash.webapp.nlp_app.NlpWebApp`.
+        info : dict[str, str], optional
+            Extra facts shown in the header's "ⓘ" popover, layered on top of what this call already
+            knows: ``explanation`` carries the model checkpoint/architecture
+            (:attr:`~shapash.explainer.nlp_explanation.NlpExplanation.model_id`/``architecture`` —
+            see :meth:`explain`) and sample/class counts, and — when :meth:`fit` was called with a
+            reference corpus — this adds "Train samples" from it. Pass *info* for anything neither
+            source can know — e.g. ``{"Dataset": "dair-ai/emotion"}`` for a caller-supplied dataset
+            label — or to override a value from either.
         """
-        NlpWebApp(explanation, engine=self, scatter_xy=scatter_xy, url_base_pathname=url_base_pathname).run(
-            port=port, debug=debug, host=host
-        )
+        # fit() is the one place that knows the reference corpus, so its size is added here rather
+        # than living on `explanation` (which is model-free and never sees the training set at all).
+        reference = getattr(self, "reference_", None)
+        engine_info = {"Train samples": str(len(reference[0]))} if reference is not None else {}
+        NlpWebApp(
+            explanation,
+            engine=self,
+            scatter_xy=scatter_xy,
+            url_base_pathname=url_base_pathname,
+            palette_name=palette_name,
+            colors_dict=colors_dict,
+            info={**engine_info, **(info or {})},
+        ).run(port=port, debug=debug, host=host)
 
     # ------------------------------------------------------------------
     # InteractiveEngine — live what-if surface (see explainer/interactive.py)

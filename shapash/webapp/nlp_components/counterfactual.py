@@ -125,7 +125,7 @@ class CounterfactualComponent(WebappComponent):
                     className="text-muted d-block mb-2",
                 ),
                 controls_row,
-                dbc.Button("Generate", id=f"{self.id}-generate-btn", color="secondary", size="sm", className="mb-2"),
+                dbc.Button("Generate", id=f"{self.id}-generate-btn", color="warning", size="sm", className="mb-2"),
                 dcc.Loading(html.Div(id=f"{self.id}-results")),
                 dcc.Store(id=f"{self.id}-store", data=[]),
             ],

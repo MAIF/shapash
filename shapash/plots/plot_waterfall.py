@@ -14,6 +14,8 @@ from collections import Counter
 import numpy as np
 from plotly import graph_objs as go
 
+from shapash.style.style_utils import DEFAULT_NLP_THEME
+
 _SPECIAL_RE = re.compile(r"^\[.*\]$|^##|^\s*$")
 
 
@@ -25,11 +27,13 @@ def plot_waterfall(
     filter_special: bool = True,
     title: str = "Token contributions",
     width: int | None = None,
+    color_positive: str = DEFAULT_NLP_THEME.xpl_positive,
+    color_negative: str = DEFAULT_NLP_THEME.xpl_negative,
 ) -> go.Figure:
     """Horizontal waterfall chart decomposing a single prediction into token SHAP contributions.
 
     Each token appears as a horizontal bar segment.  Positive contributions
-    extend right (blue), negative extend left (red).  Connectors show the
+    extend right (*color_positive*), negative extend left (*color_negative*).  Connectors show the
     cumulative path from the baseline to the final prediction.
 
     Tokens with ``|value| < min_pct * max_abs`` are aggregated into a single
@@ -54,6 +58,11 @@ def plot_waterfall(
         Figure title.
     width : int, optional
         Figure width in pixels.  Defaults to Plotly responsive behaviour.
+    color_positive, color_negative : str
+        Bar colors for a non-negative / negative contribution. Default to the ``"default"``
+        palette's ``nlp_xpl_positive``/``nlp_xpl_negative`` in ``shapash/style/colors.json`` — see
+        :class:`~shapash.webapp.nlp_app.NlpWebApp`'s ``palette_name``/``colors_dict`` to theme
+        every NLP chart at once instead of overriding this one call.
 
     Returns
     -------
@@ -138,8 +147,8 @@ def plot_waterfall(
             measure=measures,
             text=texts,
             textposition="outside",
-            increasing=dict(marker=dict(color="#1f77b4")),
-            decreasing=dict(marker=dict(color="#d62728")),
+            increasing=dict(marker=dict(color=color_positive)),
+            decreasing=dict(marker=dict(color=color_negative)),
             totals=dict(marker=dict(color="#7f7f7f")),
             connector=dict(line=dict(color="#dddddd", width=1, dash="dot")),
             cliponaxis=False,

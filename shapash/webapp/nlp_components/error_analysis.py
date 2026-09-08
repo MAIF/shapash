@@ -24,6 +24,7 @@ from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_confusion_matrix import plot_confusion_matrix
 from shapash.plots.plot_word_importance import empty_word_figure, plot_word_importance
+from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
 from shapash.webapp.nlp_components.base import CAP_GROUND_TRUTH, WebappComponent
 
 _NORMALIZE_OPTIONS: list[dcc.RadioItems.Options] = [
@@ -58,7 +59,8 @@ class ErrorAnalysisComponent(WebappComponent):
     scope = "global"
     requires = frozenset({CAP_GROUND_TRUTH})
 
-    def __init__(self) -> None:
+    def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
+        self._theme = theme
         # Populated by layout(); register_callbacks() runs after layout() has built the tab (see
         # NlpWebApp._build_layout / _register_callbacks), so these are always set by then.
         self._cm: np.ndarray | None = None
@@ -233,6 +235,8 @@ class ErrorAnalysisComponent(WebappComponent):
                 height=None,
                 show_values=False,
                 counts=counts,
+                color_positive=self._theme.xpl_positive,
+                color_negative=self._theme.xpl_negative,
             )
             fig_true = plot_word_importance(
                 wi_true,
@@ -240,6 +244,8 @@ class ErrorAnalysisComponent(WebappComponent):
                 width=None,
                 height=None,
                 show_values=False,
+                color_positive=self._theme.xpl_positive,
+                color_negative=self._theme.xpl_negative,
                 counts=counts,
             )
             fig_pred.layout.height = None

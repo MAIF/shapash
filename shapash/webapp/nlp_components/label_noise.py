@@ -121,7 +121,7 @@ class LabelNoiseComponent(WebappComponent):
                             ],
                             style=_INLINE,
                         ),
-                        dbc.Button("Detect", id=f"{self.id}-detect-btn", color="secondary", size="sm"),
+                        dbc.Button("Detect", id=f"{self.id}-detect-btn", color="warning", size="sm"),
                     ],
                     className="d-flex flex-wrap align-items-center gap-3 mb-2",
                 ),

@@ -273,18 +273,38 @@ class EncoderClassifierModel(TextModel, SupportsTokenization, SupportsEmbeddings
             )
 
     @property
+    def checkpoint(self) -> str:
+        """Human-readable checkpoint identity — the backbone's ``config._name_or_path``.
+
+        Falls back to the backbone's class name for a backbone with no HF-style config (e.g. a
+        hand-rolled ``nn.Module`` body). Display-oriented: for a *cache* key see :attr:`model_id`,
+        which adds the settings that change the vectors this checkpoint alone does not determine.
+        """
+        config = getattr(self.backbone, "config", None)
+        return getattr(config, "_name_or_path", None) or type(self.backbone).__name__
+
+    @property
+    def architecture(self) -> str:
+        """Best-effort architecture tag (e.g. ``"distilbert"``), from the backbone's HF config.
+
+        Reads ``config.model_type``, transformers' own architecture tag; falls back to the
+        backbone's class name when the backbone carries no such config (same fallback as
+        :attr:`checkpoint`, for the same reason).
+        """
+        config = getattr(self.backbone, "config", None)
+        return getattr(config, "model_type", None) or type(self.backbone).__name__
+
+    @property
     def model_id(self) -> str:
         """Stable identity for this adapter *and every setting that changes its vectors/scores*.
 
         Downstream caches (the similar-example bank, the projection cache) key on this. It therefore
-        includes the backbone's checkpoint name **and** ``pool`` / ``normalize`` — two models that differ
-        only in pooling produce different embeddings, and keying on the class name alone would make them
+        includes :attr:`checkpoint` **and** ``pool`` / ``normalize`` — two models that differ only in
+        pooling produce different embeddings, and keying on the checkpoint alone would make them
         silently share a cache entry.
         """
-        config = getattr(self.backbone, "config", None)
-        checkpoint = getattr(config, "_name_or_path", None) or type(self.backbone).__name__
         pool = self.pool if isinstance(self.pool, str) else getattr(self.pool, "__name__", "callable")
-        return f"{type(self).__name__}:{checkpoint}:pool={pool}:norm={int(self.normalize)}"
+        return f"{type(self).__name__}:{self.checkpoint}:pool={pool}:norm={int(self.normalize)}"
 
     # ------------------------------------------------------------------
     # Batched forward (shared by predict / embed)

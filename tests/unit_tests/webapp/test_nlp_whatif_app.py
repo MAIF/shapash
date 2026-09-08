@@ -1223,7 +1223,7 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
             self.assertNotIn("mild", self._words(self._call(rank_by=rank_by, sign="positive")))
 
     def test_default_floor_is_two(self):
-        from shapash.webapp.nlp_app import _DEFAULT_MIN_OCCURRENCES
+        from shapash.webapp.nlp_components.word_importance import _DEFAULT_MIN_OCCURRENCES
 
         # A mean over a single observation is not a mean; the panel must not open on one.
         self.assertEqual(_DEFAULT_MIN_OCCURRENCES, 2)
@@ -1332,7 +1332,7 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
         self.assertEqual(len(self._words(self._call(topk=2))), 2)
 
     def test_typed_topk_is_clamped_to_the_boxs_range(self):
-        from shapash.webapp.nlp_app import _MAX_TOPK, _MIN_TOPK
+        from shapash.webapp.nlp_components.word_importance import _MAX_TOPK, _MIN_TOPK
 
         # The browser enforces min/max on the spinner but not on typed input.
         self.assertEqual(len(self._words(self._call(topk=999))), 3)  # only 3 words exist
@@ -1341,7 +1341,7 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
         self.assertLessEqual(_MAX_TOPK, 50)
 
     def test_cleared_topk_box_falls_back_to_the_default(self):
-        from shapash.webapp.nlp_app import _DEFAULT_TOPK
+        from shapash.webapp.nlp_components.word_importance import _DEFAULT_TOPK
 
         self.assertEqual(_DEFAULT_TOPK, 20)
         # Only None (an emptied box) restores the default — a typed 0 clamps instead.
@@ -1357,6 +1357,236 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
 
         with self.assertRaises(PreventUpdate):
             self.graph(None, 10, "all", [], "mean", 1, None, None, False)
+
+
+class TestWordImportanceScatterSync(unittest.TestCase):
+    """Word Importance and Scatter communicate only through the shared stores (Phase A extraction).
+
+    A bar click always writes ``word-click-filter`` directly now, whether or not a scatter is
+    mounted (no more branching on the scatter's presence), and the scatter's own word dropdown
+    mirrors that store bidirectionally instead of being the "source of truth" only when it exists.
+    """
+
+    @staticmethod
+    def _explanation():
+        return TestGlobalWordImportancePanel._explanation()
+
+    def test_bar_click_registered_without_a_scatter(self):
+        app = NlpWebApp(self._explanation(), engine=None)
+        pairs = _callback_binding_ids(app, "global-importance-graph.clickData")
+        self.assertIn(("global-importance-graph", "clickData"), pairs)
+        self.assertIn(("word-filter-clear-btn", "n_clicks"), pairs)
+
+    def test_bar_click_registered_with_a_scatter_too(self):
+        # Before Phase A, a mounted scatter changed which store a bar click targeted; now Word
+        # Importance always registers this callback unconditionally, regardless of scatter presence.
+        app = NlpWebApp(self._explanation(), engine=None, scatter_xy=np.zeros((4, 2)))
+        pairs = _callback_binding_ids(app, "global-importance-graph.clickData")
+        self.assertIn(("global-importance-graph", "clickData"), pairs)
+
+    def test_scatter_word_select_mirrors_the_shared_store(self):
+        app = NlpWebApp(self._explanation(), engine=None, scatter_xy=np.zeros((4, 2)))
+        pairs = _callback_binding_ids(app, "scatter-word-select.value")
+        self.assertIn(("word-click-filter", "data"), pairs)
+
+    def test_class_selector_publishes_to_the_active_class_store(self):
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "active-class-store.data")
+        self.assertEqual(fn(1), 1)
+        # "All classes" (the string sentinel) is not itself a class index — falls back to 0.
+        self.assertEqual(fn("all"), 0)
+
+
+class TestTableFilterIntersection(unittest.TestCase):
+    """The dataset table's active filters (error cell, word click, errors-only) must intersect for
+    real. A filter that empties the combination has to actually empty the table, not be silently
+    dropped while the summary still claims it is applied — see the reported bug where clicking a
+    Word Importance bar and then an Error Analysis cell with no matching rows kept the word filter
+    in the summary text while showing every row from the cell, unfiltered.
+    """
+
+    @staticmethod
+    def _explanation():
+        texts = pd.Series(["i am happy", "so glad", "this is bad", "very sad"])
+        token_strings = [t.split() for t in texts]
+        values = [np.random.randn(len(toks), 2) for toks in token_strings]
+        return NlpExplanation(
+            texts=texts,
+            token_strings=token_strings,
+            values=values,
+            base_values=np.zeros((4, 2)),
+            y_pred=pd.Series(["pos", "pos", "neg", "neg"], name="prediction"),
+            y_prob=None,
+            y_true=pd.Series(["pos", "neg", "neg", "pos"], name="ground_truth"),
+            label_names=LABEL_NAMES,
+            folds_case=True,
+            backend_name="nlp_shap",
+            is_additive=True,
+            reference_kind="point",
+            output_space="probability",
+        )
+
+    def test_word_filter_after_error_cell_narrows_instead_of_being_dropped(self):
+        # "happy" only occurs in row 0 ("i am happy"); the clicked cell (pred=pos, true=neg) holds
+        # only row 1 ("so glad"). The intersection is empty and must stay empty.
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "dataset-table.rowData")
+        error_cell = {"pred": 1, "true": 0, "indices": [1]}
+        rows, selected, _title, summary = fn(None, ["happy"], False, error_cell, None, None)
+        self.assertEqual(rows, [])
+        self.assertEqual(selected, [])
+        self.assertIn('containing "happy"', summary)
+        self.assertIn("(0 of 4)", summary)
+
+    def test_word_filter_matching_the_cell_still_narrows(self):
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "dataset-table.rowData")
+        error_cell = {"pred": 0, "true": 1, "indices": [3]}  # row 3: "very sad"
+        rows, selected, _title, summary = fn(None, ["sad"], False, error_cell, None, None)
+        self.assertEqual([r["text"] for r in rows], ["very sad"])
+        self.assertEqual(selected, rows)
+        self.assertIn("(1 of 4)", summary)
+
+    def test_errors_only_narrows_a_word_filter_too(self):
+        # "happy" only occurs in row 0, a correct prediction — errors_only must not silently drop
+        # the word filter to avoid an empty table.
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "dataset-table.rowData")
+        rows, _selected, _title, summary = fn(None, ["happy"], True, None, None, None)
+        self.assertEqual(rows, [])
+        self.assertIn("model errors only", summary)
+        self.assertIn('containing "happy"', summary)
+
+    def test_word_filter_matches_the_exact_token_not_a_substring(self):
+        # "unhappy" contains "happy" as a substring but is a different token — a bar labeled
+        # "happy" must not pull it in, matching the exact-token semantics word_importance()/the
+        # scatter's word-contribution coloring already use.
+        texts = pd.Series(["i am happy", "so unhappy today"])
+        token_strings = [t.split() for t in texts]
+        values = [np.random.randn(len(toks), 2) for toks in token_strings]
+        explanation = NlpExplanation(
+            texts=texts,
+            token_strings=token_strings,
+            values=values,
+            base_values=np.zeros((2, 2)),
+            y_pred=pd.Series(["pos", "neg"], name="prediction"),
+            y_prob=None,
+            y_true=None,
+            label_names=LABEL_NAMES,
+            folds_case=True,
+            backend_name="nlp_shap",
+            is_additive=True,
+            reference_kind="point",
+            output_space="probability",
+        )
+        app = NlpWebApp(explanation, engine=None)
+        fn = _callback(app, "dataset-table.rowData")
+        rows, _selected, _title, _summary = fn(None, ["happy"], False, None, None, None)
+        self.assertEqual([r["text"] for r in rows], ["i am happy"])
+
+    def test_grid_filter_narrows_the_shown_count_without_touching_rowData(self):
+        # AG Grid's own column filter runs client-side on top of whatever rowData filter_table
+        # hands it — it must not change rowData/selectedRows, only the reported count, so the
+        # grid's filtered view and the "Showing:" summary agree without a second, disconnected
+        # counter (the earlier bug this mirrors: a filter description without a matching count).
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "dataset-table.rowData")
+        filter_model = {"text": {"filterType": "text", "type": "contains", "filter": "happy"}}
+        virtual_row_data = [{"text": "i am happy"}]
+        rows, _selected, _title, summary = fn(None, None, False, None, filter_model, virtual_row_data)
+        self.assertEqual(len(rows), 4)  # rowData is untouched — the grid does its own filtering
+        self.assertIn("grid filter: Text", summary)
+        self.assertIn("(1 of 4)", summary)
+
+
+def _callback(app, out_substr):
+    for key, spec in app.app.callback_map.items():
+        if out_substr in key:
+            return getattr(spec["callback"], "__wrapped__", spec["callback"])
+    raise KeyError(out_substr)
+
+
+class TestGridFilterClearButton(unittest.TestCase):
+    """AG Grid's own column filters run client-side, outside filter_table's inputs — the clear
+    button is the only thing that lets a user drop one without reaching into the grid's own header
+    UI, so its show/hide and reset behavior need their own coverage. The filter's *description* is
+    covered by filter_table itself (see TestTableFilterIntersection), since it's folded into the
+    same "Showing:" summary rather than a separate badge.
+    """
+
+    @staticmethod
+    def _explanation():
+        texts = pd.Series(["i am happy", "so glad", "this is bad", "very sad"])
+        token_strings = [t.split() for t in texts]
+        values = [np.random.randn(len(toks), 2) for toks in token_strings]
+        return NlpExplanation(
+            texts=texts,
+            token_strings=token_strings,
+            values=values,
+            base_values=np.zeros((4, 2)),
+            y_pred=pd.Series(["pos", "pos", "neg", "neg"], name="prediction"),
+            y_prob=None,
+            y_true=pd.Series(["pos", "neg", "neg", "pos"], name="ground_truth"),
+            label_names=LABEL_NAMES,
+            folds_case=True,
+            backend_name="nlp_shap",
+            is_additive=True,
+            reference_kind="point",
+            output_space="probability",
+        )
+
+    def test_no_filter_model_hides_the_clear_button(self):
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "grid-filter-clear-btn.style")
+        self.assertEqual(fn(None)["display"], "none")
+
+    def test_active_filter_model_shows_the_clear_button(self):
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "grid-filter-clear-btn.style")
+        filter_model = {"prediction": {"filterType": "text", "type": "equals", "filter": "pos"}}
+        self.assertNotEqual(fn(filter_model).get("display"), "none")
+
+    def test_clear_button_resets_the_grid_filter_model(self):
+        app = NlpWebApp(self._explanation(), engine=None)
+        fn = _callback(app, "dataset-table.filterModel")
+        self.assertEqual(fn(1), {})
+
+
+class TestScatterComponentWordContributionOption(unittest.TestCase):
+    """``offer_word_contribution`` gates the "Word contribution" color mode, not the whole panel."""
+
+    @staticmethod
+    def _explanation():
+        return TestGlobalWordImportancePanel._explanation()
+
+    def _color_options(self, offer_word_contribution: bool):
+        from shapash.webapp.nlp_components import ScatterComponent
+
+        comp = ScatterComponent(np.zeros((4, 2)), offer_word_contribution=offer_word_contribution)
+        layout = comp.layout(self._explanation(), None)
+        found = {}
+
+        def walk(node):
+            cid = getattr(node, "id", None)
+            if isinstance(cid, str):
+                found[cid] = node
+            children = getattr(node, "children", None)
+            for ch in children if isinstance(children, (list, tuple)) else [children]:
+                if ch is not None and not isinstance(ch, str):
+                    walk(ch)
+
+        walk(layout)
+        return [opt["value"] for opt in found["color-by"].options]
+
+    def test_offered_when_word_importance_is_mounted(self):
+        self.assertIn("word_contribution", self._color_options(offer_word_contribution=True))
+
+    def test_omitted_without_word_importance(self):
+        # Scatter still works standalone (Prediction/Ground-Truth) — it just cannot source a class
+        # index for word-contribution coloring without Word Importance's control.
+        options = self._color_options(offer_word_contribution=False)
+        self.assertNotIn("word_contribution", options)
+        self.assertIn("prediction", options)
 
 
 class TestWordProfileControls(unittest.TestCase):

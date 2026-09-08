@@ -6,6 +6,7 @@ from dash import Input, Output, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_sentence_highlight import plot_sentence_highlight
+from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
 from shapash.webapp.nlp_components.base import WebappComponent
 from shapash.webapp.nlp_components.datapoint import unpack_datapoint
 
@@ -21,8 +22,9 @@ class SentenceHighlightComponent(WebappComponent):
     name = "Sentence"
     scope = "local"
 
-    def __init__(self, default_class_idx: int = 0) -> None:
+    def __init__(self, default_class_idx: int = 0, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._default_class_idx = default_class_idx
+        self._theme = theme
 
     def layout(self, explanation, engine=None) -> html.Div:
         """Return the class picker + sentence-highlight placeholder div."""
@@ -90,4 +92,10 @@ class SentenceHighlightComponent(WebappComponent):
             if not datapoint or label_idx is None:
                 raise PreventUpdate
             tokens, vals, base_value, _ = unpack_datapoint(datapoint, int(label_idx))
-            return plot_sentence_highlight(tokens=tokens, values=vals, base_value=base_value)
+            return plot_sentence_highlight(
+                tokens=tokens,
+                values=vals,
+                base_value=base_value,
+                color_positive=self._theme.xpl_positive,
+                color_negative=self._theme.xpl_negative,
+            )

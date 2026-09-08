@@ -1,10 +1,10 @@
 """Minimal Dash webapp for NLP text classification explanations.
 
 Prototype bridge toward Phase 5b (composable WebappComponents). Panels are being extracted into
-``WebappComponent``s one at a time (see ``shapash/webapp/nlp_components/``); global word importance,
-the dataset table, and scatter are still built inline here pending their own extraction. All
-tabular-only SmartApp panels (violin, cluster, scatter prediction picking) beyond what NLP needs are
-absent rather than disabled.
+``WebappComponent``s one at a time (see ``shapash/webapp/nlp_components/``); the dataset table and
+the persistent selection bar are the only pieces still built inline — both are mandatory shell UI,
+not optional panels, so there is nothing left to extract them into. All tabular-only SmartApp panels
+(violin, cluster, scatter prediction picking) beyond what NLP needs are absent rather than disabled.
 """
 
 from __future__ import annotations
@@ -14,78 +14,55 @@ import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
-import plotly.graph_objs as go
-from dash import Input, Output, callback_context, dcc, html
+from dash import MATCH, Input, Output, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.explainer.interactive import InteractiveEngine
-from shapash.explainer.nlp_explanation import NlpExplanation, select_label_column
-from shapash.plots.plot_word_importance import (
-    empty_word_figure,
-    plot_word_importance,
-    word_importance_axis_title,
-)
+from shapash.explainer.nlp_explanation import NlpExplanation
+from shapash.style.style_utils import NlpTheme, resolve_nlp_theme
 from shapash.webapp.nlp_components import (
     CounterfactualComponent,
     DataEditorComponent,
     ErrorAnalysisComponent,
     LabelNoiseComponent,
+    ScatterComponent,
     SentenceHighlightComponent,
     SimilarExamplesComponent,
     WaterfallComponent,
+    WebappComponent,
+    WordImportanceComponent,
     WordProfileComponent,
     compose_selection,
+    error_positions,
     pack_datapoint,
 )
 
 _APPLY_STORE = "whatif-apply-store"
 _CURRENT_STORE = "current-datapoint"
 
-# The frequency floor the global word ranking starts at. 1 (no filter) is the status quo and is
-# actively misleading: on the emotion demo 58% of the vocabulary occurs exactly once, so an
-# unfiltered |mean| ranking is a list of single attributions. 2 is the principled minimum — a mean
-# over one observation is not a mean — and is the least surprising default; 3 is where the chart
-# visibly settles into repeated, stable words.
-_DEFAULT_MIN_OCCURRENCES = 2
-
-# Bounds for the Top-K box. The browser enforces these on the spinner arrows but not on typed
-# input, so the callback clamps rather than trusting them.
-_MIN_TOPK, _MAX_TOPK, _DEFAULT_TOPK = 1, 50, 20
-# Idle delay (seconds) before a number box commits its value. ``debounce=True`` would commit only on
-# Enter or blur, which leaves the spinner arrows apparently dead: clicking one keeps focus in the
-# box, so nothing reaches the server until the user clicks away. A numeric debounce commits after a
-# pause instead, so arrows respond while a typed "20" still does not recompute at "2".
-_INPUT_DEBOUNCE_S = 0.4
-
-# Class-dropdown value meaning "collapse the ranking across every class" — a string so it can never
-# collide with a real (integer) class index.
-_ALL_CLASSES = "all"
-
-# Shared by the layout and the callback that greys the sign options out under "All classes", so the
-# two cannot drift apart.
-_SIGN_FILTER_OPTIONS: list[dcc.RadioItems.Options] = [
-    {"label": " All", "value": "all"},
-    {"label": " Positive", "value": "positive"},
-    {"label": " Negative", "value": "negative"},
-]
-
 _HIDDEN = {"display": "none"}
 # The visible tab body is a flex-column item that fills the bodies container (which itself fills the
 # card). This unbroken flex chain is what lets a body's inner content use height:100% / flex:1 (e.g. the
 # dataset grid) to fill the panel; a plain `display:block` here would collapse to content height.
-_VISIBLE = {"display": "flex", "flexDirection": "column", "flex": "1 1 auto", "minHeight": "0", "overflowY": "auto"}
-_PALETTE = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-]
+# overflowX is pinned to "hidden" rather than left at its "visible" default: per the CSS spec, an axis
+# left "visible" next to a sibling axis that isn't computes to "auto" instead — so without this, any
+# child a stray pixel wider than the panel (a border, a scrollbar's own width) silently grows a
+# horizontal scrollbar here, even though nothing in this layout is meant to scroll sideways.
+_VISIBLE = {
+    "display": "flex",
+    "flexDirection": "column",
+    "flex": "1 1 auto",
+    "minHeight": "0",
+    "overflowY": "auto",
+    "overflowX": "hidden",
+}
+
+# Flex/border idioms repeated verbatim across the header, selection bar, tab columns and
+# `_tabbed_card` — named here so a layout tweak to one of them doesn't have to be hunted down
+# across every dict literal that copied it.
+_FLEX_FILL = {"flex": "1 1 auto", "minHeight": "0"}
+_FLEX_FIXED = {"flex": "0 0 auto"}
+_PANEL_BORDER = {"border": "1px solid #dee2e6", "borderRadius": "4px"}
 
 
 def _normalize_base_pathname(path: str | None) -> str | None:
@@ -110,6 +87,25 @@ def _normalize_base_pathname(path: str | None) -> str | None:
         return None
     stripped = path.strip().strip("/")
     return f"/{stripped}/" if stripped else None
+
+
+def _clear_button(button_id: str, label: str, *, margin: str = "me-3") -> dbc.Button:
+    """A small "x clear ..." link button, hidden until its own callback reveals it.
+
+    Shared by every selection-bar clear control (scatter / error-cell / word-filter / grid-filter
+    — see `_build_selection_bar`) — same look and same hidden-until-active behaviour, differing
+    only in id, label, and whether a right-margin is needed before the next control.
+    """
+    className = f"text-muted p-0 {margin}".rstrip()
+    return dbc.Button(
+        label,
+        id=button_id,
+        n_clicks=0,
+        color="link",
+        size="sm",
+        className=className,
+        style={"display": "none", "fontSize": "0.8em"},
+    )
 
 
 class NlpWebApp:
@@ -161,6 +157,26 @@ class NlpWebApp:
         Missing slashes are added — ``"shapash-nlp-explainer"`` and ``"/shapash-nlp-explainer"``
         both become ``"/shapash-nlp-explainer/"`` — since that is the only spelling Dash accepts
         and a prefix copied from an nginx ``location`` easily arrives without one.
+    palette_name : str, optional
+        Name of a palette in ``shapash/style/colors.json`` (the same file the tabular
+        ``SmartExplainer`` webapp draws its theme from — see ``smart_app.py``). Selects the
+        header's band color (``webapp_bkg``) and accent color (``webapp_title``). Defaults to
+        ``"default"``, the same palette ``SmartExplainer`` falls back to.
+    colors_dict : dict[str, str], optional
+        Per-key overrides merged on top of *palette_name*, same shape and key names as
+        ``colors.json`` and as ``SmartExplainer``'s own ``colors_dict`` (see
+        ``smart_explainer.py``'s ``define_style``). Only ``webapp_bkg`` (header band) and
+        ``webapp_title`` (accent color) are read today; other keys are accepted but unused.
+    info : dict[str, str], optional
+        Extra ``label -> value`` facts shown in the header's "ⓘ" popover, layered on top of what
+        ``explanation`` already carries (``model_id``, ``architecture`` — each omitted when the
+        value is ``None`` — plus ``n_samples`` and ``n_classes``/``backend_name``,
+        always shown). A key already filled in from ``explanation`` is overridden by *info*; any
+        other key is appended after — except ``"Train samples"``, which is placed right after "Test
+        samples" since the two are naturally read together. ``NlpExplainer.run_app`` uses this key to
+        add it (only known post-``fit()``, so it can never live on the model-free ``explanation``) —
+        see there for the full picture when going through it rather than constructing ``NlpWebApp``
+        directly.
     """
 
     def __init__(
@@ -169,6 +185,9 @@ class NlpWebApp:
         engine: InteractiveEngine | None = None,
         scatter_xy: np.ndarray | None = None,
         url_base_pathname: str | None = None,
+        palette_name: str = "default",
+        colors_dict: dict[str, str] | None = None,
+        info: dict[str, str] | None = None,
     ) -> None:
         if scatter_xy is not None:
             scatter_xy = np.asarray(scatter_xy)
@@ -186,12 +205,32 @@ class NlpWebApp:
         self._explanation = explanation
         self._engine = engine
 
+        # See the `info` docstring above: everything `explanation` can say for itself, in reading
+        # order, with *info* (from the caller, or NlpExplainer.run_app's "Train samples") layered on
+        # top — overriding a key already here, or appended after for anything new.
+        self._info: dict[str, str] = {}
+        if explanation.model_id:
+            self._info["Model"] = explanation.model_id
+        if explanation.architecture:
+            self._info["Model architecture"] = explanation.architecture
+        self._info["Test samples"] = str(explanation.n_samples)
+        if info and "Train samples" in info:
+            # Reserve the slot here, right after "Test samples", so the update() below fills an
+            # existing key in place instead of appending it at the end like any other extra fact.
+            self._info["Train samples"] = info["Train samples"]
+        self._info["Number of classes"] = str(explanation.n_classes)
+        self._info["Explainer backend"] = explanation.backend_name
+        self._info.update(info or {})
+
         self.app = dash.Dash(
             __name__,
             external_stylesheets=[dbc.themes.BOOTSTRAP],
             url_base_pathname=_normalize_base_pathname(url_base_pathname),
         )
-        self.app.title = "Shapash — NLP Explainer"
+        self.app.title = "Shapash - NLP Explainer"
+
+        self._theme: NlpTheme = resolve_nlp_theme(palette_name, colors_dict)
+
         # Pin the document to the viewport so only the inner panels scroll, never the page. The
         # 100vh shell needs html/body at full height with no default margin; overflow:hidden is the
         # guarantee against any residual sub-pixel overflow producing a page scrollbar.
@@ -220,14 +259,81 @@ class NlpWebApp:
     # ------------------------------------------------------------------
 
     def _build_layout(self) -> None:
-        explanation = self._explanation
-        label_names = explanation.label_names or [str(i) for i in range(self._explanation.n_classes)]
+        """Orchestrate the shell: table → columns → selection bar → components/tabs → container.
+
+        Each step below is a focused builder (see the methods that follow) — this method's job is
+        only the assembly order and the handful of values threaded between them.
+        """
         # Predicted-label name → class index, shared by the confusion matrix and (via
         # NlpExplanation.label_to_idx) by SentenceHighlightComponent's predicted-class sync callback.
         self._label_to_idx = self._explanation.label_to_idx
-        n = self._explanation.n_samples
 
-        # ── Table records — always include _orig_idx for scatter filtering ──
+        has_prob = self._build_table_records()
+        column_defs = self._build_column_defs(has_prob)
+        # Field → header-name lookup for the grid-filter badge in `_register_callbacks` (AG Grid's
+        # own column filters report field names via filterModel, but the badge should read like the UI).
+        self._column_header_by_field = {c["field"]: c["headerName"] for c in column_defs}
+        text_samples_body = self._build_text_samples_body(column_defs)
+
+        selection_bar = self._build_selection_bar()
+
+        # ── Assemble the three panels as tab groups (all bodies stay mounted) ──
+        self._tab_groups: dict[str, list[str]] = {}
+        components = self._build_components()
+        left_tabs, upper_right_tabs, lower_right_tabs = self._build_tabs(components, text_samples_body)
+
+        left_column = html.Div(
+            [selection_bar, self._tabbed_card("left-tabs", left_tabs)],
+            style={"display": "flex", "flexDirection": "column", "gap": "8px", "height": "100%"},
+        )
+        right_column = html.Div(
+            [
+                self._tabbed_card("upper-right-tabs", upper_right_tabs),
+                self._tabbed_card("lower-right-tabs", lower_right_tabs),
+            ],
+            style={"display": "flex", "flexDirection": "column", "gap": "8px", "height": "100%"},
+        )
+
+        self.app.layout = dbc.Container(
+            [
+                # The Class selector lives with the panel it drives: Word Importance (global) and
+                # Sentence Highlight (local, see highlight_body) each get their own, so switching
+                # one no longer silently reinterprets the other.
+                self._build_header(),
+                # ── Three-panel body: left (data) | right (global over local) ──
+                dbc.Row(
+                    [
+                        dbc.Col(left_column, width=5, style={"height": "100%"}),
+                        dbc.Col(right_column, width=7, style={"height": "100%"}),
+                    ],
+                    # gx-3 = horizontal gutter only. A vertical gutter (g-3) adds a 1rem net excess
+                    # that pushes the 100vh shell past the viewport and makes the whole page scroll.
+                    className="gx-3",
+                    style=_FLEX_FILL,
+                ),
+                *self._build_stores(),
+            ],
+            fluid=True,
+            # Full-viewport shell: panels scroll internally, the page itself never scrolls. The 4px
+            # paddingBottom is breathing room below the last panel — box-sizing is border-box
+            # (Bootstrap's reboot), so it comes out of the 100vh instead of pushing the page taller.
+            style={
+                "height": "100vh",
+                "display": "flex",
+                "flexDirection": "column",
+                "overflow": "hidden",
+                "paddingBottom": "4px",
+            },
+        )
+
+    def _build_table_records(self) -> bool:
+        """Build the dataset table's row records.
+
+        Caches ``self._full_table_records`` (scatter-driven re-filtering in callbacks reads it) and
+        ``self._has_gt``. Returns whether a "probability" column was included, the one piece the
+        caller still needs to build the matching column defs.
+        """
+        n = self._explanation.n_samples
         texts = self._explanation.texts
         assert texts is not None  # noqa: S101 - the webapp requires an already-compiled explainer
         records: dict[str, list] = {
@@ -246,18 +352,17 @@ class NlpWebApp:
             records["probability"] = y_prob.max(axis=1).tolist()
 
         table_df = pd.DataFrame(records)
-
-        # Full records cached for scatter-driven re-filtering in callbacks
         self._full_table_records: list[dict] = table_df.to_dict("records")
+        self._has_gt = "ground_truth" in table_df.columns
+        return y_prob is not None
 
-        has_gt = "ground_truth" in table_df.columns
-        self._has_gt = has_gt
-        has_prob = y_prob is not None
+    def _build_column_defs(self, has_prob: bool) -> list[dict]:
+        """AG Grid column defs for the dataset table — ground truth/probability columns are optional."""
         column_defs: list[dict] = [
             {"field": "text", "headerName": "Text", "flex": 3, "tooltipField": "text", "filter": "agTextColumnFilter"},
             {"field": "prediction", "headerName": "Prediction", "flex": 1, "filter": "agTextColumnFilter"},
         ]
-        if has_gt:
+        if self._has_gt:
             column_defs.append(
                 {"field": "ground_truth", "headerName": "Ground Truth", "flex": 1, "filter": "agTextColumnFilter"}
             )
@@ -271,251 +376,11 @@ class NlpWebApp:
                     "valueFormatter": {"function": "params.value != null ? params.value.toFixed(3) : ''"},
                 }
             )
+        return column_defs
 
-        # ── Corpus word list for the exclusion multi-select ────────────
-        # Normalised exactly as ``word_importance`` keys its units, via the same resolver, so an
-        # entry here always matches a bar in the chart. On an uncased model that folds
-        # AWFUL/Awful/awful into one entry; on a cased model it leaves all three, because there
-        # they are genuinely different inputs.
-        all_words = explanation.vocabulary()
-        word_options: list[dcc.Dropdown.Options] = [{"label": w, "value": w} for w in all_words]
-
-        # ── Scatter panel content (only when scatter_xy is provided) ──
-        scatter_col_content = None
-        if self._scatter_xy is not None:
-            color_options: list[dcc.Dropdown.Options] = [{"label": "Prediction", "value": "prediction"}]
-            if self._explanation.y_true is not None:
-                color_options.append({"label": "Ground Truth", "value": "ground_truth"})
-            color_options.append({"label": "Word contribution", "value": "word_contribution"})
-
-            scatter_col_content = html.Div(
-                [
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                html.H6("Sample Space", className="fw-bold mb-0"),
-                                width="auto",
-                                className="align-self-center",
-                            ),
-                            dbc.Col(
-                                dcc.Dropdown(
-                                    id="color-by",
-                                    options=color_options,
-                                    value="prediction",
-                                    clearable=False,
-                                    style={"width": "160px", "fontSize": "0.9em"},
-                                ),
-                                width="auto",
-                            ),
-                            dbc.Col(
-                                dcc.Dropdown(
-                                    id="scatter-word-select",
-                                    options=word_options,
-                                    value=[],
-                                    multi=True,
-                                    clearable=True,
-                                    placeholder="Select words…",
-                                    style={"display": "none", "minWidth": "180px", "fontSize": "0.9em"},
-                                ),
-                                width="auto",
-                                className="align-self-center",
-                            ),
-                        ],
-                        className="align-items-center mb-2",
-                    ),
-                    html.Small(
-                        "Box/lasso or click to filter. Click a word bar to color by its SHAP contribution.",
-                        className="text-muted d-block mb-2",
-                    ),
-                    dcc.Graph(
-                        id="scatter-plot",
-                        figure=self._build_scatter_fig("prediction"),
-                        config={
-                            "displayModeBar": True,
-                            "modeBarButtonsToRemove": ["autoScale2d", "resetScale2d"],
-                            "responsive": True,
-                        },
-                        # Grow to fill the card's remaining height so the scatter
-                        # matches the taller word-importance panel beside it.
-                        style={"flex": "1 1 auto", "minHeight": "340px"},
-                    ),
-                ],
-                # Flex column so the graph above can stretch to the panel height.
-                style={"display": "flex", "flexDirection": "column", "height": "100%"},
-            )
-
-        # ── Global Word Importance panel — controls live inside it ──
-        # (Top-K / Sign / Exclude / Class only affect this panel, so they are co-located here —
-        # independent from the local class picker in the Sentence Highlight panel below.)
-        # The tab label already names the panel, so no H6; a tight controls row + a graph that
-        # flex-grows to fill the panel means the whole chart is visible without scrolling.
-        # "All classes" first: it is the overview a reader without a class in mind wants, and it is
-        # the only entry whose value is not an index (see _ALL_CLASSES).
-        global_class_options: list[dcc.Dropdown.Options] = [{"label": "All classes", "value": _ALL_CLASSES}]
-        global_class_options += [{"label": name, "value": i} for i, name in enumerate(label_names)]
-        # Ordering only: both statistics are signed and are ranked on |value|, so the sign filter
-        # and the bars' red/blue colouring mean the same thing in either mode.
-        rank_by_options: list[dcc.Dropdown.Options] = [
-            {"label": "Mean |·|", "value": "mean"},
-            {"label": "Total |·|", "value": "sum"},
-        ]
-        word_importance_panel = html.Div(
-            [
-                # One flex row split into two clusters — "what to rank" (left) and "what to keep"
-                # (right) — rather than six controls in an unbroken run: grouping reads faster, and
-                # a Bootstrap 50/50 column split was tried first but broke (the left cluster's own
-                # natural width exceeds half the panel at ordinary sizes, so the fixed-width column
-                # either overlapped the right cluster or wrapped mid-cluster). space-between instead
-                # pushes the right cluster as far right as the two clusters' actual widths allow —
-                # around the midpoint in practice, and never overlapping or force-wrapping either
-                # cluster — with flex-wrap kept as a fallback for genuinely narrow panels.
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.Div(
-                                    [
-                                        html.Label("Class", className="fw-bold small mb-0"),
-                                        dcc.Dropdown(
-                                            id="global-class-selector",
-                                            options=global_class_options,
-                                            value=0,
-                                            clearable=False,
-                                            style={"width": "140px"},
-                                        ),
-                                    ]
-                                ),
-                                html.Div(
-                                    [
-                                        html.Label(
-                                            "Rank by",
-                                            className="fw-bold small mb-0",
-                                            title=(
-                                                "Mean: the average pull wherever the word "
-                                                "appears. Total: its whole pull on the "
-                                                "corpus, so frequent words outrank rare "
-                                                "strong ones. The two disagree often."
-                                            ),
-                                        ),
-                                        dcc.Dropdown(
-                                            id="rank-by",
-                                            options=rank_by_options,
-                                            value="mean",
-                                            clearable=False,
-                                            style={"width": "95px"},
-                                        ),
-                                    ]
-                                ),
-                                html.Div(
-                                    [
-                                        html.Label(
-                                            "Min occur.",
-                                            className="fw-bold small mb-0",
-                                            title=(
-                                                "Hide words seen fewer than this many times "
-                                                "in the current selection. A mean over one "
-                                                "occurrence is not a mean, and most of a "
-                                                "corpus is words seen once."
-                                            ),
-                                        ),
-                                        dcc.Input(
-                                            id="min-occurrences",
-                                            type="number",
-                                            min=1,
-                                            step=1,
-                                            value=_DEFAULT_MIN_OCCURRENCES,
-                                            debounce=_INPUT_DEBOUNCE_S,
-                                            className="form-control form-control-sm",
-                                            style={"width": "80px"},
-                                        ),
-                                    ]
-                                ),
-                                html.Div(
-                                    [
-                                        html.Label(
-                                            "Top-K words",
-                                            className="fw-bold small mb-0",
-                                            title=f"How many words to chart, {_MIN_TOPK}–{_MAX_TOPK}",
-                                        ),
-                                        dcc.Input(
-                                            id="topk-input",
-                                            type="number",
-                                            min=_MIN_TOPK,
-                                            max=_MAX_TOPK,
-                                            step=1,
-                                            value=_DEFAULT_TOPK,
-                                            debounce=_INPUT_DEBOUNCE_S,
-                                            className="form-control form-control-sm",
-                                            style={"width": "90px"},
-                                        ),
-                                    ]
-                                ),
-                            ],
-                            className="d-flex align-items-start flex-wrap gap-2",
-                        ),
-                        html.Div(
-                            [
-                                html.Div(
-                                    [
-                                        html.Label("Contributions", className="fw-bold small mb-0"),
-                                        dcc.RadioItems(
-                                            id="sign-filter",
-                                            options=_SIGN_FILTER_OPTIONS,
-                                            value="all",
-                                            inline=True,
-                                            inputStyle={"marginRight": "4px"},
-                                            labelStyle={"marginRight": "12px"},
-                                        ),
-                                    ]
-                                ),
-                                html.Div(
-                                    [
-                                        html.Label(
-                                            "Exclude words",
-                                            className="fw-bold small mb-0",
-                                            style={"whiteSpace": "nowrap"},
-                                        ),
-                                        dcc.Dropdown(
-                                            id="word-filter",
-                                            options=word_options,
-                                            value=[],
-                                            multi=True,
-                                            placeholder="Exclude…",
-                                            style={"fontSize": "0.85em"},
-                                        ),
-                                    ],
-                                    style={"flex": "1 1 auto", "minWidth": "130px"},
-                                ),
-                            ],
-                            className="d-flex align-items-start flex-wrap gap-2",
-                        ),
-                    ],
-                    className="d-flex align-items-start flex-wrap mb-1",
-                    style={"flex": "0 0 auto", "justifyContent": "space-between", "gap": "0.5rem"},
-                ),
-                # The graph keeps the height plot_word_importance computed for it (30px per word)
-                # and this wrapper scrolls. Letting the chart flex to the panel instead — which is
-                # what it used to do — gives 50 words 8px each, at which point plotly drops the
-                # word labels and the bars become unidentifiable.
-                # "responsive" must stay off here: it makes plotly track the *container's* current
-                # size instead of the figure's own layout.height, which silently defeats the fixed
-                # per-row height above and squeezes every word back into whatever space the flex
-                # panel happens to have — the exact illegible-labels bug this height is built to
-                # avoid. Width still adapts once, at mount, from the container.
-                html.Div(
-                    dcc.Graph(
-                        id="global-importance-graph",
-                        config={"displayModeBar": False},
-                        style={"width": "100%"},
-                    ),
-                    style={"flex": "1 1 auto", "minHeight": "0", "overflowY": "auto"},
-                ),
-            ],
-            style={"height": "100%", "display": "flex", "flexDirection": "column"},
-        )
-
-        # ── Dataset table body (left-panel default tab) ───────────────
-        text_samples_body = html.Div(
+    def _build_text_samples_body(self, column_defs: list[dict]) -> html.Div:
+        """Dataset table body (left-panel default tab): title row + the AG Grid itself."""
+        return html.Div(
             [
                 dbc.Row(
                     [
@@ -530,7 +395,7 @@ class NlpWebApp:
                         ),
                     ],
                     className="align-items-center mb-2",
-                    style={"flex": "0 0 auto"},
+                    style=_FLEX_FIXED,
                 ),
                 # Grid grows to fill the tab body (now that the editor lives on its own tab).
                 dag.AgGrid(
@@ -552,61 +417,36 @@ class NlpWebApp:
                         "rowHeight": 38,
                     },
                     selectedRows=[self._full_table_records[0]],
-                    style={
-                        "flex": "1 1 auto",
-                        "minHeight": "0",
-                        "--ag-font-size": "15px",
-                        "--ag-header-font-size": "14px",
-                    },
+                    style={**_FLEX_FILL, "--ag-font-size": "15px", "--ag-header-font-size": "14px"},
                     className="ag-theme-alpine",
                 ),
             ],
             style={"height": "100%", "display": "flex", "flexDirection": "column"},
         )
 
-        # ── Selection bar: persistent, always-visible filter state + clears ──
-        # Lives above the left tabs so a scatter/word selection stays visible whichever
-        # left tab (table or embeddings) is active. Clear buttons are consolidated here
-        # from the individual panels they used to live in.
+    def _build_selection_bar(self) -> html.Div:
+        """Persistent, always-visible filter state + clear buttons.
+
+        Lives above the left tabs so a scatter/word selection stays visible whichever left tab
+        (table or embeddings) is active. Clear buttons are consolidated here from the individual
+        panels they used to live in.
+        """
         selection_children: list = [
             html.Span("Showing:", className="text-muted small me-2"),
+            # AG Grid's own column filters (the funnel icon in each header) act on the grid
+            # client-side and don't flow through filter_table's inputs the way the other filters
+            # do — filter_table folds them into this same summary via a filterModel/virtualRowData
+            # Input pair, so a grid-level filter is described here too, not just inside the grid.
             html.Span("all samples", id="selection-summary", className="small fw-bold me-3"),
         ]
-        if scatter_col_content is not None:
-            selection_children.append(
-                dbc.Button(
-                    "× clear selection",
-                    id="scatter-clear-btn",
-                    n_clicks=0,
-                    color="link",
-                    size="sm",
-                    className="text-muted p-0 me-3",
-                    style={"display": "none", "fontSize": "0.8em"},
-                )
-            )
-        if has_gt:
-            selection_children.append(
-                dbc.Button(
-                    "× clear cell",
-                    id="error-cell-clear-btn",
-                    n_clicks=0,
-                    color="link",
-                    size="sm",
-                    className="text-muted p-0 me-3",
-                    style={"display": "none", "fontSize": "0.8em"},
-                )
-            )
-        selection_children.append(
-            dbc.Button(
-                "× clear word filter",
-                id="word-filter-clear-btn",
-                n_clicks=0,
-                color="link",
-                size="sm",
-                className="text-muted p-0",
-                style={"display": "none", "fontSize": "0.8em"},
-            )
-        )
+        if self._scatter_xy is not None:
+            selection_children.append(_clear_button("scatter-clear-btn", "× clear selection"))
+        if self._has_gt:
+            selection_children.append(_clear_button("error-cell-clear-btn", "× clear cell"))
+        selection_children.append(_clear_button("word-filter-clear-btn", "× clear word filter"))
+        # No trailing margin: it is followed by the errors-only switch, pushed to the far right
+        # by that switch's own `ms-auto`, not by spacing here.
+        selection_children.append(_clear_button("grid-filter-clear-btn", "× clear grid filter", margin=""))
         # Right-aligned (ms-auto) and here — rather than inside the Dataset tab body — so it stays
         # usable from the Embeddings tab too, where it now also drives point highlighting.
         selection_children.append(
@@ -615,63 +455,82 @@ class NlpWebApp:
                 label="Model Errors",
                 value=False,
                 className="small mb-0 ms-auto",
-                style={} if has_gt else {"display": "none"},
+                style={} if self._has_gt else _HIDDEN,
             )
         )
-        selection_bar = html.Div(
+        return html.Div(
             selection_children,
             style={
-                "border": "1px solid #dee2e6",
-                "borderRadius": "4px",
+                **_PANEL_BORDER,
                 "padding": "6px 12px",
                 "display": "flex",
                 "alignItems": "center",
                 "flexWrap": "wrap",
-                "flex": "0 0 auto",
+                **_FLEX_FIXED,
             },
         )
 
-        # ── Assemble the three panels as tab groups (all bodies stay mounted) ──
-        self._tab_groups: dict[str, list[str]] = {}
+    def _build_components(self) -> list[WebappComponent]:
+        """Instantiate every capability-gated component, plus the scatter panel if data was given.
 
+        Assigns ``self._components`` — read again by ``_register_callbacks`` once the layout exists
+        — and returns the same list for ``_build_tabs`` to map onto tab groups.
+        """
         # Local class picker default: the predicted class of the initially selected row. It is reset
         # to the newly-selected text's prediction by a sync callback owned by
         # SentenceHighlightComponent — see sync_local_class_to_prediction — so switching sentences
         # always starts on "why did the model predict this", while still letting the user override it
         # for the current sentence.
-        default_local_class = self._label_to_idx.get(self._full_table_records[0].get("prediction"), 0)
-        self._components = [
+        predicted_label = self._full_table_records[0].get("prediction")
+        default_local_class = self._label_to_idx.get(predicted_label, 0) if isinstance(predicted_label, str) else 0
+        components: list[WebappComponent] = [
             comp
             for comp in (
-                SentenceHighlightComponent(default_local_class),
-                WaterfallComponent(),
+                SentenceHighlightComponent(default_local_class, theme=self._theme),
+                WaterfallComponent(theme=self._theme),
                 DataEditorComponent(),
                 CounterfactualComponent(),
                 SimilarExamplesComponent(),
                 LabelNoiseComponent(),
-                ErrorAnalysisComponent(),
-                WordProfileComponent(),
+                ErrorAnalysisComponent(theme=self._theme),
+                WordProfileComponent(theme=self._theme),
+                WordImportanceComponent(theme=self._theme),
             )
             if type(comp).is_available(self._explanation, self._engine)
         ]
-        highlight_comp = next(c for c in self._components if isinstance(c, SentenceHighlightComponent))
-        waterfall_comp = next(c for c in self._components if isinstance(c, WaterfallComponent))
-        editor_comp = next((c for c in self._components if isinstance(c, DataEditorComponent)), None)
-        cf_comp = next((c for c in self._components if isinstance(c, CounterfactualComponent)), None)
-        similar_comp = next((c for c in self._components if isinstance(c, SimilarExamplesComponent)), None)
-        noise_comp = next((c for c in self._components if isinstance(c, LabelNoiseComponent)), None)
-        error_analysis_comp = next((c for c in self._components if isinstance(c, ErrorAnalysisComponent)), None)
-        word_profile_comp = next((c for c in self._components if isinstance(c, WordProfileComponent)), None)
+        # Mounting is decided by the caller-supplied array, not by `is_available` — a pre-computed
+        # projection is arbitrary data handed to NlpWebApp, not an explanation/engine capability.
+        # Word Importance is always mounted at this point (it has no `requires`), so the scatter's
+        # word-contribution color mode can always be offered.
+        if self._scatter_xy is not None:
+            components.append(ScatterComponent(self._scatter_xy, offer_word_contribution=True))
+        self._components = components
+        return components
+
+    def _build_tabs(self, components: list[WebappComponent], text_samples_body: html.Div) -> tuple[list, list, list]:
+        """Map *components* onto the shell's three tab groups: left, upper-right, lower-right."""
+        highlight_comp = next(c for c in components if isinstance(c, SentenceHighlightComponent))
+        waterfall_comp = next(c for c in components if isinstance(c, WaterfallComponent))
+        word_importance_comp = next(c for c in components if isinstance(c, WordImportanceComponent))
+        editor_comp = next((c for c in components if isinstance(c, DataEditorComponent)), None)
+        cf_comp = next((c for c in components if isinstance(c, CounterfactualComponent)), None)
+        similar_comp = next((c for c in components if isinstance(c, SimilarExamplesComponent)), None)
+        noise_comp = next((c for c in components if isinstance(c, LabelNoiseComponent)), None)
+        error_analysis_comp = next((c for c in components if isinstance(c, ErrorAnalysisComponent)), None)
+        word_profile_comp = next((c for c in components if isinstance(c, WordProfileComponent)), None)
+        scatter_comp = next((c for c in components if isinstance(c, ScatterComponent)), None)
 
         left_tabs: list = [("table", "Dataset", text_samples_body)]
-        if scatter_col_content is not None:
-            left_tabs.append(("scatter", "Embeddings", scatter_col_content))
+        if scatter_comp is not None:
+            left_tabs.append(("scatter", "Embeddings", scatter_comp.layout(self._explanation, self._engine)))
         if editor_comp is not None:
             left_tabs.append(("editor", "Data Editor", editor_comp.layout(self._explanation, self._engine)))
 
         # Error Analysis sits beside Word Importance: it *is* an aggregated word-importance view
         # (per confusion-matrix cell), so it belongs with the other global "why" panels on the right.
-        upper_right_tabs: list = [("importance", "Word Importance", word_importance_panel)]
+        upper_right_tabs: list = [
+            ("importance", "Word Importance", word_importance_comp.layout(self._explanation, self._engine))
+        ]
         # Immediately after Word Importance, because it is the same question asked the other way
         # round (one word across all classes, instead of one class across the top words) and the two
         # are read together — a bar clicked there arrives preselected here.
@@ -700,19 +559,10 @@ class NlpWebApp:
             ("highlight", "Sentence", highlight_comp.layout(self._explanation, self._engine)),
             ("waterfall", "Waterfall", waterfall_comp.layout(self._explanation, self._engine)),
         ]
+        return left_tabs, upper_right_tabs, lower_right_tabs
 
-        left_column = html.Div(
-            [selection_bar, self._tabbed_card("left-tabs", left_tabs)],
-            style={"display": "flex", "flexDirection": "column", "gap": "8px", "height": "100%"},
-        )
-        right_column = html.Div(
-            [
-                self._tabbed_card("upper-right-tabs", upper_right_tabs),
-                self._tabbed_card("lower-right-tabs", lower_right_tabs),
-            ],
-            style={"display": "flex", "flexDirection": "column", "gap": "8px", "height": "100%"},
-        )
-
+    def _build_stores(self) -> list[dcc.Store]:
+        """Shared ``dcc.Store``s the shell and its components read/write cross-panel state through."""
         stores: list = [
             # current-datapoint is the app's primary selection: the one text every
             # per-instance panel (highlight, waterfall, counterfactuals) reads from.
@@ -721,40 +571,84 @@ class NlpWebApp:
             dcc.Store(id="word-click-filter", data=None),
             # Selected confusion-matrix cell: {"pred": idx, "true": idx, "indices": [...]} or None.
             dcc.Store(id="error-cell", data=None),
+            # Word Importance's class selector, published so Scatter's word-contribution color mode
+            # can read it without referencing Word Importance's DOM id directly (see
+            # nlp_components/scatter.py).
+            dcc.Store(id="active-class-store", data=0),
         ]
         # Only the What-if Lab (editor + counterfactual) reads/writes the apply store; the always-on
         # core panels (highlight, waterfall) never do, so their presence alone shouldn't create it.
-        if editor_comp is not None or cf_comp is not None:
+        needs_apply_store = any(isinstance(c, (DataEditorComponent, CounterfactualComponent)) for c in self._components)
+        if needs_apply_store:
             stores.append(dcc.Store(id=_APPLY_STORE, data=None))
+        return stores
 
-        self.app.layout = dbc.Container(
+    def _build_header(self) -> html.Div:
+        """Top band: clickable logo + title (links to the repo) and the run-info popover."""
+        return html.Div(
             [
-                # ── Header — the Class selector now lives with the panel it drives: Word
-                # Importance (global) and Sentence Highlight (local, see highlight_body) each
-                # get their own, so switching one no longer silently reinterprets the other. ──
-                dbc.Row(
-                    [
-                        dbc.Col(html.H4("Shapash — NLP Explainer", className="mb-0"), width=12),
-                    ],
-                    className="py-2 align-items-center",
-                    style={"flex": "0 0 auto"},
+                html.A(
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                html.Img(
+                                    # "fond fonce" — the dark-background mark, matching
+                                    # the gray band it sits on here.
+                                    src=self.app.get_asset_url("shapash-fond-fonce.png"),
+                                    style={"height": "32px"},
+                                ),
+                                width="auto",
+                            ),
+                            dbc.Col(
+                                html.H4(
+                                    "Shapash - NLP Explainer",
+                                    className="mb-0",
+                                    style={"color": self._theme.header_accent},
+                                )
+                            ),
+                        ],
+                        align="center",
+                        className="g-2",
+                    ),
+                    href="https://github.com/MAIF/shapash",
+                    target="_blank",
+                    style={"textDecoration": "none", "display": "block"},
                 ),
-                # ── Three-panel body: left (data) | right (global over local) ──
-                dbc.Row(
+                html.Div(
                     [
-                        dbc.Col(left_column, width=5, style={"height": "100%"}),
-                        dbc.Col(right_column, width=7, style={"height": "100%"}),
+                        html.Span(
+                            html.I("info", className="material-icons"),
+                            id="app-info-btn",
+                            title="Run info",
+                            style={"cursor": "pointer", "color": self._theme.header_accent, "fontSize": "22px"},
+                        ),
+                        dbc.Popover(
+                            dbc.PopoverBody(
+                                [
+                                    html.Div(
+                                        [html.Span(f"{label}: ", className="fw-bold"), html.Span(value)],
+                                        className="small",
+                                    )
+                                    for label, value in self._info.items()
+                                ]
+                            ),
+                            target="app-info-btn",
+                            trigger="click",
+                            placement="bottom-end",
+                        ),
                     ],
-                    # gx-3 = horizontal gutter only. A vertical gutter (g-3) adds a 1rem net excess
-                    # that pushes the 100vh shell past the viewport and makes the whole page scroll.
-                    className="gx-3",
-                    style={"flex": "1 1 auto", "minHeight": "0"},
+                    style={**_FLEX_FIXED, "alignSelf": "center"},
                 ),
-                *stores,
             ],
-            fluid=True,
-            # Full-viewport shell: panels scroll internally, the page itself never scrolls.
-            style={"height": "100vh", "display": "flex", "flexDirection": "column", "overflow": "hidden"},
+            style={
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "space-between",
+                "margin": "0 0 6px 0",
+                "padding": "12px 16px",
+                "backgroundColor": self._theme.header_bkg,
+                **_FLEX_FIXED,
+            },
         )
 
     def _tabbed_card(self, tabs_id: str, tabs: list) -> html.Div:
@@ -774,7 +668,23 @@ class NlpWebApp:
         ]
         return html.Div(
             [
-                dbc.Tabs(headers, id=tabs_id, active_tab=active),
+                html.Div(
+                    [
+                        dbc.Tabs(headers, id=tabs_id, active_tab=active, style={"flex": "1 1 auto", "minWidth": "0"}),
+                        # Magnifies whichever tab is active — see the `panel-card`/`panel-expand-btn`
+                        # clientside callback in `_register_callbacks`. A CSS class toggle (not the
+                        # browser Fullscreen API) so it works the same for every panel regardless of
+                        # what the active tab's own layout does internally.
+                        html.Span(
+                            html.I("fullscreen", className="material-icons"),
+                            id={"type": "panel-expand-btn", "id": tabs_id},
+                            n_clicks=0,
+                            title="Expand panel",
+                            style={"cursor": "pointer", "flex": "0 0 auto", "padding": "0 2px", "color": "#6c757d"},
+                        ),
+                    ],
+                    style={"display": "flex", "alignItems": "center", "gap": "6px"},
+                ),
                 # Flex column so the single visible body (the others are display:none) fills the height.
                 html.Div(
                     bodies,
@@ -787,6 +697,7 @@ class NlpWebApp:
                     },
                 ),
             ],
+            id={"type": "panel-card", "id": tabs_id},
             style={
                 "border": "1px solid #dee2e6",
                 "borderRadius": "4px",
@@ -796,6 +707,7 @@ class NlpWebApp:
                 "overflow": "hidden",
                 "flex": "1 1 0",
                 "minHeight": "0",
+                "backgroundColor": "white",
             },
         )
 
@@ -807,6 +719,7 @@ class NlpWebApp:
         explanation = self._explanation
         full_records = self._full_table_records
         has_gt = self._has_gt
+        column_header_by_field = self._column_header_by_field
 
         def _compose_indices(selected_indices, error_cell, errors_only=False):
             """Combine the scatter selection, the confusion-cell selection, and the errors toggle.
@@ -816,116 +729,8 @@ class NlpWebApp:
             is set. Returns a list of original sample indices, or ``None`` when nothing is active.
             """
             cell_indices = error_cell.get("indices") if error_cell else None
-            error_positions: set[int] | None = None
-            if errors_only and has_gt:
-                mask = self._error_mask()
-                if mask is not None:
-                    error_positions = set(np.where(mask)[0].tolist())
-            return compose_selection(selected_indices, cell_indices, error_positions)
-
-        # ── Global word importance ───────────────────────────────────────
-        @self.app.callback(
-            Output("global-importance-graph", "figure"),
-            [
-                Input("global-class-selector", "value"),
-                Input("topk-input", "value"),
-                Input("sign-filter", "value"),
-                Input("word-filter", "value"),
-                Input("rank-by", "value"),
-                Input("min-occurrences", "value"),
-                Input("scatter-selected-indices", "data"),
-                Input("error-cell", "data"),
-                Input("errors-only-switch", "value"),
-            ],
-        )
-        def update_global_importance(
-            label_idx,
-            topk,
-            sign_filter,
-            exclude_words_list,
-            rank_by,
-            min_occurrences,
-            selected_indices,
-            error_cell,
-            errors_only,
-        ):
-            if label_idx is None:
-                raise PreventUpdate
-            across_classes = label_idx == _ALL_CLASSES
-            rank_by = rank_by or "mean"
-            # Typed input bypasses the box's own min/max, and a cleared box arrives as None.
-            n_top = max(_MIN_TOPK, min(_MAX_TOPK, int(topk))) if topk is not None else _DEFAULT_TOPK
-            # A cleared number input arrives as None; 1 is "no floor", which is what an empty box
-            # should mean rather than reverting to the default the user just deleted.
-            floor = max(1, int(min_occurrences)) if min_occurrences else 1
-            effective_indices = _compose_indices(selected_indices, error_cell, bool(errors_only))
-            # Across classes the bars are magnitudes (max over classes of |statistic|), so a sign
-            # filter has nothing left to select on: it is greyed out in that mode and forced to
-            # "all" here as well, so a value left over from a single-class view cannot silently
-            # empty the chart.
-            sign = "all" if across_classes else (sign_filter or "all")
-            word_imp = explanation.word_importance(
-                label_idx=None if across_classes else int(label_idx),
-                n_top=n_top,
-                filter_sign=sign,
-                # Punctuation is its own unit since word segmentation splits on word/non-word
-                # boundaries; corpus-wide its mean contribution averages to ~0, so it is noise here.
-                # Per-instance punctuation contributions stay visible in the Sentence Highlight panel.
-                filter_punctuation=True,
-                exclude_words=set(exclude_words_list or []) or None,
-                sample_indices=effective_indices,
-                rank_by=rank_by,
-                min_occurrences=floor,
-            )
-            n_scope = len(effective_indices) if effective_indices is not None else len(explanation)
-            if word_imp.empty:
-                # Name the filter that actually emptied it, since the fix differs: the sign filter
-                # (checked first — it is applied last), then the frequency floor, then everything
-                # else (an exclusion list or an empty selection).
-                if sign in ("positive", "negative"):
-                    reason = f"No {sign} word passes these filters."
-                elif floor > 1:
-                    reason = f"No word occurs at least {floor} time(s) in these {n_scope} sample(s)."
-                else:
-                    reason = f"No word passes these filters in these {n_scope} sample(s)."
-                return empty_word_figure(reason)
-
-            # Same filters and same sample scope as the ranking above, so the count on a bar's
-            # hover is the count that bar's aggregate was computed over — and the count the
-            # min-occurrences floor was applied to.
-            counts = explanation.word_counts(filter_punctuation=True, sample_indices=effective_indices)
-            fig = plot_word_importance(
-                word_imp,
-                # No title: the tab is already labelled "Word Importance" and the class/floor are
-                # both visible in the filter row right above the chart — a repeated title band was
-                # just eating vertical space this panel needs for word rows (see the graph wrapper
-                # below, which scrolls when it runs out).
-                title=None,
-                # A mean, a total and a cross-class magnitude are different quantities on an
-                # identical-looking chart, so the axis has to say which one is drawn. Derived from
-                # what word_importance stamped on its result rather than re-deduced here.
-                x_title=word_importance_axis_title(str(word_imp.name)),
-                width=None,
-                height=None,
-                counts=counts["n_occurrences"],
-            )
-            # Height deliberately left as plot_word_importance computed it — see the graph's
-            # wrapper in the layout.
-            return fig
-
-        # Under "All classes" the ranking is a magnitude, so Positive/Negative would silently
-        # return nothing. Grey them out and pull the selection back to "All" rather than leaving a
-        # live control that cannot do anything.
-        @self.app.callback(
-            Output("sign-filter", "options"),
-            Output("sign-filter", "value"),
-            Input("global-class-selector", "value"),
-        )
-        def gate_sign_filter(label_idx):
-            if label_idx != _ALL_CLASSES:
-                return _SIGN_FILTER_OPTIONS, dash.no_update
-            greyed = [{**opt, "disabled": opt["value"] != "all"} for opt in _SIGN_FILTER_OPTIONS]
-            return greyed, "all"
+            errors = error_positions(explanation) if (errors_only and has_gt) else None
+            return compose_selection(selected_indices, cell_indices, errors)
 
         # ── Primary selection: selected table row → current-datapoint ────
         # The editor's Predict callback also writes this store (see DataEditorComponent),
@@ -953,37 +758,10 @@ class NlpWebApp:
         # SentenceHighlightComponent / WaterfallComponent (see the component loop at the end of this
         # method) — they only need the current-datapoint store, already shared via `stores["current"]`.
 
-        # ── Word-bar click / clear → table word filter ───────────────────
-        # Resetting the graph's clickData to None after each event lets the SAME bar be clicked
-        # again (Plotly does not re-fire clickData when the value is unchanged). Without a scatter
-        # the bar click drives word-click-filter directly; WITH a scatter the filter is derived
-        # from scatter-word-select instead (see the scatter block), so editing/removing the word
-        # there also clears this filter.
-        if self._scatter_xy is None:
-
-            @self.app.callback(
-                Output("word-click-filter", "data"),
-                Output("global-importance-graph", "clickData"),
-                Input("global-importance-graph", "clickData"),
-                Input("word-filter-clear-btn", "n_clicks"),
-                prevent_initial_call=True,
-            )
-            def update_word_click_filter(click_data, _clear_clicks):
-                trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
-                if "word-filter-clear-btn" in trigger:
-                    return None, None
-                if not click_data or not click_data.get("points"):
-                    raise PreventUpdate
-                return [click_data["points"][0]["y"]], None
-
-        @self.app.callback(
-            Output("word-filter-clear-btn", "style"),
-            Input("word-click-filter", "data"),
-        )
-        def toggle_word_clear_button(word_filter):
-            if word_filter:
-                return {"display": "inline", "fontSize": "0.8em"}
-            return {"display": "none", "fontSize": "0.8em"}
+        # Word-bar click / clear → table word filter, and the coloring/selection scatter callbacks,
+        # are registered by WordImportanceComponent / ScatterComponent respectively (see the
+        # component loop at the end of this method) — both read/write the shared
+        # `stores["word_click"]`/`stores["selection"]` stores, already wired above.
 
         # ── Unified table filter (scatter + word-bar click + errors-only) ──
         # Also writes the selection-summary readout: it already knows the resulting row count, so the
@@ -1000,9 +778,11 @@ class NlpWebApp:
                 Input("word-click-filter", "data"),
                 Input("errors-only-switch", "value"),
                 Input("error-cell", "data"),
+                Input("dataset-table", "filterModel"),
+                Input("dataset-table", "virtualRowData"),
             ],
         )
-        def filter_table(selected_indices, word_filter, errors_only, error_cell):
+        def filter_table(selected_indices, word_filter, errors_only, error_cell, filter_model, virtual_row_data):
             # word_filter may be a list of words (multi-select in the scatter) or None.
             words = word_filter if isinstance(word_filter, list) else ([word_filter] if word_filter else [])
             effective_indices = _compose_indices(selected_indices, error_cell)
@@ -1012,13 +792,21 @@ class NlpWebApp:
                 idx_set = set(effective_indices)
                 recs = [r for r in full_records if r["_orig_idx"] in idx_set] or full_records
             if errors_only and has_gt:
-                misclassified = [r for r in recs if str(r.get("prediction", "")) != str(r.get("ground_truth", ""))]
-                recs = misclassified or recs
+                # True intersection — must not silently drop this filter when it empties the
+                # selection, or the summary below (which still says "model errors only") would
+                # describe a filter that was not actually applied.
+                recs = [r for r in recs if str(r.get("prediction", "")) != str(r.get("ground_truth", ""))]
             if words:
-                lowers = [w.lower() for w in words]
-                # Rows containing ANY of the selected words (matches the scatter's word colouring).
-                filtered = [r for r in recs if any(w in r["text"].lower() for w in lowers)]
-                recs = filtered or recs
+                lowers = {w.lower() for w in words}
+                # Rows containing ANY of the selected words as an exact token — matched against
+                # explanation.token_strings, the same tokenization word_importance()/vocabulary()
+                # rank on, so a bar labeled "happy" cannot pull in "unhappy"/"happier" via a raw
+                # substring match on the sentence text.
+                # True intersection, same reasoning as errors_only above — e.g. a word clicked in
+                # Word Importance followed by an Error Analysis cell that contains none of that
+                # word's rows must show 0 rows, not silently ignore the word and claim it in the
+                # summary anyway.
+                recs = [r for r in recs if lowers & {t.lower() for t in explanation.token_strings[r["_orig_idx"]]}]
 
             total = len(full_records)
             parts = []
@@ -1033,108 +821,40 @@ class NlpWebApp:
                 parts.append("containing " + ", ".join(f'"{w}"' for w in words))
             if errors_only and has_gt:
                 parts.append("model errors only")
+
+            # AG Grid's own column filters (the funnel icon in each header) run entirely
+            # client-side and never pass through the filtering above — fold them into the same
+            # count here rather than reporting a second, disconnected number, so "Showing:" always
+            # names the row count actually on screen. virtualRowData is the grid's rowData after
+            # those inline filters are applied, so its length is that final on-screen count.
+            grid_filtered = bool(filter_model)
+            shown = len(virtual_row_data) if (grid_filtered and virtual_row_data is not None) else len(recs)
+            if grid_filtered:
+                names = ", ".join(column_header_by_field.get(f, f) for f in filter_model)
+                parts.append(f"grid filter: {names}")
+
             if parts:
-                summary = " · ".join(parts) + f" ({len(recs)} of {total})"
+                summary = " · ".join(parts) + f" ({shown} of {total})"
                 title = "Text Samples — filtered"
             else:
                 summary = f"all {total} samples"
                 title = "Text Samples — click a row to inspect"
-            return recs, [recs[0]], title, summary
+            return recs, ([recs[0]] if recs else []), title, summary
 
-        # ── Scatter-specific callbacks (registered only when xy provided) ──
-        if self._scatter_xy is not None:
+        @self.app.callback(
+            Output("grid-filter-clear-btn", "style"),
+            Input("dataset-table", "filterModel"),
+        )
+        def toggle_grid_filter_clear_btn(filter_model):
+            return {"fontSize": "0.8em"} if filter_model else {"display": "none"}
 
-            @self.app.callback(
-                Output("scatter-plot", "figure"),
-                [
-                    Input("color-by", "value"),
-                    Input("scatter-word-select", "value"),
-                    Input("global-class-selector", "value"),
-                    Input("errors-only-switch", "value"),
-                ],
-            )
-            def update_scatter_color(color_by, words, label_idx, errors_only):
-                return self._build_scatter_fig(
-                    color_by or "prediction",
-                    words=words or [],
-                    # "All classes" is not a column to colour by; the scatter falls back to the
-                    # first class rather than crashing on int("all").
-                    label_idx=label_idx if isinstance(label_idx, int) else 0,
-                    errors_only=bool(errors_only),
-                )
-
-            @self.app.callback(
-                Output("color-by", "value"),
-                Input("scatter-word-select", "value"),
-            )
-            def sync_color_by(words):
-                if not words:
-                    raise PreventUpdate
-                return "word_contribution"
-
-            # Bar click / clear → scatter word selection (the single source of truth for the word
-            # filter when a scatter exists). clickData is reset so the same bar can be re-clicked.
-            @self.app.callback(
-                Output("scatter-word-select", "value"),
-                Output("global-importance-graph", "clickData"),
-                Input("global-importance-graph", "clickData"),
-                Input("word-filter-clear-btn", "n_clicks"),
-                prevent_initial_call=True,
-            )
-            def set_scatter_words(click_data, _clear_clicks):
-                trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
-                if "word-filter-clear-btn" in trigger:
-                    return [], None
-                if not click_data or not click_data.get("points"):
-                    raise PreventUpdate
-                return [click_data["points"][0]["y"]], None
-
-            # Table word filter follows the scatter selection: removing the word in the dropdown (or
-            # hitting clear) unfilters the table and hides the clear button.
-            @self.app.callback(
-                Output("word-click-filter", "data"),
-                Input("scatter-word-select", "value"),
-            )
-            def word_filter_from_scatter(words):
-                return words or None
-
-            @self.app.callback(
-                Output("scatter-word-select", "style"),
-                Input("color-by", "value"),
-            )
-            def toggle_word_select(color_by):
-                base = {"minWidth": "180px", "fontSize": "0.9em"}
-                return base if color_by == "word_contribution" else {**base, "display": "none"}
-
-            @self.app.callback(
-                Output("scatter-selected-indices", "data"),
-                Input("scatter-plot", "selectedData"),
-                Input("scatter-plot", "clickData"),
-                Input("scatter-clear-btn", "n_clicks"),
-            )
-            def update_scatter_selection(selected_data, click_data, _clear_clicks):
-                trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
-                if "scatter-clear-btn" in trigger:
-                    return None
-                if "clickData" in trigger:
-                    if not click_data or not click_data.get("points"):
-                        return None
-                    return [int(click_data["points"][0]["customdata"][0])]
-                # An empty selectedData here is almost always plotly re-emitting on a figure recolor
-                # (color-by / word / errors-only toggle), NOT a user deselect — ignore it so the box
-                # survives. Genuine clears go through the clear button or a point click above.
-                if not selected_data or not selected_data.get("points"):
-                    raise PreventUpdate
-                return [int(pt["customdata"][0]) for pt in selected_data["points"]]
-
-            @self.app.callback(
-                Output("scatter-clear-btn", "style"),
-                Input("scatter-selected-indices", "data"),
-            )
-            def toggle_clear_button(selected_indices):
-                visible = {"display": "inline", "fontSize": "0.8em"}
-                hidden = {"display": "none", "fontSize": "0.8em"}
-                return visible if selected_indices else hidden
+        @self.app.callback(
+            Output("dataset-table", "filterModel"),
+            Input("grid-filter-clear-btn", "n_clicks"),
+            prevent_initial_call=True,
+        )
+        def clear_grid_filter(_n_clicks):
+            return {}
 
         # ── Tab visibility: toggle display of always-mounted bodies ──────
         # Bodies stay in the DOM (see _tabbed_card); only their `display` flips so the
@@ -1150,17 +870,45 @@ class NlpWebApp:
 
         # (The selection-summary readout is written by filter_table, which knows the row count.)
 
+        # ── Panel magnify: one clientside toggle for every `_tabbed_card` ─────────────────
+        # A single MATCH callback handles all three panels (Dataset/Embeddings, the global
+        # Word Importance group, Sentence/Waterfall) — no per-graph wiring needed, since it just
+        # toggles a CSS class on the whole card (see `.fullscreen-overlay` in style.css) rather
+        # than resizing any one plot: the card's own flex layout does the rest. Plotly figures
+        # inside don't auto-track a CSS-only resize, so a manual `Plotly.Plots.resize` nudges
+        # them once the browser has reflowed the class change.
+        self.app.clientside_callback(
+            """
+            function(n_clicks) {
+                if (!n_clicks) { return window.dash_clientside.no_update; }
+                const expand = (n_clicks % 2 === 1);
+                setTimeout(function() {
+                    document.querySelectorAll('.js-plotly-plot').forEach(function(gd) {
+                        if (window.Plotly) { window.Plotly.Plots.resize(gd); }
+                    });
+                }, 60);
+                return expand ? 'fullscreen-overlay' : '';
+            }
+            """,
+            Output({"type": "panel-card", "id": MATCH}, "className"),
+            Input({"type": "panel-expand-btn", "id": MATCH}, "n_clicks"),
+        )
+
         # ── Registered components (always-on core panels + capability-gated What-if Lab) ──
         stores = {
             "apply": _APPLY_STORE,
             "current": _CURRENT_STORE,
             "error_cell": "error-cell",
             "error_cell_clear": "error-cell-clear-btn",
-            # The three shell-owned filters a global panel has to honour, plus the clicked-word
-            # store, handed over by id so a component never hard-codes the shell's ids.
+            # The shell-owned filters a global panel has to honour, plus the clicked-word store and
+            # its clear button and the published active class, handed over by id so a component
+            # never hard-codes the shell's ids.
             "selection": "scatter-selected-indices",
+            "selection_clear": "scatter-clear-btn",
             "errors_only": "errors-only-switch",
             "word_click": "word-click-filter",
+            "word_click_clear": "word-filter-clear-btn",
+            "active_class": "active-class-store",
         }
         for comp in self._components:
             comp.register_callbacks(self.app, self._explanation, self._engine, stores)
@@ -1172,188 +920,3 @@ class NlpWebApp:
     def run(self, port: int = 8050, debug: bool = False, host: str = "127.0.0.1") -> None:
         """Launch the Dash development server."""
         self.app.run(port=port, debug=debug, host=host)
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def _word_contributions(self, word: str, label_idx: int) -> np.ndarray:
-        """Per-sample sum of SHAP contributions for all tokens matching *word*."""
-        explanation = self._explanation
-        n = self._explanation.n_samples
-        result = np.zeros(n)
-        word_lower = word.lower()
-        for i in range(n):
-            tokens = explanation.token_strings[i]
-            vals = select_label_column(explanation.values[i], label_idx)
-            for j, tok in enumerate(tokens):
-                if tok.strip().lower() == word_lower:
-                    result[i] += vals[j]
-        return result
-
-    def _error_mask(self) -> np.ndarray | None:
-        """Boolean array, ``True`` where the prediction disagrees with the ground truth.
-
-        ``None`` when either is unavailable. Matches the string comparison used by the
-        "Model Errors" table filter so both stay consistent.
-        """
-        y_true = self._explanation.y_true
-        y_pred = self._explanation.y_pred
-        if y_true is None or y_pred is None:
-            return None
-        return np.asarray(y_true).astype(str) != np.asarray(y_pred).astype(str)
-
-    @staticmethod
-    def _emphasize_errors(
-        idx_arr: np.ndarray,
-        base_opacity: float,
-        base_size: float,
-        error_mask: np.ndarray | None,
-    ) -> tuple[list[float] | float, list[float] | float]:
-        """Per-point opacity/size that pops model errors and shadows everything else.
-
-        Keeps the caller's coloring untouched — only opacity and marker size change —
-        so points stay grouped/colored however the "Color by" dropdown already draws them.
-        Returns scalars (the unmodified base values) when ``error_mask`` is unavailable.
-        """
-        if error_mask is None or len(idx_arr) == 0:
-            return base_opacity, base_size
-        is_error = error_mask[idx_arr]
-        opacity = np.where(is_error, max(base_opacity, 0.9), 0.12).tolist()
-        size = np.where(is_error, base_size + 3, max(base_size - 2, 3)).tolist()
-        return opacity, size
-
-    def _build_scatter_fig(
-        self,
-        color_by: str,
-        words: list[str] | None = None,
-        label_idx: int = 0,
-        errors_only: bool = False,
-    ) -> go.Figure:
-        """2-D scatter coloured by prediction, ground-truth label, or word SHAP contribution.
-
-        One trace per class for label-based coloring so the legend works correctly
-        and Plotly's box/lasso select dims unselected points across all traces.
-        Word-contribution mode uses a single diverging-colorscale trace.
-        ``customdata`` always stores the original sample index. When ``errors_only`` is
-        set, misclassified points are emphasized (larger, opaque) and the rest are
-        shadowed (small, faint) without altering their color.
-        """
-        n = self._explanation.n_samples
-        explanation = self._explanation
-        exp_texts = self._explanation.texts
-        assert exp_texts is not None  # noqa: S101 - the webapp requires an already-compiled explainer
-        texts_short = [(t[:120] + "…") if len(t) > 120 else t for t in exp_texts]
-        xy = self._scatter_xy
-        assert xy is not None  # noqa: S101 - only registered/called when scatter_xy was provided
-        error_mask = self._error_mask() if errors_only else None
-
-        if color_by == "word_contribution" and words:
-            contributions = np.sum([self._word_contributions(w, label_idx) for w in words], axis=0)
-            max_abs = float(np.abs(contributions).max()) or 1.0
-            present_mask = np.where(contributions != 0.0)[0]
-            absent_mask = np.where(contributions == 0.0)[0]
-            colorbar_title = " + ".join(f'"{w}"' for w in words) if len(words) <= 3 else f"{len(words)} words"
-
-            fig = go.Figure()
-            # Both layers are ALWAYS added (even when a mask is empty) so the trace structure stays
-            # constant across word additions/removals. With a stable `uirevision`, a changing WebGL
-            # (Scattergl) trace count leaves ghost/"shadow" points from the previous render — keeping
-            # exactly two traces avoids that.
-            absent_opacity, absent_size = self._emphasize_errors(absent_mask, 0.35, 5, error_mask)
-            present_opacity, present_size = self._emphasize_errors(present_mask, 0.9, 9, error_mask)
-
-            # Gray context layer — absent points (no selected word contributes to them).
-            fig.add_trace(
-                go.Scattergl(
-                    x=xy[absent_mask, 0].tolist(),
-                    y=xy[absent_mask, 1].tolist(),
-                    mode="markers",
-                    marker=dict(color="#b0b0b0", size=absent_size, opacity=absent_opacity),
-                    customdata=absent_mask.reshape(-1, 1).tolist(),
-                    text=[texts_short[j] for j in absent_mask],
-                    hovertemplate="%{text}<extra>absent</extra>",
-                    showlegend=False,
-                )
-            )
-            # Colored overlay — samples where at least one selected word contributes.
-            fig.add_trace(
-                go.Scattergl(
-                    x=xy[present_mask, 0].tolist(),
-                    y=xy[present_mask, 1].tolist(),
-                    mode="markers",
-                    marker=dict(
-                        color=contributions[present_mask].tolist(),
-                        colorscale="RdBu",
-                        cmin=-max_abs,
-                        cmax=max_abs,
-                        size=present_size,
-                        opacity=present_opacity,
-                        colorbar=dict(
-                            title=dict(text=colorbar_title, side="right"),
-                            thickness=12,
-                            tickformat=".2f",
-                        ),
-                    ),
-                    customdata=present_mask.reshape(-1, 1).tolist(),
-                    text=[texts_short[j] for j in present_mask],
-                    hovertemplate="<b>SHAP: %{marker.color:.3f}</b><br>%{text}<extra></extra>",
-                    showlegend=False,
-                )
-            )
-            fig.update_layout(
-                dragmode="select",
-                uirevision="scatter",
-                xaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-                yaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-                plot_bgcolor="#f9f9f9",
-                paper_bgcolor="white",
-                margin=dict(l=10, r=10, t=10, b=10),
-                autosize=True,
-                showlegend=False,
-            )
-            return fig
-
-        if color_by == "ground_truth" and self._explanation.y_true is not None:
-            labels = [str(label) for label in self._explanation.y_true.tolist()]
-        elif self._explanation.y_pred is not None:
-            labels = [str(label) for label in self._explanation.y_pred.tolist()]
-        else:
-            labels = [""] * n
-
-        label_names = explanation.label_names or sorted(set(labels))
-
-        fig = go.Figure()
-        for i, name in enumerate(label_names):
-            mask = [j for j, lbl in enumerate(labels) if lbl == name]
-            if not mask:
-                continue
-            mask_arr = np.array(mask)
-            opacity, size = self._emphasize_errors(mask_arr, 0.75, 7, error_mask)
-            fig.add_trace(
-                go.Scattergl(
-                    x=xy[mask_arr, 0].tolist(),
-                    y=xy[mask_arr, 1].tolist(),
-                    mode="markers",
-                    marker=dict(color=_PALETTE[i % len(_PALETTE)], size=size, opacity=opacity),
-                    customdata=mask_arr.reshape(-1, 1).tolist(),
-                    text=[texts_short[j] for j in mask],
-                    hovertemplate=f"<b>{name}</b><br>%{{text}}<extra></extra>",
-                    name=name,
-                )
-            )
-
-        fig.update_layout(
-            dragmode="select",
-            uirevision="scatter",
-            xaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-            yaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-            plot_bgcolor="#f9f9f9",
-            paper_bgcolor="white",
-            margin=dict(l=10, r=10, t=10, b=10),
-            # No fixed height — the responsive Graph stretches it to fill the card.
-            autosize=True,
-            legend=dict(itemsizing="constant", orientation="v", title_text=""),
-            showlegend=True,
-        )
-        return fig

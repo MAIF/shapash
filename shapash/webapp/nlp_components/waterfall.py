@@ -6,6 +6,7 @@ from dash import Input, Output, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_waterfall import plot_waterfall
+from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
 from shapash.webapp.nlp_components.base import WebappComponent
 from shapash.webapp.nlp_components.datapoint import unpack_datapoint
 
@@ -21,6 +22,9 @@ class WaterfallComponent(WebappComponent):
     id = "waterfall-panel"
     name = "Waterfall"
     scope = "local"
+
+    def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
+        self._theme = theme
 
     def layout(self, explanation, engine=None) -> html.Div:
         """Return the grouping-threshold slider + waterfall graph."""
@@ -74,4 +78,6 @@ class WaterfallComponent(WebappComponent):
                 base_value=base_value,
                 min_pct=min_pct,
                 title=f"Token contributions — {label_name}",
+                color_positive=self._theme.xpl_positive,
+                color_negative=self._theme.xpl_negative,
             )

@@ -1007,6 +1007,7 @@ def main() -> None:
     # Step 3 — the expensive call, and the only one that produces results. The returned artifact is
     # immutable and holds no model, no backend and no explainer handle; ground truth rides on it
     # (never on xpl), which is why a cache hit still gets *this* run's y_true attached.
+    dataset_label = str(config.dataset_path) if config.is_local_dataset else config.dataset_name
     explanation = xpl.explain(sentences, y=y_true, cache_dir=explain_dir)
 
     # Step 4 — everything downstream reads the artifact as an argument.
@@ -1042,6 +1043,7 @@ def main() -> None:
         host=config.host,
         scatter_xy=projected,
         url_base_pathname=config.url_base_path,
+        info={"Dataset": dataset_label},
     )
 
 

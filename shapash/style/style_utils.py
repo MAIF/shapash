@@ -4,6 +4,7 @@ functions for loading and manipulating colors
 
 import json
 import os
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -180,6 +181,55 @@ def get_palette(palette_name):
     if palette_name is None:
         palette_name = list(colors_loading().keys())[0]  # Default palette name
     return select_palette(colors_loading(), palette_name)
+
+
+@dataclass(frozen=True)
+class NlpTheme:
+    """Resolved colors the NLP webapp and its plots draw from — a palette with overrides merged in.
+
+    ``xpl_positive``/``xpl_negative`` name the concept "explanation pushes the prediction
+    up/down" rather than any one backend's algorithm (``nlp_shap`` and ``nlp_captum_lig`` both
+    produce signed per-token contributions, drawn with these two colors) — see
+    ``docs/architecture/explanation-space.md``.
+    """
+
+    header_bkg: str
+    header_accent: str
+    xpl_positive: str
+    xpl_negative: str
+
+
+def resolve_nlp_theme(palette_name: str = "default", colors_dict: dict[str, str] | None = None) -> NlpTheme:
+    """Resolve the NLP webapp's theme: *palette_name* from ``colors.json``, *colors_dict* merged on top.
+
+    The single place every NLP color customization funnels through — :class:`~shapash.webapp.nlp_app.NlpWebApp`
+    resolves it once from its ``palette_name``/``colors_dict`` constructor arguments; every plot
+    function in :mod:`shapash.plots` that draws a signed contribution defaults its own color
+    arguments from :data:`DEFAULT_NLP_THEME` below, so a bare call (a doctest, a notebook via
+    ``NlpExplanation.plot``) still renders in the same default colors without going through the
+    webapp at all.
+
+    Parameters
+    ----------
+    palette_name : str
+        Name of a palette in ``colors.json``.
+    colors_dict : dict[str, str], optional
+        Per-key overrides merged on top of the selected palette, same key names as ``colors.json``.
+
+    Returns
+    -------
+    NlpTheme
+    """
+    palette = {**select_palette(colors_loading(), palette_name), **(colors_dict or {})}
+    return NlpTheme(
+        header_bkg=palette["webapp_bkg"],
+        header_accent=palette["webapp_title"],
+        xpl_positive=palette["nlp_xpl_positive"],
+        xpl_negative=palette["nlp_xpl_negative"],
+    )
+
+
+DEFAULT_NLP_THEME = resolve_nlp_theme()
 
 
 def get_pyplot_color(colors):

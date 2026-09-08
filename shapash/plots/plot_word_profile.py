@@ -5,8 +5,7 @@ from __future__ import annotations
 import pandas as pd
 from plotly import graph_objs as go
 
-_COLOR_POSITIVE = "#1f77b4"
-_COLOR_NEGATIVE = "#d62728"
+from shapash.style.style_utils import DEFAULT_NLP_THEME
 
 
 def plot_word_profile(
@@ -17,6 +16,8 @@ def plot_word_profile(
     title: str = "Word profile",
     width: int | None = 640,
     height: int | None = None,
+    color_positive: str = DEFAULT_NLP_THEME.xpl_positive,
+    color_negative: str = DEFAULT_NLP_THEME.xpl_negative,
 ) -> go.Figure:
     """Horizontal bar chart of one word's aggregated contribution to each class.
 
@@ -43,6 +44,11 @@ def plot_word_profile(
         Figure title.
     width, height : int, optional
         Figure size in pixels. ``height`` defaults to a size that fits the number of classes.
+    color_positive, color_negative : str
+        Bar colors for a non-negative / negative contribution. Default to the ``"default"``
+        palette's ``nlp_xpl_positive``/``nlp_xpl_negative`` in ``shapash/style/colors.json`` — see
+        :class:`~shapash.webapp.nlp_app.NlpWebApp`'s ``palette_name``/``colors_dict`` to theme
+        every NLP chart at once instead of overriding this one call.
 
     Returns
     -------
@@ -57,7 +63,7 @@ def plot_word_profile(
     class_idx = list(stats.index)
     names = [label_names[i] if label_names is not None and i < len(label_names) else str(i) for i in class_idx]
     values = [float(v) for v in stats.to_numpy()]
-    colors = [_COLOR_POSITIVE if v >= 0 else _COLOR_NEGATIVE for v in values]
+    colors = [color_positive if v >= 0 else color_negative for v in values]
 
     errors: list[float] | None = None
     if spread is not None and len(spread):

@@ -5,8 +5,7 @@ from __future__ import annotations
 import numpy as np
 from plotly import graph_objs as go
 
-_COLOR_POSITIVE = "#1f77b4"
-_COLOR_NEGATIVE = "#d62728"
+from shapash.style.style_utils import DEFAULT_NLP_THEME
 
 
 def plot_token_highlight(
@@ -16,10 +15,12 @@ def plot_token_highlight(
     max_tokens: int | None = None,
     width: int = 900,
     height: int | None = None,
+    color_positive: str = DEFAULT_NLP_THEME.xpl_positive,
+    color_negative: str = DEFAULT_NLP_THEME.xpl_negative,
 ) -> go.Figure:
     """Horizontal bar chart of token-level SHAP contributions for one sample.
 
-    Positive contributions are shown in blue, negative in red.
+    Positive contributions are shown in *color_positive*, negative in *color_negative*.
     Tokens are displayed in sentence order (top to bottom). When ``max_tokens``
     is set, only the highest-magnitude tokens are kept but their relative order
     in the sentence is preserved.
@@ -39,6 +40,11 @@ def plot_token_highlight(
         Figure width in pixels.
     height : int, optional
         Figure height in pixels. Defaults to ``max(400, 30 * n_tokens + 120)``.
+    color_positive, color_negative : str
+        Bar colors for a non-negative / negative contribution. Default to the ``"default"``
+        palette's ``nlp_xpl_positive``/``nlp_xpl_negative`` in ``shapash/style/colors.json`` — see
+        :class:`~shapash.webapp.nlp_app.NlpWebApp`'s ``palette_name``/``colors_dict`` to theme
+        every NLP chart at once instead of overriding this one call.
 
     Returns
     -------
@@ -58,7 +64,7 @@ def plot_token_highlight(
         tokens = [tokens[i] for i in keep]
         values = values[keep]
 
-    colors = [_COLOR_POSITIVE if v >= 0 else _COLOR_NEGATIVE for v in values]
+    colors = [color_positive if v >= 0 else color_negative for v in values]
 
     # Plotly renders y-axis bottom-to-top; reverse so sentence reads top-to-bottom.
     fig = go.Figure(

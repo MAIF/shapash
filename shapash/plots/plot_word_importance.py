@@ -7,8 +7,7 @@ from collections.abc import Mapping
 import pandas as pd
 from plotly import graph_objs as go
 
-_COLOR_POSITIVE = "#1f77b4"
-_COLOR_NEGATIVE = "#d62728"
+from shapash.style.style_utils import DEFAULT_NLP_THEME
 
 # Vertical room per word. The y axis is categorical and every category gets a tick (dtick=1
 # below), so this is what decides whether those ticks have room to render at all: squeeze 50 words
@@ -83,13 +82,15 @@ def plot_word_importance(
     height: int | None = None,
     show_values: bool = True,
     counts: pd.Series | Mapping[str, int] | None = None,
+    color_positive: str = DEFAULT_NLP_THEME.xpl_positive,
+    color_negative: str = DEFAULT_NLP_THEME.xpl_negative,
 ) -> go.Figure:
     """Horizontal bar chart of aggregated token-level SHAP contributions per word.
 
     Words are displayed in the order given (highest at top). Positive contributions are shown
-    in blue, negative in red — which holds whichever statistic produced them, since
-    :meth:`~shapash.explainer.nlp_explanation.NlpExplanation.word_importance` ranks by absolute
-    value but returns signed numbers.
+    in *color_positive*, negative in *color_negative* — which holds whichever statistic produced
+    them, since :meth:`~shapash.explainer.nlp_explanation.NlpExplanation.word_importance` ranks by
+    absolute value but returns signed numbers.
 
     Parameters
     ----------
@@ -122,6 +123,11 @@ def plot_word_importance(
         :meth:`~shapash.explainer.nlp_explanation.NlpExplanation.word_counts` computed with the
         *same* filters and sample scope as the ranking. A mapping that does not cover every
         plotted word is ignored outright rather than shown partially.
+    color_positive, color_negative : str
+        Bar colors for a non-negative / negative contribution. Default to the ``"default"``
+        palette's ``nlp_xpl_positive``/``nlp_xpl_negative`` in ``shapash/style/colors.json`` — see
+        :class:`~shapash.webapp.nlp_app.NlpWebApp`'s ``palette_name``/``colors_dict`` to theme
+        every NLP chart at once instead of overriding this one call.
 
     Returns
     -------
@@ -135,7 +141,7 @@ def plot_word_importance(
     """
     words = [str(w) for w in word_imp.index]
     values = [float(v) for v in word_imp.to_numpy()]
-    colors = [_COLOR_POSITIVE if v >= 0 else _COLOR_NEGATIVE for v in values]
+    colors = [color_positive if v >= 0 else color_negative for v in values]
     labels = [f"{v:+.3f}" for v in values] if show_values else None
     occurrences = _aligned_counts(words, counts)
 

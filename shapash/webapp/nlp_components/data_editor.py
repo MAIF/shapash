@@ -68,7 +68,7 @@ class DataEditorComponent(WebappComponent):
                     id=f"{self.id}-input",
                     style={"width": "100%", "height": "90px", "fontSize": "0.95em"},
                 ),
-                dbc.Button("Predict", id=f"{self.id}-predict-btn", color="primary", size="sm", className="mt-2"),
+                dbc.Button("Predict", id=f"{self.id}-predict-btn", color="warning", size="sm", className="mt-2"),
                 # Hidden until the first Predict, so an empty plot area is not shown on tab open.
                 html.Div(
                     [

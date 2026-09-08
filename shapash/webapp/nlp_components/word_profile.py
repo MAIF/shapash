@@ -42,6 +42,7 @@ from shapash.explainer.nlp_explanation import (
 )
 from shapash.plots.plot_word_importance import empty_word_figure
 from shapash.plots.plot_word_profile import plot_word_profile
+from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
 from shapash.webapp.nlp_components.base import WebappComponent, compose_selection, error_positions
 from shapash.webapp.nlp_components.datapoint import pack_datapoint
 
@@ -129,7 +130,8 @@ class WordProfileComponent(WebappComponent):
     # Data-only: reads the artifact and nothing else, so it also mounts on a loaded snapshot.
     requires = frozenset()
 
-    def __init__(self) -> None:
+    def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
+        self._theme = theme
         # Both option orderings, built once in layout() and swapped by a callback: the counts cost
         # a full pass over the corpus, and the sort toggle must not pay it on every click.
         self._options: dict[str, list] = {"alpha": [], "frequency": []}
@@ -331,6 +333,8 @@ class WordProfileComponent(WebappComponent):
                 title="",  # the caption below carries the word and the counts
                 width=None,
                 height=None,
+                color_positive=self._theme.xpl_positive,
+                color_negative=self._theme.xpl_negative,
             )
             fig.layout.height = None  # let the CSS container height take over
 

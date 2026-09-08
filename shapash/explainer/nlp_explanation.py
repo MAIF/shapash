@@ -256,6 +256,15 @@ class NlpExplanation:
         :meth:`~shapash.model.base.SupportsTokenization.folds_case`. Decides the default unit
         grouping in :meth:`word_importance` — see :meth:`resolve_lowercase`. ``None`` when the
         model exposes no tokenizer to ask.
+    model_id : str or None
+        The model's checkpoint identity (e.g. an HF hub id or local path) at ``explain()`` time —
+        read off ``TextModel.checkpoint`` (see :attr:`~shapash.model.encoder.EncoderClassifierModel.checkpoint`)
+        when the bound model exposes one. Purely descriptive: a plain string, never a live model
+        handle, so it does not compromise this class being model-free. ``None`` for a model with no
+        such identity (e.g. a bare LIME ``classifier_fn``).
+    architecture : str or None
+        Best-effort architecture tag (e.g. ``"distilbert"``), read off ``TextModel.architecture``
+        when available. ``None`` on the same models that leave :attr:`model_id` ``None``.
     backend_name : str
         ``type(backend).name`` — which explanation method produced this artifact.
     is_additive : bool
@@ -286,6 +295,10 @@ class NlpExplanation:
     is_additive: bool
     reference_kind: Literal["distribution", "statistics", "point", "none"]
     output_space: Literal["probability", "logit"]
+    # Purely descriptive metadata (see the docstrings above) — defaulted so every existing
+    # NlpExplanation(...) call site (library and test) keeps working unchanged.
+    model_id: str | None = None
+    architecture: str | None = None
 
     # ClassVar, not a field: it is a shared constant, not per-explanation data, so it stays out
     # of ``fields()`` — and therefore out of ``__init__``, ``replace()`` and ``save()``.
@@ -355,6 +368,8 @@ class NlpExplanation:
             "is_additive",
             "reference_kind",
             "output_space",
+            "model_id",
+            "architecture",
         }
     )
 
@@ -936,6 +951,8 @@ class NlpExplanation:
             "output_space": self.output_space,
             "label_names": self.label_names,
             "folds_case": self.folds_case,
+            "model_id": self.model_id,
+            "architecture": self.architecture,
             # Authoritative counts, not re-derived from the tidy tables on load: a sample with
             # zero tokens has no row in contrib_df at all, so inferring n_samples from the table
             # would silently drop it (and n_classes has nothing to read from an all-empty batch).
@@ -1020,6 +1037,11 @@ class NlpExplanation:
             # explained raw logits, everything else probabilities.
             output_space=meta.get("output_space")
             or ("logit" if meta["backend_name"] == "nlp_captum_lig" else "probability"),
+            # Absent (None) on a file saved before these fields existed, or when the model that
+            # produced it exposed no such identity — either way a webapp reading it just omits
+            # the fact rather than showing a stale placeholder.
+            model_id=meta.get("model_id"),
+            architecture=meta.get("architecture"),
         )
         return explanation, scatter_xy
 

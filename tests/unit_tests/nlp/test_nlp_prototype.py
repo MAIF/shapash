@@ -37,6 +37,7 @@ from shapash.plots.plot_token_highlight import plot_token_highlight
 from shapash.plots.plot_waterfall import plot_waterfall
 from shapash.plots.plot_word_importance import plot_word_importance
 from shapash.plots.plot_word_profile import plot_word_profile
+from shapash.style.style_utils import DEFAULT_NLP_THEME
 from shapash.webapp.nlp_app import NlpWebApp
 from shapash.webapp.nlp_components import compose_selection as _compose_selection
 from shapash.webapp.nlp_components import error_positions
@@ -1717,8 +1718,8 @@ class TestPlotWordProfile(unittest.TestCase):
     def test_sign_drives_colour(self):
         fig = plot_word_profile(self.stats, label_names=["pos", "neg"])
         # Reversed alongside the values, so the last colour belongs to the positive class 0.
-        self.assertEqual(fig.data[0].marker.color[-1], "#1f77b4")
-        self.assertEqual(fig.data[0].marker.color[0], "#d62728")
+        self.assertEqual(fig.data[0].marker.color[-1], DEFAULT_NLP_THEME.xpl_positive)
+        self.assertEqual(fig.data[0].marker.color[0], DEFAULT_NLP_THEME.xpl_negative)
 
     def test_falls_back_to_class_indices_without_names(self):
         fig = plot_word_profile(self.stats)
@@ -2396,6 +2397,9 @@ class TestRunAppMountPath(unittest.TestCase):
             engine=xpl,
             scatter_xy=None,
             url_base_pathname="/shapash-nlp-explainer/",
+            palette_name="default",
+            colors_dict=None,
+            info={},
         )
 
     def test_defaults_to_no_prefix(self):
