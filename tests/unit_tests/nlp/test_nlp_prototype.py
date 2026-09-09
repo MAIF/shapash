@@ -42,6 +42,7 @@ from shapash.webapp.nlp_app import NlpWebApp
 from shapash.webapp.nlp_components import compose_selection as _compose_selection
 from shapash.webapp.nlp_components import error_positions
 from shapash.webapp.nlp_components.error_analysis import ErrorAnalysisComponent, _cell_from_click
+from shapash.webapp.utils.launch import RunningApp
 
 LABEL_NAMES = ["sadness", "joy", "love", "anger", "fear", "surprise"]
 N_CLASSES = len(LABEL_NAMES)
@@ -1151,6 +1152,39 @@ class TestNlpWebApp(unittest.TestCase):
         for child in children:
             ids |= self._collect_ids(child)
         return ids
+
+
+class TestNlpWebAppRun(unittest.TestCase):
+    """``NlpWebApp.run`` / ``NlpExplainer.run_app`` — killable background server."""
+
+    def setUp(self):
+        self.xpl = _make_explainer()
+        self.explanation = _make_explanation()
+
+    def test_run_returns_killable_app_by_default(self):
+        webapp = NlpWebApp(self.explanation, engine=self.xpl)
+        app = webapp.run(port=0)
+        try:
+            self.assertIsInstance(app, RunningApp)
+            self.assertTrue(app.is_alive())
+        finally:
+            app.kill()
+        self.assertFalse(app.is_alive())
+
+    def test_run_app_returns_killable_app(self):
+        app = self.xpl.run_app(self.explanation, port=0)
+        try:
+            self.assertIsInstance(app, RunningApp)
+            self.assertTrue(app.is_alive())
+        finally:
+            app.kill()
+
+    def test_debug_mode_blocks_and_returns_none(self):
+        webapp = NlpWebApp(self.explanation, engine=self.xpl)
+        with patch.object(webapp.app, "run") as mock_run:
+            result = webapp.run(port=0, debug=True)
+        mock_run.assert_called_once_with(port=0, debug=True, host="127.0.0.1")
+        self.assertIsNone(result)
 
 
 class TestComposeSelection(unittest.TestCase):
