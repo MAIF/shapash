@@ -18,6 +18,7 @@ from plotly import graph_objs as go
 
 from shapash.explainer.nlp_explanation import NlpExplanation
 from shapash.explainer.nlp_plotter import NlpPlotter
+from shapash.webapp.utils.dash_to_html import DashHtmlPreview
 
 
 def _make_explanation(
@@ -100,6 +101,12 @@ class TestPerInstancePlots(unittest.TestCase):
 
     def test_sentence_returns_a_dash_component(self):
         self.assertIsInstance(self.explanation.plot.sentence(row=0, label_idx=1), html.Div)
+
+    def test_sentence_notebook_true_returns_a_previewable_wrapper(self):
+        preview = self.explanation.plot.sentence(row=0, label_idx=1, notebook=True)
+        self.assertIsInstance(preview, DashHtmlPreview)
+        self.assertIsInstance(preview.component, html.Div)
+        self.assertIn("<div", preview._repr_html_())
 
     def test_negative_row_counts_from_the_end(self):
         last = self.explanation.plot.tokens(row=-1, label_idx=0)

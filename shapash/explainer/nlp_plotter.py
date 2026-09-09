@@ -35,6 +35,7 @@ from shapash.plots.plot_token_highlight import plot_token_highlight
 from shapash.plots.plot_waterfall import plot_waterfall
 from shapash.plots.plot_word_importance import plot_word_importance, word_importance_axis_title
 from shapash.plots.plot_word_profile import plot_word_profile
+from shapash.webapp.utils.dash_to_html import DashHtmlPreview
 
 if TYPE_CHECKING:
     from shapash.explainer.nlp_explanation import NlpExplanation
@@ -202,7 +203,7 @@ class NlpPlotter:
             width=width,
         )
 
-    def sentence(self, row: int = 0, label_idx: int = 0) -> html.Div:
+    def sentence(self, row: int = 0, label_idx: int = 0, notebook: bool = False) -> html.Div | DashHtmlPreview:
         """One sample rendered inline, each token background-shaded by its contribution.
 
         Parameters
@@ -211,16 +212,25 @@ class NlpPlotter:
             Positional index of the sample (see :meth:`tokens`).
         label_idx : int
             Index of the class to display, in ``label_names`` order.
+        notebook : bool
+            ``False`` (default) returns the raw Dash component — directly usable as ``children``
+            in your own Dash layout, the same way :meth:`tokens`/:meth:`waterfall` return a
+            ``go.Figure`` directly usable in ``dcc.Graph(figure=...)``. ``True`` wraps it in a
+            :class:`~shapash.webapp.utils.dash_to_html.DashHtmlPreview`, so leaving the call as
+            the last expression in a notebook cell (or ``display()``-ing it) renders it as static
+            HTML — a Dash component's own ``str()``/``repr()`` is Python source, not markup, so
+            ``IPython.display.HTML(...)`` on the raw component would just show that source as text.
 
         Returns
         -------
-        dash.html.Div
-            A Dash component. In a notebook, display it inside a
-            ``jupyter_dash``/``dash`` app, or use :meth:`tokens` for a standalone figure.
+        dash.html.Div or DashHtmlPreview
+            A Dash component (``notebook=False``), or that same component wrapped for notebook
+            display (``notebook=True`` — the original is still reachable as ``.component``).
         """
         label_idx = self._check_label_idx(label_idx)
         toks, values, base_value = self._slice(row, label_idx)
-        return plot_sentence_highlight(tokens=toks, values=values, base_value=base_value)
+        div = plot_sentence_highlight(tokens=toks, values=values, base_value=base_value)
+        return DashHtmlPreview(div) if notebook else div
 
     # ── batch-level plots ───────────────────────────────────────────────────────────────
     def word_importance(

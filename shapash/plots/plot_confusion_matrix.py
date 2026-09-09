@@ -82,11 +82,13 @@ def plot_confusion_matrix(
     )
 
     size = max(360, 90 * n + 120)
-    # The x-axis sits on top, so keep room for its labels even without a title.
-    top_margin = 80 if title else 40
+    # The x-axis sits on top, so keep room for its labels even without a title. With a title,
+    # pin it above that axis title (rather than at Plotly's default position, which drifts down
+    # into the same band) and give the axis title a standoff so the two never share a line.
+    top_margin = 115 if title else 40
     fig.update_layout(
-        title=dict(text=title, x=0.5),
-        xaxis_title="Predicted class",
+        title=dict(text=title, x=0.5, y=0.98, yanchor="top"),
+        xaxis_title=dict(text="Predicted class", standoff=25),
         yaxis_title="True class",
         width=width or size,
         height=height or size,
