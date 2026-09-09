@@ -43,6 +43,7 @@ from shapash.explainer.nlp_explanation import NlpExplanation
 from shapash.model.base import SupportsEmbeddings, SupportsTokenization, TextModel, has_capabilities
 from shapash.model.hf import HFPipelineModel
 from shapash.webapp.nlp_app import NlpWebApp
+from shapash.webapp.utils.launch import RunningApp
 
 # Built-in counterfactual generators, in preference order: HotFlip (gradient-based, richer
 # substitutions) first, AblationFlip (forward-pass-only removal) as the broader fallback. Every entry
@@ -515,7 +516,7 @@ class NlpExplainer:
         palette_name: str = "default",
         colors_dict: dict[str, str] | None = None,
         info: dict[str, str] | None = None,
-    ) -> None:
+    ) -> RunningApp | None:
         """Launch the NLP explanation webapp for ``explanation``.
 
         The webapp reads ``explanation`` directly — it never writes to it, so the artifact it renders
@@ -563,12 +564,20 @@ class NlpExplainer:
             reference corpus — this adds "Train samples" from it. Pass *info* for anything neither
             source can know — e.g. ``{"Dataset": "dair-ai/emotion"}`` for a caller-supplied dataset
             label — or to override a value from either.
+
+        Returns
+        -------
+        RunningApp or None
+            When ``debug`` is ``False`` (the default), the app runs on a background thread and
+            this call returns immediately with a handle to it — call ``.kill()`` on it (or use it
+            as a context manager) to stop the app. Returns ``None`` when ``debug=True``, since
+            Dash's own dev server blocks in that mode instead — see :meth:`~shapash.webapp.nlp_app.NlpWebApp.run`.
         """
         # fit() is the one place that knows the reference corpus, so its size is added here rather
         # than living on `explanation` (which is model-free and never sees the training set at all).
         reference = getattr(self, "reference_", None)
         engine_info = {"Train samples": str(len(reference[0]))} if reference is not None else {}
-        NlpWebApp(
+        return NlpWebApp(
             explanation,
             engine=self,
             scatter_xy=scatter_xy,

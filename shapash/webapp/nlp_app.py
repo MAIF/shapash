@@ -9,6 +9,8 @@ not optional panels, so there is nothing left to extract them into. All tabular-
 
 from __future__ import annotations
 
+import logging
+
 import dash
 import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
@@ -36,6 +38,7 @@ from shapash.webapp.nlp_components import (
     error_positions,
     pack_datapoint,
 )
+from shapash.webapp.utils.launch import RunningApp, run_in_background
 
 _APPLY_STORE = "whatif-apply-store"
 _CURRENT_STORE = "current-datapoint"
@@ -917,6 +920,32 @@ class NlpWebApp:
     # Public
     # ------------------------------------------------------------------
 
-    def run(self, port: int = 8050, debug: bool = False, host: str = "127.0.0.1") -> None:
-        """Launch the Dash development server."""
-        self.app.run(port=port, debug=debug, host=host)
+    def run(self, port: int = 8050, debug: bool = False, host: str = "127.0.0.1") -> RunningApp | None:
+        """Launch the Dash server.
+
+        Parameters
+        ----------
+        port : int
+            Port for the server.
+        debug : bool
+            Enable Dash debug mode (hot reload, error overlay). Debug mode uses Dash's own
+            blocking dev server and reloader, so it cannot be handed back as a killable handle —
+            stop it by interrupting the kernel/process. Defaults to ``False``.
+        host : str
+            Host to bind the server to.
+
+        Returns
+        -------
+        RunningApp or None
+            When ``debug`` is ``False`` (the default), the server runs on a background thread and
+            this call returns immediately with a handle to it — call ``.kill()`` on it (or use it
+            as a context manager) to stop the server. Returns ``None`` when ``debug=True``, since
+            that path blocks instead.
+        """
+        if debug:
+            self.app.run(port=port, debug=debug, host=host)
+            return None
+        running_app = run_in_background(self.app.server, host, port)
+        logging.info(f"Your Shapash application run on {running_app.url}")
+        logging.info("Use the method .kill() to stop your app.")
+        return running_app
