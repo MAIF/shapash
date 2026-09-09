@@ -6,6 +6,7 @@ import copy
 import functools
 import logging
 import time
+import warnings
 from collections.abc import Callable
 from typing import Any
 
@@ -35,6 +36,7 @@ from shapash.utils.check import (
     check_y,
 )
 from shapash.utils.columntransformer_backend import columntransformer
+from shapash.utils.drift import compute_schema_distribution, detect_schema_drift, resolve_schema_drift_config
 from shapash.utils.io import _build_predictor_manifest, _compute_schema_fingerprint, _save_manifest, save_pickle
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
@@ -165,6 +167,10 @@ class SmartPredictor:
         List of labels if the model used is for classification problem, None otherwise.
     mask_params: dict (optional)
         Dictionary that specify how to summarize the explainability.
+    schema_distribution: dict (optional)
+        Compact reference summaries used to detect drift in new input batches.
+    schema_drift_config: dict (optional)
+        Thresholds and sampling settings used for schema-drift detection.
 
     How to declare a new SmartPredictor object?
 
@@ -199,6 +205,8 @@ class SmartPredictor:
         postprocessing=None,
         features_groups=None,
         mask_params=None,
+        schema_distribution: dict[Any, dict[str, Any]] | None = None,
+        schema_drift_config: dict[str, float | int] | None = None,
     ):
         params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 
@@ -228,6 +236,8 @@ class SmartPredictor:
         self.check_mask_params()
         self.postprocessing = postprocessing
         self.features_groups = features_groups
+        self.schema_distribution = schema_distribution
+        self.schema_drift_config = resolve_schema_drift_config(schema_drift_config)
         list_preprocessing = preprocessing_tolist(self.preprocessing)
         check_consistency_model_features(
             self.features_dict,
@@ -312,6 +322,7 @@ class SmartPredictor:
             )
         if x is not None:
             x = self.check_dataset_features(self.check_dataset_type(x))
+            self._check_schema_drift(x)
             self.data = self.clean_data(x)
             self.data["x_postprocessed"] = self.apply_postprocessing()
             try:
@@ -338,6 +349,29 @@ class SmartPredictor:
 
         if self.features_groups is not None:
             self._add_groups_input()
+
+    def _check_schema_drift(self, x: pd.DataFrame) -> None:
+        """Warn and log when ``x`` materially differs from the reference distribution."""
+        reference = getattr(self, "schema_distribution", None)
+        if not reference:
+            return
+
+        config = resolve_schema_drift_config(getattr(self, "schema_drift_config", None))
+        current = compute_schema_distribution(x, top_k=int(config["top_k"]))
+        drift = detect_schema_drift(reference, current, config)
+        fingerprint = self._get_schema_fingerprint()
+        for column, reasons in drift.items():
+            details = "; ".join(reasons)
+            message = f"Potential schema drift detected for '{column}': {details}"
+            warnings.warn(message, UserWarning, stacklevel=3)
+            _logger.warning(
+                message,
+                extra={
+                    "schema_fingerprint": fingerprint,
+                    "drift_column": column,
+                    "drift_reasons": tuple(reasons),
+                },
+            )
 
     def _add_groups_input(self):
         """
