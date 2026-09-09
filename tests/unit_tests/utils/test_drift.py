@@ -1,8 +1,9 @@
 """Unit tests for lightweight SmartPredictor schema-drift utilities."""
 
 import pandas as pd
+import pytest
 
-from shapash.utils.drift import compute_schema_distribution, detect_schema_drift
+from shapash.utils.drift import compute_schema_distribution, detect_schema_drift, resolve_schema_drift_config
 
 
 def test_compute_schema_distribution_numeric_and_categorical() -> None:
@@ -73,3 +74,24 @@ def test_detect_schema_drift_skips_small_batches() -> None:
     current = compute_schema_distribution(pd.DataFrame({"age": range(200, 210)}))
 
     assert detect_schema_drift(reference, current) == {}
+
+
+def test_detect_schema_drift_uses_custom_thresholds() -> None:
+    reference = compute_schema_distribution(pd.DataFrame({"age": range(100)}))
+    current = compute_schema_distribution(pd.DataFrame({"age": range(200, 300)}))
+
+    assert detect_schema_drift(reference, current, {"numeric_median_iqr_threshold": 10.0}) == {}
+
+
+def test_detect_schema_drift_uses_custom_minimum_sample_size() -> None:
+    reference = compute_schema_distribution(pd.DataFrame({"age": range(100)}))
+    current = compute_schema_distribution(pd.DataFrame({"age": range(200, 210)}))
+
+    drift = detect_schema_drift(reference, current, {"min_sample_size": 10})
+
+    assert "age" in drift
+
+
+def test_resolve_schema_drift_config_rejects_unknown_settings() -> None:
+    with pytest.raises(ValueError, match="Unknown schema drift configuration keys"):
+        resolve_schema_drift_config({"unknown_threshold": 1.0})

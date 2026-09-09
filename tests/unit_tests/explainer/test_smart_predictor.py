@@ -1386,7 +1386,7 @@ class TestSmartPredictorSchemaDrift(unittest.TestCase):
 
     LOGGER_NAME = "shapash.smartpredictor"
 
-    def _make_predictor(self) -> SmartPredictor:
+    def _make_predictor(self, schema_drift_config=None) -> SmartPredictor:
         dataframe_x = pd.DataFrame(
             {
                 0: np.arange(100),
@@ -1399,13 +1399,27 @@ class TestSmartPredictorSchemaDrift(unittest.TestCase):
         y_pred = pd.DataFrame(clf.predict(dataframe_x), columns=["pred"])
         xpl = SmartExplainer(model=clf, features_dict={})
         xpl.compile(x=dataframe_x, y_pred=y_pred)
-        return xpl.to_smartpredictor()
+        return xpl.to_smartpredictor(schema_drift_config=schema_drift_config)
 
     def test_to_smartpredictor_stores_reference_distribution(self) -> None:
         predictor = self._make_predictor()
 
         assert predictor.schema_distribution
         assert set(predictor.schema_distribution) == {0, 1, 2}
+
+    def test_to_smartpredictor_stores_resolved_drift_config(self) -> None:
+        predictor = self._make_predictor({"numeric_median_iqr_threshold": 10.0})
+
+        assert predictor.schema_drift_config["numeric_median_iqr_threshold"] == 10.0
+        assert predictor.schema_drift_config["missing_rate_delta_threshold"] == 0.1
+
+    def test_add_input_uses_custom_drift_threshold(self) -> None:
+        predictor = self._make_predictor({"numeric_median_iqr_threshold": 100.0})
+        shifted = pd.DataFrame({0: np.arange(500, 600), 1: np.arange(600, 700), 2: np.arange(700, 800)})
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            predictor.add_input(x=shifted)
 
     def test_add_input_stable_data_does_not_warn(self) -> None:
         predictor = self._make_predictor()

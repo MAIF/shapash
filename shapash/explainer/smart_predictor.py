@@ -36,7 +36,7 @@ from shapash.utils.check import (
     check_y,
 )
 from shapash.utils.columntransformer_backend import columntransformer
-from shapash.utils.drift import compute_schema_distribution, detect_schema_drift
+from shapash.utils.drift import compute_schema_distribution, detect_schema_drift, resolve_schema_drift_config
 from shapash.utils.io import _build_predictor_manifest, _compute_schema_fingerprint, _save_manifest, save_pickle
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
@@ -169,6 +169,8 @@ class SmartPredictor:
         Dictionary that specify how to summarize the explainability.
     schema_distribution: dict (optional)
         Compact reference summaries used to detect drift in new input batches.
+    schema_drift_config: dict (optional)
+        Thresholds and sampling settings used for schema-drift detection.
 
     How to declare a new SmartPredictor object?
 
@@ -204,6 +206,7 @@ class SmartPredictor:
         features_groups=None,
         mask_params=None,
         schema_distribution: dict[Any, dict[str, Any]] | None = None,
+        schema_drift_config: dict[str, float | int] | None = None,
     ):
         params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 
@@ -234,6 +237,7 @@ class SmartPredictor:
         self.postprocessing = postprocessing
         self.features_groups = features_groups
         self.schema_distribution = schema_distribution
+        self.schema_drift_config = resolve_schema_drift_config(schema_drift_config)
         list_preprocessing = preprocessing_tolist(self.preprocessing)
         check_consistency_model_features(
             self.features_dict,
@@ -352,7 +356,9 @@ class SmartPredictor:
         if not reference:
             return
 
-        drift = detect_schema_drift(reference, compute_schema_distribution(x))
+        config = resolve_schema_drift_config(getattr(self, "schema_drift_config", None))
+        current = compute_schema_distribution(x, top_k=int(config["top_k"]))
+        drift = detect_schema_drift(reference, current, config)
         fingerprint = self._get_schema_fingerprint()
         for column, reasons in drift.items():
             details = "; ".join(reasons)
