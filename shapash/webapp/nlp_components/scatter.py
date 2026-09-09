@@ -27,21 +27,9 @@ import plotly.graph_objs as go
 from dash import Input, Output, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
-from shapash.explainer.nlp_explanation import select_label_column
+from shapash.explainer.nlp_explanation import word_contributions_by_sample
+from shapash.plots.plot_scatter import plot_scatter
 from shapash.webapp.nlp_components.base import WebappComponent, error_mask
-
-_PALETTE = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-]
 
 
 class ScatterComponent(WebappComponent):
@@ -217,39 +205,6 @@ class ScatterComponent(WebappComponent):
     # Helpers
     # ------------------------------------------------------------------
 
-    def _word_contributions(self, explanation, word: str, label_idx: int) -> np.ndarray:
-        """Per-sample sum of SHAP contributions for all tokens matching *word*."""
-        n = explanation.n_samples
-        result = np.zeros(n)
-        word_lower = word.lower()
-        for i in range(n):
-            tokens = explanation.token_strings[i]
-            vals = select_label_column(explanation.values[i], label_idx)
-            for j, tok in enumerate(tokens):
-                if tok.strip().lower() == word_lower:
-                    result[i] += vals[j]
-        return result
-
-    @staticmethod
-    def _emphasize_errors(
-        idx_arr: np.ndarray,
-        base_opacity: float,
-        base_size: float,
-        error_mask: np.ndarray | None,
-    ) -> tuple[list[float] | float, list[float] | float]:
-        """Per-point opacity/size that pops model errors and shadows everything else.
-
-        Keeps the caller's coloring untouched — only opacity and marker size change —
-        so points stay grouped/colored however the "Color by" dropdown already draws them.
-        Returns scalars (the unmodified base values) when ``error_mask`` is unavailable.
-        """
-        if error_mask is None or len(idx_arr) == 0:
-            return base_opacity, base_size
-        is_error = error_mask[idx_arr]
-        opacity = np.where(is_error, max(base_opacity, 0.9), 0.12).tolist()
-        size = np.where(is_error, base_size + 3, max(base_size - 2, 3)).tolist()
-        return opacity, size
-
     def _build_scatter_fig(
         self,
         explanation,
@@ -258,128 +213,38 @@ class ScatterComponent(WebappComponent):
         label_idx: int = 0,
         errors_only: bool = False,
     ) -> go.Figure:
-        """2-D scatter coloured by prediction, ground-truth label, or word SHAP contribution.
+        """Slice ``explanation`` for the requested coloring and hand it to :func:`plot_scatter`.
 
-        One trace per class for label-based coloring so the legend works correctly
-        and Plotly's box/lasso select dims unselected points across all traces.
-        Word-contribution mode uses a single diverging-colorscale trace.
-        ``customdata`` always stores the original sample index. When ``errors_only`` is
-        set, misclassified points are emphasized (larger, opaque) and the rest are
-        shadowed (small, faint) without altering their color.
+        ``color_by``/``words``/``label_idx`` decide *which* arrays to slice (a webapp-control
+        concern); the actual figure construction is the same pure function notebook/script callers
+        get via ``explanation.plot.scatter`` — see
+        :meth:`~shapash.explainer.nlp_plotter.NlpPlotter.scatter`.
         """
-        n = explanation.n_samples
-        exp_texts = explanation.texts
-        assert exp_texts is not None  # noqa: S101 - the webapp requires an already-compiled explainer
-        texts_short = [(t[:120] + "…") if len(t) > 120 else t for t in exp_texts]
-        xy = self._scatter_xy
         err_mask = error_mask(explanation) if errors_only else None
 
         if color_by == "word_contribution" and words:
-            contributions = np.sum([self._word_contributions(explanation, w, label_idx) for w in words], axis=0)
-            max_abs = float(np.abs(contributions).max()) or 1.0
-            present_mask = np.where(contributions != 0.0)[0]
-            absent_mask = np.where(contributions == 0.0)[0]
+            contributions = word_contributions_by_sample(explanation, words, label_idx)
             colorbar_title = " + ".join(f'"{w}"' for w in words) if len(words) <= 3 else f"{len(words)} words"
-
-            fig = go.Figure()
-            # Both layers are ALWAYS added (even when a mask is empty) so the trace structure stays
-            # constant across word additions/removals. With a stable `uirevision`, a changing WebGL
-            # (Scattergl) trace count leaves ghost/"shadow" points from the previous render — keeping
-            # exactly two traces avoids that.
-            absent_opacity, absent_size = self._emphasize_errors(absent_mask, 0.35, 5, err_mask)
-            present_opacity, present_size = self._emphasize_errors(present_mask, 0.9, 9, err_mask)
-
-            # Gray context layer — absent points (no selected word contributes to them).
-            fig.add_trace(
-                go.Scattergl(
-                    x=xy[absent_mask, 0].tolist(),
-                    y=xy[absent_mask, 1].tolist(),
-                    mode="markers",
-                    marker=dict(color="#b0b0b0", size=absent_size, opacity=absent_opacity),
-                    customdata=absent_mask.reshape(-1, 1).tolist(),
-                    text=[texts_short[j] for j in absent_mask],
-                    hovertemplate="%{text}<extra>absent</extra>",
-                    showlegend=False,
-                )
+            return plot_scatter(
+                self._scatter_xy,
+                explanation.texts,
+                contributions=contributions,
+                colorbar_title=colorbar_title,
+                error_mask=err_mask,
             )
-            # Colored overlay — samples where at least one selected word contributes.
-            fig.add_trace(
-                go.Scattergl(
-                    x=xy[present_mask, 0].tolist(),
-                    y=xy[present_mask, 1].tolist(),
-                    mode="markers",
-                    marker=dict(
-                        color=contributions[present_mask].tolist(),
-                        colorscale="RdBu",
-                        cmin=-max_abs,
-                        cmax=max_abs,
-                        size=present_size,
-                        opacity=present_opacity,
-                        colorbar=dict(
-                            title=dict(text=colorbar_title, side="right"),
-                            thickness=12,
-                            tickformat=".2f",
-                        ),
-                    ),
-                    customdata=present_mask.reshape(-1, 1).tolist(),
-                    text=[texts_short[j] for j in present_mask],
-                    hovertemplate="<b>SHAP: %{marker.color:.3f}</b><br>%{text}<extra></extra>",
-                    showlegend=False,
-                )
-            )
-            fig.update_layout(
-                dragmode="select",
-                uirevision="scatter",
-                xaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-                yaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-                plot_bgcolor="#f9f9f9",
-                paper_bgcolor="white",
-                margin=dict(l=10, r=10, t=10, b=10),
-                autosize=True,
-                showlegend=False,
-            )
-            return fig
 
         if color_by == "ground_truth" and explanation.y_true is not None:
             labels = [str(label) for label in explanation.y_true.tolist()]
         elif explanation.y_pred is not None:
             labels = [str(label) for label in explanation.y_pred.tolist()]
         else:
-            labels = [""] * n
+            labels = [""] * explanation.n_samples
 
         label_names = explanation.label_names or sorted(set(labels))
-
-        fig = go.Figure()
-        for i, name in enumerate(label_names):
-            mask = [j for j, lbl in enumerate(labels) if lbl == name]
-            if not mask:
-                continue
-            mask_arr = np.array(mask)
-            opacity, size = self._emphasize_errors(mask_arr, 0.75, 7, err_mask)
-            fig.add_trace(
-                go.Scattergl(
-                    x=xy[mask_arr, 0].tolist(),
-                    y=xy[mask_arr, 1].tolist(),
-                    mode="markers",
-                    marker=dict(color=_PALETTE[i % len(_PALETTE)], size=size, opacity=opacity),
-                    customdata=mask_arr.reshape(-1, 1).tolist(),
-                    text=[texts_short[j] for j in mask],
-                    hovertemplate=f"<b>{name}</b><br>%{{text}}<extra></extra>",
-                    name=name,
-                )
-            )
-
-        fig.update_layout(
-            dragmode="select",
-            uirevision="scatter",
-            xaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-            yaxis=dict(showticklabels=False, showgrid=True, gridcolor="#e5e5e5", zeroline=False, title=""),
-            plot_bgcolor="#f9f9f9",
-            paper_bgcolor="white",
-            margin=dict(l=10, r=10, t=10, b=10),
-            # No fixed height — the responsive Graph stretches it to fill the card.
-            autosize=True,
-            legend=dict(itemsizing="constant", orientation="v", title_text=""),
-            showlegend=True,
+        return plot_scatter(
+            self._scatter_xy,
+            explanation.texts,
+            labels=labels,
+            label_names=label_names,
+            error_mask=err_mask,
         )
-        return fig

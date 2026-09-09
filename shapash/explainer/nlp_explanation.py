@@ -17,6 +17,7 @@ import io
 import json
 import re
 import zipfile
+from collections.abc import Sequence
 from dataclasses import dataclass, fields, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -126,6 +127,42 @@ def aggregate_word_contributions(occurrences: pd.DataFrame, agg: str = "mean") -
     out.name = agg
     out.index.name = "class_idx"
     return out
+
+
+def word_contributions_by_sample(explanation: NlpExplanation, words: Sequence[str], label_idx: int) -> np.ndarray:
+    """Per-sample sum of one class's contribution from every occurrence of any of ``words``.
+
+    The per-sample counterpart of :func:`aggregate_word_contributions`: that one collapses a
+    word's occurrences into one number per class, this collapses one class's occurrences into one
+    number per sample — the shape the scatter panel colors points by
+    (:func:`~shapash.plots.plot_scatter.plot_scatter`'s ``contributions``). Goes through
+    :meth:`NlpExplanation.word_occurrences` for each word, so the match honors the same
+    tokenizer-derived case-folding as :meth:`NlpExplanation.word_importance`/:meth:`word_profile`.
+
+    Parameters
+    ----------
+    explanation : NlpExplanation
+        The artifact to read occurrences from.
+    words : Sequence[str]
+        Words to sum together — a sample contributing via more than one of them is counted once
+        per matching word, same as summing each word's own per-sample series.
+    label_idx : int
+        Class whose contribution to keep.
+
+    Returns
+    -------
+    np.ndarray, shape (n_samples,)
+        ``0.0`` for a sample none of ``words`` occur in.
+    """
+    result = np.zeros(explanation.n_samples)
+    for word in words:
+        occurrences = explanation.word_occurrences(word)
+        if occurrences.empty:
+            continue
+        matched = occurrences[occurrences["class_idx"] == label_idx]
+        by_sample = matched.groupby("sample")["contribution"].sum()
+        result[by_sample.index.to_numpy()] += by_sample.to_numpy()
+    return result
 
 
 def rank_word_samples(

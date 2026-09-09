@@ -38,9 +38,7 @@ def _make_explanation(values_ndim: int, with_base: bool, with_true: bool, with_p
         base_values = np.array([0.1, 0.2, 0.3]) if with_base else None
 
     y_pred = pd.Series(["pos", "neg", "pos"], index=texts.index, name="prediction")
-    y_prob = (
-        pd.DataFrame({"neg": [0.1, 0.8, 0.3], "pos": [0.9, 0.2, 0.7]}, index=texts.index) if with_prob else None
-    )
+    y_prob = pd.DataFrame({"neg": [0.1, 0.8, 0.3], "pos": [0.9, 0.2, 0.7]}, index=texts.index) if with_prob else None
     y_true = pd.Series(["pos", "pos", "pos"], index=texts.index, name="ground_truth") if with_true else None
 
     return NlpExplanation(

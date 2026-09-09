@@ -147,10 +147,12 @@ class NlpWebApp:
         ``NlpExplanation.load()``, which carries no model: components self-disable via
         their ``requires`` when the engine is absent or lacks a capability.
     scatter_xy : np.ndarray, optional
-        Pre-computed 2-D projection, shape ``(n_samples, 2)``.  When provided,
-        a scatter panel is added to the layout.  Compute with PaCMAP, UMAP,
-        t-SNE, PCA, etc. and pass the result here — Shapash does not perform
-        the projection itself to avoid heavy optional dependencies.
+        Pre-computed 2-D projection, shape ``(n_samples, 2)``. When provided, a scatter panel is
+        added to the layout. ``NlpWebApp`` itself never computes this — it has no model to embed
+        with (see ``engine`` above) — so pass it in from whatever produced it: PaCMAP, UMAP,
+        t-SNE, PCA, etc. Prefer :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.compute_projection`
+        (defaults to PCA — no extra install, sklearn is already a core dependency) over rolling
+        your own, so the scatter and the similar-example neighbours share one embedding space.
     url_base_pathname : str, optional
         Mount the app under a URL prefix instead of the server root, for serving behind a reverse
         proxy that routes a subpath (e.g. ``"/shapash-nlp-explainer/"``) to this process. Dash

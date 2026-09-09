@@ -20,7 +20,7 @@ import hashlib
 import threading
 from dataclasses import replace
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -60,19 +60,25 @@ def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
 
 
-def _reducer_tag(reducer: object) -> str:
-    """Name a reducer for a cache tag: its class plus a digest of its parameters when it exposes them.
+def _reducer_tag(reducer: object, fit_transform_kwargs: dict[str, Any] | None = None) -> str:
+    """Name a reducer for a cache tag: its class plus a digest of its settings.
 
     Two runs of the same reducer class with different settings produce different coordinates, so the
-    class name alone would silently reload the wrong scatter. ``get_params()`` (sklearn's convention,
-    which ``pacmap`` also follows) makes the settings part of the tag. A reducer without it is keyed by
-    class name only — documented on :meth:`NlpExplainer.compute_projection` as needing ``recompute``.
+    class name alone would silently reload the wrong scatter. "Settings" covers both the reducer's own
+    constructor parameters — read via ``get_params()`` (sklearn's convention, which ``pacmap`` also
+    follows) — and any ``fit_transform_kwargs`` a caller passed at call time (e.g. PaCMAP's
+    ``init="pca"``), since those affect the output identically but live outside ``get_params()``. A
+    reducer with no ``get_params()`` and no ``fit_transform_kwargs`` is keyed by class name only —
+    documented on :meth:`NlpExplainer.compute_projection` as needing ``recompute``.
     """
     name = type(reducer).__name__.lower()
     get_params = getattr(reducer, "get_params", None)
-    if get_params is None:
+    if get_params is None and not fit_transform_kwargs:
         return name
-    digest = hashlib.md5(repr(sorted(get_params().items())).encode(), usedforsecurity=False).hexdigest()
+    params = dict(get_params()) if get_params is not None else {}
+    if fit_transform_kwargs:
+        params["__fit_transform_kwargs__"] = sorted(fit_transform_kwargs.items())
+    digest = hashlib.md5(repr(sorted(params.items())).encode(), usedforsecurity=False).hexdigest()
     return f"{name}-{digest[:8]}"
 
 
@@ -442,6 +448,7 @@ class NlpExplainer:
         reducer=None,
         cache_dir: str | Path | None = None,
         recompute: bool = False,
+        **fit_transform_kwargs: Any,
     ):
         """Return a 2-D projection of ``explanation``'s texts, ready to pass to :meth:`run_app`.
 
@@ -462,9 +469,15 @@ class NlpExplainer:
         cache_dir : str or Path, optional
             When given, both the embeddings and the projected coordinates are persisted here and
             reloaded on later runs, so only the first call pays the cost. The key covers the model, the
-            effective space, the texts, and the reducer's class + parameters.
+            effective space, the texts, and the reducer's class + parameters (including
+            ``fit_transform_kwargs`` below).
         recompute : bool, optional
             Drop this text set's cached artifacts first, forcing a fresh embed + fit.
+        **fit_transform_kwargs
+            Forwarded to ``reducer.fit_transform(vectors, **fit_transform_kwargs)`` — for arguments a
+            reducer only accepts at call time rather than at construction, e.g. PaCMAP's
+            ``init="pca"``. Part of the cache key (see Notes), so changing them busts the cache the
+            same way changing the reducer's own constructor parameters does.
 
         Returns
         -------
@@ -474,13 +487,16 @@ class NlpExplainer:
         Notes
         -----
         The reducer's contribution to the cache key is its class name plus a digest of ``get_params()``
-        when it exposes one (sklearn and pacmap both do). A reducer with neither is keyed by class name
-        alone, so re-tuning such a reducer needs ``recompute=True`` to take effect.
+        (when it exposes one — sklearn and pacmap both do) and of ``fit_transform_kwargs``. A reducer
+        with neither is keyed by class name alone, so re-tuning such a reducer needs ``recompute=True``
+        to take effect.
 
         Examples
         --------
         >>> explanation = xpl.explain(texts)
-        >>> xy = xpl.compute_projection(explanation, reducer=pacmap.PaCMAP(n_components=2), cache_dir="cache/")
+        >>> xy = xpl.compute_projection(
+        ...     explanation, reducer=pacmap.PaCMAP(n_components=2), cache_dir="cache/", init="pca"
+        ... )
         >>> xpl.run_app(explanation, scatter_xy=xy)
         """
         text_model = self._require_text_model()
@@ -501,8 +517,8 @@ class NlpExplainer:
             store.clear()
         with self._compute_guard():  # embed() tokenizes — serialize against the live compute ops
             return store.cached_array(
-                f"{_reducer_tag(reducer)}.proj",
-                lambda: np.asarray(reducer.fit_transform(store.vectors())),
+                f"{_reducer_tag(reducer, fit_transform_kwargs)}.proj",
+                lambda: np.asarray(reducer.fit_transform(store.vectors(), **fit_transform_kwargs)),
             )
 
     def run_app(

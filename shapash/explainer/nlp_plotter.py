@@ -28,8 +28,10 @@ from shapash.explainer.nlp_explanation import (
     WORD_AGGREGATIONS,
     aggregate_word_contributions,
     select_label_column,
+    word_contributions_by_sample,
 )
 from shapash.plots.plot_confusion_matrix import plot_confusion_matrix
+from shapash.plots.plot_scatter import plot_scatter
 from shapash.plots.plot_sentence_highlight import plot_sentence_highlight
 from shapash.plots.plot_token_highlight import plot_token_highlight
 from shapash.plots.plot_waterfall import plot_waterfall
@@ -412,3 +414,82 @@ class NlpPlotter:
         cm = exp.confusion_matrix()
         labels = list(exp.label_to_idx)
         return plot_confusion_matrix(cm, labels, normalize=normalize, title=title, width=width, height=height)
+
+    def scatter(
+        self,
+        xy: np.ndarray,
+        color_by: str = "prediction",
+        words: list[str] | None = None,
+        label_idx: int = 0,
+        errors_only: bool = False,
+        use_webgl: bool = False,
+    ) -> go.Figure:
+        """2-D scatter of the batch (e.g. an embedding projection), colored by class or by a word.
+
+        ``xy`` is not something the artifact carries — see :meth:`NlpExplainer.compute_projection`
+        for how to produce it (defaults to PCA on the model's embeddings, no extra install since
+        sklearn is a core dependency) — every other argument here comes straight from ``self._exp``,
+        the same split :class:`~shapash.webapp.nlp_components.scatter.ScatterComponent` uses to
+        build the identical figure inside the What-if Lab.
+
+        Parameters
+        ----------
+        xy : np.ndarray, shape (n_samples, 2)
+            2-D coordinates aligned with the explanation's samples.
+        color_by : {"prediction", "ground_truth", "word_contribution"}
+            ``"ground_truth"`` falls back to predictions when ``y_true`` is unavailable;
+            ``"word_contribution"`` falls back to predictions when ``words`` is empty.
+        words : list[str], optional
+            With ``color_by="word_contribution"``, sum these words' contributions to
+            ``label_idx`` per sample and color by that (diverging scale; gray where none occur).
+        label_idx : int
+            Class whose contribution to color by, in ``label_names`` order. Only used with
+            ``color_by="word_contribution"``.
+        errors_only : bool
+            Emphasize misclassified points (larger, opaque) and shadow the rest, without changing
+            their color. Needs ``y_true``; ignored otherwise.
+        use_webgl : bool
+            Draw with WebGL (``Scattergl``) rather than plain SVG (``Scatter``). Defaults to
+            ``False`` here since some notebook front-ends (e.g. VSCode's notebook renderer over
+            certain remote/SSH or sandboxed setups) can't get a WebGL context; pass ``True`` for
+            smoother interaction on large batches when your renderer supports it — the Dash What-if
+            Lab's identical figure keeps WebGL on by default.
+
+        Returns
+        -------
+        plotly.graph_objs.Figure
+
+        Examples
+        --------
+        >>> xy = xpl.compute_projection(explanation, cache_dir="cache/")
+        >>> explanation.plot.scatter(xy, color_by="word_contribution", words=["terrible"]).show()
+        """
+        exp = self._exp
+        err_mask = None
+        if errors_only and exp.y_true is not None and exp.y_pred is not None:
+            err_mask = np.asarray(exp.y_true).astype(str) != np.asarray(exp.y_pred).astype(str)
+
+        if color_by == "word_contribution" and words:
+            label_idx = self._check_label_idx(label_idx)
+            contributions = word_contributions_by_sample(exp, words, label_idx)
+            colorbar_title = " + ".join(f'"{w}"' for w in words) if len(words) <= 3 else f"{len(words)} words"
+            return plot_scatter(
+                xy,
+                exp.texts,
+                contributions=contributions,
+                colorbar_title=colorbar_title,
+                error_mask=err_mask,
+                use_webgl=use_webgl,
+            )
+
+        if color_by == "ground_truth" and exp.y_true is not None:
+            labels = [str(label) for label in exp.y_true.tolist()]
+        elif exp.y_pred is not None:
+            labels = [str(label) for label in exp.y_pred.tolist()]
+        else:
+            labels = [""] * exp.n_samples
+
+        label_names = exp.label_names or sorted(set(labels))
+        return plot_scatter(
+            xy, exp.texts, labels=labels, label_names=label_names, error_mask=err_mask, use_webgl=use_webgl
+        )

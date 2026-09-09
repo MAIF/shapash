@@ -1589,6 +1589,45 @@ class TestScatterComponentWordContributionOption(unittest.TestCase):
         self.assertIn("prediction", options)
 
 
+class TestBuildScatterFig(unittest.TestCase):
+    """``_build_scatter_fig``'s own dispatch — the part left after extracting the drawing itself
+    into :func:`~shapash.plots.plot_scatter.plot_scatter`."""
+
+    @staticmethod
+    def _explanation(with_true: bool, with_pred: bool):
+        texts = pd.Series(["rare common", "common"])
+        return NlpExplanation(
+            texts=texts,
+            token_strings=[["rare", "common"], ["common"]],
+            values=[np.array([[0.9, -0.9], [0.3, -0.3]]), np.array([[0.3, -0.3]])],
+            base_values=None,
+            y_pred=pd.Series(["neg", "pos"], index=texts.index) if with_pred else None,
+            y_prob=None,
+            y_true=pd.Series(["pos", "pos"], index=texts.index) if with_true else None,
+            label_names=None,
+            folds_case=True,
+            backend_name="nlp_shap",
+            is_additive=True,
+            reference_kind="none",
+            output_space="probability",
+        )
+
+    def _component(self):
+        from shapash.webapp.nlp_components import ScatterComponent
+
+        return ScatterComponent(np.zeros((2, 2)), offer_word_contribution=True)
+
+    def test_ground_truth_colors_by_y_true(self):
+        fig = self._component()._build_scatter_fig(self._explanation(True, True), "ground_truth")
+        names = {trace.name for trace in fig.data}
+        self.assertEqual(names, {"pos"})  # both samples are "pos" in y_true
+
+    def test_without_prediction_or_ground_truth_draws_a_single_unlabeled_group(self):
+        fig = self._component()._build_scatter_fig(self._explanation(False, False), "prediction")
+        self.assertEqual(len(fig.data), 1)
+        self.assertEqual(len(fig.data[0].x), 2)
+
+
 class TestWordProfileControls(unittest.TestCase):
     """The picker's sort/labels, the restricted aggregation list, and bar-click class ranking."""
 

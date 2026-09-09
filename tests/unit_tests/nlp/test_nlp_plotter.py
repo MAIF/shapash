@@ -160,6 +160,54 @@ class TestBatchPlots(unittest.TestCase):
         self.assertIn("y_true", str(ctx.exception))
 
 
+class TestScatterPlot(unittest.TestCase):
+    def setUp(self):
+        self.xy = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]])
+
+    def test_default_colors_by_prediction(self):
+        explanation = _make_explanation()  # y_pred = [pos, neg, pos]
+        fig = explanation.plot.scatter(self.xy)
+        self.assertIsInstance(fig, go.Figure)
+        names = {trace.name for trace in fig.data}
+        self.assertEqual(names, {"pos", "neg"})
+
+    def test_ground_truth_falls_back_to_prediction_without_y_true(self):
+        explanation = _make_explanation(with_true=False)  # y_pred = [pos, neg, pos]
+        fig = explanation.plot.scatter(self.xy, color_by="ground_truth")
+        names = {trace.name for trace in fig.data}
+        self.assertEqual(names, {"pos", "neg"})
+
+    def test_word_contribution_colors_by_the_matching_samples(self):
+        explanation = _make_explanation()  # sample 1 tokens: ["i", "am", "happy"]
+        fig = explanation.plot.scatter(self.xy, color_by="word_contribution", words=["happy"], label_idx=1)
+        self.assertEqual(len(fig.data), 2)  # absent layer + present layer
+        absent_trace, present_trace = fig.data
+        self.assertEqual([row[0] for row in present_trace.customdata], [1])
+        self.assertEqual([row[0] for row in absent_trace.customdata], [0, 2])
+
+    def test_word_contribution_without_words_falls_back_to_prediction(self):
+        explanation = _make_explanation()
+        fig = explanation.plot.scatter(self.xy, color_by="word_contribution", words=[])
+        names = {trace.name for trace in fig.data}
+        self.assertEqual(names, {"pos", "neg"})
+
+    def test_out_of_range_label_idx_raises_with_words(self):
+        explanation = _make_explanation()
+        with self.assertRaises(IndexError):
+            explanation.plot.scatter(self.xy, color_by="word_contribution", words=["happy"], label_idx=5)
+
+    def test_errors_only_runs_without_ground_truth(self):
+        explanation = _make_explanation(with_true=False)
+        fig = explanation.plot.scatter(self.xy, errors_only=True)
+        self.assertIsInstance(fig, go.Figure)
+
+    def test_ground_truth_and_errors_only_with_real_ground_truth(self):
+        explanation = _make_explanation()  # y_true = [pos, pos, pos], y_pred = [pos, neg, pos]
+        fig = explanation.plot.scatter(self.xy, color_by="ground_truth", errors_only=True)
+        names = {trace.name for trace in fig.data}
+        self.assertEqual(names, {"pos"})
+
+
 class TestGuards(unittest.TestCase):
     def test_waterfall_refuses_on_a_non_additive_backend(self):
         """LIME contributions do not sum to the prediction, so the running total is nonsense."""

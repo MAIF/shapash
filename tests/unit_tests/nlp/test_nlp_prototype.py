@@ -28,10 +28,12 @@ from shapash.explainer.nlp_explanation import (
     NlpExplanation,
     aggregate_word_contributions,
     rank_word_samples,
+    word_contributions_by_sample,
 )
 from shapash.model.base import SupportsEmbeddings, SupportsGradients, SupportsTokenization, TextModel
 from shapash.plots.plot_confusion_matrix import plot_confusion_matrix
 from shapash.plots.plot_noise_matrix import plot_noise_matrix
+from shapash.plots.plot_scatter import plot_scatter
 from shapash.plots.plot_sentence_highlight import plot_sentence_highlight
 from shapash.plots.plot_token_highlight import plot_token_highlight
 from shapash.plots.plot_waterfall import plot_waterfall
@@ -693,12 +695,14 @@ class _CountingReducer:
     def __init__(self, scale=1.0):
         self.scale = scale
         self.fits = 0
+        self.last_kwargs = None
 
     def get_params(self, deep=True):
         return {"scale": self.scale}
 
-    def fit_transform(self, x):
+    def fit_transform(self, x, **kwargs):
         self.fits += 1
+        self.last_kwargs = kwargs
         return np.asarray(x)[:, :2] * self.scale
 
 
@@ -788,6 +792,26 @@ class TestComputeProjection(unittest.TestCase):
             self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, recompute=True)
             self.assertEqual(self.model.calls, 1)
             self.assertEqual(reducer.fits, 2)
+
+    def test_fit_transform_kwargs_are_forwarded(self):
+        reducer = _CountingReducer()
+        self.xpl.compute_projection(self.explanation, reducer=reducer, init="pca", verbose=False)
+        self.assertEqual(reducer.last_kwargs, {"init": "pca", "verbose": False})
+
+    def test_fit_transform_kwargs_take_part_in_the_key(self):
+        """Changing a call-time argument (e.g. PaCMAP's ``init=``) must not silently reload."""
+        with tempfile.TemporaryDirectory() as d:
+            reducer = _CountingReducer()
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="a")
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="b")
+            self.assertEqual(reducer.fits, 2)
+
+    def test_same_fit_transform_kwargs_reuse_the_cache(self):
+        with tempfile.TemporaryDirectory() as d:
+            reducer = _CountingReducer()
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="a")
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="a")
+            self.assertEqual(reducer.fits, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -1733,6 +1757,85 @@ class TestRankWordSamples(unittest.TestCase):
         ranked = rank_word_samples(self.occ, class_idx=99)
         self.assertTrue(ranked.empty)
         self.assertEqual(list(ranked.columns), ["sample", "contribution", "n_occurrences"])
+
+
+class TestWordContributionsBySample(unittest.TestCase):
+    def setUp(self):
+        self.explanation = _profile_explanation()
+
+    def test_sums_one_words_occurrences_per_sample(self):
+        # class 0: sample0 has one "happy" (0.4), sample1 has two ("Happy" 0.2 + "happy" 0.1 = 0.3),
+        # sample2 has one (-0.6), sample3 has none.
+        result = word_contributions_by_sample(self.explanation, ["happy"], label_idx=0)
+        np.testing.assert_allclose(result, [0.4, 0.3, -0.6, 0.0])
+
+    def test_sums_across_words_within_a_sample(self):
+        # "today" only occurs in sample0 (0.05, class 0), added on top of "happy"'s own 0.4.
+        result = word_contributions_by_sample(self.explanation, ["happy", "today"], label_idx=0)
+        np.testing.assert_allclose(result, [0.45, 0.3, -0.6, 0.0])
+
+    def test_label_idx_selects_the_class(self):
+        class0 = word_contributions_by_sample(self.explanation, ["happy"], label_idx=0)
+        class1 = word_contributions_by_sample(self.explanation, ["happy"], label_idx=1)
+        np.testing.assert_allclose(class1, -class0)
+
+    def test_absent_word_returns_all_zeros(self):
+        result = word_contributions_by_sample(self.explanation, ["nonexistent"], label_idx=0)
+        np.testing.assert_allclose(result, np.zeros(len(self.explanation)))
+
+    def test_result_length_matches_the_batch(self):
+        result = word_contributions_by_sample(self.explanation, ["happy"], label_idx=0)
+        self.assertEqual(len(result), len(self.explanation))
+
+
+class TestPlotScatter(unittest.TestCase):
+    def setUp(self):
+        self.xy = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0], [3.0, 3.0]])
+        self.texts = ["so happy today !", "Happy and happy again", "not happy at all", "nothing here"]
+
+    def test_categorical_mode_draws_one_trace_per_label_name(self):
+        fig = plot_scatter(self.xy, self.texts, labels=["pos", "pos", "neg", "neg"], label_names=["pos", "neg"])
+        self.assertIsInstance(fig, go.Figure)
+        self.assertEqual(len(fig.data), 2)
+        self.assertEqual(fig.data[0].name, "pos")
+        self.assertEqual([row[0] for row in fig.data[0].customdata], [0, 1])
+
+    def test_categorical_mode_skips_empty_categories(self):
+        fig = plot_scatter(self.xy, self.texts, labels=["pos", "pos", "pos", "pos"], label_names=["pos", "neg"])
+        self.assertEqual(len(fig.data), 1)
+
+    def test_word_contribution_mode_splits_present_and_absent(self):
+        fig = plot_scatter(self.xy, self.texts, contributions=np.array([0.4, 0.0, -0.6, 0.0]))
+        self.assertIsInstance(fig, go.Figure)
+        self.assertEqual(len(fig.data), 2)
+        absent_trace, present_trace = fig.data
+        self.assertEqual([row[0] for row in absent_trace.customdata], [1, 3])
+        self.assertEqual([row[0] for row in present_trace.customdata], [0, 2])
+
+    def test_error_mask_shrinks_correct_points_and_grows_wrong_ones(self):
+        contributions = np.array([0.4, 0.0, -0.6, 0.0])
+        error_mask = np.array([True, False, False, False])
+        fig = plot_scatter(self.xy, self.texts, contributions=contributions, error_mask=error_mask)
+        _, present_trace = fig.data
+        # present_mask is [0, 2]; sample 0 is the error and should be emphasized over sample 2.
+        sizes = present_trace.marker.size
+        self.assertGreater(sizes[0], sizes[1])
+
+    def test_requires_exactly_one_of_contributions_or_labels(self):
+        with self.assertRaises(ValueError):
+            plot_scatter(self.xy, self.texts)
+        with self.assertRaises(ValueError):
+            plot_scatter(
+                self.xy,
+                self.texts,
+                labels=["pos"] * 4,
+                label_names=["pos"],
+                contributions=np.zeros(4),
+            )
+
+    def test_labels_without_label_names_raises(self):
+        with self.assertRaises(ValueError):
+            plot_scatter(self.xy, self.texts, labels=["pos"] * 4)
 
 
 class TestPlotWordProfile(unittest.TestCase):
