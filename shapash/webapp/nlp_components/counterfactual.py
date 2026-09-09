@@ -15,6 +15,7 @@ from dash import ALL, Input, Output, State, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.compute.generators.base import Field, IntField, TokenListField
+from shapash.compute.generators.cf_utils import format_edit
 from shapash.webapp.nlp_components.base import CAP_COUNTERFACTUAL, CAP_PREDICT, WebappComponent
 from shapash.webapp.nlp_components.datapoint import datapoint_from_contributions
 
@@ -215,7 +216,7 @@ def _results_table(cfs, component_id: str):
     )
     rows = []
     for i, cf in enumerate(cfs):
-        subs = ", ".join(f"{old}→{new}" for _, old, new in cf.substitutions)
+        subs = ", ".join(format_edit(old, new) for _, old, new in cf.substitutions)
         rows.append(
             html.Tr(
                 [

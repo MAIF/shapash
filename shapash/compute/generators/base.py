@@ -22,7 +22,7 @@ from typing import Any
 
 import numpy as np
 
-from shapash.compute.generators.cf_utils import is_prediction_flip
+from shapash.compute.generators.cf_utils import format_edit, is_prediction_flip
 from shapash.model.base import SupportsTokenization, TextModel
 
 #: Candidate texts scored per ``predict`` call when the model declares no batch size of its own.
@@ -55,6 +55,12 @@ class Counterfactual:
         Probability of ``new_label`` on the counterfactual text.
     prob_delta : float
         Drop in the original label's probability (``orig_prob`` minus its probability on the CF).
+
+    Examples
+    --------
+    >>> import dataclasses, pandas as pd
+    >>> res = xpl.generate_counterfactuals(text, generator="ablation_flip")
+    >>> pd.DataFrame([dataclasses.asdict(cf) for cf in res])
     """
 
     original_text: str
@@ -67,6 +73,20 @@ class Counterfactual:
     orig_prob: float
     new_prob: float
     prob_delta: float
+
+    def __repr__(self) -> str:
+        """Concise, edit-first summary — the shape that matters when scanning results in a notebook.
+
+        The default dataclass repr dumps every field (``tokens`` included), burying the one thing
+        worth reading at a glance under noise, and leaves a removal's edit (``old_token, ""``) to be
+        inferred from an empty string rather than stated. :func:`~.cf_utils.format_edit` spells out a
+        substitution (``old→new``) and a removal (``−old``) the same way here and in the webapp's
+        results table, so the two read consistently wherever a counterfactual is shown.
+        """
+        edits = ", ".join(format_edit(old, new) for _, old, new in self.substitutions) or "no edits"
+        return (
+            f'Counterfactual("{self.original_text}" → "{self.new_text}", {self.orig_label}→{self.new_label}, {edits})'
+        )
 
 
 @dataclass(frozen=True)

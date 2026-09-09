@@ -44,6 +44,16 @@ def prediction_difference(orig_probs: np.ndarray, cf_probs: np.ndarray, class_id
     return float(orig_probs[class_idx] - cf_probs[class_idx])
 
 
+def format_edit(old_token: str, new_token: str) -> str:
+    """Render one token edit for display: a substitution as ``old→new``, a removal as ``−old``.
+
+    An empty ``new_token`` means the position was dropped rather than replaced (how removal-based
+    generators such as AblationFlip express themselves in ``Counterfactual.substitutions``) — spelled
+    out here so a removal doesn't read as "replaced with nothing" but as what it is, a drop.
+    """
+    return f"{old_token}→{new_token}" if new_token else f"−{old_token}"
+
+
 def display_form(model, token: str) -> str:
     """Return the user-facing spelling of ``token`` — markers stripped, lowercased.
 

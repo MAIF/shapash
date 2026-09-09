@@ -92,6 +92,15 @@ class NlpExplainer:
         Pre-built backend instance.  When provided, ``explainer_args`` and
         ``explainer_compute_args`` are ignored — configure the backend directly
         before passing it in.  Defaults to ``NlpShapBackend``.
+    cf_generator : CounterfactualGenerator, optional
+        Counterfactual generator driving the webapp's "What-if Lab" panel and
+        :meth:`generate_counterfactuals` — finds the smallest text edit that flips the model's
+        prediction. When given, used verbatim as the sole (active) generator — no auto-discovery.
+        When ``None`` (default), every built-in generator compatible with the model — checked via
+        capabilities, e.g. gradient-based ``HotFlipGenerator`` needs ``SupportsGradients``, while
+        forward-pass-only ``AblationFlipGenerator`` works even on a prediction-only pipeline — is
+        auto-registered (see :meth:`available_cf_generators`), so the webapp can switch between
+        them live; the first one becomes the default/active generator (:attr:`cf_generator`).
     explainer_args : dict, optional
         Forwarded to ``NlpShapBackend.__init__`` when no ``backend`` is given.
     explainer_compute_args : dict, optional
