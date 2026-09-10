@@ -117,18 +117,27 @@ def _resolve_tokenizer_source(name_or_path: str, tokenizer_name: str | None = No
     return base_model
 
 
-def _load_tokenizer(source: str, transformers: Any) -> Any:
+def _load_tokenizer(source: str, transformers: Any, **tokenizer_kwargs: Any) -> Any:
     """Load the tokenizer, preferring a fast one but falling back to the slow implementation.
 
     A fast tokenizer is best — it unlocks the exact ``word_ids()`` word-alignment the LIG highlights
     use — but some checkpoints ship no ``tokenizer.json``, so the fast load raises. We then retry with
     ``use_fast=False``; a slow tokenizer still works (gradient attribution degrades to a scheme-aware
-    string merge). When *both* fail, the checkpoint has no standard HF tokenizer at all — typically a
-    custom ``trust_remote_code`` architecture — which this adapter does not support; surface that as a
-    clear error rather than a deep tokenizer stack trace.
+    string merge). When *both* fail the checkpoint has no tokenizer this call can build, and the error
+    says what to do about it rather than dumping a deep tokenizer stack trace.
+
+    Parameters
+    ----------
+    source : str
+        Hub id or local path to load the tokenizer from.
+    transformers : module
+        The imported ``transformers`` module (injected so this stays unit-testable).
+    **tokenizer_kwargs
+        Forwarded to both attempts — notably ``trust_remote_code``, which a checkpoint shipping its own
+        tokenizer implementation needs. ``use_fast`` is set here and must not be passed.
     """
     try:
-        return transformers.AutoTokenizer.from_pretrained(source, use_fast=True)
+        return transformers.AutoTokenizer.from_pretrained(source, use_fast=True, **tokenizer_kwargs)
     except Exception as fast_err:  # noqa: BLE001 — retry slow, then re-raise with a usable hint
         logger.warning(
             "Fast tokenizer unavailable for %s (%s) — retrying with use_fast=False.",
@@ -136,13 +145,24 @@ def _load_tokenizer(source: str, transformers: Any) -> Any:
             type(fast_err).__name__,
         )
         try:
-            return transformers.AutoTokenizer.from_pretrained(source, use_fast=False)
-        except Exception as slow_err:  # noqa: BLE001 — no standard tokenizer; give an actionable message
+            return transformers.AutoTokenizer.from_pretrained(source, use_fast=False, **tokenizer_kwargs)
+        except Exception as slow_err:  # noqa: BLE001 — no loadable tokenizer; give an actionable message
+            # The hint depends on what was already tried: suggesting trust_remote_code=True to someone
+            # who just passed it is noise, and would read as "this checkpoint is unsupported" when the
+            # real problem is something else (a bad path, a missing sentencepiece/protobuf, no network).
+            hint = (
+                "If this checkpoint ships a custom tokenizer implementation, retry with "
+                "trust_remote_code=True (this executes code from the checkpoint — only do so for a "
+                "source you trust)."
+                if not tokenizer_kwargs.get("trust_remote_code")
+                else "Custom code was already allowed, so this is not a trust_remote_code problem — "
+                "check the path/hub id, network access, and that any extra tokenizer dependency "
+                "(e.g. sentencepiece, protobuf) is installed."
+            )
             raise RuntimeError(
-                f"Could not load a tokenizer for {source!r} in fast or slow mode. This is usually a "
-                "checkpoint with a non-standard or custom (trust_remote_code) tokenizer/architecture, "
-                "which HFClassifierModel does not support. Use a standard "
-                "AutoModelForSequenceClassification checkpoint that ships a normal HF tokenizer."
+                f"Could not load a tokenizer for {source!r} in fast or slow mode. {hint} You can also "
+                "pass an already-loaded tokenizer via tokenizer=, or build HFClassifierModel(classifier, "
+                "tokenizer) directly."
             ) from slow_err
 
 
@@ -327,6 +347,8 @@ class HFClassifierModel(EncoderClassifierModel):
         label_names: list[str] | None = None,
         device: int | str | object | None = None,
         max_length: int | str | None = "auto",
+        trust_remote_code: bool = False,
+        load_kwargs: dict[str, Any] | None = None,
         **model_kwargs: Any,
     ) -> HFClassifierModel:
         """Build a full-capability adapter straight from a checkpoint id or a local directory.
@@ -361,6 +383,26 @@ class HFClassifierModel(EncoderClassifierModel):
             sentinel (see :func:`_resolve_max_length`). ``None`` trusts the tokenizer verbatim (the
             length guard in :class:`~shapash.model.encoder.EncoderClassifierModel` still applies). An int
             forces an explicit length.
+        trust_remote_code : bool, optional
+            Allow the checkpoint to define its own model/tokenizer classes (``AutoModel``'s flag of the
+            same name), which is what a custom architecture such as ``Alibaba-NLP/gte-base-en-v1.5``,
+            Jina or Nomic needs. Default ``False``. Applied to the tokenizer *and* the model, since a
+            checkpoint that ships one usually ships both.
+
+            **This executes Python code downloaded from the checkpoint**, so pass it only for a source
+            you trust. It is always forwarded explicitly (``False`` included) rather than left unset:
+            unset, ``transformers`` asks for confirmation on an interactive terminal, which would hang
+            a webapp or a batch job on a prompt nobody sees.
+
+            A loaded custom architecture is not automatically *fully* capable — the capability surface
+            still needs a backbone that accepts ``inputs_embeds`` and exposes ``get_input_embeddings()``
+            (see :class:`~shapash.model.encoder.EncoderClassifierModel`). Prediction and SHAP work
+            regardless; gradients and Captum LIG depend on the checkpoint's own implementation.
+        load_kwargs : dict, optional
+            Extra keyword arguments forwarded to ``AutoModelForSequenceClassification.from_pretrained``
+            and to the tokenizer load (e.g. ``revision``, ``dtype``, ``token``, ``cache_dir``). Kept
+            separate from ``**model_kwargs`` below, which configures *this adapter* — one dict per
+            destination, so no argument is ambiguous about which of the two it reaches.
         **model_kwargs
             Forwarded to the constructor (e.g. ``batch_size``, ``embedding_space``, ``pool``).
 
@@ -376,10 +418,13 @@ class HFClassifierModel(EncoderClassifierModel):
             length — see :meth:`__init__`).
         """
         transformers = import_optional_module("transformers", extra=_NLP_EXTRA)
+        loader_kwargs = {"trust_remote_code": trust_remote_code, **(load_kwargs or {})}
         if tokenizer is None or isinstance(tokenizer, str):
-            tokenizer = _load_tokenizer(_resolve_tokenizer_source(name_or_path, tokenizer), transformers)
+            tokenizer = _load_tokenizer(
+                _resolve_tokenizer_source(name_or_path, tokenizer), transformers, **loader_kwargs
+            )
 
-        classifier = transformers.AutoModelForSequenceClassification.from_pretrained(str(name_or_path))
+        classifier = transformers.AutoModelForSequenceClassification.from_pretrained(str(name_or_path), **loader_kwargs)
         if device is not None:
             classifier = classifier.to(device)
         logger.info("Loaded %s as HFClassifierModel on device: %s", name_or_path, next(classifier.parameters()).device)

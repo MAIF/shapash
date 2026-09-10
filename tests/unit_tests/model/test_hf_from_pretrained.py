@@ -104,9 +104,11 @@ class _FakeAutoTokenizer:
         self.fail_fast = fail_fast
         self.fail_slow = fail_slow
         self.calls = []
+        self.kwargs = []
 
-    def from_pretrained(self, source, use_fast):
+    def from_pretrained(self, source, use_fast, **kwargs):
         self.calls.append(use_fast)
+        self.kwargs.append(kwargs)
         if use_fast and self.fail_fast:
             raise OSError("no tokenizer.json")
         if not use_fast and self.fail_slow:
@@ -128,10 +130,26 @@ def test_load_tokenizer_falls_back_to_slow():
     assert auto.calls == [True, False]
 
 
-def test_load_tokenizer_both_fail_raises_actionable_error():
+def test_load_tokenizer_both_fail_suggests_trust_remote_code():
     auto = _FakeAutoTokenizer(fail_fast=True, fail_slow=True)
-    with pytest.raises(RuntimeError, match="does not support"):
+    with pytest.raises(RuntimeError, match="retry with trust_remote_code=True"):
         _load_tokenizer("some-model", SimpleNamespace(AutoTokenizer=auto))
+
+
+def test_load_tokenizer_both_fail_with_custom_code_allowed_points_elsewhere():
+    # Suggesting trust_remote_code=True to someone who already passed it would misdiagnose the failure.
+    auto = _FakeAutoTokenizer(fail_fast=True, fail_slow=True)
+    with pytest.raises(RuntimeError, match="not a trust_remote_code problem"):
+        _load_tokenizer("some-model", SimpleNamespace(AutoTokenizer=auto), trust_remote_code=True)
+
+
+def test_load_tokenizer_forwards_kwargs_to_both_attempts():
+    auto = _FakeAutoTokenizer(fail_fast=True)
+    _load_tokenizer("some-model", SimpleNamespace(AutoTokenizer=auto), trust_remote_code=True, revision="v2")
+    assert auto.kwargs == [
+        {"trust_remote_code": True, "revision": "v2"},
+        {"trust_remote_code": True, "revision": "v2"},
+    ]
 
 
 # ── label_names arity check in __init__ ───────────────────────────────────────────────────────────────
@@ -200,11 +218,18 @@ class _FakeTransformers:
         self._tokenizer = tokenizer
         self._classifier = classifier
         self.model_loaded_from = None
-        self.AutoTokenizer = SimpleNamespace(from_pretrained=lambda source, use_fast: tokenizer)
+        self.model_kwargs = None
+        self.tokenizer_kwargs = None
+        self.AutoTokenizer = SimpleNamespace(from_pretrained=self._load_tokenizer)
         self.AutoModelForSequenceClassification = SimpleNamespace(from_pretrained=self._load_model)
 
-    def _load_model(self, source):
+    def _load_tokenizer(self, source, use_fast, **kwargs):
+        self.tokenizer_kwargs = kwargs
+        return self._tokenizer
+
+    def _load_model(self, source, **kwargs):
         self.model_loaded_from = source
+        self.model_kwargs = kwargs
         return self._classifier
 
 
@@ -259,6 +284,44 @@ def test_from_pretrained_label_names_override_is_arity_checked(fake_transformers
 def test_from_pretrained_forwards_model_kwargs(fake_transformers):
     model = HFClassifierModel.from_pretrained("some/checkpoint", batch_size=7)
     assert model.batch_size == 7
+    # ``**model_kwargs`` configures the adapter — it must never leak into the checkpoint loaders.
+    assert "batch_size" not in fake_transformers.model_kwargs
+    assert "batch_size" not in fake_transformers.tokenizer_kwargs
+
+
+def test_from_pretrained_passes_trust_remote_code_to_both_loaders(fake_transformers):
+    # A custom architecture (GTE-v1.5, Jina, Nomic) ships both a model and a tokenizer implementation,
+    # so the flag has to reach both loads or the pair fails halfway.
+    HFClassifierModel.from_pretrained("custom/checkpoint", trust_remote_code=True)
+    assert fake_transformers.model_kwargs["trust_remote_code"] is True
+    assert fake_transformers.tokenizer_kwargs["trust_remote_code"] is True
+
+
+def test_from_pretrained_sends_trust_remote_code_false_explicitly(fake_transformers):
+    # Explicit False, not omitted: left unset, transformers prompts for confirmation on an interactive
+    # terminal, which would hang a webapp or batch job on a prompt nobody sees.
+    HFClassifierModel.from_pretrained("some/checkpoint")
+    assert fake_transformers.model_kwargs["trust_remote_code"] is False
+    assert fake_transformers.tokenizer_kwargs["trust_remote_code"] is False
+
+
+def test_from_pretrained_forwards_load_kwargs_to_both_loaders(fake_transformers):
+    HFClassifierModel.from_pretrained("some/checkpoint", load_kwargs={"revision": "abc123"})
+    assert fake_transformers.model_kwargs["revision"] == "abc123"
+    assert fake_transformers.tokenizer_kwargs["revision"] == "abc123"
+
+
+def test_from_pretrained_load_kwargs_can_override_trust_remote_code(fake_transformers):
+    HFClassifierModel.from_pretrained("some/checkpoint", load_kwargs={"trust_remote_code": True})
+    assert fake_transformers.model_kwargs["trust_remote_code"] is True
+
+
+def test_from_pretrained_skips_the_tokenizer_load_when_one_is_supplied(fake_transformers):
+    # An already-loaded tokenizer is used verbatim, so nothing is forwarded to a tokenizer loader.
+    tokenizer = _FakeTokenizer()
+    HFClassifierModel.from_pretrained("some/checkpoint", tokenizer=tokenizer, trust_remote_code=True)
+    assert fake_transformers.tokenizer_kwargs is None
+    assert fake_transformers.model_kwargs["trust_remote_code"] is True
 
 
 def test_from_pretrained_moves_classifier_to_requested_device(fake_transformers, monkeypatch):
