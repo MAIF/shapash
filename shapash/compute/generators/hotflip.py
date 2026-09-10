@@ -43,9 +43,6 @@ from shapash.model.base import (
     has_capabilities,
 )
 
-_MAX_FLIPPABLE_TOKENS = 10
-_CANDIDATES_PER_POSITION = 50
-
 
 class _GradientModel(Protocol):
     """The exact capability surface HotFlip uses (predict + gradients + embeddings + tokenization)."""
@@ -70,6 +67,12 @@ class HotFlipGenerator(CounterfactualGenerator):
 
     name = "hotflip"
     display_name = "HotFlip"
+    #: Vocabulary entries shortlisted per position by the linear estimate, before the model re-scores
+    #: them. Not a :meth:`config_spec` field: it is the dominant cost of a run (``positions x this``
+    #: forward passes, far more than the search itself) and raising it changes neither the flip rate,
+    #: which saturates well below the default, nor the plausibility of the winning word — it only
+    #: reshuffles which candidate wins. Overridable per instance for deliberate experiments.
+    candidates_per_position: int = 50
 
     def config_spec(self) -> dict[str, Field]:
         """Expose ``num_examples``, ``max_flips`` and ``tokens_to_ignore`` as tunable knobs."""
@@ -123,7 +126,7 @@ class HotFlipGenerator(CounterfactualGenerator):
         ranked = np.argsort(-grad_l2).tolist()
         flippable = [
             p for p in ranked if model.is_substitutable_at(tokens, p) and display_form(model, tokens[p]) not in ignore
-        ][:_MAX_FLIPPABLE_TOKENS]
+        ][: self.max_candidate_positions]
 
         vocab, matrix = model.get_embedding_table()
         replacement: dict[int, str] = {}
@@ -138,7 +141,7 @@ class HotFlipGenerator(CounterfactualGenerator):
                 cand_tok = vocab[int(cand)]
                 if cand_tok != tokens[pos] and model.is_substitutable(cand_tok):
                     shortlist.append(cand_tok)
-                    if len(shortlist) >= _CANDIDATES_PER_POSITION:
+                    if len(shortlist) >= self.candidates_per_position:
                         break
             if not shortlist:
                 continue

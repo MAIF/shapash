@@ -271,6 +271,33 @@ class TestAblationFlipOnMarkedTokenizer(unittest.TestCase):
         self.assertEqual(cfs, [])
 
 
+class TestCandidatePositionCap(unittest.TestCase):
+    """The cap is one named attribute on the ABC, overridable without patching module globals.
+
+    It was two module constants (``_MAX_ABLATABLE_TOKENS`` / ``_MAX_FLIPPABLE_TOKENS``) holding the
+    same value for the same purpose in two files, reachable only by monkeypatching.
+    """
+
+    def test_default_is_shared_by_both_generators(self):
+        from shapash.compute.generators import HotFlipGenerator
+
+        self.assertEqual(AblationFlipGenerator.max_candidate_positions, 10)
+        self.assertEqual(HotFlipGenerator.max_candidate_positions, 10)
+
+    def test_instance_override_limits_the_positions_searched(self):
+        gen = _make_generator()
+        gen.max_candidate_positions = 1
+        # Only the single best removal is offered, so a flip needing any other token cannot be found.
+        cfs = gen.generate("this is great and good", config={"num_examples": 5, "max_ablations": 2})
+        for cf in cfs:
+            self.assertEqual(len(cf.flipped_positions), 1)
+
+    def test_override_does_not_leak_to_other_instances(self):
+        gen = _make_generator()
+        gen.max_candidate_positions = 2
+        self.assertEqual(_make_generator().max_candidate_positions, 10)
+
+
 class TestMultiPieceWordsAreNotStranded(unittest.TestCase):
     """Dropping the *head* of a multi-piece word strands its continuations into a fragment.
 

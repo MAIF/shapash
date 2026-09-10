@@ -123,6 +123,14 @@ class CounterfactualGenerator(ABC):
     name: str = "counterfactual"
     #: Human-readable label for the webapp method selector (falls back to a title-cased ``name``).
     display_name: str = "Counterfactual"
+    #: How many ranked positions a generator may offer :meth:`search_minimal`.
+    #:
+    #: Deliberately **not** a :meth:`config_spec` field. ``max_flips`` already is one, and the two
+    #: multiply: the search scores ``sum(C(n, s) for s in 1..max_flips)`` combinations, so 10 positions
+    #: at ``max_flips=5`` is 637 candidate texts while 30 positions is 174,436 — an unbounded wait in a
+    #: blocking webapp callback, chosen by the person least placed to predict it. Overridable per
+    #: subclass or per instance (``generator.max_candidate_positions = 20``) for deliberate experiments.
+    max_candidate_positions: int = 10
 
     def __init__(self, model: TextModel) -> None:
         self.model = model

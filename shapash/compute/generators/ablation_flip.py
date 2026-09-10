@@ -35,8 +35,6 @@ from shapash.model.base import SupportsTokenization, TextModel, has_capabilities
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-_MAX_ABLATABLE_TOKENS = 10
-
 
 class AblationFlipGenerator(CounterfactualGenerator):
     """Perturbation-based token-removal counterfactuals (Captum ``FeatureAblation``)."""
@@ -93,7 +91,7 @@ class AblationFlipGenerator(CounterfactualGenerator):
 
         scores = self._ablation_scores(tokens, content_positions, orig_class)
         # Keep the most supportive positions (largest drop when removed) as removal candidates.
-        ranked = [content_positions[j] for j in np.argsort(-scores)][:_MAX_ABLATABLE_TOKENS]
+        ranked = [content_positions[j] for j in np.argsort(-scores)][: self.max_candidate_positions]
         return self.search_minimal(
             text,
             tokens,
