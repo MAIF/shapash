@@ -268,7 +268,32 @@ class SmartPlotter:
 
     def _get_waterfall_classification_coupled_outputs(self, line, data):
         """
-        Rebuild class scores and probabilities from additive SHAP outputs.
+        Rebuild coupled class outputs for a local waterfall explanation.
+
+        For the selected observation, this method computes one additive score
+        per class using:
+        base_score(class) + sum(feature contributions for class)
+        Then it converts these scores to probabilities using a softmax so that
+        class probabilities stay coupled across classes.
+
+        Parameters
+        ----------
+        line : list
+            One-element list containing the selected row index.
+        data : dict
+            Explainability data structure containing class-wise sorted
+            contributions in ``data["contrib_sorted"]``.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - predicted_class: predicted class label (same type as
+              ``self._explainer._classes`` entries)
+            - probs: numpy.ndarray of final class probabilities
+            - base_probs: numpy.ndarray of class probabilities at baseline
+            - scores: numpy.ndarray of final additive class scores
+            - base_scores: numpy.ndarray of baseline class scores
         """
         classes = list(self._explainer._classes)
         contrib_sorted = data["contrib_sorted"]
@@ -294,6 +319,24 @@ class SmartPlotter:
         return predicted_class, probs, base_probs, scores, base_scores
 
     def _softmax_from_scores(self, scores):
+        """
+        Convert additive class scores into normalized probabilities.
+
+        Parameters
+        ----------
+        scores : array-like
+            Raw class scores.
+
+        Returns
+        -------
+        numpy.ndarray
+            Probability vector summing to 1.
+
+        Notes
+        -----
+        The computation uses a max-shift stabilization before exponentiation
+        to improve numerical stability.
+        """
         scores = np.asarray(scores, dtype=float)
         stabilized = scores - np.max(scores)
         exp_scores = np.exp(stabilized)
@@ -301,14 +344,38 @@ class SmartPlotter:
 
     def _get_waterfall_classification_tooltips(self, line, data, contrib, label_num):
         """
-        Build waterfall tooltip extras for classification.
+        Build waterfall tooltip text for classification local explanations.
 
-        The returned tooltips keep the cumulative output visible and add the
-        coupled probability obtained by applying softmax on the current class
-        scores after each displayed contribution.
+        Each tooltip line contains the cumulative additive output for the
+        explained class and its coupled probability (softmax over all classes)
+        after each contribution step.
+
+        Parameters
+        ----------
+        line : list
+            One-element list containing the selected row index.
+        data : dict
+            Explainability data structure containing class-wise sorted
+            contributions.
+        contrib : list
+            Displayed contributions for the explained class after filtering and
+            masking.
+        label_num : int
+            Index of the explained class in ``self._explainer._classes``.
+
+        Returns
+        -------
+        list of str
+            Ordered tooltip strings used by the waterfall plot.
+
+        Notes
+        -----
+        The contribution ordering mirrors the current waterfall display logic:
+        positive contributions (largest absolute first), then zeros, then
+        negative contributions.
         """
-        predicted_class, coupled_probs, _, coupled_scores, coupled_base_scores = (
-            self._get_waterfall_classification_coupled_outputs(line, data)
+        _, coupled_probs, _, coupled_scores, coupled_base_scores = self._get_waterfall_classification_coupled_outputs(
+            line, data
         )
         final_scores = np.array(coupled_scores, dtype=float)
         base_scores = np.array(coupled_base_scores, dtype=float)
@@ -343,7 +410,7 @@ class SmartPlotter:
             f"Cumulative output: <b>{final_scores[label_num]:.4f}</b><br />Proba: <b>{final_prob:.4f}</b><br />Final output"
         )
 
-        return tooltips, predicted_class, coupled_probs, coupled_scores
+        return tooltips
 
     def local_plot(
         self,
@@ -485,17 +552,9 @@ class SmartPlotter:
 
                 waterfall_tooltips = None
                 coupled_predicted_class = None
-                coupled_probs = None
-                coupled_scores = None
 
                 if plot_type == "waterfall":
-                    (
-                        coupled_predicted_class,
-                        coupled_probs,
-                        _,
-                        coupled_scores,
-                        coupled_base_scores,
-                    ) = self._get_waterfall_classification_coupled_outputs(line, data)
+                    coupled_predicted_class, _, _, _, _ = self._get_waterfall_classification_coupled_outputs(line, data)
 
                 if show_predict is True:
                     subtitle_parts = [f"Explained class: <b>{label_value}</b>"]
@@ -582,9 +641,7 @@ class SmartPlotter:
                 del contrib[expl]
 
             if self._explainer._case == "classification" and plot_type == "waterfall":
-                waterfall_tooltips, _, _, _ = self._get_waterfall_classification_tooltips(
-                    line, data, contrib, label_num
-                )
+                waterfall_tooltips = self._get_waterfall_classification_tooltips(line, data, contrib, label_num)
 
         base_value = self._get_waterfall_base_value(line, label_num=label_num) if plot_type == "waterfall" else None
 

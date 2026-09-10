@@ -348,28 +348,6 @@ class TestSmartExplainer(unittest.TestCase):
         assert isinstance(xpl.contributions, list)
         assert len(xpl.contributions) == 2
 
-    def test_to_pandas_does_not_persist_filter_params(self):
-        """
-        Unit test to_pandas filtering is temporary and does not alter global mask_params.
-        """
-        np.random.seed(1)
-        df = pd.DataFrame(range(0, 12), columns=["id"])
-        df["y"] = (df["id"] % 2).astype(int)
-        df["x1"] = np.random.randint(1, 123, df.shape[0])
-        df["x2"] = np.random.randint(1, 3, df.shape[0])
-        df = df.set_index("id")
-
-        clf = cb.CatBoostClassifier(n_estimators=2).fit(df[["x1", "x2"]], df["y"])
-        xpl = SmartExplainer(clf)
-        xpl.compile(x=df[["x1", "x2"]])
-
-        xpl.filter(positive=None, max_contrib=2)
-        previous_mask_params = xpl.mask_params.copy()
-
-        _ = xpl.to_pandas(positive=True, max_contrib=2)
-
-        assert xpl.mask_params == previous_mask_params
-
     def test_filter_0(self):
         """
         Unit test filter 0

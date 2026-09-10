@@ -1167,14 +1167,6 @@ class SmartExplainer:
             raise ValueError("You have to specify y_pred argument. Please use add() or compile() method")
 
         # Apply filter method if necessary
-        filter_called = False
-        previous_mask = getattr(self, "mask", None)
-        had_mask_attr = hasattr(self, "mask")
-        previous_masked_contributions = getattr(self, "masked_contributions", None)
-        had_masked_contributions_attr = hasattr(self, "masked_contributions")
-        previous_mask_params = getattr(self, "mask_params", None)
-        had_mask_params_attr = hasattr(self, "mask_params")
-
         if (
             all(var is None for var in [features_to_hide, threshold, positive, max_contrib])
             and hasattr(self, "mask_params")
@@ -1193,7 +1185,6 @@ class SmartExplainer:
         ):
             print("to_pandas params: " + str(self.mask_params))
         else:
-            filter_called = True
             self.filter(
                 features_to_hide=features_to_hide,
                 threshold=threshold,
@@ -1219,27 +1210,8 @@ class SmartExplainer:
         y_pred, summary = keep_right_contributions(
             self.y_pred, data["summary"], self._case, self._classes, self.label_dict, proba_values
         )
-        output = pd.concat([y_pred, summary], axis=1)
 
-        # Keep to_pandas side-effect free regarding global filtering state so
-        # subsequent local_plot calls are not unintentionally filtered.
-        if filter_called:
-            if had_mask_attr:
-                self.mask = previous_mask
-            elif hasattr(self, "mask"):
-                delattr(self, "mask")
-
-            if had_masked_contributions_attr:
-                self.masked_contributions = previous_masked_contributions
-            elif hasattr(self, "masked_contributions"):
-                delattr(self, "masked_contributions")
-
-            if had_mask_params_attr:
-                self.mask_params = previous_mask_params
-            elif hasattr(self, "mask_params"):
-                delattr(self, "mask_params")
-
-        return output
+        return pd.concat([y_pred, summary], axis=1)
 
     def compute_features_import(self, force=False, local=False):
         """
