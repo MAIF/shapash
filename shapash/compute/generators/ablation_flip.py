@@ -74,13 +74,19 @@ class AblationFlipGenerator(CounterfactualGenerator):
         target_class = label_names.index(target_label) if (target_label and target_label in label_names) else None
 
         tokens = model.tokenize(text)
-        # Removable positions are decided by the *model's* tokenization scheme (``is_substitutable``),
+        # Removable positions are decided by the *model's* tokenization scheme (``is_substitutable_at``),
         # not by a string rule here: under SentencePiece/byte-BPE every content token carries a
         # ``▁``/``Ġ`` word-start marker, which a bare ``isalpha`` check rejects wholesale. ``ignore``
         # holds user-typed words, so it is matched against each token's display form for the same
         # reason — ``"great"`` must match the token ``"▁great"``.
+        #
+        # The *position* form matters here as much as in HotFlip: dropping the head of a multi-piece
+        # word strands its continuations, turning ``["gr", "##ou", "##chy"]`` into ``"ouchy"`` rather
+        # than removing ``"grouchy"``.
         content_positions = [
-            i for i, t in enumerate(tokens) if model.is_substitutable(t) and display_form(model, t) not in ignore
+            i
+            for i, t in enumerate(tokens)
+            if model.is_substitutable_at(tokens, i) and display_form(model, t) not in ignore
         ]
         if not content_positions:
             return []

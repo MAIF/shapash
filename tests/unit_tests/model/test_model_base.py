@@ -209,5 +209,76 @@ class TestIsSubstitutable(unittest.TestCase):
         self.assertFalse(is_word_token("▁good"))  # why it cannot be used alone
 
 
+class TestIsSubstitutableAt(unittest.TestCase):
+    """A multi-piece word's *head* is a word token but not a substitutable *position*.
+
+    ``"grouchy"`` tokenizes to ``["gr", "##ou", "##chy"]``; ``"gr"`` is bare and alphabetic, so every
+    token-level test accepts it, and substituting there rebuilt ``"superouchy"``. Only a check that can
+    see the following token rejects it.
+    """
+
+    def test_continuation_scheme_rejects_multi_piece_head(self):
+        m = _SchemeModel()
+        tokens = ["i", "am", "gr", "##ou", "##chy", "today"]
+        self.assertTrue(m.is_substitutable(tokens[2]))  # token-level says yes...
+        self.assertFalse(m.is_substitutable_at(tokens, 2))  # ...position-level says no
+        self.assertEqual([i for i in range(len(tokens)) if m.is_substitutable_at(tokens, i)], [0, 1, 5])
+
+    def test_marked_scheme_rejects_multi_piece_head(self):
+        m = _SchemeModel(marker="▁")
+        tokens = ["▁i", "▁am", "▁grou", "chy", "▁today"]
+        self.assertTrue(m.is_substitutable(tokens[2]))
+        self.assertFalse(m.is_substitutable_at(tokens, 2))
+        self.assertEqual([i for i in range(len(tokens)) if m.is_substitutable_at(tokens, i)], [0, 1, 4])
+
+    def test_marked_scheme_keeps_word_before_punctuation(self):
+        """Punctuation is unmarked but starts no word — the word before a comma stays perturbable.
+
+        Treating every unmarked token as a continuation would silently make the last word of every
+        sentence, and any word before a comma, unsubstitutable.
+        """
+        m = _SchemeModel(marker="Ġ")
+        tokens = ["Ġrude", ",", "Ġawful", "."]
+        self.assertTrue(m.is_substitutable_at(tokens, 0))
+        self.assertTrue(m.is_substitutable_at(tokens, 2))
+
+    def test_final_position_has_no_successor(self):
+        m = _SchemeModel()
+        self.assertTrue(m.is_substitutable_at(["hello", "world"], 1))
+
+    def test_marked_scheme_accepts_the_unmarked_opening_word(self):
+        """byte-BPE leaves the first token of a text bare, so the marker test misreads it.
+
+        ``"the waiter was rude"`` tokenizes to ``["the", "Ġwaiter", ...]``; judging ``"the"`` by the
+        marker made the opening word of every input unperturbable on the whole RoBERTa/GPT-2 family.
+        """
+        m = _SchemeModel(marker="Ġ")
+        tokens = ["the", "Ġwaiter", "Ġwas", "Ġrude"]
+        self.assertFalse(m.is_substitutable(tokens[0]))  # token-level still reads it as mid-word
+        self.assertTrue(m.is_substitutable_at(tokens, 0))  # position 0 knows better
+
+    def test_opening_word_still_rejected_when_multi_piece(self):
+        """The index-0 clause relaxes the *marker* rule, not the whole-word rule.
+
+        ``"rude waiters"`` tokenizes to ``["r", "ude", "Ġwait", "ers"]`` — ``"r"`` opens the text but
+        still only heads a multi-piece word, so substituting there would rebuild ``"Xude"``.
+        """
+        m = _SchemeModel(marker="Ġ")
+        self.assertFalse(m.is_substitutable_at(["r", "ude", "Ġwait", "ers"], 0))
+
+    def test_unmarked_token_is_only_forgiven_at_index_zero(self):
+        m = _SchemeModel(marker="Ġ")
+        # Same bare token, mid-text: still a mid-word piece, still rejected.
+        self.assertFalse(m.is_substitutable_at(["Ġthe", "the", "Ġrude"], 1))
+
+    def test_continues_word_follows_the_scheme(self):
+        self.assertTrue(_SchemeModel().continues_word("##ou"))
+        self.assertFalse(_SchemeModel().continues_word("and"))
+        # Marked schemes invert it: bare = mid-word, marked = new word, punctuation = neither.
+        self.assertTrue(_SchemeModel(marker="▁").continues_word("chy"))
+        self.assertFalse(_SchemeModel(marker="▁").continues_word("▁and"))
+        self.assertFalse(_SchemeModel(marker="▁").continues_word(","))
+
+
 if __name__ == "__main__":
     unittest.main()

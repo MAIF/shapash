@@ -3,13 +3,14 @@
 HotFlip finds a *minimal* set of token substitutions that changes the model's prediction, using a
 single backward pass to estimate each token's impact:
 
-1. Rank content tokens by the L2 norm of their input-embedding gradient (largest first).
+1. Rank content tokens by the L2 norm of their input-embedding gradient (largest first), keeping only
+   positions holding a **complete word** (:meth:`~shapash.model.base.SupportsTokenization.is_substitutable_at`).
 2. For each position, shortlist the top-K **word** candidates by the first-order estimate
    (``embedding_matrix @ token_gradient``, most-negative first), then **re-score that shortlist
    against the model** and keep the one that most reduces the original-class probability. The linear
    estimate alone is an unreliable proxy — its single best pick often does not flip at all — so
-   model verification is what surfaces genuine substitutions. Sub-word (``##``) and non-word tokens
-   are excluded so rebuilt text stays well-formed.
+   model verification is what surfaces genuine substitutions. Sub-word continuations, the *heads* of
+   multi-piece words, and non-word tokens are all excluded so rebuilt text stays well-formed.
 3. Hand the chosen substitutions to the shared minimal search
    (:meth:`~shapash.compute.generators.base.CounterfactualGenerator.search_minimal`), which tries flip
    combinations of increasing size (1..``max_flips``) in batched ``predict`` calls and keeps the
@@ -21,6 +22,7 @@ Requires a model exposing :class:`~shapash.model.base.SupportsGradients` and
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol, cast
 
 import numpy as np
@@ -60,6 +62,8 @@ class _GradientModel(Protocol):
 
     def is_substitutable(self, token: str) -> bool: ...
 
+    def is_substitutable_at(self, tokens: Sequence[str], index: int) -> bool: ...
+
 
 class HotFlipGenerator(CounterfactualGenerator):
     """Gradient-based token-substitution counterfactuals (LIT HotFlip)."""
@@ -80,9 +84,11 @@ class HotFlipGenerator(CounterfactualGenerator):
         """Compatible only with models exposing gradients, an embedding table *and* tokenization.
 
         ``SupportsTokenization`` is required because rebuilding a flipped sentence goes through
-        ``detokenize``, and choosing which vocab entries are usable replacements goes through
-        ``is_substitutable`` — both live on that capability. It was previously used without being
-        declared, which happened to work only because every gradient-capable adapter also tokenizes.
+        ``detokenize``, choosing which vocab entries are usable replacements goes through
+        ``is_substitutable``, and choosing which *positions* may be flipped goes through
+        ``is_substitutable_at`` — all three live on that capability. It was previously used without
+        being declared, which happened to work only because every gradient-capable adapter also
+        tokenizes.
         """
         return has_capabilities(model, SupportsGradients, SupportsEmbeddings, SupportsTokenization)
 
@@ -108,10 +114,15 @@ class HotFlipGenerator(CounterfactualGenerator):
         # filtered by word-hood as well as candidates: substituting a whole word into a *mid-word*
         # position rebuilds malformed text, which is what the module docstring already promises to
         # avoid — it was previously enforced on candidates only.
+        #
+        # ``is_substitutable_at`` (not ``is_substitutable``) because the *head* of a multi-piece word is
+        # itself a bare word token: ``"grouchy"`` tokenizes to ``["gr", "##ou", "##chy"]``, and flipping
+        # position ``"gr"`` rebuilt ``"superouchy"``. Only the position form can see the continuation
+        # that follows.
         grad_l2 = np.sum(grads * grads, axis=-1)
         ranked = np.argsort(-grad_l2).tolist()
         flippable = [
-            p for p in ranked if model.is_substitutable(tokens[p]) and display_form(model, tokens[p]) not in ignore
+            p for p in ranked if model.is_substitutable_at(tokens, p) and display_form(model, tokens[p]) not in ignore
         ][:_MAX_FLIPPABLE_TOKENS]
 
         vocab, matrix = model.get_embedding_table()

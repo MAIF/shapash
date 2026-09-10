@@ -6,7 +6,9 @@ counterfactual moved the original class probability.
 Token word-hood used to live here too, as a bare ``token.isalpha()``. It now lives in the model layer
 (:func:`~shapash.model.base.is_word_token` and the scheme-aware
 :meth:`~shapash.model.base.SupportsTokenization.is_substitutable`), because the answer depends on the
-tokenization scheme and only the model knows which one it uses.
+tokenization scheme and only the model knows which one it uses. Generators choosing a *position* to
+perturb want :meth:`~shapash.model.base.SupportsTokenization.is_substitutable_at` instead, which also
+rejects the head of a multi-piece word — a question no per-token predicate can answer.
 """
 
 from __future__ import annotations

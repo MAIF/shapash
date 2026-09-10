@@ -51,6 +51,32 @@ class BagOfWordsModel(TextModel, SupportsTokenization):
         return " ".join(tokens)
 
 
+class SubwordModel(BagOfWordsModel):
+    """WordPiece-style fake: some words split into pieces, so a word *head* is bare but not a word.
+
+    ``BagOfWordsModel`` splits on whitespace, which can never reproduce the multi-piece case that made
+    both generators emit malformed text (``"grouchy"`` → ``["gr", "##ou", "##chy"]``, flipped to
+    ``"superouchy"``).
+    """
+
+    _PIECES = {"terrible": ["terr", "##ible"], "grouchy": ["gr", "##ou", "##chy"]}
+
+    def tokenize(self, text):
+        pieces = []
+        for word in text.split():
+            pieces.extend(self._PIECES.get(word, [word]))
+        return pieces
+
+    def detokenize(self, tokens):
+        out = ""
+        for token in tokens:
+            if token.startswith("##"):
+                out += token[2:]
+            else:
+                out = f"{out} {token}" if out else token
+        return out
+
+
 def _exact_ablation_scores(self, tokens, content_positions, orig_class):
     """Captum-free stand-in for ``_ablation_scores``: exact drop in ``orig_class`` per removed token."""
     base = self.model.predict([self.model.detokenize(list(tokens))])[0][orig_class]
@@ -243,6 +269,37 @@ class TestAblationFlipOnMarkedTokenizer(unittest.TestCase):
         # nothing; the comparison goes through the token's display form instead.
         cfs = self.gen.generate("this is great", config={"tokens_to_ignore": ["great"], "max_ablations": 1})
         self.assertEqual(cfs, [])
+
+
+class TestMultiPieceWordsAreNotStranded(unittest.TestCase):
+    """Dropping the *head* of a multi-piece word strands its continuations into a fragment.
+
+    ``"terrible"`` tokenizes to ``["terr", "##ible"]``. Removing ``"terr"`` leaves ``"ible"`` — a word
+    the model never saw, which reads to the search as a large probability drop and so gets selected
+    eagerly. The position must be excluded, even at the cost of finding no counterfactual at all.
+    """
+
+    def setUp(self):
+        self.gen = AblationFlipGenerator(SubwordModel())
+        self.gen._ablation_scores = _exact_ablation_scores.__get__(self.gen, AblationFlipGenerator)
+
+    def test_word_head_is_not_an_ablation_candidate(self):
+        model = self.gen.model
+        tokens = model.tokenize("this is terrible")
+        self.assertEqual(tokens, ["this", "is", "terr", "##ible"])
+        self.assertTrue(model.is_substitutable(tokens[2]))  # token-level accepts the bare head
+        self.assertFalse(model.is_substitutable_at(tokens, 2))  # the position does not
+
+    def test_never_returns_a_stranded_fragment(self):
+        # Pre-fix, "terr" was removable and this returned "this is ible but good" as a valid flip.
+        cfs = self.gen.generate("this is terrible but good", config={"num_examples": 5, "max_ablations": 2})
+        for cf in cfs:
+            self.assertNotIn("ible", cf.new_text)
+            self.assertNotIn("ouchy", cf.new_text)
+
+    def test_prefers_no_counterfactual_over_a_malformed_one(self):
+        # The only flip-enabling removal is the multi-piece word, which cannot be removed piecewise.
+        self.assertEqual(self.gen.generate("this is terrible but good", config={"max_ablations": 1}), [])
 
 
 if __name__ == "__main__":

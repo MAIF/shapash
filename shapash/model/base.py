@@ -22,6 +22,7 @@ concrete class — this is what keeps HotFlip and friends model-agnostic.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import Any, Protocol, cast, runtime_checkable
 
 import numpy as np
@@ -103,6 +104,12 @@ class TextModel(ABC):
 # (BERT/DistilBERT) uses the opposite convention — it marks *continuations* with ``##`` and leaves word
 # starts bare. See :meth:`SupportsTokenization.word_start_marker`.
 WORD_START_MARKERS = ("Ġ", "▁")  # "Ġ", "▁"
+
+# Word-*continuation* markers, the opposite convention: WordPiece prefixes every piece *after* the
+# first with ``##``. Needed to tell a whole word from the *head* of a multi-piece one — ``"gr"`` in
+# ``["gr", "##ou", "##chy"]`` is bare and alphabetic, so it passes every token-level word test while
+# being unsubstitutable in place. See :meth:`SupportsTokenization.is_substitutable_at`.
+CONTINUATION_MARKERS = ("##",)
 
 # Two ordinary lowercase words, tokenized once to detect the convention above. Deliberately trivial:
 # any tokenizer segments this into whole words, so a marker appears if and only if the scheme uses one.
@@ -233,6 +240,74 @@ class SupportsTokenization(ABC):
         if marker is None:
             return is_word_token(token)
         return token.startswith(marker) and is_word_token(token[len(marker) :])
+
+    def continues_word(self, token: str) -> bool:
+        """Whether ``token`` continues the word begun by the token before it.
+
+        The mirror image of :meth:`is_substitutable`, and answered from the same probed scheme:
+
+        * **Continuation-marking** tokenizers say so explicitly — ``##ou`` continues, ``and`` does not.
+        * **Word-start-marking** tokenizers say so by omission: an *unmarked* piece continues the
+          previous word. Punctuation is unmarked too (``"▁rude"``, ``"."``) but starts nothing, so the
+          alphabetic test excludes it — without that, no word before a comma or full stop would ever be
+          perturbable.
+
+        Only meaningful for a token that *follows* another; the first token of a text continues nothing
+        regardless of what this returns.
+
+        Parameters
+        ----------
+        token : str
+            A token string from this model's tokenizer.
+
+        Returns
+        -------
+        bool
+            ``True`` when the token is a mid-word piece rather than the start of a new word.
+        """
+        marker = self.word_start_marker()
+        if marker is None:
+            return token.startswith(CONTINUATION_MARKERS)
+        return not token.startswith(marker) and is_word_token(token)
+
+    def is_substitutable_at(self, tokens: Sequence[str], index: int) -> bool:
+        """Whether ``tokens[index]`` is a whole word that can be swapped or dropped *in place*.
+
+        The position-level form of :meth:`is_substitutable`, and the one counterfactual generators want
+        when choosing which positions to perturb. Word-hood cannot be decided from a token alone: a
+        multi-piece word's *head* is bare and alphabetic, so ``"gr"`` in ``["gr", "##ou", "##chy"]``
+        passes :meth:`is_substitutable` while a substitution there rebuilds ``"superouchy"`` — malformed
+        text of exactly the kind both generators document themselves as avoiding. Deciding it needs the
+        *next* token, which a per-token predicate structurally cannot see.
+
+        Position also settles the *opening* word, which the token-level rule gets wrong in the other
+        direction: byte-BPE marks a word start with ``Ġ`` but leaves the very first token of a text
+        bare, emitting ``["the", "Ġwaiter", ...]``. :meth:`is_substitutable` reads that bare ``"the"``
+        as a mid-word piece, so the first word of *every* input was silently unperturbable on the whole
+        RoBERTa/GPT-2 family. At index 0 there is no preceding word to continue, so word-hood there is
+        the marker-free rule.
+
+        :meth:`is_substitutable` remains the right check for a bare vocabulary entry being considered as
+        a *replacement*, where there is no surrounding sequence to consult.
+
+        Parameters
+        ----------
+        tokens : Sequence[str]
+            The full tokenization of the text.
+        index : int
+            Position into ``tokens`` to test.
+
+        Returns
+        -------
+        bool
+            ``True`` when the position holds a complete word, so replacing or removing it leaves the
+            rest of the text well-formed.
+        """
+        # The index-0 clause only ever *adds* the opening token; it is redundant (not wrong) under a
+        # continuation-marking scheme, where ``is_substitutable`` is already the marker-free rule.
+        if not (self.is_substitutable(tokens[index]) or (index == 0 and is_word_token(tokens[index]))):
+            return False
+        return index + 1 >= len(tokens) or not self.continues_word(tokens[index + 1])
 
 
 class SupportsEmbeddings(ABC):
