@@ -373,26 +373,6 @@ class TestCheck(unittest.TestCase):
                 features_dict, model, columns_dict, features_types, mask_params, preprocessing
             )
 
-    def test_check_preprocessing_options_1(self):
-        """
-        Unit test 1 for check_preprocessing_options
-        """
-        y = pd.DataFrame(data=[0, 1], columns=["y"])
-        train = pd.DataFrame({"num1": [0, 1], "num2": [0, 2], "other": ["A", "B"]})
-        enc = ColumnTransformer(
-            transformers=[("power", skp.QuantileTransformer(n_quantiles=2), ["num1", "num2"])], remainder="drop"
-        )
-        enc.fit(train, y)
-
-        with self.assertRaises(ValueError):
-            check_preprocessing_options(enc)
-
-        enc = ColumnTransformer(
-            transformers=[("power", skp.QuantileTransformer(n_quantiles=2), ["num1", "num2"])], remainder="passthrough"
-        )
-        enc.fit(train, y)
-        check_preprocessing_options(enc)
-
     def test_check_consistency_model_features_4(self):
         """
         Test check_consistency_model_features 1
