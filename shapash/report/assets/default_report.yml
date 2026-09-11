@@ -1,0 +1,77 @@
+# default_report.yml
+# Default smart report configuration based on block sections.
+
+sections:
+  - type: header
+    params:
+      title: "House prices report"
+      subtitle: >
+        This document is a data science report of the kaggle house prices tutorial project.
+        It was generated using the Shapash library.
+
+  - type: project_information
+    params:
+      title: "Project information"
+      project_info_file: "tutorial/generate_report/config/project_information.yml"
+
+  - type: model_analysis
+    params:
+      title: "Model analysis"
+
+  - type: group
+    params:
+      title: "Dataset analysis"
+    blocks:
+      - type: global_analysis
+        params:
+          title: "Global analysis"
+
+      - type: univariate_analysis
+        params:
+          title: "Univariate analysis"
+
+      - type: target_analysis
+        params:
+          title: "Target analysis"
+          show_train: true
+
+      - type: correlations_plot
+        params:
+          title: "Multivariate analysis"
+          max_features: 20
+
+  - type: group
+    params:
+      title: "Model explainability"
+    blocks:
+      - type: feature_importance
+        params:
+          title: "Global feature importance plot"
+
+      - type: contribution_plot
+        params:
+          title: "Features contribution plots"
+          include_all_features: true
+
+  - type: group
+    params:
+      title: "Model performance"
+    blocks:
+      - type: target_distribution
+        params:
+          title: "Univariate analysis of target variable"
+
+      - type: performance_metrics
+        params:
+          title: "Metrics"
+          metrics:
+            - path: "sklearn.metrics.mean_absolute_error"
+              name: "Mean absolute error"
+            - path: "sklearn.metrics.mean_squared_error"
+              name: "Mean squared error"
+
+  - type: callout
+    params:
+      body: >
+        You can add as many blocks, charts, and text sections as you want.
+        The generated HTML renders report content only (no source code).

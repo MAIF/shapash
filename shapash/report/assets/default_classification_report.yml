@@ -1,0 +1,122 @@
+# default_report_classification_titanic.yml
+# Smart report configuration for Titanic binary classification (survival).
+# This file is a template: edit titles, texts, and block parameters for your project.
+# You can reorder sections/blocks, remove blocks, or add new ones supported by ReportBlockMixin.
+
+sections:
+  # One item in this list = one top-level section in the generated HTML report.
+  # - type: header
+  #   # `header` renders the report title area.
+  #   params:
+  #     title: Your project title
+  #     subtitle: >
+  #       Some subtitle for your project
+
+  # # `group` lets you organize several blocks under a common section title.
+  # - type: group
+  #   params:
+  #     title: "Project information"
+  #   blocks:
+  #     # `text` displays a free markdown text block.
+  #     - type: text
+  #       params:
+  #         title: "General information"
+  #         # Replace placeholders with your own project metadata.
+  #         content:
+  #           version: x.y.z
+  #           name: Name of your project
+  #           purpose: ...
+  #           date: 1970-01-01
+  #           contributors: Your Name
+  #           description: ...
+  #           source code: https://...
+  #     - type: text
+  #       params:
+  #         title: "Dataset information"
+  #         # Describe data provenance, scope, and target variable.
+  #         content:
+  #           path: ...
+  #           origin: ...
+  #           description: ...
+  #           depth: ...
+  #           perimeter: ...
+  #           target variable: name of target variable
+  #           target description: description of target variable
+  #     - type: text
+  #       params:
+  #         title: "Some other subsection"
+  #         # You can duplicate this block to add any extra context.
+  #         content:
+  #           whatever: you want to add
+
+  # `model_analysis` summarizes estimator type, library, and model parameters.
+  - type: model_analysis
+    params:
+      title: "Model analysis"
+
+  - type: group
+    params:
+      title: "Dataset analysis"
+    blocks:
+      # Global statistics on prediction and (optionally) training datasets.
+      - type: global_analysis
+        params:
+          title: "Global analysis"
+
+      # Interactive per-feature distributions and statistics.
+      - type: univariate_analysis
+        params:
+          title: "Univariate analysis"
+
+      # Target-specific analysis; set `show_train: false` to hide training target.
+      - type: target_analysis
+        params:
+          title: "Target analysis"
+          show_train: true
+
+      # Correlation matrix; reduce `max_features` for faster/lighter reports.
+      - type: correlations_plot
+        params:
+          title: "Multivariate analysis"
+          max_features: 20
+
+  - type: group
+    params:
+      title: "Model performance"
+    blocks:
+      # Classification confusion matrix using y_true vs y_pred.
+      - type: confusion_matrix
+        params:
+          title: "Confusion matrix"
+
+      # Lift curve for one class. Set `label` to the class id/value to inspect.
+      - type: lift_curve
+        params:
+          title: "Lift curve"
+          label: 1
+
+      # Compare prediction and true target distributions.
+      - type: target_distribution
+        params:
+          title: "Target distribution"
+
+      # Add/remove metrics using fully qualified function paths.
+      - type: performance_metrics
+        params:
+          title: "Metrics"
+          metrics:
+            - path: "sklearn.metrics.accuracy_score"
+              name: "Accuracy"
+            - path: "sklearn.metrics.precision_score"
+              name: "Precision"
+            - path: "sklearn.metrics.recall_score"
+              name: "Recall"
+            - path: "sklearn.metrics.f1_score"
+              name: "F1"
+
+  # Optional final note displayed at the end of the report.
+  - type: callout
+    params:
+      body: >
+        This report uses built-in blocks only. You can later plug a custom
+        block runtime to extend the layout.

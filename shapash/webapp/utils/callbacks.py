@@ -2,7 +2,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from shapash.explainer.smart_explainer import SmartExplainer
+    from shapash.explainer.explainer import Explainer
 
 import dash_bootstrap_components as dbc
 import numpy as np
@@ -827,13 +827,13 @@ def handle_group_display_logic(
 
 
 def determine_total_pages_and_display(
-    explainer: "SmartExplainer", features: int, bool_group: bool, group_name: str, page: int
+    explainer: "Explainer", features: int, bool_group: bool, group_name: str, page: int
 ) -> tuple[int, dict[str, str], int]:
     """
     Determine the total number of pages and the display properties.
 
     Args:
-        explainer (SmartExplainer): The explainer object.
+        explainer (Explainer): The explainer object.
         features (int): Number of features to display per page.
         bool_group (bool): Whether to display groups.
         group_name (str): Name of the feature group.
@@ -844,9 +844,17 @@ def determine_total_pages_and_display(
     """
     display_groups = explainer.features_groups is not None and bool_group
     if explainer._case == "classification":
-        nb_features = len(explainer.features_imp_groups[0]) if display_groups else len(explainer.features_imp[0])
+        features_imp = explainer.features_imp_groups if display_groups else explainer.features_imp
+        if not isinstance(features_imp, list) or len(features_imp) == 0:
+            raise ValueError("Feature importances are missing for classification case.")
+        nb_features = len(features_imp[0])
     elif explainer._case == "regression":
-        nb_features = len(explainer.features_imp_groups) if display_groups else len(explainer.features_imp)
+        features_imp = explainer.features_imp_groups if display_groups else explainer.features_imp
+        if features_imp is None:
+            raise ValueError("Feature importances are missing for regression case.")
+        nb_features = len(features_imp)
+    else:
+        raise ValueError("Unknown explainer case.")
 
     total_pages = (nb_features - 1) // features + 1
     if (total_pages == 1) or (group_name):

@@ -59,7 +59,7 @@ class TestCallbacks(unittest.TestCase):
             additional_data=additional_data,
             additional_features_dict=additional_features_dict,
         )
-        self.smart_app = SmartApp(self.xpl)
+        self.smart_app = SmartApp(self.xpl.explainer)
 
         self.click_data = {
             "points": [
@@ -314,8 +314,8 @@ class TestCallbacks(unittest.TestCase):
 
     def test_get_id_card_features(self):
         data = self.smart_app.components["table"]["dataset"].data
-        features_dict = copy.deepcopy(self.xpl.features_dict)
-        features_dict.update(self.xpl.additional_features_dict)
+        features_dict = copy.deepcopy(self.xpl.explainer.features_dict)
+        features_dict.update(self.xpl.explainer.additional_features_dict)
         selected_row = get_id_card_features(data, 3, self.special_cols, features_dict)
         expected_result = pd.DataFrame(
             {
@@ -337,8 +337,8 @@ class TestCallbacks(unittest.TestCase):
         pd.testing.assert_frame_equal(selected_row, expected_result)
 
     def test_get_id_card_contrib(self):
-        data = self.xpl.data
-        selected_contrib = get_id_card_contrib(data, 3, self.xpl.features_dict, self.xpl.columns_dict, 0)
+        data = self.xpl.explainer.data
+        selected_contrib = get_id_card_contrib(data, 3, self.xpl.explainer.features_dict, self.xpl.explainer.columns_dict, 0)
         assert set(selected_contrib["feature_name"]) == {"Useless col", "column1"}
         assert selected_contrib.columns.tolist() == ["feature_name", "feature_contrib"]
 
@@ -369,7 +369,7 @@ class TestCallbacks(unittest.TestCase):
         )
 
         selected_data = create_id_card_data(
-            selected_row, selected_contrib, "feature_name", True, self.special_cols, self.xpl.additional_features_dict
+            selected_row, selected_contrib, "feature_name", True, self.special_cols, self.xpl.explainer.additional_features_dict
         )
         expected_result = pd.DataFrame(
             {
@@ -400,12 +400,12 @@ class TestCallbacks(unittest.TestCase):
             },
             index=["_index_", "_predict_", "_target_", "_error_","column3", "column1", "_column2"],
         )
-        children = create_id_card_layout(selected_data, self.xpl.additional_features_dict)
+        children = create_id_card_layout(selected_data, self.xpl.explainer.additional_features_dict)
         assert len(children) == 7
 
     def test_get_feature_filter_options(self):
-        features_dict = copy.deepcopy(self.xpl.features_dict)
-        features_dict.update(self.xpl.additional_features_dict)
+        features_dict = copy.deepcopy(self.xpl.explainer.features_dict)
+        features_dict.update(self.xpl.explainer.additional_features_dict)
         options = get_feature_filter_options(self.smart_app.dataframe, features_dict, self.special_cols)
         assert [option["label"] for option in options] == [
             "_index_",

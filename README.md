@@ -198,8 +198,8 @@ app = xpl.run_app()
 [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
 - Step 4: Generate the Shapash Report
-  > This step allows to generate a standalone html report of your project using the different splits
-  of your dataset and also the metrics you used:
+  > This step generates a standalone HTML report from a block-based layout.
+  You can optionally provide a YAML file to customize report sections and blocks.
 
 ```python
 xpl.generate_report(
@@ -208,6 +208,7 @@ xpl.generate_report(
     x_train=xtrain,
     y_train=ytrain,
     y_test=ytest,
+    yaml_path="path/to/report_config.yml",  # Optional: custom block configuration
     title_story="House prices report",
     title_description="""This document is a data science report of the kaggle house prices tutorial project.
         It was generated using the Shapash library.""",

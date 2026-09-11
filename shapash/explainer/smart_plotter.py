@@ -54,7 +54,7 @@ class SmartPlotter:
     just use the following syntax
     Attributes :
     explainer: object
-        SmartExplainer instance to point to.
+        Explainer compute object (delegating to SmartExplainer state).
     Example
     --------
     >>> xpl.plot.my_plot_method(param=value)
@@ -174,9 +174,15 @@ class SmartPlotter:
         """
         if hasattr(self._explainer, "masked_contributions"):
             if isinstance(self._explainer.masked_contributions, list):
-                ext_contrib = self._explainer.masked_contributions[label].loc[line[0], :].values
+                masked_contrib = self._explainer.masked_contributions[label]
             else:
-                ext_contrib = self._explainer.masked_contributions.loc[line[0], :].values
+                masked_contrib = self._explainer.masked_contributions
+
+            # No hidden contributions are available until a filter computation fills this structure.
+            if masked_contrib.empty or line[0] not in masked_contrib.index:
+                return var_dict, x_val, contrib
+
+            ext_contrib = masked_contrib.loc[line[0], :].values
 
             ext_var_dict = ["Hidden Negative Contributions", "Hidden Positive Contributions"]
             ext_x = ["", ""]
@@ -1587,6 +1593,21 @@ class SmartPlotter:
             return dict_t
 
         fig.layout.coloraxis.colorscale = self._style_dict["interactions_col_scale"]
+
+        # Plotly updatemenus uses paper coordinates (not pixels).
+        # Convert target pixel offsets from the top-left of the full figure
+        # into normalized paper coordinates to keep a stable visual position.
+        margin_left = 90
+        margin_right = 20
+        margin_top = 120
+        margin_bottom = 70
+        menu_left_px = 12
+        menu_top_px = 12
+        plot_width = max(width - margin_left - margin_right, 1)
+        plot_height = max(height - margin_top - margin_bottom, 1)
+        menu_x = (menu_left_px - margin_left) / plot_width
+        menu_y = 1 + (margin_top - menu_top_px) / plot_height
+
         updatemenus = [
             dict(
                 active=0,
@@ -1625,30 +1646,14 @@ class SmartPlotter:
                     ]
                 ),
                 direction="down",
-                pad={"r": 10, "t": 10},
+                pad={"r": 10, "t": 0},
                 showactive=True,
-                x=0.37,
+                x=menu_x,
                 xanchor="left",
-                y=1.25,
+                y=menu_y,
                 yanchor="top",
             )
         ]
-        fig.update_layout(
-            xaxis_title=self._explainer.columns_dict[sorted_top_features_indices[0][0]],
-            yaxis_title="Shap interaction value",
-            updatemenus=updatemenus,
-            annotations=[
-                dict(
-                    text=f"Sorted top {len(indices_to_plot)} SHAP interaction Variables :",
-                    x=0,
-                    xref="paper",
-                    y=1.2,
-                    yref="paper",
-                    align="left",
-                    showarrow=False,
-                )
-            ],
-        )
 
         update_interactions_fig(
             fig=fig,
@@ -1662,7 +1667,13 @@ class SmartPlotter:
             style_dict=self._style_dict,
         )
 
-        fig.update_layout(title={"y": 0.88, "x": 0.5, "xanchor": "center", "yanchor": "top"})
+        fig.update_layout(
+            title={"y": 0.88, "x": 0.5, "xanchor": "center", "yanchor": "top"},
+            updatemenus=updatemenus,
+            margin={"l": margin_left, "r": margin_right, "t": margin_top, "b": margin_bottom},
+            xaxis_title=self._explainer.columns_dict[sorted_top_features_indices[0][0]],
+            yaxis_title="Shap interaction value",
+        )
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)

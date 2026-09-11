@@ -42,6 +42,7 @@ dependencies = [
     "numpy>=2.0.0",
     # 3.0.4 yanked upstream: segfaults in datetime ops (pandas #66083)
     "pandas>=2.2.2,!=3.0.4,<4.0.0",
+    "phik>=0.12.4",
     "plotly>=5.0.0,<6.0.0",
     "scikit-learn>=1.8.0,<1.9.0",
     "scipy>=1.13.0",
@@ -51,13 +52,8 @@ dependencies = [
 
 [project.optional-dependencies] # Optional
 report = [
-    "Jinja2>=3.1.0",
-    "jupyter-client>=8.3.0",
-    "nbconvert>=7.2.0",
-    "notebook>=7.0.0",
-    "papermill>=2.5.0",
-    "phik>=0.12.4",
-    "pyarrow>=17.0.0",
+    "panel>=1.8.10",
+
 ]
 xgboost = ["xgboost>=2.1.0"]
 catboost = ["catboost>=1.2.8"]

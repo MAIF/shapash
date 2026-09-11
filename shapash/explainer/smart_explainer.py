@@ -2,41 +2,55 @@
 Smart explainer module
 """
 
+from __future__ import annotations
+
 import copy
 import logging
-import shutil
-import tempfile
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 from werkzeug.serving import make_server
 
 import shapash.explainer.smart_predictor
-from shapash.backend import BaseBackend, get_backend_cls_from_name
-from shapash.backend.shap_backend import get_shap_interaction_values
-from shapash.manipulation.select_lines import keep_right_contributions
-from shapash.manipulation.summarize import create_grouped_features_values
-from shapash.report import check_report_requirements
+from shapash.backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
-from shapash.utils.check import (
-    check_additional_data,
-    check_columns_order,
-    check_features_name,
-    check_label_dict,
-    check_model,
-    check_postprocessing,
-    check_y,
-)
 from shapash.utils.custom_thread import CustomThread
-from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
 from shapash.utils.io import load_pickle, save_pickle
-from shapash.utils.model import predict, predict_error, predict_proba
-from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
+from shapash.utils.transform import handle_categorical_missing
 from shapash.utils.utils import get_host_name
 from shapash.webapp.smart_app import SmartApp
 
+from .explainer import Explainer
 from .smart_plotter import SmartPlotter
+
+if TYPE_CHECKING:
+    from shapash.report.blocks import ReportBlockMixin
+
+REPORT_DEPENDENCIES_AVAILABLE = False
+ReportTemplate: Any | None = None
+_ReportBlockMixin: type[Any] | None = None
+
+
+def _generate_smart_report_unavailable(*args: Any, **kwargs: Any) -> None:
+    raise ImportError("Report dependencies are not installed. Please install shapash report extras.")
+
+
+generate_smart_report = _generate_smart_report_unavailable
+
+
+try:
+    from shapash.report import ReportTemplate as _ReportTemplate
+    from shapash.report.blocks import ReportBlockMixin as _ReportBlockMixin
+    from shapash.report.core import generate_report as _generate_smart_report
+except ImportError:
+    # [report] optional dependencies may not be installed
+    ...
+else:
+    REPORT_DEPENDENCIES_AVAILABLE = True
+    ReportTemplate = _ReportTemplate
+    generate_smart_report = _generate_smart_report
 
 logging.basicConfig(level=logging.INFO)
 
@@ -189,18 +203,18 @@ class SmartExplainer:
 
     def __init__(
         self,
-        model,
-        backend="shap",
-        preprocessing=None,
-        postprocessing=None,
-        features_groups=None,
-        features_dict=None,
-        label_dict=None,
+        model: Any,
+        backend: str | BaseBackend = "shap",
+        preprocessing: Any | None = None,
+        postprocessing: dict[str, Any] | None = None,
+        features_groups: dict[str, list[str]] | None = None,
+        features_dict: dict[str, str] | None = None,
+        label_dict: dict[Any, Any] | None = None,
         title_story: str | None = None,
-        palette_name=None,
-        colors_dict=None,
-        **backend_kwargs,
-    ):
+        palette_name: str | None = None,
+        colors_dict: dict[str, Any] | None = None,
+        **backend_kwargs: Any,
+    ) -> None:
         if features_dict is not None and not isinstance(features_dict, dict):
             raise ValueError(
                 """
@@ -213,53 +227,39 @@ class SmartExplainer:
                 label_dict must be a dict
                 """
             )
+        self.smartapp: Any = None
         self.model = model
-        self.preprocessing = preprocessing
-        self.backend_name = None
-        if isinstance(backend, str):
-            self.backend_name = backend
-        elif isinstance(backend, BaseBackend):
-            self.backend = backend
-            if backend.preprocessing is None and self.preprocessing is not None:
-                self.backend.preprocessing = self.preprocessing
-        else:
-            raise NotImplementedError(f"Unknown backend : {backend}")
-
-        self.backend_kwargs = backend_kwargs
-        self.features_dict = dict() if features_dict is None else copy.deepcopy(features_dict)
-        self.label_dict = label_dict
-        self.title_story = title_story if title_story is not None else ""
+        title_story = title_story if title_story is not None else ""
+        self.title_story = title_story
         self.palette_name = palette_name if palette_name else "default"
         self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
         if colors_dict is not None:
             self.colors_dict.update(colors_dict)
-        self.plot = SmartPlotter(self, self.colors_dict)
 
-        self._case, self._classes = check_model(self.model)
-        self.postprocessing = postprocessing
-        self.check_label_dict()
-        if self.label_dict:
-            self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
-
-        self.features_groups = features_groups
-        self.local_neighbors = None
-        self.features_stability = None
-        self.features_compacity = None
-        self.contributions = None
-        self.explain_data = None
-        self.features_imp: Any = None
+        self.explainer = Explainer(
+            model=model,
+            backend=backend,
+            preprocessing=preprocessing,
+            postprocessing=postprocessing,
+            features_groups=features_groups,
+            features_dict=features_dict,
+            label_dict=label_dict,
+            **backend_kwargs,
+        )
+        self.plot = SmartPlotter(self.explainer, self.colors_dict)
+        self.explainer.plot = self.plot
 
     def compile(
         self,
-        x,
-        contributions=None,
-        y_pred=None,
-        proba_values=None,
-        y_target=None,
-        columns_order=None,
-        additional_data=None,
-        additional_features_dict=None,
-    ):
+        x: pd.DataFrame,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+        y_pred: pd.Series | pd.DataFrame | None = None,
+        proba_values: pd.Series | pd.DataFrame | None = None,
+        y_target: pd.Series | pd.DataFrame | None = None,
+        columns_order: list[str] | None = None,
+        additional_data: pd.DataFrame | None = None,
+        additional_features_dict: dict[str, str] | None = None,
+    ) -> None:
         """
         Prepare and structure all data needed for interpreting the model and its predictions.
 
@@ -318,25 +318,15 @@ class SmartExplainer:
         >>> xpl.compile(x=x_test)
         >>> xpl.plot.features_importance()
         """
-        if isinstance(self.backend_name, str):
-            backend_cls = get_backend_cls_from_name(self.backend_name)
-            self.backend = backend_cls(
-                model=self.model, preprocessing=self.preprocessing, masker=x, **self.backend_kwargs
-            )
-        self.x_encoded = handle_categorical_missing(x)
-        x_init = inverse_transform(self.x_encoded, self.preprocessing)
-        self.x_init = handle_categorical_missing(x_init)
-        self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
-        if (self.y_pred is None) and (hasattr(self.model, "predict")):
-            self.predict()
-
-        self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
-        if (self._case == "classification") and (self.proba_values is None) and (hasattr(self.model, "predict_proba")):
-            self.predict_proba()
-
-        self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-        self.prediction_error = predict_error(
-            self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
+        self.explainer.compile(
+            x=x,
+            contributions=contributions,
+            y_pred=y_pred,
+            proba_values=proba_values,
+            y_target=y_target,
+            columns_order=columns_order,
+            additional_data=additional_data,
+            additional_features_dict=additional_features_dict,
         )
 
         self._get_contributions_from_backend_or_user(x, contributions)
@@ -468,7 +458,7 @@ class SmartExplainer:
 
         return columns_order
 
-    def define_style(self, palette_name=None, colors_dict=None):
+    def define_style(self, palette_name: str | None = None, colors_dict: dict[str, Any] | None = None) -> None:
         """
         Set the color set to use in plots.
         """
@@ -483,16 +473,16 @@ class SmartExplainer:
 
     def add(
         self,
-        y_pred=None,
-        proba_values=None,
-        y_target=None,
-        label_dict=None,
-        features_dict=None,
+        y_pred: pd.Series | pd.DataFrame | None = None,
+        proba_values: pd.Series | pd.DataFrame | None = None,
+        y_target: pd.Series | pd.DataFrame | None = None,
+        label_dict: dict[Any, Any] | None = None,
+        features_dict: dict[str, str] | None = None,
         title_story: str | None = None,
-        columns_order=None,
-        additional_data=None,
-        additional_features_dict=None,
-    ):
+        columns_order: list[str] | None = None,
+        additional_data: pd.DataFrame | None = None,
+        additional_features_dict: dict[str, str] | None = None,
+    ) -> None:
         """
         Add or update metadata and outputs without recompiling the explainer.
 
@@ -549,317 +539,21 @@ class SmartExplainer:
         >>> xpl.add(y_pred=preds, features_dict=feat_dict)
         >>> xpl.plot.local_plot(index=5)
         """
-        if y_pred is not None:
-            self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
-        if proba_values is not None:
-            self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
-        if y_target is not None:
-            self.y_target = check_y(self.x_init, y_target, y_name="y_target")
-        if hasattr(self, "y_target") and self.y_target is not None:
-            self.prediction_error = predict_error(
-                self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
-            )
-        if label_dict is not None:
-            if isinstance(label_dict, dict) is False:
-                raise ValueError(
-                    """
-                    label_dict must be a dict
-                    """
-                )
-            self.label_dict = label_dict
-            self.check_label_dict()
-            self.inv_label_dict = {v: k for k, v in self.label_dict.items()}
-        if features_dict is not None:
-            if isinstance(features_dict, dict) is False:
-                raise ValueError(
-                    """
-                    features_dict must be a dict
-                    """
-                )
-            self.features_dict = features_dict
-            self.check_features_dict()
-            self.inv_features_dict = {v: k for k, v in self.features_dict.items()}
         if title_story is not None:
             self.title_story = title_story
-        if additional_features_dict is not None:
-            self.additional_features_dict = self._compile_additional_features_dict(additional_features_dict)
-        if additional_data is not None:
-            self.additional_data = self._compile_additional_data(additional_data)
-        if columns_order is not None:
-            self.columns_order = self._compile_columns_order(columns_order)
 
-    def get_interaction_values(self, n_samples_max=None, selection=None):
-        """
-        Compute SHAP interaction values for the encoded dataset.
+        self.explainer.add(
+            y_pred=y_pred,
+            proba_values=proba_values,
+            y_target=y_target,
+            label_dict=label_dict,
+            features_dict=features_dict,
+            columns_order=columns_order,
+            additional_data=additional_data,
+            additional_features_dict=additional_features_dict,
+        )
 
-        This method calculates pairwise SHAP interaction effects between features
-        for each sample in `x_encoded`. It is only available when using a backend
-        based on `TreeExplainer` (i.e., for tree-based models such as LightGBM,
-        XGBoost, or CatBoost).
-
-        For more details, see the official Tree SHAP paper:
-        https://arxiv.org/pdf/1802.03888.pdf
-
-        Parameters
-        ----------
-        n_samples_max : int, optional
-            Maximum number of samples to compute interaction values for.
-            If provided, the computation will be limited to this number of samples,
-            selected randomly or according to the backend implementation.
-        selection : list of int, optional
-            List of specific sample indices for which to compute interactions.
-            Useful to focus on a subset of the dataset rather than the entire `x_encoded`.
-
-        Returns
-        -------
-        numpy.ndarray
-            Array of SHAP interaction values with shape `(n_samples, n_features, n_features)`.
-            Each entry `[i, j, k]` represents the interaction strength between features `j`
-            and `k` for sample `i`.
-        """
-        x = copy.deepcopy(self.x_encoded)
-
-        if selection:
-            x = x.loc[selection]
-
-        if hasattr(self, "x_interaction"):
-            if self.x_interaction.equals(x[:n_samples_max]):
-                return self.interaction_values
-
-        self.x_interaction = x[:n_samples_max]
-        self.interaction_values = get_shap_interaction_values(self.x_interaction, self.backend.explainer)
-        return self.interaction_values
-
-    def check_postprocessing_modif_strings(self, postprocessing=None):
-        """
-        Check whether postprocessing transformations will convert numeric values to strings.
-
-        This method inspects the provided `postprocessing` configuration and determines
-        if any transformation rule would change a numerical feature into a string representation
-        (e.g., by adding prefixes, suffixes, or other text-based modifications).
-
-        Parameters
-        ----------
-        postprocessing : dict, optional
-            Dictionary of postprocessing transformations to apply.
-            Keys correspond to feature names, and values define transformation rules.
-
-        Returns
-        -------
-        bool
-            `True` if at least one numeric feature will be converted to string,
-            otherwise `False`.
-        """
-        modif = False
-        if postprocessing is not None:
-            for key in postprocessing.keys():
-                dict_postprocess = postprocessing[key]
-                if dict_postprocess["type"] in {"prefix", "suffix"} and pd.api.types.is_numeric_dtype(self.x_init[key]):
-                    modif = True
-        return modif
-
-    def modify_postprocessing(self, postprocessing=None):
-        """
-        Adjust the postprocessing dictionary so that all keys reference actual feature names.
-
-        This method ensures that postprocessing rules are aligned with the real feature names
-        used in the dataset. If the provided dictionary uses alternative identifiers
-        (such as column indices or encoded names), they are converted into the corresponding
-        feature names using `columns_dict` or `inv_features_dict`.
-
-        Parameters
-        ----------
-        postprocessing : dict, optional
-            Dictionary of postprocessing transformations to adjust.
-            Keys may be feature names, indices, or label references.
-
-        Returns
-        -------
-        dict
-            Modified postprocessing dictionary, where all keys correspond directly
-            to real feature names while preserving the original transformation rules.
-        """
-        if postprocessing:
-            new_dic = dict()
-            for key in postprocessing.keys():
-                if key in self.features_dict:
-                    new_dic[key] = postprocessing[key]
-
-                elif key in self.columns_dict.keys():
-                    new_dic[self.columns_dict[key]] = postprocessing[key]
-
-                elif key in self.inv_features_dict:
-                    new_dic[self.inv_features_dict[key]] = postprocessing[key]
-
-                else:
-                    raise ValueError(f"Feature name '{key}' not found in the dataset.")
-
-            return new_dic
-
-    def apply_postprocessing(self, postprocessing=None):
-        """
-        Apply postprocessing transformations to the `x_init` DataFrame, if defined.
-
-        This method updates `x_init` according to the transformation rules specified
-        in the `postprocessing` dictionary. If no postprocessing is provided,
-        the original `x_init` is returned unchanged.
-
-        Parameters
-        ----------
-        postprocessing : dict, optional
-            Dictionary of postprocessing transformations to apply to `x_init`.
-            Keys correspond to feature names, and values define the transformation rules.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The modified `x_init` DataFrame if postprocessing rules are applied,
-            otherwise the unmodified `x_init`.
-        """
-
-        if postprocessing:
-            return apply_postprocessing(self.x_init, postprocessing)
-        else:
-            return self.x_init
-
-    def check_label_dict(self):
-        """
-        Check if label_dict and model _classes match
-        """
-        if self._case != "regression":
-            return check_label_dict(self.label_dict, self._case, self._classes)
-
-    def check_features_dict(self):
-        """
-        Synchronize features_dict with dataset columns:
-        - Remove features not present in dataset
-        - Add missing dataset features to features_dict
-        """
-
-        dataset_features = set(self.columns_dict.values())
-        current_features = set(self.features_dict.keys())
-
-        # Remove features not present in dataset
-        for feature in current_features - dataset_features:
-            self.features_dict.pop(feature, None)
-
-        # Add features present in dataset but missing in features_dict
-        for feature in dataset_features - current_features:
-            self.features_dict[feature] = feature
-
-    def _update_features_dict_with_groups(self, features_groups):
-        """
-        Add groups into features dict and inv_features_dict if not present.
-        """
-        for group_name in features_groups.keys():
-            self.features_desc[group_name] = 1000
-            if group_name not in self.features_dict.keys():
-                self.features_dict[group_name] = group_name
-                self.inv_features_dict[group_name] = group_name
-
-    def check_contributions(self):
-        """
-        Check if contributions and prediction set match in terms of shape and index.
-        """
-        if not self.state.check_contributions(self.contributions, self.x_init):
-            raise ValueError(
-                """
-                Prediction set and contributions should have exactly the same number of lines
-                and number of columns. the order of the columns must be the same
-                Please check x, contributions and preprocessing arguments.
-                """
-            )
-
-    def check_label_name(self, label, origin=None):
-        """
-        Validate and convert a label name into its corresponding integer identifier.
-
-        If the provided label is already an integer, it is returned unchanged.
-        If it is a string corresponding to a class name, the method converts it
-        into the appropriate integer label using the label dictionary.
-        An error is raised if the label cannot be recognized.
-
-        Parameters
-        ----------
-        label : int or str
-            Label identifier, provided either as an integer (class index)
-            or as a string (human-readable class name).
-        origin : {'num', 'code', 'value', None}, optional
-            Specifies the form of the input label:
-            - `'num'`: integer class index
-            - `'code'`: internal label code
-            - `'value'`: business or display name
-            - `None`: automatically inferred (default)
-
-        Returns
-        -------
-        tuple
-            A tuple containing:
-            - `label_num` : int — numerical class index
-            - `label_code` : object — internal class code used by the model
-            - `label_value` : str — human-readable class name
-        """
-        if origin is None:
-            if label in self._classes:
-                origin = "code"
-            elif self.label_dict is not None and label in self.label_dict.values():
-                origin = "value"
-            elif isinstance(label, int) and label in range(-1, len(self._classes)):
-                origin = "num"
-
-        try:
-            if origin == "num":
-                label_num = label
-                label_code = self._classes[label]
-                label_value = self.label_dict[label_code] if self.label_dict else label_code
-            elif origin == "code":
-                label_code = label
-                label_num = self._classes.index(label)
-                label_value = self.label_dict[label_code] if self.label_dict else label_code
-            elif origin == "value":
-                label_code = self.inv_label_dict[label]
-                label_num = self._classes.index(label_code)
-                label_value = label
-            else:
-                raise ValueError
-
-        except ValueError as err:
-            raise Exception({"message": "Origin must be 'num', 'code' or 'value'."}) from err
-
-        except Exception as err:
-            raise Exception({"message": f"Label ({label}) not found for origin ({origin})"}) from err
-
-        return label_num, label_code, label_value
-
-    def check_features_name(self, features, use_groups=False):
-        """
-        Validate and convert feature names or IDs into their corresponding column indices.
-
-        This method ensures that the provided list of features is aligned with
-        the internal column indexing used in Shapash. It supports both
-        technical feature names and business (domain) names, as defined in
-        `columns_dict` or `features_dict`.
-
-        Parameters
-        ----------
-        features : list
-            List of feature identifiers, where each element can be either:
-            - an integer (column ID), or
-            - a string (technical or business feature name).
-        use_groups : bool, optional
-            If True, the method also resolves feature groups defined in
-            `features_groups`. Default is False.
-
-        Returns
-        -------
-        list of int
-            List of column indices corresponding to the input features,
-            compatible with `var_dict`.
-        """
-        columns_dict = self.columns_dict if use_groups is False else self.columns_dict_groups
-        return check_features_name(columns_dict, self.features_dict, features)
-
-    def check_attributes(self, attribute):
+    def check_attributes(self, attribute: str) -> Any:
         """
         Verify that the SmartExplainer instance contains the specified attribute.
 
@@ -881,12 +575,22 @@ class SmartExplainer:
         ValueError
             If the specified attribute does not exist in the current explainer.
         """
-        if not hasattr(self, attribute):
+        if hasattr(self, attribute):
+            return getattr(self, attribute)
+
+        if not hasattr(self.explainer, attribute):
             raise ValueError(f"The attribute '{attribute}' does not exist in this SmartExplainer instance.")
 
-        return self.__dict__[attribute]
+        return getattr(self.explainer, attribute)
 
-    def filter(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None, display_groups=None):
+    def filter(
+        self,
+        features_to_hide: list[str] | None = None,
+        threshold: float | None = None,
+        positive: bool | None = None,
+        max_contrib: int | None = None,
+        display_groups: bool | None = None,
+    ) -> None:
         """
         Apply filtering rules to summarize local explainability results.
 
@@ -935,35 +639,20 @@ class SmartExplainer:
         >>> xpl.filter(features_to_hide=['Age', 'Gender'], threshold=0.01, max_contrib=10)
         >>> xpl.plot.local_plot(index=5)
         """
-        display_groups = True if (display_groups is not False and self.features_groups is not None) else False
-        if display_groups:
-            data = self.data_groups
-        else:
-            data = self.data
-        mask = [self.state.init_mask(data["contrib_sorted"], True)]
-        if features_to_hide:
-            mask.append(
-                self.state.hide_contributions(
-                    data["var_dict"],
-                    features_list=self.check_features_name(features_to_hide, use_groups=display_groups),
-                )
-            )
-        if threshold:
-            mask.append(self.state.cap_contributions(data["contrib_sorted"], threshold=threshold))
-        if positive is not None:
-            mask.append(self.state.sign_contributions(data["contrib_sorted"], positive=positive))
-        self.mask = self.state.combine_masks(mask)
-        if max_contrib:
-            self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
-        self.masked_contributions = self.state.compute_masked_contributions(data["contrib_sorted"], self.mask)
-        self.mask_params = {
-            "features_to_hide": features_to_hide,
-            "threshold": threshold,
-            "positive": positive,
-            "max_contrib": max_contrib,
-        }
+        features_to_hide_values: list[Any] | None = features_to_hide
+        if features_to_hide is not None:
+            use_groups = True if (display_groups is not False and self.explainer.features_groups is not None) else False
+            features_to_hide_values = self.explainer.check_features_name(features_to_hide, use_groups=use_groups)
 
-    def save(self, path):
+        self.explainer.filter(
+            features_to_hide=features_to_hide_values,
+            threshold=threshold,
+            positive=positive,
+            max_contrib=max_contrib,
+            display_groups=display_groups,
+        )
+
+    def save(self, path: str) -> None:
         """
         Save the SmartExplainer object to disk as a pickle file.
 
@@ -991,7 +680,7 @@ class SmartExplainer:
         save_pickle(self, path)
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: str) -> SmartExplainer:
         """
         Load a previously saved SmartExplainer object from a pickle file.
 
@@ -1023,69 +712,22 @@ class SmartExplainer:
         if isinstance(xpl, SmartExplainer):
             smart_explainer = cls(model=xpl.model)
             smart_explainer.__dict__.update(xpl.__dict__)
+            # Rebind plot<->explainer links after unpickling.
+            smart_explainer.plot = SmartPlotter(smart_explainer.explainer, smart_explainer.colors_dict)
+            smart_explainer.explainer.plot = smart_explainer.plot
             return smart_explainer
         else:
             raise ValueError("The provided file does not contain a SmartExplainer object.")
 
-    def predict_proba(self):
-        """
-        Compute and store prediction probabilities for each sample in `x_encoded`.
-
-        This method applies the model’s `predict_proba` function to the encoded
-        dataset (`x_encoded`) and saves the resulting probability values in
-        `self.proba_values`.
-
-        It is typically used for classification models to display or analyze
-        predicted probabilities in visualizations or summaries.
-
-        Returns
-        -------
-        None
-            The computed probabilities are stored in the `proba_values` attribute.
-
-        Example
-        -------
-        >>> xpl.predict_proba()
-        >>> xpl.proba_values.head()
-        """
-        self.proba_values = predict_proba(self.model, self.x_encoded, self._classes)
-
-    def predict(self):
-        """
-        Compute and store model predictions for each sample in `x_encoded`.
-
-        This method applies the model’s `predict` function to the encoded dataset
-        (`x_encoded`) and saves the resulting predictions in the `y_pred` attribute.
-        If target values (`y_target`) are available, it also computes and stores
-        the prediction error in `prediction_error`.
-
-        Returns
-        -------
-        None
-            The computed predictions are stored in the `y_pred` attribute.
-            If available, prediction errors are stored in `prediction_error`.
-
-        Example
-        -------
-        >>> xpl.predict()
-        >>> xpl.y_pred.head()
-        >>> xpl.prediction_error
-        """
-        self.y_pred = predict(self.model, self.x_encoded)
-        if hasattr(self, "y_target"):
-            self.prediction_error = predict_error(
-                self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
-            )
-
     def to_pandas(
         self,
-        features_to_hide=None,
-        threshold=None,
-        positive=None,
-        max_contrib=None,
-        proba=False,
-        use_groups=None,
-    ):
+        features_to_hide: list[str] | None = None,
+        threshold: float | None = None,
+        positive: bool | None = None,
+        max_contrib: int | None = None,
+        proba: bool = False,
+        use_groups: bool | None = None,
+    ) -> pd.DataFrame:
         """
         Export a summarized view of local explainability results as a pandas DataFrame.
 
@@ -1156,261 +798,16 @@ class SmartExplainer:
         1     3     0.628911    Sex         2.0         0.585475         Pclass      1.0         0.370504
         2     0     0.543308    Sex         2.0         -0.486667        Pclass      3.0         0.255072
         """
-        use_groups = True if (use_groups is not False and self.features_groups is not None) else False
-        if use_groups:
-            data = self.data_groups
-        else:
-            data = self.data
-
-        # Classification: y_pred is needed
-        if self.y_pred is None:
-            raise ValueError("You have to specify y_pred argument. Please use add() or compile() method")
-
-        # Apply filter method if necessary
-        if (
-            all(var is None for var in [features_to_hide, threshold, positive, max_contrib])
-            and hasattr(self, "mask_params")
-            and (
-                # if the already computed mask does not have the right shape (this can happen when
-                # we use groups of features once and then use method without groups)
-                (
-                    isinstance(data["contrib_sorted"], pd.DataFrame)
-                    and len(data["contrib_sorted"].columns) == len(self.mask.columns)
-                )
-                or (
-                    isinstance(data["contrib_sorted"], list)
-                    and len(data["contrib_sorted"][0].columns) == len(self.mask[0].columns)
-                )
-            )
-        ):
-            print("to_pandas params: " + str(self.mask_params))
-        else:
-            self.filter(
-                features_to_hide=features_to_hide,
-                threshold=threshold,
-                positive=positive,
-                max_contrib=max_contrib,
-                display_groups=use_groups,
-            )
-        if use_groups:
-            columns_dict = {i: col for i, col in enumerate(self.x_init_groups.columns)}
-        else:
-            columns_dict = self.columns_dict
-        # Summarize information
-        data["summary"] = self.state.summarize(
-            data["contrib_sorted"], data["var_dict"], data["x_sorted"], self.mask, columns_dict, self.features_dict
-        )
-        # Matching with y_pred
-        if proba:
-            self.predict_proba()
-            proba_values = self.proba_values
-        else:
-            proba_values = None
-
-        y_pred, summary = keep_right_contributions(
-            self.y_pred, data["summary"], self._case, self._classes, self.label_dict, proba_values
+        return self.explainer.to_pandas(
+            features_to_hide=features_to_hide,
+            threshold=threshold,
+            positive=positive,
+            max_contrib=max_contrib,
+            proba=proba,
+            use_groups=use_groups,
         )
 
-        return pd.concat([y_pred, summary], axis=1)
-
-    def compute_features_import(self, force=False, local=False):
-        """
-        Compute the relative feature importance based on contribution magnitudes.
-
-        This method calculates the global feature importance as the sum of the absolute
-        values of feature contributions across all samples.
-        The importance values are normalized on a base-100 scale.
-
-        For models with defined feature groups, grouped importances are also computed.
-        Optionally, local-level importances can be generated to capture finer-grained
-        feature effects at multiple neighborhood scales.
-
-        Parameters
-        ----------
-        force : bool, optional
-            If `True`, recomputes feature importance even if it has already been calculated.
-            Default is `False`.
-        local : bool, optional
-            If `True`, computes additional local-level importances at multiple aggregation
-            scales (level 1 and level 2).
-            Default is `False`.
-
-        Returns
-        -------
-        pandas.Series or list of pandas.Series
-            - **Regression:** a single `Series` with one row per feature.
-            - **Classification:** a list of `Series`, one per class label.
-            Each `Series` represents the normalized feature importances,
-            indexed by feature name.
-
-        Notes
-        -----
-        - Feature importances are computed using the backend’s `get_global_features_importance` method.
-        - Grouped importances are computed if `features_groups` are defined.
-        - When `local=True`, additional granular importances are computed with
-        alternative normalization factors (norm=3 and norm=7).
-
-        Example
-        -------
-        >>> # Compute standard global feature importance
-        >>> xpl.compute_features_import()
-
-        >>> # Compute both global and local-level importances
-        >>> xpl.compute_features_import(local=True)
-        >>> xpl.features_imp.head()
-        """
-        self.features_imp = self.backend.get_global_features_importance(
-            contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=1
-        )
-
-        if self.features_groups is not None and self.features_imp_groups is None:
-            self.features_imp_groups = self.state.compute_features_import(self.contributions_groups, norm=1)
-
-        if local:
-            self.features_imp_local_lev1 = self.backend.get_global_features_importance(
-                contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=3
-            )
-            self.features_imp_local_lev2 = self.backend.get_global_features_importance(
-                contributions=self.contributions, explain_data=self.explain_data, subset=None, norm=7
-            )
-            if self.features_groups is not None:
-                self.features_imp_groups_local_lev1 = self.state.compute_features_import(
-                    self.contributions_groups, norm=3
-                )
-                self.features_imp_groups_local_lev2 = self.state.compute_features_import(
-                    self.contributions_groups, norm=7
-                )
-
-    def compute_features_stability(self, selection):
-        """
-        Compute feature stability metrics for a given selection of instances.
-
-        This method calculates how stable feature contributions are within the
-        neighborhood of selected samples.
-        The resulting metrics are used in the visualizations
-        `local_neighbors_plot` and `local_stability_plot`.
-
-        Behavior depends on the size of the selection:
-        - **Single instance:** returns the normalized contribution values of the
-          instance and its neighbors (`norm_shap`).
-        - **Multiple instances:** returns the average normalized contributions
-          (`amplitude`) and their variability across neighborhoods (`variability`).
-
-        Parameters
-        ----------
-        selection : list of int
-            Indices of samples in `x_encoded` for which to compute stability metrics.
-            Each index corresponds to a row in the dataset.
-
-        Returns
-        -------
-        dict
-            Dictionary containing arrays to be displayed in stability plots:
-            - `"amplitude"` : average normalized contribution values of selected instances and their neighbors
-            - `"variability"` : variation in contributions across the neighborhood
-            - `"norm_shap"` : normalized SHAP (or contribution) values for the selected instance(s)
-
-        Raises
-        ------
-        AssertionError
-            If the explainer handles a multi-class classification problem (currently unsupported).
-
-        Notes
-        -----
-        - Only binary classification and regression tasks are supported.
-        - For each instance, nearest neighbors are identified using the encoded data (`x_encoded`).
-        - Contributions are normalized to enable comparison across samples.
-
-        Example
-        -------
-        >>> # Compute stability for a single instance
-        >>> xpl.compute_features_stability(selection=[5])
-        >>> xpl.local_neighbors["norm_shap"]
-
-        >>> # Compute stability for multiple instances
-        >>> xpl.compute_features_stability(selection=[2, 8, 12])
-        >>> xpl.features_stability["variability"].shape
-        """
-        if (self._case == "classification") and (len(self._classes) > 2):
-            raise AssertionError("Multi-class classification is not supported")
-
-        all_neighbors = find_neighbors(selection, self.x_encoded, self.model, self._case)
-
-        # Check if entry is a single instance or not
-        if len(selection) == 1:
-            # Compute explanations for instance and neighbors
-            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_encoded, self.contributions, self._case)
-            self.local_neighbors = {"norm_shap": norm_shap}
-        else:
-            numb_expl = len(selection)
-            amplitude = np.zeros((numb_expl, self.x_init.shape[1]))
-            variability = np.zeros((numb_expl, self.x_init.shape[1]))
-            # For each instance (+ neighbors), compute explanation
-            for i in range(numb_expl):
-                (
-                    _,
-                    variability[i, :],
-                    amplitude[i, :],
-                ) = shap_neighbors(all_neighbors[i], self.x_encoded, self.contributions, self._case)
-            self.features_stability = {"variability": variability, "amplitude": amplitude}
-
-    def compute_features_compacity(self, selection, distance, nb_features):
-        """
-        Compute feature compacity metrics for a given selection of instances.
-
-        This method evaluates how efficiently a model’s predictions can be
-        approximated using only a subset of features. It returns:
-        - the minimum number of features needed to reach a specified approximation level, and
-        - the approximation level reached with a given number of features.
-
-        These metrics are used in the `compacity_plot` visualization to illustrate
-        the trade-off between explanation simplicity and fidelity.
-
-        Parameters
-        ----------
-        selection : list of int
-            Indices of samples in `x_encoded` for which to compute compacity metrics.
-        distance : float
-            Target approximation level (between 0 and 1) indicating how close
-            the reduced-feature model should be to the full model.
-        nb_features : int
-            Number of features to use when computing the achieved approximation.
-
-        Raises
-        ------
-        AssertionError
-            If the explainer handles a multi-class classification problem (currently unsupported).
-
-        Returns
-        -------
-        dict
-            Dictionary containing:
-            - `"features_needed"` : number of features required to reach the target approximation level
-            - `"distance_reached"` : approximation level achieved using the given number of features
-
-        Notes
-        -----
-        - Only regression and binary classification tasks are supported.
-        - Approximation values are clipped between 0 and 1.
-        - Feature compacity measures how well the model’s predictions can be summarized
-          with fewer explanatory variables.
-
-        Example
-        -------
-        >>> xpl.compute_features_compacity(selection=[0, 5, 10], distance=0.9, nb_features=10)
-        >>> xpl.features_compacity["features_needed"]
-        """
-        if (self._case == "classification") and (len(self._classes) > 2):
-            raise AssertionError("Multi-class classification is not supported")
-
-        features_needed = get_min_nb_features(selection, self.contributions, self._case, distance)
-        distance_reached = get_distance(selection, self.contributions, self._case, nb_features)
-        # We clip large approximations to 100%
-        distance_reached = np.clip(distance_reached, 0, 1)
-
-        self.features_compacity = {"features_needed": features_needed, "distance_reached": distance_reached}
-
-    def init_app(self, settings: dict | None = None):
+    def init_app(self, settings: dict[str, Any] | None = None):
         """
         Initialize a SmartApp instance for the current SmartExplainer object.
 
@@ -1442,14 +839,14 @@ class SmartExplainer:
         >>> xpl.init_app(settings={"rows": 100, "features": 10})
         >>> xpl.smartapp.run()
         """
-        self.smartapp = SmartApp(self, settings)
+        self.smartapp = SmartApp(self.explainer, settings, title_story=self.title_story)
 
     def run_app(
         self,
         port: int | None = None,
         host: str | None = None,
         title_story: str | None = None,
-        settings: dict | None = None,
+        settings: dict[str, Any] | None = None,
     ) -> CustomThread:
         """
         Launch the Shapash interpretability WebApp associated with this SmartExplainer.
@@ -1504,15 +901,21 @@ class SmartExplainer:
 
         if title_story is not None:
             self.title_story = title_story
-        if hasattr(self, "_case"):
-            self.smartapp = SmartApp(self, settings)
+        if hasattr(self.explainer, "_case"):
+            self.smartapp = SmartApp(self.explainer, settings, title_story=self.title_story)
             if host is None:
                 host = DEFAULT_HOST
             if port is None:
                 port = 8050
             host_name = get_host_name()
             wsgi_server = make_server(host, port, self.smartapp.server)
-            server_instance = CustomThread(target=wsgi_server.serve_forever, on_kill=wsgi_server.shutdown)
+            server_instance = CustomThread(target=wsgi_server.serve_forever)
+
+            def _kill():
+                wsgi_server.shutdown()
+                server_instance.killed = True
+
+            cast(Any, server_instance).kill = _kill
             if host_name is None:
                 host_name = host
             elif host != DEFAULT_HOST:
@@ -1525,7 +928,7 @@ class SmartExplainer:
         else:
             raise ValueError("Explainer must be compiled before running app.")
 
-    def to_smartpredictor(self):
+    def to_smartpredictor(self) -> Any:
         """
         Create and return a SmartPredictor object derived from the current SmartExplainer instance.
 
@@ -1582,7 +985,7 @@ class SmartExplainer:
         >>> sp.predict(data_sample)
         >>> sp.explain(data_sample)
         """
-        if self.backend is None:
+        if self.explainer.backend is None:
             raise ValueError(
                 """
                 SmartPredictor needs a backend (explainer).
@@ -1591,14 +994,15 @@ class SmartExplainer:
                 """
             )
 
-        self.features_types = {features: str(self.x_init[features].dtypes) for features in self.x_init.columns}
+        features_types = {
+            features: str(self.explainer.x_init[features].dtypes) for features in self.explainer.x_init.columns
+        }
 
         listattributes = [
             "features_dict",
             "model",
             "columns_dict",
             "backend",
-            "features_types",
             "label_dict",
             "preprocessing",
             "postprocessing",
@@ -1606,14 +1010,17 @@ class SmartExplainer:
         ]
 
         params_smartpredictor = [self.check_attributes(attribute) for attribute in listattributes]
+        params_smartpredictor.insert(4, features_types)
 
-        if not hasattr(self, "mask_params"):
-            self.mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
-        params_smartpredictor.append(self.mask_params)
+        if hasattr(self.explainer, "mask_params"):
+            mask_params = self.explainer.mask_params
+        else:
+            mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
+        params_smartpredictor.append(mask_params)
 
         return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
 
-    def check_x_y_attributes(self, x_str, y_str):
+    def check_x_y_attributes(self, x_str: str, y_str: str) -> list[Any]:
         """
         Validate and retrieve two attributes from the SmartExplainer instance.
 
@@ -1655,47 +1062,36 @@ class SmartExplainer:
         attributs_explainer = [x_str, y_str]
 
         for attribut in attributs_explainer:
-            if hasattr(self, attribut):
-                params_checkypred.append(self.__dict__[attribut])
+            if hasattr(self.explainer, attribut):
+                params_checkypred.append(getattr(self.explainer, attribut))
             else:
                 params_checkypred.append(None)
         return params_checkypred
 
     def generate_report(
         self,
-        output_file,
-        project_info_file,
-        x_train=None,
-        y_train=None,
-        y_test=None,
-        title_story=None,
-        title_description=None,
-        metrics=None,
-        working_dir=None,
-        notebook_path=None,
-        kernel_name=None,
-        max_points=200,
-        display_interaction_plot=False,
-        nb_top_interactions=5,
-    ):
+        output_file: str,
+        x_train: pd.DataFrame | None = None,
+        y_train: pd.Series | pd.DataFrame | list | None = None,
+        y_test: pd.Series | pd.DataFrame | list | None = None,
+        yaml_path: str | Path | None = None,
+        max_points: int = 200,
+        block_instance: ReportBlockMixin | None = None,
+    ) -> None:
         """
         Generate an interactive HTML report summarizing the model and its explainability.
 
         This method produces a comprehensive HTML report containing visual and textual
-        insights about the project, dataset, and model performance.
-        It leverages a predefined or custom Jupyter notebook template to analyze
-        the model, generate plots, compute metrics, and export the final report.
+        insights about the project, dataset, and model performance using the
+        smart_report block-based HTML renderer.
 
-        A project information YAML file is required to describe key project details
-        (e.g., model name, author, date, context).
+        A report configuration is provided through a YAML file. If no YAML file is
+        specified, a default configuration is generated automatically.
 
         Parameters
         ----------
         output_file : str
             Path to the output HTML file where the report will be saved.
-        project_info_file : str
-            Path to a YAML file containing project metadata to be displayed in the report
-            (e.g., project name, author, date, description).
         x_train : pandas.DataFrame, optional
             Training dataset used to fit the model.
             Used for generating feature summaries and training-related analyses.
@@ -1703,34 +1099,15 @@ class SmartExplainer:
             Target values corresponding to `x_train`.
         y_test : pandas.Series or pandas.DataFrame, optional
             Target values for the test dataset.
-        title_story : str, optional
-            Title displayed at the top of the report.
-        title_description : str, optional
-            Short descriptive text displayed below the main title.
-        metrics : list of dict, optional
-            List of metrics to compute and display in the performance section.
-            Each dictionary should include:
-            - `'path'`: str — import path to the metric function (e.g., `"sklearn.metrics.f1_score"`)
-            - `'name'`: str, optional — display name for the metric
-            - `'use_proba_values'`: bool, optional — if True, use predicted probabilities instead of labels
-            Example:
-            `metrics=[{'name': 'F1 score', 'path': 'sklearn.metrics.f1_score'}]`
-        working_dir : str, optional
-            Directory used to temporarily store generated files (e.g., notebook, outputs).
-            If `None`, a temporary directory is automatically created and deleted after report generation.
-        notebook_path : str, optional
-            Path to a custom notebook used as a template for generating the report.
-            If `None`, the default Shapash report notebook is used.
-        kernel_name : str, optional
-            Name of the Jupyter kernel to use for report execution.
-            Useful when multiple kernels are available and the default one is incorrect.
+        yaml_path : str, optional
+            Path to a custom YAML configuration file used to generate the report.
+            If `None`, a default YAML configuration is generated.
         max_points : int, optional, default=200
             Maximum number of points displayed in contribution plots.
-        display_interaction_plot : bool, optional, default=False
-            If True, includes interaction plots in the report.
-            (Note: this can increase computation time.)
-        nb_top_interactions : int, optional, default=5
-            Number of top feature interactions to include in the report.
+        block_instance : object, optional
+            Optional custom block runtime used to resolve block methods during report generation.
+            The instance must already be fully initialized by the user and should implement
+            methods named `block_<type>` for YAML block entries.
 
         Returns
         -------
@@ -1746,7 +1123,7 @@ class SmartExplainer:
 
         Notes
         -----
-        - The method internally executes a notebook that generates the report content.
+        - The method renders the report from block definitions in a YAML configuration.
         - Temporary files are automatically cleaned up unless a custom `working_dir` is provided.
         - Interaction plots can be disabled to optimize runtime performance.
 
@@ -1754,69 +1131,64 @@ class SmartExplainer:
         -------
         >>> xpl.generate_report(
         ...     output_file="report.html",
-        ...     project_info_file="utils/project_info.yml",
         ...     x_train=x_train,
         ...     y_train=y_train,
         ...     y_test=y_test,
-        ...     title_story="House Prices Project Report",
-        ...     title_description="Comprehensive interpretability analysis for the Kaggle house prices dataset.",
-        ...     metrics=[
-        ...         {"path": "sklearn.metrics.mean_squared_error", "name": "Mean Squared Error"},
-        ...         {"path": "sklearn.metrics.mean_absolute_error", "name": "Mean Absolute Error"},
-        ...     ],
         ...     display_interaction_plot=True,
         ...     nb_top_interactions=5,
         ... )
         """
-        check_report_requirements()
-        if x_train is not None:
-            x_train = handle_categorical_missing(x_train)
-        # Avoid Import Errors with requirements specific to the Shapash Report
-        from shapash.report.generation import execute_report, export_and_save_report  # noqa: PLC0415
 
-        rm_working_dir = False
-        if not working_dir:
-            working_dir = tempfile.mkdtemp()
-            rm_working_dir = True
-
+        # input checks
         if not hasattr(self, "model"):
             raise AssertionError(
                 "Explainer object was not compiled. Please compile the explainer "
                 "object using .compile(...) method before generating the report."
             )
 
-        try:
-            execute_report(
-                working_dir=working_dir,
-                explainer=self,
-                project_info_file=project_info_file,
+        report_template = ReportTemplate
+        report_block_cls = _ReportBlockMixin
+        if (not REPORT_DEPENDENCIES_AVAILABLE) or report_template is None or report_block_cls is None:
+            raise ImportError("Report dependencies are not installed. Please install shapash report extras.")
+
+        if block_instance is not None:
+            if (x_train is not None) and (block_instance.x_train_init is not x_train):
+                logging.warning("block_instance's x_train is different from provided x_train. Latter is ignored.")
+            if (y_train is not None) and (block_instance.y_train is not y_train):
+                logging.warning("block_instance's y_train is different from provided y_train. Latter is ignored.")
+            if (y_test is not None) and (block_instance.y_test is not y_test):
+                logging.warning("block_instance's y_test is different from provided y_test. Latter is ignored.")
+            if max_points != block_instance.max_points:
+                logging.warning("block_instance's max_points is different from provided max_points. Latter is ignored.")
+
+            report_runtime = block_instance
+
+        else:
+            if x_train is not None:
+                x_train = handle_categorical_missing(x_train)
+
+            report_runtime = report_block_cls(
+                explainer=self.explainer,
                 x_train=x_train,
                 y_train=y_train,
                 y_test=y_test,
-                config={
-                    k: v
-                    for k, v in dict(
-                        title_story=title_story,
-                        title_description=title_description,
-                        metrics=metrics,
-                        max_points=max_points,
-                        display_interaction_plot=display_interaction_plot,
-                        nb_top_interactions=nb_top_interactions,
-                    ).items()
-                    if v is not None
-                },
-                notebook_path=notebook_path,
-                kernel_name=kernel_name,
+                max_points=max_points,
             )
-            export_and_save_report(working_dir=working_dir, output_file=output_file)
+        if self.explainer._case == "classification":
+            default_report = report_template.DEFAULT_CLASSIFICATION
+        else:
+            default_report = report_template.DEFAULT_REGRESSION
 
-            if rm_working_dir:
-                shutil.rmtree(working_dir)
-
-        except Exception as e:
-            if rm_working_dir:
-                shutil.rmtree(working_dir)
-            raise e
+        config_file = (
+            Path(yaml_path)
+            if yaml_path is not None
+            else Path(__file__).resolve().parent.parent / "report" / "assets" / str(default_report)
+        )
+        generate_smart_report(
+            runtime=report_runtime,
+            config_file=config_file,
+            output_file=output_file,
+        )
 
     def _local_pred(self, index, label=None):
         """
@@ -1852,16 +1224,16 @@ class SmartExplainer:
         >>> xpl._local_pred(index=12)
         0.7421
         """
-        if self._case == "classification":
-            if self.proba_values is not None:
-                value = self.proba_values.iloc[:, [label]].loc[index].values[0]
+        if self.explainer._case == "classification":
+            if self.explainer.proba_values is not None:
+                value = self.explainer.proba_values.iloc[:, [label]].loc[index].values[0]
             else:
                 value = None
-        elif self._case == "regression":
-            if self.y_pred is not None:
-                value = self.y_pred.loc[index]
+        elif self.explainer._case == "regression":
+            if self.explainer.y_pred is not None:
+                value = self.explainer.y_pred.loc[index]
             else:
-                value = self.model.predict(self.x_encoded.loc[[index]])[0]
+                value = self.explainer.model.predict(self.explainer.x_encoded.loc[[index]])[0]
 
         if isinstance(value, pd.Series):
             value = value.values[0]
