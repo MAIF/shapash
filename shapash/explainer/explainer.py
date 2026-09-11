@@ -211,8 +211,18 @@ class Explainer:
             self.explain_data = self.backend.run_explainer(x=x)
             self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
         else:
-            self.explain_data = {"contributions": contributions}
-            self.contributions = self.backend.format_and_aggregate_local_contributions(x=x, contributions=contributions)
+            if isinstance(contributions, dict):
+                if "contributions" not in contributions:
+                    raise ValueError("contributions dict must contain a 'contributions' key")
+                self.explain_data = contributions
+                local_contributions = contributions["contributions"]
+            else:
+                self.explain_data = {"contributions": contributions}
+                local_contributions = contributions
+
+            self.contributions = self.backend.format_and_aggregate_local_contributions(
+                x=x, contributions=local_contributions
+            )
         self.state = self.backend.state
 
     def _apply_all_postprocessing_modifications(self) -> None:

@@ -315,6 +315,40 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.compile(x=df[["x1", "x2"]], additional_data=df[["x3"]])
         assert len(xpl.explainer.additional_features_dict) == 1
 
+    def test_compile_7_with_explain_data_dict(self):
+        """
+        Unit test compile 7
+        checking compile method with explain_data-like dict
+        """
+        np.random.seed(1)
+        df = pd.DataFrame(range(0, 8), columns=["id"])
+        df["y"] = df["id"] % 2
+        df["x1"] = np.random.randint(1, 10, df.shape[0])
+        df["x2"] = np.random.randint(1, 4, df.shape[0])
+        df = df.set_index("id")
+
+        clf = RandomForestClassifier(n_estimators=5, random_state=1).fit(df[["x1", "x2"]], df["y"])
+
+        raw_contrib = pd.DataFrame(
+            np.random.normal(0, 0.1, size=(df.shape[0], 2)),
+            columns=["x1", "x2"],
+            index=df.index,
+        )
+        base_values = np.column_stack(
+            [np.full(df.shape[0], -0.2, dtype=float), np.full(df.shape[0], 0.2, dtype=float)]
+        )
+
+        explain_data = {"contributions": raw_contrib, "base_values": base_values}
+
+        xpl = SmartExplainer(clf)
+        xpl.compile(x=df[["x1", "x2"]], contributions=explain_data)
+
+        assert isinstance(xpl.explainer.explain_data, dict)
+        assert "base_values" in xpl.explainer.explain_data
+        assert np.array_equal(xpl.explainer.explain_data["base_values"], base_values)
+        assert isinstance(xpl.explainer.contributions, list)
+        assert len(xpl.explainer.contributions) == 2
+
     def test_filter_0(self):
         """
         Unit test filter 0
@@ -959,7 +993,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer.contributions = contributions
         xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
         xpl.explainer.backend.state = SmartState()
-        xpl.explain_data = None
+        xpl.explainer.explain_data = None
         xpl.explainer._case = "regression"
         xpl.explainer.compute_features_import()
         expected = contributions.abs().sum().sort_values(ascending=True)
@@ -988,7 +1022,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer._case = "classification"
         xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
         xpl.explainer.backend.state = MultiDecorator(SmartState())
-        xpl.explain_data = None
+        xpl.explainer.explain_data = None
         xpl.explainer.compute_features_import()
         expect1 = contrib1.abs().sum().sort_values(ascending=True)
         expect1 = expect1 / expect1.sum()

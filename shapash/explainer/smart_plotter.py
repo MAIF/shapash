@@ -201,6 +201,223 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
+    def _get_waterfall_base_value(self, line, label_num=None):
+        """
+        Retrieve a baseline value for local waterfall plot.
+
+        Priority order:
+        1) explainer explain_data["base_values"] when available
+        2) backend explainer expected_value when available
+        3) fallback to empirical mean model output
+        """
+
+        explain_data = self._explainer.explain_data
+        if isinstance(explain_data, dict) and explain_data.get("base_values") is not None:
+            base_values = explain_data["base_values"]
+            base_candidate = base_values[label_num] if isinstance(base_values, list) else base_values
+
+            if isinstance(base_candidate, pd.DataFrame | pd.Series):
+                return float(np.asarray(base_candidate.loc[line[0]]).reshape(-1)[0])
+
+            if isinstance(base_candidate, np.ndarray):
+                n_samples = len(self._explainer.x_init)
+                idx = self._explainer.x_init.index.get_loc(line[0])
+
+                if base_candidate.ndim == 0:
+                    return float(base_candidate)
+                if base_candidate.ndim == 1:
+                    if self._explainer._case == "classification" and base_candidate.size == len(
+                        self._explainer._classes
+                    ):
+                        return float(base_candidate[label_num])
+                    if base_candidate.size == n_samples:
+                        return float(base_candidate[idx])
+                    return float(base_candidate[label_num])
+                if base_candidate.ndim == 2:
+                    if base_candidate.shape[0] == n_samples:
+                        return float(base_candidate[idx, label_num])
+                    return float(base_candidate[label_num, idx])
+
+                return float(base_candidate.reshape(-1)[0])
+
+            return float(base_candidate)
+
+        expected_value = None
+        backend = getattr(self._explainer, "backend", None)
+        backend_explainer = getattr(backend, "explainer", None)
+        if backend_explainer is not None and hasattr(backend_explainer, "expected_value"):
+            expected_value = backend_explainer.expected_value
+
+        if expected_value is not None:
+            if isinstance(expected_value, list | np.ndarray):
+                expected_array = np.array(expected_value).reshape(-1)
+                if label_num is None:
+                    return float(expected_array[0])
+                return float(expected_array[label_num])
+            return float(expected_value)
+
+        if self._explainer._case == "classification":
+            if (
+                label_num is not None
+                and hasattr(self._explainer, "proba_values")
+                and self._explainer.proba_values is not None
+            ):
+                return float(self._explainer.proba_values.iloc[:, label_num].mean())
+            if label_num is not None and hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+                label_code = self._explainer._classes[label_num]
+                return float((self._explainer.y_pred.iloc[:, 0] == label_code).mean())
+        elif self._explainer._case == "regression":
+            if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+                return float(self._explainer.y_pred.iloc[:, 0].mean())
+
+        return 0.0
+
+    def _get_waterfall_classification_coupled_outputs(self, line, data):
+        """
+        Rebuild coupled class outputs for a local waterfall explanation.
+
+        For the selected observation, this method computes one additive score
+        per class using:
+        base_score(class) + sum(feature contributions for class)
+        Then it converts these scores to probabilities using a softmax so that
+        class probabilities stay coupled across classes.
+
+        Parameters
+        ----------
+        line : list
+            One-element list containing the selected row index.
+        data : dict
+            Explainability data structure containing class-wise sorted
+            contributions in ``data["contrib_sorted"]``.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - predicted_class: predicted class label (same type as
+              ``self._explainer._classes`` entries)
+            - probs: numpy.ndarray of final class probabilities
+            - base_probs: numpy.ndarray of class probabilities at baseline
+            - scores: numpy.ndarray of final additive class scores
+            - base_scores: numpy.ndarray of baseline class scores
+        """
+        classes = list(self._explainer._classes)
+        contrib_sorted = data["contrib_sorted"]
+
+        base_scores = np.array(
+            [self._get_waterfall_base_value(line, label_num=class_idx) for class_idx in range(len(classes))],
+            dtype=float,
+        )
+        scores = np.array(
+            [
+                base_scores[class_idx] + float(np.sum(contrib_sorted[class_idx].loc[line[0], :].values.astype(float)))
+                for class_idx in range(len(classes))
+            ],
+            dtype=float,
+        )
+
+        probs = self._softmax_from_scores(scores)
+        base_probs = self._softmax_from_scores(base_scores)
+
+        predicted_idx = int(np.argmax(probs))
+        predicted_class = classes[predicted_idx]
+
+        return predicted_class, probs, base_probs, scores, base_scores
+
+    def _softmax_from_scores(self, scores):
+        """
+        Convert additive class scores into normalized probabilities.
+
+        Parameters
+        ----------
+        scores : array-like
+            Raw class scores.
+
+        Returns
+        -------
+        numpy.ndarray
+            Probability vector summing to 1.
+
+        Notes
+        -----
+        The computation uses a max-shift stabilization before exponentiation
+        to improve numerical stability.
+        """
+        scores = np.asarray(scores, dtype=float)
+        stabilized = scores - np.max(scores)
+        exp_scores = np.exp(stabilized)
+        return exp_scores / np.sum(exp_scores)
+
+    def _get_waterfall_classification_tooltips(self, line, data, contrib, label_num):
+        """
+        Build waterfall tooltip text for classification local explanations.
+
+        Each tooltip line contains the cumulative additive output for the
+        explained class and its coupled probability (softmax over all classes)
+        after each contribution step.
+
+        Parameters
+        ----------
+        line : list
+            One-element list containing the selected row index.
+        data : dict
+            Explainability data structure containing class-wise sorted
+            contributions.
+        contrib : list
+            Displayed contributions for the explained class after filtering and
+            masking.
+        label_num : int
+            Index of the explained class in ``self._explainer._classes``.
+
+        Returns
+        -------
+        list of str
+            Ordered tooltip strings used by the waterfall plot.
+
+        Notes
+        -----
+        The contribution ordering mirrors the current waterfall display logic:
+        positive contributions (largest absolute first), then zeros, then
+        negative contributions.
+        """
+        _, coupled_probs, _, coupled_scores, coupled_base_scores = self._get_waterfall_classification_coupled_outputs(
+            line, data
+        )
+        final_scores = np.array(coupled_scores, dtype=float)
+        base_scores = np.array(coupled_base_scores, dtype=float)
+        tooltips = [
+            f"Cumulative output: <b>{base_scores[label_num]:.4f}</b><br />Proba: <b>{float(self._softmax_from_scores(base_scores)[label_num]):.4f}</b>"
+        ]
+
+        positive_contribs = sorted([c for c in contrib if c > 0], key=abs, reverse=True)
+        zero_contribs = [c for c in contrib if c == 0]
+        negative_contribs = sorted([c for c in contrib if c < 0], reverse=True)
+        ordered_contribs = positive_contribs + zero_contribs + negative_contribs
+
+        final_prob = (
+            float(coupled_probs[label_num])
+            if coupled_probs is not None
+            else float(self._softmax_from_scores(final_scores)[label_num])
+        )
+
+        running_scores = base_scores.copy()
+        for contrib_idx, contrib_value in enumerate(ordered_contribs):
+            running_scores[label_num] += contrib_value
+            if contrib_idx == len(ordered_contribs) - 1:
+                tooltips.append(
+                    f"Cumulative output: <b>{running_scores[label_num]:.4f}</b><br />Proba: <b>{final_prob:.4f}</b>"
+                )
+            else:
+                tooltips.append(
+                    f"Cumulative output: <b>{running_scores[label_num]:.4f}</b><br />Proba: <b>{float(self._softmax_from_scores(running_scores)[label_num]):.4f}</b>"
+                )
+
+        tooltips.append(
+            f"Cumulative output: <b>{final_scores[label_num]:.4f}</b><br />Proba: <b>{final_prob:.4f}</b><br />Final output"
+        )
+
+        return tooltips
+
     def local_plot(
         self,
         index=None,
@@ -209,6 +426,7 @@ class SmartPlotter:
         label=None,
         show_masked=True,
         show_predict=True,
+        plot_type="bar",
         display_groups=None,
         yaxis_max_label=12,
         width=900,
@@ -216,6 +434,7 @@ class SmartPlotter:
         file_name=None,
         auto_open=False,
         zoom=False,
+        waterfall_xaxis_start=None,
     ):
         """
         The local_plot method is used to display the local contributions of
@@ -225,6 +444,7 @@ class SmartPlotter:
         preprocessing is used here to make this graph more intelligible
         index, row_num or query parameter can be used to select the local explanations to display
         local_plot tutorial offers a lot of examples (please check tutorial part of this doc)
+
         Parameters
         ----------
         index: string, int, float, ... type of index in x_val input matrix (default None)
@@ -243,6 +463,10 @@ class SmartPlotter:
             show the sum of the contributions of the hidden variable
         show_predict: bool (default: True)
             show predict or predict proba value
+        plot_type: str (default: "bar")
+            Type of local plot. Available values are:
+            - "bar": standard local contribution bar chart
+            - "waterfall": cumulative local explanation with baseline value
         yaxis_max_label: int
             Maximum number of variables to display labels on the y axis
         display_groups : bool (default: None)
@@ -259,14 +483,24 @@ class SmartPlotter:
             Indicate whether to open the bar plot or not.
         zoom: bool (default=False)
             graph is currently zoomed
+        waterfall_xaxis_start: float, int, "auto" or None (default: None)
+            Start value of x-axis in waterfall mode.
+            - None: keep default automatic axis behavior
+            - "auto": compute an intelligent start based on baseline/prediction scale
+            - numeric value: force a manual x-axis start
+
         Returns
         -------
         Plotly Figure Object
             Input arrays updated with masked contributions.
+
         Example
         --------
         >>> xpl.plot.local_plot(row_num=0)
         """
+        if plot_type not in {"bar", "waterfall"}:
+            raise ValueError("plot_type must be either 'bar' or 'waterfall'.")
+
         display_groups = (
             True if (display_groups is not False and self._explainer.features_groups is not None) else False
         )
@@ -322,12 +556,45 @@ class SmartPlotter:
                 x_val = data["x_sorted"][label_num]
                 var_dict = data["var_dict"][label_num]
 
+                waterfall_tooltips = None
+                coupled_predicted_class = None
+
+                if plot_type == "waterfall":
+                    coupled_predicted_class, _, _, _, _ = self._get_waterfall_classification_coupled_outputs(line, data)
+
                 if show_predict is True:
+                    subtitle_parts = [f"Explained class: <b>{label_value}</b>"]
+
+                    predicted_class = None
+                    if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+                        predicted_class = self._explainer.y_pred.loc[line[0]].values[0]
+                    elif hasattr(self._explainer, "proba_values") and self._explainer.proba_values is not None:
+                        predicted_class_index = int(np.argmax(self._explainer.proba_values.loc[line[0]].to_numpy()))
+                        predicted_class = self._explainer._classes[predicted_class_index]
+                    elif coupled_predicted_class is not None:
+                        predicted_class = coupled_predicted_class
+
+                    if predicted_class is not None:
+                        predicted_class_value = (
+                            self._explainer.label_dict.get(predicted_class, predicted_class)
+                            if self._explainer.label_dict is not None
+                            else predicted_class
+                        )
+                        subtitle_parts.append(f"Predicted class: <b>{predicted_class_value}</b>")
+
+                    if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                        target_value = self._explainer.y_target.loc[line[0]].values[0]
+                        if self._explainer.label_dict is not None:
+                            target_value = self._explainer.label_dict.get(target_value, target_value)
+                        subtitle_parts.append(f"Target: <b>{target_value}</b>")
+
                     pred = self._explainer._local_pred(line[0], label_num)
                     if pred is None:
-                        subtitle = f"Response: <b>{label_value}</b> - No proba available"
+                        subtitle_parts.append("No proba available")
                     else:
-                        subtitle = f"Response: <b>{label_value}</b> - Proba: <b>{pred:.4f}</b>"
+                        subtitle_parts.append(f"Proba: <b>{pred:.4f}</b>")
+
+                    subtitle = " - ".join(subtitle_parts)
 
             elif self._explainer._case == "regression":
                 contrib = data["contrib_sorted"]
@@ -340,7 +607,20 @@ class SmartPlotter:
                         digit = self._round_digit
                     else:
                         digit = compute_digit_number(pred_value)
-                    subtitle = f"Predict: <b>{round(pred_value, digit)}</b>"
+                    subtitle_parts = [f"Predict: <b>{round(pred_value, digit)}</b>"]
+                    target_raw_value = None
+                    if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                        target_raw_value = self._explainer.y_target.loc[line[0]].values[0]
+                        subtitle_parts.append(f"Target: <b>{round(target_raw_value, digit)}</b>")
+
+                    error_value = None
+                    if target_raw_value is not None:
+                        error_value = abs(target_raw_value - pred_value)
+
+                    if error_value is not None:
+                        digit = compute_digit_number(error_value)
+                        subtitle_parts.append(f"Prediction error: <b>{round(error_value, digit)}</b>")
+                    subtitle = " - ".join(subtitle_parts)
 
             var_dict, x_val, contrib = self._get_selection(line, var_dict, x_val, contrib)
             var_dict, x_val, contrib = self._apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
@@ -366,6 +646,11 @@ class SmartPlotter:
                 del x_val[expl]
                 del contrib[expl]
 
+            if self._explainer._case == "classification" and plot_type == "waterfall":
+                waterfall_tooltips = self._get_waterfall_classification_tooltips(line, data, contrib, label_num)
+
+        base_value = self._get_waterfall_base_value(line, label_num=label_num) if plot_type == "waterfall" else None
+
         fig = plot_bar_chart(
             line,
             var_dict,
@@ -378,12 +663,19 @@ class SmartPlotter:
             self._explainer.inv_features_dict,
             yaxis_max_label,
             subtitle,
+            plot_type,
+            base_value,
             width,
             height,
             file_name,
             auto_open,
             zoom,
+            waterfall_xaxis_start=waterfall_xaxis_start,
+            waterfall_tooltips=waterfall_tooltips
+            if self._explainer._case == "classification" and plot_type == "waterfall"
+            else None,
         )
+
         return fig
 
     def contribution_plot(
@@ -497,7 +789,7 @@ class SmartPlotter:
             subcontrib = contributions[label_num]
             if self._explainer.y_pred is not None:
                 col_value = self._explainer._classes[label_num]
-            subtitle = f"Response: <b>{label_value}</b>"
+            subtitle = f"Explained class: <b>{label_value}</b>"
             # predict proba Color scale
             if proba and self._explainer.proba_values is not None:
                 proba_values = self._explainer.proba_values.iloc[:, [label_num]]
@@ -801,7 +1093,7 @@ class SmartPlotter:
             label_num, _, label_value = self._explainer.check_label_name(label)
             features_importance_case = features_importance[label_num]
             contributions_case = contributions[label_num]
-            subtitle = f"Response: <b>{label_value}</b>"
+            subtitle = f"Explained class: <b>{label_value}</b>"
 
         # Regression case
         elif self._explainer._case == "regression":
@@ -981,7 +1273,7 @@ class SmartPlotter:
             if show_predict:
                 preds = [self._explainer._local_pred(line, label_num) for line in line_reference]
                 subtitle = (
-                    f"Response: <b>{label_value}</b> - "
+                    f"Explained class: <b>{label_value}</b> - "
                     + "Probas: "
                     + " ; ".join(
                         [
@@ -2348,7 +2640,7 @@ class SmartPlotter:
                 df_pred = pd.concat(dfs, axis=1).set_index(y_proba_target.columns[0])
                 df_pred.columns = cols
 
-                subtitle = f"Response: <b>{label_value}</b>"
+                subtitle = f"Explained class: <b>{label_value}</b>"
                 hv_text = {"points": [], "clusters": []}
                 for el in color_value:
                     # Build hover text

@@ -78,14 +78,18 @@ class LimeBackend(BaseBackend):
         x : pd.DataFrame
             The observations dataframe used by the model.
 
-        Returns
-        -------
-        dict
-            A dict with key 'contributions':
-            - pd.DataFrame of shape (n_samples, n_features)
-              for binary classification or regression.
-            - List[pd.DataFrame] of length n_classes
-              for multiclass classification.
+                Returns
+                -------
+                dict
+                        A dict with keys:
+                        - 'contributions':
+                            - pd.DataFrame of shape (n_samples, n_features)
+                                for binary classification or regression.
+                            - List[pd.DataFrame] of length n_classes
+                                for multiclass classification.
+                        - 'base_values': local intercepts by individual:
+                            - np.ndarray of shape (n_samples, n_classes) for classification.
+                            - np.ndarray of shape (n_samples,) for regression.
         """
         feature_names = list(x.columns)
         data = self.data if self.data is not None else x
@@ -105,13 +109,42 @@ class LimeBackend(BaseBackend):
         if self._case == "classification":
             num_classes = len(self._classes)
             if num_classes > 2:
-                contributions = self._explain_multiclass(x, feature_names, predict_fn, num_classes)
+                contributions, base_values = self._explain_multiclass(x, feature_names, predict_fn, num_classes)
             else:
-                contributions = self._explain_binary_or_regression(x, feature_names, predict_fn)
+                contributions, base_values = self._explain_binary_or_regression(
+                    x, feature_names, predict_fn, num_classes=2
+                )
         else:
-            contributions = self._explain_binary_or_regression(x, feature_names, predict_fn)
+            contributions, base_values = self._explain_binary_or_regression(x, feature_names, predict_fn)
 
-        return dict(contributions=contributions)
+        return dict(contributions=contributions, base_values=base_values)
+
+    @staticmethod
+    def _extract_intercept(exp, class_idx=None) -> float:
+        """Extract a numeric intercept from a LIME explanation object."""
+        intercept = getattr(exp, "intercept", None)
+
+        if isinstance(intercept, dict):
+            if class_idx is not None and class_idx in intercept:
+                return float(intercept[class_idx])
+            if class_idx is not None and str(class_idx) in intercept:
+                return float(intercept[str(class_idx)])
+            if len(intercept) > 0:
+                return float(next(iter(intercept.values())))
+
+        if isinstance(intercept, (list, tuple)):
+            if class_idx is not None and class_idx < len(intercept):
+                return float(intercept[class_idx])
+            if len(intercept) > 0:
+                return float(intercept[0])
+
+        if intercept is not None:
+            try:
+                return float(intercept)
+            except (TypeError, ValueError):
+                pass
+
+        return 0.0
 
     def _explain_multiclass(
         self,
@@ -119,7 +152,7 @@ class LimeBackend(BaseBackend):
         feature_names: list,
         predict_fn: Callable,
         num_classes: int,
-    ) -> list[pd.DataFrame]:
+    ) -> tuple[list[pd.DataFrame], pd.DataFrame]:
         """
         Compute LIME contributions for multiclass classification.
 
@@ -129,8 +162,9 @@ class LimeBackend(BaseBackend):
 
         Returns
         -------
-        list[pd.DataFrame]
-            One DataFrame of shape (n_samples, n_features) per class.
+        tuple[list[pd.DataFrame], pd.DataFrame]
+            - One DataFrame of shape (n_samples, n_features) per class.
+            - Local intercepts of shape (n_samples, n_classes).
         """
         # One explain_instance call per sample — O(n_samples)
         explanations = []
@@ -144,27 +178,36 @@ class LimeBackend(BaseBackend):
             explanations.append(exp)
 
         contribution = []
+        base_values = pd.DataFrame(index=x.index, columns=list(range(num_classes)), dtype=float)
         for j in range(num_classes):
             class_contrib = [{_transform_name(feat, x): val for feat, val in exp.as_list(j)} for exp in explanations]
             contribution.append(pd.DataFrame(class_contrib, index=x.index)[feature_names])
+            for idx, exp in zip(x.index, explanations, strict=False):
+                base_values.at[idx, j] = self._extract_intercept(exp, class_idx=j)
 
-        return contribution
+        return contribution, base_values.to_numpy(dtype=float)
 
     def _explain_binary_or_regression(
         self,
         x: pd.DataFrame,
         feature_names: list,
         predict_fn: Callable,
-    ) -> pd.DataFrame:
+        num_classes: int | None = None,
+    ) -> tuple[pd.DataFrame, pd.DataFrame | pd.Series]:
         """
         Compute LIME contributions for binary classification or regression.
 
         Returns
         -------
-        pd.DataFrame
-            Contributions of shape (n_samples, n_features).
+        tuple[pd.DataFrame, pd.DataFrame | pd.Series]
+            - Contributions of shape (n_samples, n_features).
+            - Local intercepts by individual:
+              - classification: shape (n_samples, 2)
+              - regression: shape (n_samples,)
         """
         lime_contrib = []
+        base_values_cls: list[list[float]] = []
+        base_values_reg: list[float] = []
         for i in x.index:
             exp = self.explainer.explain_instance(
                 x.loc[i].to_numpy(),
@@ -172,5 +215,18 @@ class LimeBackend(BaseBackend):
                 num_features=x.shape[1],
             )
             lime_contrib.append({_transform_name(feat, x): val for feat, val in exp.as_list()})
+            if self._case == "classification":
+                # Binary classification contributions are expanded later as [-contrib, +contrib].
+                # Keep base values coherent with this convention.
+                pos_intercept = self._extract_intercept(exp, class_idx=1)
+                base_values_cls.append([-pos_intercept, pos_intercept])
+            else:
+                base_values_reg.append(self._extract_intercept(exp, class_idx=0))
 
-        return pd.DataFrame(lime_contrib, index=x.index)[feature_names]
+        contrib_df = pd.DataFrame(lime_contrib, index=x.index)[feature_names]
+        if self._case == "classification":
+            base_values_df = pd.DataFrame(base_values_cls, index=x.index, columns=list(range(num_classes or 2)))
+            return contrib_df, base_values_df.to_numpy(dtype=float)
+
+        base_values_series = pd.Series(base_values_reg, index=x.index)
+        return contrib_df, base_values_series.to_numpy(dtype=float)
