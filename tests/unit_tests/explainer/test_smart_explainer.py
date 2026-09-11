@@ -343,11 +343,11 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(clf)
         xpl.compile(x=df[["x1", "x2"]], contributions=explain_data)
 
-        assert isinstance(xpl.explain_data, dict)
-        assert "base_values" in xpl.explain_data
-        assert np.array_equal(xpl.explain_data["base_values"], base_values)
-        assert isinstance(xpl.contributions, list)
-        assert len(xpl.contributions) == 2
+        assert isinstance(xpl.explainer.explain_data, dict)
+        assert "base_values" in xpl.explainer.explain_data
+        assert np.array_equal(xpl.explainer.explain_data["base_values"], base_values)
+        assert isinstance(xpl.explainer.contributions, list)
+        assert len(xpl.explainer.contributions) == 2
 
     def test_filter_0(self):
         """
@@ -993,7 +993,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer.contributions = contributions
         xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
         xpl.explainer.backend.state = SmartState()
-        xpl.explain_data = None
+        xpl.explainer.explain_data = None
         xpl.explainer._case = "regression"
         xpl.explainer.compute_features_import()
         expected = contributions.abs().sum().sort_values(ascending=True)
@@ -1022,7 +1022,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer._case = "classification"
         xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
         xpl.explainer.backend.state = MultiDecorator(SmartState())
-        xpl.explain_data = None
+        xpl.explainer.explain_data = None
         xpl.explainer.compute_features_import()
         expect1 = contrib1.abs().sum().sort_values(ascending=True)
         expect1 = expect1 / expect1.sum()

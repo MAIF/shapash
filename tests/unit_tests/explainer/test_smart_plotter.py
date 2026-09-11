@@ -172,18 +172,18 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.layout.title.text == tit
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_regression_error_is_not_from_prediction_error_attr(self, local_pred, filter):
         """
         Ensure local regression error is computed from raw prediction-target gap.
         """
         local_pred.return_value = 1234.0
         filter.return_value = None
-        self.smart_explainer._case = "regression"
-        self.smart_explainer.y_target = pd.DataFrame(
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.y_target = pd.DataFrame(
             data=[50.0, 1000.0], columns=["y_target"], index=["person_A", "person_B"]
         )
-        self.smart_explainer.prediction_error = pd.DataFrame(
+        self.smart_explainer.explainer.prediction_error = pd.DataFrame(
             data=[0.0, 0.0], columns=["_error_"], index=["person_A", "person_B"]
         )
 
@@ -195,15 +195,15 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.layout.title.text == tit
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_long_subtitle_adaptive_font(self, local_pred, filter):
         """
         Ensure local plot reduces subtitle font size when subtitle is too long for the figure width.
         """
         local_pred.return_value = 1234.0
         filter.return_value = None
-        self.smart_explainer._case = "regression"
-        self.smart_explainer.y_target = pd.DataFrame(
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.y_target = pd.DataFrame(
             data=[50.0, 1000.0], columns=["y_target"], index=["person_A", "person_B"]
         )
 
@@ -417,7 +417,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     @patch("shapash.explainer.explainer.Explainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_multiclass_target_and_predicted_class(self, local_pred, select_lines, filter):
         """
         Unit test local plot subtitle with target and predicted class in multiclass settings.
@@ -442,23 +442,27 @@ class TestSmartPlotter(unittest.TestCase):
         label_dictionary = {0: "class_0", 1: "class_1", 2: "class_2"}
 
         smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
-        smart_explainer_mi.data = dict()
-        smart_explainer_mi.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
-        smart_explainer_mi.data["var_dict"] = [var_dict, var_dict, var_dict]
-        smart_explainer_mi.x_init = x_init
-        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_init.columns)}
-        smart_explainer_mi.mask = [mask, mask, mask]
-        smart_explainer_mi._case = "classification"
-        smart_explainer_mi._classes = [0, 1, 2]
-        smart_explainer_mi.label_dict = label_dictionary
-        smart_explainer_mi.inv_label_dict = {v: k for k, v in label_dictionary.items()}
-        smart_explainer_mi.y_pred = pd.DataFrame(data=[1, 2], columns=["y_pred"], index=index)
-        smart_explainer_mi.y_target = pd.DataFrame(data=[0, 2], columns=["y_target"], index=index)
-        smart_explainer_mi.prediction_error = pd.DataFrame(data=[0.9, 0.02], columns=["_error_"], index=index)
-        smart_explainer_mi.inv_features_dict = {}
-        smart_explainer_mi.state = MultiDecorator(SmartState())
+        smart_explainer_mi.explainer.data = dict()
+        smart_explainer_mi.explainer.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
+        smart_explainer_mi.explainer.data["var_dict"] = [var_dict, var_dict, var_dict]
+        smart_explainer_mi.explainer.x_init = x_init
+        smart_explainer_mi.explainer.columns_dict = {
+            i: col for i, col in enumerate(smart_explainer_mi.explainer.x_init.columns)
+        }
+        smart_explainer_mi.explainer.mask = [mask, mask, mask]
+        smart_explainer_mi.explainer._case = "classification"
+        smart_explainer_mi.explainer._classes = [0, 1, 2]
+        smart_explainer_mi.explainer.label_dict = label_dictionary
+        smart_explainer_mi.explainer.inv_label_dict = {v: k for k, v in label_dictionary.items()}
+        smart_explainer_mi.explainer.y_pred = pd.DataFrame(data=[1, 2], columns=["y_pred"], index=index)
+        smart_explainer_mi.explainer.y_target = pd.DataFrame(data=[0, 2], columns=["y_target"], index=index)
+        smart_explainer_mi.explainer.prediction_error = pd.DataFrame(
+            data=[0.9, 0.02], columns=["_error_"], index=index
+        )
+        smart_explainer_mi.explainer.inv_features_dict = {}
+        smart_explainer_mi.explainer.state = MultiDecorator(SmartState())
 
         condition = "index == 'B'"
         output = smart_explainer_mi.plot.local_plot(query=condition)
@@ -949,18 +953,18 @@ class TestSmartPlotter(unittest.TestCase):
         assert fig_output_neg.layout.xaxis.range[1] < 0
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_waterfall_regression(self, local_pred, filter):
         """
         Unit test local_plot waterfall mode in regression.
         """
         local_pred.return_value = 12.88
         filter.return_value = None
-        self.smart_explainer._case = "regression"
-        self.smart_explainer.y_pred = pd.DataFrame(
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.y_pred = pd.DataFrame(
             data=[10.0, 20.0], columns=["y_pred"], index=["person_A", "person_B"]
         )
-        self.smart_explainer.explain_data = {"base_values": 15.0}
+        self.smart_explainer.explainer.explain_data = {"base_values": 15.0}
 
         output = self.smart_explainer.plot.local_plot(index="person_B", plot_type="waterfall", show_predict=False, height=550)
 
@@ -970,15 +974,15 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].x[0] == 15.0
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_waterfall_regression_manual_xaxis_start(self, local_pred, filter):
         """
         Unit test local_plot forwards manual waterfall x-axis start to chart.
         """
         local_pred.return_value = 12.88
         filter.return_value = None
-        self.smart_explainer._case = "regression"
-        self.smart_explainer.explain_data = {"base_values": 15.0}
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.explain_data = {"base_values": 15.0}
 
         output = self.smart_explainer.plot.local_plot(
             index="person_B",
@@ -991,7 +995,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.layout.xaxis.range[0] == 10.0
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_waterfall_multiclass_base_values_1d(self, local_pred, filter):
         """
         Unit test local_plot waterfall baseline selection for multiclass with 1D base_values.
@@ -1014,21 +1018,23 @@ class TestSmartPlotter(unittest.TestCase):
         label_dictionary = {0: "class_0", 1: "class_1", 2: "class_2"}
 
         smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
-        smart_explainer_mi.data = dict()
-        smart_explainer_mi.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
-        smart_explainer_mi.data["var_dict"] = [var_dict, var_dict, var_dict]
-        smart_explainer_mi.x_init = x_init
-        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_init.columns)}
-        smart_explainer_mi.mask = [mask, mask, mask]
-        smart_explainer_mi._case = "classification"
-        smart_explainer_mi._classes = [0, 1, 2]
-        smart_explainer_mi.label_dict = label_dictionary
-        smart_explainer_mi.inv_label_dict = {v: k for k, v in label_dictionary.items()}
-        smart_explainer_mi.explain_data = {"base_values": np.array([0.11, 0.22, 0.33])}
-        smart_explainer_mi.inv_features_dict = {}
-        smart_explainer_mi.state = MultiDecorator(SmartState())
+        smart_explainer_mi.explainer.data = dict()
+        smart_explainer_mi.explainer.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
+        smart_explainer_mi.explainer.data["var_dict"] = [var_dict, var_dict, var_dict]
+        smart_explainer_mi.explainer.x_init = x_init
+        smart_explainer_mi.explainer.columns_dict = {
+            i: col for i, col in enumerate(smart_explainer_mi.explainer.x_init.columns)
+        }
+        smart_explainer_mi.explainer.mask = [mask, mask, mask]
+        smart_explainer_mi.explainer._case = "classification"
+        smart_explainer_mi.explainer._classes = [0, 1, 2]
+        smart_explainer_mi.explainer.label_dict = label_dictionary
+        smart_explainer_mi.explainer.inv_label_dict = {v: k for k, v in label_dictionary.items()}
+        smart_explainer_mi.explainer.explain_data = {"base_values": np.array([0.11, 0.22, 0.33])}
+        smart_explainer_mi.explainer.inv_features_dict = {}
+        smart_explainer_mi.explainer.state = MultiDecorator(SmartState())
 
         output = smart_explainer_mi.plot.local_plot(index="B", plot_type="waterfall", show_predict=False, height=550)
 
@@ -1041,7 +1047,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert str(output.data[0].customdata[-1]).endswith("Final output")
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_waterfall_subtitle_uses_model_prediction(self, local_pred, filter):
         """
         Unit test waterfall subtitle uses model probability instead of reconstructed probability.
@@ -1064,21 +1070,23 @@ class TestSmartPlotter(unittest.TestCase):
         label_dictionary = {0: "class_0", 1: "class_1", 2: "class_2"}
 
         smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
-        smart_explainer_mi.data = dict()
-        smart_explainer_mi.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
-        smart_explainer_mi.data["var_dict"] = [var_dict, var_dict, var_dict]
-        smart_explainer_mi.x_init = x_init
-        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_init.columns)}
-        smart_explainer_mi.mask = [mask, mask, mask]
-        smart_explainer_mi._case = "classification"
-        smart_explainer_mi._classes = [0, 1, 2]
-        smart_explainer_mi.label_dict = label_dictionary
-        smart_explainer_mi.inv_label_dict = {v: k for k, v in label_dictionary.items()}
-        smart_explainer_mi.explain_data = {"base_values": np.array([0.11, 0.22, 0.33])}
-        smart_explainer_mi.inv_features_dict = {}
-        smart_explainer_mi.state = MultiDecorator(SmartState())
+        smart_explainer_mi.explainer.data = dict()
+        smart_explainer_mi.explainer.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
+        smart_explainer_mi.explainer.data["var_dict"] = [var_dict, var_dict, var_dict]
+        smart_explainer_mi.explainer.x_init = x_init
+        smart_explainer_mi.explainer.columns_dict = {
+            i: col for i, col in enumerate(smart_explainer_mi.explainer.x_init.columns)
+        }
+        smart_explainer_mi.explainer.mask = [mask, mask, mask]
+        smart_explainer_mi.explainer._case = "classification"
+        smart_explainer_mi.explainer._classes = [0, 1, 2]
+        smart_explainer_mi.explainer.label_dict = label_dictionary
+        smart_explainer_mi.explainer.inv_label_dict = {v: k for k, v in label_dictionary.items()}
+        smart_explainer_mi.explainer.explain_data = {"base_values": np.array([0.11, 0.22, 0.33])}
+        smart_explainer_mi.explainer.inv_features_dict = {}
+        smart_explainer_mi.explainer.state = MultiDecorator(SmartState())
 
         with patch.object(
             smart_explainer_mi.plot,
@@ -1091,7 +1099,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert "Proba: <b>0.4200</b>" in title_text
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_waterfall_multiclass_non_numeric_classes_single_tick(self, local_pred, filter):
         """
         Unit test local_plot waterfall shows only explained class tick for non-numeric class codes.
@@ -1114,21 +1122,23 @@ class TestSmartPlotter(unittest.TestCase):
         label_dictionary = {"cheap": "Cheap", "mid": "Moderately Expensive", "high": "Expensive"}
 
         smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
-        smart_explainer_mi.data = dict()
-        smart_explainer_mi.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
-        smart_explainer_mi.data["var_dict"] = [var_dict, var_dict, var_dict]
-        smart_explainer_mi.x_init = x_init
-        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_init.columns)}
-        smart_explainer_mi.mask = [mask, mask, mask]
-        smart_explainer_mi._case = "classification"
-        smart_explainer_mi._classes = ["cheap", "mid", "high"]
-        smart_explainer_mi.label_dict = label_dictionary
-        smart_explainer_mi.inv_label_dict = {v: k for k, v in label_dictionary.items()}
-        smart_explainer_mi.explain_data = {"base_values": np.array([0.11, 0.22, 0.33])}
-        smart_explainer_mi.inv_features_dict = {}
-        smart_explainer_mi.state = MultiDecorator(SmartState())
+        smart_explainer_mi.explainer.data = dict()
+        smart_explainer_mi.explainer.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
+        smart_explainer_mi.explainer.data["var_dict"] = [var_dict, var_dict, var_dict]
+        smart_explainer_mi.explainer.x_init = x_init
+        smart_explainer_mi.explainer.columns_dict = {
+            i: col for i, col in enumerate(smart_explainer_mi.explainer.x_init.columns)
+        }
+        smart_explainer_mi.explainer.mask = [mask, mask, mask]
+        smart_explainer_mi.explainer._case = "classification"
+        smart_explainer_mi.explainer._classes = ["cheap", "mid", "high"]
+        smart_explainer_mi.explainer.label_dict = label_dictionary
+        smart_explainer_mi.explainer.inv_label_dict = {v: k for k, v in label_dictionary.items()}
+        smart_explainer_mi.explainer.explain_data = {"base_values": np.array([0.11, 0.22, 0.33])}
+        smart_explainer_mi.explainer.inv_features_dict = {}
+        smart_explainer_mi.explainer.state = MultiDecorator(SmartState())
 
         output = smart_explainer_mi.plot.local_plot(index="B", plot_type="waterfall", show_predict=False, height=550)
 
@@ -1139,7 +1149,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert str(output.data[0].customdata[-1]).endswith("Final output")
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.explainer.Explainer._local_pred")
     def test_local_plot_waterfall_multiclass_base_values_2d_transposed(self, local_pred, filter):
         """
         Unit test local_plot waterfall baseline selection for multiclass with transposed 2D base_values.
@@ -1162,22 +1172,26 @@ class TestSmartPlotter(unittest.TestCase):
         label_dictionary = {0: "class_0", 1: "class_1", 2: "class_2"}
 
         smart_explainer_mi = SmartExplainer(model=self.model, features_dict=feature_dictionary)
-        smart_explainer_mi.data = dict()
-        smart_explainer_mi.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
-        smart_explainer_mi.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
-        smart_explainer_mi.data["var_dict"] = [var_dict, var_dict, var_dict]
-        smart_explainer_mi.x_init = x_init
-        smart_explainer_mi.columns_dict = {i: col for i, col in enumerate(smart_explainer_mi.x_init.columns)}
-        smart_explainer_mi.mask = [mask, mask, mask]
-        smart_explainer_mi._case = "classification"
-        smart_explainer_mi._classes = [0, 1, 2]
-        smart_explainer_mi.label_dict = label_dictionary
-        smart_explainer_mi.inv_label_dict = {v: k for k, v in label_dictionary.items()}
+        smart_explainer_mi.explainer.data = dict()
+        smart_explainer_mi.explainer.contributions = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["contrib_sorted"] = [contrib_sorted, contrib_sorted, contrib_sorted]
+        smart_explainer_mi.explainer.data["x_sorted"] = [x_sorted, x_sorted, x_sorted]
+        smart_explainer_mi.explainer.data["var_dict"] = [var_dict, var_dict, var_dict]
+        smart_explainer_mi.explainer.x_init = x_init
+        smart_explainer_mi.explainer.columns_dict = {
+            i: col for i, col in enumerate(smart_explainer_mi.explainer.x_init.columns)
+        }
+        smart_explainer_mi.explainer.mask = [mask, mask, mask]
+        smart_explainer_mi.explainer._case = "classification"
+        smart_explainer_mi.explainer._classes = [0, 1, 2]
+        smart_explainer_mi.explainer.label_dict = label_dictionary
+        smart_explainer_mi.explainer.inv_label_dict = {v: k for k, v in label_dictionary.items()}
         # shape = (n_classes, n_samples)
-        smart_explainer_mi.explain_data = {"base_values": np.array([[0.11, 0.11], [0.22, 0.22], [0.33, 0.33]])}
-        smart_explainer_mi.inv_features_dict = {}
-        smart_explainer_mi.state = MultiDecorator(SmartState())
+        smart_explainer_mi.explainer.explain_data = {
+            "base_values": np.array([[0.11, 0.11], [0.22, 0.22], [0.33, 0.33]])
+        }
+        smart_explainer_mi.explainer.inv_features_dict = {}
+        smart_explainer_mi.explainer.state = MultiDecorator(SmartState())
 
         output = smart_explainer_mi.plot.local_plot(index="B", plot_type="waterfall", show_predict=False, height=550)
 
@@ -1187,16 +1201,16 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Unit test fallback baseline in regression when backend expected_value is unavailable.
         """
-        self.smart_explainer._case = "regression"
-        self.smart_explainer.explain_data = {}
-        self.smart_explainer.y_pred = pd.DataFrame(
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.explain_data = {}
+        self.smart_explainer.explainer.y_pred = pd.DataFrame(
             data=[10.0, 20.0], columns=["y_pred"], index=["person_A", "person_B"]
         )
 
         class DummyExplainer:
             pass
 
-        self.smart_explainer.backend.explainer = DummyExplainer()
+        self.smart_explainer.explainer.backend.explainer = DummyExplainer()
 
         base_value = self.smart_explainer.plot._get_waterfall_base_value(["person_B"], label_num=None)
 
@@ -1206,17 +1220,17 @@ class TestSmartPlotter(unittest.TestCase):
         """
         Unit test fallback baseline in classification when backend expected_value is unavailable.
         """
-        self.smart_explainer._case = "classification"
-        self.smart_explainer._classes = [0, 1]
-        self.smart_explainer.explain_data = {}
-        self.smart_explainer.proba_values = pd.DataFrame(
+        self.smart_explainer.explainer._case = "classification"
+        self.smart_explainer.explainer._classes = [0, 1]
+        self.smart_explainer.explainer.explain_data = {}
+        self.smart_explainer.explainer.proba_values = pd.DataFrame(
             data=[[0.2, 0.8], [0.6, 0.4]], columns=[0, 1], index=["person_A", "person_B"]
         )
 
         class DummyExplainer:
             pass
 
-        self.smart_explainer.backend.explainer = DummyExplainer()
+        self.smart_explainer.explainer.backend.explainer = DummyExplainer()
 
         base_value = self.smart_explainer.plot._get_waterfall_base_value(["person_B"], label_num=1)
 
