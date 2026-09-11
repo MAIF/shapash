@@ -946,7 +946,7 @@ def plot_clustering_by_explainability(
     projections : np.ndarray or None, optional, default=None
         Precomputed 2D TSNE projections. If None, projections will be computed within the function.
     labels
-    keep_quantile : tuple of float, optional, default=(0.05, 0.95)
+    keep_quantile : tuple of float, optional, default=None
         Quantiles to retain for color scaling, helping to manage outliers.
     random_state : int, optional, default=79
         Random seed for reproducibility of the TSNE projection.
