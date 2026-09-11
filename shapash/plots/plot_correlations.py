@@ -46,7 +46,7 @@ def plot_correlations(
     optimized : boolean, optional
         True if we want to potentially accelerate the computation of the correlation matrix by reducing the
         lenght of the data and the number of modalties per columns.
-    max_features : int (default: 10)
+    max_features : int (default: 20)
         Max number of features to show on the matrix.
     features_to_hide : list (optional)
         List of features that will not appear on the graph
@@ -57,7 +57,7 @@ def plot_correlations(
         Correlation method used. 'phik' or 'pearson' are possible values. 'phik' is used by default.
     width : Int (default: 900)
         Plotly figure - layout width
-    height : Int (default: 600)
+    height : Int (default: 500)
         Plotly figure - layout height
     degree  : int, optional, (default 2.5)
         degree applied on the correlation matrix in order to focus more or less the clustering
