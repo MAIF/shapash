@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - develop
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -73,6 +74,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
         fail_ci_if_error: false
+        disable_search: true
 
   pandas_compat:
     name: Pandas Compat (${{ matrix.pandas }})
