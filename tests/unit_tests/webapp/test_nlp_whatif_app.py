@@ -24,8 +24,15 @@ from shapash.webapp.nlp_components import (
     LabelNoiseComponent,
     SimilarExamplesComponent,
 )
+from shapash.webapp.nlp_components.base import AppContext
 
 LABEL_NAMES = ["neg", "pos"]
+
+
+def _ctx(explanation, engine=None, coords=None) -> AppContext:
+    """The context ``NlpWebApp`` builds, for calling a component directly."""
+    return AppContext(explanation, engine=engine, coords=coords)
+
 
 # A tiny lexically separable corpus for the independent label probe. "bad"/"awful" sit in "neg",
 # so a row labelled "neg" gets backed and a row labelled "pos" gets rejected.
@@ -328,7 +335,7 @@ class TestThreePanelLayout(unittest.TestCase):
         return app, found
 
     def test_full_tab_groups_when_all_panels_available(self):
-        app, ids = self._ids(FakeEngine(can_edit=True, can_cf=True), scatter_xy=np.zeros((2, 2)))
+        app, ids = self._ids(FakeEngine(can_edit=True, can_cf=True), projection=np.zeros((2, 2)))
         self.assertEqual(
             app._tab_groups,
             {
@@ -366,7 +373,7 @@ class TestThreePanelLayout(unittest.TestCase):
         self.assertNotIn("counterfactual", app._tab_groups["upper-right-tabs"])
 
     def test_selection_bar_present(self):
-        _, ids = self._ids(FakeEngine(can_edit=True, can_cf=True), scatter_xy=np.zeros((2, 2)))
+        _, ids = self._ids(FakeEngine(can_edit=True, can_cf=True), projection=np.zeros((2, 2)))
         self.assertIn("selection-summary", ids)
         self.assertIn("word-filter-clear-btn", ids)
         self.assertIn("scatter-clear-btn", ids)
@@ -400,7 +407,7 @@ class TestThreePanelLayout(unittest.TestCase):
 
     def test_tab_toggle_callbacks_registered(self):
         engine = FakeEngine(can_edit=True, can_cf=True)
-        app = NlpWebApp(engine.to_explanation(), engine=engine, scatter_xy=np.zeros((2, 2)))
+        app = NlpWebApp(engine.to_explanation(), engine=engine, projection=np.zeros((2, 2)))
         outputs = " ".join(app.app.callback_map.keys())
         self.assertIn("left-tabs-body-table.style", outputs)
         self.assertIn("lower-right-tabs-body-waterfall.style", outputs)
@@ -441,7 +448,7 @@ class TestSimilarComponent(unittest.TestCase):
         app = dash.Dash(__name__)
         comp = SimilarExamplesComponent()
         comp.register_callbacks(
-            app, explanation, engine, {"apply": "whatif-apply-store", "current": "current-datapoint"}
+            app, _ctx(explanation, engine), {"apply": "whatif-apply-store", "current": "current-datapoint"}
         )
         return app, engine
 
@@ -459,7 +466,7 @@ class TestSimilarComponent(unittest.TestCase):
 
         engine = FakeEngine(can_edit=True, can_cf=False, can_similar=True)
         found = set()
-        _collect_ids(SimilarExamplesComponent().layout(engine.to_explanation(), engine), found)
+        _collect_ids(SimilarExamplesComponent().layout(_ctx(engine.to_explanation(), engine)), found)
         self.assertIn("similar-topk", found)
         self.assertIn("similar-threshold", found)
         self.assertIn("similar-mode", found)
@@ -615,13 +622,13 @@ class TestLabelNoiseMounting(unittest.TestCase):
 
     def test_caption_warns_when_no_independent_cross_check_is_available(self):
         engine = FakeEngine(can_edit=True, can_cf=False, has_labels=True)
-        layout = LabelNoiseComponent().layout(engine.to_explanation(), engine)
+        layout = LabelNoiseComponent().layout(_ctx(engine.to_explanation(), engine))
         caption = layout.children[1].children
         self.assertIn("no independent cross-check", caption)
 
     def test_caption_explains_the_corpus_column_when_the_probe_is_available(self):
         engine = FakeEngine(can_edit=True, can_cf=False, has_labels=True, probe_corpus=_PROBE_CORPUS)
-        layout = LabelNoiseComponent().layout(engine.to_explanation(), engine)
+        layout = LabelNoiseComponent().layout(_ctx(engine.to_explanation(), engine))
         caption = layout.children[1].children
         self.assertIn("Corpus column", caption)
 
@@ -644,7 +651,7 @@ class TestLabelNoiseComponent(unittest.TestCase):
         app = dash.Dash(__name__)
         comp = LabelNoiseComponent()
         comp.register_callbacks(
-            app, explanation, engine, {"apply": "whatif-apply-store", "current": "current-datapoint"}
+            app, _ctx(explanation, engine), {"apply": "whatif-apply-store", "current": "current-datapoint"}
         )
         return app, engine
 
@@ -935,7 +942,7 @@ class TestWordProfileComponent(unittest.TestCase):
         explanation = self._explanation()
         app = dash.Dash(__name__)
         comp = WordProfileComponent()
-        comp.register_callbacks(app, explanation, None, self.STORES)
+        comp.register_callbacks(app, _ctx(explanation, None), self.STORES)
         return app, explanation
 
     @staticmethod
@@ -951,13 +958,13 @@ class TestWordProfileComponent(unittest.TestCase):
         from shapash.webapp.nlp_components import WordProfileComponent
 
         # Data-only panel: it must survive a loaded snapshot with no live model.
-        self.assertTrue(WordProfileComponent.is_available(self._explanation(), None))
+        self.assertTrue(WordProfileComponent.is_available(_ctx(self._explanation(), None)))
 
     def test_layout_declares_every_id_its_callbacks_bind(self):
         from shapash.webapp.nlp_components import WordProfileComponent
 
         found = set()
-        _collect_ids(WordProfileComponent().layout(self._explanation(), None), found)
+        _collect_ids(WordProfileComponent().layout(_ctx(self._explanation(), None)), found)
         for suffix in ("select", "agg", "class", "order", "limit", "graph", "caption", "results", "store"):
             self.assertIn(f"word-profile-{suffix}", found)
 
@@ -965,7 +972,7 @@ class TestWordProfileComponent(unittest.TestCase):
         from shapash.webapp.nlp_components import WordProfileComponent
 
         explanation = self._explanation()
-        layout = WordProfileComponent().layout(explanation, None)
+        layout = WordProfileComponent().layout(_ctx(explanation, None))
         found = {}
 
         def walk(node):
@@ -991,7 +998,7 @@ class TestWordProfileComponent(unittest.TestCase):
             base_values=np.zeros(4),
             label_names=["score"],
         )
-        layout = WordProfileComponent().layout(binary, None)
+        layout = WordProfileComponent().layout(_ctx(binary, None))
         found = set()
         _collect_ids(layout, found)
         # Still present (callbacks bind it), just not shown.
@@ -1304,7 +1311,7 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
 
     def test_scatter_colouring_survives_all_classes(self):
         # The scatter reads the same dropdown, where int("all") would raise.
-        app = NlpWebApp(self._explanation(), engine=None, scatter_xy=np.zeros((4, 2)))
+        app = NlpWebApp(self._explanation(), engine=None, projection=np.zeros((4, 2)))
         fn = None
         for key, spec in app.app.callback_map.items():
             if "scatter-plot.figure" in key:
@@ -1380,12 +1387,12 @@ class TestWordImportanceScatterSync(unittest.TestCase):
     def test_bar_click_registered_with_a_scatter_too(self):
         # Before Phase A, a mounted scatter changed which store a bar click targeted; now Word
         # Importance always registers this callback unconditionally, regardless of scatter presence.
-        app = NlpWebApp(self._explanation(), engine=None, scatter_xy=np.zeros((4, 2)))
+        app = NlpWebApp(self._explanation(), engine=None, projection=np.zeros((4, 2)))
         pairs = _callback_binding_ids(app, "global-importance-graph.clickData")
         self.assertIn(("global-importance-graph", "clickData"), pairs)
 
     def test_scatter_word_select_mirrors_the_shared_store(self):
-        app = NlpWebApp(self._explanation(), engine=None, scatter_xy=np.zeros((4, 2)))
+        app = NlpWebApp(self._explanation(), engine=None, projection=np.zeros((4, 2)))
         pairs = _callback_binding_ids(app, "scatter-word-select.value")
         self.assertIn(("word-click-filter", "data"), pairs)
 
@@ -1562,8 +1569,9 @@ class TestScatterComponentWordContributionOption(unittest.TestCase):
     def _color_options(self, offer_word_contribution: bool):
         from shapash.webapp.nlp_components import ScatterComponent
 
-        comp = ScatterComponent(np.zeros((4, 2)), offer_word_contribution=offer_word_contribution)
-        layout = comp.layout(self._explanation(), None)
+        comp = ScatterComponent(offer_word_contribution=offer_word_contribution)
+        explanation = self._explanation()
+        layout = comp.layout(_ctx(explanation, None, coords=np.zeros((explanation.n_samples, 2))))
         found = {}
 
         def walk(node):
@@ -1615,15 +1623,20 @@ class TestBuildScatterFig(unittest.TestCase):
     def _component(self):
         from shapash.webapp.nlp_components import ScatterComponent
 
-        return ScatterComponent(np.zeros((2, 2)), offer_word_contribution=True)
+        return ScatterComponent(offer_word_contribution=True)
+
+    def _ctx_for(self, explanation):
+        # The figure takes its two coordinate columns from the projection and every visual encoding
+        # — colours, legend, hover, error mask — from the explanation, so both have to be bound.
+        return _ctx(explanation, None, coords=np.zeros((explanation.n_samples, 2)))
 
     def test_ground_truth_colors_by_y_true(self):
-        fig = self._component()._build_scatter_fig(self._explanation(True, True), "ground_truth")
+        fig = self._component()._build_scatter_fig(self._ctx_for(self._explanation(True, True)), "ground_truth")
         names = {trace.name for trace in fig.data}
         self.assertEqual(names, {"pos"})  # both samples are "pos" in y_true
 
     def test_without_prediction_or_ground_truth_draws_a_single_unlabeled_group(self):
-        fig = self._component()._build_scatter_fig(self._explanation(False, False), "prediction")
+        fig = self._component()._build_scatter_fig(self._ctx_for(self._explanation(False, False)), "prediction")
         self.assertEqual(len(fig.data), 1)
         self.assertEqual(len(fig.data[0].x), 2)
 
@@ -1635,7 +1648,7 @@ class TestWordProfileControls(unittest.TestCase):
         from shapash.webapp.nlp_components import WordProfileComponent
 
         comp = WordProfileComponent()
-        layout = comp.layout(TestWordProfileComponent._explanation(), None)
+        layout = comp.layout(_ctx(TestWordProfileComponent._explanation(), None))
         found = {}
 
         def walk(node):
@@ -1657,9 +1670,9 @@ class TestWordProfileControls(unittest.TestCase):
 
         comp = WordProfileComponent()
         explanation = TestWordProfileComponent._explanation()
-        comp.layout(explanation, None)  # builds the option lists the sort callback serves
+        comp.layout(_ctx(explanation, None))  # builds the option lists the sort callback serves
         app = dash.Dash(__name__)
-        comp.register_callbacks(app, explanation, None, TestWordProfileComponent.STORES)
+        comp.register_callbacks(app, _ctx(explanation, None), TestWordProfileComponent.STORES)
         return app
 
     @staticmethod

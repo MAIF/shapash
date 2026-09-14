@@ -51,8 +51,9 @@ class SimilarExamplesComponent(WebappComponent):
         retriever = getattr(engine, "_retriever", None)
         return getattr(retriever, "layer", None) if retriever is not None else None
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Return the panel: a top-k control plus a results area fed by the current datapoint."""
+        engine = ctx.engine
         layer = self._layer_name(engine)
         caption = "Train examples most similar to the selected text in the model's decision space"
         if layer:
@@ -119,8 +120,9 @@ class SimilarExamplesComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Recompute neighbours on selection/mode/filter change; wire per-row Inspect into the current store."""
+        engine = ctx.engine
         current_store = stores["current"]
 
         @app.callback(

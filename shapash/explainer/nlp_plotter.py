@@ -6,7 +6,7 @@ returns the figure. No display state is stored anywhere — pass different argum
 a different figure from the *same* untouched explanation.
 
 Why a separate object rather than methods on :class:`NlpExplanation` itself: the explanation is
-the persistence boundary (``save``/``load`` with a ``format_version``), so keeping rendering off
+the persistence boundary (``save``/``load``), so keeping rendering off
 it keeps the dataclass a dataclass. It also mirrors the tabular side, where ``SmartExplainer``
 exposes :class:`~shapash.explainer.smart_plotter.SmartPlotter` as ``.plot``.
 
@@ -24,6 +24,7 @@ import numpy as np
 from dash import html
 from plotly import graph_objs as go
 
+from shapash.compute.embeddings import Embedding, projection_coords
 from shapash.explainer.nlp_explanation import (
     WORD_AGGREGATIONS,
     aggregate_word_contributions,
@@ -60,7 +61,7 @@ class NlpPlotter:
 
     Examples
     --------
-    >>> explanation, _ = NlpExplanation.load("run.zip")  # no model needed
+    >>> explanation = NlpExplanation.load("run.xpl")  # no model needed
     >>> explanation.plot.waterfall(row=0, label_idx=1).show()
     """
 
@@ -417,7 +418,7 @@ class NlpPlotter:
 
     def scatter(
         self,
-        xy: np.ndarray,
+        projection: Embedding | np.ndarray,
         color_by: str = "prediction",
         words: list[str] | None = None,
         label_idx: int = 0,
@@ -426,16 +427,19 @@ class NlpPlotter:
     ) -> go.Figure:
         """2-D scatter of the batch (e.g. an embedding projection), colored by class or by a word.
 
-        ``xy`` is not something the artifact carries — see :meth:`NlpExplainer.compute_projection`
-        for how to produce it (defaults to PCA on the model's embeddings, no extra install since
-        sklearn is a core dependency) — every other argument here comes straight from ``self._exp``,
-        the same split :class:`~shapash.webapp.nlp_components.scatter.ScatterComponent` uses to
+        The projection is not something the artifact carries — see
+        :meth:`NlpExplainer.compute_projection` for how to produce it (defaults to PCA on the
+        model's embeddings, no extra install since sklearn is a core dependency). The projection
+        supplies only the coordinates; colours, legend, hover text and error mask all come from
+        ``self._exp`` — the same split :class:`~shapash.webapp.nlp_components.scatter.ScatterComponent` uses to
         build the identical figure inside the What-if Lab.
 
         Parameters
         ----------
-        xy : np.ndarray, shape (n_samples, 2)
-            2-D coordinates aligned with the explanation's samples.
+        projection : Embedding or np.ndarray, shape (n_samples, 2)
+            2-D coordinates aligned with the explanation's samples, checked by
+            :func:`~shapash.compute.embeddings.projection_coords`: an ``Embedding`` of different texts
+            is refused, a bare array is accepted on its shape alone.
         color_by : {"prediction", "ground_truth", "word_contribution"}
             ``"ground_truth"`` falls back to predictions when ``y_true`` is unavailable;
             ``"word_contribution"`` falls back to predictions when ``words`` is empty.
@@ -461,10 +465,11 @@ class NlpPlotter:
 
         Examples
         --------
-        >>> xy = xpl.compute_projection(explanation, cache_dir="cache/")
-        >>> explanation.plot.scatter(xy, color_by="word_contribution", words=["terrible"]).show()
+        >>> projection = xpl.compute_projection(explanation, cache_dir="cache/")
+        >>> explanation.plot.scatter(projection, color_by="word_contribution", words=["terrible"]).show()
         """
         exp = self._exp
+        xy = projection_coords(projection, exp)
         err_mask = None
         if errors_only and exp.y_true is not None and exp.y_pred is not None:
             err_mask = np.asarray(exp.y_true).astype(str) != np.asarray(exp.y_pred).astype(str)

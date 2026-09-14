@@ -16,6 +16,7 @@ import pandas as pd
 from dash import html
 from plotly import graph_objs as go
 
+from shapash.compute.embeddings import Embedding
 from shapash.explainer.nlp_explanation import NlpExplanation
 from shapash.explainer.nlp_plotter import NlpPlotter
 from shapash.webapp.utils.dash_to_html import DashHtmlPreview
@@ -206,6 +207,37 @@ class TestScatterPlot(unittest.TestCase):
         fig = explanation.plot.scatter(self.xy, color_by="ground_truth", errors_only=True)
         names = {trace.name for trace in fig.data}
         self.assertEqual(names, {"pos"})
+
+
+class TestScatterProjectionArgument(unittest.TestCase):
+    """Wiring only — the check itself is tested in ``test_embeddings.TestProjectionCoords``."""
+
+    @staticmethod
+    def _projection(explanation, **overrides):
+        fields = {
+            "vectors": np.zeros((explanation.n_samples, 2)),
+            "model_id": "fake:v1",
+            "space": "decision",
+            "corpus_id": explanation.corpus_id,
+            "reducer_tag": "pca-1234",
+        }
+        fields.update(overrides)
+        return Embedding(**fields)
+
+    def test_a_typed_projection_is_accepted(self):
+        explanation = _make_explanation()
+        fig = explanation.plot.scatter(self._projection(explanation))
+        self.assertIsInstance(fig, go.Figure)
+
+    def test_a_projection_from_another_corpus_is_refused(self):
+        explanation = _make_explanation()
+        with self.assertRaises(ValueError) as ctx:
+            explanation.plot.scatter(self._projection(explanation, corpus_id="a-different-corpus"))
+        self.assertIn("different texts", str(ctx.exception))
+
+    def test_a_bare_array_is_still_accepted_on_its_shape(self):
+        explanation = _make_explanation()
+        self.assertIsInstance(explanation.plot.scatter(np.zeros((3, 2))), go.Figure)
 
 
 class TestGuards(unittest.TestCase):

@@ -28,22 +28,10 @@ import pandas as pd
 
 from shapash.__version__ import __version__ as _shapash_version
 from shapash.backend.nlp_backend import is_punctuation
+from shapash.compute.hashing import hash_corpus
 
 if TYPE_CHECKING:
     from shapash.explainer.nlp_plotter import NlpPlotter
-
-# Stamped into meta.json on save and checked on load, so an incompatible file fails loudly instead of
-# parsing into wrong numbers — a layout change (wide instead of tidy contributions, a different
-# class_idx encoding) often still reads cleanly and yields a plausible, wrong explanation. The risk is
-# live rather than hypothetical: explain() writes these files into cache_dir and its key covers
-# texts/model/backend but *not* the shapash version, so an upgrade leaves old files the new reader
-# will hit. It also cannot be added retroactively — a file written without a version is forever
-# ambiguous — which is why it sits here at v1 with nothing yet to reject. Limit: it versions the
-# *layout* only; numbers whose meaning changes under an identical schema are invisible to it (the
-# shapash_version recorded alongside it is the breadcrumb for that, and nothing checks it). The tuple
-# is what lets a future reader accept v1 as well as its own — the migration code does not exist yet.
-_FORMAT_VERSION = 1
-_SUPPORTED_FORMAT_VERSIONS = (1,)
 
 _PROB_PREFIX = "y_prob__"
 
@@ -222,7 +210,7 @@ def rank_word_samples(
     return ranked.head(n_top).reset_index(drop=True)
 
 
-@dataclass(frozen=True, eq=False, slots=True)
+@dataclass(frozen=True, eq=False, slots=True, repr=False)
 class NlpExplanation:
     """Immutable result of :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.explain`.
 
@@ -250,6 +238,10 @@ class NlpExplanation:
     - ``eq=False`` — value equality is meaningless here (comparing the ``pd.Series`` fields raises
       "truth value is ambiguous"), so the object compares and hashes by identity rather than
       offering an ``__eq__`` that only ever raises. Use :meth:`save`/:meth:`load` to compare runs.
+    - ``repr=False`` — the generated dataclass repr prints every field's ``repr()`` in full, which
+      for ``texts``/``token_strings``/``values`` means the entire batch: a notebook cell that just
+      names the variable would dump megabytes of text and per-token arrays. :meth:`__repr__` below
+      prints a one-line summary instead; the full payload stays one attribute access away.
 
     The boundary worth knowing: the pandas fields (``texts``, ``y_pred``, ``y_prob``, ``y_true``)
     are held by reference and *not* sealed — pandas has no equivalent write lock — so in-place
@@ -469,6 +461,12 @@ class NlpExplanation:
     def __len__(self) -> int:
         return len(self.token_strings)
 
+    def __repr__(self) -> str:
+        return (
+            f"NlpExplanation(n_samples={self.n_samples}, n_classes={self.n_classes}, "
+            f"backend={self.backend_name!r}, has_ground_truth={self.has_ground_truth})"
+        )
+
     @property
     def n_samples(self) -> int:
         """Number of samples in the batch."""
@@ -478,6 +476,22 @@ class NlpExplanation:
     def n_classes(self) -> int:
         """Number of model output columns the contributions carry."""
         return _n_classes(self.values, self.base_values, self.label_names)
+
+    @property
+    def corpus_id(self) -> str:
+        """Digest of :attr:`texts` alone — the dataset's identity, independent of model or backend.
+
+        Equal to the ``corpus_id`` of any :class:`~shapash.compute.embeddings.Embedding` of the same
+        texts, which is how a projection is checked against this explanation. A property rather than
+        a field, since it is a pure function of ``texts``; it hashes every text, so call it at
+        boundaries rather than inside a render loop.
+
+        Returns
+        -------
+        str
+            32-character hex digest.
+        """
+        return hash_corpus(self.texts.tolist())
 
     @property
     def has_ground_truth(self) -> bool:
@@ -509,7 +523,7 @@ class NlpExplanation:
 
         Examples
         --------
-        >>> explanation, _ = NlpExplanation.load("run.zip")  # no model, no backend
+        >>> explanation = NlpExplanation.load("run.xpl")  # no model, no backend
         >>> explanation.plot.waterfall(row=0, label_idx=1).show()
         """
         # Imported here, not at module scope: this module is the persistence boundary and stays
@@ -957,29 +971,30 @@ class NlpExplanation:
                 cm[t, p] += 1
         return cm
 
-    def save(self, path: str | Path, scatter_xy: np.ndarray | None = None) -> None:
+    def save(self, path: str | Path) -> None:
         """Persist this explanation (no model or backend required to reload).
 
         Writes a single zip file containing a plain-text ``meta.json`` (readable
         without shapash) plus long/tidy parquet tables for contributions, base
-        values, samples (texts/predictions/ground truth) and, optionally, a 2-D
-        scatter projection.
+        values and samples (texts/predictions/ground truth).
+
+        A 2-D projection is not bundled: save it separately with
+        :meth:`~shapash.compute.embeddings.Embedding.save`.
 
         Parameters
         ----------
         path : str or Path
-            Destination file. Any extension is accepted; ``.shxpl`` is a reasonable
+            Destination file. Any extension is accepted; ``.xpl`` is a reasonable
             convention but not enforced.
-        scatter_xy : np.ndarray, optional
-            Pre-computed 2-D projection to bundle alongside the explanation, shape
-            ``(n_samples, 2)`` (the same array :meth:`~NlpExplainer.compute_projection`
-            returns).
+
+        See Also
+        --------
+        load : Restore a file written here.
         """
         contrib_df, base_df, values_ndim = _contributions_to_frames(self.token_strings, self.values, self.base_values)
         samples_df = _samples_to_frame(self.texts, self.y_pred, self.y_prob, self.y_true)
 
         meta = {
-            "format_version": _FORMAT_VERSION,
             "shapash_version": _shapash_version,
             "created_at": datetime.now(UTC).isoformat(),
             "backend_name": self.backend_name,
@@ -998,7 +1013,6 @@ class NlpExplanation:
             "values_ndim": values_ndim,
             "has_base_values": base_df is not None,
             "has_ground_truth": self.y_true is not None,
-            "has_scatter": scatter_xy is not None,
         }
 
         with zipfile.ZipFile(Path(path), "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -1007,15 +1021,9 @@ class NlpExplanation:
             if base_df is not None:
                 _write_parquet(zf, "base_values.parquet", base_df)
             _write_parquet(zf, "samples.parquet", samples_df)
-            if scatter_xy is not None:
-                scatter_arr = np.asarray(scatter_xy)
-                scatter_df = pd.DataFrame(
-                    {"sample_idx": np.arange(len(scatter_arr)), "x": scatter_arr[:, 0], "y": scatter_arr[:, 1]}
-                )
-                _write_parquet(zf, "scatter.parquet", scatter_df)
 
     @classmethod
-    def load(cls, path: str | Path) -> tuple[NlpExplanation, np.ndarray | None]:
+    def load(cls, path: str | Path) -> NlpExplanation:
         """Restore an explanation saved by :meth:`save`.
 
         Parameters
@@ -1025,39 +1033,21 @@ class NlpExplanation:
 
         Returns
         -------
-        explanation : NlpExplanation
-            The restored explanation.
-        scatter_xy : np.ndarray or None
-            The projection array bundled at save time, or ``None``.
-
-        Raises
-        ------
-        ValueError
-            If the file's ``format_version`` is not one this shapash version reads.
+        NlpExplanation
+            The restored artifact, model-free and backend-free.
         """
         with zipfile.ZipFile(Path(path), "r") as zf:
             meta = json.loads(zf.read("meta.json"))
-            version = meta.get("format_version")
-            if version not in _SUPPORTED_FORMAT_VERSIONS:
-                raise ValueError(
-                    f"Unsupported NlpExplanation format_version={version!r}; this shapash version "
-                    f"({_shapash_version}) reads version(s) {_SUPPORTED_FORMAT_VERSIONS}. "
-                    "Re-save this explanation with a compatible shapash version."
-                )
             contrib_df = _read_parquet(zf, "contributions.parquet")
             base_df = _read_parquet(zf, "base_values.parquet") if meta.get("has_base_values", True) else None
             samples_df = _read_parquet(zf, "samples.parquet")
-            scatter_xy = None
-            if meta.get("has_scatter"):
-                scatter_df = _read_parquet(zf, "scatter.parquet")
-                scatter_xy = scatter_df[["x", "y"]].to_numpy()
 
         token_strings, values, base_values = _frames_to_contributions(
             contrib_df, base_df, meta["values_ndim"], meta["n_samples"], meta["n_classes"]
         )
         texts, y_pred, y_true, y_prob = _frame_to_samples(samples_df)
 
-        explanation = cls(
+        return cls(
             texts=texts,
             token_strings=token_strings,
             values=values,
@@ -1080,7 +1070,6 @@ class NlpExplanation:
             model_id=meta.get("model_id"),
             architecture=meta.get("architecture"),
         )
-        return explanation, scatter_xy
 
 
 def _write_parquet(zf: zipfile.ZipFile, name: str, df: pd.DataFrame) -> None:

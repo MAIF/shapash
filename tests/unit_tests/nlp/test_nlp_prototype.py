@@ -7,8 +7,10 @@ not required — synthetic NlpContributions data is used throughout so the suite
 runs in CI without transformers/datasets.
 """
 
+import json
 import tempfile
 import unittest
+import zipfile
 from dataclasses import replace
 from unittest.mock import patch
 
@@ -20,6 +22,7 @@ from dash import html
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_lime_backend import NlpLimeBackend
 from shapash.backend.nlp_shap_backend import NlpShapBackend
+from shapash.compute.embeddings import Embedding
 from shapash.compute.generators import AblationFlipGenerator, HotFlipGenerator
 from shapash.compute.retrieval import Neighbor
 from shapash.explainer.nlp_explainer import NlpExplainer
@@ -690,15 +693,12 @@ class _ProjectableModel(TextModel, SupportsEmbeddings):
 
 
 class _CountingReducer:
-    """A reducer with sklearn's ``get_params`` surface, so its settings reach the cache tag."""
+    """A deterministic reducer that counts its fits and records its call-time kwargs."""
 
     def __init__(self, scale=1.0):
         self.scale = scale
         self.fits = 0
         self.last_kwargs = None
-
-    def get_params(self, deep=True):
-        return {"scale": self.scale}
 
     def fit_transform(self, x, **kwargs):
         self.fits += 1
@@ -727,7 +727,7 @@ def _projection_explanation(texts: pd.Series) -> NlpExplanation:
 
 
 class TestComputeProjection(unittest.TestCase):
-    """The library owns the space + the caching; the caller injects only the reducer."""
+    """The library owns the space + the embedding cache; the caller injects only the reducer."""
 
     def setUp(self):
         self.model = _ProjectableModel()
@@ -735,20 +735,42 @@ class TestComputeProjection(unittest.TestCase):
         self.explanation = _projection_explanation(pd.Series(["alpha", "beta banana", "gamma"]))
 
     def test_returns_two_columns_aligned_with_the_texts(self):
-        xy = self.xpl.compute_projection(self.explanation)
-        self.assertEqual(xy.shape, (3, 2))
+        projection = self.xpl.compute_projection(self.explanation)
+        self.assertEqual(projection.vectors.shape, (3, 2))
+        self.assertEqual(projection.n_samples, self.explanation.n_samples)
 
     def test_defaults_to_pca_without_any_extra_dependency(self):
         """The default reducer must be something a core install already has — sklearn's PCA."""
-        xy = self.xpl.compute_projection(self.explanation)
-        self.assertEqual(xy.shape, (3, 2))
+        projection = self.xpl.compute_projection(self.explanation)
+        self.assertEqual(projection.n_components, 2)
         self.assertEqual(self.model.calls, 1)
 
     def test_injected_reducer_is_used(self):
         reducer = _CountingReducer(scale=2.0)
-        xy = self.xpl.compute_projection(self.explanation, reducer=reducer)
+        projection = self.xpl.compute_projection(self.explanation, reducer=reducer)
         self.assertEqual(reducer.fits, 1)
-        np.testing.assert_allclose(xy[0], [10.0, 4.0])  # "alpha": len 5, 2 a's, doubled
+        np.testing.assert_allclose(projection.vectors[0], [10.0, 4.0])  # "alpha": len 5, 2 a's, doubled
+
+    def test_projection_carries_the_provenance_needed_to_pair_it_back(self):
+        # The point of returning an Embedding rather than a bare array: the coordinates say which
+        # corpus, model and space they belong to, so a mismatch can be caught instead of drawn.
+        projection = self.xpl.compute_projection(self.explanation)
+        self.assertEqual(projection.corpus_id, self.explanation.corpus_id)
+        self.assertEqual(projection.model_id, self.model.model_id)
+        self.assertEqual(projection.space, self.model.resolve_space())
+        self.assertEqual(projection.reducer_tag, "pca")
+
+    def test_embeddings_are_raw_and_reusable_for_several_projections(self):
+        # The flow the split exists for: embed once (needs the model), reduce many times (does not).
+        embedding = self.xpl.compute_embeddings(self.explanation)
+        self.assertEqual(self.model.calls, 1)
+        self.assertIsNone(embedding.reducer_tag)
+        self.assertEqual(embedding.corpus_id, self.explanation.corpus_id)
+
+        first = embedding.project(_CountingReducer(scale=1.0))
+        second = embedding.project(_CountingReducer(scale=3.0))
+        self.assertEqual(self.model.calls, 1, "reducing must not re-embed")
+        np.testing.assert_allclose(second.vectors, first.vectors * 3.0)
 
     def test_raises_for_a_model_that_cannot_embed(self):
         """A prediction-only model gets a clear error pointing at the escape hatch, not an AttributeError."""
@@ -757,7 +779,8 @@ class TestComputeProjection(unittest.TestCase):
         with self.assertRaises(TypeError):
             xpl.compute_projection(explanation)
 
-    def test_cached_across_instances(self):
+    def test_embeddings_cached_across_instances_while_the_reducer_reruns(self):
+        # Only the expensive half is cached; a layout worth keeping is saved explicitly.
         with tempfile.TemporaryDirectory() as d:
             reducer = _CountingReducer()
             self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
@@ -765,18 +788,11 @@ class TestComputeProjection(unittest.TestCase):
             fresh_model = _ProjectableModel()
             fresh = NlpExplainer(fresh_model, backend=object())
             fresh.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
-            self.assertEqual(fresh_model.calls, 0)  # neither embedded
-            self.assertEqual(reducer.fits, 1)  # nor re-fitted
-
-    def test_reducer_settings_take_part_in_the_key(self):
-        """Re-tuning a reducer must not silently reload the previous scatter."""
-        with tempfile.TemporaryDirectory() as d:
-            a = self.xpl.compute_projection(self.explanation, reducer=_CountingReducer(scale=1.0), cache_dir=d)
-            b = self.xpl.compute_projection(self.explanation, reducer=_CountingReducer(scale=3.0), cache_dir=d)
-            np.testing.assert_allclose(b, a * 3.0)
+            self.assertEqual(fresh_model.calls, 0)
+            self.assertEqual(reducer.fits, 2)
 
     def test_model_space_takes_part_in_the_key(self):
-        """Moving the model's space must re-project, not reload the other space's coordinates."""
+        """Moving the model's space must re-embed, not reload the other space's vectors."""
         with tempfile.TemporaryDirectory() as d:
             self.xpl.compute_projection(self.explanation, reducer=_CountingReducer(), cache_dir=d)
             self.model.space = "pooled"
@@ -797,22 +813,6 @@ class TestComputeProjection(unittest.TestCase):
         reducer = _CountingReducer()
         self.xpl.compute_projection(self.explanation, reducer=reducer, init="pca", verbose=False)
         self.assertEqual(reducer.last_kwargs, {"init": "pca", "verbose": False})
-
-    def test_fit_transform_kwargs_take_part_in_the_key(self):
-        """Changing a call-time argument (e.g. PaCMAP's ``init=``) must not silently reload."""
-        with tempfile.TemporaryDirectory() as d:
-            reducer = _CountingReducer()
-            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="a")
-            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="b")
-            self.assertEqual(reducer.fits, 2)
-
-    def test_same_fit_transform_kwargs_reuse_the_cache(self):
-        with tempfile.TemporaryDirectory() as d:
-            reducer = _CountingReducer()
-            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="a")
-            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, init="a")
-            self.assertEqual(reducer.fits, 1)
-
 
 # ---------------------------------------------------------------------------
 # NlpExplainer.fit — reference state, and when its cost is paid
@@ -1069,16 +1069,25 @@ class TestNlpWebApp(unittest.TestCase):
         self.assertNotIn("scatter-plot", ids)
         self.assertNotIn("color-by", ids)
 
-    def test_scatter_present_when_xy_given(self):
-        xy = np.zeros((3, 2))
-        webapp = NlpWebApp(self.explanation, engine=self.xpl, scatter_xy=xy)
+    def test_scatter_present_when_a_projection_is_given(self):
+        webapp = NlpWebApp(self.explanation, engine=self.xpl, projection=np.zeros((3, 2)))
         ids = self._collect_ids(webapp.app.layout)
         self.assertIn("scatter-plot", ids)
         self.assertIn("color-by", ids)
 
+    def test_scatter_mounts_from_a_matching_embedding(self):
+        projection = Embedding(np.zeros((3, 2)), "m", "s", corpus_id=self.explanation.corpus_id, reducer_tag="pca")
+        ids = self._collect_ids(NlpWebApp(self.explanation, engine=self.xpl, projection=projection).app.layout)
+        self.assertIn("scatter-plot", ids)
+
+    def test_an_embedding_of_other_texts_is_refused_at_construction(self):
+        projection = Embedding(np.zeros((3, 2)), "m", "s", corpus_id="other-texts", reducer_tag="pca")
+        with self.assertRaises(ValueError):
+            NlpWebApp(self.explanation, engine=self.xpl, projection=projection)
+
     def test_scatter_wrong_shape_raises(self):
         with self.assertRaises(ValueError):
-            NlpWebApp(self.explanation, engine=self.xpl, scatter_xy=np.zeros((5, 2)))  # 5 rows but only 3 samples
+            NlpWebApp(self.explanation, engine=self.xpl, projection=np.zeros((5, 2)))  # 5 rows but only 3 samples
 
     # ── Error Analysis tab (confusion matrix) ─────────────────────────
 
@@ -2289,6 +2298,23 @@ class TestExplainCacheKey(unittest.TestCase):
         self.assertNotEqual(xpl._compute_key(["a", "b"]), xpl._compute_key(["b", "a"]))
 
 
+def _read_meta(path) -> dict:
+    with zipfile.ZipFile(path) as zf:
+        return json.loads(zf.read("meta.json"))
+
+
+def _drop_meta_key(path, key) -> None:
+    """Rewrite a saved ``.xpl`` in place without one ``meta.json`` key — how an older layout is faked."""
+    with zipfile.ZipFile(path) as zin:
+        members = {item.filename: zin.read(item.filename) for item in zin.infolist()}
+    meta = json.loads(members["meta.json"])
+    del meta[key]
+    members["meta.json"] = json.dumps(meta).encode()
+    with zipfile.ZipFile(path, "w") as zout:
+        for name, data in members.items():
+            zout.writestr(name, data)
+
+
 class TestExplainDiskCacheIsolation(unittest.TestCase):
     """The disk cache is the dangerous case: a stale entry survives the process that wrote it."""
 
@@ -2333,6 +2359,43 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             self.assertFalse(path.exists())
             xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
             self.assertTrue(path.exists(), "cache_path disagrees with where explain() wrote")
+
+    def test_stale_layout_is_a_miss_not_a_crash(self):
+        # The cache key covers texts/model/backend but not the shapash version, so a layout change
+        # leaves entries the new reader cannot parse. The entry must be recomputed and overwritten.
+        with tempfile.TemporaryDirectory() as cache_dir:
+            _explainer(backend=_MarkerBackend(marker=4.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            path = _explainer().cache_path(_SAMPLE_TEXTS, cache_dir)
+            _drop_meta_key(path, "values_ndim")
+
+            backend = _MarkerBackend(marker=4.0)
+            explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+
+            self.assertEqual(backend.calls, 1, "a rejected cache entry must fall through to a recompute")
+            np.testing.assert_allclose(explanation.values[0], 4.0)
+            self.assertIn("values_ndim", _read_meta(path), "stale entry was not replaced")
+
+    def test_corrupt_cache_entry_is_a_miss_not_a_crash(self):
+        with tempfile.TemporaryDirectory() as cache_dir:
+            _explainer(backend=_MarkerBackend(marker=5.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            path = _explainer().cache_path(_SAMPLE_TEXTS, cache_dir)
+            path.write_bytes(b"not a zip file")
+
+            backend = _MarkerBackend(marker=5.0)
+            explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+
+            self.assertEqual(backend.calls, 1)
+            np.testing.assert_allclose(explanation.values[0], 5.0)
+
+    def test_explicit_load_still_raises_on_a_stale_file(self):
+        # The miss-not-crash rule is scoped to the cache. A caller who names a file gets an error
+        # rather than a silent substitution.
+        with tempfile.TemporaryDirectory() as cache_dir:
+            _explainer().explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            path = _explainer().cache_path(_SAMPLE_TEXTS, cache_dir)
+            _drop_meta_key(path, "values_ndim")
+            with self.assertRaises(KeyError):
+                NlpExplanation.load(path)
 
     def test_clear_cache_forces_a_recompute(self):
         with tempfile.TemporaryDirectory() as cache_dir:
@@ -2529,14 +2592,18 @@ class TestRunAppMountPath(unittest.TestCase):
         explanation = object()
         with patch("shapash.explainer.nlp_explainer.NlpWebApp") as web_app:
             xpl.run_app(explanation, url_base_pathname="/shapash-nlp-explainer/")
-        web_app.assert_called_once_with(
-            explanation,
-            engine=xpl,
-            scatter_xy=None,
-            url_base_pathname="/shapash-nlp-explainer/",
-            palette_name="default",
-            colors_dict=None,
-            info={},
+
+        self.assertIs(web_app.call_args.args[0], explanation)
+        self.assertEqual(
+            web_app.call_args.kwargs,
+            {
+                "engine": xpl,
+                "projection": None,
+                "url_base_pathname": "/shapash-nlp-explainer/",
+                "palette_name": "default",
+                "colors_dict": None,
+                "info": {},
+            },
         )
 
     def test_defaults_to_no_prefix(self):

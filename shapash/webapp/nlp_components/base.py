@@ -1,9 +1,9 @@
 """``WebappComponent`` contract + capability resolution for what-if panels.
 
 A component declares the capabilities it needs via ``requires``; :func:`available_capabilities`
-computes what the bound explanation + engine actually provide, and :meth:`WebappComponent.is_available`
-gates mounting on ``requires <= available``. This is the mechanism that makes the What-if Lab
-appear only when the explainer holds a live (and, for counterfactuals, gradient-capable) model.
+computes what the app's :class:`AppContext` actually provides, and :meth:`WebappComponent.is_available`
+gates mounting on ``requires <= available``. This is the mechanism that makes the What-if Lab appear
+only when the explainer holds a live (and, for counterfactuals, gradient-capable) model.
 
 Components read the immutable :class:`~shapash.explainer.nlp_explanation.NlpExplanation` directly and
 never write to it: every display choice lives in a Dash ``dcc.Store`` or a callback argument, so the
@@ -13,6 +13,7 @@ artifact a component renders is the same one that was saved.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -28,18 +29,37 @@ CAP_GRADIENTS = "model:gradients"
 CAP_SIMILAR = "engine:similar"
 CAP_LABELS = "data:labels"
 CAP_GROUND_TRUTH = "data:ground_truth"
+CAP_PROJECTION = "data:projection"
 
 
-def available_capabilities(explanation: NlpExplanation, engine: InteractiveEngine | None) -> frozenset[str]:
-    """Return the capability tokens the given explanation + engine satisfy.
+@dataclass(frozen=True)
+class AppContext:
+    """What every panel reads: the explanation, the live engine, and the scatter coordinates.
+
+    Built and validated once by :class:`~shapash.webapp.nlp_app.NlpWebApp`; not a user-facing type.
 
     Parameters
     ----------
     explanation : NlpExplanation
-        The immutable artifact, supplying the *data* capabilities — what the compiled batch
-        contains, independent of whether a live model is still attached.
+        The immutable artifact every panel reads.
     engine : InteractiveEngine or None
-        Live engine, or ``None`` for a snapshot (no live capabilities).
+        Live engine for what-if actions, or ``None`` for a snapshot.
+    coords : np.ndarray or None
+        ``(n_samples, 2)`` scatter coordinates, already checked against *explanation*.
+    """
+
+    explanation: NlpExplanation
+    engine: InteractiveEngine | None = None
+    coords: np.ndarray | None = None
+
+
+def available_capabilities(ctx: AppContext) -> frozenset[str]:
+    """Return the capability tokens *ctx* satisfies.
+
+    Parameters
+    ----------
+    ctx : AppContext
+        The explanation, engine and coordinates this app was built from.
 
     Returns
     -------
@@ -47,9 +67,12 @@ def available_capabilities(explanation: NlpExplanation, engine: InteractiveEngin
         Satisfied capability tokens (e.g. ``{"engine:predict", "engine:counterfactual",
         "model:gradients"}``).
     """
+    explanation, engine = ctx.explanation, ctx.engine
     caps: set[str] = set()
-    # Data capabilities are read from the compiled batch, so they survive a snapshot — they sit
-    # outside the engine guard below on purpose.
+    # Data capabilities are read from the compiled batch and the coordinates beside it, so they
+    # survive a snapshot — they sit outside the engine guard below on purpose.
+    if ctx.coords is not None:
+        caps.add(CAP_PROJECTION)
     if explanation.y_true is not None:
         caps.add(CAP_GROUND_TRUTH)
         if has_usable_probabilities(explanation.y_prob):
@@ -133,34 +156,30 @@ class WebappComponent(ABC):
     requires: frozenset[str] = frozenset()
 
     @classmethod
-    def is_available(cls, explanation: NlpExplanation, engine: InteractiveEngine | None) -> bool:
-        """Whether the component's ``requires`` are satisfied by the explanation + engine."""
-        return cls.requires <= available_capabilities(explanation, engine)
+    def is_available(cls, ctx: AppContext) -> bool:
+        """Whether the component's ``requires`` are satisfied by *ctx*."""
+        return cls.requires <= available_capabilities(ctx)
 
     @abstractmethod
-    def layout(self, explanation: NlpExplanation, engine: InteractiveEngine | None = None):
+    def layout(self, ctx: AppContext):
         """Return the Dash layout for this component.
 
-        ``engine`` is provided for components whose initial UI depends on live capabilities — e.g. the
-        counterfactual panel renders its config controls from the generator's spec, so they must exist
-        in the initial layout rather than be injected by a later callback.
+        The whole context is passed because a component's initial UI may depend on more than the
+        explanation — the counterfactual panel renders its config controls from the live generator's
+        spec, and the scatter panel needs the coordinates.
         """
 
     @abstractmethod
-    def register_callbacks(
-        self, app, explanation: NlpExplanation, engine: InteractiveEngine | None, stores: dict
-    ) -> None:
+    def register_callbacks(self, app, ctx: AppContext, stores: dict) -> None:
         """Register this component's Dash callbacks.
 
         Parameters
         ----------
         app : dash.Dash
             The Dash application.
-        explanation : NlpExplanation
-            The immutable artifact to read (never written to).
-        engine : InteractiveEngine or None
-            Live engine for prediction / counterfactual generation, or ``None`` for a snapshot with
-            no live model — only reached for a component whose ``requires`` needs no engine capability.
+        ctx : AppContext
+            The explanation, engine and coordinates to read (never written to). Display state lives
+            in the ``dcc.Store``s.
         stores : dict
             Shared ``dcc.Store`` ids the What-if Lab wires between components
             (e.g. ``{"apply": "whatif-apply-store"}``).

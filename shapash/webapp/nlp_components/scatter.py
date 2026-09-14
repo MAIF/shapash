@@ -1,8 +1,7 @@
 """Scatter (Embeddings) panel: 2-D projection of the text embeddings, box/lasso-selectable.
 
-Mounting is decided by the caller-supplied ``scatter_xy`` array, not by ``requires`` — a pre-computed
-projection is arbitrary data handed to ``NlpWebApp``, not an explanation/engine capability, so
-``NlpWebApp`` only ever constructs this component when it has one (see ``ScatterComponent.__init__``).
+Mounted like every other panel: ``requires = {CAP_PROJECTION}``, satisfied when the app was given a
+projection (``AppContext.coords``).
 
 The "Word contribution" color mode is a **structural, not capability, dependency** on
 :class:`~shapash.webapp.nlp_components.word_importance.WordImportanceComponent`: coloring by a word's
@@ -22,14 +21,13 @@ the two panels happens to be mounted or the order callbacks fire in.
 from __future__ import annotations
 
 import dash_bootstrap_components as dbc
-import numpy as np
 import plotly.graph_objs as go
 from dash import Input, Output, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.explainer.nlp_explanation import word_contributions_by_sample
 from shapash.plots.plot_scatter import plot_scatter
-from shapash.webapp.nlp_components.base import WebappComponent, error_mask
+from shapash.webapp.nlp_components.base import CAP_PROJECTION, WebappComponent, error_mask
 
 
 class ScatterComponent(WebappComponent):
@@ -38,14 +36,14 @@ class ScatterComponent(WebappComponent):
     id = "scatter"
     name = "Embeddings"
     scope = "global"
-    requires = frozenset()
+    requires = frozenset({CAP_PROJECTION})
 
-    def __init__(self, scatter_xy: np.ndarray, offer_word_contribution: bool) -> None:
-        self._scatter_xy = scatter_xy
+    def __init__(self, offer_word_contribution: bool) -> None:
         self._offer_word_contribution = offer_word_contribution
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Build the color-by/word-select controls and the scatter graph itself."""
+        explanation = ctx.explanation
         word_options: list[dcc.Dropdown.Options] = [{"label": w, "value": w} for w in explanation.vocabulary()]
         color_options: list[dcc.Dropdown.Options] = [{"label": "Prediction", "value": "prediction"}]
         if explanation.y_true is not None:
@@ -94,7 +92,7 @@ class ScatterComponent(WebappComponent):
                 ),
                 dcc.Graph(
                     id="scatter-plot",
-                    figure=self._build_scatter_fig(explanation, "prediction"),
+                    figure=self._build_scatter_fig(ctx, "prediction"),
                     config={
                         "displayModeBar": True,
                         "modeBarButtonsToRemove": ["autoScale2d", "resetScale2d"],
@@ -109,7 +107,7 @@ class ScatterComponent(WebappComponent):
             style={"display": "flex", "flexDirection": "column", "height": "100%"},
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire coloring, selection, and the bidirectional word-list sync with the shared store."""
         selection_store = stores["selection"]
         selection_clear_btn = stores["selection_clear"]
@@ -128,7 +126,7 @@ class ScatterComponent(WebappComponent):
         )
         def update_scatter_color(color_by, words, label_idx, errors_only):
             return self._build_scatter_fig(
-                explanation,
+                ctx,
                 color_by or "prediction",
                 words=words or [],
                 label_idx=label_idx if isinstance(label_idx, int) else 0,
@@ -207,26 +205,30 @@ class ScatterComponent(WebappComponent):
 
     def _build_scatter_fig(
         self,
-        explanation,
+        ctx,
         color_by: str,
         words: list[str] | None = None,
         label_idx: int = 0,
         errors_only: bool = False,
     ) -> go.Figure:
-        """Slice ``explanation`` for the requested coloring and hand it to :func:`plot_scatter`.
+        """Slice *ctx* for the requested coloring and hand it to :func:`plot_scatter`.
+
+        Coordinates come from ``ctx.coords``; every visual encoding comes from ``ctx.explanation``.
 
         ``color_by``/``words``/``label_idx`` decide *which* arrays to slice (a webapp-control
         concern); the actual figure construction is the same pure function notebook/script callers
         get via ``explanation.plot.scatter`` — see
         :meth:`~shapash.explainer.nlp_plotter.NlpPlotter.scatter`.
         """
+        explanation = ctx.explanation
+        coords = ctx.coords
         err_mask = error_mask(explanation) if errors_only else None
 
         if color_by == "word_contribution" and words:
             contributions = word_contributions_by_sample(explanation, words, label_idx)
             colorbar_title = " + ".join(f'"{w}"' for w in words) if len(words) <= 3 else f"{len(words)} words"
             return plot_scatter(
-                self._scatter_xy,
+                coords,
                 explanation.texts,
                 contributions=contributions,
                 colorbar_title=colorbar_title,
@@ -242,7 +244,7 @@ class ScatterComponent(WebappComponent):
 
         label_names = explanation.label_names or sorted(set(labels))
         return plot_scatter(
-            self._scatter_xy,
+            coords,
             explanation.texts,
             labels=labels,
             label_names=label_names,

@@ -78,7 +78,7 @@ class CounterfactualComponent(WebappComponent):
             )
         return items
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Return the counterfactual card with a method selector and per-generator config controls.
 
         The selector and *every* generator's controls are built here (not injected by a callback) so
@@ -86,6 +86,7 @@ class CounterfactualComponent(WebappComponent):
         reference not-yet-created objects. Only the active generator's control group is visible; the
         selector callback toggles the rest. The selector is hidden when a single generator is bound.
         """
+        engine = ctx.engine
         generators = self._generators(engine)
         default_gen = generators[0][0] if generators else None
 
@@ -133,8 +134,9 @@ class CounterfactualComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire the method selector, Generate, and per-row Apply (→ shared editor store)."""
+        engine = ctx.engine
         apply_store = stores["apply"]
         current_store = stores["current"]
 

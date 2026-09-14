@@ -319,7 +319,7 @@ class SupportsEmbeddings(ABC):
     through it, so that changing the model's space moves them together.
 
     That agreement is a **convention, not a guarantee**: a caller who computes its own coordinates and
-    hands them to the webapp (``run_app(scatter_xy=...)``) bypasses this entirely, and nothing detects
+    hands them to the webapp (``run_app(projection=...)``) bypasses this entirely, and nothing detects
     it. Use :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.compute_projection`, which derives the
     scatter from this method, unless you specifically want a space of your own choosing.
     """

@@ -19,6 +19,7 @@ import pandas as pd
 from dash import MATCH, Input, Output, dcc, html
 from dash.exceptions import PreventUpdate
 
+from shapash.compute.embeddings import Embedding, projection_coords
 from shapash.explainer.interactive import InteractiveEngine
 from shapash.explainer.nlp_explanation import NlpExplanation
 from shapash.style.style_utils import NlpTheme, resolve_nlp_theme
@@ -38,6 +39,7 @@ from shapash.webapp.nlp_components import (
     error_positions,
     pack_datapoint,
 )
+from shapash.webapp.nlp_components.base import AppContext
 from shapash.webapp.utils.launch import RunningApp, run_in_background
 
 _APPLY_STORE = "whatif-apply-store"
@@ -138,21 +140,22 @@ class NlpWebApp:
     Parameters
     ----------
     explanation : NlpExplanation
-        The result of ``NlpExplainer.explain()`` (or a loaded one — see
-        ``NlpExplanation.load()``) to serve.
+        The result of ``NlpExplainer.explain()`` (or a loaded one — see ``NlpExplanation.load()``)
+        to serve.
     engine : InteractiveEngine, optional
         Live engine for what-if actions (re-predicting edited text, generating
         counterfactuals, similar-example retrieval, label-noise probing) — normally the
-        ``NlpExplainer`` that produced ``explanation``. ``None`` for a snapshot loaded via
+        ``NlpExplainer`` that produced the explanation. ``None`` for a snapshot loaded via
         ``NlpExplanation.load()``, which carries no model: components self-disable via
         their ``requires`` when the engine is absent or lacks a capability.
-    scatter_xy : np.ndarray, optional
-        Pre-computed 2-D projection, shape ``(n_samples, 2)``. When provided, a scatter panel is
-        added to the layout. ``NlpWebApp`` itself never computes this — it has no model to embed
-        with (see ``engine`` above) — so pass it in from whatever produced it: PaCMAP, UMAP,
-        t-SNE, PCA, etc. Prefer :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.compute_projection`
-        (defaults to PCA — no extra install, sklearn is already a core dependency) over rolling
-        your own, so the scatter and the similar-example neighbours share one embedding space.
+    projection : Embedding or np.ndarray, optional
+        Pre-computed 2-D projection. When provided, a scatter panel is added to the layout.
+        ``NlpWebApp`` itself never computes this — it has no model to embed with (see *engine*
+        above) — so pass it in from whatever produced it: PaCMAP, UMAP, t-SNE, PCA, etc. Prefer
+        :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.compute_projection` (defaults to PCA —
+        no extra install, sklearn is already a core dependency) over rolling your own, so the
+        scatter and the similar-example neighbours share one embedding space. An ``Embedding`` of
+        different texts is refused; a bare ``(n_samples, 2)`` array is accepted on its shape alone.
     url_base_pathname : str, optional
         Mount the app under a URL prefix instead of the server root, for serving behind a reverse
         proxy that routes a subpath (e.g. ``"/shapash-nlp-explainer/"``) to this process. Dash
@@ -188,25 +191,21 @@ class NlpWebApp:
         self,
         explanation: NlpExplanation,
         engine: InteractiveEngine | None = None,
-        scatter_xy: np.ndarray | None = None,
+        projection: Embedding | np.ndarray | None = None,
         url_base_pathname: str | None = None,
         palette_name: str = "default",
         colors_dict: dict[str, str] | None = None,
         info: dict[str, str] | None = None,
     ) -> None:
-        if scatter_xy is not None:
-            scatter_xy = np.asarray(scatter_xy)
-            n = len(explanation.texts)
-            if scatter_xy.shape != (n, 2):
-                raise ValueError(f"scatter_xy must have shape ({n}, 2), got {scatter_xy.shape}")
-        self._scatter_xy: np.ndarray | None = scatter_xy
-
-        # What-if Lab: the immutable artifact + a separate, possibly-absent live engine. The
-        # artifact is only ever read here — display state lives in the `dcc.Store`s declared in
-        # `_build_layout`, never on the explanation.
-        # Components self-disable via their `requires` when the engine is None or lacks a capability
-        # (e.g. a loaded snapshot has no model at all). `self._components` itself is assembled later
-        # in `_build_layout` (it needs `_full_table_records`, not ready yet here).
+        # Every input is checked here, once, so a mismatched deployment fails at construction rather
+        # than as a wrong picture. Components then read the validated context and self-disable via
+        # their `requires` (e.g. a loaded snapshot has no engine). Display state lives in the
+        # `dcc.Store`s declared in `_build_layout`, never on the explanation.
+        self._ctx = AppContext(
+            explanation=explanation,
+            engine=engine,
+            coords=projection_coords(projection, explanation) if projection is not None else None,
+        )
         self._explanation = explanation
         self._engine = engine
 
@@ -444,7 +443,7 @@ class NlpWebApp:
             # Input pair, so a grid-level filter is described here too, not just inside the grid.
             html.Span("all samples", id="selection-summary", className="small fw-bold me-3"),
         ]
-        if self._scatter_xy is not None:
+        if self._ctx.coords is not None:
             selection_children.append(_clear_button("scatter-clear-btn", "× clear selection"))
         if self._has_gt:
             selection_children.append(_clear_button("error-cell-clear-btn", "× clear cell"))
@@ -501,14 +500,13 @@ class NlpWebApp:
                 WordProfileComponent(theme=self._theme),
                 WordImportanceComponent(theme=self._theme),
             )
-            if type(comp).is_available(self._explanation, self._engine)
+            if type(comp).is_available(self._ctx)
         ]
-        # Mounting is decided by the caller-supplied array, not by `is_available` — a pre-computed
-        # projection is arbitrary data handed to NlpWebApp, not an explanation/engine capability.
-        # Word Importance is always mounted at this point (it has no `requires`), so the scatter's
-        # word-contribution color mode can always be offered.
-        if self._scatter_xy is not None:
-            components.append(ScatterComponent(self._scatter_xy, offer_word_contribution=True))
+        # The scatter is mounted by `requires` like everything else (CAP_PROJECTION). It is appended
+        # rather than listed above only because its `offer_word_contribution` argument depends on Word Importance being mounted —
+        # which it always is at this point, since that panel has no `requires`.
+        if ScatterComponent.is_available(self._ctx):
+            components.append(ScatterComponent(offer_word_contribution=True))
         self._components = components
         return components
 
@@ -527,42 +525,32 @@ class NlpWebApp:
 
         left_tabs: list = [("table", "Dataset", text_samples_body)]
         if scatter_comp is not None:
-            left_tabs.append(("scatter", "Embeddings", scatter_comp.layout(self._explanation, self._engine)))
+            left_tabs.append(("scatter", "Embeddings", scatter_comp.layout(self._ctx)))
         if editor_comp is not None:
-            left_tabs.append(("editor", "Data Editor", editor_comp.layout(self._explanation, self._engine)))
+            left_tabs.append(("editor", "Data Editor", editor_comp.layout(self._ctx)))
 
         # Error Analysis sits beside Word Importance: it *is* an aggregated word-importance view
         # (per confusion-matrix cell), so it belongs with the other global "why" panels on the right.
-        upper_right_tabs: list = [
-            ("importance", "Word Importance", word_importance_comp.layout(self._explanation, self._engine))
-        ]
+        upper_right_tabs: list = [("importance", "Word Importance", word_importance_comp.layout(self._ctx))]
         # Immediately after Word Importance, because it is the same question asked the other way
         # round (one word across all classes, instead of one class across the top words) and the two
         # are read together — a bar clicked there arrives preselected here.
         if word_profile_comp is not None:
-            upper_right_tabs.append(
-                ("word-profile", "Word Profile", word_profile_comp.layout(self._explanation, self._engine))
-            )
+            upper_right_tabs.append(("word-profile", "Word Profile", word_profile_comp.layout(self._ctx)))
         if error_analysis_comp is not None:
-            upper_right_tabs.append(
-                ("errors", "Error Analysis", error_analysis_comp.layout(self._explanation, self._engine))
-            )
+            upper_right_tabs.append(("errors", "Error Analysis", error_analysis_comp.layout(self._ctx)))
         # Next to Error Analysis by design: same ground-truth prerequisite, and it answers the
         # question that panel leaves open — whether the *label*, not the model, is what is wrong.
         if noise_comp is not None:
-            upper_right_tabs.append(("label-noise", "Label Noise", noise_comp.layout(self._explanation, self._engine)))
+            upper_right_tabs.append(("label-noise", "Label Noise", noise_comp.layout(self._ctx)))
         if cf_comp is not None:
-            upper_right_tabs.append(
-                ("counterfactual", "Counterfactuals", cf_comp.layout(self._explanation, self._engine))
-            )
+            upper_right_tabs.append(("counterfactual", "Counterfactuals", cf_comp.layout(self._ctx)))
         if similar_comp is not None:
-            upper_right_tabs.append(
-                ("similar", "Similar Examples", similar_comp.layout(self._explanation, self._engine))
-            )
+            upper_right_tabs.append(("similar", "Similar Examples", similar_comp.layout(self._ctx)))
 
         lower_right_tabs: list = [
-            ("highlight", "Sentence", highlight_comp.layout(self._explanation, self._engine)),
-            ("waterfall", "Waterfall", waterfall_comp.layout(self._explanation, self._engine)),
+            ("highlight", "Sentence", highlight_comp.layout(self._ctx)),
+            ("waterfall", "Waterfall", waterfall_comp.layout(self._ctx)),
         ]
         return left_tabs, upper_right_tabs, lower_right_tabs
 
@@ -916,7 +904,7 @@ class NlpWebApp:
             "active_class": "active-class-store",
         }
         for comp in self._components:
-            comp.register_callbacks(self.app, self._explanation, self._engine, stores)
+            comp.register_callbacks(self.app, self._ctx, stores)
 
     # ------------------------------------------------------------------
     # Public

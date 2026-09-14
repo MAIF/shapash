@@ -71,8 +71,9 @@ class LabelNoiseComponent(WebappComponent):
     # Data-only: no engine capability, so this also mounts on a snapshot explainer.
     requires = frozenset({CAP_LABELS})
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Return the panel: detection controls over an initially empty results area."""
+        engine = ctx.engine
         can_probe = engine is not None and engine.can_probe_labels()
         caption = (
             "Confident learning over the model's probabilities and the ground-truth labels. "
@@ -132,8 +133,9 @@ class LabelNoiseComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Run detection on demand; wire each row's Inspect into the shared current datapoint."""
+        explanation, engine = ctx.explanation, ctx.engine
         current_store = stores["current"]
 
         @app.callback(

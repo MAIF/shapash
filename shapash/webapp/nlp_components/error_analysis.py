@@ -67,8 +67,9 @@ class ErrorAnalysisComponent(WebappComponent):
         self._cm_true_idx: np.ndarray | None = None
         self._cm_pred_idx: np.ndarray | None = None
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Build the matrix + per-cell word-importance panel, caching the matrix for callbacks."""
+        explanation = ctx.explanation
         label_names = explanation.label_names or [str(i) for i in range(explanation.n_classes)]
         idx_of = explanation.label_to_idx
         y_true, y_pred = explanation.y_true, explanation.y_pred
@@ -146,8 +147,9 @@ class ErrorAnalysisComponent(WebappComponent):
             style={"height": "100%", "display": "flex", "flexDirection": "column", "overflowY": "auto"},
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire the normalize toggle, cell click/clear, and the two per-cell word charts."""
+        explanation = ctx.explanation
         error_cell_store = stores["error_cell"]
         clear_btn_id = stores["error_cell_clear"]
 

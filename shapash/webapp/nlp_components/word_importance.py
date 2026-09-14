@@ -67,10 +67,11 @@ class WordImportanceComponent(WebappComponent):
     def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._theme = theme
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Build the controls + graph. DOM ids are the pre-extraction literals (no ``self.id`` prefix)
         so existing layout tests keep matching — these ids were never shared with any other panel.
         """
+        explanation = ctx.explanation
         label_names = explanation.label_names or [str(i) for i in range(explanation.n_classes)]
         word_options: list[dcc.Dropdown.Options] = [{"label": w, "value": w} for w in explanation.vocabulary()]
 
@@ -240,8 +241,9 @@ class WordImportanceComponent(WebappComponent):
             style={"height": "100%", "display": "flex", "flexDirection": "column"},
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire the ranking, the sign-filter gate, and the bar-click → shared word/class stores."""
+        explanation = ctx.explanation
         selection_store = stores["selection"]
         error_cell_store = stores["error_cell"]
         errors_only_switch = stores["errors_only"]

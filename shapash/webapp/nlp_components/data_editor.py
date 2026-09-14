@@ -51,7 +51,7 @@ class DataEditorComponent(WebappComponent):
     scope = "local"
     requires = frozenset({CAP_PREDICT})
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Return the editor card: textarea, Predict button, class-probability bar.
 
         Token contributions for the edited text are shown by the shared lower-right panel (it reads the
@@ -82,8 +82,9 @@ class DataEditorComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire prefill (row/apply → textarea) and Predict (textarea → prediction + current datapoint)."""
+        engine = ctx.engine
         apply_store = stores["apply"]
         current_store = stores["current"]
 

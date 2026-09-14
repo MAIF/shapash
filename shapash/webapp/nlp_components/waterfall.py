@@ -26,7 +26,7 @@ class WaterfallComponent(WebappComponent):
     def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._theme = theme
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Return the grouping-threshold slider + waterfall graph."""
         return html.Div(
             [
@@ -53,8 +53,9 @@ class WaterfallComponent(WebappComponent):
             style={"height": "100%"},
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire the waterfall figure to the current datapoint, class picker, and threshold."""
+        explanation = ctx.explanation
         current_store = stores["current"]
 
         @app.callback(

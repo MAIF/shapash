@@ -203,7 +203,7 @@ class TestQueryThreshold(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             r1 = SimilarExampleRetriever(self.model, self.texts, self.labels, cache_dir=d)
             r1.build()
-            cache_file = r1.store.path("emb")
+            cache_file = r1.store.path
             self.assertTrue(cache_file.exists())
 
             # A fresh retriever over the same corpus/space/model loads the bank from disk.

@@ -6,43 +6,26 @@ text. Both are a pure function of *(model identity, effective space, corpus)*, s
 one cache with one key — otherwise each caller invents its own filename and they drift, which is how
 a bank built in the ``"decision"`` space ends up reloaded for a scatter drawn in ``"pooled"``.
 
-:class:`EmbeddingStore` is that one place. It owns the key and the on-disk layout; callers ask for
-:meth:`~EmbeddingStore.vectors` and, when they derive something further from them (a 2-D projection),
-park it next to the embeddings under the same key via :meth:`~EmbeddingStore.cached_array`.
+Entries are :class:`~shapash.compute.embeddings.Embedding` files, so a cache entry can be copied out
+and loaded with :meth:`Embedding.load`. Projections are not cached here: reducing is cheap next to
+embedding, and a layout worth keeping is saved explicitly with :meth:`Embedding.save`.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
 
+from shapash.compute.embeddings import Embedding
+from shapash.compute.hashing import hash_corpus
 from shapash.model.base import EmbeddingSource
 
+__all__ = ["EmbeddingStore"]
+
 logger = logging.getLogger(__name__)
-
-
-def hash_corpus(texts: Sequence[str], key: str) -> str:
-    """Stable digest over an identity ``key`` plus the corpus texts (order-sensitive).
-
-    Each string is framed with its own byte length before hashing, so no separator choice can
-    let two different inputs collide — a literal ``"\\0"`` inside a text can no longer make
-    ``["a\\0b"]`` and ``["a", "b"]`` hash identically. ``key`` carries whatever else changes the
-    cached artifact (model identity, representation space, explanation backend).
-
-    Shared by every disk cache in the NLP path — the embedding/projection artifacts here and the
-    contribution cache in :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.explain` — so all of
-    them key on the same, collision-safe rule.
-    """
-    h = hashlib.md5(usedforsecurity=False)
-    for s in (key, *texts):
-        data = s.encode()
-        h.update(len(data).to_bytes(8, "big"))
-        h.update(data)
-    return h.hexdigest()
 
 
 class EmbeddingStore:
@@ -55,7 +38,7 @@ class EmbeddingStore:
     texts : sequence of str
         The corpus to embed. Fixed for the lifetime of the store — the cache key is derived from it.
     cache_dir : str or Path or None, optional
-        Where cached ``.npy`` files live. When ``None`` the store still memoizes in memory but writes
+        Where cached ``.npz`` files live. When ``None`` the store still memoizes in memory but writes
         nothing, so a fresh process recomputes.
 
     Notes
@@ -81,10 +64,10 @@ class EmbeddingStore:
         self.model = model
         self.texts = list(texts)
         self.cache_dir = Path(cache_dir) if cache_dir is not None else None
-        # Keyed by (key, tag), not tag alone: ``key`` folds in the model's *current* space, which is
-        # assignable at runtime (EncoderClassifierModel.embedding_space). A tag-only memo would answer
-        # from the old space after such a switch and never consult the correctly-keyed file on disk.
-        self._arrays: dict[tuple[str, str], np.ndarray] = {}
+        # Keyed by the full key, not a single slot: the key folds in the model's *current* space,
+        # which is assignable at runtime (EncoderClassifierModel.embedding_space). A single slot would
+        # answer from the old space after such a switch.
+        self._memo: dict[str, Embedding] = {}
 
     @property
     def space_key(self) -> str:
@@ -96,66 +79,49 @@ class EmbeddingStore:
         """The cache key: model identity, effective space, and corpus digest."""
         return hash_corpus(self.texts, self.space_key)
 
-    def path(self, tag: str) -> Path | None:
-        """On-disk location of the ``tag`` artifact, or ``None`` when caching is off."""
+    @property
+    def path(self) -> Path | None:
+        """On-disk location of the cached embeddings, or ``None`` when caching is off."""
         if self.cache_dir is None:
             return None
-        return self.cache_dir / f"{self.key}.{tag}.npy"
+        return self.cache_dir / f"{self.key}.emb.npz"
 
     def vectors(self) -> np.ndarray:
         """Return ``(n_texts, hidden_dim)`` embeddings in the model's current space."""
-        return self.cached_array("emb", lambda: np.asarray(self.model.embed(self.texts)))
+        return self.embedding().vectors
 
-    def cached_array(self, tag: str, compute: Callable[[], np.ndarray]) -> np.ndarray:
-        """Return the ``tag`` array for this corpus, loading it or computing and storing it.
+    def embedding(self) -> Embedding:
+        """Return this corpus's embeddings, loading them from cache or computing and caching them."""
+        key = self.key
+        if key in self._memo:
+            return self._memo[key]
 
-        Parameters
-        ----------
-        tag : str
-            Names the artifact within this store's key (``"emb"`` for the embeddings themselves,
-            e.g. ``"pca-1f3c.proj"`` for a projection derived from them). Anything that changes the
-            array's contents but not the key must be reflected here.
-        compute : callable
-            Produces the array on a cache miss. Called at most once per process.
-
-        Returns
-        -------
-        np.ndarray
-            The cached array. Memoized in memory per ``(key, tag)``, so repeat calls are free while
-            the model's space is unchanged, and a space switch re-reads (or recomputes) rather than
-            returning the previous space's array.
-        """
-        memo = (self.key, tag)
-        if memo in self._arrays:
-            return self._arrays[memo]
-        cache_file = self.path(tag)
+        cache_file = self.path
         if cache_file is not None and cache_file.exists():
-            logger.info("Embedding store hit (%s) — loading %s", tag, cache_file)
-            self._arrays[memo] = np.load(cache_file)
-            return self._arrays[memo]
-
-        logger.info("Embedding store miss (%s) — computing over %d texts (%s)", tag, len(self.texts), self.space_key)
-        array = compute()
-        self._arrays[memo] = array
-        if cache_file is not None:
-            cache_file.parent.mkdir(parents=True, exist_ok=True)
-            np.save(cache_file, array)
-            logger.info("Embedding store cached (%s) to %s", tag, cache_file)
-        return array
+            logger.info("Embedding store hit — loading %s", cache_file)
+            embedding = Embedding.load(cache_file)
+        else:
+            logger.info("Embedding store miss — computing over %d texts (%s)", len(self.texts), self.space_key)
+            embedding = Embedding(
+                vectors=np.asarray(self.model.embed(self.texts)),
+                model_id=self.model.model_id,
+                space=str(self.model.resolve_space()),
+                corpus_id=hash_corpus(self.texts),
+            )
+            if cache_file is not None:
+                embedding.save(cache_file)
+                logger.info("Embedding store cached to %s", cache_file)
+        self._memo[key] = embedding
+        return embedding
 
     def clear(self) -> None:
-        """Drop this corpus's cached artifacts — every in-memory one, and on disk those under this key.
+        """Drop the cached embeddings — every in-memory entry, and the on-disk file for the current space.
 
-        Removes *all* tags under this key, not just the embeddings, so a caller forcing a recompute
-        cannot leave a projection behind that was derived from vectors no longer on disk. The disk
-        sweep is scoped to the key, and therefore to the model's **current** space: files written for
-        a space the model has since moved off are not touched. They are already unreachable by
-        lookup, and re-selecting that space finds them again — which is the useful behaviour, not an
-        oversight. In memory the sweep is unconditional (every space).
+        Files written for a space the model has since moved off are left alone: they are unreachable
+        by lookup, and re-selecting that space finds them again.
         """
-        self._arrays.clear()
-        if self.cache_dir is None:
-            return
-        for stale in self.cache_dir.glob(f"{self.key}.*.npy"):
-            stale.unlink(missing_ok=True)
-            logger.info("Embedding store dropped %s", stale)
+        self._memo.clear()
+        cache_file = self.path
+        if cache_file is not None and cache_file.exists():
+            cache_file.unlink()
+            logger.info("Embedding store dropped %s", cache_file)

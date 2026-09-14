@@ -16,15 +16,15 @@ itself keeps no compiled batch.
 
 from __future__ import annotations
 
-import hashlib
+import logging
 import threading
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_shap_backend import NlpShapBackend
@@ -34,16 +34,20 @@ from shapash.compute.diagnostics.label_noise import (
     has_usable_probabilities,
 )
 from shapash.compute.diagnostics.label_probe import LabelProbe
-from shapash.compute.embedding_store import EmbeddingStore, hash_corpus
+from shapash.compute.embedding_store import EmbeddingStore
+from shapash.compute.embeddings import Embedding
 from shapash.compute.generators.ablation_flip import AblationFlipGenerator
 from shapash.compute.generators.base import Counterfactual, CounterfactualGenerator, Field
 from shapash.compute.generators.hotflip import HotFlipGenerator
+from shapash.compute.hashing import hash_corpus
 from shapash.compute.retrieval.similar_examples import Neighbor, SimilarExampleRetriever
 from shapash.explainer.nlp_explanation import NlpExplanation
 from shapash.model.base import SupportsEmbeddings, SupportsTokenization, TextModel, has_capabilities
 from shapash.model.hf import HFPipelineModel
 from shapash.webapp.nlp_app import NlpWebApp
 from shapash.webapp.utils.launch import RunningApp
+
+logger = logging.getLogger(__name__)
 
 # Built-in counterfactual generators, in preference order: HotFlip (gradient-based, richer
 # substitutions) first, AblationFlip (forward-pass-only removal) as the broader fallback. Every entry
@@ -60,26 +64,24 @@ def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
 
 
-def _reducer_tag(reducer: object, fit_transform_kwargs: dict[str, Any] | None = None) -> str:
-    """Name a reducer for a cache tag: its class plus a digest of its settings.
+def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
+    """Read a cached explanation, or return ``None`` when the entry cannot be read.
 
-    Two runs of the same reducer class with different settings produce different coordinates, so the
-    class name alone would silently reload the wrong scatter. "Settings" covers both the reducer's own
-    constructor parameters — read via ``get_params()`` (sklearn's convention, which ``pacmap`` also
-    follows) — and any ``fit_transform_kwargs`` a caller passed at call time (e.g. PaCMAP's
-    ``init="pca"``), since those affect the output identically but live outside ``get_params()``. A
-    reducer with no ``get_params()`` and no ``fit_transform_kwargs`` is keyed by class name only —
-    documented on :meth:`NlpExplainer.compute_projection` as needing ``recompute``.
+    An unreadable entry is a **miss, not a failure**: the cache key covers texts/model/backend but
+    not the shapash version, so a layout change leaves entries the new reader cannot parse, and a
+    cache exists so the caller need not care whether the answer was on disk.
+    :meth:`NlpExplanation.load` called directly still raises.
+
+    Scoped to the errors a stale or damaged entry produces (a missing meta key or parquet member,
+    a truncated zip) rather than bare ``Exception``, so a genuine reader bug still surfaces.
     """
-    name = type(reducer).__name__.lower()
-    get_params = getattr(reducer, "get_params", None)
-    if get_params is None and not fit_transform_kwargs:
-        return name
-    params = dict(get_params()) if get_params is not None else {}
-    if fit_transform_kwargs:
-        params["__fit_transform_kwargs__"] = sorted(fit_transform_kwargs.items())
-    digest = hashlib.md5(repr(sorted(params.items())).encode(), usedforsecurity=False).hexdigest()
-    return f"{name}-{digest[:8]}"
+    if cache_path is None or not cache_path.exists():
+        return None
+    try:
+        return NlpExplanation.load(cache_path)
+    except (KeyError, ValueError, OSError, zipfile.BadZipFile) as exc:
+        logger.warning("Ignoring unreadable explanation cache entry %s (%s) — recomputing.", cache_path, exc)
+        return None
 
 
 class NlpExplainer:
@@ -356,10 +358,9 @@ class NlpExplainer:
             computed = cached[1]
         else:
             cache_path = _cache_file(new_hash, Path(cache_dir)) if cache_dir is not None else None
+            computed = _load_cached(cache_path)
 
-            if cache_path is not None and cache_path.exists():
-                computed, _ = NlpExplanation.load(cache_path)
-            else:
+            if computed is None:
                 contributions = self.backend.run_explainer(text_list)
                 pred_df = self._predict(text_list, texts.index)
                 y_pred, y_prob = pred_df["prediction"], pred_df.drop(columns=["prediction"])
@@ -442,72 +443,51 @@ class NlpExplainer:
         self.cache_path(x, cache_dir).unlink(missing_ok=True)
         self._computed_cache = None
 
-    def compute_projection(
+    def compute_embeddings(
         self,
         explanation: NlpExplanation,
-        reducer=None,
         cache_dir: str | Path | None = None,
         recompute: bool = False,
-        **fit_transform_kwargs: Any,
-    ):
-        """Return a 2-D projection of ``explanation``'s texts, ready to pass to :meth:`run_app`.
+    ) -> Embedding:
+        """Embed ``explanation``'s texts with the bound model, cached.
 
-        The library owns the parts that must stay consistent — *which* space the texts are embedded in
-        and how that is cached — while the caller injects the dimensionality reducer, which is a
-        modelling choice shapash has no business picking for you. Embedding goes through the model's
-        current ``embedding_space``, so the scatter and the similar-example neighbours are guaranteed
-        to sit in the same space; they even share the cached vectors.
+        The expensive half of the scatter: it needs the live model and a pass over every text. The
+        result is model-free and can be reduced any number of times with :meth:`Embedding.project`.
 
         Parameters
         ----------
         explanation : NlpExplanation
-            The result of :meth:`explain` for the batch to project.
-        reducer : object, optional
-            Anything with ``fit_transform(X) -> (n_samples, 2)`` — ``sklearn`` PCA/TSNE, ``pacmap``,
-            ``umap``. Defaults to :class:`sklearn.decomposition.PCA` with two components (sklearn is
-            already a core dependency, so the default costs no extra install).
+            The result of :meth:`explain` for the batch to embed.
         cache_dir : str or Path, optional
-            When given, both the embeddings and the projected coordinates are persisted here and
-            reloaded on later runs, so only the first call pays the cost. The key covers the model, the
-            effective space, the texts, and the reducer's class + parameters (including
-            ``fit_transform_kwargs`` below).
+            When given, the vectors are persisted here and reloaded on later runs. The key covers
+            the model, the effective space and the texts — the same key
+            :meth:`find_similar`'s reference bank uses, so the scatter and the neighbours share one
+            embedding space and, when the corpora coincide, one file.
         recompute : bool, optional
-            Drop this text set's cached artifacts first, forcing a fresh embed + fit.
-        **fit_transform_kwargs
-            Forwarded to ``reducer.fit_transform(vectors, **fit_transform_kwargs)`` — for arguments a
-            reducer only accepts at call time rather than at construction, e.g. PaCMAP's
-            ``init="pca"``. Part of the cache key (see Notes), so changing them busts the cache the
-            same way changing the reducer's own constructor parameters does.
+            Drop this text set's cached embeddings first, forcing a fresh embed.
 
         Returns
         -------
-        np.ndarray, shape (n_samples, 2)
-            Coordinates aligned with the compiled texts.
+        Embedding
+            ``(n_samples, hidden_dim)`` vectors carrying the model, space and corpus they came
+            from. Its ``corpus_id`` equals ``explanation.corpus_id``.
 
-        Notes
-        -----
-        The reducer's contribution to the cache key is its class name plus a digest of ``get_params()``
-        (when it exposes one — sklearn and pacmap both do) and of ``fit_transform_kwargs``. A reducer
-        with neither is keyed by class name alone, so re-tuning such a reducer needs ``recompute=True``
-        to take effect.
+        Raises
+        ------
+        TypeError
+            If the bound model cannot produce embeddings (no ``SupportsEmbeddings``).
 
         Examples
         --------
-        >>> explanation = xpl.explain(texts)
-        >>> xy = xpl.compute_projection(
-        ...     explanation, reducer=pacmap.PaCMAP(n_components=2), cache_dir="cache/", init="pca"
-        ... )
-        >>> xpl.run_app(explanation, scatter_xy=xy)
+        >>> emb = xpl.compute_embeddings(explanation, cache_dir="cache/")   # doctest: +SKIP
+        >>> emb.project(pacmap.PaCMAP(n_components=2), init="pca")         # doctest: +SKIP
         """
         text_model = self._require_text_model()
         if not has_capabilities(text_model, SupportsEmbeddings):
             raise TypeError(
                 f"{type(text_model).__name__} does not support embeddings (SupportsEmbeddings); "
-                "pass pre-computed coordinates to run_app(scatter_xy=...) instead."
+                "pass pre-computed coordinates to run_app(projection=...) instead."
             )
-        if reducer is None:
-            reducer = PCA(n_components=2)
-
         store = EmbeddingStore(
             text_model,  # type: ignore[arg-type]  # has_capabilities narrows the capability
             explanation.texts.tolist(),
@@ -516,10 +496,51 @@ class NlpExplainer:
         if recompute:
             store.clear()
         with self._compute_guard():  # embed() tokenizes — serialize against the live compute ops
-            return store.cached_array(
-                f"{_reducer_tag(reducer, fit_transform_kwargs)}.proj",
-                lambda: np.asarray(reducer.fit_transform(store.vectors(), **fit_transform_kwargs)),
-            )
+            return store.embedding()
+
+    def compute_projection(
+        self,
+        explanation: NlpExplanation,
+        reducer=None,
+        cache_dir: str | Path | None = None,
+        recompute: bool = False,
+        **fit_transform_kwargs: Any,
+    ) -> Embedding:
+        """Return a 2-D projection of ``explanation``'s texts, ready to pass to :meth:`run_app`.
+
+        Shorthand for ``compute_embeddings(explanation, cache_dir, recompute).project(reducer)``. The
+        embeddings go through the model's current ``embedding_space``, so the scatter and the
+        similar-example neighbours sit in the same space. Only the embeddings are cached: reducing is
+        cheap, and most reducers are stochastic, so :meth:`Embedding.save` a layout you want to keep.
+
+        Parameters
+        ----------
+        explanation : NlpExplanation
+            The result of :meth:`explain` for the batch to project.
+        reducer : object, optional
+            Anything with ``fit_transform(X) -> (n_samples, 2)`` — ``sklearn`` PCA/TSNE, ``pacmap``,
+            ``umap``. Defaults to ``PCA(n_components=2)``.
+        cache_dir : str or Path, optional
+            Where the embeddings are cached (see :meth:`compute_embeddings`).
+        recompute : bool, optional
+            Drop the cached embeddings first.
+        **fit_transform_kwargs
+            Forwarded to ``reducer.fit_transform`` — e.g. PaCMAP's ``init="pca"``.
+
+        Returns
+        -------
+        Embedding
+            ``(n_samples, 2)`` coordinates aligned with the explanation's texts.
+
+        Examples
+        --------
+        >>> explanation = xpl.explain(texts)
+        >>> projection = xpl.compute_projection(explanation, reducer=pacmap.PaCMAP(n_components=2), init="pca")
+        >>> xpl.run_app(explanation, projection=projection)
+        """
+        # The reducer runs outside the compute lock (taken inside compute_embeddings): it is pure CPU
+        # over vectors already in hand and must not block live what-if predictions.
+        return self.compute_embeddings(explanation, cache_dir, recompute).project(reducer, **fit_transform_kwargs)
 
     def run_app(
         self,
@@ -527,7 +548,7 @@ class NlpExplainer:
         port: int = 8050,
         debug: bool = False,
         host: str = "127.0.0.1",
-        scatter_xy=None,
+        projection: Embedding | np.ndarray | None = None,
         url_base_pathname: str | None = None,
         palette_name: str = "default",
         colors_dict: dict[str, str] | None = None,
@@ -552,19 +573,15 @@ class NlpExplainer:
             Port for the Dash development server.
         debug : bool
             Enable Dash debug mode (hot reload, error overlay).
-        scatter_xy : np.ndarray, optional
-            Pre-computed 2-D projection of the text samples, shape ``(n_samples, 2)``. When provided, a
-            scatter panel appears in the webapp that can be used to lasso/box-select a subset of
-            samples, filtering both the dataset table and the global word importance plot to that
-            subset.
+        projection : Embedding, optional
+            Pre-computed 2-D projection of the text samples, normally from
+            :meth:`compute_projection` or :meth:`Embedding.project`. When provided, a scatter panel
+            appears in the webapp that can be used to lasso/box-select a subset of samples,
+            filtering both the dataset table and the global word importance plot to that subset.
 
-            Prefer :meth:`compute_projection`, whose output goes here and which guarantees the scatter
-            is drawn in the same space the similar-example neighbours are ranked in. This parameter is
-            an **unverified escape hatch**: coordinates from any source are accepted as-is, so a
-            projection built from a different space (or a different model entirely) renders happily
-            next to neighbours computed in another — selecting a cluster then means something other
-            than it appears to. Use it when you want coordinates the library cannot produce, and
-            accept that keeping them consistent is yours to manage.
+            An :class:`~shapash.compute.embeddings.Embedding` built from different texts is refused.
+            A bare ``(n_samples, 2)`` array is accepted on its shape alone, for coordinates produced
+            outside shapash.
         url_base_pathname : str, optional
             Mount the app under a URL prefix instead of the server root — for a reverse proxy that
             routes a subpath (e.g. ``"/shapash-nlp-explainer/"``) to this process. Must match the
@@ -596,7 +613,7 @@ class NlpExplainer:
         return NlpWebApp(
             explanation,
             engine=self,
-            scatter_xy=scatter_xy,
+            projection=projection,
             url_base_pathname=url_base_pathname,
             palette_name=palette_name,
             colors_dict=colors_dict,

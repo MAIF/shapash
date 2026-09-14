@@ -136,8 +136,9 @@ class WordProfileComponent(WebappComponent):
         # a full pass over the corpus, and the sort toggle must not pay it on every click.
         self._options: dict[str, list] = {"alpha": [], "frequency": []}
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Build the panel, seeded with the corpus's single most important word so it opens full."""
+        explanation = ctx.explanation
         counts = explanation.word_counts()
         # The count rides in the option *label* while the value stays the bare word, so it is
         # visible in either sort order (frequency is what tells you whether an aggregate is worth
@@ -271,8 +272,9 @@ class WordProfileComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire the profile (word × aggregation × global selection) and each row's Inspect."""
+        explanation = ctx.explanation
         current_store = stores["current"]
         selection_store = stores["selection"]
         error_cell_store = stores["error_cell"]

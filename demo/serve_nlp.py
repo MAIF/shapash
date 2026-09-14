@@ -21,9 +21,11 @@ What *can* be avoided on every restart is recomputing the expensive stuff around
 model. This script caches both to ``--cache-dir`` (keyed by a hash of the input texts):
 
 * **Contributions + predictions** — via ``explain(..., cache_dir=...)``.
-* **The text embeddings and the 2-D projection** — via ``compute_projection(explanation, cache_dir=...)``.
-  The library owns the embedding + caching (so the scatter and the similar-example neighbours are
-  always in the same space); this script only supplies the reducer, PaCMAP.
+* **The text embeddings** — via ``compute_embeddings(explanation, cache_dir=...)``. The library owns
+  the embedding + caching (so the scatter and the similar-example neighbours are always in the same
+  space).
+* **The 2-D projection** — reduced with PaCMAP and saved explicitly with ``Embedding.save``, since a
+  stochastic reducer would otherwise give a different layout on every restart.
 
 The caching is automatic: each run **loads** the cache if one exists for these exact
 texts, otherwise it **computes and writes** it. So the first run is slow; every run after
@@ -39,14 +41,22 @@ can be reopened with **no model and no backend**::
     from shapash.explainer.nlp_explanation import NlpExplanation
     from shapash.webapp.nlp_app import NlpWebApp
 
-    explanation, scatter = NlpExplanation.load("…/nlp_shap/<hash>.xpl")
-    NlpWebApp(explanation, engine=None, scatter_xy=scatter).run(port=8050)
+    explanation = NlpExplanation.load("…/nlp_shap/<hash>.xpl")
+    NlpWebApp(explanation, engine=None).run(port=8050)
+
+The scatter is a separate file, because a projection is a fact about the *embeddings* rather than
+about the explanation — different key, replaceable without any of the contributions changing::
+
+    from shapash.compute.embeddings import Embedding
+
+    projection = Embedding.load("…/projection.<space>.npz")
+    NlpWebApp(explanation, engine=None, projection=projection).run(port=8050)
 
 One caveat, and it is deliberate rather than an oversight: **the cached artifact carries no ground
 truth.** The cache key covers ``(texts, model, backend)``, and ``y`` is not a function of that key —
 it belongs to whoever called ``explain``. Serving a cache file directly therefore self-disables the
 confusion matrix and the label-noise panel. For a shareable snapshot *with* labels, save the object
-``explain`` returned: ``explanation.save(path, scatter_xy=projected)``.
+``explain`` returned: ``explanation.save(path)`` (and, alongside it, ``projection.save(...)``).
 
 The model runs on CPU when no GPU is present, so this serves fine on a plain box.
 
@@ -84,8 +94,8 @@ substitution) and ``ablation`` (leave-one-out token removal) — and are switche
 **method dropdown in the webapp**, so there is no CLI flag for them. They run live and are not cached.
 
 The on-disk cache mirrors these dependencies as a hierarchy under ``--cache-dir``:
-``<model>/<dataset>__<split>/`` holds the (backend-independent) embedding-store artifacts — the
-vectors and the projection derived from them — and a per-backend ``<...>/nlp_shap/`` or
+``<model>/<dataset>__<split>/`` holds the (backend-independent) embeddings and the projection derived
+from them — and a per-backend ``<...>/nlp_shap/`` or
 ``<...>/nlp_captum_lig/`` subdirectory holds that method's ``<hash>.xpl`` contributions.
 
 Serving a *private* model and dataset (both local, nothing on the hub)
@@ -247,6 +257,7 @@ import torch
 from torch import nn
 
 from shapash.backend import NlpCaptumLigBackend
+from shapash.compute.embeddings import Embedding
 from shapash.explainer.nlp_explainer import NlpExplainer
 from shapash.model import HFClassifierModel, SentenceTransformerModel, TextModel
 
@@ -929,9 +940,8 @@ def build_backend(config: ServeConfig, model: TextModel) -> NlpCaptumLigBackend 
 def build_reducer() -> pacmap.PaCMAP:
     """The dimensionality reducer for the scatter — a *demo* choice, not a library one.
 
-    ``NlpExplainer.compute_projection`` owns everything that must stay consistent (which space the
-    texts are embedded in, and the caching of both the vectors and the coordinates) and takes the
-    reducer as an argument, because which manifold method suits your data is a modelling decision.
+    ``NlpExplainer.compute_embeddings`` owns everything that must stay consistent (which space the
+    texts are embedded in, and the caching of the vectors); the reducer is applied on top, because which manifold method suits your data is a modelling decision.
     PaCMAP is a good default for text clusters; swap in UMAP, t-SNE, or drop the argument entirely for
     the built-in PCA.
     """
@@ -989,7 +999,7 @@ def main() -> None:
         # Drop this text set's cached contributions so the steps below recompute + overwrite. The
         # explainer owns the key (it covers the model and backend), so it also owns the deletion —
         # only *this* model+backend's entry goes, other backends' caches are left intact. The
-        # embeddings + projection are dropped by compute_projection(recompute=True) below.
+        # embeddings are dropped by compute_embeddings(recompute=True) below, the projection is re-fitted.
         logger.info("--recompute: dropping cached %s contributions + projection for these texts", config.attribution)
         xpl.clear_cache(sentences, explain_dir)
 
@@ -1011,9 +1021,16 @@ def main() -> None:
     explanation = xpl.explain(sentences, y=y_true, cache_dir=explain_dir)
 
     # Step 4 — everything downstream reads the artifact as an argument.
-    projected = xpl.compute_projection(
-        explanation, reducer=build_reducer(), cache_dir=dataset_dir, recompute=config.recompute
-    )
+    # Saved per space, so switching --embedding-space never reloads a layout drawn in another one, and
+    # refitted when the texts changed (e.g. a different --n-samples): corpus_id is what tells.
+    projection_file = dataset_dir / f"projection.{model.resolve_space()}.npz"
+    projection = Embedding.load(projection_file) if projection_file.exists() and not config.recompute else None
+    if projection is not None and projection.corpus_id == explanation.corpus_id:
+        logger.info("Projection loaded from %s", projection_file)
+    else:
+        embeddings = xpl.compute_embeddings(explanation, cache_dir=dataset_dir, recompute=config.recompute)
+        projection = embeddings.project(build_reducer())
+        projection.save(projection_file)
 
     # (No bank warm-up here: fit(precompute=True) above already embedded the reference corpus, under
     # the same condition this used to test — can_find_similar() is "a retriever was built", which is
@@ -1041,7 +1058,7 @@ def main() -> None:
         port=config.port,
         debug=False,
         host=config.host,
-        scatter_xy=projected,
+        projection=projection,
         url_base_pathname=config.url_base_path,
         info={"Dataset": dataset_label},
     )

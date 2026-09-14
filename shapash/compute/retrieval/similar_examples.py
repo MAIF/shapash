@@ -83,7 +83,7 @@ class SimilarExampleRetriever:
     This matches the 2-D scatter *when the scatter is built by*
     :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.compute_projection`, which reads the same
     space through the same :class:`~shapash.compute.embedding_store.EmbeddingStore`. Coordinates passed
-    in by hand via ``run_app(scatter_xy=...)`` are outside that guarantee.
+    in by hand via ``run_app(projection=...)`` are outside that guarantee.
 
     Examples
     --------

@@ -26,8 +26,9 @@ class SentenceHighlightComponent(WebappComponent):
         self._default_class_idx = default_class_idx
         self._theme = theme
 
-    def layout(self, explanation, engine=None) -> html.Div:
+    def layout(self, ctx) -> html.Div:
         """Return the class picker + sentence-highlight placeholder div."""
+        explanation = ctx.explanation
         label_names = explanation.label_names or [str(i) for i in range(explanation.n_classes)]
         class_options: list[dcc.Dropdown.Options] = [{"label": name, "value": i} for i, name in enumerate(label_names)]
         return html.Div(
@@ -62,8 +63,9 @@ class SentenceHighlightComponent(WebappComponent):
             style={"height": "100%"},
         )
 
-    def register_callbacks(self, app, explanation, engine, stores) -> None:
+    def register_callbacks(self, app, ctx, stores) -> None:
         """Wire the predicted-class sync and the sentence-highlight render."""
+        explanation = ctx.explanation
         current_store = stores["current"]
 
         # Fires only on current-datapoint changes (row click, editor Predict, counterfactual Apply)

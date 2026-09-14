@@ -2,7 +2,7 @@
 
 Covers the round-trip (save -> load) across the shape matrix that matters: 1-D (binary/
 regression) vs 2-D (multi-class) contribution arrays, with/without a baseline, with/without
-ground truth and probabilities, with/without a bundled scatter projection, and a sample with
+ground truth and probabilities, and a sample with
 zero tokens (the edge case that broke a naive "infer counts from the tidy tables" design —
 see ``_n_classes``/``_frames_to_contributions`` in the module under test).
 """
@@ -64,13 +64,13 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
         self.tmp_path = Path(self._tmp.name)
 
-    def _round_trip(self, expl: NlpExplanation, scatter_xy=None) -> tuple[NlpExplanation, np.ndarray | None]:
+    def _round_trip(self, expl: NlpExplanation) -> NlpExplanation:
         path = self.tmp_path / "explanation.zip"
-        expl.save(path, scatter_xy=scatter_xy)
+        expl.save(path)
         return NlpExplanation.load(path)
 
-    def _assert_round_trips(self, expl: NlpExplanation, scatter_xy=None):
-        loaded, loaded_scatter = self._round_trip(expl, scatter_xy=scatter_xy)
+    def _assert_round_trips(self, expl: NlpExplanation):
+        loaded = self._round_trip(expl)
 
         for original, restored in zip(expl.values, loaded.values, strict=True):
             np.testing.assert_allclose(original, restored)
@@ -101,15 +101,12 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
         self.assertEqual(loaded.label_names, expl.label_names)
         self.assertEqual(loaded.folds_case, expl.folds_case)
 
-        if scatter_xy is None:
-            self.assertIsNone(loaded_scatter)
-        else:
-            np.testing.assert_allclose(loaded_scatter, scatter_xy)
+        # Survives the round trip because the texts do: it is derived, never stored-and-restored.
+        self.assertEqual(loaded.corpus_id, expl.corpus_id)
 
-    def test_multiclass_with_base_ground_truth_probabilities_and_scatter(self):
+    def test_multiclass_with_base_ground_truth_and_probabilities(self):
         expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
-        scatter = np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
-        self._assert_round_trips(expl, scatter_xy=scatter)
+        self._assert_round_trips(expl)
 
     def test_binary_without_ground_truth_or_probabilities(self):
         expl = _make_explanation(values_ndim=1, with_base=True, with_true=False, with_prob=False)
@@ -138,27 +135,6 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
         self.assertIn("shapash_version", meta)
         self.assertIn("created_at", meta)
 
-    def test_unsupported_format_version_raises_actionable_error(self):
-        expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
-        path = self.tmp_path / "explanation.zip"
-        expl.save(path)
-
-        with zipfile.ZipFile(path) as zin:
-            meta = json.loads(zin.read("meta.json"))
-            meta["format_version"] = 999
-            members = {item.filename: zin.read(item.filename) for item in zin.infolist()}
-        members["meta.json"] = json.dumps(meta).encode()
-
-        bad_path = self.tmp_path / "bad_version.zip"
-        with zipfile.ZipFile(bad_path, "w") as zout:
-            for name, data in members.items():
-                zout.writestr(name, data)
-
-        with self.assertRaises(ValueError) as ctx:
-            NlpExplanation.load(bad_path)
-        self.assertIn("format_version", str(ctx.exception))
-        self.assertIn("999", str(ctx.exception))
-
     def _resave_without_output_space(self, expl: NlpExplanation) -> Path:
         """A file as an earlier shapash (pre-``output_space``) would have written it."""
         path = self.tmp_path / "legacy.zip"
@@ -180,11 +156,45 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
         shap_expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
         lig_expl = replace(shap_expl, backend_name="nlp_captum_lig")
 
-        loaded_shap, _ = NlpExplanation.load(self._resave_without_output_space(shap_expl))
-        loaded_lig, _ = NlpExplanation.load(self._resave_without_output_space(lig_expl))
+        loaded_shap = NlpExplanation.load(self._resave_without_output_space(shap_expl))
+        loaded_lig = NlpExplanation.load(self._resave_without_output_space(lig_expl))
 
         self.assertEqual(loaded_shap.output_space, "probability")
         self.assertEqual(loaded_lig.output_space, "logit")
+
+
+class TestCorpusIdentity(unittest.TestCase):
+    """``corpus_id`` — the texts-only digest that pairs an explanation with its embeddings.
+
+    It has to depend on the texts and on *nothing else*, because that is what makes two artifacts
+    over one dataset recognisable as such: a SHAP and a Captum explanation of the same batch, an
+    ``Embedding`` of it, a projection of that embedding.
+    """
+
+    def test_same_texts_agree_across_backend_and_model(self):
+        shap_expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
+        lig_expl = replace(shap_expl, backend_name="nlp_captum_lig", output_space="logit", model_id="other/model")
+        self.assertEqual(shap_expl.corpus_id, lig_expl.corpus_id)
+
+    def test_different_texts_disagree(self):
+        expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
+        other = replace(expl, texts=pd.Series(["hello world", "i am happy today", "KO"], index=expl.texts.index))
+        self.assertNotEqual(expl.corpus_id, other.corpus_id)
+
+    def test_order_is_part_of_the_identity(self):
+        # Row i of a projection means "the projection of texts[i]", so a reordered corpus is a
+        # different corpus even though it holds the same strings.
+        expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
+        shuffled = replace(expl, texts=pd.Series(expl.texts.tolist()[::-1], index=expl.texts.index))
+        self.assertNotEqual(expl.corpus_id, shuffled.corpus_id)
+
+    def test_reindexing_does_not_change_it(self):
+        # relabelled() rebinds texts to the caller's index without touching the strings; an id that
+        # moved here would break the pairing for every explanation served out of the explain cache.
+        expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
+        reindexed = pd.Series(expl.texts.tolist(), index=[0, 1, 2])
+        derived = expl.relabelled(texts=reindexed, y_true=None)
+        self.assertEqual(derived.corpus_id, expl.corpus_id)
 
 
 if __name__ == "__main__":
@@ -232,6 +242,19 @@ class TestNlpExplanationDescriptors(unittest.TestCase):
             values=[np.zeros((0, 2)) for _ in range(3)],
         )
         self.assertEqual(explanation.n_classes, 2)  # recovered from label_names
+
+    def test_repr_is_a_one_line_summary_not_the_dataclass_default(self):
+        # The generated dataclass repr would print every text, token and contribution array in
+        # full — a notebook cell that just names the variable must not dump the whole batch.
+        explanation = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
+        repr_str = repr(explanation)
+        self.assertEqual(
+            repr_str, "NlpExplanation(n_samples=3, n_classes=2, backend='nlp_shap', has_ground_truth=True)"
+        )
+
+    def test_repr_reports_has_ground_truth_false_when_absent(self):
+        explanation = _make_explanation(values_ndim=2, with_base=True, with_true=False, with_prob=True)
+        self.assertIn("has_ground_truth=False", repr(explanation))
 
 
 class TestFieldPartition(unittest.TestCase):
@@ -369,6 +392,6 @@ class TestSharedIndexInvariant(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "run.zip"
             self.explanation.save(path)
-            restored, _ = NlpExplanation.load(path)
+            restored = NlpExplanation.load(path)
         self.assertTrue(restored.y_pred.index.equals(restored.texts.index))
         self.assertTrue(restored.y_true.index.equals(restored.texts.index))

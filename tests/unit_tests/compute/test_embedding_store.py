@@ -13,6 +13,8 @@ from pathlib import Path
 import numpy as np
 
 from shapash.compute.embedding_store import EmbeddingStore
+from shapash.compute.embeddings import Embedding
+from shapash.compute.hashing import hash_corpus
 from shapash.model.base import EmbeddingSource
 
 TEXTS = ["alpha", "beta", "gamma"]
@@ -102,7 +104,7 @@ class TestVectors(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             store = EmbeddingStore(FakeModel(), TEXTS)
             store.vectors()
-            self.assertIsNone(store.path("emb"))
+            self.assertIsNone(store.path)
             self.assertEqual(list(Path(d).iterdir()), [])
 
 
@@ -115,36 +117,22 @@ class TestDiskCache(unittest.TestCase):
             self.assertEqual(fresh.calls, 0)  # served entirely from disk
             np.testing.assert_allclose(vectors, [[5.0, 1.0], [4.0, 1.0], [5.0, 1.0]])
 
-    def test_derived_arrays_cache_beside_the_embeddings(self):
-        """A projection is cached under its own tag but the same key, so both travel together."""
-        with tempfile.TemporaryDirectory() as d:
-            store = EmbeddingStore(FakeModel(), TEXTS, cache_dir=d)
-            fits = []
-
-            def project():
-                fits.append(1)
-                return store.vectors()[:, :1]
-
-            store.cached_array("pca.proj", project)
-            fresh = EmbeddingStore(FakeModel(), TEXTS, cache_dir=d)
-            fresh.cached_array("pca.proj", project)
-            self.assertEqual(len(fits), 1)  # the reducer did not re-fit
-            self.assertTrue(store.path("pca.proj").exists())
-            self.assertTrue(store.path("emb").exists())
-
-    def test_clear_drops_every_tag_under_the_key(self):
-        """Half-clearing would leave a projection derived from vectors that no longer exist."""
+    def test_clear_drops_the_cached_file(self):
         with tempfile.TemporaryDirectory() as d:
             store = EmbeddingStore(FakeModel(), TEXTS, cache_dir=d)
             store.vectors()
-            store.cached_array("pca.proj", lambda: np.zeros((3, 2)))
             store.clear()
-            self.assertFalse(store.path("emb").exists())
-            self.assertFalse(store.path("pca.proj").exists())
+            self.assertFalse(store.path.exists())
 
             model = FakeModel()
             EmbeddingStore(model, TEXTS, cache_dir=d).vectors()
             self.assertEqual(model.calls, 1)  # really recomputed, not silently reloaded
+
+    def test_clear_without_a_cache_dir_is_a_no_op(self):
+        store = EmbeddingStore(FakeModel(), TEXTS)
+        store.embedding()
+        store.clear()
+        self.assertEqual(store.embedding().n_samples, len(TEXTS))
 
 
 class TestKeySeparation(unittest.TestCase):
@@ -172,6 +160,32 @@ class TestKeySeparation(unittest.TestCase):
     def test_same_configuration_collides_on_purpose(self):
         model = FakeModel()
         self.assertEqual(EmbeddingStore(model, TEXTS).key, EmbeddingStore(FakeModel(), list(TEXTS)).key)
+
+
+class TestEmbeddingArtifact(unittest.TestCase):
+    """The store returns provenance, not a bare array."""
+
+    def test_embedding_carries_the_identity_the_store_keyed_on(self):
+        model = FakeModel(model_id="fake:v2", space="pooled")
+        embedding = EmbeddingStore(model, TEXTS).embedding()
+
+        self.assertEqual(embedding.model_id, "fake:v2")
+        self.assertEqual(embedding.space, "pooled")
+        self.assertEqual(embedding.corpus_id, hash_corpus(TEXTS))
+        self.assertIsNone(embedding.reducer_tag, "raw model output is not a reduction")
+        np.testing.assert_allclose(embedding.vectors, model.embed(TEXTS))
+
+    def test_entries_are_written_as_loadable_embedding_files(self):
+        # One format, two locations: a cache entry is exactly what Embedding.save writes, so it can
+        # be copied out and shared without any conversion step.
+        with tempfile.TemporaryDirectory() as d:
+            store = EmbeddingStore(FakeModel(), TEXTS, cache_dir=d)
+            store.embedding()
+            straight_from_disk = Embedding.load(store.path)
+
+            self.assertEqual(straight_from_disk.corpus_id, hash_corpus(TEXTS))
+            self.assertEqual(straight_from_disk.model_id, "fake:v1")
+            np.testing.assert_allclose(straight_from_disk.vectors, store.vectors())
 
 
 if __name__ == "__main__":
