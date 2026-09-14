@@ -65,7 +65,14 @@ jobs:
         python -m pip install --upgrade build
         python -m build
     - name: Test and coverage
-      run: make coverage
+      run: make coverage-report
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.13'
+      uses: codecov/codecov-action@v6
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: false
 
   pandas_compat:
     name: Pandas Compat (${{ matrix.pandas }})
