@@ -17,7 +17,7 @@ def hide_contributions(var_dict, features_list):
     var_dict: pd.DataFrame
         Dataframe with features indexes ordered
         by contribution.
-    feature_list: list
+    features_list: list
         List of index, feature to hide.
 
     Returns
@@ -35,7 +35,7 @@ def cap_contributions(s_contrib, threshold=0.1):
 
     Parameters
     ----------
-    s : pandas.DataFrame
+    s_contrib : pandas.DataFrame
         Local contributions, positive and negative values.
     threshold: float, optional (default: 0.1)
         User defined threshold above which local contributions are hidden.
@@ -53,11 +53,11 @@ def sign_contributions(dataframe, positive=True):
     """
     Returns Boolean values depending on
     the signs of local contributions
-    stored in df and on the positive parameter.
+    stored in dataframe and on the positive parameter.
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    dataframe : pandas.DataFrame
         Local contributions of the model.
     positive : boolean (default=True)
         True to evaluate positive value.
@@ -82,7 +82,7 @@ def cutoff_contributions_old(dataframe, max_contrib):
 
     Parameters
     ----------
-    df : pd.Dataframe
+    dataframe : pd.Dataframe
         DataFrame is a sorted local contributions matrix.
     max_contrib: int
         The k most important contributions to keep.

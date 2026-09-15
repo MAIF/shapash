@@ -12,7 +12,7 @@ def select_lines(dataframe, condition=None):
     on a boolean condition.
     Parameters
     ----------
-    df : pandas.DataFrame
+    dataframe : pandas.DataFrame
         Input dataframe used for the query.
     condition : string
         A boolean condition expressed as string.
@@ -33,7 +33,7 @@ def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict,
 
     Parameters
     ----------
-    ypred: pandas.DataFrame (optional)
+    y_pred: pandas.DataFrame (optional)
             User-specified prediction values.
     contributions: pandas.DataFrame (regression) or list (classification) (optional)
         local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding)

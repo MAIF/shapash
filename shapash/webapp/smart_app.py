@@ -67,16 +67,16 @@ class SmartApp:
     Attributes
     ----------
     explainer: object
-        SmartExplainer instance to point to.
+        Explainer instance to point to.
     """
 
-    def __init__(self, explainer, settings: dict | None = None):
+    def __init__(self, explainer, settings: dict | None = None, title_story: str | None = None):
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
-        explainer : SmartExplainer
-            SmartExplainer object
+        explainer : Explainer
+            Explainer object
         settings : dict
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
@@ -89,8 +89,9 @@ class SmartApp:
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = "Shapash Monitor"
-        if explainer.title_story:
-            self.app.title += " - " + explainer.title_story
+        self.title_story = title_story if title_story is not None else ""
+        if self.title_story:
+            self.app.title += " - " + self.title_story
         self.explainer = explainer
 
         # SETTINGS
@@ -831,7 +832,7 @@ class SmartApp:
                                     dbc.Row(
                                         [
                                             html.H3(
-                                                truncate_str(self.explainer.title_story, maxlen=40),
+                                                truncate_str(self.title_story, maxlen=40),
                                                 id="shapash_title_story",
                                                 style={"text-align": "center"},
                                             )
