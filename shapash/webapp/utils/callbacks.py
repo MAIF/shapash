@@ -180,9 +180,9 @@ def select_data_from_date_filters(
 
     Parameters
     ----------
-    round_dataframe : pd.DataFrame
+    df : pd.DataFrame
         Data to sample
-    id_feature : list
+    feature_id : list
         features ids
     id_date : list
         date features ids
