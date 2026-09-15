@@ -61,7 +61,7 @@ class ShapBackend(BaseBackend):
         """
         print("INFO: Shap explainer type -", self.explainer)
         contributions = self.explainer(x, **self.explainer_compute_args)
-        explain_data = dict(contributions=contributions.values)
+        explain_data = dict(contributions=contributions.values, base_values=getattr(contributions, "base_values", None))
         return explain_data
 
 
