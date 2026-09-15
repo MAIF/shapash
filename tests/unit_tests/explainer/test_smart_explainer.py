@@ -1012,15 +1012,15 @@ class TestSmartExplainer(unittest.TestCase):
 
         def build():
             xpl = SmartExplainer(self.model)
-            xpl.features_imp = None
-            xpl.contributions = contributions
-            xpl.contributions_groups = contributions
-            xpl.features_groups = {"group_0": ["contribution_0", "contribution_1"]}
-            xpl.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
-            xpl.backend.state = SmartState()
-            xpl.state = SmartState()
-            xpl.explain_data = None
-            xpl._case = "regression"
+            xpl.explainer.features_imp = None
+            xpl.explainer.contributions = contributions
+            xpl.explainer.contributions_groups = contributions
+            xpl.explainer.features_groups = {"group_0": ["contribution_0", "contribution_1"]}
+            xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
+            xpl.explainer.backend.state = SmartState()
+            xpl.explainer.state = SmartState()
+            xpl.explainer.explain_data = None
+            xpl.explainer._case = "regression"
             return xpl
 
         expected = contributions.abs().sum().sort_values(ascending=True)
@@ -1028,15 +1028,15 @@ class TestSmartExplainer(unittest.TestCase):
 
         # force=True must refresh an already-populated cache
         xpl = build()
-        xpl.features_imp_groups = "stale"
-        xpl.compute_features_import(force=True)
-        assert expected.equals(xpl.features_imp_groups)
+        xpl.explainer.features_imp_groups = "stale"
+        xpl.explainer.compute_features_import(force=True)
+        assert expected.equals(xpl.explainer.features_imp_groups)
 
         # force=False leaves an existing value alone, as before
         xpl = build()
-        xpl.features_imp_groups = "stale"
-        xpl.compute_features_import()
-        assert xpl.features_imp_groups == "stale"
+        xpl.explainer.features_imp_groups = "stale"
+        xpl.explainer.compute_features_import()
+        assert xpl.explainer.features_imp_groups == "stale"
 
     def test_to_smartpredictor_1(self):
         """
