@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import catboost as cb
 import lightgbm as lgb
@@ -7,7 +8,7 @@ import pandas as pd
 import sklearn.ensemble as ske
 import xgboost as xgb
 
-from shapash.backend.shap_backend import ShapBackend
+from shapash.backend.shap_backend import ShapBackend, get_shap_interaction_values
 
 
 class TestShapBackend(unittest.TestCase):
@@ -82,3 +83,48 @@ class TestShapBackend(unittest.TestCase):
                 assert len(features_imp[0]) == len(self.x_df.columns)
             else:
                 assert len(features_imp) == len(self.x_df.columns)
+
+    def test_get_shap_interaction_values_sum_4d_output(self):
+        class DummyTreeExplainer:
+            def shap_interaction_values(self, x_df):
+                return np.ones((len(x_df), x_df.shape[1], x_df.shape[1], 2))
+
+        x_df = pd.DataFrame(np.zeros((4, 3)), columns=["a", "b", "c"])
+
+        with patch("shapash.backend.shap_backend.shap.TreeExplainer", DummyTreeExplainer):
+            out = get_shap_interaction_values(x_df, DummyTreeExplainer())
+
+        assert out.shape == (4, 3, 3)
+        assert np.all(out == 2)
+
+    def test_get_shap_interaction_values_select_label_from_list_output(self):
+        class DummyTreeExplainer:
+            def shap_interaction_values(self, x_df):
+                return [
+                    np.ones((len(x_df), x_df.shape[1], x_df.shape[1])),
+                    np.full((len(x_df), x_df.shape[1], x_df.shape[1]), 3.0),
+                ]
+
+        x_df = pd.DataFrame(np.zeros((4, 3)), columns=["a", "b", "c"])
+
+        with patch("shapash.backend.shap_backend.shap.TreeExplainer", DummyTreeExplainer):
+            out = get_shap_interaction_values(x_df, DummyTreeExplainer(), class_index=1)
+
+        assert out.shape == (4, 3, 3)
+        assert np.all(out == 3)
+
+    def test_get_shap_interaction_values_select_label_from_4d_output(self):
+        class DummyTreeExplainer:
+            def shap_interaction_values(self, x_df):
+                out = np.zeros((len(x_df), x_df.shape[1], x_df.shape[1], 2))
+                out[..., 0] = 2.0
+                out[..., 1] = 5.0
+                return out
+
+        x_df = pd.DataFrame(np.zeros((4, 3)), columns=["a", "b", "c"])
+
+        with patch("shapash.backend.shap_backend.shap.TreeExplainer", DummyTreeExplainer):
+            out = get_shap_interaction_values(x_df, DummyTreeExplainer(), class_index=1)
+
+        assert out.shape == (4, 3, 3)
+        assert np.all(out == 5)
