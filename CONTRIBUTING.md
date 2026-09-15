@@ -146,7 +146,7 @@ A pull request asks the Shapash team to review your changes and merge them into 
 
 At the top of your forked repository page, click **Compare & pull request**.
 
-<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-compare-pr.png" alt="pull request" />
+<img width="912" height="59" alt="shapash-compare-pr" src="https://github.com/user-attachments/assets/c7d1649d-64f0-4669-9243-627c2285b7e9" />
 
 Configure the pull request branches as follows:
 
@@ -155,11 +155,11 @@ Configure the pull request branches as follows:
 - Head repository: your-github-username/shapash
 - Head branch: your-contribution-branch
 
-<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-branch.png" alt="select pull request branches" />
+<img width="1237" height="181" alt="shapash-pr-branch" src="https://github.com/user-attachments/assets/5cee69b7-cec4-4c24-bbe6-3deb41bab925" />
 
 After selecting the correct branches, click the green **Create pull request** button.
 
-<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-description.png" alt="pull request description" />
+<img width="1242" height="722" alt="shapash-pr-description" src="https://github.com/user-attachments/assets/8977e2b9-e3dd-4c1c-b904-eb6817bdfcb0" />
 
 The pull request description is pre-filled with a template. Please complete it with all relevant details about your contribution.
 
