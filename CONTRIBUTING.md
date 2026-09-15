@@ -1,103 +1,106 @@
-# How to contribute to Shapash Open source
+# How to contribute to Shapash
 
-This guide aims to help you contributing to Shapash. If you have found any problems, improvements that can be done, or you have a burning desire to develop new features for Shapash, please make sure to follow the steps bellow.
+This guide explains how to contribute to Shapash. If you found a bug, identified an improvement, or want to propose a new feature, follow the steps below.
 
 - [How to open an issue](#how-to-open-an-issue)
-- [Create your contribution to submit a pull request](#create-your-contribution-to-submit-a-pull-request)
-    - [Fork to code in your personal Shapash repo](#fork-to-code-in-your-personal-shapash-repo)
-    - [Clone your forked repository](#clone-your-forked-repository)
-    - [Make sure that your repository is up to date](#make-sure-that-your-repository-is-up-to-date)
-    - [Start your contribution code](#start-your-contribution-code)
-    - [Commit your changes](#commit-your-changes)
+- [Create your contribution and submit a pull request](#create-your-contribution-and-submit-a-pull-request)
+    - [Fork the repository](#fork-the-repository)
+    - [Clone your fork](#clone-your-fork)
+    - [Keep your fork up to date](#keep-your-fork-up-to-date)
+    - [Install dependencies and set up your environment](#install-dependencies-and-set-up-your-environment)
+    - [Set up pre-commit hooks](#set-up-pre-commit-hooks)
+    - [Start coding on a dedicated branch](#start-coding-on-a-dedicated-branch)
+    - [Run tests and build checks](#run-tests-and-build-checks)
+    - [Run code quality checks](#run-code-quality-checks)
+    - [Commit and push your changes](#commit-and-push-your-changes)
     - [Create a pull request](#create-a-pull-request)
-    - [Finally submit your pull request](#finally-submit-your-pull-request)
+    - [Submit your pull request](#submit-your-pull-request)
 
 # How to open an issue
 
-**Screenshots are coming soon**
+Opening an issue starts a discussion to evaluate whether your bug report or feature request should be implemented in Shapash.
 
-An issue will open a discussion to evaluate if the problem / feature that you submit is eligible, and legitimate for Shapash.
+Before opening an issue:
 
-Check on the project tab if your issue / feature is not already created. In this tab, you will find the roadmap of Shapash.
+- Check the Project tab to see whether the item already exists in the roadmap.
+- Search existing open issues to avoid duplicates.
+- Specify whether your request is a feature or a bug fix.
 
-A Pull Request must be linked to an issue.
-Before you open an issue, please check the current opened issues to ensure there are no duplicate. Define if it's a feature or a bugfix.
+Every pull request must be linked to an issue.
 
-Next, the Shapash team, or the community, will give you a feedback on whether your issue must be implemented in Shapash, or if it can be resolved easily without a pull request.
+After you open an issue, the Shapash team or community members will provide feedback and help decide whether a pull request is needed.
 
-# Create your contribution to submit a pull request
-## Fork to code in your personal Shapash repo
+# Setup your environment
 
-The first step is to get our MAIF repository on your personal GitHub repositories. To do so, use the "Fork" button.
-
-<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-fork.png" alt="fork this repository" />
-
-## Clone your forked repository
-
-<img align="right" width="300" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-clone.png" alt="clone your forked repository" />
-
-Click on the "Code" button to copy the url of your repository, and next, you can paste this url to clone your forked repository.
+## Get the code
+- Fork the MAIF/shapash repository to your personal GitHub account using the **Fork** button.
+- Clone your fork into your workspace.
+- Synchronnize your fork with the upstream repository before creating a new branch.
 
 ```
-git clone https://github.com/YOUR_GITHUB_PROFILE/shapash.git
-```
-
-## Make sure that your repository is up to date
-
-To insure that your local forked repository is synced, you have to update your repo with the master branch of Shapash (MAIF). So, go to your repository and as follow :
-
-```
-cd shapash
 git remote add upstream https://github.com/MAIF/shapash.git
-git pull upstream master
+git pull upstream develop
 ```
 
-## Install dependencies and setup your virtual environment
+## Install dependencies and set up your environment
+
 Python `>=3.11, <3.15` is required.
 
-After creating a virtual environment, run
+After creating a virtual environment, run:
 ```
 pip install -e ".[dev,test]"
 ```
 
-Otherwise, we recommend to use `uv`
+Alternatively, we recommend using `uv`:
 ```
 uv sync --extra dev --extra test
 ```
-Take a look at `pyproject.toml` for other dependency groups.
 
-## Pre-commit
-We use pre-commit hooks to automatically identify issues before committing. After installing dev dependencies, make sure to set up the git hook scripts to run automatically on `git commit`
+See `pyproject.toml` for other dependency groups.
+
+## Set up pre-commit hooks
+
+We use pre-commit hooks to catch issues automatically before each commit. After installing development dependencies, enable the hooks:
+
 ```
 pre-commit install
 ```
 
-## Start your contribution code
+# Create your contribution and submit a pull request
 
-To contribute to Shapash, you will need to create a personal branch.
+## Start coding on a dedicated branch
+
+Create a personal branch for your contribution:
+
 ```
 git checkout -b feature/my-contribution-branch
 ```
-We recommand to use a convention of naming branch.
-- **feature/your_feature_name** if you are creating a feature
-- **hotfix/your_bug_fix** if you are fixing a bug
 
-## Tests & Build
+Recommended branch naming convention:
 
-Run pytest to check that all tests pass (and get coverage):
+- **feature/your_branch_name** for a new feature
+- **bugfix/your_branch_name** for a bug fix
+
+## Run tests and build checks
+
+Run pytest to ensure tests pass and to collect coverage:
+
 ```
 pytest --cov=shapash
 ```
 
-To test against multiple Python versions at once, use `tox`:
+To test against multiple Python versions, use `tox`:
+
 ```
 pipx install tox
 pipx inject tox tox-uv
 tox
 ```
-`tox-uv` lets tox use `uv` for interpreter and environment management. Missing Python versions are skipped automatically.
 
-Make sure that Shapash builds correctly:
+`tox-uv` allows tox to use `uv` for interpreter and environment management. Missing Python versions are skipped automatically.
+
+Make sure Shapash builds correctly:
+
 ```
 python -m build
 
@@ -106,67 +109,62 @@ or
 uv build
 ```
 
-## Code Quality
-Check your code quality (linting and formatting) with ruff:
+## Run code quality checks
+
+Check linting and formatting with ruff:
+
 ```
 ruff check
 ruff format
 ```
 
-Check your type annotations with mypy:
+Check type annotations with mypy:
+
 ```
 mypy shapash
 ```
 
-## Commit your changes
+## Commit and push your changes
 
-We recommend committing with clear messages and grouping your commits by modifications dependencies.
+Use clear commit messages and group related changes logically.
 
-Once all of the previous steps succeed (code quality, tests and build), push your local modifications to your remote repository.
+Once all checks pass (code quality, tests, and build), push your changes to your fork:
 
 ```
 git add <file>
-git commit -m 'fixed a bug'
+git commit -m "Fix bug in ..."
 git push origin feature/my-contribution-branch
 ```
 
-Your branch is now available on your remote forked repository, with your changes.
+Your branch is now available on your remote fork.
 
-Next step is now to create a Pull Request so the Shapash Team can add your changes to the official repository.
+Next, create a pull request so the Shapash team can review and merge your changes.
 
-## Create a Pull Request
+## Create a pull request
 
+A pull request asks the Shapash team to review your changes and merge them into the `develop` branch of the official repository.
 
-A pull request allows you to ask the Shapash team to review your changes, and merge your changes into the master branch of the official repository.
-
-To create one, on the top of your forked repository, you will find a button "Compare & pull request"
+At the top of your forked repository page, click **Compare & pull request**.
 
 <img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-compare-pr.png" alt="pull request" />
 
-As you can see, you can select on the right side which branch of your forked repository you want to associate to the pull request.
-
-On the left side, you will find the official Shapash repository.
+Configure the pull request branches as follows:
 
 - Base repository: MAIF/shapash
-- Base branch: master
+- Base branch: develop
 - Head repository: your-github-username/shapash
 - Head branch: your-contribution-branch
 
-<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-branch.png" alt="clone your forked repository" />
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-branch.png" alt="select pull request branches" />
 
-Once you have selected the right branch, let's create the pull request with the green button "Create pull request".
+After selecting the correct branches, click the green **Create pull request** button.
 
-<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-description.png" alt="clone your forked repository" />
+<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/assets/images/contributing/shapash-pr-description.png" alt="pull request description" />
 
-In the description, a template is initialized with all informations you have to give about what you are doing on what your PR is doing.
+The pull request description is pre-filled with a template. Please complete it with all relevant details about your contribution.
 
-Please follow this to write your PR content.
+## Submit your pull request
 
+Your pull request is now ready to be submitted. A member of the Shapash team will review it and contact you if changes are needed.
 
-## Finally submit your pull request
-
-Your pull request is now ready to be submitted. A member of the Shapash team will contact you and will review your code and contact you if needed.
-
-You have contributed to an Open source project, thank you and congratulations ! 🥳
-
-Show your contribution to Shapash in your curriculum, and share it on your social media. Be proud of yourself, you gave some code lines to the entire world !
+Thank you for contributing to Shapash.
