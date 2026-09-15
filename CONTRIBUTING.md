@@ -3,12 +3,11 @@
 This guide explains how to contribute to Shapash. If you found a bug, identified an improvement, or want to propose a new feature, follow the steps below.
 
 - [How to open an issue](#how-to-open-an-issue)
-- [Create your contribution and submit a pull request](#create-your-contribution-and-submit-a-pull-request)
-    - [Fork the repository](#fork-the-repository)
-    - [Clone your fork](#clone-your-fork)
-    - [Keep your fork up to date](#keep-your-fork-up-to-date)
+- [Setup your environment](#setup-your-environment)
+    - [Get the code](#get-the-code)
     - [Install dependencies and set up your environment](#install-dependencies-and-set-up-your-environment)
     - [Set up pre-commit hooks](#set-up-pre-commit-hooks)
+- [Create your contribution and submit a pull request](#create-your-contribution-and-submit-a-pull-request)
     - [Start coding on a dedicated branch](#start-coding-on-a-dedicated-branch)
     - [Run tests and build checks](#run-tests-and-build-checks)
     - [Run code quality checks](#run-code-quality-checks)
