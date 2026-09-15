@@ -21,6 +21,8 @@ jobs:
     steps:
     - name: Git checkout
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0  # required for setuptools-scm to read git tags
     - name: Set up Python 3.12
       uses: actions/setup-python@v6
       with:
