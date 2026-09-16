@@ -296,5 +296,70 @@ class TestConfusionMatrixData(unittest.TestCase):
             _make_explanation(with_true=False).confusion_matrix()
 
 
+def _word_profile_explanation(folds_case=True):
+    """Three samples, two classes, with 'happy' appearing in three of them (twice in one)."""
+    token_strings = [
+        ["[CLS]", "so", "happy", "today", "!"],
+        ["Happy", "and", "happy", "again"],
+        ["not", "happy", "at", "all"],
+        ["nothing", "here"],
+    ]
+    values = [
+        np.array([[0.0, 0.0], [0.1, -0.1], [0.4, -0.4], [0.05, -0.05], [0.0, 0.0]]),
+        np.array([[0.2, -0.2], [0.0, 0.0], [0.1, -0.1], [0.0, 0.0]]),
+        np.array([[-0.1, 0.1], [-0.6, 0.6], [0.0, 0.0], [0.0, 0.0]]),
+        np.array([[0.0, 0.0], [0.0, 0.0]]),
+    ]
+    texts = pd.Series(["so happy today !", "Happy and happy again", "not happy at all", "nothing here"])
+    return NlpExplanation(
+        texts=texts,
+        token_strings=token_strings,
+        values=values,
+        base_values=None,
+        y_pred=pd.Series(["pos", "pos", "neg", "neg"], index=texts.index, name="prediction"),
+        y_prob=None,
+        y_true=pd.Series(["pos", "neg", "neg", "neg"], index=texts.index, name="ground_truth"),
+        label_names=["pos", "neg"],
+        folds_case=folds_case,
+        backend_name="nlp_shap",
+        is_additive=True,
+        reference_kind="none",
+        output_space="probability",
+    )
+
+
+class TestPlotterWordProfile(unittest.TestCase):
+    def setUp(self):
+        self.explanation = _word_profile_explanation()
+
+    def test_returns_figure_titled_with_counts(self):
+        fig = self.explanation.plot.word_profile("happy")
+        self.assertIsInstance(fig, go.Figure)
+        self.assertIn("4 occurrence(s) in 3 sample(s)", fig.layout.title.text)
+
+    def test_mean_draws_error_bars_and_sum_does_not(self):
+        self.assertIsNotNone(self.explanation.plot.word_profile("happy", agg="mean").data[0].error_x.array)
+        self.assertIsNone(self.explanation.plot.word_profile("happy", agg="sum").data[0].error_x.array)
+
+    def test_single_occurrence_spread_is_zero_not_nan(self):
+        fig = self.explanation.plot.word_profile("today", agg="mean")
+        self.assertEqual(list(fig.data[0].error_x.array), [0.0, 0.0])
+
+    def test_sample_indices_scope(self):
+        fig = self.explanation.plot.word_profile("happy", sample_indices=[1])
+        self.assertIn("2 occurrence(s) in 1 sample(s)", fig.layout.title.text)
+
+    def test_title_override(self):
+        self.assertEqual(self.explanation.plot.word_profile("happy", title="X").layout.title.text, "X")
+
+    def test_absent_word_raises_rather_than_drawing_an_empty_chart(self):
+        with self.assertRaisesRegex(ValueError, "does not occur"):
+            self.explanation.plot.word_profile("absent")
+
+    def test_absent_in_scope_names_the_scope(self):
+        with self.assertRaisesRegex(ValueError, "in the selected samples"):
+            self.explanation.plot.word_profile("happy", sample_indices=[3])
+
+
 if __name__ == "__main__":
     unittest.main()

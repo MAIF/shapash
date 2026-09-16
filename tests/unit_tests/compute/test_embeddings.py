@@ -9,8 +9,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pandas as pd
 
 from shapash.compute.embeddings import Embedding, projection_coords
+from shapash.explainer.nlp_explainer import NlpExplainer
+from shapash.explainer.nlp_explanation import NlpExplanation
+from shapash.model.base import SupportsEmbeddings, SupportsTokenization, TextModel
 
 
 class _Scaler:
@@ -161,6 +165,236 @@ class TestProjectionCoords(unittest.TestCase):
         self.assertEqual(coords.shape, (4, 2))
         with self.assertRaises(ValueError):
             projection_coords(np.zeros((3, 2)), self.explanation)
+
+
+# ---------------------------------------------------------------------------
+# NlpExplainer.compute_projection / compute_embeddings / fit — reducer wiring
+# and embedding precompute at fit time
+# ---------------------------------------------------------------------------
+
+LABEL_NAMES = ["sadness", "joy", "love", "anger", "fear", "surprise"]
+
+
+class _ProjectableModel(TextModel, SupportsEmbeddings):
+    """Embeds each text to a deterministic 3-D point; counts calls so cache hits are observable."""
+
+    def __init__(self, space="decision"):
+        super().__init__(label_names=LABEL_NAMES[:2])
+        self.space = space
+        self.calls = 0
+
+    def resolve_space(self, space=None):
+        return space if space is not None else self.space
+
+    def predict(self, texts):
+        return np.tile([0.4, 0.6], (len(texts), 1))
+
+    def get_embedding_table(self):
+        return (["a"], np.zeros((1, 3)))
+
+    def embed(self, texts, space=None):
+        self.calls += 1
+        return np.array([[float(len(t)), float(t.count("a")), 1.0] for t in texts])
+
+    @property
+    def shap_callable(self):
+        return self.predict
+
+
+class _CountingReducer:
+    """A deterministic reducer that counts its fits and records its call-time kwargs."""
+
+    def __init__(self, scale=1.0):
+        self.scale = scale
+        self.fits = 0
+        self.last_kwargs = None
+
+    def fit_transform(self, x, **kwargs):
+        self.fits += 1
+        self.last_kwargs = kwargs
+        return np.asarray(x)[:, :2] * self.scale
+
+
+class _TokenizeOnlyModel(TextModel, SupportsTokenization):
+    """Tokenizable but gradient-free — only AblationFlip is compatible."""
+
+    def __init__(self):
+        super().__init__(label_names=["neg", "pos"])
+
+    def predict(self, texts):
+        return np.tile([0.4, 0.6], (len(texts), 1))
+
+    def tokenize(self, text):
+        return text.split()
+
+    def detokenize(self, tokens):
+        return " ".join(tokens)
+
+    @property
+    def shap_callable(self):
+        return self.predict
+
+
+def _projection_explanation(texts: pd.Series) -> NlpExplanation:
+    """A minimal ``NlpExplanation`` carrying only ``texts`` — all ``compute_projection`` needs."""
+    n = len(texts)
+    return NlpExplanation(
+        texts=texts,
+        token_strings=[[] for _ in range(n)],
+        values=[np.zeros((0, 2)) for _ in range(n)],
+        base_values=np.zeros((n, 2)),
+        y_pred=pd.Series(["pos"] * n, index=texts.index, name="prediction"),
+        y_prob=None,
+        y_true=None,
+        label_names=None,
+        folds_case=None,
+        backend_name="test",
+        is_additive=True,
+        reference_kind="none",
+        output_space="probability",
+    )
+
+
+class TestComputeProjection(unittest.TestCase):
+    """The library owns the space + the embedding cache; the caller injects only the reducer."""
+
+    def setUp(self):
+        self.model = _ProjectableModel()
+        self.xpl = NlpExplainer(self.model, backend=object())
+        self.explanation = _projection_explanation(pd.Series(["alpha", "beta banana", "gamma"]))
+
+    def test_returns_two_columns_aligned_with_the_texts(self):
+        projection = self.xpl.compute_projection(self.explanation)
+        self.assertEqual(projection.vectors.shape, (3, 2))
+        self.assertEqual(projection.n_samples, self.explanation.n_samples)
+
+    def test_defaults_to_pca_without_any_extra_dependency(self):
+        """The default reducer must be something a core install already has — sklearn's PCA."""
+        projection = self.xpl.compute_projection(self.explanation)
+        self.assertEqual(projection.n_components, 2)
+        self.assertEqual(self.model.calls, 1)
+
+    def test_injected_reducer_is_used(self):
+        reducer = _CountingReducer(scale=2.0)
+        projection = self.xpl.compute_projection(self.explanation, reducer=reducer)
+        self.assertEqual(reducer.fits, 1)
+        np.testing.assert_allclose(projection.vectors[0], [10.0, 4.0])  # "alpha": len 5, 2 a's, doubled
+
+    def test_projection_carries_the_provenance_needed_to_pair_it_back(self):
+        # The point of returning an Embedding rather than a bare array: the coordinates say which
+        # corpus, model and space they belong to, so a mismatch can be caught instead of drawn.
+        projection = self.xpl.compute_projection(self.explanation)
+        self.assertEqual(projection.corpus_id, self.explanation.corpus_id)
+        self.assertEqual(projection.model_id, self.model.model_id)
+        self.assertEqual(projection.space, self.model.resolve_space())
+        self.assertEqual(projection.reducer_tag, "pca")
+
+    def test_embeddings_are_raw_and_reusable_for_several_projections(self):
+        # The flow the split exists for: embed once (needs the model), reduce many times (does not).
+        embedding = self.xpl.compute_embeddings(self.explanation)
+        self.assertEqual(self.model.calls, 1)
+        self.assertIsNone(embedding.reducer_tag)
+        self.assertEqual(embedding.corpus_id, self.explanation.corpus_id)
+
+        first = embedding.project(_CountingReducer(scale=1.0))
+        second = embedding.project(_CountingReducer(scale=3.0))
+        self.assertEqual(self.model.calls, 1, "reducing must not re-embed")
+        np.testing.assert_allclose(second.vectors, first.vectors * 3.0)
+
+    def test_raises_for_a_model_that_cannot_embed(self):
+        """A prediction-only model gets a clear error pointing at the escape hatch, not an AttributeError."""
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object())
+        explanation = _projection_explanation(pd.Series(["alpha", "beta"]))
+        with self.assertRaises(TypeError):
+            xpl.compute_projection(explanation)
+
+    def test_embeddings_cached_across_instances_while_the_reducer_reruns(self):
+        # Only the expensive half is cached; a layout worth keeping is saved explicitly.
+        with tempfile.TemporaryDirectory() as d:
+            reducer = _CountingReducer()
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
+
+            fresh_model = _ProjectableModel()
+            fresh = NlpExplainer(fresh_model, backend=object())
+            fresh.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
+            self.assertEqual(fresh_model.calls, 0)
+            self.assertEqual(reducer.fits, 2)
+
+    def test_model_space_takes_part_in_the_key(self):
+        """Moving the model's space must re-embed, not reload the other space's vectors."""
+        with tempfile.TemporaryDirectory() as d:
+            self.xpl.compute_projection(self.explanation, reducer=_CountingReducer(), cache_dir=d)
+            self.model.space = "pooled"
+            self.model.calls = 0
+            self.xpl.compute_projection(self.explanation, reducer=_CountingReducer(), cache_dir=d)
+            self.assertEqual(self.model.calls, 1)  # re-embedded under the new space
+
+    def test_recompute_forces_a_fresh_fit(self):
+        with tempfile.TemporaryDirectory() as d:
+            reducer = _CountingReducer()
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
+            self.model.calls = 0
+            self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d, recompute=True)
+            self.assertEqual(self.model.calls, 1)
+            self.assertEqual(reducer.fits, 2)
+
+    def test_fit_transform_kwargs_are_forwarded(self):
+        reducer = _CountingReducer()
+        self.xpl.compute_projection(self.explanation, reducer=reducer, init="pca", verbose=False)
+        self.assertEqual(reducer.last_kwargs, {"init": "pca", "verbose": False})
+
+
+class _UnembeddableModel(_ProjectableModel):
+    """Embeds nothing: stands in for a corpus the model chokes on (OOM, bad encoding)."""
+
+    def embed(self, texts, space=None):
+        raise RuntimeError("cannot embed this corpus")
+
+
+class TestFitPrecompute(unittest.TestCase):
+    CORPUS = ["a happy line", "a sad line", "another happy one"]
+    LABELS = ["joy", "sadness", "joy"]
+
+    def test_precompute_embeds_the_bank_at_fit(self):
+        model = _ProjectableModel()
+        xpl = NlpExplainer(model, backend=object()).fit(self.CORPUS, y=self.LABELS)
+        self.assertEqual(model.calls, 1)  # the corpus, embedded once, inside fit
+        xpl.find_similar("a happy line")
+        self.assertEqual(model.calls, 2)  # the query only — the bank was already there
+
+    def test_precompute_false_defers_to_first_query(self):
+        model = _ProjectableModel()
+        xpl = NlpExplainer(model, backend=object()).fit(self.CORPUS, y=self.LABELS, precompute=False)
+        self.assertEqual(model.calls, 0)
+        xpl.find_similar("a happy line")
+        self.assertEqual(model.calls, 2)  # bank + query, both charged to the first click
+
+    def test_find_similar_threshold_filters_by_score_and_reports_total(self):
+        model = _ProjectableModel()
+        xpl = NlpExplainer(model, backend=object()).fit(self.CORPUS, y=self.LABELS)
+        neighbors, total = xpl.find_similar_threshold("a happy line", threshold=-1.0, limit=1)
+        self.assertLessEqual(len(neighbors), 1)
+        self.assertGreaterEqual(total, len(neighbors))
+
+    def test_find_similar_threshold_requires_a_retriever(self):
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object()).fit(self.CORPUS, y=self.LABELS)
+        with self.assertRaises(RuntimeError):
+            xpl.find_similar_threshold("a happy line")
+
+    def test_precompute_is_a_noop_when_no_retriever_was_built(self):
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object()).fit(self.CORPUS, y=self.LABELS)
+        self.assertFalse(xpl.can_find_similar())  # model cannot embed
+        self.assertTrue(xpl.can_probe_labels())  # ... but the model-free probe still fit
+
+    def test_a_bank_failure_still_leaves_the_model_free_probe_usable(self):
+        xpl = NlpExplainer(_UnembeddableModel(), backend=object())
+        with self.assertRaises(RuntimeError):
+            xpl.fit(self.CORPUS, y=self.LABELS)
+        # reference_/classes_ are assigned before the bank is built, so the half-fitted object keeps
+        # the feature that never needed the model.
+        self.assertEqual(xpl.reference_, (self.CORPUS, self.LABELS))
+        self.assertEqual(xpl.classes_, LABEL_NAMES[:2])  # from the model, not derived from y
+        self.assertTrue(xpl.can_probe_labels())
 
 
 if __name__ == "__main__":
