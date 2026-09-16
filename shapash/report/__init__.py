@@ -1,20 +1,3 @@
-import importlib
+from .common import ReportTemplate, export_report_yml
 
-# This list should be identical to the list in setup.py
-report_requirements = ["nbconvert==6.0.7", "papermill", "matplotlib", "notebook", "Jinja2"]
-
-
-def check_report_requirements():
-    """
-    Checks that all required packages for the report are installed.
-    This function should be called before executing the report.
-    """
-    for req in report_requirements:
-        pkg = req.split("=")[0]
-        try:
-            importlib.import_module(pkg.lower())
-        except ImportError as err:
-            raise ModuleNotFoundError(
-                f"The following package is necessary to generate the Shapash Report : {pkg}. "
-                f"Try 'pip install shapash[report]' to install all required packages."
-            ) from err
+__all__ = ["ReportTemplate", "export_report_yml"]
