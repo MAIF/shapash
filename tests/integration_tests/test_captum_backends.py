@@ -18,7 +18,6 @@ pytest.importorskip("torch")
 pytest.importorskip("captum")
 
 from shapash.backend import NlpCaptumLigBackend  # noqa: E402
-from shapash.backend.nlp_backend import NlpContributions  # noqa: E402
 from shapash.compute.generators import AblationFlipGenerator  # noqa: E402
 from shapash.explainer.nlp_explainer import NlpExplainer  # noqa: E402
 from shapash.model import HFClassifierModel  # noqa: E402
@@ -72,13 +71,12 @@ def test_lig_backend_contributions(model):
 
 
 def test_lig_backend_through_explainer_and_word_importance(model):
-    """The LIG backend drives NlpExplainer.compile and the shared word-importance aggregation."""
+    """The LIG backend drives NlpExplainer.explain and the shared word-importance aggregation."""
     xpl = NlpExplainer(model, label_names=LABELS, backend=NlpCaptumLigBackend(model, label_names=LABELS))
-    xpl.compile(["i am so happy today", "i feel terrified and alone"])
-    assert isinstance(xpl.contributions, NlpContributions)
-    assert len(xpl.contributions) == 2
+    explanation = xpl.explain(["i am so happy today", "i feel terrified and alone"])
+    assert len(explanation) == 2
     joy_idx = LABELS.index("joy")
-    word_imp = xpl.contributions.word_importance(joy_idx, n_top=5)
+    word_imp = explanation.word_importance(joy_idx, n_top=5)
     assert len(word_imp) > 0  # some words survive special-token filtering
 
 

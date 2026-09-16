@@ -121,11 +121,12 @@ def test_explainer_interactive_engine_with_classifier(hf):
     assert label in LABELS
     assert abs(sum(probs.values()) - 1.0) < 1e-4
 
-    xpl.compile(["i am so happy today", "i feel terrified and alone"], y_true=["joy", "fear"])
+    explanation = xpl.explain(["i am so happy today", "i feel terrified and alone"], y=["joy", "fear"])
+    assert list(explanation.y_true) == ["joy", "fear"]
     contribs, elabel, eprobs = xpl.explain_text("i am furious about this")
-    assert len(contribs) == 1
+    assert len(contribs.token_strings) == 1
     assert elabel in LABELS
-    assert contribs.label_names == LABELS
+    assert set(eprobs.keys()) == set(LABELS)
 
     cfs = xpl.generate_counterfactuals("i am so happy today", config={"num_examples": 2, "max_flips": 2})
     assert all(cf.new_label != cf.orig_label for cf in cfs)
@@ -174,8 +175,8 @@ def test_whatif_app_callbacks_end_to_end(hf):
     classifier, tokenizer, _ = hf
     model = HFClassifierModel(classifier, tokenizer, label_names=LABELS)
     xpl = NlpExplainer(model, label_names=LABELS)
-    xpl.compile(["i am so happy today", "i feel terrified and alone"], y_true=["joy", "fear"])
-    webapp = NlpWebApp(xpl)
+    explanation = xpl.explain(["i am so happy today", "i feel terrified and alone"], y=["joy", "fear"])
+    webapp = NlpWebApp(explanation, engine=xpl)
     app = webapp.app
 
     # Predict: edited text -> probability figure + current-datapoint (drives the shared highlight).
@@ -249,13 +250,12 @@ def test_label_noise_detection_with_real_probabilities(hf):
     noisy = list(truth)
     noisy[0], noisy[2] = "anger", "joy"
 
-    reference = (texts, truth)
-    xpl = NlpExplainer(model, label_names=LABELS, reference_corpus=reference)
-    xpl.compile(texts, y_true=noisy)
+    xpl = NlpExplainer(model, label_names=LABELS).fit(X_reference=texts, y=truth)
+    explanation = xpl.explain(texts, y=noisy)
 
-    assert xpl.can_detect_label_noise()
+    assert xpl.can_detect_label_noise(explanation)
     assert xpl.can_probe_labels()
-    report = xpl.detect_label_noise(top_n=5)
+    report = xpl.detect_label_noise(explanation, top_n=5)
 
     assert report.n_samples == len(texts)
     assert report.label_names == LABELS
@@ -286,15 +286,15 @@ def test_label_noise_detection_with_real_probabilities(hf):
 
     # Without a reference corpus there is no second opinion, and detection still runs.
     bare = NlpExplainer(model, label_names=LABELS)
-    bare.compile(texts, y_true=noisy)
+    bare_explanation = bare.explain(texts, y=noisy)
     assert not bare.can_probe_labels()
-    assert all(issue.probe is None for issue in bare.detect_label_noise(top_n=5).issues)
+    assert all(issue.probe is None for issue in bare.detect_label_noise(bare_explanation, top_n=5).issues)
 
 
 def test_label_noise_unavailable_without_ground_truth(hf):
     classifier, tokenizer, _ = hf
     xpl = NlpExplainer(HFClassifierModel(classifier, tokenizer, label_names=LABELS), label_names=LABELS)
-    xpl.compile(["i am so happy today", "i feel terrified and alone"])
-    assert not xpl.can_detect_label_noise()
+    explanation = xpl.explain(["i am so happy today", "i feel terrified and alone"])
+    assert not xpl.can_detect_label_noise(explanation)
     with pytest.raises(RuntimeError, match="ground-truth labels"):
-        xpl.detect_label_noise()
+        xpl.detect_label_noise(explanation)

@@ -130,8 +130,8 @@ def test_st_token_gradients_align(st_model):
 def test_st_shap_backend_runs(st_model):
     """SHAP works via the explicit Text masker (no transformers pipeline needed)."""
     xpl = NlpExplainer(st_model, label_names=LABELS)
-    xpl.compile(TEXTS[:2])
-    words = xpl.contributions.token_strings[0]
+    explanation = xpl.explain(TEXTS[:2])
+    words = explanation.token_strings[0]
     assert len(words) > 0
     # word-level highlights must not leak special tokens or subword markers.
     assert not any(w.startswith(("##", "Ġ", "▁")) or w in ("[CLS]", "[SEP]") for w in words)
@@ -203,8 +203,8 @@ def test_torch_word_alignment_with_fast_tokenizer(torch_model):
 
 def test_torch_shap_and_lig_backends_run(torch_model):
     xpl = NlpExplainer(torch_model, label_names=LABELS)
-    xpl.compile(TEXTS[:2])
-    assert len(xpl.contributions.token_strings[0]) > 0
+    explanation = xpl.explain(TEXTS[:2])
+    assert len(explanation.token_strings[0]) > 0
 
     backend = NlpCaptumLigBackend(torch_model, label_names=LABELS)
     raw = backend.run_explainer(TEXTS[:2])
