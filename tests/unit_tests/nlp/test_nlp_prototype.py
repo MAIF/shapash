@@ -12,12 +12,12 @@ import tempfile
 import unittest
 import zipfile
 from dataclasses import replace
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
-from dash import html
+from dash import html, jupyter_dash
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_lime_backend import NlpLimeBackend
@@ -1188,36 +1188,43 @@ class TestNlpWebApp(unittest.TestCase):
 
 
 class TestNlpWebAppRun(unittest.TestCase):
-    """``NlpWebApp.run`` / ``NlpExplainer.run_app`` — killable background server."""
+    """``NlpWebApp.run`` / ``NlpExplainer.run_app`` — delegate to ``dash.Dash.run``; a stop handle in notebooks."""
 
     def setUp(self):
         self.xpl = _make_explainer()
         self.explanation = _make_explanation()
 
-    def test_run_returns_killable_app_by_default(self):
-        webapp = NlpWebApp(self.explanation, engine=self.xpl)
-        app = webapp.run(port=0)
-        try:
-            self.assertIsInstance(app, RunningApp)
-            self.assertTrue(app.is_alive())
-        finally:
-            app.kill()
-        self.assertFalse(app.is_alive())
+    @staticmethod
+    def _jupyter_active(active):
+        return patch.object(type(jupyter_dash), "active", new_callable=PropertyMock, return_value=active)
 
-    def test_run_app_returns_killable_app(self):
-        app = self.xpl.run_app(self.explanation, port=0)
-        try:
-            self.assertIsInstance(app, RunningApp)
-            self.assertTrue(app.is_alive())
-        finally:
-            app.kill()
-
-    def test_debug_mode_blocks_and_returns_none(self):
+    def test_outside_notebook_delegates_to_dash_and_returns_none(self):
         webapp = NlpWebApp(self.explanation, engine=self.xpl)
-        with patch.object(webapp.app, "run") as mock_run:
-            result = webapp.run(port=0, debug=True)
-        mock_run.assert_called_once_with(port=0, debug=True, host="127.0.0.1")
+        with self._jupyter_active(False), patch.object(webapp.app, "run") as mock_run:
+            result = webapp.run(port=8123, debug=True)
+        mock_run.assert_called_once_with(port=8123, debug=True, host="127.0.0.1")
         self.assertIsNone(result)
+
+    def test_in_notebook_returns_handle_on_dash_registered_server(self):
+        webapp = NlpWebApp(self.explanation, engine=self.xpl)
+        server = MagicMock()
+
+        def register(port, debug, host):
+            jupyter_dash._servers[(host, port)] = server
+
+        with self._jupyter_active(True), patch.object(webapp.app, "run", side_effect=register):
+            app = webapp.run(port=8123)
+        self.assertIsInstance(app, RunningApp)
+        app.kill()
+        server.shutdown.assert_called_once_with()
+        self.assertNotIn(("127.0.0.1", 8123), jupyter_dash._servers)
+
+    def test_run_app_forwards_the_handle(self):
+        sentinel = object()
+        with patch.object(NlpWebApp, "run", return_value=sentinel) as mock_run:
+            result = self.xpl.run_app(self.explanation, port=8123)
+        mock_run.assert_called_once_with(port=8123, debug=False, host="127.0.0.1")
+        self.assertIs(result, sentinel)
 
 
 class TestComposeSelection(unittest.TestCase):

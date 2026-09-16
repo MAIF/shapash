@@ -601,10 +601,9 @@ class NlpExplainer:
         Returns
         -------
         RunningApp or None
-            When ``debug`` is ``False`` (the default), the app runs on a background thread and
-            this call returns immediately with a handle to it — call ``.kill()`` on it (or use it
-            as a context manager) to stop the app. Returns ``None`` when ``debug=True``, since
-            Dash's own dev server blocks in that mode instead — see :meth:`~shapash.webapp.nlp_app.NlpWebApp.run`.
+            In a notebook, the app is served in the background and this returns immediately with a
+            handle — call ``.kill()`` on it to stop the app. Anywhere else, this blocks until the
+            server is stopped (Ctrl+C) and returns ``None`` — see :meth:`~shapash.webapp.nlp_app.NlpWebApp.run`.
         """
         # fit() is the one place that knows the reference corpus, so its size is added here rather
         # than living on `explanation` (which is model-free and never sees the training set at all).

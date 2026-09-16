@@ -9,14 +9,12 @@ not optional panels, so there is nothing left to extract them into. All tabular-
 
 from __future__ import annotations
 
-import logging
-
 import dash
 import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
-from dash import MATCH, Input, Output, dcc, html
+from dash import MATCH, Input, Output, dcc, html, jupyter_dash
 from dash.exceptions import PreventUpdate
 
 from shapash.compute.embeddings import Embedding, projection_coords
@@ -40,7 +38,7 @@ from shapash.webapp.nlp_components import (
     pack_datapoint,
 )
 from shapash.webapp.nlp_components.base import AppContext
-from shapash.webapp.utils.launch import RunningApp, run_in_background
+from shapash.webapp.utils.launch import RunningApp
 
 _APPLY_STORE = "whatif-apply-store"
 _CURRENT_STORE = "current-datapoint"
@@ -918,24 +916,16 @@ class NlpWebApp:
         port : int
             Port for the server.
         debug : bool
-            Enable Dash debug mode (hot reload, error overlay). Debug mode uses Dash's own
-            blocking dev server and reloader, so it cannot be handed back as a killable handle —
-            stop it by interrupting the kernel/process. Defaults to ``False``.
+            Enable Dash debug mode (hot reload, error overlay). Defaults to ``False``.
         host : str
             Host to bind the server to.
 
         Returns
         -------
         RunningApp or None
-            When ``debug`` is ``False`` (the default), the server runs on a background thread and
-            this call returns immediately with a handle to it — call ``.kill()`` on it (or use it
-            as a context manager) to stop the server. Returns ``None`` when ``debug=True``, since
-            that path blocks instead.
+            In a notebook, Dash serves the app in the background and this returns immediately with
+            a handle — call ``.kill()`` on it (or use it as a context manager) to stop the server.
+            Anywhere else, this blocks until the server is stopped (Ctrl+C) and returns ``None``.
         """
-        if debug:
-            self.app.run(port=port, debug=debug, host=host)
-            return None
-        running_app = run_in_background(self.app.server, host, port)
-        logging.info(f"Your Shapash application run on {running_app.url}")
-        logging.info("Use the method .kill() to stop your app.")
-        return running_app
+        self.app.run(port=port, debug=debug, host=host)
+        return RunningApp(host, port) if jupyter_dash.active else None
