@@ -25,6 +25,7 @@ from shapash.webapp.nlp_components import (
     SimilarExamplesComponent,
 )
 from shapash.webapp.nlp_components.base import AppContext
+from shapash.webapp.nlp_components.datapoint import pack_datapoint
 
 LABEL_NAMES = ["neg", "pos"]
 
@@ -1367,6 +1368,69 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
         with self.assertRaises(PreventUpdate):
             self.graph(None, 10, "all", [], "mean", 1, None, None, False, None)
 
+    def test_generic_empty_explains_itself_when_neither_sign_nor_floor_is_the_cause(self):
+        # Excluding every word in the corpus empties the ranking without any sign filter or floor
+        # active — the fallback message names neither, unlike the two more specific reasons above.
+        fig = self.graph(0, 10, "all", ["rare", "common", "mild"], "mean", 1, None, None, False, None)
+        self.assertEqual(len(fig.data), 0)
+        self.assertIn("No word passes these filters in these 4 sample(s)", fig.layout.annotations[0].text)
+
+
+class TestWordImportanceClickCallbacks(unittest.TestCase):
+    """Word-click store sync: a bar click or the clear button, and the clear button's own visibility."""
+
+    @staticmethod
+    def _app():
+        return NlpWebApp(TestGlobalWordImportancePanel._explanation(), engine=None)
+
+    def test_bar_click_publishes_the_word_and_resets_clickdata(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import word_importance as word_importance_module
+
+        app = self._app()
+        update = _callback(app, "data...global-importance-graph.clickData")
+        click_data = {"points": [{"y": "common"}]}
+        with mock.patch.object(word_importance_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "global-importance-graph.clickData"}]
+            words, reset = update(click_data, None)
+        self.assertEqual(words, ["common"])
+        self.assertIsNone(reset)
+
+    def test_clear_button_resets_the_store(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import word_importance as word_importance_module
+
+        app = self._app()
+        update = _callback(app, "data...global-importance-graph.clickData")
+        with mock.patch.object(word_importance_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "word-filter-clear-btn.n_clicks"}]
+            words, reset = update(None, 1)
+        self.assertIsNone(words)
+        self.assertIsNone(reset)
+
+    def test_empty_click_prevents_update(self):
+        from unittest import mock
+
+        from dash.exceptions import PreventUpdate
+        from shapash.webapp.nlp_components import word_importance as word_importance_module
+
+        app = self._app()
+        update = _callback(app, "data...global-importance-graph.clickData")
+        with mock.patch.object(word_importance_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "global-importance-graph.clickData"}]
+            with self.assertRaises(PreventUpdate):
+                update({"points": []}, None)
+            with self.assertRaises(PreventUpdate):
+                update(None, None)
+
+    def test_toggle_clear_button_visibility(self):
+        app = self._app()
+        toggle = _callback(app, "word-filter-clear-btn.style")
+        self.assertEqual(toggle(None)["display"], "none")
+        self.assertEqual(toggle(["common"])["display"], "inline")
+
 
 class TestWordImportanceScatterSync(unittest.TestCase):
     """Word Importance and Scatter communicate only through the shared stores (Phase A extraction).
@@ -1641,6 +1705,413 @@ class TestBuildScatterFig(unittest.TestCase):
         fig = self._component()._build_scatter_fig(self._ctx_for(self._explanation(False, False)), "prediction")
         self.assertEqual(len(fig.data), 1)
         self.assertEqual(len(fig.data[0].x), 2)
+
+
+class TestScatterComponentCallbacks(unittest.TestCase):
+    """The scatter panel's own callbacks: color-mode/word-list sync and box/lasso/click selection."""
+
+    @staticmethod
+    def _explanation():
+        texts = pd.Series(["rare common", "common"])
+        return NlpExplanation(
+            texts=texts,
+            token_strings=[["rare", "common"], ["common"]],
+            values=[np.array([[0.9, -0.9], [0.3, -0.3]]), np.array([[0.3, -0.3]])],
+            base_values=None,
+            y_pred=pd.Series(["neg", "pos"], index=texts.index, name="prediction"),
+            y_prob=None,
+            y_true=pd.Series(["pos", "pos"], index=texts.index, name="ground_truth"),
+            label_names=None,
+            folds_case=True,
+            backend_name="nlp_shap",
+            is_additive=True,
+            reference_kind="none",
+            output_space="probability",
+        )
+
+    def _app(self):
+        return NlpWebApp(self._explanation(), engine=None, projection=np.zeros((2, 2)))
+
+    def test_ground_truth_option_offered_when_available(self):
+        app = self._app()
+        # Walk the layout for the color-by dropdown directly, mirroring TestScatterComponentWordContributionOption.
+        found = {}
+
+        def walk(node):
+            cid = getattr(node, "id", None)
+            if isinstance(cid, str):
+                found[cid] = node
+            children = getattr(node, "children", None)
+            for ch in children if isinstance(children, (list, tuple)) else [children]:
+                if ch is not None and not isinstance(ch, str):
+                    walk(ch)
+
+        walk(app.app.layout)
+        dropdown = found["color-by"]
+        self.assertIn("ground_truth", [opt["value"] for opt in dropdown.options])
+
+    def test_sync_color_by_switches_to_word_contribution_when_words_selected(self):
+        app = self._app()
+        sync = _callback(app, "color-by.value")
+        self.assertEqual(sync(["common"]), "word_contribution")
+
+    def test_sync_color_by_prevents_update_when_words_cleared(self):
+        from dash.exceptions import PreventUpdate
+
+        app = self._app()
+        sync = _callback(app, "color-by.value")
+        with self.assertRaises(PreventUpdate):
+            sync([])
+        with self.assertRaises(PreventUpdate):
+            sync(None)
+
+    def test_follow_word_click_mirrors_a_single_word_as_a_list(self):
+        app = self._app()
+        follow = _callback(app, "scatter-word-select.value")
+        self.assertEqual(follow("common"), ["common"])
+
+    def test_follow_word_click_passes_through_a_list_and_clears_on_falsy(self):
+        app = self._app()
+        follow = _callback(app, "scatter-word-select.value")
+        self.assertEqual(follow(["common", "rare"]), ["common", "rare"])
+        self.assertEqual(follow(None), [])
+
+    def test_word_filter_from_scatter_publishes_to_the_shared_store(self):
+        app = self._app()
+        publish = _callback(app, "word-click-filter.data@")
+        self.assertEqual(publish(["common"]), ["common"])
+        self.assertIsNone(publish([]))
+        self.assertIsNone(publish(None))
+
+    def test_toggle_word_select_visibility_follows_color_mode(self):
+        app = self._app()
+        toggle = _callback(app, "scatter-word-select.style")
+        self.assertNotEqual(toggle("word_contribution").get("display"), "none")
+        self.assertEqual(toggle("prediction")["display"], "none")
+
+    def test_update_scatter_selection_clear_button_resets(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import scatter as scatter_module
+
+        app = self._app()
+        update = _callback(app, "scatter-selected-indices.data")
+        with mock.patch.object(scatter_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "scatter-clear-btn.n_clicks"}]
+            self.assertIsNone(update(None, None, 1))
+
+    def test_update_scatter_selection_from_a_click(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import scatter as scatter_module
+
+        app = self._app()
+        update = _callback(app, "scatter-selected-indices.data")
+        click_data = {"points": [{"customdata": [1]}]}
+        with mock.patch.object(scatter_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "scatter-plot.clickData"}]
+            self.assertEqual(update(None, click_data, None), [1])
+
+    def test_update_scatter_selection_ignores_an_empty_click(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import scatter as scatter_module
+
+        app = self._app()
+        update = _callback(app, "scatter-selected-indices.data")
+        with mock.patch.object(scatter_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "scatter-plot.clickData"}]
+            self.assertIsNone(update(None, {"points": []}, None))
+            self.assertIsNone(update(None, None, None))
+
+    def test_update_scatter_selection_ignores_an_empty_box_select_as_a_recolor_echo(self):
+        from dash.exceptions import PreventUpdate
+
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import scatter as scatter_module
+
+        app = self._app()
+        update = _callback(app, "scatter-selected-indices.data")
+        with mock.patch.object(scatter_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "scatter-plot.selectedData"}]
+            with self.assertRaises(PreventUpdate):
+                update({"points": []}, None, None)
+
+    def test_update_scatter_selection_from_a_box_select(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import scatter as scatter_module
+
+        app = self._app()
+        update = _callback(app, "scatter-selected-indices.data")
+        selected_data = {"points": [{"customdata": [0]}, {"customdata": [1]}]}
+        with mock.patch.object(scatter_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "scatter-plot.selectedData"}]
+            self.assertEqual(update(selected_data, None, None), [0, 1])
+
+    def test_toggle_clear_button_visibility(self):
+        app = self._app()
+        toggle = _callback(app, "scatter-clear-btn.style")
+        self.assertEqual(toggle(None)["display"], "none")
+        self.assertEqual(toggle([0, 1])["display"], "inline")
+
+
+def _make_local_panel_explanation():
+    """Two samples, two classes — enough for the sentence-highlight / waterfall panels."""
+    texts = pd.Series(["i am happy", "so sad"])
+    return NlpExplanation(
+        texts=texts,
+        token_strings=[["i", "am", "happy"], ["so", "sad"]],
+        values=[np.array([[0.1, -0.1], [0.2, -0.2], [0.4, -0.4]]), np.array([[-0.3, 0.3], [-0.5, 0.5]])],
+        base_values=np.array([[0.0, 0.0], [0.0, 0.0]]),
+        y_pred=pd.Series(["pos", "neg"], index=texts.index, name="prediction"),
+        y_prob=None,
+        y_true=None,
+        label_names=LABEL_NAMES,
+        folds_case=True,
+        backend_name="nlp_shap",
+        is_additive=True,
+        reference_kind="none",
+        output_space="probability",
+    )
+
+
+def _make_local_panel_datapoint(label="pos"):
+    return pack_datapoint(
+        text="i am happy",
+        orig_idx=0,
+        tokens=["i", "am", "happy"],
+        values=np.array([[0.1, -0.1], [0.2, -0.2], [0.4, -0.4]]),
+        base_values=np.array([0.0, 0.0]),
+        label=label,
+    )
+
+
+class TestSentenceHighlightComponentCallbacks(unittest.TestCase):
+    """The Sentence panel's own callbacks: class-picker sync to the prediction, and the render."""
+
+    def _app(self):
+        return NlpWebApp(_make_local_panel_explanation(), engine=None)
+
+    def test_sync_local_class_prevents_update_without_a_datapoint(self):
+        from dash.exceptions import PreventUpdate
+
+        app = self._app()
+        sync = _callback(app, "local-class-selector.value")
+        with self.assertRaises(PreventUpdate):
+            sync(None)
+        with self.assertRaises(PreventUpdate):
+            sync({"text": "i am happy", "label": None})
+
+    def test_sync_local_class_prevents_update_for_an_unknown_label(self):
+        from dash.exceptions import PreventUpdate
+
+        app = self._app()
+        sync = _callback(app, "local-class-selector.value")
+        with self.assertRaises(PreventUpdate):
+            sync(_make_local_panel_datapoint(label="not-a-real-class"))
+
+    def test_sync_local_class_resolves_the_predicted_label_to_its_index(self):
+        app = self._app()
+        sync = _callback(app, "local-class-selector.value")
+        self.assertEqual(sync(_make_local_panel_datapoint(label="pos")), LABEL_NAMES.index("pos"))
+
+    def test_update_sentence_highlight_prevents_update_without_datapoint_or_class(self):
+        from dash.exceptions import PreventUpdate
+
+        app = self._app()
+        update = _callback(app, "sentence-highlight.children")
+        with self.assertRaises(PreventUpdate):
+            update(None, 0)
+        with self.assertRaises(PreventUpdate):
+            update(_make_local_panel_datapoint(), None)
+
+    def test_update_sentence_highlight_renders_for_a_valid_datapoint(self):
+        from dash import html
+
+        app = self._app()
+        update = _callback(app, "sentence-highlight.children")
+        result = update(_make_local_panel_datapoint(), 1)
+        self.assertIsInstance(result, html.Div)
+
+
+class TestWaterfallComponentCallbacks(unittest.TestCase):
+    """The Waterfall panel's own callback: current datapoint + class + threshold -> figure."""
+
+    def _app(self):
+        return NlpWebApp(_make_local_panel_explanation(), engine=None)
+
+    def test_update_waterfall_prevents_update_without_datapoint_or_class(self):
+        from dash.exceptions import PreventUpdate
+
+        app = self._app()
+        update = _callback(app, "waterfall-graph.figure")
+        with self.assertRaises(PreventUpdate):
+            update(None, 0, 10)
+        with self.assertRaises(PreventUpdate):
+            update(_make_local_panel_datapoint(), None, 10)
+
+    def test_update_waterfall_renders_and_titles_by_class(self):
+        import plotly.graph_objs as go
+
+        app = self._app()
+        update = _callback(app, "waterfall-graph.figure")
+        fig = update(_make_local_panel_datapoint(), 1, 10)
+        self.assertIsInstance(fig, go.Figure)
+        self.assertIn(LABEL_NAMES[1], fig.layout.title.text)
+
+    def test_update_waterfall_defaults_the_threshold_when_missing(self):
+        app = self._app()
+        update = _callback(app, "waterfall-graph.figure")
+        # None threshold (e.g. before the slider ever fires) must not raise — falls back to 10%.
+        fig = update(_make_local_panel_datapoint(), 0, None)
+        self.assertIsNotNone(fig)
+
+
+class TestCounterfactualComponentCallbacks(unittest.TestCase):
+    """The generate/apply wiring: method-group toggling, the Generate click, and per-row Apply."""
+
+    def _app(self, engine=None):
+        engine = engine or FakeEngine(can_edit=True, can_cf=True)
+        return NlpWebApp(engine.to_explanation(), engine=engine), engine
+
+    def test_toggle_controls_shows_only_the_selected_generators_group(self):
+        app, _ = self._app()
+        toggle = _callback(app, "counterfactual-cfg-group-hotflip.style")
+        hotflip_style, ablation_style = toggle("hotflip")
+        self.assertNotEqual(hotflip_style.get("display"), "none")
+        self.assertEqual(ablation_style.get("display"), "none")
+
+    # generate(n_clicks, datapoint, selected_gen, *config_values) — 6 states: (num_examples,
+    # max_flips/max_ablations, tokens_to_ignore) for each of FakeEngine's two generators, in order.
+    _CONFIG_VALUES = (5, 3, "", 5, 3, "")
+
+    def test_generate_prevents_update_without_a_click(self):
+        from dash.exceptions import PreventUpdate
+
+        app, _ = self._app()
+        generate = _callback(app, "counterfactual-results.children")
+        with self.assertRaises(PreventUpdate):
+            generate(None, {"text": "i am happy"}, "hotflip", *self._CONFIG_VALUES)
+
+    def test_generate_prevents_update_without_text(self):
+        from dash.exceptions import PreventUpdate
+
+        app, _ = self._app()
+        generate = _callback(app, "counterfactual-results.children")
+        with self.assertRaises(PreventUpdate):
+            generate(1, None, "hotflip", *self._CONFIG_VALUES)
+        with self.assertRaises(PreventUpdate):
+            generate(1, {"text": "   "}, "hotflip", *self._CONFIG_VALUES)
+
+    def test_generate_returns_a_results_table_on_success(self):
+        app, engine = self._app()
+        generate = _callback(app, "counterfactual-results.children")
+        children, texts = generate(1, {"text": "i am happy"}, "hotflip", *self._CONFIG_VALUES)
+        self.assertIsNotNone(children)
+        self.assertEqual(texts, [cf.new_text for cf in engine.generate_counterfactuals("i am happy")])
+
+    def test_generate_reports_when_no_counterfactual_is_found(self):
+        class _NoResultsEngine(FakeEngine):
+            def generate_counterfactuals(self, text, config=None, generator=None):
+                return []
+
+        app, _ = self._app(_NoResultsEngine(can_edit=True, can_cf=True))
+        generate = _callback(app, "counterfactual-results.children")
+        children, texts = generate(1, {"text": "i am happy"}, "hotflip", *self._CONFIG_VALUES)
+        self.assertIn("No counterfactual found", children.children)
+        self.assertEqual(texts, [])
+
+    def test_apply_prevents_update_without_any_click(self):
+        from dash.exceptions import PreventUpdate
+
+        app, _ = self._app()
+        apply_fn = _callback(app, "whatif-apply-store.data")
+        with self.assertRaises(PreventUpdate):
+            apply_fn([None], ["a new text"])
+
+    def test_apply_prevents_update_on_out_of_range_index(self):
+        from unittest import mock
+
+        from dash.exceptions import PreventUpdate
+        from shapash.webapp.nlp_components import counterfactual as counterfactual_module
+
+        app, _ = self._app()
+        apply_fn = _callback(app, "whatif-apply-store.data")
+        with mock.patch.object(counterfactual_module, "callback_context") as cc:
+            cc.triggered_id = {"type": "counterfactual-apply", "index": 5}
+            with self.assertRaises(PreventUpdate):
+                apply_fn([1], ["only one text"])
+
+    def test_apply_publishes_the_chosen_text_and_datapoint(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import counterfactual as counterfactual_module
+
+        app, engine = self._app()
+        apply_fn = _callback(app, "whatif-apply-store.data")
+        with mock.patch.object(counterfactual_module, "callback_context") as cc:
+            cc.triggered_id = {"type": "counterfactual-apply", "index": 0}
+            text, datapoint = apply_fn([1], ["a new counterfactual text"])
+        self.assertEqual(text, "a new counterfactual text")
+        self.assertEqual(datapoint["text"], "a new counterfactual text")
+        self.assertEqual(datapoint["label"], "pos")  # FakeEngine.explain_text always returns "pos"
+
+
+class TestDataEditorComponentCallbacks(unittest.TestCase):
+    """The editor's own callbacks: prefill from a row/applied counterfactual, and Predict."""
+
+    def _app(self):
+        engine = FakeEngine(can_edit=True, can_cf=False)
+        return NlpWebApp(engine.to_explanation(), engine=engine)
+
+    def test_prefill_prevents_update_without_a_row_or_an_applied_text(self):
+        from unittest import mock
+
+        from dash.exceptions import PreventUpdate
+        from shapash.webapp.nlp_components import data_editor as data_editor_module
+
+        app = self._app()
+        prefill = _callback(app, "data-editor-input.value")
+        with mock.patch.object(data_editor_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "dataset-table.selectedRows"}]
+            with self.assertRaises(PreventUpdate):
+                prefill(None, None)
+
+    def test_prefill_from_a_selected_row(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import data_editor as data_editor_module
+
+        app = self._app()
+        prefill = _callback(app, "data-editor-input.value")
+        with mock.patch.object(data_editor_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "dataset-table.selectedRows"}]
+            self.assertEqual(prefill([{"text": "a selected row"}], None), "a selected row")
+
+    def test_prefill_from_an_applied_counterfactual(self):
+        from unittest import mock
+
+        from shapash.webapp.nlp_components import data_editor as data_editor_module
+
+        app = self._app()
+        prefill = _callback(app, "data-editor-input.value")
+        with mock.patch.object(data_editor_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "whatif-apply-store.data"}]
+            self.assertEqual(prefill(None, "an applied counterfactual"), "an applied counterfactual")
+
+    def test_predict_prevents_update_without_a_click_or_text(self):
+        from dash.exceptions import PreventUpdate
+
+        app = self._app()
+        predict = _callback(app, "data-editor-prob.figure")
+        with self.assertRaises(PreventUpdate):
+            predict(None, "some text")
+        with self.assertRaises(PreventUpdate):
+            predict(1, "")
+        with self.assertRaises(PreventUpdate):
+            predict(1, "   ")
 
 
 class TestWordProfileControls(unittest.TestCase):

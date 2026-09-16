@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 from dash import html, jupyter_dash
+from dash.exceptions import PreventUpdate
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_lime_backend import NlpLimeBackend
@@ -46,6 +47,8 @@ from shapash.style.style_utils import DEFAULT_NLP_THEME
 from shapash.webapp.nlp_app import NlpWebApp
 from shapash.webapp.nlp_components import compose_selection as _compose_selection
 from shapash.webapp.nlp_components import error_positions
+from shapash.webapp.nlp_components.datapoint import pack_datapoint, unpack_datapoint
+from shapash.webapp.nlp_components import error_analysis as error_analysis_module
 from shapash.webapp.nlp_components.error_analysis import ErrorAnalysisComponent, _cell_from_click
 from shapash.webapp.utils.launch import RunningApp
 
@@ -1153,6 +1156,93 @@ class TestNlpWebApp(unittest.TestCase):
         self.assertIsNone(_cell_from_click({"points": []}, name_to_idx))
         self.assertIsNone(_cell_from_click({"points": [{"x": "??", "y": "??"}]}, name_to_idx))
 
+    @staticmethod
+    def _callback(webapp, out_substr):
+        # callback_map stores Dash's context-wrapping shim; the raw user function is under __wrapped__.
+        for key, spec in webapp.app.callback_map.items():
+            if out_substr in key:
+                fn = spec["callback"]
+                return getattr(fn, "__wrapped__", fn)
+        raise KeyError(out_substr)
+
+    def test_update_confusion_matrix_normalizes_on_recall(self):
+        webapp = self._make_webapp_with_gt()
+        update = self._callback(webapp, "confusion-matrix-graph.figure")
+        fig = update("recall")
+        # The container drives sizing for this half-column panel, not the figure itself.
+        self.assertIsNone(fig.layout.width)
+        self.assertIsNone(fig.layout.height)
+
+    def test_set_error_cell_resolves_click_to_cell_and_clears_clickdata(self):
+        webapp = self._make_webapp_with_gt()
+        set_cell = self._callback(webapp, "error-cell.data")
+        click = {"points": [{"x": "joy", "y": "sadness"}]}
+        with patch.object(error_analysis_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "confusion-matrix-graph.clickData"}]
+            data, click_out = set_cell(click, None)
+        self.assertEqual(data, {"pred": 1, "true": 0, "indices": [0]})
+        self.assertIsNone(click_out)
+
+    def test_set_error_cell_prevents_update_on_unresolved_click(self):
+        webapp = self._make_webapp_with_gt()
+        set_cell = self._callback(webapp, "error-cell.data")
+        click = {"points": [{"x": "??", "y": "??"}]}
+        with patch.object(error_analysis_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "confusion-matrix-graph.clickData"}]
+            with self.assertRaises(PreventUpdate):
+                set_cell(click, None)
+
+    def test_set_error_cell_clear_button_resets_store(self):
+        webapp = self._make_webapp_with_gt()
+        set_cell = self._callback(webapp, "error-cell.data")
+        with patch.object(error_analysis_module, "callback_context") as cc:
+            cc.triggered = [{"prop_id": "error-cell-clear-btn.n_clicks"}]
+            data, click_out = set_cell(None, 1)
+        self.assertIsNone(data)
+        self.assertIsNone(click_out)
+
+    def test_toggle_error_cell_clear_button_visibility(self):
+        webapp = self._make_webapp_with_gt()
+        toggle = self._callback(webapp, "error-cell-clear-btn.style")
+        self.assertEqual(toggle(None)["display"], "none")
+        self.assertEqual(toggle({"pred": 1, "true": 0, "indices": [0]})["display"], "inline")
+
+    def test_update_error_word_charts_empty_without_a_selected_cell(self):
+        webapp = self._make_webapp_with_gt()
+        update = self._callback(webapp, "error-cell-caption.children")
+        fig_pred, fig_true, caption = update(None)
+        self.assertIsInstance(fig_pred, go.Figure)
+        self.assertIsInstance(fig_true, go.Figure)
+        self.assertIn("Click a cell", caption)
+
+    def test_update_error_word_charts_empty_when_cell_has_no_samples(self):
+        webapp = self._make_webapp_with_gt()
+        update = self._callback(webapp, "error-cell-caption.children")
+        fig_pred, fig_true, caption = update({"pred": 0, "true": 1, "indices": []})
+        self.assertIsInstance(fig_pred, go.Figure)
+        self.assertIn("0 samples", caption)
+
+    def test_update_error_word_charts_off_diagonal_cell_flags_few_samples(self):
+        webapp = self._make_webapp_with_gt()
+        update = self._callback(webapp, "error-cell-caption.children")
+        # pred=joy(1), true=sadness(0): the single planted error, row 0.
+        fig_pred, fig_true, caption = update({"pred": 1, "true": 0, "indices": [0]})
+        self.assertIsInstance(fig_pred, go.Figure)
+        self.assertIsInstance(fig_true, go.Figure)
+        self.assertIn("predicted joy", caption)
+        self.assertIn("true sadness", caption)
+        self.assertIn("1 sample", caption)
+        self.assertIn("few samples", caption)
+
+    def test_update_error_word_charts_diagonal_cell_marks_correct_predictions(self):
+        webapp = self._make_webapp_with_gt()
+        update = self._callback(webapp, "error-cell-caption.children")
+        # pred=joy(1), true=joy(1): a correct prediction, row 2.
+        fig_pred, fig_true, caption = update({"pred": 1, "true": 1, "indices": [2]})
+        self.assertIsInstance(fig_pred, go.Figure)
+        self.assertIsInstance(fig_true, go.Figure)
+        self.assertIn("correct predictions (diagonal)", caption)
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -1267,6 +1357,51 @@ class TestErrorPositions(unittest.TestCase):
         explanation = _make_explanation(y_true=pd.Series(["joy", "joy", "joy"], index=texts.index))
         # y_pred is ["joy", "sadness", "joy"], so only the middle row disagrees.
         self.assertEqual(error_positions(explanation), {1})
+
+
+class TestUnpackDatapoint(unittest.TestCase):
+    """``unpack_datapoint`` slices a ``pack_datapoint`` payload down to one class for rendering."""
+
+    def test_multiclass_slices_the_requested_column(self):
+        dp = pack_datapoint(
+            text="i am happy",
+            orig_idx=2,
+            tokens=["i", "am", "happy"],
+            values=np.array([[0.1, -0.1], [0.2, -0.2], [0.3, -0.3]]),
+            base_values=np.array([0.5, -0.5]),
+            label="joy",
+        )
+        tokens, vals, base_value, label = unpack_datapoint(dp, label_idx=1)
+        self.assertEqual(tokens, ["i", "am", "happy"])
+        np.testing.assert_allclose(vals, [-0.1, -0.2, -0.3])
+        self.assertEqual(base_value, -0.5)
+        self.assertEqual(label, "joy")
+
+    def test_binary_1d_values_ignore_label_idx(self):
+        dp = pack_datapoint(
+            text="not great",
+            orig_idx=None,
+            tokens=["not", "great"],
+            values=np.array([0.2, -0.4]),
+            base_values=None,
+        )
+        tokens, vals, base_value, label = unpack_datapoint(dp, label_idx=1)
+        np.testing.assert_allclose(vals, [0.2, -0.4])
+        self.assertIsNone(base_value)
+        self.assertIsNone(label)
+
+    def test_single_scalar_base_value_is_shared_across_classes(self):
+        dp = pack_datapoint(
+            text="ok",
+            orig_idx=0,
+            tokens=["ok"],
+            values=np.array([[0.1, 0.2, 0.3]]),
+            base_values=np.array([0.7]),  # one shared scalar, not one per class
+        )
+        # label_idx=2 slices fine into values (3 classes) but has no matching entry in base_values.
+        _, vals, base_value, _ = unpack_datapoint(dp, label_idx=2)
+        np.testing.assert_allclose(vals, [0.3])
+        self.assertEqual(base_value, 0.7)
 
 
 # ---------------------------------------------------------------------------
