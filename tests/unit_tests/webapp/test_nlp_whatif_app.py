@@ -1198,8 +1198,10 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
     def setUp(self):
         self.graph = self._app()
 
-    def _call(self, rank_by="mean", floor=1, sign="all", topk=10, indices=None, cell=None, errors=False, label=0):
-        return self.graph(label, topk, sign, [], rank_by, floor, indices, cell, errors)
+    def _call(
+        self, rank_by="mean", floor=1, sign="all", topk=10, indices=None, cell=None, errors=False, label=0, words=None
+    ):
+        return self.graph(label, topk, sign, [], rank_by, floor, indices, cell, errors, words)
 
     @staticmethod
     def _values(fig):
@@ -1363,7 +1365,7 @@ class TestGlobalWordImportancePanel(unittest.TestCase):
         from dash.exceptions import PreventUpdate
 
         with self.assertRaises(PreventUpdate):
-            self.graph(None, 10, "all", [], "mean", 1, None, None, False)
+            self.graph(None, 10, "all", [], "mean", 1, None, None, False, None)
 
 
 class TestWordImportanceScatterSync(unittest.TestCase):

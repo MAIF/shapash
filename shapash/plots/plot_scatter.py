@@ -15,6 +15,8 @@ from collections.abc import Sequence
 import numpy as np
 import plotly.graph_objs as go
 
+from shapash.style.style_utils import DEFAULT_NLP_THEME
+
 # Qualitative palette for the categorical mode — one color per class, cycling if there are more
 # classes than colors. Independent of the signed positive/negative theme in
 # ``shapash.style.style_utils`` (``DEFAULT_NLP_THEME.xpl_positive``/``xpl_negative``), which colors a
@@ -78,6 +80,8 @@ def plot_scatter(
     error_mask: np.ndarray | None = None,
     palette: Sequence[str] = DEFAULT_CATEGORICAL_PALETTE,
     use_webgl: bool = True,
+    color_positive: str = DEFAULT_NLP_THEME.xpl_positive,
+    color_negative: str = DEFAULT_NLP_THEME.xpl_negative,
 ) -> go.Figure:
     """2-D scatter, colored either by class or by a word's SHAP contribution.
 
@@ -116,6 +120,12 @@ def plot_scatter(
         the Dash webapp needs. Some notebook front-ends (e.g. VSCode's notebook renderer over
         certain remote/SSH or sandboxed setups) can't get a WebGL context and raise "WebGL is not
         supported by your browser" — pass ``False`` there to fall back to the plain SVG ``Scatter``.
+    color_positive, color_negative : str
+        Word-contribution mode: the two ends of the diverging colorscale (white at zero). Default
+        to the ``"default"`` palette's ``nlp_xpl_positive``/``nlp_xpl_negative`` in
+        ``shapash/style/colors.json`` — see :class:`~shapash.webapp.nlp_app.NlpWebApp`'s
+        ``palette_name``/``colors_dict`` to theme every NLP chart at once instead of overriding
+        this one call.
 
     Returns
     -------
@@ -134,7 +144,9 @@ def plot_scatter(
     scatter_cls = go.Scattergl if use_webgl else go.Scatter
 
     if contributions is not None:
-        return _plot_word_contribution(xy, texts_short, contributions, colorbar_title, error_mask, scatter_cls)
+        return _plot_word_contribution(
+            xy, texts_short, contributions, colorbar_title, error_mask, scatter_cls, color_positive, color_negative
+        )
     if labels is None or label_names is None:
         raise ValueError("`label_names` is required alongside `labels`.")
     return _plot_categorical(xy, texts_short, list(labels), list(label_names), error_mask, palette, scatter_cls)
@@ -147,8 +159,13 @@ def _plot_word_contribution(
     colorbar_title: str | None,
     error_mask: np.ndarray | None,
     scatter_cls: type[go.Scatter] | type[go.Scattergl],
+    color_positive: str,
+    color_negative: str,
 ) -> go.Figure:
     max_abs = float(np.abs(contributions).max()) or 1.0
+    # Diverging colorscale white-out-from-zero, matching every other signed-contribution chart in
+    # the app (Word Importance, Sentence Highlight, Waterfall) instead of a generic red/blue.
+    diverging_colorscale = [[0.0, color_negative], [0.5, "rgb(255, 255, 255)"], [1.0, color_positive]]
     present_mask = np.where(contributions != 0.0)[0]
     absent_mask = np.where(contributions == 0.0)[0]
 
@@ -178,7 +195,7 @@ def _plot_word_contribution(
             mode="markers",
             marker=dict(
                 color=contributions[present_mask].tolist(),
-                colorscale="RdBu",
+                colorscale=diverging_colorscale,
                 cmin=-max_abs,
                 cmax=max_abs,
                 size=present_size,

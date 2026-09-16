@@ -27,6 +27,7 @@ from dash.exceptions import PreventUpdate
 
 from shapash.explainer.nlp_explanation import word_contributions_by_sample
 from shapash.plots.plot_scatter import plot_scatter
+from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
 from shapash.webapp.nlp_components.base import CAP_PROJECTION, WebappComponent, error_mask
 
 
@@ -38,8 +39,9 @@ class ScatterComponent(WebappComponent):
     scope = "global"
     requires = frozenset({CAP_PROJECTION})
 
-    def __init__(self, offer_word_contribution: bool) -> None:
+    def __init__(self, offer_word_contribution: bool, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._offer_word_contribution = offer_word_contribution
+        self._theme = theme
 
     def layout(self, ctx) -> html.Div:
         """Build the color-by/word-select controls and the scatter graph itself."""
@@ -233,6 +235,8 @@ class ScatterComponent(WebappComponent):
                 contributions=contributions,
                 colorbar_title=colorbar_title,
                 error_mask=err_mask,
+                color_positive=self._theme.xpl_positive,
+                color_negative=self._theme.xpl_negative,
             )
 
         if color_by == "ground_truth" and explanation.y_true is not None:

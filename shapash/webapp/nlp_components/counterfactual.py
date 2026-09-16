@@ -233,6 +233,7 @@ def _results_table(cfs, component_id: str):
                             color="link",
                             size="sm",
                             className="p-0",
+                            style={"color": "#111111", "fontWeight": "600"},
                             title="Load into the editor and show its token contributions on the right",
                         )
                     ),

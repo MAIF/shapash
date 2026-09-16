@@ -147,9 +147,9 @@ def plot_waterfall(
             measure=measures,
             text=texts,
             textposition="outside",
-            increasing=dict(marker=dict(color=color_positive)),
-            decreasing=dict(marker=dict(color=color_negative)),
-            totals=dict(marker=dict(color="#7f7f7f")),
+            increasing=dict(marker=dict(color=color_positive, line=dict(color="rgba(50, 50, 50, 0.6)", width=0.5))),
+            decreasing=dict(marker=dict(color=color_negative, line=dict(color="rgba(50, 50, 50, 0.6)", width=0.5))),
+            totals=dict(marker=dict(color="#7f7f7f", line=dict(color="rgba(50, 50, 50, 0.6)", width=0.5))),
             connector=dict(line=dict(color="#dddddd", width=1, dash="dot")),
             cliponaxis=False,
         )

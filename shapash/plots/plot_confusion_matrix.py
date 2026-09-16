@@ -5,7 +5,12 @@ from __future__ import annotations
 import numpy as np
 from plotly import graph_objs as go
 
-_COLORSCALE = "Blues"
+# Plotly's own continuous "Blues" scale, independent of the app's active NLP palette: the
+# discrete, hand-picked stops in colors.json's "blues"/"default" palettes band visibly on a
+# heatmap, and under the yellow "default" palette low off-diagonal counts (the errors this
+# matrix exists to surface) rendered as near-invisible pale yellow. Plotly's built-in scale reads
+# cleanly regardless of which palette the rest of the app is themed with.
+_DEFAULT_COLORSCALE = "Blues"
 
 
 def plot_confusion_matrix(
@@ -15,6 +20,7 @@ def plot_confusion_matrix(
     title: str = "Confusion matrix",
     width: int | None = None,
     height: int | None = None,
+    colorscale: list[str] | str = _DEFAULT_COLORSCALE,
 ) -> go.Figure:
     """Heatmap of a confusion matrix with click-identifiable cells.
 
@@ -40,6 +46,10 @@ def plot_confusion_matrix(
         Figure width in pixels. Defaults to a size scaled to the number of classes.
     height : int, optional
         Figure height in pixels. Defaults to a size scaled to the number of classes.
+    colorscale : list of str or str
+        Plotly heatmap colorscale. Defaults to Plotly's built-in ``"Blues"``, independent of the
+        app's active NLP palette — the errors this matrix exists to surface need to stay readable
+        whichever palette the rest of the app is themed with.
 
     Returns
     -------
@@ -75,7 +85,7 @@ def plot_confusion_matrix(
             customdata=customdata,
             text=text,
             texttemplate="%{text}",
-            colorscale=_COLORSCALE,
+            colorscale=colorscale,
             colorbar=dict(title=colorbar_title),
             hovertemplate=("true: %{y}<br>predicted: %{x}<br>" + hover_val + "<extra></extra>"),
         )

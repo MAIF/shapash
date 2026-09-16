@@ -75,7 +75,7 @@ def _truncate(text: str) -> str:
     return text if len(text) <= _TEXT_PREVIEW_CHARS else text[: _TEXT_PREVIEW_CHARS - 1] + "…"
 
 
-def _samples_table(ranked, explanation, component_id: str, show_truth: bool):
+def _samples_table(ranked, explanation, component_id: str, show_truth: bool, theme: NlpTheme):
     """Ranked samples with their contribution, occurrence count, prediction and an Inspect button."""
     head_cells = [html.Th("Contribution"), html.Th("×", title="Occurrences of the word in this sample")]
     head_cells.append(html.Th("Predicted"))
@@ -91,7 +91,8 @@ def _samples_table(ranked, explanation, component_id: str, show_truth: bool):
         cells = [
             html.Td(
                 f"{value:+.4f}",
-                className="fw-bold " + ("text-primary" if value >= 0 else "text-danger"),
+                className="fw-bold",
+                style={"color": theme.xpl_positive if value >= 0 else theme.xpl_negative},
             ),
             html.Td(str(int(record.n_occurrences)), className="text-muted"),
             html.Td(str(y_pred.iloc[pos]) if y_pred is not None else "—", style={"fontSize": "0.85em"}),
@@ -107,6 +108,7 @@ def _samples_table(ranked, explanation, component_id: str, show_truth: bool):
                     color="link",
                     size="sm",
                     className="p-0",
+                    style={"color": "#111111", "fontWeight": "600"},
                     title="Show this sample's token contributions on the right",
                 )
             )
@@ -362,7 +364,7 @@ class WordProfileComponent(WebappComponent):
                         f"Contribution to {label_names[int(class_idx or 0)]}, summed within each sample.",
                         className="text-muted d-block mb-1",
                     ),
-                    _samples_table(ranked, explanation, self.id, show_truth),
+                    _samples_table(ranked, explanation, self.id, show_truth, self._theme),
                 ]
             )
             return fig, caption, table, [int(s) for s in ranked["sample"]]

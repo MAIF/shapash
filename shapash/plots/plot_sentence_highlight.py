@@ -25,16 +25,21 @@ def _parse_rgb(color: str) -> tuple[int, int, int]:
     return r, g, b
 
 
-def _shap_color(val: float, max_abs: float, pos_rgb: tuple[int, int, int], neg_rgb: tuple[int, int, int]) -> str:
-    """Interpolate from white toward the sign-appropriate colour."""
+def _shap_style(
+    val: float, max_abs: float, pos_rgb: tuple[int, int, int], neg_rgb: tuple[int, int, int]
+) -> dict[str, str]:
+    """Background interpolated from white toward the sign-appropriate colour, with a text colour
+    picked for contrast against it (the negative blue gets dark enough, at high magnitude, that
+    black text stops being readable — see the module docstring)."""
     if max_abs == 0 or val == 0:
-        return "transparent"
+        return {"backgroundColor": "transparent"}
     t = min(abs(val) / max_abs, 1.0)
     r_base, g_base, b_base = pos_rgb if val >= 0 else neg_rgb
     r = int(255 + t * (r_base - 255))
     g = int(255 + t * (g_base - 255))
     b = int(255 + t * (b_base - 255))
-    return f"rgb({r},{g},{b})"
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    return {"backgroundColor": f"rgb({r},{g},{b})", "color": "#111111" if luminance > 0.6 else "#ffffff"}
 
 
 def plot_sentence_highlight(
@@ -111,7 +116,7 @@ def plot_sentence_highlight(
             spans.append(
                 html.Span(
                     tok + " ",
-                    style={**_span_base, "backgroundColor": _shap_color(float(val), max_abs, pos_rgb, neg_rgb)},
+                    style={**_span_base, **_shap_style(float(val), max_abs, pos_rgb, neg_rgb)},
                     title=tooltip,
                 )
             )

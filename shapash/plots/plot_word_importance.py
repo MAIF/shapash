@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 import pandas as pd
 from plotly import graph_objs as go
@@ -84,6 +84,7 @@ def plot_word_importance(
     counts: pd.Series | Mapping[str, int] | None = None,
     color_positive: str = DEFAULT_NLP_THEME.xpl_positive,
     color_negative: str = DEFAULT_NLP_THEME.xpl_negative,
+    highlighted_words: Sequence[str] | None = None,
 ) -> go.Figure:
     """Horizontal bar chart of aggregated token-level SHAP contributions per word.
 
@@ -128,6 +129,10 @@ def plot_word_importance(
         palette's ``nlp_xpl_positive``/``nlp_xpl_negative`` in ``shapash/style/colors.json`` — see
         :class:`~shapash.webapp.nlp_app.NlpWebApp`'s ``palette_name``/``colors_dict`` to theme
         every NLP chart at once instead of overriding this one call.
+    highlighted_words : Sequence[str], optional
+        Words to keep at full opacity, fading every other bar — emphasizes a selection (e.g. the
+        word a bar click just filtered on) without changing any bar's color. ``None`` or empty
+        leaves every bar at full opacity.
 
     Returns
     -------
@@ -144,6 +149,8 @@ def plot_word_importance(
     colors = [color_positive if v >= 0 else color_negative for v in values]
     labels = [f"{v:+.3f}" for v in values] if show_values else None
     occurrences = _aligned_counts(words, counts)
+    highlight_set = set(highlighted_words) if highlighted_words else None
+    opacity = [1.0 if w in highlight_set else 0.3 for w in words] if highlight_set else 1.0
 
     # Name the statistic in the hover too: the axis title is the only thing distinguishing a mean
     # from a total, and it is off-screen once the chart is long enough to scroll.
@@ -158,7 +165,11 @@ def plot_word_importance(
             x=values[::-1],
             y=words[::-1],
             orientation="h",
-            marker_color=colors[::-1],
+            marker=dict(
+                color=colors[::-1],
+                opacity=opacity[::-1] if isinstance(opacity, list) else opacity,
+                line=dict(color="rgba(50, 50, 50, 0.6)", width=0.5),
+            ),
             text=labels[::-1] if labels is not None else None,
             textposition="outside" if show_values else "none",
             textfont=dict(size=10, color="#666666"),
@@ -183,6 +194,12 @@ def plot_word_importance(
             zerolinewidth=1,
             gridcolor="#eeeeee",
             range=_padded_range(values) if show_values else None,
+            # Plotly's default double-click ("reset+autosize") recomputes autorange from the data
+            # whenever the axis is still at its as-drawn range — which discards the value-label
+            # padding above and re-stretches every bar to the fresh, unpadded extent. There is no
+            # zoom/pan use for a chart whose range is already fully computed, so disable both axes'
+            # interactivity outright rather than fight the reset behavior.
+            fixedrange=True,
         ),
         yaxis=dict(
             automargin=True,
@@ -191,6 +208,7 @@ def plot_word_importance(
             # — and it does it silently. Forcing dtick makes a cramped chart look cramped instead.
             dtick=1,
             tickfont=dict(size=12, color="#222222"),
+            fixedrange=True,
         ),
         # Slightly thicker bars than plotly's default, so a word label lines up against a bar
         # rather than against whitespace.

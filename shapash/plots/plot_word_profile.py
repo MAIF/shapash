@@ -79,7 +79,7 @@ def plot_word_profile(
             x=values[::-1],
             y=names[::-1],
             orientation="h",
-            marker_color=colors[::-1],
+            marker=dict(color=colors[::-1], line=dict(color="rgba(50, 50, 50, 0.6)", width=0.5)),
             # The class index travels on the bar so a click handler resolves it directly. Matching
             # the y-axis label back to a class would be ambiguous the moment two classes share a
             # display name, and reversed here alongside every other per-bar array.

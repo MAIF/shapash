@@ -250,6 +250,7 @@ def _neighbors_table(neighbors, predicted_label, component_id):
                     color="link",
                     size="sm",
                     className="p-0",
+                    style={"color": "#111111", "fontWeight": "600"},
                     title="Explain this example here and show its token contributions on the right",
                 )
             )

@@ -237,6 +237,9 @@ class WordImportanceComponent(WebappComponent):
                     ),
                     style={"flex": "1 1 auto", "minHeight": "0", "overflowY": "auto"},
                 ),
+                # Dummy Output for the clientside double-click listener below — nothing reads its
+                # data, it exists only because a clientside_callback needs some Output to target.
+                dcc.Store(id="wi-dblclick-bind"),
             ],
             style={"height": "100%", "display": "flex", "flexDirection": "column"},
         )
@@ -251,6 +254,43 @@ class WordImportanceComponent(WebappComponent):
         word_click_clear_btn = stores["word_click_clear"]
         active_class_store = stores["active_class"]
 
+        # Double-clicking the chart (a bar or blank space) clears the word-click filter, mirroring
+        # the clear button. Plotly's own click handling already swallows the *single*-click event
+        # that would otherwise precede a double-click, so this never races the bar-click handler
+        # below. Done via a raw `plotly_doubleclick` listener + `set_props` rather than the
+        # `relayoutData` prop: with both axes `fixedrange` (see plot_word_importance), Plotly's
+        # relayout on double-click carries no changed attributes, and Dash dedupes an unchanged
+        # prop value — a second double-click would otherwise silently stop firing anything.
+        app.clientside_callback(
+            f"""
+            function() {{
+                function bind() {{
+                    // getElementById returns Dash's own wrapper div; Plotly attaches its event
+                    // emitter (the `.on(...)` method used below) to the inner `.js-plotly-plot`
+                    // node instead, the same one the panel-expand fullscreen callback resizes —
+                    // and only once its own (async) first render has actually completed, which
+                    // this callback's own trigger does not wait for, hence the retry below.
+                    var wrapper = document.getElementById('global-importance-graph');
+                    var gd = wrapper ? wrapper.querySelector('.js-plotly-plot') : null;
+                    if (!gd) {{
+                        setTimeout(bind, 100);
+                        return;
+                    }}
+                    if (!gd._wiDblclickBound) {{
+                        gd._wiDblclickBound = true;
+                        gd.on('plotly_doubleclick', function() {{
+                            window.dash_clientside.set_props('{word_click_store}', {{data: null}});
+                        }});
+                    }}
+                }}
+                bind();
+                return window.dash_clientside.no_update;
+            }}
+            """,
+            Output("wi-dblclick-bind", "data"),
+            Input("global-importance-graph", "id"),
+        )
+
         @app.callback(
             Output("global-importance-graph", "figure"),
             [
@@ -263,6 +303,7 @@ class WordImportanceComponent(WebappComponent):
                 Input(selection_store, "data"),
                 Input(error_cell_store, "data"),
                 Input(errors_only_switch, "value"),
+                Input(word_click_store, "data"),
             ],
         )
         def update_global_importance(
@@ -275,6 +316,7 @@ class WordImportanceComponent(WebappComponent):
             selected_indices,
             error_cell,
             errors_only,
+            highlighted_words,
         ):
             if label_idx is None:
                 raise PreventUpdate
@@ -339,6 +381,7 @@ class WordImportanceComponent(WebappComponent):
                 counts=counts["n_occurrences"],
                 color_positive=self._theme.xpl_positive,
                 color_negative=self._theme.xpl_negative,
+                highlighted_words=highlighted_words,
             )
             # Height deliberately left as plot_word_importance computed it — see the graph's
             # wrapper in the layout.

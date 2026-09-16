@@ -214,6 +214,13 @@ h4 {
     margin-bottom: 0;
 }
 
+/* NLP app: "Model Errors" switch fill, themed via the --errors-switch-color custom property
+   set inline on the switch (see nlp_app.py._build_selection_bar). */
+#errors-only-switch:checked {
+    background-color: var(--errors-switch-color, #f4c000);
+    border-color: var(--errors-switch-color, #f4c000);
+}
+
 .Select-placeholder, .Select__placeholder {
     line-height: 1.4vw !important;
     font-size: calc(0.3rem + 0.5vw) !important;

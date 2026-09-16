@@ -255,6 +255,7 @@ def _issues_table(issues, component_id):
                     color="link",
                     size="sm",
                     className="p-0",
+                    style={"color": "#111111", "fontWeight": "600"},
                     title="Show this sample's token contributions on the right",
                 )
             )

@@ -72,7 +72,7 @@ def plot_token_highlight(
             x=values[::-1],
             y=tokens[::-1],
             orientation="h",
-            marker_color=colors[::-1],
+            marker=dict(color=colors[::-1], line=dict(color="rgba(50, 50, 50, 0.6)", width=0.5)),
             hovertemplate="%{y}: %{x:.4f}<extra></extra>",
         )
     )

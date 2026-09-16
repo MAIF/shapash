@@ -457,7 +457,10 @@ class NlpWebApp:
                 label="Model Errors",
                 value=False,
                 className="small mb-0 ms-auto",
-                style={} if self._has_gt else _HIDDEN,
+                # The "on" fill (--errors-switch-color, read by style.css) takes the theme's accent
+                # color — the same color smart_app.py's own switches use. The label keeps its
+                # default text color; only the switch itself is themed.
+                style={"--errors-switch-color": self._theme.header_accent} if self._has_gt else _HIDDEN,
             )
         )
         return html.Div(
@@ -504,7 +507,7 @@ class NlpWebApp:
         # rather than listed above only because its `offer_word_contribution` argument depends on Word Importance being mounted —
         # which it always is at this point, since that panel has no `requires`.
         if ScatterComponent.is_available(self._ctx):
-            components.append(ScatterComponent(offer_word_contribution=True))
+            components.append(ScatterComponent(offer_word_contribution=True, theme=self._theme))
         self._components = components
         return components
 
@@ -652,7 +655,16 @@ class NlpWebApp:
         """
         active = tabs[0][0]
         self._tab_groups[tabs_id] = [tid for tid, _, _ in tabs]
-        headers = [dbc.Tab(label=label, tab_id=tid) for tid, label, _ in tabs]
+        # Tab label text color matches smart_app.py's tabs; bold only while selected.
+        headers = [
+            dbc.Tab(
+                label=label,
+                tab_id=tid,
+                label_style={"color": "black"},
+                active_label_style={"color": "black", "fontWeight": "bold"},
+            )
+            for tid, label, _ in tabs
+        ]
         bodies = [
             html.Div(body, id=f"{tabs_id}-body-{tid}", style=(_VISIBLE if tid == active else _HIDDEN))
             for tid, _, body in tabs
