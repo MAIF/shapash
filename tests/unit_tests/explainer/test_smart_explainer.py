@@ -525,6 +525,37 @@ class TestSmartExplainer(unittest.TestCase):
         assert not hasattr(xpl, "mask_params")
         assert_frame_equal(baseline_pandas, xpl.to_pandas())
 
+    def test_to_pandas_does_not_mutate_explainer(self):
+        """
+        Regression test for issue #752 (mirror image): exporting to_pandas() with its own
+        filtering arguments must not persist a mask on the explainer, since that would silently
+        change what a later local_plot() (without an explicit mask_state) draws.
+        """
+        rng = np.random.default_rng(0)
+        n = 30
+        x = pd.DataFrame({f"x{i}": rng.normal(size=n) for i in range(25)})
+        y = pd.Series((x["x0"] + rng.normal(size=n) * 0.3 > 0).astype(int), name="y", index=x.index)
+        model = cb.CatBoostClassifier(n_estimators=5).fit(x, y)
+
+        def make_explainer():
+            xpl = SmartExplainer(model)
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x), index=x.index, name="pred"))
+            return xpl
+
+        baseline_fig = make_explainer().plot.local_plot(row_num=0)
+
+        xpl = make_explainer()
+        xpl.to_pandas(max_contrib=2)
+
+        assert xpl.explainer.mask_params == {
+            "features_to_hide": None,
+            "threshold": None,
+            "positive": None,
+            "max_contrib": None,
+        }
+        fig_after_to_pandas = xpl.plot.local_plot(row_num=0)
+        assert len(fig_after_to_pandas.data) == len(baseline_fig.data)
+
     def test_check_label_name_1(self):
         """
         Unit test check label name 1
