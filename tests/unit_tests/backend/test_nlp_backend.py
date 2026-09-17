@@ -1,6 +1,6 @@
 """Unit tests for the shared NLP backend layer — the punctuation helper.
 
-``NlpExplanation.word_importance`` filtering is covered in ``tests/unit_tests/nlp``; this file
+``NlpExplanation.word_importance`` filtering is covered in ``tests/unit_tests/explainer``; this file
 covers :func:`~shapash.backend.nlp_backend.is_punctuation` itself, which word segmentation now
 makes load-bearing (punctuation is emitted as its own unit rather than glued to a neighbour).
 """

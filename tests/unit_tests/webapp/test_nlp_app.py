@@ -35,12 +35,11 @@ from tests.unit_tests.webapp.nlp_components._shared import (
 )
 from tests.unit_tests.webapp.nlp_components._shared import LABEL_NAMES as _WHATIF_LABEL_NAMES
 
-# The 6-class label set used by the TestNlpWebApp / TestNlpWebAppRun fixtures below (moved here
-# from tests/unit_tests/nlp/test_nlp_prototype.py). This intentionally shadows, for this module
-# only, the 2-class ``LABEL_NAMES`` used by the What-if Lab classes further down (imported above
-# as ``_WHATIF_LABEL_NAMES``) — the two source files each defined their own module-level
-# ``LABEL_NAMES`` with different values, which collide once both land in one file. See the
-# migration report for details.
+# The 6-class label set used by the TestNlpWebApp / TestNlpWebAppRun fixtures below. This
+# intentionally shadows, for this module only, the 2-class ``LABEL_NAMES`` used by the What-if Lab
+# classes further down (imported above as ``_WHATIF_LABEL_NAMES``) — the two source files each
+# defined their own module-level ``LABEL_NAMES`` with different values, which collide once both land
+# in one file. See the migration report for details.
 LABEL_NAMES = ["sadness", "joy", "love", "anger", "fear", "surprise"]
 N_CLASSES = len(LABEL_NAMES)
 
