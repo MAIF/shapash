@@ -8,6 +8,7 @@ import pandas as pd
 
 from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.backend.shap_backend import get_shap_interaction_values
+from shapash.manipulation.mask import compute_mask
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.manipulation.summarize import create_grouped_features_values
 from shapash.utils.check import (
@@ -539,31 +540,18 @@ class Explainer:
             data = self.data_groups
         else:
             data = self.data
-        mask = [self.state.init_mask(data["contrib_sorted"], True)]
-        if features_to_hide:
-            features_list = features_to_hide
-            if not all(isinstance(feature, int) for feature in features_to_hide):
-                features_list = self.check_features_name(features_to_hide, use_groups=display_groups)
-            mask.append(
-                self.state.hide_contributions(
-                    data["var_dict"],
-                    features_list=features_list,
-                )
-            )
-        if threshold:
-            mask.append(self.state.cap_contributions(data["contrib_sorted"], threshold=threshold))
-        if positive is not None:
-            mask.append(self.state.sign_contributions(data["contrib_sorted"], positive=positive))
-        self.mask = self.state.combine_masks(mask)
-        if max_contrib:
-            self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
-        self.masked_contributions = self.state.compute_masked_contributions(data["contrib_sorted"], self.mask)
-        self.mask_params = {
-            "features_to_hide": features_to_hide,
-            "threshold": threshold,
-            "positive": positive,
-            "max_contrib": max_contrib,
-        }
+        features_list = features_to_hide
+        if features_to_hide and not all(isinstance(feature, int) for feature in features_to_hide):
+            features_list = self.check_features_name(features_to_hide, use_groups=display_groups)
+        self.mask, self.masked_contributions, self.mask_params = compute_mask(
+            self.state,
+            data,
+            features_list=features_list,
+            threshold=threshold,
+            positive=positive,
+            max_contrib=max_contrib,
+        )
+        self.mask_params["features_to_hide"] = features_to_hide
 
     def predict_proba(self) -> None:
         """
@@ -609,7 +597,10 @@ class Explainer:
 
         The output combines prediction information with top feature
         contributions for each row. If no filtering arguments are provided,
-        the last stored filter parameters can be reused when compatible.
+        the last stored filter parameters (from an explicit call to
+        :meth:`filter`) can be reused when compatible; otherwise the mask is
+        computed on the fly and never persisted, so this call does not
+        affect later plots or exports.
 
         Parameters
         ----------
@@ -662,20 +653,25 @@ class Explainer:
             and is_compatible_cached_mask
         ):
             print("to_pandas params: " + str(self.mask_params))
+            mask = self.mask
         else:
-            self.filter(
-                features_to_hide=features_to_hide,
+            features_list = features_to_hide
+            if features_to_hide and not all(isinstance(feature, int) for feature in features_to_hide):
+                features_list = self.check_features_name(features_to_hide, use_groups=use_groups)
+            mask, _, _ = compute_mask(
+                self.state,
+                data,
+                features_list=features_list,
                 threshold=threshold,
                 positive=positive,
                 max_contrib=max_contrib,
-                display_groups=use_groups,
             )
         if use_groups:
             columns_dict = {i: col for i, col in enumerate(self.x_init_groups.columns)}
         else:
             columns_dict = self.columns_dict
         data["summary"] = self.state.summarize(
-            data["contrib_sorted"], data["var_dict"], data["x_sorted"], self.mask, columns_dict, self.features_dict
+            data["contrib_sorted"], data["var_dict"], data["x_sorted"], mask, columns_dict, self.features_dict
         )
         if proba:
             self.predict_proba()
