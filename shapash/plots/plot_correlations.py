@@ -6,10 +6,79 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 from scipy.spatial.distance import pdist
 
-from shapash.manipulation.summarize import compute_corr
+from shapash.manipulation.summarize import compute_corr, contribution_weighted_corr_matrix
 from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.dtypes import text_like_columns
 from shapash.utils.utils import adjust_title_height, compute_top_correlations_features, suffix_duplicates
+
+
+def _cluster_corr(corr, degree, inplace=False):
+    """
+    Rearranges the correlation matrix, corr, so that groups of highly
+    correlated variables are next to eachother.
+
+    Parameters
+    ----------
+    corr : pandas.DataFrame or numpy.ndarray
+        a NxN correlation matrix
+    degree  : int
+        degree applied on the correlation matrix in order to focus more or less the clustering
+        on strong correlated variables
+    inplace : bool, optional
+        to replace the original correlation matrix by the new one, by default False
+
+    Returns
+    -------
+    pandas.DataFrame or numpy.ndarray
+        a NxN correlation matrix with the columns and rows rearranged
+    """
+    if corr.shape[0] < 2:
+        return corr
+
+    pairwise_distances = pdist(np.abs(corr) ** degree)
+
+    finite_mask = np.isfinite(pairwise_distances)
+    if not np.all(finite_mask):
+        max_valid = pairwise_distances[finite_mask].max() if np.any(finite_mask) else 0.0
+        pairwise_distances[~finite_mask] = max_valid
+
+    linkage = sch.linkage(pairwise_distances, method="complete")
+    cluster_distance_threshold = pairwise_distances.max() / 2
+    idx_to_cluster_array = sch.fcluster(linkage, cluster_distance_threshold, criterion="distance")
+    idx = np.argsort(idx_to_cluster_array)
+
+    if not inplace:
+        corr = corr.copy()
+
+    if isinstance(corr, pd.DataFrame):
+        return corr.iloc[idx, :].T.iloc[idx, :]
+
+    return corr[idx, :][:, idx]
+
+
+def _prepare_corr_matrix(corr, max_features, degree):
+    top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
+    corr = _cluster_corr(corr.loc[top_features, top_features], degree=degree)
+    list_features = [col for col in corr.columns if col in top_features]
+
+    k = 12
+    list_features_shorten = [
+        x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in list_features
+    ]
+    list_features_shorten = suffix_duplicates(list_features_shorten)
+    return corr, list_features, list_features_shorten
+
+
+def _resolve_style_dict(style_dict, palette_name):
+    if style_dict:
+        style_dict_default = {}
+        keys = ["dict_title", "init_contrib_colorscale"]
+        if any(key not in style_dict for key in keys):
+            style_dict_default = define_style(get_palette(palette_name))
+        style_dict_default.update(style_dict)
+        return style_dict_default
+
+    return define_style(get_palette(palette_name))
 
 
 def plot_correlations(
@@ -76,80 +145,12 @@ def plot_correlations(
     >>> xpl.plot.correlations()
     """
 
-    def cluster_corr(corr, degree, inplace=False):
-        """
-        Rearranges the correlation matrix, corr, so that groups of highly
-        correlated variables are next to eachother
-
-        Parameters
-        ----------
-        corr : pandas.DataFrame or numpy.ndarray
-            a NxN correlation matrix
-        degree  : int
-            degree applied on the correlation matrix in order to focus more or less the clustering
-            on strong correlated variables
-        inplace : bool, optional
-            to replace the original correlation matrix by the new one, by default False
-
-        Returns
-        -------
-        pandas.DataFrame or numpy.ndarray
-            a NxN correlation matrix with the columns and rows rearranged
-        """
-
-        if corr.shape[0] < 2:
-            return corr
-        # Compute pairwise distances based on transformed correlation matrix
-        pairwise_distances = pdist(np.abs(corr) ** degree)
-
-        # Replace non-finite values (NaN, inf) with the maximum valid distance or 0 if all are invalid
-        finite_mask = np.isfinite(pairwise_distances)
-        if not np.all(finite_mask):
-            # Use the maximum of the valid distances as a fallback value
-            max_valid = pairwise_distances[finite_mask].max() if np.any(finite_mask) else 0.0
-            pairwise_distances[~finite_mask] = max_valid
-
-        # Perform hierarchical clustering
-        linkage = sch.linkage(pairwise_distances, method="complete")
-
-        # Define threshold for cluster cutting (half of the maximum distance)
-        cluster_distance_threshold = pairwise_distances.max() / 2
-
-        # Assign cluster labels
-        idx_to_cluster_array = sch.fcluster(linkage, cluster_distance_threshold, criterion="distance")
-        idx = np.argsort(idx_to_cluster_array)
-
-        if not inplace:
-            corr = corr.copy()
-
-        if isinstance(corr, pd.DataFrame):
-            return corr.iloc[idx, :].T.iloc[idx, :]
-
-        return corr[idx, :][:, idx]
-
     # Function to compute correlation matrix and prepare top features
     def prepare_corr_matrix(df_subset):
         corr = compute_corr(df_subset.drop(features_to_hide, axis=1), compute_method)
-        top_features = compute_top_correlations_features(corr=corr, max_features=max_features)
-        corr = cluster_corr(corr.loc[top_features, top_features], degree=degree)
-        list_features = [col for col in corr.columns if col in top_features]
+        return _prepare_corr_matrix(corr=corr, max_features=max_features, degree=degree)
 
-        # Shorten long feature names and handle duplicates
-        k = 12
-        list_features_shorten = [
-            x.replace(x[k + k // 2 : -k + k // 2], "...") if len(x) > 2 * k + 3 else x for x in list_features
-        ]
-        list_features_shorten = suffix_duplicates(list_features_shorten)
-        return corr, list_features, list_features_shorten
-
-    if style_dict:
-        style_dict_default = {}
-        keys = ["dict_title", "init_contrib_colorscale"]
-        if any(key not in style_dict for key in keys):
-            style_dict_default = define_style(get_palette(palette_name))
-        style_dict_default.update(style_dict)
-    else:
-        style_dict_default = define_style(get_palette(palette_name))
+    style_dict_default = _resolve_style_dict(style_dict=style_dict, palette_name=palette_name)
 
     if features_dict is None:
         features_dict = {}
@@ -239,6 +240,182 @@ def plot_correlations(
 
     title = f"Correlation ({compute_method})"
     if len(list_features) < len(df.drop(features_to_hide, axis=1).columns):
+        subtitle = f"Top {len(list_features)} correlations"
+        title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
+    dict_t = style_dict_default["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+
+    if corr.min().min() >= 0:
+        colorscale = ["rgb(255, 255, 255)"] + style_dict_default["init_contrib_colorscale"][5:-1]
+    else:
+        colorscale = style_dict_default["init_contrib_colorscale"]
+
+    fig.update_layout(
+        coloraxis=dict(colorscale=colorscale),
+        showlegend=True,
+        title=dict_t,
+        width=width,
+        height=height,
+    )
+
+    fig.update_yaxes(automargin=True)
+    fig.update_xaxes(automargin=True)
+
+    if file_name:
+        plot(fig, filename=file_name, auto_open=auto_open)
+
+    return fig
+
+
+def plot_contributions_correlations(
+    contributions,
+    df=None,
+    style_dict: dict | None = None,
+    palette_name: str = "default",
+    features_dict=None,
+    optimized=False,
+    max_features=20,
+    features_to_hide=None,
+    facet_col=None,
+    width=900,
+    height=500,
+    degree=2.5,
+    decimals=2,
+    file_name=None,
+    auto_open=False,
+):
+    """
+    Contribution-weighted correlations matrix heatmap plot.
+    Correlations are computed from contribution values using
+    `contribution_weighted_corr_matrix`.
+
+    Parameters
+    ----------
+    contributions : pd.DataFrame
+        Contribution values used to compute the correlation matrix.
+    df : pd.DataFrame, optional
+        DataFrame used to facet the plot when `facet_col` is provided.
+        Must share the same index as `contributions`.
+    style_dict: dict
+        the different styles used in the different outputs of Shapash
+    palette_name : str, optional, default="default"
+        The name of the color palette to be used if `colors_dict` is not provided.
+    features_dict: dict (default: None)
+        Dictionary mapping technical feature names to domain names.
+    optimized : boolean, optional
+        True if we want to potentially accelerate the computation of the correlation matrix by reducing the
+        number of rows used to compute it.
+    max_features : int (default: 10)
+        Max number of features to show on the matrix.
+    features_to_hide : list (optional)
+        List of features that will not appear on the graph.
+    facet_col : str (optional)
+        Name of the column used to split the graph in two (or more) plots. One correlation
+        subplot will be computed for each value of this column.
+    width : Int (default: 900)
+        Plotly figure - layout width
+    height : Int (default: 600)
+        Plotly figure - layout height
+    degree  : int, optional, (default 2.5)
+        degree applied on the correlation matrix in order to focus more or less the clustering
+        on strong correlated variables
+    decimals : int, optional, (default 2)
+        number of decimals to plot for correlation values
+    file_name: string (optional)
+        File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+    auto_open: Boolean (optional)
+        Indicate whether to open the bar plot or not.
+
+    Returns
+    -------
+    go.Figure
+    """
+
+    def prepare_corr_matrix(contrib_subset):
+        corr = contribution_weighted_corr_matrix(contrib_subset.drop(contrib_features_to_hide, axis=1))
+        return _prepare_corr_matrix(corr=corr, max_features=max_features, degree=degree)
+
+    style_dict_default = _resolve_style_dict(style_dict=style_dict, palette_name=palette_name)
+
+    if features_dict is None:
+        features_dict = {}
+
+    if features_to_hide is None:
+        features_to_hide = []
+    else:
+        features_to_hide = list(features_to_hide)
+
+    contrib_features_to_hide = [feature for feature in features_to_hide if feature in contributions.columns]
+
+    if df is None:
+        df = pd.DataFrame(index=contributions.index)
+    else:
+        if not contributions.index.isin(df.index).all():
+            raise ValueError("df must contain the same index as contributions.")
+        df = df.loc[contributions.index].copy()
+
+    if facet_col is not None and facet_col not in df.columns:
+        raise ValueError("facet_col must be a column of df.")
+
+    if optimized and len(contributions) > 10000:
+        sampled_index = contributions.sample(n=10000, random_state=1).index
+        contributions = contributions.loc[sampled_index]
+        df = df.loc[sampled_index]
+
+    hovertemplate = "<b>%{text}<br />Correlation: %{z}</b><extra></extra>"
+
+    list_features = []
+    if facet_col:
+        facet_col_values = sorted(df[facet_col].unique(), reverse=True)
+        fig = make_subplots(
+            rows=1,
+            cols=df[facet_col].nunique(),
+            subplot_titles=[t + " correlation" for t in facet_col_values],
+            horizontal_spacing=0.15,
+        )
+        for i, col_v in enumerate(facet_col_values):
+            subset_index = df[df[facet_col] == col_v].index
+            corr, list_features, list_features_shorten = prepare_corr_matrix(contributions.loc[subset_index])
+
+            fig.add_trace(
+                go.Heatmap(
+                    z=corr.loc[list_features, list_features].round(decimals).values,
+                    x=list_features_shorten,
+                    y=list_features_shorten,
+                    coloraxis="coloraxis",
+                    text=[
+                        [
+                            f"Feature 1: {features_dict.get(y, y)} <br />Feature 2: {features_dict.get(x, x)}"
+                            for x in list_features
+                        ]
+                        for y in list_features
+                    ],
+                    hovertemplate=hovertemplate,
+                ),
+                row=1,
+                col=i + 1,
+            )
+    else:
+        corr, list_features, list_features_shorten = prepare_corr_matrix(contributions)
+
+        fig = go.Figure(
+            go.Heatmap(
+                z=corr.loc[list_features, list_features].round(decimals).values,
+                x=list_features_shorten,
+                y=list_features_shorten,
+                coloraxis="coloraxis",
+                text=[
+                    [
+                        f"Feature 1: {features_dict.get(y, y)} <br />Feature 2: {features_dict.get(x, x)}"
+                        for x in list_features
+                    ]
+                    for y in list_features
+                ],
+                hovertemplate=hovertemplate,
+            )
+        )
+
+    title = "Correlation (contribution-weighted)"
+    if len(list_features) < len(contributions.drop(contrib_features_to_hide, axis=1).columns):
         subtitle = f"Top {len(list_features)} correlations"
         title += f"<span style='font-size: 12px;'><br />{subtitle}</span>"
     dict_t = style_dict_default["dict_title"] | {"text": title, "y": adjust_title_height(height)}

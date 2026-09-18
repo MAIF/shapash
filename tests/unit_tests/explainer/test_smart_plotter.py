@@ -2151,6 +2151,52 @@ class TestSmartPlotter(unittest.TestCase):
         assert len(output.data) == 2
         assert features_to_hide == ["D"]
 
+    def test_contributions_correlations_1(self):
+        """
+        Test contribution-weighted correlations plot 1
+        """
+        smart_explainer = self.smart_explainer
+
+        output = smart_explainer.plot.contributions_correlations_plot(label=0, max_features=2)
+
+        assert len(output.data) == 1
+        assert len(output.data[0].x) == 2
+        assert len(output.data[0].y) == 2
+        assert output.data[0].z.shape == (2, 2)
+
+    def test_contributions_correlations_2(self):
+        """
+        Test contribution-weighted correlations plot 2
+        """
+        smart_explainer = self.smart_explainer
+
+        df = pd.DataFrame(
+            {"C": ["C8", "C9"]},
+            index=["person_A", "person_B"],
+        )
+
+        output = smart_explainer.plot.contributions_correlations_plot(df=df, label=0, max_features=2, facet_col="C")
+
+        assert len(output.data) == 2
+        assert len(output.data[0].x) == 2
+        assert len(output.data[0].y) == 2
+        assert output.data[0].z.shape == (2, 2)
+
+    def test_contributions_correlations_does_not_mutate_features_to_hide(self):
+        smart_explainer = self.smart_explainer
+        features_to_hide = ["X2"]
+
+        output = smart_explainer.plot.contributions_correlations_plot(
+            df=pd.DataFrame({"C": ["C8", "C9"]}, index=["person_A", "person_B"]),
+            label=0,
+            max_features=2,
+            features_to_hide=features_to_hide,
+            facet_col="C",
+        )
+
+        assert len(output.data) == 2
+        assert features_to_hide == ["X2"]
+
     def test_stability_plot_1(self):
         np.random.seed(42)
         df = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
