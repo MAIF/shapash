@@ -85,8 +85,10 @@ Recommended branch naming convention:
 Run pytest to ensure tests pass and to collect coverage:
 
 ```
-pytest --cov=shapash
+make coverage
 ```
+
+Note that CI will fail if coverage is less than 75%.  
 
 To test against multiple Python versions, use `tox`:
 
