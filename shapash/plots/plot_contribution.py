@@ -202,7 +202,7 @@ def plot_scatter(
     if has_nan_numeric:
         customdata_values = feature_values_array.astype(object).copy()
         customdata_values[nan_mask_arr] = "missing"
-    customdata = np.stack((customdata_values, feature_values.index.values), axis=-1)
+    customdata = np.stack((customdata_values, feature_values.index.values), axis=-1).tolist()
 
     fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
@@ -757,7 +757,7 @@ def _add_violin_and_scatter(
         customdata = np.stack(
             (feature_values.loc[feature_cond].values.flatten(), contributions.loc[feature_cond].index.values),
             axis=-1,
-        )
+        ).tolist()
         marker = None
         if colorpoints is not None:
             marker = {
