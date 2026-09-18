@@ -81,5 +81,52 @@ class TestPlotContributionCustomdata(unittest.TestCase):
         self._assert_all_customdata_are_plain_lists(fig)
 
 
+class TestPlotViolinGrid(unittest.TestCase):
+    """
+    Regression coverage for the incident where violin contribution plots lost
+    their horizontal background grid. Root cause: plot_violin draws on a
+    secondary y-axis (yaxis2, "overlaying" the hidden primary yaxis used for
+    the background distribution histogram). Plotly.js v2/v3 (bundled with
+    plotly<6) drew grid lines for an overlaying axis by falling back to the
+    anchor axis's schema default (showgrid=True); Plotly.js v4 (bundled with
+    plotly>=7) does not, so the grid silently disappeared with no code change
+    on our side. Fix: explicitly keep the anchor yaxis "visible" (it draws the
+    grid) while hiding its ticks/line/title, since it is otherwise only a
+    layout helper axis with no data of its own.
+    """
+
+    def setUp(self):
+        self.style_dict = define_style(get_palette("default"))
+
+    def test_violin_yaxis_grid_is_enabled_and_no_title_leaks(self):
+        rng = np.random.default_rng(0)
+        index = pd.RangeIndex(50)
+        feature_values = pd.DataFrame({"cat_feat": rng.integers(0, 4, size=50)}, index=index)
+        contributions = pd.DataFrame({"contribution": rng.normal(size=50)}, index=index)
+
+        fig = plot_violin(
+            feature_values=feature_values,
+            contributions=contributions,
+            feature_name="cat_feat",
+            case="regression",
+            style_dict=self.style_dict,
+        )
+
+        self.assertTrue(
+            fig.layout.yaxis.showgrid,
+            "yaxis.showgrid must be True - this is the axis that actually draws the "
+            "violin plot's horizontal grid lines, even though it carries no visible "
+            "ticks or labels of its own.",
+        )
+        self.assertTrue(fig.layout.yaxis.visible, "yaxis must stay visible=True, otherwise its grid is suppressed too")
+        self.assertFalse(
+            fig.layout.yaxis.showticklabels, "the hidden helper yaxis must not show tick labels"
+        )
+        self.assertIsNone(
+            fig.layout.yaxis.title.text,
+            "the hidden helper yaxis must not carry a 'Contribution' title - that belongs on yaxis2",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
