@@ -197,6 +197,7 @@ class NlpTheme:
     header_accent: str
     xpl_positive: str
     xpl_negative: str
+    confusion_scale: tuple[str, ...]
 
 
 def resolve_nlp_theme(palette_name: str = "default", colors_dict: dict[str, str] | None = None) -> NlpTheme:
@@ -226,6 +227,9 @@ def resolve_nlp_theme(palette_name: str = "default", colors_dict: dict[str, str]
         header_accent=palette["webapp_title"],
         xpl_positive=palette["nlp_xpl_positive"],
         xpl_negative=palette["nlp_xpl_negative"],
+        # A tuple, not the palette's list: NlpTheme is a frozen dataclass, so a mutable field
+        # would make it unhashable.
+        confusion_scale=tuple(palette["confusion_matrix_colorscale"]),
     )
 
 

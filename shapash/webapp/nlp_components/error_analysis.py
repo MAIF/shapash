@@ -111,7 +111,14 @@ class ErrorAnalysisComponent(WebappComponent):
                 ),
                 dcc.Graph(
                     id="confusion-matrix-graph",
-                    figure=plot_confusion_matrix(self._cm, label_names, title="", width=None, height=None),
+                    figure=plot_confusion_matrix(
+                        self._cm,
+                        label_names,
+                        title="",
+                        width=None,
+                        height=None,
+                        colorscale=self._theme.confusion_scale,
+                    ),
                     config={"displayModeBar": False, "responsive": True},
                     style={"height": "360px", "flex": "0 0 auto"},
                 ),
@@ -159,6 +166,7 @@ class ErrorAnalysisComponent(WebappComponent):
         assert cm is not None and pred_idx_arr is not None and true_idx_arr is not None  # noqa: S101 - layout() runs first
         label_names = explanation.label_names or [str(i) for i in range(cm.shape[0])]
         name_to_idx = {name: i for i, name in enumerate(label_names)}
+        confusion_scale = self._theme.confusion_scale
 
         @app.callback(
             Output("confusion-matrix-graph", "figure"),
@@ -170,6 +178,7 @@ class ErrorAnalysisComponent(WebappComponent):
                 label_names,
                 normalize="true" if normalize == "recall" else None,
                 title="",  # the tab header already labels this panel
+                colorscale=confusion_scale,
             )
             # Let the container height drive size (this panel is only half-column tall).
             fig.layout.width = None
