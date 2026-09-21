@@ -1,4 +1,5 @@
 import random
+from numbers import Integral
 from typing import Any
 
 import numpy as np
@@ -8,7 +9,7 @@ from sklearn.cluster import KMeans
 
 def subset_sampling(
     df: pd.DataFrame,
-    selection: list[Any] | np.ndarray | None = None,
+    selection: list[Any] | None = None,
     max_points: int = 2000,
     col: str | tuple[str, str] | list[str] | None = None,
     col_value_count: int | tuple[int, int] = 0,
@@ -18,7 +19,7 @@ def subset_sampling(
 
     Parameters
     ----------
-    selection : list or numpy.ndarray, optional
+    selection : list, optional
         Explicit row indices specifying a subset of the DataFrame for plotting.
         If None, sampling is performed over the full DataFrame.
     max_points : int, optional
@@ -52,7 +53,7 @@ def subset_sampling(
 
 def _determine_sampling_strategy(
     df: pd.DataFrame,
-    selection: list[Any] | np.ndarray | None,
+    selection: list[Any] | None,
     max_points: int,
     col: str | tuple[str, str] | list[str] | None,
     col_value_count: int | tuple[int, int],
@@ -65,7 +66,7 @@ def _determine_sampling_strategy(
     ----------
     df : pd.DataFrame
         Input dataframe used for sampling.
-    selection : list or numpy.ndarray, optional
+    selection : list, optional
         Explicit row indices to keep. If None, sampling is performed on the
         full dataframe.
     max_points : int
@@ -84,8 +85,8 @@ def _determine_sampling_strategy(
     """
     if selection is None:
         return _no_selection_sampling(df, max_points, col, col_value_count, random_seed)
-    elif isinstance(selection, (list, np.ndarray)):
-        return _list_selection_sampling(df, list(selection), max_points, col, col_value_count, random_seed)
+    elif isinstance(selection, list):
+        return _list_selection_sampling(df, selection, max_points, col, col_value_count, random_seed)
     else:
         raise ValueError("Parameter 'selection' must be a list.")
 
@@ -204,7 +205,9 @@ def _intelligent_sampling(
     if isinstance(col, (tuple, list)) and len(col) == 2:
         return _intelligent_sampling_pair(data, max_points, col, random_seed, rng)
 
-    scalar_col_value_count = col_value_count if isinstance(col_value_count, int) else max(col_value_count)
+    scalar_col_value_count = (
+        col_value_count if isinstance(col_value_count, (Integral, np.integer)) else max(col_value_count)
+    )
 
     is_col_str = True
     if data[col].dtype.kind in "fc":

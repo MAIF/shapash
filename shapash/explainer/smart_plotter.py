@@ -1083,6 +1083,9 @@ class SmartPlotter:
         addnote : str or None
             Optional note describing the applied sampling strategy.
         """
+        if isinstance(selection, np.ndarray):
+            selection = selection.tolist()
+
         # Sampling
         list_ind, addnote = subset_sampling(
             self._explainer.x_init,
