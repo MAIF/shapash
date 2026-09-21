@@ -34,7 +34,11 @@ from shapash.model import (  # noqa: E402
 )
 
 ST_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-HF_BODY = "bhadresh-savani/distilbert-base-uncased-emotion"
+# Tiny random-weight DistilBert: only shapes/capabilities are asserted below (the head is random
+# too), so there's no need for the ~250MB trained checkpoint. ST_MODEL stays full-size because
+# several tests below pin behaviour specific to its actual config (mean pooling, normalize=True,
+# the 512 vs 256 tokenizer/max_seq_length mismatch).
+HF_BODY = "hf-internal-testing/tiny-random-DistilBertModel"
 LABELS = ["neg", "pos", "neutral"]
 TEXTS = ["i am so happy today", "this is terrible and sad", "an ordinary grey afternoon"]
 
@@ -53,7 +57,7 @@ def st_model():
 
 @pytest.fixture(scope="module")
 def torch_model():
-    """A TorchClassifierModel: a raw HF encoder body + a random 3-class head + fast tokenizer."""
+    """A TorchClassifierModel: a tiny random-weight HF encoder body + a random 3-class head + fast tokenizer."""
     try:
         tokenizer = transformers.AutoTokenizer.from_pretrained(HF_BODY, use_fast=True)
         body = transformers.AutoModel.from_pretrained(HF_BODY)
