@@ -107,10 +107,16 @@ def plot_confusion_matrix(
         colorbar_tickformat = None
 
     # customdata[true][pred] = [pred_idx, true_idx] — the order a click handler reads.
-    customdata = np.empty((n, n, 2), dtype=int)
+    # Plain nested Python lists, not a numpy array: Plotly>=6 serializes an ndarray customdata
+    # as a binary blob ({"dtype", "bdata", "shape"}) instead of a per-point JSON list, so a real
+    # click in the browser loses the cell indices entirely (see plot_contribution.py for the
+    # same fix and tests/integration_tests/test_webapp_click_updates_local_explanation.py for
+    # the incident this class of bug caused).
+    customdata_arr = np.empty((n, n, 2), dtype=int)
     for i in range(n):
         for j in range(n):
-            customdata[i, j] = (j, i)
+            customdata_arr[i, j] = (j, i)
+    customdata = customdata_arr.tolist()
 
     hovertemplate = "true: %{y}<br>predicted: %{x}<br>" + hover_val + "<extra></extra>"
     common = dict(

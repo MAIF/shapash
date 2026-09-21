@@ -1,9 +1,11 @@
 """Unit tests for the plot_confusion_matrix function — pure, no explainer or model required."""
 
+import json
 import unittest
 
 import numpy as np
 import plotly.graph_objs as go
+import plotly.io as pio
 
 from shapash.plots.plot_confusion_matrix import _emphasis_colorscale, plot_confusion_matrix
 
@@ -63,6 +65,31 @@ class TestPlotConfusionMatrix(unittest.TestCase):
     def test_custom_title(self):
         fig = plot_confusion_matrix(self.cm, self.labels, title="Errors")
         self.assertIn("Errors", fig.layout.title.text)
+
+    def test_customdata_is_json_list_not_binary_blob(self):
+        # Regression: customdata built from a numpy ndarray is serialized by Plotly>=6 into a
+        # binary blob ({"dtype", "bdata", "shape"}) instead of a plain per-point JSON list, so
+        # `clickData.points[0].customdata` in the browser comes back as a dict and
+        # `_cell_from_click`'s `custom[0]` raises KeyError: 0. See plot_contribution.py's
+        # equivalent test for the same incident class.
+        fig = plot_confusion_matrix(self.cm, self.labels)
+        traces = json.loads(pio.to_json(fig))["data"]
+        found_customdata = False
+        for trace in traces:
+            customdata = trace.get("customdata")
+            if customdata is None:
+                continue
+            found_customdata = True
+            self.assertIsInstance(
+                customdata,
+                list,
+                msg=(
+                    f"customdata was serialized as {type(customdata)} instead of a plain "
+                    "list. Plotly.js cannot recover a per-point value from a binary-encoded "
+                    "array, so clicking a cell loses its (pred, true) indices in the browser."
+                ),
+            )
+        self.assertTrue(found_customdata, "No trace with customdata found in the figure")
 
 
 class TestOffDiagonalEmphasis(unittest.TestCase):
