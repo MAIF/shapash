@@ -355,11 +355,11 @@ def update_interactions_fig(
     title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
     if subtitle or addnote:
         if subtitle and addnote:
-            title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            title += "<br><sup>" + subtitle + " - " + str(addnote) + "</sup>"
         elif subtitle:
             title += "<br><sup>" + subtitle + "</sup>"
         else:
-            title += "<br><sup>" + addnote + "</sup>"
+            title += "<br><sup>" + str(addnote) + "</sup>"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(col_name1, 110)}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": "Shap interaction value"}

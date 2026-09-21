@@ -4,6 +4,7 @@ Smart plotter module
 
 import math
 import random
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -1049,11 +1050,11 @@ class SmartPlotter:
 
     def _select_indices_interactions_plot(
         self,
-        selection: list | None,
+        selection: list[Any] | np.ndarray | None,
         max_points: int,
         sampling_col: str | tuple[str, str] | None = None,
         col_value_count: int | tuple[int, int] = 0,
-    ) -> tuple[list, str | None]:
+    ) -> tuple[list[Any] | np.ndarray, str | None]:
         """
         Select row indices for interaction plots.
 
@@ -1063,7 +1064,7 @@ class SmartPlotter:
 
         Parameters
         ----------
-        selection : list, optional
+        selection : list or numpy.ndarray, optional
             Explicit row indices to keep. If None, sampling is performed over
             the full compiled dataset.
         max_points : int
@@ -1077,7 +1078,7 @@ class SmartPlotter:
 
         Returns
         -------
-        list_ind : list
+        list_ind : list or numpy.ndarray
             Row indices selected for the plot.
         addnote : str or None
             Optional note describing the applied sampling strategy.
@@ -1094,7 +1095,7 @@ class SmartPlotter:
         return list_ind, addnote
 
     def _order_interactions_pair(
-        self, col_id1: int, col_id2: int, list_ind: list, cat_num_threshold: int
+        self, col_id1: int, col_id2: int, list_ind: list[Any] | np.ndarray, cat_num_threshold: int
     ) -> tuple[int, int]:
         """
         Order an interaction pair for readability on the x-axis.
@@ -1110,7 +1111,7 @@ class SmartPlotter:
             Column index of the first feature.
         col_id2 : int
             Column index of the second feature.
-        list_ind : list
+        list_ind : list or numpy.ndarray
             Row indices used to inspect current feature distributions.
         cat_num_threshold : int
             Threshold used to discriminate categorical from numerical series.
@@ -1148,7 +1149,7 @@ class SmartPlotter:
         self,
         col1: str | int,
         col2: str | int,
-        selection: list | None = None,
+        selection: list[Any] | np.ndarray | None = None,
         label: int | str = -1,
         violin_maxf: int = 10,
         max_points: int = 500,
@@ -1322,7 +1323,7 @@ class SmartPlotter:
     def top_interactions_plot(
         self,
         nb_top_interactions: int = 5,
-        selection: list | None = None,
+        selection: list[Any] | np.ndarray | None = None,
         label: int | str = -1,
         violin_maxf: int = 10,
         max_points: int = 500,
