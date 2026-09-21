@@ -191,6 +191,11 @@ def plot_interactions_scatter(
     if x_values_hover.equals(x_values):
         _add_density_trace(fig, x_series, y_series, style_dict, include_na_for_categories=True)
 
+    interaction_customdata = np.stack((x_values_hover.values.flatten(), x_values.index.values), axis=-1).tolist()
+    for trace in fig.data:
+        if trace.fill != "toself":
+            trace.customdata = interaction_customdata
+
     return _build_secondary_y_scatter_figure(fig, y_series)
 
 
@@ -254,7 +259,7 @@ def plot_interactions_violin(
             go.Violin(
                 x=x_numeric.loc[x_cond].to_numpy(),
                 y=y_values.loc[x_cond].values.flatten(),
-                name="missing" if pd.isna(modality) else modality,
+                name="missing" if pd.isna(modality) else str(modality),
                 line_color=style_dict["violin_default"],
                 showlegend=False,
                 meanline_visible=True,
@@ -293,9 +298,15 @@ def plot_interactions_violin(
         yaxis=dict(
             side="right",
             range=[0, y_upper_max * 3],
+            # Grid lines are drawn by this anchor axis, not by the overlaying yaxis2
+            # below, so it must stay visible for the horizontal grid to render.
+            showgrid=True,
+            visible=True,
             showticklabels=False,
-            showgrid=False,
-            visible=False,
+            showline=False,
+            zeroline=False,
+            title=None,
+            ticks="",
         ),
         yaxis2=dict(
             overlaying="y",
@@ -306,6 +317,10 @@ def plot_interactions_violin(
     xs_labels = ["missing" if pd.isna(x) else x for x in uniq_l]
     fig.update_xaxes(tickmode="array", tickvals=list(range(len(uniq_l))), ticktext=xs_labels)
     fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+
+    # Same rationale as contribution violin: once the helper axis becomes visible
+    # for grid rendering, clear the title that would otherwise leak onto it.
+    fig.update_layout(yaxis=dict(title=None))
 
     return fig
 
