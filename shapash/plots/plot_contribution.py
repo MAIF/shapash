@@ -372,7 +372,8 @@ def update_interactions_fig(
 
     fig.update_layout(
         coloraxis=dict(colorbar={"title": {"text": col_name2}}),
-        yaxis_title=dict_yaxis,
+        yaxis=dict(title=None),
+        yaxis2=dict(title=dict_yaxis),
         title=dict_t,
         template="none",
         width=width,

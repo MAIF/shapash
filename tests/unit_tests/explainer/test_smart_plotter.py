@@ -2084,6 +2084,22 @@ class TestSmartPlotter(unittest.TestCase):
 
         self.setUp()
 
+    def test_interactions_plot_sets_visible_yaxis_title(self):
+        """Interactions plots should expose their title on the visible y-axis."""
+        col1 = "X1"
+        col2 = "X2"
+
+        interaction_values = np.array([[[0.1, -0.7], [-0.6, 0.3]], [[0.2, -0.1], [-0.2, 0.1]]])
+        self.smart_explainer.explainer.interaction_values = interaction_values
+        self.smart_explainer.explainer.x_interaction = self.smart_explainer.explainer.x_encoded
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        assert output.layout.yaxis.title.text is None
+        assert output.layout.yaxis2.title.text == "Shap interaction value"
+
+        self.setUp()
+
     def test_interactions_plot_adds_subtitle_with_class(self):
         """
         Interactions plot title should include explained class like contribution plot.
