@@ -32,7 +32,7 @@ The `shap` backend is a core dependency already. Everything else (HF models, tor
 counterfactual/diagnostics stack) is behind the `nlp` extra:
 
 ```bash
-uv sync --extra nlp
+uv sync --extra nlp       # contributors: dev + test tooling plus the nlp extra
 ```
 or
 ```bash
@@ -40,7 +40,7 @@ pip install ".[nlp]"
 ```
 
 which pulls in `torch`, `transformers`, `datasets`, `sentence-transformers`, `sentencepiece`,
-`protobuf`, `captum`, `pacmap`, `dash-ag-grid`.
+`protobuf`, `captum`, `pacmap`.
 
 The `nlp_lime` backend needs `lime`, which is its own extra rather than bundled into `nlp` (it's also
 usable with tabular data, via `LimeBackend`).

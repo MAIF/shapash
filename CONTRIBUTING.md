@@ -45,15 +45,23 @@ git pull upstream develop
 
 Python `>=3.11, <3.15` is required.
 
-After creating a virtual environment, run:
+We recommend `uv`. A plain sync installs shapash with the `dev` and `test` dependency groups:
 ```
-pip install -e ".[dev,test]"
+uv sync
 ```
 
-Alternatively, we recommend using `uv`:
+Alternatively, with pip (>= 25.1), after creating a virtual environment, run:
 ```
-uv sync --extra dev --extra test
+pip install -e . --group dev --group test
 ```
+
+This covers classical (tabular) shapash. The NLP modules and their tests need the heavier `nlp`
+extra (torch, transformers, ...); without it, those tests are skipped. To work on NLP:
+```
+uv sync --extra nlp            # or: pip install -e ".[nlp]" --group dev --group test
+```
+A later plain `uv sync` removes the NLP packages again (it syncs exactly). `uv run` and
+`uv sync --inexact` leave them in place.
 
 See `pyproject.toml` for other dependency groups.
 

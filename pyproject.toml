@@ -31,6 +31,7 @@ classifiers = [
 ]
 dependencies = [
     "category_encoders>=2.6.0",
+    "dash-ag-grid>=35.2.0",
     "dash-bootstrap-components>=2.0.0",
     "dash-daq>=0.6.0",
     "dash>=3.0.0,<4.0.0",
@@ -43,6 +44,7 @@ dependencies = [
     "pandas>=2.2.2,!=3.0.4,<4.0.0",
     "phik>=0.12.4",
     "plotly>=5.0.0,<8.0.0",
+    "pyarrow>=17.0.0",
     "scikit-learn>=1.8.0,<1.10.0",
     "scipy>=1.13.0",
     "shap>=0.46.0",
@@ -64,7 +66,6 @@ nlp = [
     "protobuf>=7.35.1",
     "captum>=0.9.0",
     "pacmap>=0.9.1",
-    "dash-ag-grid>=35.2.0"
 ]
 
 xgboost = ["xgboost>=2.1.0"]
@@ -72,8 +73,17 @@ catboost = ["catboost>=1.2.8"]
 lightgbm = ["lightgbm>=4.4.0"]
 lime = ["lime>=0.2.0.0"]
 
+[project.urls]
+Homepage = "https://github.com/MAIF/shapash"
+
+[dependency-groups]
+# Developer-only (not accessible via pip)
+# For uv users: `uv sync` installs `dev` + `test` by default (see [tool.uv])
+# For pip >= 25.1: `pip install . --group <name>`
 dev = ["pre-commit", "mypy", "ruff"]
 
+# Classical (tabular) test deps only.
+# NLP tests skip cleanly without the `nlp` extra; add it with `uv sync --extra nlp`.
 test = ["pytest", "pytest-cov", "shapash[xgboost,catboost,lightgbm,lime,report]"]
 
 doc = [
@@ -87,11 +97,15 @@ doc = [
     "sphinxcontrib-qthelp==1.0.3",
     "sphinxcontrib-serializinghtml==1.1.5",
 ]
+dev-all = [
+    {include-group = "dev"},
+    {include-group = "test"},
+    {include-group = "doc"},
+    "shapash[nlp]",
+]
 
-all = ["shapash[dev, test, doc]"]
-
-[project.urls]
-Homepage = "https://github.com/MAIF/shapash"
+[tool.uv]
+default-groups = ["dev", "test"]
 
 [tool.setuptools]
 package-dir = {"" = "."}
@@ -107,6 +121,9 @@ where = ["."]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+    "nlp: needs the `nlp` extra (torch, transformers, captum, ...); skipped when it is not installed",
+]
 
 [tool.coverage.report]
 show_missing = true
@@ -118,7 +135,7 @@ legacy_tox_ini = """
 envlist = py311, py312, py313, py314
 
 [testenv]
-extras = test
+dependency_groups = test
 commands = pytest {posargs}
 """
 

@@ -11,10 +11,13 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-import torch
-from torch import nn
 
-from shapash.model import (
+torch = pytest.importorskip("torch")
+pytestmark = pytest.mark.nlp
+
+from torch import nn  # noqa: E402
+
+from shapash.model import (  # noqa: E402
     SupportsCaptumIG,
     SupportsEmbeddings,
     SupportsGradients,
@@ -22,8 +25,8 @@ from shapash.model import (
     TorchClassifierModel,
     has_capabilities,
 )
-from shapash.model.encoder import EncoderClassifierModel, _pool_hidden
-from shapash.model.torch_models import build_encoder_head_backbone
+from shapash.model.encoder import EncoderClassifierModel, _pool_hidden  # noqa: E402
+from shapash.model.torch_models import build_encoder_head_backbone  # noqa: E402
 
 
 class _FakeTokenizer:

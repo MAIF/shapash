@@ -19,6 +19,7 @@ transformers = pytest.importorskip("transformers")
 torch = pytest.importorskip("torch")
 st = pytest.importorskip("sentence_transformers")
 pytest.importorskip("captum")
+pytestmark = pytest.mark.nlp
 
 from torch import nn  # noqa: E402
 

@@ -16,6 +16,7 @@ import pytest
 transformers = pytest.importorskip("transformers")
 pytest.importorskip("torch")
 pytest.importorskip("captum")
+pytestmark = pytest.mark.nlp
 
 from shapash.backend import NlpCaptumLigBackend  # noqa: E402
 from shapash.compute.generators import AblationFlipGenerator  # noqa: E402

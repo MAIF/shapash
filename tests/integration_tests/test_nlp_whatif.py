@@ -10,6 +10,7 @@ import pytest
 
 transformers = pytest.importorskip("transformers")
 pytest.importorskip("torch")
+pytestmark = pytest.mark.nlp
 
 from shapash.compute.generators import AblationFlipGenerator, HotFlipGenerator, TokenListField  # noqa: E402
 from shapash.explainer.interactive import InteractiveEngine  # noqa: E402

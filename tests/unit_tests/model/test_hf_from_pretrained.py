@@ -11,11 +11,14 @@ import json
 from types import SimpleNamespace
 
 import pytest
-import torch
-from torch import nn
 
-from shapash.model import hf
-from shapash.model.hf import (
+torch = pytest.importorskip("torch")
+pytestmark = pytest.mark.nlp
+
+from torch import nn  # noqa: E402
+
+from shapash.model import hf  # noqa: E402
+from shapash.model.hf import (  # noqa: E402
     _FALLBACK_MAX_LENGTH,
     _UNSET_TOKENIZER_MAX_LENGTH,
     HFClassifierModel,
