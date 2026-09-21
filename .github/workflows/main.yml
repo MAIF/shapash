@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - develop
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -20,6 +21,8 @@ jobs:
     steps:
     - name: Git checkout
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0  # required for setuptools-scm to read git tags
     - name: Set up Python 3.12
       uses: actions/setup-python@v6
       with:
@@ -65,7 +68,15 @@ jobs:
         python -m pip install --upgrade build
         python -m build
     - name: Test and coverage
-      run: make coverage
+      run: make coverage-report
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.13'
+      uses: codecov/codecov-action@v6
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: false
+        disable_search: true
 
   pandas_compat:
     name: Pandas Compat (${{ matrix.pandas }})

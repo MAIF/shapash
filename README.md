@@ -4,8 +4,12 @@
 
 <p align="center">
   <!-- Tests -->
-  <a href="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg">
-    <img src="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg" alt="tests">
+  <a href="https://github.com/MAIF/shapash/actions/workflows/main.yml">
+    <img src="https://github.com/MAIF/shapash/workflows/CI/badge.svg" alt="tests">
+  </a>
+  <!-- Codecov -->
+  <a href="https://codecov.io/gh/MAIF/shapash">
+    <img src="https://codecov.io/gh/MAIF/shapash/branch/master/graph/badge.svg" alt="codecov">
   </a>
   <!-- PyPi -->
   <a href="https://img.shields.io/pypi/v/shapash">

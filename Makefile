@@ -47,6 +47,7 @@ clean-pyc: ## remove Python file artifacts
 clean-test: ## remove test and coverage artifacts
 	rm -fr .tox/
 	rm -f .coverage
+	rm -f coverage.xml
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
@@ -66,10 +67,10 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## run tests with coverage
-	pytest --cov=shapash
+	pytest --cov=shapash --cov-branch
 
-coverage-report: ## run tests with coverage and generate html report
-	pytest --cov=shapash --cov-report=html
+coverage-report: ## run tests with coverage and generate xml report
+	pytest --cov=shapash --cov-branch --cov-report=xml
 
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/shapash.rst
