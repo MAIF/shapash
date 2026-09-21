@@ -1047,7 +1047,13 @@ class SmartPlotter:
 
         return fig
 
-    def _select_indices_interactions_plot(self, selection, max_points, sampling_col=None, col_value_count=0):
+    def _select_indices_interactions_plot(
+        self,
+        selection: list | None,
+        max_points: int,
+        sampling_col: str | tuple[str, str] | None = None,
+        col_value_count: int | tuple[int, int] = 0,
+    ) -> tuple[list, str | None]:
         """
         Method used for sampling indices.
         Uses the same subset_sampling utility as contribution plots,
@@ -1063,8 +1069,9 @@ class SmartPlotter:
         sampling_col : str or tuple(str, str), optional
             Column name (or crossed pair of column names) used to drive smart sampling.
             If None, random sampling is used when needed.
-        col_value_count : int, optional
-            Number of unique values for sampling_col.
+        col_value_count : int or tuple(int, int), optional
+            Number of unique values for sampling_col, or per-column unique counts
+            when sampling on a crossed pair of features.
         Returns
         -------
         list_ind : list
@@ -1083,7 +1090,9 @@ class SmartPlotter:
 
         return list_ind, addnote
 
-    def _order_interactions_pair(self, col_id1, col_id2, list_ind, cat_num_threshold):
+    def _order_interactions_pair(
+        self, col_id1: int, col_id2: int, list_ind: list, cat_num_threshold: int
+    ) -> tuple[int, int]:
         """
         Order an interaction pair for readability on the x-axis.
 
@@ -1107,10 +1116,6 @@ class SmartPlotter:
         if t1 == VarType.TYPE_CAT and t2 == VarType.TYPE_NUM:
             return col_id1, col_id2
 
-        # Rule 2: num + num -> keep user order
-        if t1 == VarType.TYPE_NUM and t2 == VarType.TYPE_NUM:
-            return col_id1, col_id2
-
         # Rule 3: cat + cat -> higher-cardinality variable on x-axis
         if t1 == VarType.TYPE_CAT and t2 == VarType.TYPE_CAT:
             n1 = s1.nunique(dropna=False)
@@ -1122,18 +1127,18 @@ class SmartPlotter:
 
     def interactions_plot(
         self,
-        col1,
-        col2,
-        selection=None,
-        label=-1,
-        violin_maxf=10,
-        max_points=500,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-        auto_order=True,
-    ):
+        col1: str | int,
+        col2: str | int,
+        selection: list | None = None,
+        label: int | str = -1,
+        violin_maxf: int = 10,
+        max_points: int = 500,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        auto_order: bool = True,
+    ) -> go.Figure:
         """
         Displays a Plotly scatter plot or violin plot of two selected features and their combined
         contributions for each of their values.
@@ -1294,16 +1299,16 @@ class SmartPlotter:
 
     def top_interactions_plot(
         self,
-        nb_top_interactions=5,
-        selection=None,
-        label=-1,
-        violin_maxf=10,
-        max_points=500,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-    ):
+        nb_top_interactions: int = 5,
+        selection: list | None = None,
+        label: int | str = -1,
+        violin_maxf: int = 10,
+        max_points: int = 500,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
         """
         Displays a dynamic plot with the `nb_top_interactions` most important interactions existing
         between two variables.

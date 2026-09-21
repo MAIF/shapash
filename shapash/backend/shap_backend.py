@@ -65,7 +65,9 @@ class ShapBackend(BaseBackend):
         return explain_data
 
 
-def get_shap_interaction_values(x_df, explainer, class_index=None):
+def get_shap_interaction_values(
+    x_df: pd.DataFrame, explainer: shap.TreeExplainer, class_index: int | None = None
+) -> np.ndarray:
     """
     Compute the shap interaction values for a given dataframe.
     Also checks if the explainer is a TreeExplainer.
@@ -76,7 +78,6 @@ def get_shap_interaction_values(x_df, explainer, class_index=None):
         DataFrame for which will be computed the interaction values using the explainer.
     explainer : shap.TreeExplainer
         explainer object used to compute the interaction values.
-
     class_index : int, optional
         Class index to select in classification / multi-output settings.
         If None, outputs are aggregated by summing across classes.
@@ -105,18 +106,38 @@ def get_shap_interaction_values(x_df, explainer, class_index=None):
             shap_interaction_values = shap_interaction_values[class_index]
     elif isinstance(shap_interaction_values, np.ndarray) and shap_interaction_values.ndim == 4:
         n_samples = len(x_df)
-        if shap_interaction_values.shape[0] == n_samples:
+        n_features = x_df.shape[1]
+
+        is_sample_first_layout = (
+            shap_interaction_values.shape[0] == n_samples
+            and shap_interaction_values.shape[1] == n_features
+            and shap_interaction_values.shape[2] == n_features
+        )
+        is_output_first_layout = (
+            shap_interaction_values.shape[1] == n_samples
+            and shap_interaction_values.shape[2] == n_features
+            and shap_interaction_values.shape[3] == n_features
+        )
+
+        if is_sample_first_layout and not is_output_first_layout:
             # shape: (#samples, #features, #features, #outputs)
             if class_index is None:
                 shap_interaction_values = np.sum(shap_interaction_values, axis=-1)
             else:
                 shap_interaction_values = shap_interaction_values[..., class_index]
-        elif shap_interaction_values.shape[1] == n_samples:
+        elif is_output_first_layout and not is_sample_first_layout:
             # shape: (#outputs, #samples, #features, #features)
             if class_index is None:
                 shap_interaction_values = np.sum(shap_interaction_values, axis=0)
             else:
                 shap_interaction_values = shap_interaction_values[class_index, ...]
+        elif is_sample_first_layout and is_output_first_layout:
+            # Ambiguous rare case where sample, feature and output dimensions have
+            # identical sizes. Preserve the previous sample-first interpretation.
+            if class_index is None:
+                shap_interaction_values = np.sum(shap_interaction_values, axis=-1)
+            else:
+                shap_interaction_values = shap_interaction_values[..., class_index]
         else:
             # Fallback: preserve previous behavior by aggregating on last axis.
             shap_interaction_values = np.sum(shap_interaction_values, axis=-1)

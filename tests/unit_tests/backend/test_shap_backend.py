@@ -133,6 +133,38 @@ class TestShapBackend(unittest.TestCase):
         assert out.shape == (4, 3, 3)
         assert np.all(out == 5)
 
+    def test_get_shap_interaction_values_4d_sample_first_with_same_sample_feature_size(self):
+        class DummyTreeExplainer:
+            def shap_interaction_values(self, x_df):
+                out = np.zeros((len(x_df), x_df.shape[1], x_df.shape[1], 2))
+                out[..., 0] = 1.0
+                out[..., 1] = 4.0
+                return out
+
+        x_df = pd.DataFrame(np.zeros((3, 3)), columns=["a", "b", "c"])
+
+        with patch("shapash.backend.shap_backend.shap.TreeExplainer", DummyTreeExplainer):
+            out = get_shap_interaction_values(x_df, DummyTreeExplainer(), class_index=1)
+
+        assert out.shape == (3, 3, 3)
+        assert np.all(out == 4)
+
+    def test_get_shap_interaction_values_4d_output_first_with_same_sample_feature_size(self):
+        class DummyTreeExplainer:
+            def shap_interaction_values(self, x_df):
+                out = np.zeros((2, len(x_df), x_df.shape[1], x_df.shape[1]))
+                out[0, ...] = 2.0
+                out[1, ...] = 6.0
+                return out
+
+        x_df = pd.DataFrame(np.zeros((3, 3)), columns=["a", "b", "c"])
+
+        with patch("shapash.backend.shap_backend.shap.TreeExplainer", DummyTreeExplainer):
+            out = get_shap_interaction_values(x_df, DummyTreeExplainer(), class_index=1)
+
+        assert out.shape == (3, 3, 3)
+        assert np.all(out == 6)
+
 
 class TestShapBackendExplainerSelection(unittest.TestCase):
     def setUp(self):
