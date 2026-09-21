@@ -5,8 +5,12 @@ import catboost as cb
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+import pytest
+import shap
 import sklearn.ensemble as ske
 import xgboost as xgb
+from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from shapash.backend.shap_backend import ShapBackend, get_shap_interaction_values
 
@@ -128,3 +132,43 @@ class TestShapBackend(unittest.TestCase):
 
         assert out.shape == (4, 3, 3)
         assert np.all(out == 5)
+
+
+class TestShapBackendExplainerSelection(unittest.TestCase):
+    def setUp(self):
+        self.x_df = pd.DataFrame(
+            {"x1": np.arange(20).astype(float), "x2": np.arange(20)[::-1].astype(float)}
+        )
+        self.y = (self.x_df["x1"] > 10).astype(int)
+
+    def test_explainer_args_without_explicit_explainer_class(self):
+        model = lgb.LGBMRegressor(n_estimators=1).fit(self.x_df, self.y)
+        backend_xpl = ShapBackend(model, explainer_args={"algorithm": "tree"})
+        assert isinstance(backend_xpl.explainer, shap.explainers.Tree)
+
+    def test_linear_model_uses_linear_explainer(self):
+        model = LinearRegression().fit(self.x_df, self.y)
+        masker = shap.maskers.Independent(self.x_df)
+        backend_xpl = ShapBackend(model, masker=masker)
+        assert isinstance(backend_xpl.explainer, shap.explainers.Linear)
+
+    def test_falls_back_to_predict_proba(self):
+        model = KNeighborsClassifier(n_neighbors=3).fit(self.x_df, self.y)
+        backend_xpl = ShapBackend(model, masker=self.x_df)
+        assert hasattr(backend_xpl, "explainer")
+
+    def test_falls_back_to_predict(self):
+        model = KNeighborsRegressor(n_neighbors=3).fit(self.x_df, self.y)
+        backend_xpl = ShapBackend(model, masker=self.x_df)
+        assert hasattr(backend_xpl, "explainer")
+
+
+class TestGetShapInteractionValues(unittest.TestCase):
+    def test_raises_when_explainer_is_not_tree_explainer(self):
+        x_df = pd.DataFrame({"x1": [1.0, 2.0], "x2": [3.0, 4.0]})
+
+        class FakeExplainer:
+            pass
+
+        with pytest.raises(ValueError, match="not a TreeExplainer"):
+            get_shap_interaction_values(x_df, FakeExplainer())

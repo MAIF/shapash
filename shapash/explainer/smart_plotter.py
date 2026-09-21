@@ -245,7 +245,7 @@ class SmartPlotter:
         label: integer or string (default None)
             If the label is of string type, check if it can be changed to integer to select the
             good dataframe object.
-        show_masked: bool (default: False)
+        show_masked: bool (default: True)
             show the sum of the contributions of the hidden variable
         show_predict: bool (default: True)
             show predict or predict proba value
@@ -711,7 +711,7 @@ class SmartPlotter:
         normalize_by_nb_samples : bool, optional, default: False
             Normalizes feature importance by the number of samples.
             This is only applicable when `mode` is set to 'cumulative'.
-        degree : int, optional, default: 0
+        degree : str or float, optional, default: 'slider'
             Degree of adjustment to apply to the cumulative feature contributions curve.
             This is only applicable when `mode` is set to 'cumulative'.
 
@@ -1586,7 +1586,7 @@ class SmartPlotter:
         optimized : boolean, optional
             True if we want to potentially accelerate the computation of the correlation matrix by reducing the
             lenght of the data and the number of modalties per columns.
-        max_features : int (default: 10)
+        max_features : int (default: 20)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
             List of features that will not appear on the graph
@@ -1597,7 +1597,7 @@ class SmartPlotter:
             Correlation method used. 'phik' or 'pearson' are possible values. 'phik' is used by default.
         width : Int (default: 900)
             Plotly figure - layout width
-        height : Int (default: 600)
+        height : Int (default: 500)
             Plotly figure - layout height
         degree  : int, optional, (default 2.5)
             degree applied on the correlation matrix in order to focus more or less the clustering
@@ -2088,9 +2088,9 @@ class SmartPlotter:
             Estimated targets as returned by a classifier.
         colors_dict : dict
             dict of colors used
-        width : int, optional, default=7
+        width : int, optional, default=700
             The width of the generated figure, in inches.
-        height : int, optional, default=4
+        height : int, optional, default=500
             The height of the generated figure, in inches.
         color_quantile_cap : float, optional, default=None
             Upper quantile used to cap the cell color, useful on
@@ -2326,7 +2326,7 @@ class SmartPlotter:
         label : int or str, optional, default=-1
             Label to use in classification tasks (e.g., class index or name). Ignored in regression.
 
-        threshold_top_features : float, optional, default=0.9
+        threshold_top_features : float, optional, default=0.95
             Feature selection threshold based on mean absolute contribution values. Only features contributing
             to the cumulative threshold are retained for projection.
 

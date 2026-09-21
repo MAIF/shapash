@@ -2,6 +2,7 @@
 Unit test smart plotter
 """
 
+import json
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 from catboost import CatBoostClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
@@ -25,6 +27,29 @@ from shapash.plots.plot_line_comparison import plot_line_comparison
 from shapash.style.style_utils import get_palette
 from shapash.utils.check import check_model
 from shapash.utils.sampling import subset_sampling
+
+
+def _assert_all_customdata_are_plain_lists(fig):
+    """
+    customdata built from a numpy array is serialized by Plotly>=6 into a binary
+    blob ({"dtype", "bdata", "shape"}) instead of a plain per-point JSON list, so
+    Plotly.js can't recover a clicked point's row index in the browser. Checking
+    this requires reading the figure post-serialization (as the browser receives
+    it), not the live Python Figure object.
+    """
+    traces = json.loads(pio.to_json(fig))["data"]
+    found_customdata = False
+    for trace in traces:
+        customdata = trace.get("customdata")
+        if customdata is None:
+            continue
+        found_customdata = True
+        assert isinstance(customdata, list), (
+            f"customdata was serialized as {type(customdata)} instead of a plain list "
+            f"(got: {customdata!r}); Plotly.js cannot recover a per-point value out of "
+            "a binary-encoded array, so a real click loses its row index in the browser."
+        )
+    assert found_customdata, "No trace with customdata found in the figure"
 
 
 class TestSmartPlotter(unittest.TestCase):
@@ -2720,6 +2745,57 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[1].type == "scatter"
         assert output.data[2].type == "scatter"
         assert f"True Values" in output.data[1].hovertext[0]
+
+    def test_scatter_plot_prediction_customdata_is_json_list_regression(self):
+        """
+        Regression coverage for the incident where clicking a point on a
+        True-Vs-Predicted scatter plot could not update the Local Explanation,
+        because customdata built from a numpy array is binary-encoded by
+        Plotly>=6 instead of serialized as a plain per-point JSON list.
+        """
+        df_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X_train = df_train.iloc[:, :-1]
+        y_train = df_train.iloc[:, -1]
+        df_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X_test = df_test.iloc[:, :-1]
+        y_test = df_test.iloc[:, -1]
+        model = DecisionTreeRegressor().fit(X_train, y_train)
+
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test, y_target=y_test)
+
+        output = xpl.plot.scatter_plot_prediction()
+        _assert_all_customdata_are_plain_lists(output)
+
+    def test_scatter_plot_prediction_customdata_is_json_list_classification(self):
+        """
+        Same regression coverage as above, for the classification violin/scatter
+        variant of the True-Vs-Predicted plot.
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list("ABC"))
+        y_test = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test, y_target=y_test)
+
+        output = xpl.plot.scatter_plot_prediction()
+        _assert_all_customdata_are_plain_lists(output)
+
+    def test_clustering_by_explainability_plot_customdata_is_json_list(self):
+        """
+        Same regression coverage as above, for the TSNE clustering projection
+        plot's data points (plot_clustering_by_explainability, show_points=True).
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+
+        output = xpl.plot.clustering_by_explainability_plot(color_value="predictions", show_clusters=False)
+        _assert_all_customdata_are_plain_lists(output)
 
     def test_lift_curve_plot_1(self):
         """
