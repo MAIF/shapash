@@ -315,8 +315,12 @@ def plot_interactions_violin(
     )
 
     xs_labels = ["missing" if pd.isna(x) else x for x in uniq_l]
-    fig.update_xaxes(tickmode="array", tickvals=list(range(len(uniq_l))), ticktext=xs_labels)
-    fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+    fig.update_xaxes(
+        tickmode="array",
+        tickvals=list(range(len(uniq_l))),
+        ticktext=xs_labels,
+        range=[-0.6, len(uniq_l) - 0.4],
+    )
 
     # Same rationale as contribution violin: once the helper axis becomes visible
     # for grid rendering, clear the title that would otherwise leak onto it.
