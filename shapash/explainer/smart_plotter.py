@@ -15,7 +15,13 @@ from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import project_feature_values_1d
 from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
-from shapash.plots.plot_contribution import plot_scatter, plot_violin
+from shapash.plots.plot_contribution import (
+    plot_interactions_scatter,
+    plot_interactions_violin,
+    plot_scatter,
+    plot_violin,
+    update_interactions_fig,
+)
 from shapash.plots.plot_correlations import plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
     compute_kmeans_labels,
@@ -26,7 +32,6 @@ from shapash.plots.plot_evaluation_metrics import (
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
-from shapash.plots.plot_interactions import plot_interactions_scatter, plot_interactions_violin, update_interactions_fig
 from shapash.plots.plot_line_comparison import plot_line_comparison
 from shapash.plots.plot_stability import plot_amplitude_vs_stability, plot_stability_distribution
 from shapash.plots.plot_univariate import plot_distribution
@@ -1202,6 +1207,11 @@ class SmartPlotter:
             col_value_count=(col_value_count1, col_value_count2),
         )
 
+        subtitle = None
+        if self._explainer._case == "classification":
+            _, _, label_value = self._explainer.check_label_name(label)
+            subtitle = f"Explained class: <b>{label_value}</b>"
+
         # Subset
         # Use display-ready values (x_init) so transcoding/postprocessing dictionaries
         # are reflected consistently on axes labels and hover.
@@ -1269,6 +1279,7 @@ class SmartPlotter:
             col_name1=col_name1,
             col_name2=col_name2,
             addnote=addnote,
+            subtitle=subtitle,
             width=width,
             height=height,
             file_name=file_name,
@@ -1335,6 +1346,11 @@ class SmartPlotter:
 
         list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
+        subtitle = None
+        if self._explainer._case == "classification":
+            _, _, label_value = self._explainer.check_label_name(label)
+            subtitle = f"Explained class: <b>{label_value}</b>"
+
         interaction_values = self._explainer.get_interaction_values(selection=list_ind, label=label)
 
         sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
@@ -1344,6 +1360,8 @@ class SmartPlotter:
         interactions_indices_traces_mapping = []
         interactions_indices_coloraxis_mapping = []
         interactions_indices_xaxis_mapping = []
+        interactions_indices_yaxis_mapping = []
+        interactions_indices_yaxis2_mapping = []
         fig = go.Figure()
 
         def _extract_xaxis_mapping(xaxis):
@@ -1351,6 +1369,17 @@ class SmartPlotter:
             out = {}
             for key in keys:
                 val = getattr(xaxis, key, None)
+                if val is not None:
+                    out[key] = list(val) if isinstance(val, tuple) else val
+            return out
+
+        def _extract_yaxis_mapping(yaxis):
+            if yaxis is None:
+                return {}
+            keys = ["side", "range", "showticklabels", "showgrid", "visible", "overlaying", "autorange"]
+            out = {}
+            for key in keys:
+                val = getattr(yaxis, key, None)
                 if val is not None:
                     out[key] = list(val) if isinstance(val, tuple) else val
             return out
@@ -1384,15 +1413,22 @@ class SmartPlotter:
                 }
             )
             interactions_indices_xaxis_mapping.append(_extract_xaxis_mapping(fig_one_interaction.layout.xaxis))
+            interactions_indices_yaxis_mapping.append(_extract_yaxis_mapping(fig_one_interaction.layout.yaxis))
+            interactions_indices_yaxis2_mapping.append(_extract_yaxis_mapping(fig_one_interaction.layout.yaxis2))
 
             for trace in fig_one_interaction.data:
                 trace.visible = True if i == 0 else False
                 fig.add_trace(trace=trace)
 
-        def generate_title_dict(col_name1, col_name2, addnote):
+        def generate_title_dict(col_name1, col_name2, addnote, subtitle):
             title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
-            if addnote:
-                title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+            if subtitle or addnote:
+                if subtitle and addnote:
+                    title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+                elif subtitle:
+                    title += "<br><sup>" + subtitle + "</sup>"
+                else:
+                    title += "<br><sup>" + addnote + "</sup>"
             dict_t = self._style_dict["dict_title"] | {
                 "text": title,
                 "y": 0.88,
@@ -1404,6 +1440,8 @@ class SmartPlotter:
 
         first_coloraxis = interactions_indices_coloraxis_mapping[0]
         first_xaxis = interactions_indices_xaxis_mapping[0]
+        first_yaxis = interactions_indices_yaxis_mapping[0]
+        first_yaxis2 = interactions_indices_yaxis2_mapping[0]
         fig.layout.coloraxis.colorscale = (
             first_coloraxis["colorscale"]
             if first_coloraxis["colorscale"] is not None
@@ -1413,6 +1451,7 @@ class SmartPlotter:
             fig.layout.coloraxis.cmin = first_coloraxis["cmin"]
             fig.layout.coloraxis.cmax = first_coloraxis["cmax"]
         fig.update_xaxes(**first_xaxis)
+        fig.update_layout(yaxis=first_yaxis, yaxis2=first_yaxis2)
 
         # Plotly updatemenus uses paper coordinates (not pixels).
         # Convert target pixel offsets from the top-left of the full figure
@@ -1451,6 +1490,8 @@ class SmartPlotter:
                                             **self._style_dict["dict_xaxis"],
                                         },
                                     },
+                                    "yaxis": interactions_indices_yaxis_mapping[id_trace],
+                                    "yaxis2": interactions_indices_yaxis2_mapping[id_trace],
                                     "legend": {"title": {"text": self._explainer.columns_dict[j]}},
                                     "coloraxis": {
                                         "colorbar": {"title": {"text": self._explainer.columns_dict[j]}},
@@ -1471,7 +1512,10 @@ class SmartPlotter:
                                         ),
                                     },
                                     "title": generate_title_dict(
-                                        self._explainer.columns_dict[i], self._explainer.columns_dict[j], addnote
+                                        self._explainer.columns_dict[i],
+                                        self._explainer.columns_dict[j],
+                                        addnote,
+                                        subtitle,
                                     ),
                                 },
                             ],
@@ -1494,6 +1538,7 @@ class SmartPlotter:
             col_name1=self._explainer.columns_dict[ordered_indices_to_plot[0][0]],
             col_name2=self._explainer.columns_dict[ordered_indices_to_plot[0][1]],
             addnote=addnote,
+            subtitle=subtitle,
             width=width,
             height=height,
             file_name=None,
@@ -1507,17 +1552,7 @@ class SmartPlotter:
             margin={"l": margin_left, "r": margin_right, "t": margin_top, "b": margin_bottom},
             xaxis_title=self._explainer.columns_dict[ordered_indices_to_plot[0][0]],
             yaxis_title="Shap interaction value",
-            annotations=[
-                dict(
-                    text=f"Sorted top {len(indices_to_plot)} SHAP interaction Variables :",
-                    x=0,
-                    xref="paper",
-                    y=1.2,
-                    yref="paper",
-                    align="left",
-                    showarrow=False,
-                )
-            ],
+            barmode="overlay",
         )
 
         if file_name:

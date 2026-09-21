@@ -2005,16 +2005,76 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = smart_explainer.plot.interactions_plot(col1, col2)
 
-        assert len(output.data) == 3
+        violin_traces = [trace for trace in output.data if trace.type == "violin"]
+        scatter_traces = [trace for trace in output.data if trace.type == "scatter"]
+        bar_traces = [trace for trace in output.data if trace.type == "bar"]
 
-        assert output.data[0].type == "violin"
-        assert output.data[1].type == "violin"
-        assert output.data[2].type == "scatter"
+        assert len(violin_traces) == 2
+        assert len(scatter_traces) == 1
+        assert len(bar_traces) == 2
 
-        assert np.issubdtype(np.asarray(output.data[2].x).dtype, np.number)
-        assert all(-0.6 <= x <= 1.6 for x in output.data[2].x)
-        assert np.array_equal(output.data[2].y, [-1.4, -0.2])
-        assert np.array_equal(output.data[2].marker.color, [34.0, 27.0])
+        scatter_trace = scatter_traces[0]
+        assert np.issubdtype(np.asarray(scatter_trace.x).dtype, np.number)
+        assert all(-0.6 <= x <= 1.6 for x in scatter_trace.x)
+        assert np.array_equal(scatter_trace.y, [-1.4, -0.2])
+        assert np.array_equal(scatter_trace.marker.color, [34.0, 27.0])
+
+        assert sum(trace.y[0] for trace in bar_traces) == 1.0
+
+        self.setUp()
+
+    def test_interactions_plot_6_add_density_trace_numeric_scatter(self):
+        """
+        Interactions scatter (numeric x numeric) should include a density/volumetry layer when enough points exist.
+        """
+        col1 = "X1"
+        col2 = "X2"
+        smart_explainer = self.smart_explainer
+
+        smart_explainer.explainer.x_encoded = smart_explainer.explainer.x_init = pd.DataFrame(
+            data=np.array([[520, 34], [12800, 27], [2500, 33], [5000, 31], [9100, 29]], dtype=float),
+            columns=["X1", "X2"],
+            index=["person_A", "person_B", "person_C", "person_D", "person_E"],
+        )
+
+        interaction_values = np.zeros((5, 2, 2), dtype=float)
+        interaction_values[:, 0, 1] = np.array([-0.7, -0.1, 0.05, 0.3, 0.12])
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+
+        smart_explainer.explainer.interaction_values = interaction_values
+        smart_explainer.explainer.x_interaction = smart_explainer.explainer.x_encoded
+
+        output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        assert len(output.data) == 2
+        density_trace = next(trace for trace in output.data if trace.fill == "toself")
+        scatter_trace = next(trace for trace in output.data if trace.fill != "toself")
+
+        assert density_trace.hoverinfo == "none"
+        assert density_trace.showlegend is False
+
+        assert np.array_equal(scatter_trace.x, [520, 12800, 2500, 5000, 9100])
+        assert np.array_equal(scatter_trace.y, [-1.4, -0.2, 0.1, 0.6, 0.24])
+        assert np.array_equal(scatter_trace.marker.color, [34.0, 27.0, 33.0, 31.0, 29.0])
+
+        self.setUp()
+
+    def test_interactions_plot_adds_subtitle_with_class(self):
+        """
+        Interactions plot title should include explained class like contribution plot.
+        """
+        col1 = "X1"
+        col2 = "X2"
+
+        interaction_values = np.array([[[0.1, -0.7], [-0.6, 0.3]], [[0.2, -0.1], [-0.2, 0.1]]])
+        self.smart_explainer.explainer.interaction_values = interaction_values
+        self.smart_explainer.explainer.x_interaction = self.smart_explainer.explainer.x_encoded
+        self.smart_explainer.explainer.label_dict = {0: "death", 1: "survival"}
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0, label=1)
+
+        assert "Explained class: <b>survival</b>" in output.layout.title.text
+        assert "Observed lines" not in output.layout.title.text
 
         self.setUp()
 
@@ -2130,6 +2190,9 @@ class TestSmartPlotter(unittest.TestCase):
         assert isinstance(output.layout.updatemenus[0].buttons[0].args[0]["visible"], list)
         assert len(output.layout.updatemenus[0].buttons[0].args[0]["visible"]) >= 5
         assert True in output.layout.updatemenus[0].buttons[0].args[0]["visible"]
+        for button in output.layout.updatemenus[0].buttons:
+            assert "yaxis" in button.args[1]
+            assert "yaxis2" in button.args[1]
 
         self.setUp()
 

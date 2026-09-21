@@ -2,6 +2,7 @@ from numbers import Number
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
@@ -11,6 +12,367 @@ from shapash.utils.utils import add_line_break, adjust_title_height, truncate_st
 from shapash.webapp.utils.utils import round_to_k
 
 NAN_PLACEHOLDER_K = 0.2
+
+
+def _compute_density_polygon(
+    x_values: pd.Series,
+    y_values: pd.Series,
+    include_na_for_categories: bool = False,
+) -> tuple[pd.Series | np.ndarray, np.ndarray, np.ndarray] | None:
+    """
+    Compute the polygon coordinates for a density/volumetry background layer.
+
+    Returns ``None`` when there is not enough information to compute a
+    meaningful density shape.
+    """
+
+    if len(x_values) <= 2:
+        return None
+
+    y_min = y_values.min()
+    y_span = y_values.max() - y_min
+
+    if pd.api.types.is_numeric_dtype(x_values):
+        x_non_null = x_values.dropna().astype(float)
+        if x_non_null.nunique() <= 1:
+            return None
+
+        x_min, x_max = x_non_null.min(), x_non_null.max()
+        val_inter = x_max - x_min
+        if val_inter <= 0:
+            return None
+
+        kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(x_non_null.to_numpy()[:, None])
+        xs = np.linspace(x_min, x_max, 1000)
+        log_dens = kde.score_samples(xs[:, None])
+
+        if y_span == 0:
+            y_upper = np.full_like(xs, y_min, dtype=float)
+        else:
+            dens = np.exp(log_dens)
+            y_upper = dens * y_span / (dens.max() * 3) + y_min
+        y_lower = np.full_like(y_upper, y_min)
+    else:
+        x_counts = x_values.value_counts(dropna=not include_na_for_categories)
+        if x_counts.shape[0] <= 1:
+            return None
+
+        xs = x_counts.index.to_series().sort_values()
+        y_upper = (x_counts.loc[xs] / x_counts.sum()).to_numpy() / 3 + y_min
+        y_lower = np.full_like(y_upper, y_min)
+
+    return xs, y_upper, y_lower
+
+
+def _add_density_trace(
+    fig: go.Figure,
+    x_values: pd.Series,
+    y_values: pd.Series,
+    style_dict: dict,
+    include_na_for_categories: bool = False,
+) -> None:
+    """
+    Add a density/volumetry background trace to an existing figure.
+    """
+
+    density_polygon = _compute_density_polygon(
+        x_values=x_values,
+        y_values=y_values,
+        include_na_for_categories=include_na_for_categories,
+    )
+    if density_polygon is None:
+        return
+
+    xs, y_upper, y_lower = density_polygon
+    fig.add_trace(
+        go.Scatter(
+            x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
+            y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
+            fill="toself",
+            hoverinfo="none",
+            showlegend=False,
+            line={"color": style_dict["contrib_distribution"]},
+        )
+    )
+
+
+def _build_secondary_y_scatter_figure(scatter_fig: go.Figure, y_values: pd.Series) -> go.Figure:
+    """
+    Rebuild a scatter figure on a two-y-axis subplot layout.
+
+    Filled density traces are attached to the primary axis, while marker traces
+    are attached to the overlaid secondary axis.
+    """
+
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    for trace in scatter_fig.data:
+        if trace.fill == "toself":
+            fig.add_trace(trace, secondary_y=False)
+        else:
+            trace.mode = "markers"
+            fig.add_trace(trace, secondary_y=True)
+
+    fig.update_layout(
+        autosize=False,
+        hovermode="closest",
+        barmode="overlay",
+        yaxis=dict(
+            side="right",
+            range=[float(y_values.min()), float(y_values.max())] if len(y_values) > 0 else None,
+            showticklabels=False,
+            showgrid=False,
+            visible=False,
+        ),
+        yaxis2=dict(
+            overlaying="y",
+            side="left",
+        ),
+    )
+
+    return fig
+
+
+def plot_interactions_scatter(
+    x_name: str,
+    y_name: str,
+    col_name: str,
+    x_values: pd.DataFrame,
+    y_values: pd.DataFrame,
+    col_values: pd.DataFrame,
+    col_scale: list,
+    style_dict: dict,
+    cmin: float | None = None,
+    cmax: float | None = None,
+    x_values_hover: pd.DataFrame | None = None,
+) -> go.Figure:
+    """
+    Generate a scatter-plot figure for interactions.
+    """
+
+    if x_values_hover is None:
+        x_values_hover = x_values
+
+    x_series = pd.Series(x_values.values.flatten())
+    y_series = pd.Series(y_values.values.flatten())
+
+    data_df = pd.DataFrame(
+        {
+            x_name: x_series.values,
+            y_name: y_series.values,
+            col_name: col_values.values.flatten(),
+            "__x_hover__": x_values_hover.values.flatten(),
+        }
+    )
+
+    if isinstance(col_values.values.flatten()[0], str):
+        fig = px.scatter(
+            data_df,
+            x=x_name,
+            y=y_name,
+            color=col_name,
+            color_discrete_sequence=style_dict["interactions_discrete_colors"],
+            hover_data={x_name: False, "__x_hover__": True},
+            labels={"__x_hover__": x_name},
+        )
+    else:
+        scatter_args = {
+            "data_frame": data_df,
+            "x": x_name,
+            "y": y_name,
+            "color": col_name,
+            "color_continuous_scale": col_scale,
+            "hover_data": {x_name: False, "__x_hover__": True},
+            "labels": {"__x_hover__": x_name},
+        }
+        if cmin is not None and cmax is not None:
+            scatter_args["range_color"] = [cmin, cmax]
+        fig = px.scatter(**scatter_args)
+
+    if x_values_hover.equals(x_values):
+        _add_density_trace(fig, x_series, y_series, style_dict, include_na_for_categories=True)
+
+    return _build_secondary_y_scatter_figure(fig, y_series)
+
+
+def plot_interactions_violin(
+    x_name: str,
+    y_name: str,
+    col_name: str,
+    x_values: pd.DataFrame,
+    y_values: pd.DataFrame,
+    col_values: pd.DataFrame,
+    col_scale: list,
+    style_dict: dict,
+    cmin: float | None = None,
+    cmax: float | None = None,
+) -> go.Figure:
+    """
+    Generate a violin-plot figure for interactions with point dispersion.
+    """
+
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    uniq_l = list(pd.unique(x_values.values.flatten()))
+    uniq_l.sort()
+
+    x_numeric = pd.Series(index=x_values.index, dtype=float)
+    x_jittered = pd.Series(index=x_values.index, dtype=float)
+
+    proportions = (x_values.iloc[:, 0].value_counts(dropna=False) / len(x_values)).to_dict()
+
+    for idx, modality in enumerate(uniq_l):
+        if pd.isna(modality):
+            x_cond = x_values.iloc[:, 0].isna()
+        else:
+            x_cond = x_values.iloc[:, 0] == modality
+
+        x_numeric.loc[x_cond] = idx
+
+        percentage_series = _calculate_percentage_intervals(y_values.loc[x_cond].iloc[:, 0], bins=20)
+        x_jittered.loc[x_cond] = _create_jittered_points(
+            x_numeric.loc[x_cond].to_numpy(), percentage_series, side="both"
+        )
+
+        fig.add_trace(
+            go.Bar(
+                x=[idx],
+                y=[proportions.get(modality, 0.0)],
+                hoverinfo="none",
+                showlegend=False,
+                marker=dict(
+                    pattern_shape="+",
+                    pattern_size=6,
+                    pattern_fillmode="replace",
+                    pattern_bgcolor=style_dict["contrib_distribution"],
+                    color="white",
+                ),
+            ),
+            secondary_y=False,
+        )
+
+        fig.add_trace(
+            go.Violin(
+                x=x_numeric.loc[x_cond].to_numpy(),
+                y=y_values.loc[x_cond].values.flatten(),
+                name="missing" if pd.isna(modality) else modality,
+                line_color=style_dict["violin_default"],
+                showlegend=False,
+                meanline_visible=True,
+                scalemode="count",
+            ),
+            secondary_y=True,
+        )
+
+    x_values_dispersion = pd.DataFrame({x_name: x_jittered}, index=x_values.index)
+    scatter_fig = plot_interactions_scatter(
+        x_name=x_name,
+        y_name=y_name,
+        col_name=col_name,
+        x_values=x_values_dispersion,
+        y_values=y_values,
+        col_values=col_values,
+        col_scale=col_scale,
+        style_dict=style_dict,
+        cmin=cmin,
+        cmax=cmax,
+        x_values_hover=x_values,
+    )
+    for trace in scatter_fig.data:
+        fig.add_trace(trace, secondary_y=True)
+
+    y_upper_max = max(proportions.values()) if proportions else 1.0
+
+    fig.update_layout(
+        autosize=False,
+        hovermode="closest",
+        violingap=0.05,
+        violingroupgap=0,
+        violinmode="overlay",
+        xaxis_type="linear",
+        barmode="overlay",
+        yaxis=dict(
+            side="right",
+            range=[0, y_upper_max * 3],
+            showticklabels=False,
+            showgrid=False,
+            visible=False,
+        ),
+        yaxis2=dict(
+            overlaying="y",
+            side="left",
+        ),
+    )
+
+    xs_labels = ["missing" if pd.isna(x) else x for x in uniq_l]
+    fig.update_xaxes(tickmode="array", tickvals=list(range(len(uniq_l))), ticktext=xs_labels)
+    fig.update_xaxes(range=[-0.6, len(uniq_l) - 0.4])
+
+    return fig
+
+
+def update_interactions_fig(
+    fig: go.Figure,
+    col_name1: str,
+    col_name2: str,
+    addnote: str | None,
+    subtitle: str | None,
+    width: int,
+    height: int,
+    file_name: str | None,
+    auto_open: bool,
+    style_dict: dict,
+    col_scale: list | None = None,
+    cmin: float | None = None,
+    cmax: float | None = None,
+) -> go.Figure:
+    """
+    Update the final layout for interactions figures.
+    """
+
+    if fig.data[-1]["showlegend"] is False:
+        fig.layout.coloraxis.colorscale = col_scale if col_scale is not None else style_dict["interactions_col_scale"]
+        if cmin is not None and cmax is not None:
+            fig.layout.coloraxis.cmin = cmin
+            fig.layout.coloraxis.cmax = cmax
+    else:
+        fig.update_layout(legend=dict(title=dict(text=col_name2)))
+
+    title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
+    if subtitle or addnote:
+        if subtitle and addnote:
+            title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+        elif subtitle:
+            title += "<br><sup>" + subtitle + "</sup>"
+        else:
+            title += "<br><sup>" + addnote + "</sup>"
+    dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
+    dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(col_name1, 110)}
+    dict_yaxis = style_dict["dict_yaxis"] | {"text": "Shap interaction value"}
+
+    fig.update_traces(marker={"line": {"width": 0.8, "color": "white"}})
+    for trace in fig.data:
+        if trace.type != "bar":
+            trace.marker["size"] = 8
+            trace.marker["opacity"] = 0.8
+
+    fig.update_layout(
+        coloraxis=dict(colorbar={"title": {"text": col_name2}}),
+        yaxis_title=dict_yaxis,
+        title=dict_t,
+        template="none",
+        width=width,
+        height=height,
+        xaxis_title=dict_xaxis,
+        hovermode="closest",
+    )
+
+    fig.update_yaxes(automargin=True)
+    fig.update_xaxes(automargin=True)
+
+    if file_name:
+        plot(fig, filename=file_name, auto_open=auto_open)
+
+    return fig
 
 
 def plot_scatter(
@@ -130,40 +492,13 @@ def plot_scatter(
 
     feature_values_array = feature_values.values.flatten()
 
-    if len(feature_values_array) > 2:
-        contributions_min = contributions.values.flatten().min()
-        h = contributions.values.flatten().max() - contributions_min
-
-        if feature_values.iloc[:, 0].dtype.kind in "biufc":
-            feature_values_min, feature_values_max = min(feature_values_array), max(feature_values_array)
-            val_inter = feature_values_max - feature_values_min
-
-            feature_np = np.array(feature_values_array)
-            feature_np = feature_np[~np.isnan(feature_np)][:, None]
-            kde = KernelDensity(bandwidth=val_inter / 100, kernel="epanechnikov").fit(feature_np)
-            xs = np.linspace(feature_values_min, feature_values_max, 1000)
-            log_dens = kde.score_samples(xs[:, None])
-            y_upper = np.exp(log_dens) * h / (np.max(np.exp(log_dens)) * 3) + contributions_min
-            y_lower = np.full_like(y_upper, contributions_min)
-        else:
-            feature_values_counts = feature_values.value_counts()
-            xs = feature_values_counts.index.get_level_values(0).sort_values()
-            y_upper = (
-                feature_values_counts.loc[xs] / feature_values_counts.sum()
-            ).values.flatten() / 3 + contributions_min
-            y_lower = np.full_like(y_upper, contributions_min)
-
-        # Create the density plot
-        density_plot = go.Scatter(
-            x=np.concatenate([pd.Series(xs), pd.Series(xs)[::-1]]),
-            y=pd.concat([pd.Series(y_upper), pd.Series(y_lower)[::-1]]),
-            fill="toself",
-            hoverinfo="none",
-            showlegend=False,
-            line={"color": style_dict["contrib_distribution"]},
-        )
-        # Add density plot
-        fig.add_trace(density_plot)
+    _add_density_trace(
+        fig=fig,
+        x_values=pd.Series(feature_values_array),
+        y_values=pd.Series(contributions.values.flatten()),
+        style_dict=style_dict,
+        include_na_for_categories=False,
+    )
 
     nan_mask_arr = pd.isna(feature_values.iloc[:, 0]).to_numpy()
     has_nan_numeric = bool(nan_mask_arr.any()) and feature_values.iloc[:, 0].dtype.kind in "biufc"
