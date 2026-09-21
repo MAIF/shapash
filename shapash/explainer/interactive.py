@@ -1,9 +1,9 @@
 """Interactive (live) compute contract for what-if tooling.
 
-The master refactoring's ``ExplainerView`` is a **read-only** DTO over a *compiled* result — it
-deliberately cannot run the model on new inputs. Interactive what-if (re-predicting text the user
-edits, generating counterfactuals on the fly) needs the opposite: live access to the model,
-explanation backend and generator.
+A compiled explanation result is a **read-only** view over past output — it deliberately cannot run
+the model on new inputs. Interactive what-if (re-predicting text the user edits, generating
+counterfactuals on the fly) needs the opposite: live access to the model, explanation backend and
+generator.
 
 ``InteractiveEngine`` is that live counterpart, kept separate from the read-only view (mirroring LIT
 keeping ``Model`` separate from data). Webapp components that mutate/regenerate inputs *require* an

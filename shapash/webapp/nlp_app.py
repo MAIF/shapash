@@ -1,10 +1,10 @@
 """Minimal Dash webapp for NLP text classification explanations.
 
-Prototype bridge toward Phase 5b (composable WebappComponents). Panels are being extracted into
-``WebappComponent``s one at a time (see ``shapash/webapp/nlp_components/``); the dataset table and
-the persistent selection bar are the only pieces still built inline — both are mandatory shell UI,
-not optional panels, so there is nothing left to extract them into. All tabular-only SmartApp panels
-(violin, cluster, scatter prediction picking) beyond what NLP needs are absent rather than disabled.
+Panels are being extracted into ``WebappComponent``s one at a time (see
+``shapash/webapp/nlp_components/``); the dataset table and the persistent selection bar are the only
+pieces still built inline — both are mandatory shell UI, not optional panels, so there is nothing
+left to extract them into. All tabular-only SmartApp panels (violin, cluster, scatter prediction
+picking) beyond what NLP needs are absent rather than disabled.
 """
 
 from __future__ import annotations

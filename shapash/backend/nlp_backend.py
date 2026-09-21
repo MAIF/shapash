@@ -94,11 +94,10 @@ class NlpBackend(Backend):
         Which model output the contributions explain — read off the backend at
         ``explain()`` time and recorded on :class:`~shapash.explainer.nlp_explanation.NlpExplanation`
         so a saved artifact says which. ``"probability"``: the explained quantity is a
-        (softmax) probability, which forces per-token cross-class cancellation — see
-        ``docs/architecture/explanation-space.md``. ``"logit"``: the explained quantity is
-        the model's raw pre-softmax output, which does not cancel. Not an affine rescaling
-        of one another; a caller comparing two backends is comparing numbers on different
-        scales unless both report the same space.
+        (softmax) probability, which forces per-token cross-class cancellation. ``"logit"``: the
+        explained quantity is the model's raw pre-softmax output, which does not cancel. Not an
+        affine rescaling of one another; a caller comparing two backends is comparing numbers on
+        different scales unless both report the same space.
     requires_model_capabilities : tuple[type, ...]
         Capability ABCs (from :mod:`shapash.model.base`) the bound model must satisfy,
         checked once here so a new backend declares its needs instead of failing at

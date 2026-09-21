@@ -189,8 +189,7 @@ class NlpTheme:
 
     ``xpl_positive``/``xpl_negative`` name the concept "explanation pushes the prediction
     up/down" rather than any one backend's algorithm (``nlp_shap`` and ``nlp_captum_lig`` both
-    produce signed per-token contributions, drawn with these two colors) — see
-    ``docs/architecture/explanation-space.md``.
+    produce signed per-token contributions, drawn with these two colors).
     """
 
     header_bkg: str

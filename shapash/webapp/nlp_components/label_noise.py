@@ -22,7 +22,7 @@ That column replaced an earlier one showing the labels of the row's nearest neig
 ranks in the model's decision space, so those neighbours restated the prediction 98.6% of the time
 and backed the *wrong* prediction on 87% of model errors — it read as confirmation while carrying no
 information. Representation neighbours are still one click away and honestly framed in the Similar
-Examples panel, which follows the current datapoint. See implementation-log C.27.
+Examples panel, which follows the current datapoint.
 
 *Inspect* makes a flagged row the current datapoint so its token contributions render in the shared
 Sentence/Waterfall panels — the words that pushed the model away from the given label. Unlike the

@@ -15,7 +15,7 @@ probably just wrong; low means both models agree the label is off.
 Why a separate classifier rather than nearest neighbours in the model's representation space: that
 space is the one feeding the classifier head, so its neighbours restate the prediction (measured at
 98.6% agreement on the emotion demo) and back the *wrong* prediction on 87% of the model's errors.
-Anything derived from the audited model corroborates it by construction. See implementation-log C.27.
+Anything derived from the audited model corroborates it by construction.
 
 Why bag-of-words rather than sentence embeddings: measured on the emotion demo, TF-IDF + logistic
 regression scores 0.658 accuracy and agrees with the audited model 66.6% of the time, against 0.636

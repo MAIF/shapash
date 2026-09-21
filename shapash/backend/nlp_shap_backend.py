@@ -207,13 +207,12 @@ class NlpShapBackend(NlpBackend):
     # nothing backend-specific to learn here.
     reference_kind = "none"
     # Shapley values satisfy the efficiency axiom by construction, and stay additive
-    # even under the Partition/Owen path SHAP silently takes for text (see A8 in
-    # docs/architecture/refactoring-plan.md: Owen values satisfy efficiency too).
+    # even under the Partition/Owen path SHAP silently takes for text. Owen values satisfy efficiency too.
     is_additive = True
     # ``shap_callable`` resolves to a ``text-classification`` pipeline (softmax output), not
-    # ``model.logits`` — see docs/architecture/explanation-space.md §1/§2. This is why per-token
-    # attributions cancel across classes: the explained quantity sums to 1 for every masked
-    # variant, which is a constant-payoff game whose Shapley values are all zero.
+    # ``model.logits``. This is why per-token attributions cancel across classes: the explained
+    # quantity sums to 1 for every masked variant, which is a constant-payoff game whose Shapley
+    # values are all zero.
     output_space = "probability"
     requires_model_capabilities = ()  # a plain scoring callable is enough
 

@@ -1,14 +1,12 @@
 """Composable webapp components for the NLP what-if tools.
 
-Prototype of the master plan's Phase-5b ``WebappComponent`` contract, applied first to the
-interactive what-if panels (data editor + counterfactuals). Each component owns its layout and
-callbacks and declares its ``requires`` capabilities, self-disabling when the bound explanation/engine
-cannot satisfy them.
+A ``WebappComponent`` contract, applied first to the interactive what-if panels (data editor +
+counterfactuals). Each component owns its layout and callbacks and declares its ``requires``
+capabilities, self-disabling when the bound explanation/engine cannot satisfy them.
 
-Notably this **extends** the Phase-5b ``requires`` idea from *data* capabilities (e.g.
-``proba_values``) to *engine/model* capabilities (``engine:predict``, ``engine:counterfactual``),
-so a panel can require a live, gradient-capable model — the refinement to fold back into the master
-contract.
+Notably this **extends** the ``requires`` idea from *data* capabilities (e.g. ``proba_values``) to
+*engine/model* capabilities (``engine:predict``, ``engine:counterfactual``), so a panel can require a
+live, gradient-capable model.
 """
 
 from __future__ import annotations

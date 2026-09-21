@@ -16,7 +16,7 @@ LIG is a *completion* method: for each class ``c`` the token attributions sum to
 so the additive ``base + Σ = total`` summary in ``plot_sentence_highlight`` stays consistent. These
 values live in raw logit space — **not** the same space ``NlpShapBackend`` reports: SHAP explains
 the pipeline's softmax probability output, not ``model.logits``, so the two backends' numbers are on
-different scales and are not directly comparable (see ``docs/architecture/explanation-space.md``).
+different scales and are not directly comparable.
 
 Unlike the SHAP/LIME backends (which wrap a plain text callable), this backend needs the embedding
 module and a logits forward pass, so it consumes a :class:`~shapash.model.base.TextModel` that
@@ -208,7 +208,7 @@ class NlpCaptumLigBackend(NlpBackend):
 
     name = "nlp_captum_lig"
     # A constructed point from the tokenizer (model.reference_ids() -> pad/mask ids),
-    # not learned from data — see A9 in docs/architecture/refactoring-plan.md.
+    # not learned from data.
     reference_kind = "point"
     # Integrated Gradients satisfies the completeness axiom (Sundararajan, Taly & Yan,
     # 2017, "Axiomatic Attribution for Deep Networks"): attributions sum exactly to

@@ -1,13 +1,6 @@
 """Prototype NLP explainer for text classification models.
 
-This module is a **bridge prototype** toward Phase 6 of the refactoring plan,
-where token-level NLP explanations will be integrated into ``SmartExplainer``
-via ``TextDataset`` and ``ExplanationSession``. Once those are in place, users
-will call ``SmartExplainer.compile(x=TextDataset(texts))`` and this class will
-be removed.
-
-``NlpExplainer`` follows the ``fit``/``explain`` seam (Amendment A5 in
-``docs/architecture/refactoring-plan.md``): ``fit(X_reference, y=None)`` learns
+``NlpExplainer`` follows a ``fit``/``explain`` seam: ``fit(X_reference, y=None)`` learns
 reference state (the similar-example / label-noise-probe corpus) and
 ``explain(X, y=None)`` runs the backend and returns an immutable
 :class:`~shapash.explainer.nlp_explanation.NlpExplanation` — the explainer
@@ -216,8 +209,7 @@ class NlpExplainer:
         of their own — see ``NlpBackend.reference_kind`` on each (``"none"``/``"point"``: a masker
         that infers itself, or a point constructed by the tokenizer, neither learned from data). So
         calling ``fit`` is optional; :meth:`explain` works standalone, exactly as ``compile`` did.
-        What *is* fit-time reference state for text — the two pieces the plan calls out (see the
-        refactoring plan's Context 4a) — is the corpus this method learns:
+        What *is* fit-time reference state for text is the corpus this method learns:
 
         Parameters
         ----------
@@ -258,7 +250,7 @@ class NlpExplainer:
         trailing-underscore convention for fitted state. Does not subclass ``BaseEstimator``: text
         models here are HuggingFace pipelines / torch models, not sklearn estimators, so there is no
         ``Pipeline``/skrub interop need to justify full conformance (``get_params``/``clone``) the
-        way there is for the tabular explainer — see the refactoring plan's Phase 1.
+        way there is for the tabular explainer.
         """
         ref_texts = list(X_reference) if X_reference is not None else None
         ref_labels = list(y) if y is not None else None
