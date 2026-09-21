@@ -2,8 +2,8 @@
 
 Tokens whose absolute contribution falls below a configurable threshold are
 collapsed into a single "other (N tokens)" bar so the chart stays readable even
-for long sequences.  Tokens are sorted by absolute contribution descending
-(standard SHAP convention), giving the most important tokens top billing.
+for long sequences.  Tokens are ordered so the biggest absolute contribution
+renders at the top of the chart, decreasing downward (standard SHAP convention).
 """
 
 from __future__ import annotations
@@ -102,8 +102,19 @@ def plot_waterfall(
     significant = [(t, v) for t, v in zip(all_toks, all_vals_f, strict=False) if abs(v) >= threshold]
     small = [(t, v) for t, v in zip(all_toks, all_vals_f, strict=False) if abs(v) < threshold]
 
-    # Sort significant by |value| descending (SHAP convention)
-    significant.sort(key=lambda p: abs(p[1]), reverse=True)
+    # "other" is a single aggregate bar standing in for all below-threshold tokens, so it
+    # must be ranked alongside the significant ones by its own |value| rather than pinned
+    # next to the total.
+    bars = list(significant)
+    if small:
+        n_small = len(small)
+        sum_small = sum(v for _, v in small)
+        bars.append((f"other ({n_small} token{'s' if n_small != 1 else ''})", sum_small))
+
+    # Sort ascending by |value|. Plotly's horizontal waterfall renders the first y-entry
+    # at the *bottom* and the last at the *top*, so ascending order here puts the biggest
+    # contribution at the top of the chart, decreasing downward.
+    bars.sort(key=lambda p: abs(p[1]))
 
     # ── Build waterfall arrays ──────────────────────────────────────────
     y_labels: list[str] = []
@@ -115,16 +126,9 @@ def plot_waterfall(
         x_vals.append(float(base_value))
         measures.append("absolute")
 
-    for tok, val in significant:
-        y_labels.append(tok)
+    for label, val in bars:
+        y_labels.append(label)
         x_vals.append(val)
-        measures.append("relative")
-
-    if small:
-        n_small = len(small)
-        sum_small = sum(v for _, v in small)
-        y_labels.append(f"other ({n_small} token{'s' if n_small != 1 else ''})")
-        x_vals.append(sum_small)
         measures.append("relative")
 
     running_total = (float(base_value) if base_value is not None else 0.0) + sum(all_vals_f)
