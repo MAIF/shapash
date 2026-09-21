@@ -1055,29 +1055,32 @@ class SmartPlotter:
         col_value_count: int | tuple[int, int] = 0,
     ) -> tuple[list, str | None]:
         """
-        Method used for sampling indices.
-        Uses the same subset_sampling utility as contribution plots,
-        including smart sampling when a sampling column is provided.
+        Select row indices for interaction plots.
+
+        This method delegates to the same sampling utility as contribution
+        plots, including smart sampling when a driving column or a crossed
+        pair of columns is provided.
+
         Parameters
         ----------
-        selection : list
-            Contains list of index, subset of the input DataFrame that we want to plot
+        selection : list, optional
+            Explicit row indices to keep. If None, sampling is performed over
+            the full compiled dataset.
         max_points : int
-            Maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
+            Maximum number of rows to keep for plotting.
         sampling_col : str or tuple(str, str), optional
             Column name (or crossed pair of column names) used to drive smart sampling.
             If None, random sampling is used when needed.
         col_value_count : int or tuple(int, int), optional
             Number of unique values for sampling_col, or per-column unique counts
             when sampling on a crossed pair of features.
+
         Returns
         -------
         list_ind : list
-            List of indices to select
-        addnote : str
-            Text to inform the user the selection that has been done.
+            Row indices selected for the plot.
+        addnote : str or None
+            Optional note describing the applied sampling strategy.
         """
         # Sampling
         list_ind, addnote = subset_sampling(
@@ -1100,6 +1103,22 @@ class SmartPlotter:
         - categorical + numeric: categorical is placed on x-axis
         - numeric + numeric: keep input order
         - categorical + categorical: higher-cardinality variable is placed on x-axis
+
+        Parameters
+        ----------
+        col_id1 : int
+            Column index of the first feature.
+        col_id2 : int
+            Column index of the second feature.
+        list_ind : list
+            Row indices used to inspect current feature distributions.
+        cat_num_threshold : int
+            Threshold used to discriminate categorical from numerical series.
+
+        Returns
+        -------
+        tuple of int
+            Ordered pair of feature indices to plot.
         """
         col_name1 = self._explainer.columns_dict[col_id1]
         col_name2 = self._explainer.columns_dict[col_id2]
@@ -1140,45 +1159,48 @@ class SmartPlotter:
         auto_order: bool = True,
     ) -> go.Figure:
         """
-        Displays a Plotly scatter plot or violin plot of two selected features and their combined
-        contributions for each of their values.
-        This plot allows the user to understand how the different combinations of values of the
-        two selected features influence the importance of the two features in the model output.
-        A sample is taken if the number of points to be displayed is too large.
+        Display a Plotly interaction plot for two selected features.
+
+        Depending on the number of modalities on the x-axis feature, the plot
+        is rendered either as a scatter plot or as a violin plot with point
+        dispersion. A sample is taken if the number of displayed rows is too
+        large.
+
         Parameters
         ----------
-        col1: String or Int
-            Name, label name or column number of the first column whose contributions we want to plot
-        col2: String or Int
-            Name, label name or column number of the second column whose contributions we want to plot
-        selection: list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
+        col1 : str or int
+            Name, display label, or column index of the first feature.
+        col2 : str or int
+            Name, display label, or column index of the second feature.
+        selection : list, optional
+            Explicit row indices to plot.
         label : int or str, default=-1
             Class label used in classification settings. It follows the same
             behavior as contribution_plot: select one class to display interactions.
-        violin_maxf: int (optional, default: 10)
-            maximum number modality to plot violin. If the feature specified with col argument
-            has more modalities than violin_maxf, a scatter plot will be choose
-        max_points: int (optional, default: 500)
-            maximum number of points to plot in contribution plot. if input dataset is bigger than
-            max_points, a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        width : Int (default: 900)
-            Plotly figure - layout width
-        height : Int (default: 600)
-            Plotly figure - layout height
-        file_name: string (optional)
-            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
-            Indicate whether to open the bar plot or not.
-        auto_order: bool (optional, default: True)
+        violin_maxf : int, default=10
+            Maximum number of unique values allowed on the x-axis feature to
+            use a violin plot. Above this threshold, a scatter plot is used.
+        max_points : int, default=500
+            Maximum number of rows to display.
+        width : int, default=900
+            Plotly figure width.
+        height : int, default=600
+            Plotly figure height.
+        file_name : str, optional
+            Output file path used to save the figure.
+        auto_open : bool, default=False
+            Whether to automatically open the saved figure.
+        auto_order : bool, default=True
             If True, automatically reorder the pair for readability:
             categorical on x-axis against numeric, and for two categoricals
             place the highest-cardinality variable on x-axis.
             If False, the order provided by the user is preserved.
+
         Returns
         -------
-        Plotly Figure Object
+        plotly.graph_objects.Figure
+            The generated interaction figure.
+
         Example
         --------
         >>> xpl.plot.interactions_plot(0, 1)
@@ -1310,40 +1332,40 @@ class SmartPlotter:
         auto_open: bool = False,
     ) -> go.Figure:
         """
-        Displays a dynamic plot with the `nb_top_interactions` most important interactions existing
-        between two variables.
-        The most important interactions are determined computing the sum of all absolute shap interactions
-        values between all existing pairs of variables.
-        A button allows to select and display the corresponding features values and their shap contribution values.
-        For readability, each displayed pair is automatically ordered before plotting by the same
-        rules as `interactions_plot(auto_order=True)`.
+        Display a dynamic figure for the most important feature interactions.
+
+        The most important interactions are determined by the sum of absolute
+        SHAP interaction values over all pairs of variables. Each pair can then
+        be displayed through a dropdown menu, reusing the same ordering rules
+        as ``interactions_plot(auto_order=True)``.
+
         Parameters
         ----------
         nb_top_interactions : int
             Number of top interactions to display.
-        selection : list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
+        selection : list, optional
+            Explicit row indices to plot.
         label : int or str, default=-1
             Class label used in classification settings. It follows the same
             behavior as contribution_plot: select one class to display interactions.
-        violin_maxf : int (optional, default: 10)
-            maximum number modality to plot violin. If the feature specified with col argument
-            has more modalities than violin_maxf, a scatter plot will be choose
-        max_points : int (optional, default: 500)
-            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        width : Int (default: 900)
-            Plotly figure - layout width
-        height : Int (default: 600)
-            Plotly figure - layout height
-        file_name: string (optional)
-            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
-            Indicate whether to open the bar plot or not.
+        violin_maxf : int, default=10
+            Maximum number of unique values allowed on the x-axis feature to
+            use a violin plot. Above this threshold, a scatter plot is used.
+        max_points : int, default=500
+            Maximum number of rows to display.
+        width : int, default=900
+            Plotly figure width.
+        height : int, default=600
+            Plotly figure height.
+        file_name : str, optional
+            Output file path used to save the figure.
+        auto_open : bool, default=False
+            Whether to automatically open the saved figure.
+
         Returns
         -------
         go.Figure
+
         Example
         --------
         >>> xpl.plot.top_interactions_plot()

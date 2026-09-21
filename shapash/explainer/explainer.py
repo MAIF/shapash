@@ -503,11 +503,7 @@ class Explainer:
             if self.x_interaction.equals(x[:n_samples_max]):
                 # Backward compatibility: tests or custom workflows may inject
                 # precomputed interactions without label-aware cache metadata.
-                if not self._interaction_cache_loaded:
-                    if self.interaction_values is None:
-                        raise RuntimeError("interaction_values cache is unexpectedly empty")
-                    return self.interaction_values
-                if self._interaction_label == label_num:
+                if not self._interaction_cache_loaded or self._interaction_label == label_num:
                     if self.interaction_values is None:
                         raise RuntimeError("interaction_values cache is unexpectedly empty")
                     return self.interaction_values
