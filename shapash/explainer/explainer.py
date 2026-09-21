@@ -237,7 +237,7 @@ class Explainer:
             x_init=self.x_init,
             x_encoded=self.x_encoded,
             preprocessing=self.preprocessing,
-            features_groups=self.features_groups,
+            features_groups=features_groups,
             features_dict=self.features_dict,
             how="dict_of_values",
         )
