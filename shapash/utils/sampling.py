@@ -1,5 +1,4 @@
 import random
-from numbers import Integral
 from typing import Any
 
 import numpy as np
@@ -205,9 +204,10 @@ def _intelligent_sampling(
     if isinstance(col, (tuple, list)) and len(col) == 2:
         return _intelligent_sampling_pair(data, max_points, col, random_seed, rng)
 
-    scalar_col_value_count = (
-        col_value_count if isinstance(col_value_count, (Integral, np.integer)) else max(col_value_count)
-    )
+    if isinstance(col_value_count, tuple):
+        scalar_col_value_count = max(col_value_count)
+    else:
+        scalar_col_value_count = int(col_value_count)
 
     is_col_str = True
     if data[col].dtype.kind in "fc":
