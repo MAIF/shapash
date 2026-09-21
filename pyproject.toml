@@ -33,7 +33,6 @@ dependencies = [
     "category_encoders>=2.6.0",
     "dash-bootstrap-components>=2.0.0",
     "dash-daq>=0.6.0",
-    "dash-renderer==1.8.3",
     "dash>=3.0.0,<4.0.0",
     "Flask>=1.0.4",
     "matplotlib>=3.8.4",
@@ -43,8 +42,8 @@ dependencies = [
     # 3.0.4 yanked upstream: segfaults in datetime ops (pandas #66083)
     "pandas>=2.2.2,!=3.0.4,<4.0.0",
     "phik>=0.12.4",
-    "plotly>=5.0.0,<6.0.0",
-    "scikit-learn>=1.8.0,<1.9.0",
+    "plotly>=5.0.0,<8.0.0",
+    "scikit-learn>=1.8.0,<1.10.0",
     "scipy>=1.13.0",
     "shap>=0.46.0",
     "shapely>=2.0.0",
