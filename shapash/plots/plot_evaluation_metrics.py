@@ -485,7 +485,7 @@ def _prediction_classification_plot(
             jitter=0.075,
             meanline_visible=True,
             spanmode="hard",
-            customdata=df_pred["proba_values"].index.values,
+            customdata=df_pred["proba_values"].index.values.tolist(),
             scalemode="count",
         )
     )
@@ -524,7 +524,7 @@ def _prediction_classification_plot(
             name="Correct Prediction",
             hovertext=hv_text_correct_predict,
             hovertemplate="<b>%{hovertext}</b><br />",
-            customdata=df_correct_predict["proba_values"].index.values,
+            customdata=df_correct_predict["proba_values"].index.values.tolist(),
         )
     )
 
@@ -538,7 +538,7 @@ def _prediction_classification_plot(
             name="Wrong Prediction",
             hovertext=hv_text_wrong_predict,
             hovertemplate="<b>%{hovertext}</b><br />",
-            customdata=df_wrong_predict["proba_values"].index.values,
+            customdata=df_wrong_predict["proba_values"].index.values.tolist(),
         )
     )
 
@@ -686,7 +686,7 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
             mode="markers",
             hovertext=hv_text,
             hovertemplate="<b>%{hovertext}</b><br />",
-            customdata=y_pred.index.values,
+            customdata=y_pred.index.values.tolist(),
             showlegend=False,
         )
 
@@ -1121,7 +1121,7 @@ def plot_clustering_by_explainability(
                 hovertext=hv_text["points"][i - 1] if show_points else None,
                 hovertemplate="<b>%{hovertext}</b><br />" if show_points else None,
                 name="",
-                customdata=values_to_project.index.values if show_points else None,
+                customdata=values_to_project.index.values.tolist() if show_points else None,
             )
         )
 
