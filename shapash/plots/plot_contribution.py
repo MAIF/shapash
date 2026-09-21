@@ -202,7 +202,7 @@ def plot_scatter(
     if has_nan_numeric:
         customdata_values = feature_values_array.astype(object).copy()
         customdata_values[nan_mask_arr] = "missing"
-    customdata = np.stack((customdata_values, feature_values.index.values), axis=-1)
+    customdata = np.stack((customdata_values, feature_values.index.values), axis=-1).tolist()
 
     fig.update_traces(customdata=customdata, hovertemplate=hovertemplate)
 
@@ -429,9 +429,16 @@ def plot_violin(
         yaxis=dict(
             side="right",
             range=[0, y_upper_max * 3],
-            showticklabels=False,  # Hide tick labels
-            showgrid=False,  # Hide grid lines (optional)
-            visible=False,  # Make the entire axis invisible
+            # Grid lines are drawn by this anchor axis, not by the overlaying yaxis2
+            # below, so it must stay "visible" for the horizontal grid to render even
+            # though everything else about it (labels, line, title) is hidden.
+            showgrid=True,
+            visible=True,
+            showticklabels=False,
+            showline=False,
+            zeroline=False,
+            title=None,
+            ticks="",
         ),
         yaxis2=dict(
             overlaying="y",
@@ -461,6 +468,11 @@ def plot_violin(
         case=case,
         style_dict=style_dict,
     )
+    # _update_contributions_fig sets a "Contribution" title on this axis (shared
+    # with plot_scatter, where it belongs); here it's the hidden helper axis, so
+    # clear it back out - it would otherwise render now that the axis is
+    # "visible" again for its grid lines (see the yaxis config above).
+    fig.update_layout(yaxis=dict(title=None))
 
     return fig
 
@@ -757,7 +769,7 @@ def _add_violin_and_scatter(
         customdata = np.stack(
             (feature_values.loc[feature_cond].values.flatten(), contributions.loc[feature_cond].index.values),
             axis=-1,
-        )
+        ).tolist()
         marker = None
         if colorpoints is not None:
             marker = {

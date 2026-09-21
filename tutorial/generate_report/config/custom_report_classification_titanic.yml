@@ -1,0 +1,87 @@
+# custom_report_classification_titanic.yml
+# Custom smart report configuration for Titanic binary classification.
+
+sections:
+  - type: header
+    params:
+      title: "Titanic survival custom report"
+      subtitle: >
+        This report combines built-in explainability sections and custom
+        user blocks dedicated to classification error analysis.
+
+  - type: model_analysis
+    params:
+      title: "Model analysis"
+
+  - type: group
+    params:
+      title: "Dataset analysis"
+    blocks:
+      - type: global_analysis
+        params:
+          title: "Global analysis"
+
+      - type: univariate_analysis
+        params:
+          title: "Univariate analysis"
+
+      - type: target_analysis
+        params:
+          title: "Target analysis"
+          show_train: true
+
+  - type: group
+    params:
+      title: "Classification explainability"
+    blocks:
+      - type: feature_importance
+        params:
+          title: "Global feature importance"
+          label: 1
+
+      - type: contribution_plot
+        params:
+          title: "Features contribution plots"
+          include_all_features: true
+          label: 1
+
+      - type: misclassification_focus
+        params:
+          title: "Most confident misclassifications"
+          top_k: 12
+
+  - type: group
+    params:
+      title: "Performance"
+    blocks:
+      - type: confusion_matrix
+        params:
+          title: "Confusion matrix"
+
+      - type: lift_curve
+        params:
+          title: "Lift curve"
+          label: 1
+
+      - type: prediction_error_summary
+        params:
+          title: "Prediction error summary"
+
+      - type: performance_metrics
+        params:
+          title: "Metrics"
+          metrics:
+            - path: "sklearn.metrics.accuracy_score"
+              name: "Accuracy"
+            - path: "sklearn.metrics.precision_score"
+              name: "Precision"
+            - path: "sklearn.metrics.recall_score"
+              name: "Recall"
+            - path: "sklearn.metrics.f1_score"
+              name: "F1"
+
+  - type: callout
+    params:
+      body: >
+        Custom blocks focus on high-confidence mistakes to prioritize the
+        most actionable explainability investigations.

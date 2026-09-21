@@ -67,16 +67,16 @@ class SmartApp:
     Attributes
     ----------
     explainer: object
-        SmartExplainer instance to point to.
+        Explainer instance to point to.
     """
 
-    def __init__(self, explainer, settings: dict | None = None):
+    def __init__(self, explainer, settings: dict | None = None, title_story: str | None = None):
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
-        explainer : SmartExplainer
-            SmartExplainer object
+        explainer : Explainer
+            Explainer object
         settings : dict
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
@@ -89,8 +89,9 @@ class SmartApp:
             external_stylesheets=[dbc.themes.BOOTSTRAP],
         )
         self.app.title = "Shapash Monitor"
-        if explainer.title_story:
-            self.app.title += " - " + explainer.title_story
+        self.title_story = title_story if title_story is not None else ""
+        if self.title_story:
+            self.app.title += " - " + self.title_story
         self.explainer = explainer
 
         # SETTINGS
@@ -831,7 +832,7 @@ class SmartApp:
                                     dbc.Row(
                                         [
                                             html.H3(
-                                                truncate_str(self.explainer.title_story, maxlen=40),
+                                                truncate_str(self.title_story, maxlen=40),
                                                 id="shapash_title_story",
                                                 style={"text-align": "center"},
                                             )
@@ -2360,7 +2361,12 @@ class SmartApp:
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
-            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
+            [
+                State("dataset", "data"),
+                State("dataset", "derived_viewport_data"),
+                State("index_id", "value"),
+                State("index_id", "n_submit"),
+            ],
         )
         def update_index_id(
             click_data,
@@ -2373,6 +2379,7 @@ class SmartApp:
             data,
             viewport_data,
             current_index_id,
+            current_n_submit,
         ):
             """
             This function is used to update index value according to
@@ -2391,7 +2398,8 @@ class SmartApp:
             ----------------------------------------------------------------
             return
             selected index id
-            boolean n_submit
+            n_submit counter, incremented on every trigger so the downstream
+            validation/refresh chain fires on every trigger, not just the first
             """
             ctx = dash.callback_context
             selected = None
@@ -2419,7 +2427,7 @@ class SmartApp:
                     selected = current_index_id
             except KeyError:
                 selected = current_index_id
-            return selected, True
+            return selected, (current_n_submit or 0) + 1
 
         @app.callback(Output("threshold_label", "children"), [Input("threshold_id", "value")])
         def update_threshold_label(value):
@@ -2540,13 +2548,14 @@ class SmartApp:
         @app.callback(
             Output("validation", "n_clicks"),
             [Input("index_id", "n_submit")],
+            [State("validation", "n_clicks")],
         )
-        def click_validation(n_submit):
+        def click_validation(n_submit, n_clicks):
             """
             submit index selection
             """
             if n_submit:
-                return 1
+                return (n_clicks or 0) + 1
             else:
                 raise PreventUpdate
 
