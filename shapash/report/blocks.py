@@ -21,7 +21,6 @@ from shapash.report.data_analysis import perform_global_dataframe_analysis, perf
 from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
-from shapash.utils.utils import compute_sorted_variables_interactions_list_indices
 
 logger = logging.getLogger(__name__)
 
@@ -672,53 +671,11 @@ class ReportBlockMixin:
         return resolved_title, [feature_select, selected_panel]
 
     @block
-    def block_interactions_plot(
-        self,
-        title: str = "",
-        col1: str | None = None,
-        col2: str | None = None,
-        max_points: int | None = None,
-    ) -> BlockContent:
-        """Render an interactions plot between two features.
-
-        Parameters
-        ----------
-        title : str, default=""
-            Optional section title.
-        col1 : str or None, default=None
-            First feature. If None, the method picks a default interaction pair.
-        col2 : str or None, default=None
-            Second feature. If None, the method picks a default interaction pair.
-        max_points : int or None, default=None
-            Maximum number of points used by the plotting backend.
-
-        Returns
-        -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and interactions plot content rendered by the @block decorator.
-
-        Examples
-        --------
-        >>> runtime.block_interactions_plot(col1="age", col2="income")
-        """
-        explainer = self._require_explainer("interactions_plot")
-        feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
-        if max_points is None:
-            effective_max_points = self.max_points
-        else:
-            effective_max_points = max_points
-        fig = explainer.plot.interactions_plot(col1=feature_one, col2=feature_two, max_points=effective_max_points)
-        if title is None:
-            resolved_title = f"{self._feature_label(feature_one)} / {self._feature_label(feature_two)}"
-        else:
-            resolved_title = title
-        return resolved_title, [fig]
-
-    @block
     def block_top_interactions_plot(
         self,
         title: str = "Top interactions plot",
         nb_top_interaction: int = 5,
+        class_label: int | str = -1,
         max_points: int | None = None,
     ) -> BlockContent:
         """Render a plot for the top feature interaction pairs.
@@ -729,6 +686,8 @@ class ReportBlockMixin:
             Section title displayed above the interaction figure.
         nb_top_interaction : int, default=5
             Number of top interactions to display.
+        class_label : int or str, default=-1
+            Optional class/target label used to compute and render class-specific interactions.
         max_points : int or None, default=None
             Maximum number of points used by the plotting backend.
 
@@ -748,6 +707,7 @@ class ReportBlockMixin:
             effective_max_points = max_points
         fig = explainer.plot.top_interactions_plot(
             nb_top_interactions=nb_top_interaction,
+            label=class_label,
             max_points=effective_max_points,
         )
         return title, [fig]
@@ -1155,18 +1115,6 @@ class ReportBlockMixin:
         if self.df_train_test is None:
             raise ValueError(f"{block_type} block requires x_train and explainer.x_init data on the report instance.")
         return self.df_train_test
-
-    def _resolve_interaction_pair(self, col1: str | None, col2: str | None) -> tuple[str, str]:
-        if col1 and col2:
-            return col1, col2
-        explainer = self._require_explainer("interactions_plot")
-        list_ind, _ = explainer.plot._select_indices_interactions_plot(selection=None, max_points=self.max_points)
-        interaction_values = explainer.get_interaction_values(selection=list_ind)
-        sorted_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
-        if not sorted_indices:
-            raise ValueError("No interaction pair available for interactions_plot block.")
-        first_idx, second_idx = sorted_indices[0]
-        return explainer.columns_dict[first_idx], explainer.columns_dict[second_idx]
 
     def _feature_label(self, feature: str) -> str:
         if self.explainer is None:

@@ -2,6 +2,7 @@
 Unit test smart plotter
 """
 
+import json
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 from catboost import CatBoostClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
@@ -25,6 +27,29 @@ from shapash.plots.plot_line_comparison import plot_line_comparison
 from shapash.style.style_utils import get_palette
 from shapash.utils.check import check_model
 from shapash.utils.sampling import subset_sampling
+
+
+def _assert_all_customdata_are_plain_lists(fig):
+    """
+    customdata built from a numpy array is serialized by Plotly>=6 into a binary
+    blob ({"dtype", "bdata", "shape"}) instead of a plain per-point JSON list, so
+    Plotly.js can't recover a clicked point's row index in the browser. Checking
+    this requires reading the figure post-serialization (as the browser receives
+    it), not the live Python Figure object.
+    """
+    traces = json.loads(pio.to_json(fig))["data"]
+    found_customdata = False
+    for trace in traces:
+        customdata = trace.get("customdata")
+        if customdata is None:
+            continue
+        found_customdata = True
+        assert isinstance(customdata, list), (
+            f"customdata was serialized as {type(customdata)} instead of a plain list "
+            f"(got: {customdata!r}); Plotly.js cannot recover a per-point value out of "
+            "a binary-encoded array, so a real click loses its row index in the browser."
+        )
+    assert found_customdata, "No trace with customdata found in the figure"
 
 
 class TestSmartPlotter(unittest.TestCase):
@@ -150,6 +175,7 @@ class TestSmartPlotter(unittest.TestCase):
         self.smart_explainer.explainer.y_target = pd.DataFrame(
             data=[10.12, 11.11], columns=["y_target"], index=["person_A", "person_B"]
         )
+        self.smart_explainer.explainer.state = SmartState()
         output = self.smart_explainer.plot.local_plot(index="person_B")
         output_data = output.data
 
@@ -2450,6 +2476,8 @@ class TestSmartPlotter(unittest.TestCase):
         assert np.array_equal(output.data[0].x, ["PhD", "Master"])
         assert np.array_equal(output.data[0].y, [-1.4, -0.2])
         assert np.array_equal(output.data[0].marker.color, [34.0, 27.0])
+        assert output.layout.coloraxis.cmin == 27.0
+        assert output.layout.coloraxis.cmax == 34.0
         assert len(output.data) == 1
 
         self.setUp()
@@ -2471,7 +2499,7 @@ class TestSmartPlotter(unittest.TestCase):
         smart_explainer.explainer.interaction_values = interaction_values
         smart_explainer.explainer.x_interaction = smart_explainer.explainer.x_encoded
 
-        output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0)
+        output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0, auto_order=False)
 
         assert np.array_equal(output.data[0].x, [34.0])
         assert np.array_equal(output.data[0].y, [-1.4])
@@ -2533,15 +2561,164 @@ class TestSmartPlotter(unittest.TestCase):
 
         output = smart_explainer.plot.interactions_plot(col1, col2)
 
-        assert len(output.data) == 3
+        violin_traces = [trace for trace in output.data if trace.type == "violin"]
+        scatter_traces = [trace for trace in output.data if trace.type == "scatter"]
+        bar_traces = [trace for trace in output.data if trace.type == "bar"]
 
-        assert output.data[0].type == "violin"
-        assert output.data[1].type == "violin"
-        assert output.data[2].type == "scatter"
+        assert len(violin_traces) == 2
+        assert len(scatter_traces) == 1
+        assert len(bar_traces) == 2
 
-        assert np.array_equal(output.data[2].x, ["PhD", "Master"])
-        assert np.array_equal(output.data[2].y, [-1.4, -0.2])
-        assert np.array_equal(output.data[2].marker.color, [34.0, 27.0])
+        scatter_trace = scatter_traces[0]
+        assert np.issubdtype(np.asarray(scatter_trace.x).dtype, np.number)
+        assert all(-0.6 <= x <= 1.6 for x in scatter_trace.x)
+        assert np.array_equal(scatter_trace.y, [-1.4, -0.2])
+        assert np.array_equal(scatter_trace.marker.color, [34.0, 27.0])
+
+        assert sum(trace.y[0] for trace in bar_traces) == 1.0
+
+        self.setUp()
+
+    def test_interactions_plot_6_add_density_trace_numeric_scatter(self):
+        """
+        Interactions scatter (numeric x numeric) should include a density/volumetry layer when enough points exist.
+        """
+        col1 = "X1"
+        col2 = "X2"
+        smart_explainer = self.smart_explainer
+
+        smart_explainer.explainer.x_encoded = smart_explainer.explainer.x_init = pd.DataFrame(
+            data=np.array([[520, 34], [12800, 27], [2500, 33], [5000, 31], [9100, 29]], dtype=float),
+            columns=["X1", "X2"],
+            index=["person_A", "person_B", "person_C", "person_D", "person_E"],
+        )
+
+        interaction_values = np.zeros((5, 2, 2), dtype=float)
+        interaction_values[:, 0, 1] = np.array([-0.7, -0.1, 0.05, 0.3, 0.12])
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+
+        smart_explainer.explainer.interaction_values = interaction_values
+        smart_explainer.explainer.x_interaction = smart_explainer.explainer.x_encoded
+
+        output = smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        assert len(output.data) == 2
+        density_trace = next(trace for trace in output.data if trace.fill == "toself")
+        scatter_trace = next(trace for trace in output.data if trace.fill != "toself")
+
+        assert density_trace.hoverinfo == "none"
+        assert density_trace.showlegend is False
+
+        assert np.array_equal(scatter_trace.x, [520, 12800, 2500, 5000, 9100])
+        assert np.array_equal(scatter_trace.y, [-1.4, -0.2, 0.1, 0.6, 0.24])
+        assert np.array_equal(scatter_trace.marker.color, [34.0, 27.0, 33.0, 31.0, 29.0])
+
+        self.setUp()
+
+    def test_interactions_plot_sets_visible_yaxis_title(self):
+        """Interactions plots should expose their title on the visible y-axis."""
+        col1 = "X1"
+        col2 = "X2"
+
+        interaction_values = np.array([[[0.1, -0.7], [-0.6, 0.3]], [[0.2, -0.1], [-0.2, 0.1]]])
+        self.smart_explainer.explainer.interaction_values = interaction_values
+        self.smart_explainer.explainer.x_interaction = self.smart_explainer.explainer.x_encoded
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0)
+
+        assert output.layout.yaxis.title.text is None
+        assert output.layout.yaxis2.title.text == "Shap interaction value"
+
+        self.setUp()
+
+    def test_interactions_plot_adds_subtitle_with_class(self):
+        """
+        Interactions plot title should include explained class like contribution plot.
+        """
+        col1 = "X1"
+        col2 = "X2"
+
+        interaction_values = np.array([[[0.1, -0.7], [-0.6, 0.3]], [[0.2, -0.1], [-0.2, 0.1]]])
+        self.smart_explainer.explainer.interaction_values = interaction_values
+        self.smart_explainer.explainer.x_interaction = self.smart_explainer.explainer.x_encoded
+        self.smart_explainer.explainer.label_dict = {0: "death", 1: "survival"}
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=0, label=1)
+
+        assert "Explained class: <b>survival</b>" in output.layout.title.text
+        assert "Observed lines" not in output.layout.title.text
+
+        self.setUp()
+
+    def test_interactions_plot_numeric_low_cardinality_as_category(self):
+        """
+        Low-cardinality integer-like numeric feature should be treated as categorical in interactions plot.
+        """
+        col1 = "Pclass"
+        col2 = "X1"
+        explainer = self.smart_explainer.explainer
+
+        n_rows = 45
+        idx = [f"person_{i}" for i in range(n_rows)]
+        x1_vals = ["A", "B", "A"] * 15
+        pclass_vals = ([1, 2, 3] * 15)[:n_rows]
+        explainer.x_encoded = explainer.x_init = pd.DataFrame(
+            data={"Pclass": pclass_vals, "X1": x1_vals}, index=idx
+        )
+        explainer.x_encoded["Pclass"] = explainer.x_encoded["Pclass"].astype(float)
+
+        interaction_values = np.zeros((n_rows, 2, 2), dtype=float)
+        interaction_values[:, 0, 1] = np.linspace(-0.8, 0.8, n_rows)
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+
+        explainer.interaction_values = interaction_values
+        explainer.x_interaction = explainer.x_encoded
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "Pclass", 1: "X1"}
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
+
+        assert list(output.layout.xaxis.ticktext) == ["1.0", "2.0", "3.0"]
+        scatter_traces = [trace for trace in output.data if trace.type == "scatter"]
+        assert len(scatter_traces) == 2
+        assert sorted(trace.name for trace in scatter_traces) == ["A", "B"]
+
+        self.setUp()
+
+    def test_interactions_plot_use_postprocessed_values_on_abscissa(self):
+        """
+        Interactions plot must use display-ready (postprocessed/transcoded) values on x-axis labels.
+        """
+        col1 = "sex"
+        col2 = "X2"
+        explainer = self.smart_explainer.explainer
+
+        idx = ["person_A", "person_B", "person_C", "person_D"]
+        explainer.x_init = pd.DataFrame(
+            data={"sex": ["male", "female", "male", "female"], "X2": [34.0, 27.0, 41.0, 30.0]},
+            index=idx,
+        )
+        explainer.x_encoded = pd.DataFrame(
+            data={"sex": [1.0, 0.0, 1.0, 0.0], "X2": [34.0, 27.0, 41.0, 30.0]},
+            index=idx,
+        )
+        explainer.x_contrib_plot = pd.DataFrame(
+            data={"sex": [1.0, 0.0, 1.0, 0.0], "X2": [34.0, 27.0, 41.0, 30.0]},
+            index=idx,
+        )
+        explainer.x_interaction = explainer.x_encoded
+        explainer.postprocessing_modifications = True
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "sex", 1: "X2"}
+
+        interaction_values = np.zeros((4, 2, 2), dtype=float)
+        interaction_values[:, 0, 1] = np.array([-0.7, -0.1, 0.2, 0.5])
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+        explainer.interaction_values = interaction_values
+
+        output = self.smart_explainer.plot.interactions_plot(col1, col2, violin_maxf=10, auto_order=False)
+
+        assert list(output.layout.xaxis.ticktext) == ["female", "male"]
 
         self.setUp()
 
@@ -2585,6 +2762,9 @@ class TestSmartPlotter(unittest.TestCase):
         assert isinstance(output.layout.updatemenus[0].buttons[0].args[0]["visible"], list)
         assert len(output.layout.updatemenus[0].buttons[0].args[0]["visible"]) >= 5
         assert True in output.layout.updatemenus[0].buttons[0].args[0]["visible"]
+        for button in output.layout.updatemenus[0].buttons:
+            assert "yaxis" in button.args[1]
+            assert "yaxis2" in button.args[1]
 
         self.setUp()
 
@@ -2630,6 +2810,163 @@ class TestSmartPlotter(unittest.TestCase):
         assert True in output.layout.updatemenus[0].buttons[0].args[0]["visible"]
 
         self.setUp()
+
+    def test_top_interactions_plot_keeps_categorical_xaxis_ticks(self):
+        """
+        top_interactions_plot buttons must keep x-axis tick labels for categorical interactions.
+        """
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
+        idx = [f"person_{i}" for i in range(40)]
+
+        sex_labels = ["male", "female"] * 20
+        sex_encoded = [1.0, 0.0] * 20
+        pclass_vals = ([1, 2, 3, 1] * 10)[:40]
+        fare_vals = np.linspace(5, 80, 40)
+
+        explainer.x_init = pd.DataFrame(
+            data={"sex": sex_labels, "Pclass": pclass_vals, "Fare": fare_vals},
+            index=idx,
+        )
+        explainer.x_encoded = pd.DataFrame(
+            data={"sex": sex_encoded, "Pclass": pclass_vals, "Fare": fare_vals},
+            index=idx,
+        )
+        explainer.x_interaction = explainer.x_encoded
+        explainer.postprocessing_modifications = True
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "sex", 1: "Pclass", 2: "Fare"}
+
+        interaction_values = np.zeros((40, 3, 3), dtype=float)
+        interaction_values[:, 0, 1] = np.linspace(-0.9, 0.9, 40)
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+        interaction_values[:, 0, 2] = np.linspace(0.2, 1.0, 40)
+        interaction_values[:, 2, 0] = interaction_values[:, 0, 2]
+        explainer.interaction_values = interaction_values
+
+        output = smart_explainer.plot.top_interactions_plot(nb_top_interactions=2, violin_maxf=10)
+
+        xaxis_updates = [button.args[1]["xaxis"] for button in output.layout.updatemenus[0].buttons]
+        assert any(
+            "ticktext" in xaxis_update and len(list(xaxis_update["ticktext"])) > 0
+            for xaxis_update in xaxis_updates
+        )
+
+        self.setUp()
+
+    def test_interactions_plot_order_two_categorical_by_cardinality(self):
+        """
+        With two categorical features, x-axis should be the one with more categories.
+        """
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
+        explainer.x_init = pd.DataFrame(
+            data={"X1": ["A", "A", "B", "B"], "X2": ["k1", "k2", "k3", "k1"]},
+            index=["person_A", "person_B", "person_C", "person_D"],
+        )
+        explainer.x_encoded = explainer.x_init.copy()
+        explainer.x_interaction = explainer.x_encoded
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "X1", 1: "X2"}
+
+        interaction_values = np.zeros((4, 2, 2), dtype=float)
+        interaction_values[:, 0, 1] = np.array([-0.3, -0.1, 0.2, 0.4])
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+        explainer.interaction_values = interaction_values
+
+        output = smart_explainer.plot.interactions_plot("X1", "X2", violin_maxf=0, auto_order=True)
+
+        assert output.layout.xaxis.title.text == "X2"
+
+        self.setUp()
+
+    def test_interactions_plot_order_two_numeric_keep_input(self):
+        """
+        With two numeric features, preserve user input order on x-axis.
+        """
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
+        explainer.x_init = pd.DataFrame(
+            data={"X1": [1.0, 2.0, 3.0, 4.0], "X2": [10.0, 20.0, 30.0, 40.0]},
+            index=["person_A", "person_B", "person_C", "person_D"],
+        )
+        explainer.x_encoded = explainer.x_init.copy()
+        explainer.x_interaction = explainer.x_encoded
+        explainer.features_desc = dict(explainer.x_init.nunique())
+        explainer.columns_dict = {0: "X1", 1: "X2"}
+
+        interaction_values = np.zeros((4, 2, 2), dtype=float)
+        interaction_values[:, 0, 1] = np.array([-0.3, -0.1, 0.2, 0.4])
+        interaction_values[:, 1, 0] = interaction_values[:, 0, 1]
+        explainer.interaction_values = interaction_values
+
+        output = smart_explainer.plot.interactions_plot("X2", "X1", violin_maxf=0)
+
+        assert output.layout.xaxis.title.text == "X2"
+        assert np.array_equal(output.data[0].x, [10.0, 20.0, 30.0, 40.0])
+
+        self.setUp()
+
+    def test_interactions_plot_order_cat_num_auto_enabled(self):
+        """
+        With auto_order=True and mixed cat/num, categorical variable must be on x-axis.
+        """
+        col1 = "X1"
+        col2 = "X2"
+        smart_explainer = self.smart_explainer
+        explainer = smart_explainer.explainer
+        explainer.x_encoded = explainer.x_init = pd.DataFrame(
+            data=np.array([["PhD", 34], ["Master", 27]]), columns=["X1", "X2"], index=["person_A", "person_B"]
+        )
+        explainer.x_encoded["X2"] = explainer.x_encoded["X2"].astype(float)
+
+        interaction_values = np.array([[[0.1, -0.7], [-0.7, 0.3]], [[0.2, -0.1], [-0.1, 0.1]]])
+
+        explainer.interaction_values = interaction_values
+        explainer.x_interaction = explainer.x_encoded
+
+        output = smart_explainer.plot.interactions_plot(col2, col1, violin_maxf=0, auto_order=True)
+
+        assert np.array_equal(output.data[0].x, ["PhD", "Master"])
+        assert np.array_equal(output.data[0].y, [-1.4, -0.2])
+        assert np.array_equal(output.data[0].marker.color, [34.0, 27.0])
+        assert output.layout.xaxis.title.text == "X1"
+        assert len(output.data) == 1
+
+        self.setUp()
+
+    def test_interactions_plot_passes_label_to_interaction_values(self):
+        """
+        interactions_plot should pass selected class label to get_interaction_values.
+        """
+        smart_explainer = self.smart_explainer
+        smart_explainer.explainer._case = "classification"
+        smart_explainer.explainer._classes = [0, 1]
+
+        interaction_values = np.array([[[0.1, -0.7], [-0.7, 0.3]], [[0.2, -0.1], [-0.1, 0.1]]])
+
+        with patch.object(smart_explainer.explainer, "get_interaction_values", return_value=interaction_values) as mocked_get:
+            smart_explainer.plot.interactions_plot("X1", "X2", label=1, violin_maxf=0, max_points=10)
+
+        assert mocked_get.call_args.kwargs["label"] == 1
+
+    def test_top_interactions_plot_passes_label_to_interaction_values(self):
+        """
+        top_interactions_plot should pass selected class label to get_interaction_values.
+        """
+        smart_explainer = self.smart_explainer
+        smart_explainer.explainer._case = "classification"
+        smart_explainer.explainer._classes = [0, 1]
+
+        n_samples = len(smart_explainer.explainer.x_init)
+        n_features = len(smart_explainer.explainer.x_init.columns)
+        interaction_values = np.zeros((n_samples, n_features, n_features), dtype=float)
+        interaction_values[:, 1, 0] = np.linspace(-0.2, 0.2, n_samples)
+
+        with patch.object(smart_explainer.explainer, "get_interaction_values", return_value=interaction_values) as mocked_get:
+            smart_explainer.plot.top_interactions_plot(nb_top_interactions=1, label=1, max_points=10, violin_maxf=0)
+
+        assert mocked_get.call_args.kwargs["label"] == 1
 
     def test_correlations_1(self):
         """
@@ -2956,6 +3293,57 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[2].type == "scatter"
         assert f"True Values" in output.data[1].hovertext[0]
 
+    def test_scatter_plot_prediction_customdata_is_json_list_regression(self):
+        """
+        Regression coverage for the incident where clicking a point on a
+        True-Vs-Predicted scatter plot could not update the Local Explanation,
+        because customdata built from a numpy array is binary-encoded by
+        Plotly>=6 instead of serialized as a plain per-point JSON list.
+        """
+        df_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X_train = df_train.iloc[:, :-1]
+        y_train = df_train.iloc[:, -1]
+        df_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 4)), columns=list("ABCD"))
+        X_test = df_test.iloc[:, :-1]
+        y_test = df_test.iloc[:, -1]
+        model = DecisionTreeRegressor().fit(X_train, y_train)
+
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test, y_target=y_test)
+
+        output = xpl.plot.scatter_plot_prediction()
+        _assert_all_customdata_are_plain_lists(output)
+
+    def test_scatter_plot_prediction_customdata_is_json_list_classification(self):
+        """
+        Same regression coverage as above, for the classification violin/scatter
+        variant of the True-Vs-Predicted plot.
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
+        X_test = pd.DataFrame(np.random.randint(0, 100, size=(50, 3)), columns=list("ABC"))
+        y_test = pd.DataFrame(np.random.randint(0, 2, size=(50, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_test, y_target=y_test)
+
+        output = xpl.plot.scatter_plot_prediction()
+        _assert_all_customdata_are_plain_lists(output)
+
+    def test_clustering_by_explainability_plot_customdata_is_json_list(self):
+        """
+        Same regression coverage as above, for the TSNE clustering projection
+        plot's data points (plot_clustering_by_explainability, show_points=True).
+        """
+        X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))
+        y_train = pd.DataFrame(np.random.randint(0, 3, size=(30, 1)))
+        model = DecisionTreeClassifier().fit(X_train, y_train)
+        xpl = SmartExplainer(model=model)
+        xpl.compile(x=X_train, y_target=y_train)
+
+        output = xpl.plot.clustering_by_explainability_plot(color_value="predictions", show_clusters=False)
+        _assert_all_customdata_are_plain_lists(output)
+
     def test_lift_curve_plot_1(self):
         """
         Classification
@@ -3081,6 +3469,23 @@ class TestSmartPlotter(unittest.TestCase):
         selection = np.array(list(range(10, 20)))
         with self.assertRaises(ValueError):
             list_ind, addnote = subset_sampling(df=xpl.explainer.x_init, selection=selection, max_points=50)
+
+    def test_subset_sampling_6_two_variables_crossed(self):
+        """
+        test _subset_sampling with crossed variables (interaction-like sampling)
+        """
+        df = pd.DataFrame(
+            {
+                "A": np.repeat(["a", "b", "c", "d"], 25),
+                "B": np.tile(np.repeat(["u", "v", "w", "x", "y"], 5), 4),
+            }
+        )
+
+        list_ind, addnote = subset_sampling(df=df, max_points=20, col=("A", "B"), col_value_count=(4, 5))
+
+        assert len(list_ind) == 20
+        assert addnote == "Length of smart Subset: 20 (20%)"
+        assert set(list_ind).issubset(set(df.index))
 
     def test_clustering_by_explainability_plot_1_default_classification(self):
         X_train = pd.DataFrame(np.random.randint(0, 100, size=(30, 3)), columns=list("ABC"))

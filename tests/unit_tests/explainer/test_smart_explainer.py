@@ -530,6 +530,66 @@ class TestSmartExplainer(unittest.TestCase):
         expected_param_dict = {"features_to_hide": None, "threshold": 0.5, "positive": None, "max_contrib": 2}
         self.assertDictEqual(expected_param_dict, xpl.explainer.mask_params)
 
+    def test_local_plot_does_not_mutate_explainer(self):
+        """
+        Regression test for issue #752: drawing a plot must not store a mask on the explainer,
+        since that silently changes what to_pandas() returns for anyone using the object
+        afterwards (see the issue's "drawing a chart changes to_pandas()" reproduction).
+        """
+        rng = np.random.default_rng(0)
+        n = 30
+        x = pd.DataFrame({f"x{i}": rng.normal(size=n) for i in range(25)})
+        y = pd.Series((x["x0"] + rng.normal(size=n) * 0.3 > 0).astype(int), name="y", index=x.index)
+        model = cb.CatBoostClassifier(n_estimators=5).fit(x, y)
+
+        def make_explainer():
+            xpl = SmartExplainer(model)
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x), index=x.index, name="pred"))
+            return xpl
+
+        baseline_pandas = make_explainer().to_pandas()
+        # sanity check: with 25 features and no explicit max_contrib, nothing is hidden yet
+        assert (baseline_pandas.shape[1] - 1) // 3 == 25
+
+        xpl = make_explainer()
+        xpl.plot.local_plot(row_num=0)
+
+        assert not hasattr(xpl, "mask")
+        assert not hasattr(xpl, "masked_contributions")
+        assert not hasattr(xpl, "mask_params")
+        assert_frame_equal(baseline_pandas, xpl.to_pandas())
+
+    def test_to_pandas_does_not_mutate_explainer(self):
+        """
+        Regression test for issue #752 (mirror image): exporting to_pandas() with its own
+        filtering arguments must not persist a mask on the explainer, since that would silently
+        change what a later local_plot() (without an explicit mask_state) draws.
+        """
+        rng = np.random.default_rng(0)
+        n = 30
+        x = pd.DataFrame({f"x{i}": rng.normal(size=n) for i in range(25)})
+        y = pd.Series((x["x0"] + rng.normal(size=n) * 0.3 > 0).astype(int), name="y", index=x.index)
+        model = cb.CatBoostClassifier(n_estimators=5).fit(x, y)
+
+        def make_explainer():
+            xpl = SmartExplainer(model)
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x), index=x.index, name="pred"))
+            return xpl
+
+        baseline_fig = make_explainer().plot.local_plot(row_num=0)
+
+        xpl = make_explainer()
+        xpl.to_pandas(max_contrib=2)
+
+        assert xpl.explainer.mask_params == {
+            "features_to_hide": None,
+            "threshold": None,
+            "positive": None,
+            "max_contrib": None,
+        }
+        fig_after_to_pandas = xpl.plot.local_plot(row_num=0)
+        assert len(fig_after_to_pandas.data) == len(baseline_fig.data)
+
     def test_check_label_name_1(self):
         """
         Unit test check label name 1
@@ -1030,6 +1090,47 @@ class TestSmartExplainer(unittest.TestCase):
         expect2 = expect2 / expect2.sum()
         assert expect1.round(8).equals(xpl.explainer.features_imp[0].round(8))
         assert expect2.round(8).equals(xpl.explainer.features_imp[1].round(8))
+
+    def test_compute_features_import_force_recomputes_groups(self):
+        """
+        Unit test compute_features_import with force=True
+
+        The grouped importances are cached, and `force` is documented to
+        recompute even when the value already exists.
+        """
+        contributions = pd.DataFrame(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]],
+            columns=["contribution_0", "contribution_1", "contribution_2", "contribution_3"],
+            index=[0, 1, 2],
+        )
+
+        def build():
+            xpl = SmartExplainer(self.model)
+            xpl.explainer.features_imp = None
+            xpl.explainer.contributions = contributions
+            xpl.explainer.contributions_groups = contributions
+            xpl.explainer.features_groups = {"group_0": ["contribution_0", "contribution_1"]}
+            xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
+            xpl.explainer.backend.state = SmartState()
+            xpl.explainer.state = SmartState()
+            xpl.explainer.explain_data = None
+            xpl.explainer._case = "regression"
+            return xpl
+
+        expected = contributions.abs().sum().sort_values(ascending=True)
+        expected = expected / expected.sum()
+
+        # force=True must refresh an already-populated cache
+        xpl = build()
+        xpl.explainer.features_imp_groups = "stale"
+        xpl.explainer.compute_features_import(force=True)
+        assert expected.equals(xpl.explainer.features_imp_groups)
+
+        # force=False leaves an existing value alone, as before
+        xpl = build()
+        xpl.explainer.features_imp_groups = "stale"
+        xpl.explainer.compute_features_import()
+        assert xpl.explainer.features_imp_groups == "stale"
 
     def test_to_smartpredictor_1(self):
         """

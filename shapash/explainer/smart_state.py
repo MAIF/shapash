@@ -154,7 +154,7 @@ class SmartState:
         var_dict: pd.DataFrame
             Dataframe with features indexes ordered
             by contribution.
-        feature_list: list
+        features_list: list
             List of index, feature to hide.
 
         Returns
@@ -248,7 +248,7 @@ class SmartState:
         ----------
         s_contrib: pd.DataFrame
             Matrix with both positive and negative values
-        mask: pd.DataFrame
+        masks: pd.DataFrame
             Matrix with only True or False elements. False elements are the hidden elements.
 
         Returns

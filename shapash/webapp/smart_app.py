@@ -19,6 +19,7 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask
 
+from shapash.manipulation.mask import compute_mask
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.callbacks import (
     adjust_figure_layout,
@@ -2361,7 +2362,12 @@ class SmartApp:
                 Input("reset_dropdown_button", "n_clicks"),
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
-            [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
+            [
+                State("dataset", "data"),
+                State("dataset", "derived_viewport_data"),
+                State("index_id", "value"),
+                State("index_id", "n_submit"),
+            ],
         )
         def update_index_id(
             click_data,
@@ -2374,6 +2380,7 @@ class SmartApp:
             data,
             viewport_data,
             current_index_id,
+            current_n_submit,
         ):
             """
             This function is used to update index value according to
@@ -2392,7 +2399,8 @@ class SmartApp:
             ----------------------------------------------------------------
             return
             selected index id
-            boolean n_submit
+            n_submit counter, incremented on every trigger so the downstream
+            validation/refresh chain fires on every trigger, not just the first
             """
             ctx = dash.callback_context
             selected = None
@@ -2420,7 +2428,7 @@ class SmartApp:
                     selected = current_index_id
             except KeyError:
                 selected = current_index_id
-            return selected, True
+            return selected, (current_n_submit or 0) + 1
 
         @app.callback(Output("threshold_label", "children"), [Input("threshold_id", "value")])
         def update_threshold_label(value):
@@ -2511,13 +2519,30 @@ class SmartApp:
                 selected = None
             threshold = threshold if threshold != 0 else None
             sign = get_feature_contributions_sign_to_show(positive, negative)
-            self.explainer.filter(
+            # Compute the mask locally instead of calling self.explainer.filter(): the explainer
+            # is shared by every visitor of this app, so storing the mask on it would leak one
+            # user's slider position into every other user's view (and into to_pandas()/plots).
+            display_groups: bool = (
+                True if (bool_group is not False and self.explainer.features_groups is not None) else False
+            )
+            filter_data: dict[str, Any] = self.explainer.data_groups if display_groups else self.explainer.data
+            features_list: list[int] | None = (
+                self.explainer.check_features_name(masked, use_groups=display_groups) if masked else None
+            )
+            mask, masked_contributions, mask_params = compute_mask(
+                self.explainer.state,
+                filter_data,
+                features_list=features_list,
                 threshold=threshold,
-                features_to_hide=masked,
                 positive=sign,
                 max_contrib=max_contrib,
-                display_groups=bool_group,
             )
+            mask_params["features_to_hide"] = masked
+            mask_state: dict[str, Any] = {
+                "mask": mask,
+                "masked_contributions": masked_contributions,
+                "mask_params": mask_params,
+            }
             figure = self.explainer.plot.local_plot(
                 index=selected,
                 label=label,
@@ -2525,6 +2550,7 @@ class SmartApp:
                 yaxis_max_label=8,
                 display_groups=bool_group,
                 zoom=zoom_active,
+                mask_state=mask_state,
             )
             if selected is not None:
                 # Adjust graph with adding x axis titles
@@ -2541,13 +2567,14 @@ class SmartApp:
         @app.callback(
             Output("validation", "n_clicks"),
             [Input("index_id", "n_submit")],
+            [State("validation", "n_clicks")],
         )
-        def click_validation(n_submit):
+        def click_validation(n_submit, n_clicks):
             """
             submit index selection
             """
             if n_submit:
-                return 1
+                return (n_clicks or 0) + 1
             else:
                 raise PreventUpdate
 
