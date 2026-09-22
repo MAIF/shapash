@@ -1668,7 +1668,7 @@ class SmartPlotter:
     def correlations_plot(
         self,
         df=None,
-        optimized=False,
+        sample_size=None,
         max_features=20,
         features_to_hide=None,
         facet_col=None,
@@ -1688,9 +1688,9 @@ class SmartPlotter:
         ----------
         df : pd.DataFrame, optional
             DataFrame for which we want to compute correlations. Will use x_init by default.
-        optimized : boolean, optional
-            True if we want to potentially accelerate the computation of the correlation matrix by reducing the
-            lenght of the data and the number of modalties per columns.
+        sample_size : int | None, default=None
+            Maximum number of rows used to compute the correlation matrix.
+            If ``None``, no sampling is performed.
         max_features : int (default: 20)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
@@ -1727,7 +1727,7 @@ class SmartPlotter:
             df=df,
             style_dict=self._style_dict,
             features_dict=self._explainer.features_dict,
-            optimized=optimized,
+            sample_size=sample_size,
             max_features=max_features,
             features_to_hide=features_to_hide,
             facet_col=facet_col,
@@ -1746,7 +1746,7 @@ class SmartPlotter:
         self,
         df=None,
         label=None,
-        optimized=False,
+        sample_size=None,
         max_features=20,
         features_to_hide=None,
         facet_col=None,
@@ -1766,9 +1766,10 @@ class SmartPlotter:
             DataFrame used for faceting when `facet_col` is provided. Will use x_init by default.
         label : int or str, optional
             Label to select in classification mode. If omitted, the first label is used.
-        optimized : boolean, optional
-            True if we want to potentially accelerate the computation by reducing the number of rows.
-        max_features : int (default: 10)
+        sample_size : int | None, default=None
+            Maximum number of rows used to compute the correlation matrix.
+            If ``None``, no sampling is performed.
+        max_features : int, default=20
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
             List of features that will not appear on the graph.
@@ -1808,7 +1809,7 @@ class SmartPlotter:
             df=df,
             style_dict=self._style_dict,
             features_dict=self._explainer.features_dict,
-            optimized=optimized,
+            sample_size=sample_size,
             max_features=max_features,
             features_to_hide=features_to_hide,
             facet_col=facet_col,

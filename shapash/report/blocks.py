@@ -540,7 +540,7 @@ class ReportBlockMixin:
             resolved_width = width
         fig = explainer.plot.correlations_plot(
             df_train_test,
-            optimized=True,
+            sample_size=10000,
             facet_col="data_train_test",
             max_features=max_features,
             width=resolved_width,
