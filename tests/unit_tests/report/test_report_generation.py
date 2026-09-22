@@ -13,6 +13,7 @@ from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
 from shapash.report.panel_support import apply_report_css
 
+import pytest
 
 def dummy_metric(y_true, y_pred):
     return 0.75
@@ -399,3 +400,8 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsNotNone(runtime.explainer.proba_values)
         self.assertIsInstance(univariate_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(univariate_result.objects[2]).__name__, "ParamFunction")
+
+    def test_smart_explainer_required(self):
+        rbm = ReportBlockMixin()
+        with pytest.raises(ValueError):
+            rbm._require_smart_explainer("block_type")
