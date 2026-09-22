@@ -4,7 +4,7 @@ Smart plotter module
 
 import math
 import random
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
