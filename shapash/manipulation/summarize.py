@@ -48,23 +48,39 @@ def summarize_el(dataframe: pd.DataFrame, mask: pd.DataFrame, prefix: str) -> pd
 
 def compute_features_import(dataframe: pd.DataFrame, norm: int | float = 1) -> pd.Series:
     """
-    Compute a relative features importance, sum of absolute values
-    of the contributions for each
-    features importance compute in base 100
+    Compute relative feature importance from contribution values.
+
+    Feature importance is computed as the Lp norm of the absolute
+    contributions for each feature and normalized so that the resulting
+    importances sum to 1.
+
     Parameters
     ----------
-    dataframe: pd.DataFrame
-        Matrix containing all contributions
+    dataframe : pd.DataFrame
+        Matrix containing feature contributions.
+    norm : int | float, default=1
+        Norm degree used to aggregate contributions. Must be strictly
+        positive.
 
     Returns
     -------
     pd.Series
-        feature importance One row by feature,
-        index of the serie = dataframe.columns
+        Relative feature importances indexed by feature name.
     """
+    if norm <= 0:
+        raise ValueError("norm must be strictly positive.")
+
     feat_imp = (((dataframe.abs() ** norm).sum()) ** (1 / norm)).sort_values(ascending=True)
-    tot = feat_imp.sum()
-    return feat_imp / tot
+    total_importance = feat_imp.sum()
+
+    if total_importance == 0:
+        return pd.Series(
+            0.0,
+            index=feat_imp.index,
+            dtype=float,
+        )
+
+    return feat_imp / total_importance
 
 
 def summarize(
