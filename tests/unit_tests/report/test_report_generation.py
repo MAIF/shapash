@@ -80,8 +80,13 @@ class _DummyPlot:
 
 
 class _TestSmartExplainer(SmartExplainer):
-    def __init__(self, model, **kwargs):
-        super().__init__(model=model, backend=_DummyBackend(model), **kwargs)
+    def __init__(self):
+        model = _DummyModel()
+        super().__init__(
+            model=model, backend=_DummyBackend(model),
+            features_dict={"age": "Age", "income": "Income"},
+            colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}, "default": "#2255aa"},
+        )
         self.plot = _DummyPlot()
         self.explainer.plot = self.plot
         self.explainer.get_interaction_values = self.get_interaction_values
@@ -95,11 +100,7 @@ def _build_runtime() -> ReportBlockMixin:
     x_test = pd.DataFrame({"age": [21, 31, 41], "income": [110, 210, 160]})
     y_train = pd.Series([0, 1, 1], name="target")
     y_test = pd.Series([1, 0, 1], name="target")
-    explainer = _TestSmartExplainer(
-        model=_DummyModel(),
-        features_dict={"age": "Age", "income": "Income"},
-        colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}, "default": "#2255aa"},
-    )
+    explainer = _TestSmartExplainer()
     explainer.compile(
         x=x_test,
         y_pred=pd.Series([1, 0, 1], index=x_test.index),
