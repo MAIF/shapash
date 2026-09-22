@@ -1,4 +1,7 @@
 from collections.abc import Callable
+from typing import Any
+
+import numpy as np
 
 try:
     from lime import lime_tabular
@@ -78,18 +81,18 @@ class LimeBackend(BaseBackend):
         x : pd.DataFrame
             The observations dataframe used by the model.
 
-                Returns
-                -------
-                dict
-                        A dict with keys:
-                        - 'contributions':
-                            - pd.DataFrame of shape (n_samples, n_features)
-                                for binary classification or regression.
-                            - List[pd.DataFrame] of length n_classes
-                                for multiclass classification.
-                        - 'base_values': local intercepts by individual:
-                            - np.ndarray of shape (n_samples, n_classes) for classification.
-                            - np.ndarray of shape (n_samples,) for regression.
+        Returns
+        -------
+        dict
+            A dict with keys:
+            - 'contributions':
+                - pd.DataFrame of shape (n_samples, n_features)
+                    for binary classification or regression.
+                - List[pd.DataFrame] of length n_classes
+                    for multiclass classification.
+            - 'base_values': local intercepts by individual:
+                - np.ndarray of shape (n_samples, n_classes) for classification.
+                - np.ndarray of shape (n_samples,) for regression.
         """
         feature_names = list(x.columns)
         data = self.data if self.data is not None else x
@@ -120,7 +123,7 @@ class LimeBackend(BaseBackend):
         return dict(contributions=contributions, base_values=base_values)
 
     @staticmethod
-    def _extract_intercept(exp, class_idx=None) -> float:
+    def _extract_intercept(exp: Any, class_idx: int | None = None) -> float:
         """Extract a numeric intercept from a LIME explanation object."""
         intercept = getattr(exp, "intercept", None)
 
@@ -149,10 +152,10 @@ class LimeBackend(BaseBackend):
     def _explain_multiclass(
         self,
         x: pd.DataFrame,
-        feature_names: list,
+        feature_names: list[str],
         predict_fn: Callable,
         num_classes: int,
-    ) -> tuple[list[pd.DataFrame], pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, np.ndarray]:
         """
         Compute LIME contributions for multiclass classification.
 
@@ -162,7 +165,7 @@ class LimeBackend(BaseBackend):
 
         Returns
         -------
-        tuple[list[pd.DataFrame], pd.DataFrame]
+        tuple[pd.DataFrame, np.ndarray]
             - One DataFrame of shape (n_samples, n_features) per class.
             - Local intercepts of shape (n_samples, n_classes).
         """
@@ -190,16 +193,16 @@ class LimeBackend(BaseBackend):
     def _explain_binary_or_regression(
         self,
         x: pd.DataFrame,
-        feature_names: list,
+        feature_names: list[str],
         predict_fn: Callable,
         num_classes: int | None = None,
-    ) -> tuple[pd.DataFrame, pd.DataFrame | pd.Series]:
+    ) -> tuple[pd.DataFrame, np.ndarray]:
         """
         Compute LIME contributions for binary classification or regression.
 
         Returns
         -------
-        tuple[pd.DataFrame, pd.DataFrame | pd.Series]
+        tuple[pd.DataFrame, np.ndarray]
             - Contributions of shape (n_samples, n_features).
             - Local intercepts by individual:
               - classification: shape (n_samples, 2)

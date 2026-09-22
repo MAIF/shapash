@@ -258,20 +258,41 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
-    def _get_waterfall_base_value(self, line, label_num=None):
+    def _get_waterfall_base_value(self, line: list[Any], label_num: int | None = None) -> float:
         """
-        Retrieve a baseline value for local waterfall plot.
+        Retrieve the baseline value used to build a local waterfall plot.
 
-        Priority order:
-        1) explainer explain_data["base_values"] when available
-        2) backend explainer expected_value when available
-        3) fallback to empirical mean model output
+        The baseline value is determined using the following priority order:
+
+        1. ``explain_data["base_values"]`` when available.
+        2. Backend explainer ``expected_value`` when available.
+        3. Empirical mean prediction computed from model outputs.
+
+        Parameters
+        ----------
+        line : list[Any]
+            Row identifier used to retrieve the corresponding observation
+            baseline value.
+        label_num : int | None, default=None
+            Target class index for classification tasks. Ignored for
+            regression models.
+
+        Returns
+        -------
+        float
+            Baseline value associated with the selected observation and
+            target label.
         """
 
         explain_data = self._explainer.explain_data
         if isinstance(explain_data, dict) and explain_data.get("base_values") is not None:
             base_values = explain_data["base_values"]
-            base_candidate = base_values[label_num] if isinstance(base_values, list) else base_values
+            if isinstance(base_values, list):
+                if label_num is None:
+                    raise ValueError("label_num cannot be None when base_values is a list")
+                base_candidate = base_values[label_num]
+            else:
+                base_candidate = base_values
 
             if isinstance(base_candidate, pd.DataFrame | pd.Series):
                 return float(np.asarray(base_candidate.loc[line[0]]).reshape(-1)[0])
@@ -329,48 +350,58 @@ class SmartPlotter:
 
         return 0.0
 
-    def _get_waterfall_classification_coupled_outputs(self, line, data):
+    def _get_waterfall_classification_coupled_outputs(
+        self,
+        line: list,
+        data: dict,
+    ) -> tuple[
+        object,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
         """
         Rebuild coupled class outputs for a local waterfall explanation.
 
         For the selected observation, this method computes one additive score
         per class using:
-        base_score(class) + sum(feature contributions for class)
-        Then it converts these scores to probabilities using a softmax so that
-        class probabilities stay coupled across classes.
+
+            score(class) = base_score(class) + sum(feature contributions)
+
+        These scores are then converted into probabilities using a softmax
+        transformation so that class probabilities remain coupled across
+        all classes.
 
         Parameters
         ----------
         line : list
-            One-element list containing the selected row index.
+            One-element list containing the index of the selected observation.
         data : dict
-            Explainability data structure containing class-wise sorted
+            Explainability data structure containing class-wise sorted feature
             contributions in ``data["contrib_sorted"]``.
 
         Returns
         -------
-        tuple
+        tuple[object, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
             Tuple containing:
-            - predicted_class: predicted class label (same type as
-              ``self._explainer._classes`` entries)
-            - probs: numpy.ndarray of final class probabilities
-            - base_probs: numpy.ndarray of class probabilities at baseline
-            - scores: numpy.ndarray of final additive class scores
-            - base_scores: numpy.ndarray of baseline class scores
+            - predicted_class: predicted class label.
+            - probs: final class probabilities.
+            - base_probs: class probabilities computed from baseline scores.
+            - scores: final additive class scores.
+            - base_scores: baseline additive class scores.
         """
         classes = list(self._explainer._classes)
         contrib_sorted = data["contrib_sorted"]
 
         base_scores = np.array(
-            [self._get_waterfall_base_value(line, label_num=class_idx) for class_idx in range(len(classes))],
-            dtype=float,
+            [self._get_waterfall_base_value(line, label_num=class_idx) for class_idx in range(len(classes))]
         )
         scores = np.array(
             [
                 base_scores[class_idx] + float(np.sum(contrib_sorted[class_idx].loc[line[0], :].values.astype(float)))
                 for class_idx in range(len(classes))
-            ],
-            dtype=float,
+            ]
         )
 
         probs = self._softmax_from_scores(scores)
@@ -381,61 +412,68 @@ class SmartPlotter:
 
         return predicted_class, probs, base_probs, scores, base_scores
 
-    def _softmax_from_scores(self, scores):
+    def _softmax_from_scores(self, scores: np.ndarray | list[float]) -> np.ndarray:
         """
         Convert additive class scores into normalized probabilities.
 
         Parameters
         ----------
-        scores : array-like
+        scores : np.ndarray | list[float]
             Raw class scores.
 
         Returns
         -------
-        numpy.ndarray
-            Probability vector summing to 1.
+        np.ndarray
+            Probability vector whose elements sum to 1.
 
         Notes
         -----
-        The computation uses a max-shift stabilization before exponentiation
-        to improve numerical stability.
+        A max-shift stabilization is applied before exponentiation to improve
+        numerical stability and reduce the risk of overflow.
         """
         scores = np.asarray(scores, dtype=float)
         stabilized = scores - np.max(scores)
         exp_scores = np.exp(stabilized)
         return exp_scores / np.sum(exp_scores)
 
-    def _get_waterfall_classification_tooltips(self, line, data, contrib, label_num):
+    def _get_waterfall_classification_tooltips(
+        self,
+        line: list,
+        data: dict,
+        contrib: list[float],
+        label_num: int,
+    ) -> list[str]:
         """
         Build waterfall tooltip text for classification local explanations.
 
-        Each tooltip line contains the cumulative additive output for the
-        explained class and its coupled probability (softmax over all classes)
+        Each tooltip line displays the cumulative additive score for the
+        explained class together with its coupled probability. Probabilities
+        are recomputed from all class scores using a softmax transformation
         after each contribution step.
 
         Parameters
         ----------
         line : list
-            One-element list containing the selected row index.
+            One-element list containing the index of the selected observation.
         data : dict
             Explainability data structure containing class-wise sorted
             contributions.
-        contrib : list
-            Displayed contributions for the explained class after filtering and
-            masking.
+        contrib : list[float]
+            Displayed contributions for the explained class after filtering
+            and masking.
         label_num : int
             Index of the explained class in ``self._explainer._classes``.
 
         Returns
         -------
-        list of str
+        list[str]
             Ordered tooltip strings used by the waterfall plot.
 
         Notes
         -----
-        The contribution ordering mirrors the current waterfall display logic:
-        positive contributions (largest absolute first), then zeros, then
-        negative contributions.
+        Contributions are processed using the same ordering as the waterfall
+        display: positive contributions (largest absolute values first),
+        followed by zero contributions, then negative contributions.
         """
         _, coupled_probs, _, coupled_scores, coupled_base_scores = self._get_waterfall_classification_coupled_outputs(
             line, data
