@@ -18,7 +18,6 @@ from shapash.backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.custom_thread import CustomThread
 from shapash.utils.drift import compute_schema_distribution, resolve_schema_drift_config
-from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
 from shapash.utils.io import load_pickle, save_pickle
 from shapash.utils.transform import handle_categorical_missing
 from shapash.utils.utils import get_host_name
@@ -905,7 +904,7 @@ class SmartExplainer:
 
         resolved_drift_config = resolve_schema_drift_config(schema_drift_config)
         params_smartpredictor.append(
-            compute_schema_distribution(self.x_init, top_k=int(resolved_drift_config["top_k"]))
+            compute_schema_distribution(self.explainer.x_init, top_k=int(resolved_drift_config["top_k"]))
         )
         params_smartpredictor.append(resolved_drift_config)
 
