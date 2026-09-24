@@ -69,6 +69,7 @@ Shapash is suitable for Regression, Binary Classification and Multiclass problem
 
 | Version       | New Feature                                                                           | Description                                                                                                                            | Tutorial |
 |:-------------:|:-------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------:|:--------:|
+| Preview       |  NLP explainability  | Explain text classifiers at the token level, with a webapp, a What-if Lab (counterfactuals) and label-noise detection. Opt-in: `pip install shapash[nlp]` |  [notebook](https://github.com/MAIF/shapash/blob/feature/nlp-refacto/tutorial/nlp/overview.ipynb) |
 | 2.3.x         |  Additional dataset columns <br> [New demo](https://shapash-demo.ossbymaif.fr/) <br> [Article](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)                                                                | In Webapp: Target and error columns added to dataset and possibility to add features outside the model for more filtering options            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/add_column_icon.png" width="50" title="add_column">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_webapp/tuto-webapp01-additional-data.ipynb)
 | 2.3.x         |  Identity card <br> [New demo](https://shapash-demo.ossbymaif.fr/) <br> [Article](https://pub.towardsai.net/shapash-2-3-0-comprehensive-model-interpretation-40b50157c2fb)                                                                  | In Webapp: New identity card to summarize the information of the selected sample                  |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/identity_card.png" width="50" title="identity">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_webapp/tuto-webapp01-additional-data.ipynb)
 | 2.2.x         |  Picking samples <br> [Article](https://www.kdnuggets.com/2022/11/picking-examples-understand-machine-learning-model.html)                                                                | New tab in the webapp for picking samples. The graph represents the "True Values Vs Predicted Values"            |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/picking.png" width="50" title="picking">](https://github.com/MAIF/shapash/blob/master/tutorial/plots_and_charts/tuto-plot06-prediction_plot.ipynb)
@@ -144,6 +145,41 @@ Shapash can use category-encoders object, sklearn ColumnTransformer or simply fe
 - Category_encoder: *OneHotEncoder*, *OrdinalEncoder*, *BaseNEncoder*, *BinaryEncoder*, *TargetEncoder*
 - Sklearn ColumnTransformer: *OneHotEncoder*, *OrdinalEncoder*, *StandardScaler*, *QuantileTransformer*, *PowerTransformer*
 
+## 🔤 Text / NLP Explainability (preview)
+
+Shapash also makes **text classifiers** explainable: see which words drove a prediction, why the model chose one label over another, and how the prediction changes when the text does.
+The NLP stack (`NlpExplainer`, `NlpExplanation`, `NlpWebApp`) is a standalone, opt-in module that lives alongside `SmartExplainer`:
+the tabular API is unchanged and the default install pulls no NLP dependency.
+
+- **Token-level explanations** for a text classifier: which words pushed the prediction towards which label. Choose between SHAP, LIME and Captum (Integrated Gradients) backends
+- **Local and global views**: sentence highlights and waterfall plots for one text; word importance, word profiles and a confusion matrix with per-error word analysis for the whole corpus
+- **What-if Lab**: edit a text and see the live prediction, and get auto-generated minimal word changes (counterfactuals) that flip it
+- **Dataset exploration**: embeddings scatter plot, similar examples, and label-noise detection that tells label errors from model errors
+- **Portable results**: `explain()` returns a model-free artifact that can be saved and reloaded on its own (no pickle), and explored in a dedicated Dash webapp
+
+Works with encoder-based single-label classifiers (BERT, DistilBERT, RoBERTa, DeBERTa, CamemBERT, XLM-R...) from Hugging Face,
+sentence-transformers or plain PyTorch.
+
+```python
+from shapash.model.hf import HFClassifierModel
+from shapash.explainer.nlp_explainer import NlpExplainer
+
+labels = ["sadness", "joy", "love", "anger", "fear", "surprise"]
+model = HFClassifierModel.from_pretrained(
+    "bhadresh-savani/distilbert-base-uncased-emotion", label_names=labels
+)
+
+xpl = NlpExplainer(model, label_names=labels)
+explanations = xpl.explain(["i am so happy today", "i feel terrified"])
+
+explanations.plot.word_importance()  # corpus-level word importance
+xpl.run_app(explanations)  # interactive webapp
+```
+
+Install it with `pip install "shapash[nlp]"`. Learn more in the [overview notebook](https://github.com/MAIF/shapash/blob/feature/nlp-refacto/tutorial/nlp/overview.ipynb),
+the [technical documentation](https://github.com/MAIF/shapash/blob/feature/nlp-refacto/docs/wiki/NLP-Explainability.md)
+and the [demo app](https://github.com/MAIF/shapash/blob/feature/nlp-refacto/demo/README.md).
+
 ## 🛠 Installation
 
 Shapash is intended to work with Python versions 3.11 to 3.14. Installation can be done with pip:
@@ -156,6 +192,11 @@ In order to generate the Shapash Report some extra requirements are needed.
 You can install these using the following command :  
 ```bash
 pip install shapash[report]
+```
+
+To explain text models, install the NLP extra (torch, transformers, captum...):
+```bash
+pip install shapash[nlp]
 ```
 
 If you encounter **compatibility issues** you may check the corresponding section in the Shapash documentation [here](https://shapash.readthedocs.io/en/latest/installation-instructions/index.html).
