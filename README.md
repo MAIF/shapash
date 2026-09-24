@@ -165,9 +165,7 @@ from shapash.model.hf import HFClassifierModel
 from shapash.explainer.nlp_explainer import NlpExplainer
 
 labels = ["sadness", "joy", "love", "anger", "fear", "surprise"]
-model = HFClassifierModel.from_pretrained(
-    "bhadresh-savani/distilbert-base-uncased-emotion", label_names=labels
-)
+model = HFClassifierModel.from_pretrained("bhadresh-savani/distilbert-base-uncased-emotion", label_names=labels)
 
 xpl = NlpExplainer(model, label_names=labels)
 explanations = xpl.explain(["i am so happy today", "i feel terrified"])

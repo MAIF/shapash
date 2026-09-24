@@ -131,9 +131,7 @@ model = HFClassifierModel.from_pretrained(
 )
 
 xpl = NlpExplainer(model)  # backend defaults to NlpShapBackend
-xpl = xpl.fit(
-    X_reference=ref_texts, y=ref_labels
-)  # optional — enables similar-example retrieval
+xpl = xpl.fit(X_reference=ref_texts, y=ref_labels)  # optional — enables similar-example retrieval
 explanation = xpl.explain(texts, y=labels, cache_dir="demo/nlp_cache")
 
 explanation.plot.word_importance()  # corpus-level view
@@ -158,9 +156,7 @@ embeddings, not about the explanation, and the two have different keys:
 from shapash.compute.embeddings import Embedding
 
 embedding = Embedding.load("emotion.emb")  # raw vectors — needs no model to reduce
-projection = embedding.project(
-    TSNE(n_components=2)
-)  # try as many as you like, seconds each
+projection = embedding.project(TSNE(n_components=2))  # try as many as you like, seconds each
 NlpWebApp(explanation, projection=projection).run()
 ```
 
