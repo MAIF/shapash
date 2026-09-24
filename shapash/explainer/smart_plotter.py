@@ -4,7 +4,7 @@ Smart plotter module
 
 import math
 import random
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -480,14 +480,7 @@ class SmartPlotter:
         )
         final_scores = np.array(coupled_scores, dtype=float)
         base_scores = np.array(coupled_base_scores, dtype=float)
-        tooltips = [
-            f"Cumulative output: <b>{base_scores[label_num]:.4f}</b><br />Proba: <b>{float(self._softmax_from_scores(base_scores)[label_num]):.4f}</b>"
-        ]
-
-        positive_contribs = sorted([c for c in contrib if c > 0], key=abs, reverse=True)
-        zero_contribs = [c for c in contrib if c == 0]
-        negative_contribs = sorted([c for c in contrib if c < 0], reverse=True)
-        ordered_contribs = positive_contribs + zero_contribs + negative_contribs
+        tooltips = [f"Proba: <b>{float(self._softmax_from_scores(base_scores)[label_num]):.4f}</b>"]
 
         final_prob = (
             float(coupled_probs[label_num])
@@ -496,22 +489,40 @@ class SmartPlotter:
         )
 
         running_scores = base_scores.copy()
-        for contrib_idx, contrib_value in enumerate(ordered_contribs):
+        for contrib_idx, contrib_value in enumerate(contrib):
             running_scores[label_num] += contrib_value
-            if contrib_idx == len(ordered_contribs) - 1:
-                tooltips.append(
-                    f"Cumulative output: <b>{running_scores[label_num]:.4f}</b><br />Proba: <b>{final_prob:.4f}</b>"
-                )
+            if contrib_idx == len(contrib) - 1:
+                tooltips.append(f"Proba: <b>{final_prob:.4f}</b>")
             else:
-                tooltips.append(
-                    f"Cumulative output: <b>{running_scores[label_num]:.4f}</b><br />Proba: <b>{float(self._softmax_from_scores(running_scores)[label_num]):.4f}</b>"
-                )
+                tooltips.append(f"Proba: <b>{float(self._softmax_from_scores(running_scores)[label_num]):.4f}</b>")
 
-        tooltips.append(
-            f"Cumulative output: <b>{final_scores[label_num]:.4f}</b><br />Proba: <b>{final_prob:.4f}</b><br />Final output"
-        )
+        tooltips.append(f"Proba: <b>{final_prob:.4f}</b>")
 
         return tooltips
+
+    def _get_waterfall_order(
+        self,
+        contrib: list[float],
+        order: Literal["value", "absolute"],
+    ) -> list[int]:
+        if order == "value":
+            positive = [i for i, value in enumerate(contrib) if value > 0]
+            zero = [i for i, value in enumerate(contrib) if value == 0]
+            negative = [i for i, value in enumerate(contrib) if value < 0]
+
+            positive.sort(key=lambda i: contrib[i], reverse=True)
+            negative.sort(key=lambda i: contrib[i], reverse=True)
+
+            return positive + zero + negative
+
+        if order == "absolute":
+            return sorted(
+                range(len(contrib)),
+                key=lambda i: abs(contrib[i]),
+                reverse=False,
+            )
+
+        raise ValueError("waterfall_contribution_order must be 'value' or 'absolute'.")
 
     def local_plot(
         self,
@@ -529,6 +540,8 @@ class SmartPlotter:
         file_name=None,
         auto_open=False,
         zoom=False,
+        waterfall_baseline_position: Literal["top", "bottom"] = "bottom",
+        waterfall_contribution_order: Literal["value", "absolute"] = "absolute",
         waterfall_xaxis_start=None,
         mask_state: dict[str, Any] | None = None,
     ):
@@ -579,6 +592,15 @@ class SmartPlotter:
             Indicate whether to open the bar plot or not.
         zoom: bool (default=False)
             graph is currently zoomed
+        waterfall_baseline_position: {"top", "bottom"} (default="bottom")
+            Position of the baseline in waterfall mode.
+            - "top": baseline is displayed at the top and prediction at the bottom.
+            - "bottom": baseline is displayed at the bottom and prediction at the top.
+        waterfall_contribution_order: {"value", "absolute"} (default="absolute")
+            Ordering of contributions in waterfall mode.
+            - "value": sort contributions by decreasing signed value.
+            This preserves the current behavior.
+            - "absolute": sort contributions by decreasing absolute value.
         waterfall_xaxis_start: float, int, "auto" or None (default: None)
             Start value of x-axis in waterfall mode.
             - None: keep default automatic axis behavior
@@ -763,30 +785,37 @@ class SmartPlotter:
                 del x_val[expl]
                 del contrib[expl]
 
-            if self._explainer._case == "classification" and plot_type == "waterfall":
-                waterfall_tooltips = self._get_waterfall_classification_tooltips(line, data, contrib, label_num)
+            if plot_type == "waterfall":
+                waterfall_order = self._get_waterfall_order(contrib, waterfall_contribution_order)
+                var_dict = [var_dict[i] for i in waterfall_order]
+                x_val = [x_val[i] for i in waterfall_order]
+                contrib = [contrib[i] for i in waterfall_order]
+
+                if self._explainer._case == "classification":
+                    waterfall_tooltips = self._get_waterfall_classification_tooltips(line, data, contrib, label_num)
 
         base_value = self._get_waterfall_base_value(line, label_num=label_num) if plot_type == "waterfall" else None
 
         fig = plot_bar_chart(
-            line,
-            var_dict,
-            x_val,
-            contrib,
-            self._style_dict,
-            self._explainer.features_groups,
-            self._explainer.x_init,
-            self._explainer.features_dict,
-            self._explainer.inv_features_dict,
-            yaxis_max_label,
-            subtitle,
-            plot_type,
-            base_value,
-            width,
-            height,
-            file_name,
-            auto_open,
-            zoom,
+            index_value=line,
+            var_dict=var_dict,
+            x_val=x_val,
+            contrib=contrib,
+            style_dict=self._style_dict,
+            features_groups=self._explainer.features_groups,
+            x_init=self._explainer.x_init,
+            features_dict=self._explainer.features_dict,
+            inv_features_dict=self._explainer.inv_features_dict,
+            yaxis_max_label=yaxis_max_label,
+            subtitle=subtitle,
+            plot_type=plot_type,
+            base_value=base_value,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+            zoom=zoom,
+            waterfall_baseline_position=waterfall_baseline_position,
             waterfall_xaxis_start=waterfall_xaxis_start,
             waterfall_tooltips=waterfall_tooltips
             if self._explainer._case == "classification" and plot_type == "waterfall"

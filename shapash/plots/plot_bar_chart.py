@@ -26,6 +26,7 @@ def plot_bar_chart(
     file_name: str | None = None,
     auto_open: bool = False,
     zoom: bool = False,
+    waterfall_baseline_position: Literal["top", "bottom"] = "bottom",
     waterfall_xaxis_start: float | int | Literal["auto"] | None = None,
     waterfall_tooltips: list[str] | None = None,
 ) -> go.Figure:
@@ -78,6 +79,10 @@ def plot_bar_chart(
         open automatically the plot
     zoom: bool (default=False)
         graph is currently zoomed
+    waterfall_baseline_position: {"top", "bottom"} (default="bottom")
+        Position of the baseline in waterfall mode.
+        - "top": baseline is displayed at the top and prediction at the bottom.
+        - "bottom": baseline is displayed at the bottom and prediction at the top.
     waterfall_xaxis_start: float, int, "auto" or None (default: None)
         Start value of x-axis in waterfall mode.
         - None: keep default automatic axis behavior
@@ -219,23 +224,14 @@ def plot_bar_chart(
 
             bars.append([color, contrib_value, num, barobj, ylabel, hoverlabel, bar_color])
 
-        bars.sort()
+        if plot_type == "bar":
+            bars.sort()
 
         if plot_type == "waterfall":
             if base_value is None:
                 base_value = 0.0
 
-            positive_bars = [x for x in bars if x[1] > 0]
-            zero_bars = [x for x in bars if x[1] == 0]
-            negative_bars = [x for x in bars if x[1] < 0]
-
-            # requested ordering: positive impacts (most important to least), then negative impacts
-            # ordered from the closest to zero to the most negative.
-            positive_bars.sort(key=lambda x: abs(x[1]), reverse=True)
-            negative_bars.sort(key=lambda x: x[1], reverse=True)
-            ordered_waterfall_bars = positive_bars + zero_bars + negative_bars
-
-            final_prediction = base_value + sum(x[1] for x in ordered_waterfall_bars)
+            final_prediction = base_value + sum(x[1] for x in bars)
 
             def _format_value(value: float) -> str:
                 digit = compute_digit_number(value)
@@ -244,24 +240,26 @@ def plot_bar_chart(
                     formatted = formatted.rstrip("0").rstrip(".")
                 return formatted
 
-            y_values = ["<i>Baseline</i>"] + [x[4] for x in ordered_waterfall_bars] + ["<i>Prediction</i>"]
+            y_values = ["<i>Baseline</i>"] + [x[4] for x in bars] + ["<i>Prediction</i>"]
             bar_lengths = [base_value]
             bar_bases = [0.0]
             baseline_bar_color = style_dict.get("prediction_plot", {}).get(1, dict_local_plot_colors[1]["color"])
-            prediction_bar_color = style_dict.get("prediction_plot", {}).get(0, dict_local_plot_colors[0]["color"])
+            prediction_bar_color = baseline_bar_color
 
             bar_colors = [baseline_bar_color]
             custom_data = [f"<b>Baseline</b>: {_format_value(base_value)}"]
             value_text = [_format_value(base_value)]
 
             cumulative_value = base_value
-            for elem in ordered_waterfall_bars:
+            for elem in bars:
                 bar_lengths.append(elem[1])
                 bar_bases.append(cumulative_value)
                 bar_colors.append(elem[6])
-                custom_data.append(elem[5])
-                value_text.append(_format_value(elem[1]))
+
                 cumulative_value += elem[1]
+                custom_data.append(f"{elem[5]}<br />Cumulative output: <b>{_format_value(cumulative_value)}</b>")
+
+                value_text.append(_format_value(elem[1]))
 
             bar_lengths.append(final_prediction)
             bar_bases.append(0.0)
@@ -269,10 +267,14 @@ def plot_bar_chart(
             custom_data.append(f"<b>Model output</b>: {_format_value(final_prediction)}")
             value_text.append(_format_value(final_prediction))
 
-            if waterfall_tooltips is not None and len(waterfall_tooltips) == len(custom_data):
+            if waterfall_tooltips is not None:
                 custom_data = [
                     custom + (f"<br />{extra}" if extra else "")
-                    for custom, extra in zip(custom_data, waterfall_tooltips, strict=False)
+                    for custom, extra in zip(
+                        custom_data,
+                        waterfall_tooltips,
+                        strict=True,
+                    )
                 ]
 
             wf = go.Bar(
@@ -285,15 +287,21 @@ def plot_bar_chart(
                 textposition="none",
                 marker_color=bar_colors,
                 showlegend=False,
-                hovertemplate="%{customdata}<br />Value: %{text}<extra></extra>",
+                hovertemplate="%{customdata}<br />Contribution: %{text}<extra></extra>",
             )
             fig = go.Figure(data=[wf], layout=layout)
-            fig.update_yaxes(autorange="reversed")
+
+            if waterfall_baseline_position == "top":
+                fig.update_yaxes(autorange="reversed")
+            elif waterfall_baseline_position == "bottom":
+                fig.update_yaxes(autorange=True)
+            else:
+                raise ValueError("waterfall_baseline_position must be 'top' or 'bottom'.")
 
             if waterfall_xaxis_start is not None:
                 path_values = [base_value]
                 running_value = base_value
-                for elem in ordered_waterfall_bars:
+                for elem in bars:
                     running_value += elem[1]
                     path_values.append(running_value)
 

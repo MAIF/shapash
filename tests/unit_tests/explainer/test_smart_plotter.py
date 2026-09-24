@@ -882,20 +882,21 @@ class TestSmartPlotter(unittest.TestCase):
             contrib=contributions,
             style_dict=self.smart_explainer.plot._style_dict,
             plot_type="waterfall",
+            waterfall_baseline_position="top",
             base_value=10.0,
         )
 
         assert fig_output.data[0].type == "bar"
         assert list(fig_output.data[0].y) == [
             "<i>Baseline</i>",
-            "<b>feat_b :</b><br />B",
             "<b>feat_a :</b><br />A",
+            "<b>feat_b :</b><br />B",
             "<b>feat_c :</b><br />C",
             "<b>feat_d :</b><br />D",
             "<i>Prediction</i>",
         ]
         assert fig_output.data[0].x[0] == 10.0
-        assert list(fig_output.data[0].base) == [0.0, 10.0, 11.0, 11.2, 11.1, 0.0]
+        assert list(fig_output.data[0].base) == [0.0, 10.0, 10.2, 11.2, 11.1, 0.0]
 
     def test_plot_bar_chart_waterfall_hidden_colors(self):
         """
@@ -917,9 +918,9 @@ class TestSmartPlotter(unittest.TestCase):
 
         expected_baseline_color = self.smart_explainer.plot._style_dict["prediction_plot"][1]
         expected_hidden_pos_color = self.smart_explainer.plot._style_dict["dict_local_plot_colors"][0]["color"]
-        expected_normal_pos_color = self.smart_explainer.plot._style_dict["dict_local_plot_colors"][1]["color"]
-        expected_hidden_neg_color = self.smart_explainer.plot._style_dict["dict_local_plot_colors"][-2]["color"]
-        expected_prediction_color = self.smart_explainer.plot._style_dict["prediction_plot"][0]
+        expected_normal_pos_color = self.smart_explainer.plot._style_dict["dict_local_plot_colors"][-2]["color"]
+        expected_hidden_neg_color = self.smart_explainer.plot._style_dict["dict_local_plot_colors"][1]["color"]
+        expected_prediction_color = self.smart_explainer.plot._style_dict["prediction_plot"][1]
 
         marker_colors = list(fig_output.data[0].marker.color)
         assert marker_colors[0] == expected_baseline_color
@@ -1070,7 +1071,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert str(output.data[0].customdata[0]).startswith("<b>Baseline</b>: 0.33")
         assert all("Proba:" in str(item) for item in output.data[0].customdata)
         assert "<br />Proba:" in str(output.data[0].customdata[-1])
-        assert str(output.data[0].customdata[-1]).endswith("Final output")
+        assert str(output.data[0].customdata[-1]).endswith("Proba: <b>0.3706</b>")
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.explainer.Explainer._local_pred")
@@ -1172,7 +1173,7 @@ class TestSmartPlotter(unittest.TestCase):
         assert str(output.data[0].customdata[0]).startswith("<b>Baseline</b>: 0.33")
         assert all("Proba:" in str(item) for item in output.data[0].customdata)
         assert "<br />Proba:" in str(output.data[0].customdata[-1])
-        assert str(output.data[0].customdata[-1]).endswith("Final output")
+        assert str(output.data[0].customdata[-1]).endswith("Proba: <b>0.3706</b>")
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.explainer.Explainer._local_pred")
