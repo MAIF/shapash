@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.custom_thread import CustomThread
-from shapash.utils.drift import compute_schema_distribution, resolve_schema_drift_config
+from shapash.utils.drift import SchemaDriftConfig, compute_schema_distribution, resolve_schema_drift_config
 from shapash.utils.io import load_pickle, save_pickle
 from shapash.utils.transform import handle_categorical_missing
 from shapash.utils.utils import get_host_name
@@ -28,18 +28,6 @@ from .smart_plotter import SmartPlotter
 
 if TYPE_CHECKING:
     from shapash.report.blocks import ReportBlockMixin
-
-
-class SchemaDriftConfig(TypedDict, total=False):
-    """Configuration overrides for schema-drift detection."""
-
-    missing_rate_delta_threshold: float
-    numeric_median_iqr_threshold: float
-    categorical_tvd_threshold: float
-    categorical_cardinality_ratio_threshold: float
-    top_k: int
-    min_sample_size: int
-
 
 REPORT_DEPENDENCIES_AVAILABLE = False
 ReportTemplate: Any | None = None

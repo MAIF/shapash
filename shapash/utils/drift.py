@@ -1,10 +1,8 @@
 """Lightweight schema-distribution summaries and drift detection."""
 
-from typing import Any, cast
+from typing import Any, TypedDict, cast
 
 import pandas as pd
-
-from shapash.explainer.smart_explainer import SchemaDriftConfig
 
 MISSING_RATE_DELTA_THRESHOLD = 0.10
 NUMERIC_MEDIAN_IQR_THRESHOLD = 1.5
@@ -12,6 +10,18 @@ CATEGORICAL_TVD_THRESHOLD = 0.20
 CATEGORICAL_CARDINALITY_RATIO_THRESHOLD = 1.5
 DEFAULT_TOP_K = 10
 MIN_DRIFT_SAMPLE_SIZE = 30
+
+
+class SchemaDriftConfig(TypedDict, total=False):
+    """Configuration overrides for schema-drift detection."""
+
+    missing_rate_delta_threshold: float
+    numeric_median_iqr_threshold: float
+    categorical_tvd_threshold: float
+    categorical_cardinality_ratio_threshold: float
+    top_k: int
+    min_sample_size: int
+
 
 DEFAULT_SCHEMA_DRIFT_CONFIG: SchemaDriftConfig = {
     "missing_rate_delta_threshold": MISSING_RATE_DELTA_THRESHOLD,
@@ -27,9 +37,7 @@ def resolve_schema_drift_config(
     config: SchemaDriftConfig | None = None,
 ) -> SchemaDriftConfig:
     """Merge user-provided schema-drift settings with validated defaults."""
-
     resolved: dict[str, object] = dict(DEFAULT_SCHEMA_DRIFT_CONFIG)
-
     if config is None:
         return cast(SchemaDriftConfig, resolved)
 
@@ -39,7 +47,6 @@ def resolve_schema_drift_config(
     unknown = set(config) - set(resolved)
     if unknown:
         raise ValueError(f"Unknown schema drift configuration keys: {sorted(unknown)}")
-
     resolved.update(config)
 
     for key in (
@@ -56,7 +63,6 @@ def resolve_schema_drift_config(
         value = resolved[key]
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ValueError(f"schema_drift_config['{key}'] must be a positive integer.")
-
     return cast(SchemaDriftConfig, resolved)
 
 
