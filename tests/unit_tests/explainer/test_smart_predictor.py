@@ -6,6 +6,7 @@ import logging
 import os
 import types
 import unittest
+import warnings
 from os import path
 from pathlib import Path
 from unittest.mock import patch
@@ -1302,7 +1303,7 @@ class TestSmartPredictorLogging(unittest.TestCase):
 
     def test_add_input_emits_enter_and_completed_records(self) -> None:
         predictor = self._make_predictor()
-        x = pd.DataFrame([[1, 2, 4], [1, 2, 3]])
+        x = pd.DataFrame({0: np.arange(100), 1: np.arange(100, 200), 2: np.arange(200, 300)})
         with self.assertLogs(self.LOGGER_NAME, level=logging.DEBUG) as ctx:
             predictor.add_input(x=x)
         assert self._messages(ctx.records, "add_input", "enter"), "expected add_input enter record"
@@ -1378,3 +1379,74 @@ class TestSmartPredictorLogging(unittest.TestCase):
         finally:
             logger.setLevel(prev_level)
         assert logger.handlers == []
+
+
+class TestSmartPredictorSchemaDrift(unittest.TestCase):
+    """Integration tests for https://github.com/MAIF/shapash/issues/755."""
+
+    LOGGER_NAME = "shapash.smartpredictor"
+
+    def _make_predictor(self, schema_drift_config=None) -> SmartPredictor:
+        dataframe_x = pd.DataFrame(
+            {
+                0: np.arange(100),
+                1: np.arange(100, 200),
+                2: np.arange(200, 300),
+            }
+        )
+        target = np.tile([0, 1], 50)
+        clf = cb.CatBoostClassifier(n_estimators=1, verbose=False).fit(dataframe_x, target)
+        y_pred = pd.DataFrame(clf.predict(dataframe_x), columns=["pred"])
+        xpl = SmartExplainer(model=clf, features_dict={})
+        xpl.compile(x=dataframe_x, y_pred=y_pred)
+        return xpl.to_smartpredictor(schema_drift_config=schema_drift_config)
+
+    def test_to_smartpredictor_stores_reference_distribution(self) -> None:
+        predictor = self._make_predictor()
+
+        assert predictor.schema_distribution
+        assert set(predictor.schema_distribution) == {0, 1, 2}
+
+    def test_to_smartpredictor_stores_resolved_drift_config(self) -> None:
+        predictor = self._make_predictor({"numeric_median_iqr_threshold": 10.0})
+
+        assert predictor.schema_drift_config["numeric_median_iqr_threshold"] == 10.0
+        assert predictor.schema_drift_config["missing_rate_delta_threshold"] == 0.1
+
+    def test_add_input_uses_custom_drift_threshold(self) -> None:
+        predictor = self._make_predictor({"numeric_median_iqr_threshold": 100.0})
+        shifted = pd.DataFrame({0: np.arange(500, 600), 1: np.arange(600, 700), 2: np.arange(700, 800)})
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            predictor.add_input(x=shifted)
+
+    def test_add_input_stable_data_does_not_warn(self) -> None:
+        predictor = self._make_predictor()
+        x = pd.DataFrame({0: np.arange(100), 1: np.arange(100, 200), 2: np.arange(200, 300)})
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            predictor.add_input(x=x)
+
+    def test_add_input_drift_warns_and_logs_with_fingerprint(self) -> None:
+        predictor = self._make_predictor()
+        shifted = pd.DataFrame({0: np.arange(500, 600), 1: np.arange(600, 700), 2: np.arange(700, 800)})
+
+        with self.assertLogs(self.LOGGER_NAME, level=logging.WARNING) as log_context:
+            with pytest.warns(UserWarning, match="Potential schema drift detected"):
+                predictor.add_input(x=shifted)
+
+        drift_records = [record for record in log_context.records if hasattr(record, "drift_column")]
+        assert drift_records
+        assert all(record.schema_fingerprint.startswith("sha256:") for record in drift_records)
+        assert all(record.drift_reasons for record in drift_records)
+
+    def test_predictor_without_reference_distribution_skips_check(self) -> None:
+        predictor = self._make_predictor()
+        del predictor.schema_distribution
+        shifted = pd.DataFrame({0: np.arange(500, 600), 1: np.arange(600, 700), 2: np.arange(700, 800)})
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            predictor.add_input(x=shifted)

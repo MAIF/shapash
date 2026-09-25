@@ -17,6 +17,7 @@ import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.custom_thread import CustomThread
+from shapash.utils.drift import SchemaDriftConfig, compute_schema_distribution, resolve_schema_drift_config
 from shapash.utils.io import load_pickle, save_pickle
 from shapash.utils.transform import handle_categorical_missing
 from shapash.utils.utils import get_host_name
@@ -799,7 +800,7 @@ class SmartExplainer:
         else:
             raise ValueError("Explainer must be compiled before running app.")
 
-    def to_smartpredictor(self) -> Any:
+    def to_smartpredictor(self, schema_drift_config: SchemaDriftConfig | None = None) -> Any:
         """
         Create and return a SmartPredictor object derived from the current SmartExplainer instance.
 
@@ -810,6 +811,16 @@ class SmartExplainer:
         The generated `SmartPredictor` includes the model, preprocessing and postprocessing
         steps, feature and label mappings, and backend configuration used to compute
         contributions.
+
+        Parameters
+        ----------
+        schema_drift_config : dict, optional
+            Override schema-drift thresholds and sampling settings. Unspecified settings
+            retain their defaults. Supported keys are ``missing_rate_delta_threshold``
+            (0.10), ``numeric_median_iqr_threshold`` (1.5),
+            ``categorical_tvd_threshold`` (0.20),
+            ``categorical_cardinality_ratio_threshold`` (1.5), ``top_k`` (10),
+            and ``min_sample_size`` (30).
 
         Returns
         -------
@@ -848,6 +859,11 @@ class SmartExplainer:
           List of class labels for classification models, `None` for regression.
         - **mask_params** : dict, optional
           Parameters defining contribution filters used to summarize local explainability.
+        - **schema_distribution** : dict
+          Compact numeric and categorical summaries computed from the reference dataset
+          and used to warn about drift in new SmartPredictor input batches.
+        - **schema_drift_config** : dict
+          Resolved thresholds and sampling settings used for drift detection.
 
         Example
         -------
@@ -888,6 +904,12 @@ class SmartExplainer:
         else:
             mask_params = {"features_to_hide": None, "threshold": None, "positive": None, "max_contrib": None}
         params_smartpredictor.append(mask_params)
+
+        resolved_drift_config = resolve_schema_drift_config(schema_drift_config)
+        params_smartpredictor.append(
+            compute_schema_distribution(self.explainer.x_init, top_k=int(resolved_drift_config["top_k"]))
+        )
+        params_smartpredictor.append(resolved_drift_config)
 
         return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
 
