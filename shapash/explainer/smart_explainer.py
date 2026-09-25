@@ -276,12 +276,15 @@ class SmartExplainer:
             Prediction dataset — the same data seen by the end user.
             It should correspond to the **raw prediction input** (post-preprocessing).
             Shapash will use this dataset to compute and align explanations.
-        contributions : pandas.DataFrame, numpy.ndarray, or list, optional
+        contributions : pandas.DataFrame, numpy.ndarray, list, or dict, optional
             Local feature contributions for each sample.
             - If a `DataFrame`, its index and columns must match those of `x`.
             - If a `numpy.ndarray`, Shapash will automatically generate the corresponding
             index and column names based on `x`.
             - In multi-class settings, provide a list of contributions (one per class).
+            - If a `dict`, it must contain a `contributions` key and can include
+            additional explainer metadata (for example `base_values`). This is useful
+            to pass local baselines/intercepts along with contributions.
         y_pred : pandas.Series or pandas.DataFrame, optional
             Model predictions.
             Must have the same index as `x_init`.
