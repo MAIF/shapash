@@ -7,7 +7,7 @@ import importlib.metadata
 import inspect
 import logging
 from functools import wraps
-from typing import Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import numpy as np
 import pandas as pd
@@ -22,6 +22,8 @@ from shapash.report.panel_support import _add_css_classes, _auto_style_viewable,
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
+if TYPE_CHECKING:
+    from shapash.explainer import SmartExplainer
 logger = logging.getLogger(__name__)
 
 PALETTE = {
@@ -97,13 +99,14 @@ class ReportBlockMixin:
 
     def __init__(
         self,
-        explainer=None,
+        explainer: SmartExplainer | None = None,
         x_train: pd.DataFrame | None = None,
         y_train: pd.Series | pd.DataFrame | list | None = None,
         y_test: pd.Series | pd.DataFrame | list | None = None,
         max_points: int = 200,
     ) -> None:
-        self.explainer = explainer
+        self.smart_explainer = explainer
+        self.explainer = explainer.explainer if explainer else None
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
         self.x_init = getattr(explainer, "x_init", None)
@@ -114,11 +117,11 @@ class ReportBlockMixin:
         self.max_points = max_points
         self._inside_group = False
 
-        if explainer is not None:
-            if explainer.y_pred is not None:
-                self.y_pred, _ = self._get_values_and_name(explainer.y_pred, "prediction")
+        if self.explainer is not None:
+            if self.explainer.y_pred is not None:
+                self.y_pred, _ = self._get_values_and_name(self.explainer.y_pred, "prediction")
             else:
-                self.y_pred = explainer.model.predict(explainer.x_encoded)
+                self.y_pred = self.explainer.model.predict(self.explainer.x_encoded)
         else:
             self.y_pred = None
 
@@ -305,6 +308,7 @@ class ReportBlockMixin:
     @block
     def block_global_analysis(self, title: str = "") -> BlockContent:
         """Render global summary statistics for prediction and training datasets.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -333,6 +337,7 @@ class ReportBlockMixin:
     @block
     def block_model_analysis(self, title: str = "Model information") -> BlockContent:
         """Render model metadata and parameter tables.
+        Requires explainer.
 
         Parameters
         ----------
@@ -460,6 +465,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render feature distribution by dataset split.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -508,6 +514,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render a feature correlation matrix.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -551,6 +558,7 @@ class ReportBlockMixin:
     @block
     def block_feature_importance(self, title: str = "", label=None) -> BlockContent:
         """Render global feature importance.
+        Requires explainer.
 
         Parameters
         ----------
@@ -582,6 +590,7 @@ class ReportBlockMixin:
         include_all_features: bool = False,
     ) -> BlockContent:
         """Render feature contribution plots.
+        Requires explainer.
 
         Parameters
         ----------
@@ -679,6 +688,7 @@ class ReportBlockMixin:
         max_points: int | None = None,
     ) -> BlockContent:
         """Render a plot for the top feature interaction pairs.
+        Requires explainer.
 
         Parameters
         ----------
@@ -720,6 +730,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render prediction-versus-true target distribution.
+        Requires explainer.
 
         Parameters
         ----------
@@ -862,6 +873,7 @@ class ReportBlockMixin:
     @block
     def block_confusion_matrix(self, title: str = "") -> BlockContent:
         """Render confusion matrix for classification predictions.
+        Requires explainer.
 
         Parameters
         ----------
@@ -877,12 +889,12 @@ class ReportBlockMixin:
         --------
         >>> runtime.block_confusion_matrix()
         """
-        explainer = self._require_explainer("confusion_matrix")
+        smart_explainer = self._require_smart_explainer("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         y_test = cast(TargetValues, self.y_test)
         y_pred = cast(TargetValues, self.y_pred)
-        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=explainer.colors_dict)
+        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.colors_dict)
         if title is None:
             return "Confusion matrix", [fig]
         return title, [fig]
@@ -900,6 +912,7 @@ class ReportBlockMixin:
         height: int = 600,
     ) -> BlockContent:
         """Render lift curve for classification probabilities.
+        Requires explainer.
 
         Parameters
         ----------
@@ -969,6 +982,7 @@ class ReportBlockMixin:
         show_train: bool = True,
     ) -> BlockContent:
         """Render per-feature univariate analysis with interactive selection.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -1111,6 +1125,11 @@ class ReportBlockMixin:
             raise ValueError(f"{block_type} block requires an explainer on the report instance.")
         return self.explainer
 
+    def _require_smart_explainer(self, block_type: str):
+        if self.smart_explainer is None:
+            raise ValueError(f"{block_type} block requires a smart_explainer on the report instance.")
+        return self.smart_explainer
+
     def _require_train_test_data(self, block_type: str) -> pd.DataFrame:
         if self.df_train_test is None:
             raise ValueError(f"{block_type} block requires x_train and explainer.x_init data on the report instance.")
@@ -1122,5 +1141,5 @@ class ReportBlockMixin:
         return self.explainer.features_dict.get(feature, feature)
 
     def _feature_distribution_colors(self) -> dict:
-        explainer = self._require_explainer("feature_distribution")
-        return explainer.colors_dict["report_feature_distribution"]
+        smart_explainer = self._require_smart_explainer("feature_distribution")
+        return smart_explainer.colors_dict["report_feature_distribution"]
