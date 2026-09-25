@@ -1,15 +1,19 @@
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from typing import Any, cast
 
 import numpy as np
 import panel as pn
 import pandas as pd
 import plotly.graph_objects as go
 
+from shapash.backend import BaseBackend
+from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
 from shapash.report.panel_support import apply_report_css
 
+import pytest
 
 def dummy_metric(y_true, y_pred):
     return 0.75
@@ -19,14 +23,43 @@ class _DummyModel:
     def __init__(self):
         self.alpha = 0.1
         self.depth = 4
+        self.classes_ = np.array([0, 1])
 
     def predict(self, x):
         return np.zeros(len(x))
+
+    def predict_proba(self, x):
+        return np.array([[0.1, 0.9], [0.8, 0.2], [0.2, 0.8]])
+
+
+class _DummyBackend(BaseBackend):
+    name = "dummy"
+
+    def __init__(self, model, preprocessing=None, masker=None):
+        super().__init__(model=model, preprocessing=preprocessing)
+        self.masker = masker
+
+    def run_explainer(self, x: pd.DataFrame) -> dict:
+        return {"contributions": self._build_contributions(x)}
+
+    @staticmethod
+    def _build_contributions(x: pd.DataFrame) -> np.ndarray:
+        base = np.array(
+            [
+                [0.4, 0.1],
+                [0.2, 0.3],
+                [0.5, 0.2],
+            ]
+        )
+        return np.dstack((-base, base))
 
 
 class _DummyPlot:
     def __init__(self):
         self._style_dict = {"dummy": "style"}
+
+    def _tuning_round_digit(self):
+        return None
 
     def correlations_plot(self, *args, **kwargs):
         return go.Figure(go.Scatter(x=[1, 2], y=[2, 1]))
@@ -47,34 +80,20 @@ class _DummyPlot:
         return [0, 1], None
 
 
-class _DummyExplainer:
-    def __init__(self, x_init):
-        self.x_init = x_init
-        self.x_encoded = x_init
-        self.y_pred = [1, 0, 1]
-        self.model = _DummyModel()
-        self.preprocessing = None
-        self.postprocessing = None
-        self.features_dict = {"age": "Age", "income": "Income"}
-        self.inv_features_dict = {"Age": "age", "Income": "income"}
-        self.colors_dict = {
-            "report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"},
-            "default": "#2255aa",
-        }
+class _TestSmartExplainer(SmartExplainer):
+    def __init__(self):
+        model = _DummyModel()
+        super().__init__(
+            model=model, backend=_DummyBackend(model),
+            features_dict={"age": "Age", "income": "Income"},
+            colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}, "default": "#2255aa"},
+        )
         self.plot = _DummyPlot()
-        self.columns_dict = {0: "age", 1: "income"}
-        self._case = "classification"
-        self.y_target = [1, 0, 1]
-        self.proba_values = None
+        self.explainer.plot = self.plot
+        self.explainer.get_interaction_values = self.get_interaction_values
 
-    def get_interaction_values(self, selection=None, label=None):
-        return np.array([[0.0, 0.5], [0.5, 0.0]])
-
-    def check_label_name(self, label):
-        return 1, "class_1", "class_1"
-
-    def predict_proba(self):
-        self.proba_values = np.array([[0.1, 0.9], [0.8, 0.2], [0.2, 0.8]])
+    def get_interaction_values(self, selection=None):
+        return np.array([[[0.0, 0.5], [0.5, 0.0]], [[0.0, 0.4], [0.4, 0.0]]])
 
 
 def _build_runtime() -> ReportBlockMixin:
@@ -82,7 +101,12 @@ def _build_runtime() -> ReportBlockMixin:
     x_test = pd.DataFrame({"age": [21, 31, 41], "income": [110, 210, 160]})
     y_train = pd.Series([0, 1, 1], name="target")
     y_test = pd.Series([1, 0, 1], name="target")
-    explainer = _DummyExplainer(x_test)
+    explainer = _TestSmartExplainer()
+    explainer.compile(
+        x=x_test,
+        y_pred=pd.Series([1, 0, 1], index=x_test.index),
+        y_target=y_test,
+    )
     return ReportBlockMixin(explainer=explainer, x_train=x_train, y_train=y_train, y_test=y_test, max_points=10)
 
 
@@ -142,7 +166,7 @@ class _DummyBlocks(ReportBlockMixin):
     @block
     def block_bind_allowed(self, title: str = "Bind"):
         selector = pn.widgets.Select(name="Feature", options=["a", "b"], value="a")
-        selected_panel = pn.panel(pn.bind(lambda selected: pn.pane.Markdown(selected), selector))
+        selected_panel = pn.panel(pn.bind(cast(Any, lambda selected: pn.pane.Markdown(selected)), selector))
         return [selector, selected_panel]
 
     @block
@@ -372,3 +396,8 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsNotNone(runtime.explainer.proba_values)
         self.assertIsInstance(univariate_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(univariate_result.objects[2]).__name__, "ParamFunction")
+
+    def test_smart_explainer_required(self):
+        rbm = ReportBlockMixin()
+        with pytest.raises(ValueError):
+            rbm._require_smart_explainer("block_type")
