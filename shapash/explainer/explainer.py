@@ -8,6 +8,7 @@ import pandas as pd
 
 from shapash.backend import BaseBackend, get_backend_cls_from_name
 from shapash.backend.shap_backend import get_shap_interaction_values
+from shapash.manipulation.mask import compute_mask
 from shapash.manipulation.select_lines import keep_right_contributions
 from shapash.manipulation.summarize import create_grouped_features_values
 from shapash.utils.check import (
@@ -111,6 +112,8 @@ class Explainer:
         self.prediction_error: pd.Series | pd.DataFrame | np.ndarray | None = None
         self.x_interaction: pd.DataFrame | None = None
         self.interaction_values: np.ndarray | None = None
+        self._interaction_label: int | None = None
+        self._interaction_cache_loaded: bool = False
         self.plot: Any = None
 
     def compile(
@@ -237,7 +240,7 @@ class Explainer:
             x_init=self.x_init,
             x_encoded=self.x_encoded,
             preprocessing=self.preprocessing,
-            features_groups=self.features_groups,
+            features_groups=features_groups,
             features_dict=self.features_dict,
             how="dict_of_values",
         )
@@ -465,7 +468,10 @@ class Explainer:
             self.columns_order = self._compile_columns_order(columns_order)
 
     def get_interaction_values(
-        self, n_samples_max: int | None = None, selection: list[Any] | None = None
+        self,
+        n_samples_max: int | None = None,
+        selection: list[Any] | None = None,
+        label: int | str | None = None,
     ) -> np.ndarray:
         """
         Compute SHAP interaction values on the encoded dataset.
@@ -476,6 +482,9 @@ class Explainer:
             Maximum number of rows to use.
         selection : list, optional
             Explicit row indices to keep before applying n_samples_max.
+        label : int or str, optional
+            Class label to select in classification settings.
+            If None, interaction values are aggregated across classes/outputs.
 
         Returns
         -------
@@ -483,21 +492,34 @@ class Explainer:
             Interaction tensor with shape (n_samples, n_features, n_features).
         """
         x = copy.deepcopy(self.x_encoded)
+        label_num = None
+
+        if self._case == "classification" and label is not None:
+            label_num = self.check_label_name(label)[0]
 
         if selection:
             x = x.loc[selection]
 
         if self.x_interaction is not None:
             if self.x_interaction.equals(x[:n_samples_max]):
-                if self.interaction_values is None:
-                    raise RuntimeError("interaction_values cache is unexpectedly empty")
-                return self.interaction_values
+                # Backward compatibility: tests or custom workflows may inject
+                # precomputed interactions without label-aware cache metadata.
+                if not self._interaction_cache_loaded or self._interaction_label == label_num:
+                    if self.interaction_values is None:
+                        raise RuntimeError("interaction_values cache is unexpectedly empty")
+                    return self.interaction_values
 
         self.x_interaction = x[:n_samples_max]
         if self.backend is None:
             raise RuntimeError("Backend is not initialized")
         backend_explainer = getattr(self.backend, "explainer", None)
-        self.interaction_values = get_shap_interaction_values(self.x_interaction, cast(Any, backend_explainer))
+        self.interaction_values = get_shap_interaction_values(
+            self.x_interaction,
+            cast(Any, backend_explainer),
+            class_index=label_num,
+        )
+        self._interaction_label = label_num
+        self._interaction_cache_loaded = True
         return self.interaction_values
 
     def filter(
@@ -539,31 +561,18 @@ class Explainer:
             data = self.data_groups
         else:
             data = self.data
-        mask = [self.state.init_mask(data["contrib_sorted"], True)]
-        if features_to_hide:
-            features_list = features_to_hide
-            if not all(isinstance(feature, int) for feature in features_to_hide):
-                features_list = self.check_features_name(features_to_hide, use_groups=display_groups)
-            mask.append(
-                self.state.hide_contributions(
-                    data["var_dict"],
-                    features_list=features_list,
-                )
-            )
-        if threshold:
-            mask.append(self.state.cap_contributions(data["contrib_sorted"], threshold=threshold))
-        if positive is not None:
-            mask.append(self.state.sign_contributions(data["contrib_sorted"], positive=positive))
-        self.mask = self.state.combine_masks(mask)
-        if max_contrib:
-            self.mask = self.state.cutoff_contributions(self.mask, max_contrib=max_contrib)
-        self.masked_contributions = self.state.compute_masked_contributions(data["contrib_sorted"], self.mask)
-        self.mask_params = {
-            "features_to_hide": features_to_hide,
-            "threshold": threshold,
-            "positive": positive,
-            "max_contrib": max_contrib,
-        }
+        features_list = features_to_hide
+        if features_to_hide and not all(isinstance(feature, int) for feature in features_to_hide):
+            features_list = self.check_features_name(features_to_hide, use_groups=display_groups)
+        self.mask, self.masked_contributions, self.mask_params = compute_mask(
+            self.state,
+            data,
+            features_list=features_list,
+            threshold=threshold,
+            positive=positive,
+            max_contrib=max_contrib,
+        )
+        self.mask_params["features_to_hide"] = features_to_hide
 
     def predict_proba(self) -> None:
         """
@@ -609,7 +618,10 @@ class Explainer:
 
         The output combines prediction information with top feature
         contributions for each row. If no filtering arguments are provided,
-        the last stored filter parameters can be reused when compatible.
+        the last stored filter parameters (from an explicit call to
+        :meth:`filter`) can be reused when compatible; otherwise the mask is
+        computed on the fly and never persisted, so this call does not
+        affect later plots or exports.
 
         Parameters
         ----------
@@ -662,20 +674,25 @@ class Explainer:
             and is_compatible_cached_mask
         ):
             print("to_pandas params: " + str(self.mask_params))
+            mask = self.mask
         else:
-            self.filter(
-                features_to_hide=features_to_hide,
+            features_list = features_to_hide
+            if features_to_hide and not all(isinstance(feature, int) for feature in features_to_hide):
+                features_list = self.check_features_name(features_to_hide, use_groups=use_groups)
+            mask, _, _ = compute_mask(
+                self.state,
+                data,
+                features_list=features_list,
                 threshold=threshold,
                 positive=positive,
                 max_contrib=max_contrib,
-                display_groups=use_groups,
             )
         if use_groups:
             columns_dict = {i: col for i, col in enumerate(self.x_init_groups.columns)}
         else:
             columns_dict = self.columns_dict
         data["summary"] = self.state.summarize(
-            data["contrib_sorted"], data["var_dict"], data["x_sorted"], self.mask, columns_dict, self.features_dict
+            data["contrib_sorted"], data["var_dict"], data["x_sorted"], mask, columns_dict, self.features_dict
         )
         if proba:
             self.predict_proba()
