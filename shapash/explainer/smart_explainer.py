@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import numpy as np
 import pandas as pd
@@ -28,6 +28,18 @@ from .smart_plotter import SmartPlotter
 
 if TYPE_CHECKING:
     from shapash.report.blocks import ReportBlockMixin
+
+
+class SchemaDriftConfig(TypedDict, total=False):
+    """Configuration overrides for schema-drift detection."""
+
+    missing_rate_delta_threshold: float
+    numeric_median_iqr_threshold: float
+    categorical_tvd_threshold: float
+    categorical_cardinality_ratio_threshold: float
+    top_k: int
+    min_sample_size: int
+
 
 REPORT_DEPENDENCIES_AVAILABLE = False
 ReportTemplate: Any | None = None
@@ -797,7 +809,7 @@ class SmartExplainer:
         else:
             raise ValueError("Explainer must be compiled before running app.")
 
-    def to_smartpredictor(self, schema_drift_config: dict[str, float | int] | None = None) -> Any:
+    def to_smartpredictor(self, schema_drift_config: SchemaDriftConfig | None = None) -> Any:
         """
         Create and return a SmartPredictor object derived from the current SmartExplainer instance.
 

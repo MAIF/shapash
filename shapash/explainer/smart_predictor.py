@@ -14,6 +14,7 @@ import pandas as pd
 
 import shapash.explainer.smart_explainer
 from shapash.decomposition.contributions import assign_contributions, rank_contributions
+from shapash.explainer.smart_explainer import SchemaDriftConfig
 from shapash.manipulation.filters import (
     cap_contributions,
     combine_masks,
@@ -206,7 +207,7 @@ class SmartPredictor:
         features_groups=None,
         mask_params=None,
         schema_distribution: dict[Any, dict[str, Any]] | None = None,
-        schema_drift_config: dict[str, float | int] | None = None,
+        schema_drift_config: SchemaDriftConfig | None = None,
     ):
         params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 

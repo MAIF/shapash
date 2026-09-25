@@ -1,8 +1,10 @@
 """Lightweight schema-distribution summaries and drift detection."""
 
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
+
+from shapash.explainer.smart_explainer import SchemaDriftConfig
 
 MISSING_RATE_DELTA_THRESHOLD = 0.10
 NUMERIC_MEDIAN_IQR_THRESHOLD = 1.5
@@ -11,7 +13,7 @@ CATEGORICAL_CARDINALITY_RATIO_THRESHOLD = 1.5
 DEFAULT_TOP_K = 10
 MIN_DRIFT_SAMPLE_SIZE = 30
 
-DEFAULT_SCHEMA_DRIFT_CONFIG: dict[str, float | int] = {
+DEFAULT_SCHEMA_DRIFT_CONFIG: SchemaDriftConfig = {
     "missing_rate_delta_threshold": MISSING_RATE_DELTA_THRESHOLD,
     "numeric_median_iqr_threshold": NUMERIC_MEDIAN_IQR_THRESHOLD,
     "categorical_tvd_threshold": CATEGORICAL_TVD_THRESHOLD,
@@ -21,17 +23,23 @@ DEFAULT_SCHEMA_DRIFT_CONFIG: dict[str, float | int] = {
 }
 
 
-def resolve_schema_drift_config(config: dict[str, float | int] | None = None) -> dict[str, float | int]:
+def resolve_schema_drift_config(
+    config: SchemaDriftConfig | None = None,
+) -> SchemaDriftConfig:
     """Merge user-provided schema-drift settings with validated defaults."""
-    resolved = DEFAULT_SCHEMA_DRIFT_CONFIG.copy()
+
+    resolved: dict[str, object] = dict(DEFAULT_SCHEMA_DRIFT_CONFIG)
+
     if config is None:
-        return resolved
+        return cast(SchemaDriftConfig, resolved)
+
     if not isinstance(config, dict):
         raise ValueError("schema_drift_config must be a dict.")
 
     unknown = set(config) - set(resolved)
     if unknown:
         raise ValueError(f"Unknown schema drift configuration keys: {sorted(unknown)}")
+
     resolved.update(config)
 
     for key in (
@@ -40,12 +48,16 @@ def resolve_schema_drift_config(config: dict[str, float | int] | None = None) ->
         "categorical_tvd_threshold",
         "categorical_cardinality_ratio_threshold",
     ):
-        if not isinstance(resolved[key], (int, float)) or isinstance(resolved[key], bool) or resolved[key] < 0:
+        value = resolved[key]
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
             raise ValueError(f"schema_drift_config['{key}'] must be a non-negative number.")
+
     for key in ("top_k", "min_sample_size"):
-        if not isinstance(resolved[key], int) or isinstance(resolved[key], bool) or resolved[key] < 1:
+        value = resolved[key]
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ValueError(f"schema_drift_config['{key}'] must be a positive integer.")
-    return resolved
+
+    return cast(SchemaDriftConfig, resolved)
 
 
 def compute_schema_distribution(x: pd.DataFrame, top_k: int = DEFAULT_TOP_K) -> dict[Any, dict[str, Any]]:
@@ -86,7 +98,7 @@ def compute_schema_distribution(x: pd.DataFrame, top_k: int = DEFAULT_TOP_K) -> 
 def detect_schema_drift(
     reference: dict[Any, dict[str, Any]],
     current: dict[Any, dict[str, Any]],
-    config: dict[str, float | int] | None = None,
+    config: SchemaDriftConfig | None = None,
 ) -> dict[Any, list[str]]:
     """Return actionable drift reasons keyed by column name."""
     resolved_config = resolve_schema_drift_config(config)
