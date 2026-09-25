@@ -1,0 +1,10 @@
+services:
+  # NLP Explainer (CPU, live model). Loads pre-computed caches — run serve_nlp.py
+  # once first to build them (see demo/README.md).
+  shapash-nlp:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    image: shapash-nlp
+    ports:
+      - "8050:8050"

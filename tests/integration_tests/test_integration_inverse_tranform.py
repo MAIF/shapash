@@ -28,6 +28,15 @@ class TestInverseTranform(unittest.TestCase):
         unittest : [type]
             [description]
         """
+        # The "python"-storage titanic fixture below was intentionally built pyarrow-free (see git
+        # history on the .pkl). With pyarrow installed, pandas' default "auto" string storage infers
+        # pyarrow-backed strings for any newly-built column (e.g. category_encoders' inverse-transform
+        # output), which then fails assert_frame_equal's exact-dtype check against the fixture even
+        # though the values match. Pin "python" storage for the duration of this test only.
+        previous_storage = pd.options.mode.string_storage
+        pd.options.mode.string_storage = "python"
+        self.addCleanup(lambda: setattr(pd.options.mode, "string_storage", previous_storage))
+
         data_path = dirname(dirname(abspath(__file__)))
         if int(pd.__version__.split(".")[0]) >= 3:
             self.ds_titanic_clean = pd.read_pickle(join(data_path, "data", "clean_titanic_pandas_3.pkl"))

@@ -56,8 +56,8 @@ class ShapBackend(BaseBackend):
 
         Returns
         -------
-        explain_data : pd.DataFrame or list of pd.DataFrame
-            local contributions
+        explain_data : dict
+            Dictionary with ``contributions`` key containing the SHAP values array.
         """
         print("INFO: Shap explainer type -", self.explainer)
         contributions = self.explainer(x, **self.explainer_compute_args)

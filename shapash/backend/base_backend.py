@@ -1,17 +1,18 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from shapash.backend.backend import Backend
 from shapash.utils.check import check_contribution_object, check_model
 from shapash.utils.transform import adapt_contributions, get_preprocessing_mapping
 from shapash.utils.utils import choose_state
 
 
-class BaseBackend(ABC):
-    """``BaseBackend`` is the base class for all backends.
-    All explainability implementations should extend this abstract class
+class BaseBackend(Backend):
+    """``BaseBackend`` is the base class for all tabular backends.
+    All tabular explainability implementations should extend this abstract class
     and implement the methods marked as abstract.
     """
 
@@ -22,9 +23,8 @@ class BaseBackend(ABC):
     # It allows to compute (column-wise) aggregation of local contributions.
     column_aggregation = "sum"
 
-    # `name` defines the string name of the backend allowing to identify and
-    # construct the backend from it.
-    name = "base"
+    # `name` is inherited from `Backend` (default sentinel "base"); concrete
+    # tabular backends override it with a unique name.
     support_groups = True
     supported_cases = ["classification", "regression"]
 

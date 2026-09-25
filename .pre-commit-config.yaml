@@ -50,6 +50,7 @@ repos:
     rev: 1.20.0
     hooks:
     -   id: blacken-docs
+        args: [--line-length=120]
         additional_dependencies: [black==26.5.1]
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.3.0
