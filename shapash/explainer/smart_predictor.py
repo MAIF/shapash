@@ -14,7 +14,6 @@ import pandas as pd
 
 import shapash.explainer.smart_explainer
 from shapash.decomposition.contributions import assign_contributions, rank_contributions
-from shapash.explainer.smart_explainer import SchemaDriftConfig
 from shapash.manipulation.filters import (
     cap_contributions,
     combine_masks,
@@ -37,7 +36,12 @@ from shapash.utils.check import (
     check_y,
 )
 from shapash.utils.columntransformer_backend import columntransformer
-from shapash.utils.drift import compute_schema_distribution, detect_schema_drift, resolve_schema_drift_config
+from shapash.utils.drift import (
+    SchemaDriftConfig,
+    compute_schema_distribution,
+    detect_schema_drift,
+    resolve_schema_drift_config,
+)
 from shapash.utils.io import _build_predictor_manifest, _compute_schema_fingerprint, _save_manifest, save_pickle
 from shapash.utils.model import predict_proba
 from shapash.utils.transform import adapt_contributions, apply_postprocessing, apply_preprocessing, preprocessing_tolist
