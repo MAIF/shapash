@@ -673,6 +673,11 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
         y_pred = y_pred.map(lambda x: round(x, round_digit))
         y_pred_flatten = y_pred.values.flatten()
 
+        range_axis = [
+            min(y_target_values.min(), y_pred_flatten.min()),
+            max(y_target_values.max(), y_pred_flatten.max()),
+        ]
+
         hv_text = [
             f"Id: {x}<br />True Values: {y:,.2f}<br />Predicted Values: {z:,.2f}<br />Prediction Error: {w:,.2f}"
             for x, y, z, w in zip(
@@ -703,26 +708,19 @@ def _prediction_regression_plot(y_target, y_pred, prediction_error, list_ind, st
             "yanchor": "top",
             "y": 1.1,
         }
-        range_axis = [
-            min(y_target_values.min(), y_pred_flatten.min()),
-            max(y_target_values.max(), y_pred_flatten.max()),
-        ]
+        # Reference diagonal y = x, in data coordinates so it stays exact after zoom / autorange reset
+        fig.add_trace(
+            go.Scatter(
+                x=range_axis,
+                y=range_axis,
+                mode="lines",
+                line={"color": "grey", "width": 1, "dash": "dot"},
+                hoverinfo="skip",
+                showlegend=False,
+            )
+        )
         fig.update_xaxes(range=range_axis)
         fig.update_yaxes(range=range_axis)
-        fig.update_layout(
-            shapes=[
-                {
-                    "type": "line",
-                    "yref": "y domain",
-                    "xref": "x domain",
-                    "y0": 0,
-                    "y1": 1,
-                    "x0": 0,
-                    "x1": 1,
-                    "line": dict(color="grey", width=1, dash="dot"),
-                }
-            ]
-        )
 
     return fig, subtitle
 
