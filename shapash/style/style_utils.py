@@ -111,14 +111,14 @@ def define_style(palette):
         "yanchor": "middle",
         "x": 0.5,
         "y": 0.9,
-        "font": {"size": 24, "family": "Arial", "color": palette["title_color"]},
+        "font": {"size": 24, "family": "Arial, sans-serif", "color": palette["title_color"]},
     }
     style_dict["dict_title_stability"] = {
         "xanchor": "center",
         "x": 0.5,
         "yanchor": "bottom",
         "pad": dict(b=50),
-        "font": {"size": 24, "family": "Arial", "color": palette["title_color"]},
+        "font": {"size": 24, "family": "Arial, sans-serif", "color": palette["title_color"]},
     }
     featureimp_bar = convert_string_to_int_keys(palette["featureimp_bar"])
     style_dict["dict_featimp_colors"] = {
@@ -137,9 +137,15 @@ def define_style(palette):
     style_dict["violin_area_classif"] = convert_string_to_int_keys(palette["violin_area_classif"])
     style_dict["prediction_plot"] = convert_string_to_int_keys(palette["prediction_plot"])
     style_dict["violin_default"] = palette["violin_default"]
-    style_dict["dict_title_compacity"] = {"font": {"size": 14, "family": "Arial", "color": palette["title_color"]}}
-    style_dict["dict_xaxis"] = {"font": {"size": 16, "family": "Arial Black", "color": palette["axis_color"]}}
-    style_dict["dict_yaxis"] = {"font": {"size": 16, "family": "Arial Black", "color": palette["axis_color"]}}
+    style_dict["dict_title_compacity"] = {
+        "font": {"size": 14, "family": "Arial, sans-serif", "color": palette["title_color"]}
+    }
+    style_dict["dict_xaxis"] = {
+        "font": {"size": 16, "family": "Arial Black, Arial, sans-serif", "color": palette["axis_color"]}
+    }
+    style_dict["dict_yaxis"] = {
+        "font": {"size": 16, "family": "Arial Black, Arial, sans-serif", "color": palette["axis_color"]}
+    }
     localplot_bar = convert_string_to_int_keys(palette["localplot_bar"])
     localplot_line = convert_string_to_int_keys(palette["localplot_line"])
     style_dict["dict_local_plot_colors"] = {
