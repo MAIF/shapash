@@ -18,7 +18,8 @@ authors = [
 description = "Shapash is a Python library which aims to make machine learning interpretable and understandable by everyone."
 readme = "README.md"
 requires-python = ">=3.11, <3.15"
-license = {text = "Apache Software License 2.0"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 keywords = ["shapash"]
 classifiers = [
     "Programming Language :: Python :: 3",
