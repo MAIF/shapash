@@ -30,6 +30,9 @@ CAP_SIMILAR = "engine:similar"
 CAP_LABELS = "data:labels"
 CAP_GROUND_TRUTH = "data:ground_truth"
 CAP_PROJECTION = "data:projection"
+# The contributions sum to a well-defined total (``NlpExplanation.is_additive``) — what a waterfall's
+# running sum and a "base + Σ = total" summary assert. Absent for LIME's surrogate weights.
+CAP_ADDITIVE = "data:additive"
 
 
 @dataclass(frozen=True)
@@ -73,6 +76,8 @@ def available_capabilities(ctx: AppContext) -> frozenset[str]:
     # survive a snapshot — they sit outside the engine guard below on purpose.
     if ctx.coords is not None:
         caps.add(CAP_PROJECTION)
+    if explanation.is_additive:
+        caps.add(CAP_ADDITIVE)
     if explanation.y_true is not None:
         caps.add(CAP_GROUND_TRUTH)
         if has_usable_probabilities(explanation.y_prob):

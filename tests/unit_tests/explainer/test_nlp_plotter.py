@@ -250,6 +250,11 @@ class TestGuards(unittest.TestCase):
         self.assertIn("nlp_lime", message)
         self.assertIn("tokens", message)  # points at the plot that is still valid
 
+    def test_sentence_omits_the_base_plus_sum_summary_on_a_non_additive_backend(self):
+        # "Base + Σ = Total" asserts additivity; LIME's intercept + surrogate weights is no prediction.
+        self.assertNotIn("Base:", str(_make_explanation(is_additive=False).plot.sentence(row=0, label_idx=0)))
+        self.assertIn("Base:", str(_make_explanation(is_additive=True).plot.sentence(row=0, label_idx=0)))
+
     def test_the_other_plots_stay_available_on_a_non_additive_backend(self):
         explanation = _make_explanation(is_additive=False)
         self.assertIsInstance(explanation.plot.tokens(row=0, label_idx=0), go.Figure)

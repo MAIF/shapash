@@ -97,7 +97,8 @@ class SentenceHighlightComponent(WebappComponent):
             return plot_sentence_highlight(
                 tokens=tokens,
                 values=vals,
-                base_value=base_value,
+                # "base + Σ = total" is only true of additive contributions; LIME's intercept + weights is not a prediction.
+                base_value=base_value if explanation.is_additive else None,
                 color_positive=self._theme.xpl_positive,
                 color_negative=self._theme.xpl_negative,
             )

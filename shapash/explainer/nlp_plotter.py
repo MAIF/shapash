@@ -232,7 +232,10 @@ class NlpPlotter:
         """
         label_idx = self._check_label_idx(label_idx)
         toks, values, base_value = self._slice(row, label_idx)
-        div = plot_sentence_highlight(tokens=toks, values=values, base_value=base_value)
+        # The "base + Σ = total" summary is only true of additive contributions (see ``waterfall``).
+        div = plot_sentence_highlight(
+            tokens=toks, values=values, base_value=base_value if self._exp.is_additive else None
+        )
         return DashHtmlPreview(div) if notebook else div
 
     # ── batch-level plots ───────────────────────────────────────────────────────────────

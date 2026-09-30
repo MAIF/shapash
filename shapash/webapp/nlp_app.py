@@ -518,7 +518,7 @@ class NlpWebApp:
     def _build_tabs(self, components: list[WebappComponent], text_samples_body: html.Div) -> tuple[list, list, list]:
         """Map *components* onto the shell's three tab groups: left, upper-right, lower-right."""
         highlight_comp = next(c for c in components if isinstance(c, SentenceHighlightComponent))
-        waterfall_comp = next(c for c in components if isinstance(c, WaterfallComponent))
+        waterfall_comp = next((c for c in components if isinstance(c, WaterfallComponent)), None)
         word_importance_comp = next(c for c in components if isinstance(c, WordImportanceComponent))
         editor_comp = next((c for c in components if isinstance(c, DataEditorComponent)), None)
         cf_comp = next((c for c in components if isinstance(c, CounterfactualComponent)), None)
@@ -553,10 +553,9 @@ class NlpWebApp:
         if similar_comp is not None:
             upper_right_tabs.append(("similar", "Similar Examples", similar_comp.layout(self._ctx)))
 
-        lower_right_tabs: list = [
-            ("highlight", "Sentence", highlight_comp.layout(self._ctx)),
-            ("waterfall", "Waterfall", waterfall_comp.layout(self._ctx)),
-        ]
+        lower_right_tabs: list = [("highlight", "Sentence", highlight_comp.layout(self._ctx))]
+        if waterfall_comp is not None:
+            lower_right_tabs.append(("waterfall", "Waterfall", waterfall_comp.layout(self._ctx)))
         return left_tabs, upper_right_tabs, lower_right_tabs
 
     def _build_stores(self) -> list[dcc.Store]:

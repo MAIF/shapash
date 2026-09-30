@@ -401,3 +401,23 @@ class TestPredictLogits(unittest.TestCase):
     def test_classifier_model_advertises_the_capability(self):
         model = HFClassifierModel(_TinyClassifier(), _FakeTokenizer(), label_names=["neg", "pos"])
         self.assertTrue(has_capabilities(model, SupportsLogits))
+
+
+class TestHFPipelineModelIdentity(unittest.TestCase):
+    """``model_id`` enters ``NlpExplainer``'s cache key, so two pipelines must not share it."""
+
+    @staticmethod
+    def _pipeline(checkpoint):
+        pipeline = FakePipeline(_rows([("negative", 0.1), ("positive", 0.9)]))
+        pipeline.model = type("_Model", (), {"name_or_path": checkpoint})()
+        return pipeline
+
+    def test_model_id_carries_the_checkpoint(self):
+        self.assertNotEqual(
+            HFPipelineModel(self._pipeline("org/model-a")).model_id,
+            HFPipelineModel(self._pipeline("org/model-b")).model_id,
+        )
+        self.assertIn("org/model-a", HFPipelineModel(self._pipeline("org/model-a")).model_id)
+
+    def test_model_id_falls_back_to_the_class_name_without_a_checkpoint(self):
+        self.assertEqual(HFPipelineModel(FakePipeline([])).model_id, "HFPipelineModel")

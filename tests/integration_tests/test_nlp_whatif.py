@@ -1,8 +1,8 @@
 """Integration tests for the NLP what-if stack against a real transformer.
 
 Exercises the full-capability HuggingFace adapter (predict / embeddings / gradients) and the
-HotFlip generator on the emotion distilbert model used by the demos. Skipped automatically when
-``transformers``/``torch`` are not installed.
+HotFlip and AblationFlip counterfactual generators on the emotion distilbert model used by the demos.
+Skipped automatically when ``transformers``/``torch`` are not installed.
 """
 
 import numpy as np
@@ -106,6 +106,27 @@ def test_hotflip_counterfactuals_are_wellformed_words(hf):
         assert cf.new_label != cf.orig_label
         cf_probs = model.predict([cf.new_text])[0]
         assert LABELS[int(cf_probs.argmax())] == cf.new_label
+
+
+def test_ablation_flip_finds_flip(hf):
+    """FeatureAblation-scored token removal flips a confidently classified sample, minimally."""
+    classifier, tokenizer, _ = hf
+    model = HFClassifierModel(classifier, tokenizer, label_names=LABELS)
+    gen = AblationFlipGenerator(model)
+    cfs = gen.generate("i am so happy today", config={"num_examples": 3, "max_ablations": 3})
+    assert cfs, "AblationFlip found no counterfactual on a confident sample"
+    for cf in cfs:
+        assert cf.new_label != cf.orig_label
+        assert cf.new_text != cf.original_text
+        assert all(new == "" for _, _, new in cf.substitutions)  # removals record an empty replacement
+        # Removed tokens really are gone and the reported flip holds under the model.
+        assert model.predict([cf.new_text])[0].argmax() != model.predict([cf.original_text])[0].argmax()
+    # minimality: no returned removal set is a strict superset of another
+    sets = [frozenset(cf.flipped_positions) for cf in cfs]
+    for i, a in enumerate(sets):
+        for j, b in enumerate(sets):
+            if i != j:
+                assert not (b < a)
 
 
 def test_explainer_interactive_engine_with_classifier(hf):

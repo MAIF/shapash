@@ -6,6 +6,7 @@ import numpy as np
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_lime_backend import NlpLimeBackend
+from shapash.model.base import TextModel
 
 LABEL_NAMES = ["sadness", "joy", "love", "anger", "fear", "surprise"]
 N_CLASSES = len(LABEL_NAMES)
@@ -21,6 +22,13 @@ def _fake_classifier(texts: list[str]) -> np.ndarray:
     probs = rng.random((len(texts), N_CLASSES)).astype(np.float32)
     probs /= probs.sum(axis=1, keepdims=True)
     return probs
+
+
+class _FakeTextModel(TextModel):
+    """Prediction-only ``TextModel`` over :func:`_fake_classifier`."""
+
+    def predict(self, texts: list[str]) -> np.ndarray:
+        return _fake_classifier(texts)
 
 
 def _make_lime_backend() -> NlpLimeBackend:
@@ -150,6 +158,33 @@ class TestNlpLimeBackend(unittest.TestCase):
                 np.count_nonzero(matrix[:, col]),
                 _LIME_COMPUTE_ARGS["num_features"],
             )
+
+    def test_run_explainer_without_label_names_explains_every_column(self):
+        # LIME's own default would explain class 1 only, leaving every other column silently zero.
+        backend = NlpLimeBackend(_fake_classifier, explainer_compute_args=_LIME_COMPUTE_ARGS)
+        raw = backend.run_explainer(_SAMPLE_TEXTS[:1])
+        self.assertEqual(raw.values[0].shape[1], N_CLASSES)
+        self.assertEqual(raw.base_values.shape, (1, N_CLASSES))
+        self.assertTrue(all(np.any(raw.values[0][:, col]) for col in range(N_CLASSES)))
+
+    # --- TextModel input ---
+
+    def test_accepts_a_text_model_scored_through_predict(self):
+        model = _FakeTextModel(LABEL_NAMES)
+        backend = NlpLimeBackend(model, explainer_compute_args=_LIME_COMPUTE_ARGS)
+        self.assertEqual(backend.model, model.predict)
+        raw = backend.run_explainer(_SAMPLE_TEXTS[:1])
+        self.assertEqual(raw.values[0].shape[1], N_CLASSES)
+
+    def test_label_names_default_to_the_text_model_s(self):
+        backend = NlpLimeBackend(_FakeTextModel(LABEL_NAMES))
+        self.assertEqual(backend._classes, LABEL_NAMES)
+        self.assertEqual(backend.explainer.class_names, LABEL_NAMES)
+
+    def test_explicit_label_names_override_the_text_model_s(self):
+        renamed = [name.upper() for name in LABEL_NAMES]
+        backend = NlpLimeBackend(_FakeTextModel(LABEL_NAMES), label_names=renamed)
+        self.assertEqual(backend._classes, renamed)
 
     # --- get_local_contributions ---
 

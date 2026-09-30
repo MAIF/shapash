@@ -7,7 +7,7 @@ from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_waterfall import plot_waterfall
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import WebappComponent
+from shapash.webapp.nlp_components.base import CAP_ADDITIVE, WebappComponent
 from shapash.webapp.nlp_components.datapoint import unpack_datapoint
 
 
@@ -22,6 +22,8 @@ class WaterfallComponent(WebappComponent):
     id = "waterfall-panel"
     name = "Waterfall"
     scope = "local"
+    # A running sum is only meaningful for additive contributions — same gate as ``.plot.waterfall``.
+    requires = frozenset({CAP_ADDITIVE})
 
     def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._theme = theme

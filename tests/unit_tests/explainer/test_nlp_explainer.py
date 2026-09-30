@@ -325,6 +325,32 @@ class TestNlpExplainerWithLimeBackend(unittest.TestCase):
             xpl.explain(_SAMPLE_TEXTS)  # same data — must hit in-memory cache
         self.assertEqual(mocked_predict.call_count, 1, "memoization must skip the second _predict call")
 
+    def test_explain_with_a_bare_ndarray_classifier_fn(self):
+        # No patching of _predict: a bare scoring callable has no TextModel, so predictions come
+        # from the legacy path, which must accept a probability array.
+        xpl = NlpExplainer(_fake_classifier, label_names=LABEL_NAMES, backend=_make_lime_backend())
+        explanation = xpl.explain(_SAMPLE_TEXTS)
+        expected = _fake_classifier(_SAMPLE_TEXTS)
+        self.assertEqual(list(explanation.y_prob.columns), LABEL_NAMES)
+        np.testing.assert_allclose(explanation.y_prob.to_numpy(), expected)
+        self.assertEqual(list(explanation.y_pred), [LABEL_NAMES[i] for i in expected.argmax(axis=1)])
+        self.assertEqual(explanation.backend_name, "nlp_lime")
+
+    def test_predict_names_ndarray_columns_by_position_without_label_names(self):
+        xpl = NlpExplainer(_fake_classifier, backend=_make_lime_backend())
+        pred_df = xpl._predict(_SAMPLE_TEXTS, pd.RangeIndex(len(_SAMPLE_TEXTS)))
+        self.assertEqual(list(pred_df.columns), ["prediction"] + [str(i) for i in range(N_CLASSES)])
+
+    def test_predict_rejects_label_names_that_do_not_match_the_array(self):
+        xpl = NlpExplainer(_fake_classifier, label_names=LABEL_NAMES[:2], backend=_make_lime_backend())
+        with self.assertRaisesRegex(ValueError, "label_names has 2 entries"):
+            xpl._predict(_SAMPLE_TEXTS, pd.RangeIndex(len(_SAMPLE_TEXTS)))
+
+    def test_predict_rejects_a_one_dimensional_array(self):
+        xpl = NlpExplainer(lambda texts: np.zeros(len(texts)), backend=_make_lime_backend())
+        with self.assertRaisesRegex(ValueError, "n_texts, n_classes"):
+            xpl._predict(_SAMPLE_TEXTS, pd.RangeIndex(len(_SAMPLE_TEXTS)))
+
 
 # ---------------------------------------------------------------------------
 # compile() cache key
@@ -564,6 +590,12 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
 
             self.assertEqual(backend_b.calls, 1, "loaded the other model's cached contributions")
             np.testing.assert_allclose(explanation.values[0], 2.0)
+
+    def test_a_bare_callable_refuses_a_cache_dir(self):
+        # Every function hashes alike ("function"), so two different callables would share entries.
+        xpl = NlpExplainer(_fake_classifier, label_names=LABEL_NAMES, backend=_MarkerBackend(marker=1.0))
+        with tempfile.TemporaryDirectory() as cache_dir, self.assertRaisesRegex(ValueError, "stable identity"):
+            xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
 
     def test_same_model_and_backend_reload_from_disk(self):
         # The cache must still *work* — a fresh instance skips the expensive run.

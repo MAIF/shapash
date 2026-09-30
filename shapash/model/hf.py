@@ -224,6 +224,12 @@ class HFPipelineModel(TextModel, SupportsTokenization):
         """Callable SHAP's text explainer can wrap directly (the pipeline itself)."""
         return self.pipeline
 
+    @property
+    def model_id(self) -> str:
+        """The class name plus the pipeline's checkpoint, so two pipelines never share a cache entry."""
+        checkpoint = getattr(getattr(self.pipeline, "model", None), "name_or_path", None)
+        return f"{type(self).__name__}:{checkpoint}" if checkpoint else type(self).__name__
+
     def predict(self, texts: list[str]) -> np.ndarray:
         """Return ``(n_texts, n_classes)`` probabilities via the pipeline."""
         raw = self.pipeline(list(texts), top_k=None)

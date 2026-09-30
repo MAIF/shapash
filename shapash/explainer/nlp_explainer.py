@@ -85,8 +85,11 @@ class NlpExplainer:
 
     Parameters
     ----------
-    model : callable
-        Text pipeline or callable accepted by the chosen backend.
+    model : TextModel or callable
+        A ``TextModel`` adapter, a ``transformers`` text-classification pipeline, or a bare scoring
+        callable ``f(texts: list[str]) -> np.ndarray`` of shape ``(n_texts, n_classes)`` holding class
+        probabilities (then pass ``label_names`` in the same column order). A bare callable cannot
+        drive the What-if Lab or similar-examples panels, which need a ``TextModel``.
     label_names : list[str], optional
         Class names in the same order as the model output columns.
         Used in plot titles and the webapp class selector.
@@ -117,9 +120,21 @@ class NlpExplainer:
     >>> explanation = xpl.explain(texts)
     >>> xpl.run_app(explanation, port=8050)
 
+    A bare scoring function works too — any callable mapping ``list[str]`` to an
+    ``(n_texts, n_classes)`` probability array — here an sklearn text classifier explained with LIME.
+    The same callable goes to both the backend and the explainer, and ``label_names`` must follow the
+    array's column order:
+
+    >>> from sklearn.feature_extraction.text import TfidfVectorizer
+    >>> from sklearn.linear_model import LogisticRegression
+    >>> from sklearn.pipeline import make_pipeline
     >>> from shapash.backend.nlp_lime_backend import NlpLimeBackend
-    >>> lime_backend = NlpLimeBackend(classifier_fn, label_names=[...], explainer_compute_args={"num_features": 15})
-    >>> xpl = NlpExplainer(classifier_fn, label_names=[...], backend=lime_backend)
+    >>> clf = make_pipeline(TfidfVectorizer(), LogisticRegression()).fit(train_texts, train_labels)
+    >>> classifier_fn = clf.predict_proba
+    >>> label_names = list(clf.classes_)
+    >>> lime_backend = NlpLimeBackend(classifier_fn, label_names=label_names)
+    >>> xpl = NlpExplainer(classifier_fn, label_names=label_names, backend=lime_backend)
+    >>> explanation = xpl.explain(texts)
     """
 
     def __init__(
@@ -331,13 +346,22 @@ class NlpExplainer:
             ``<cache_dir>/<hash>.xpl`` (an :class:`~shapash.explainer.nlp_explanation.NlpExplanation`
             file) and reloaded on subsequent calls — even after a kernel restart. Disabled by
             default. One directory can be shared across models and backends: the hash identifies
-            them, so entries cannot collide.
+            them, so entries cannot collide. Needs a model with an identity — a ``TextModel`` or a
+            pipeline; a bare scoring callable raises ``ValueError``.
 
         Returns
         -------
         NlpExplanation
             The computed contributions, predictions and ground truth for this batch.
         """
+        if cache_dir is not None and getattr(self, "_text_model", None) is None:
+            # The disk key needs the model's identity, and a bare callable has none: every function
+            # would hash alike, so a second model pointed at the same cache_dir reloads the first's results.
+            raise ValueError(
+                "cache_dir needs a model with a stable identity, and a bare callable has none — two "
+                "different callables would share cache entries. Wrap the model in a TextModel adapter "
+                "(its model_id enters the key), or call explain() without cache_dir."
+            )
         texts = X if isinstance(X, pd.Series) else pd.Series(X)
         text_list = texts.tolist()
         new_hash = self._compute_key(text_list)
@@ -957,8 +981,9 @@ class NlpExplainer:
         pipeline returns all scores (``return_all_scores=True``), or a single
         ``"probability"`` column (the winning class confidence) otherwise.
 
-        Handles both ``return_all_scores=True`` (list of lists of dicts) and
-        single-prediction (list of dicts) pipeline output formats.
+        Handles a ``TextModel``, a probability ``np.ndarray`` from a bare scoring callable
+        (``label_names`` names the columns), and both ``return_all_scores=True`` (list of lists of
+        dicts) and single-prediction (list of dicts) pipeline output formats.
         """
         text_model = getattr(self, "_text_model", None)
         if text_model is not None:
@@ -970,6 +995,17 @@ class NlpExplainer:
             return result
 
         raw = self.model(text_list)
+        if isinstance(raw, np.ndarray):
+            # A bare scoring callable (e.g. sklearn's ``predict_proba``): a probability matrix, with
+            # no label information of its own — the columns are named by ``label_names``.
+            if raw.ndim != 2:
+                raise ValueError(f"The model must return an (n_texts, n_classes) array, got shape {raw.shape}.")
+            names = list(self.label_names) if self.label_names else [str(i) for i in range(raw.shape[1])]
+            if len(names) != raw.shape[1]:
+                raise ValueError(f"label_names has {len(names)} entries but the model returned {raw.shape[1]} columns.")
+            result = pd.DataFrame(raw, index=index, columns=names)
+            result.insert(0, "prediction", pd.Series([names[i] for i in raw.argmax(axis=1)], index=index))
+            return result
         if raw and isinstance(raw[0], list):
             labels = [max(preds, key=lambda p: p["score"])["label"] for preds in raw]
             col_labels = [d["label"] for d in raw[0]]

@@ -24,6 +24,7 @@ except ImportError:
     _lime_available = False
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
+from shapash.model.base import TextModel
 
 
 class NlpLimeBackend(NlpBackend):
@@ -34,15 +35,21 @@ class NlpLimeBackend(NlpBackend):
 
     Parameters
     ----------
-    model : callable
-        A function ``f(texts: list[str]) -> np.ndarray`` of shape
-        ``(n_texts, n_classes)`` returning class probabilities.
-        HuggingFace pipelines require a thin wrapper — see the example below.
+    model : TextModel or callable
+        A ``TextModel`` adapter (scored through its ``predict``, like the other NLP
+        backends), or a scoring function ``f(texts: list[str]) -> np.ndarray`` of shape
+        ``(n_texts, n_classes)`` returning class probabilities, columns in the order of
+        ``label_names`` (e.g. an sklearn pipeline's ``predict_proba``). A HuggingFace
+        pipeline built with ``top_k=None`` (or ``return_all_scores=True``) is also
+        accepted as-is, but then ``label_names`` is required so the scores can be
+        matched to columns by label.
     preprocessing : None
         Unused; accepted for interface compatibility with ``BaseBackend``.
     label_names : list[str] or None
-        Class names in the same order as the model output columns.
-        Forwarded to ``LimeTextExplainer`` as ``class_names``.
+        Class names in the same order as the model output columns. Defaults to
+        ``model.label_names`` for a ``TextModel``. Forwarded to ``LimeTextExplainer``
+        as ``class_names``. When unknown, every output column is still explained,
+        named by position.
     mask_string : str or None
         Token used to replace masked words when ``bow=False``.  Mirrors the
         ``masker`` parameter of ``NlpShapBackend``.  Defaults to
@@ -62,22 +69,40 @@ class NlpLimeBackend(NlpBackend):
         If neither ``labels`` nor ``top_labels`` is provided, ``labels`` is
         automatically set to ``range(len(label_names))``.
 
-    Example
-    -------
-    >>> import numpy as np
-    >>> from transformers import pipeline
-    >>> pipe = pipeline(
-    ...     "text-classification",
-    ...     model="distilbert-base-uncased-finetuned-sst-2-english",
-    ...     return_all_scores=True,
-    ... )
-    >>> def classifier_fn(texts):
-    ...     return np.array([[s["score"] for s in row] for row in pipe(texts)])
+    Examples
+    --------
+    With a ``TextModel`` adapter — the same object ``NlpShapBackend`` and
+    ``NlpCaptumLigBackend`` take; ``label_names`` comes from the model:
+
+    >>> from shapash.model.hf import HFClassifierModel
+    >>> model = HFClassifierModel.from_pretrained("bhadresh-savani/distilbert-base-uncased-emotion")
+    >>> backend = NlpLimeBackend(model, explainer_args={"random_state": 0})
+
+    With a scikit-learn text classifier, whose ``predict_proba`` already maps a list of
+    strings to an ``(n_texts, n_classes)`` array:
+
+    >>> from sklearn.feature_extraction.text import TfidfVectorizer
+    >>> from sklearn.linear_model import LogisticRegression
+    >>> from sklearn.pipeline import make_pipeline
+    >>> clf = make_pipeline(TfidfVectorizer(), LogisticRegression()).fit(train_texts, train_labels)
     >>> backend = NlpLimeBackend(
-    ...     classifier_fn,
-    ...     label_names=["NEGATIVE", "POSITIVE"],
+    ...     clf.predict_proba,
+    ...     label_names=list(clf.classes_),
     ...     explainer_compute_args={"num_features": 15, "num_samples": 3000},
     ... )
+
+    With a HuggingFace pipeline, which must return every class score:
+
+    >>> from transformers import pipeline
+    >>> pipe = pipeline("text-classification", model="...", top_k=None)
+    >>> backend = NlpLimeBackend(pipe, label_names=["NEGATIVE", "POSITIVE"])
+
+    Then hand the backend to ``NlpExplainer`` along with the same model (the ``TextModel`` itself
+    when you have one — that keeps the What-if Lab available):
+
+    >>> from shapash.explainer.nlp_explainer import NlpExplainer
+    >>> xpl = NlpExplainer(model, backend=backend)
+    >>> explanation = xpl.explain(texts)
     """
 
     name = "nlp_lime"
@@ -111,6 +136,12 @@ class NlpLimeBackend(NlpBackend):
         if not _lime_available:
             raise ImportError("lime is required for NlpLimeBackend — pip install lime")
 
+        # LIME only needs probabilities, so a TextModel is scored through ``predict`` — no capability
+        # beyond the base contract, which is why ``requires_model_capabilities`` stays empty.
+        if isinstance(model, TextModel):
+            if label_names is None:
+                label_names = model.label_names
+            model = model.predict
         super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
         self.mask_string = mask_string
 
@@ -177,10 +208,12 @@ class NlpLimeBackend(NlpBackend):
             vocabulary words per sample.
         """
         texts = list(x)
-        n_classes = len(self._classes)
+        # Without label names, ask the model for its output width: LIME's own default (``labels=(1,)``)
+        # would explain class 1 only and leave every other column silently zero.
+        n_classes = len(self._classes) or (self._classifier_fn(texts[:1]).shape[1] if texts else 0)
 
         compute_args = dict(self.explainer_compute_args)
-        if "labels" not in compute_args and "top_labels" not in compute_args and n_classes:
+        if "labels" not in compute_args and "top_labels" not in compute_args:
             compute_args["labels"] = list(range(n_classes))
 
         contributions: list[np.ndarray] = []
@@ -193,17 +226,17 @@ class NlpLimeBackend(NlpBackend):
             indexed_string = exp.domain_mapper.indexed_string
             vocab: list[str] = list(indexed_string.inverse_vocab)
             n_words = len(vocab)
-            effective_n_classes = n_classes or len(exp.local_exp)
 
-            # Dense weight matrix — same shape contract as NlpShapBackend values.
-            weight_matrix = np.zeros((n_words, effective_n_classes), dtype=float)
-            for label_idx in range(effective_n_classes):
+            # Dense weight matrix — same shape contract as NlpShapBackend values. Classes LIME did not
+            # explain (outside ``top_labels``) stay zero.
+            weight_matrix = np.zeros((n_words, n_classes), dtype=float)
+            for label_idx in range(n_classes):
                 if label_idx in exp.local_exp:
                     for word_id, weight in exp.local_exp[label_idx]:
                         weight_matrix[word_id, label_idx] = weight
 
             contributions.append(weight_matrix)
-            base_values_list.append([exp.intercept.get(i, 0.0) for i in range(effective_n_classes)])
+            base_values_list.append([exp.intercept.get(i, 0.0) for i in range(n_classes)])
             data.append(vocab)
 
         return NlpContributions(

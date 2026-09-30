@@ -237,6 +237,14 @@ class TestThreePanelLayout(unittest.TestCase):
         self.assertNotIn("left-tabs-body-editor", ids)
         self.assertNotIn("upper-right-tabs-body-counterfactual", ids)
 
+    def test_waterfall_tab_is_not_mounted_for_a_non_additive_explanation(self):
+        # Same gate as ``.plot.waterfall``: a running sum of LIME surrogate weights means nothing.
+        app = NlpWebApp(_make_explanation(backend_name="nlp_lime", is_additive=False), engine=None)
+        found: set = set()
+        _collect_ids(app.app.layout, found)
+        self.assertEqual(app._tab_groups["lower-right-tabs"], ["highlight"])
+        self.assertNotIn("waterfall-graph", found)
+
     def test_counterfactual_tab_only_with_editor(self):
         # Editor without CF: editor tab present on the left, no counterfactual tab on the right.
         app, ids = self._ids(FakeEngine(can_edit=True, can_cf=False))
