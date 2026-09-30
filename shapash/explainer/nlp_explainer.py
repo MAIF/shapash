@@ -370,7 +370,10 @@ class NlpExplainer:
                     backend_name=backend_cls.name,
                     is_additive=backend_cls.is_additive,
                     reference_kind=backend_cls.reference_kind,
-                    output_space=backend_cls.output_space,
+                    # Off the instance, not the class: a backend may choose its space per instance.
+                    output_space=self.backend.output_space,
+                    is_signed=backend_cls.is_signed,
+                    baseline_token=getattr(self.backend, "baseline_token", None),
                     model_id=getattr(self._text_model, "checkpoint", None),
                     architecture=getattr(self._text_model, "architecture", None),
                 )
@@ -903,7 +906,9 @@ class NlpExplainer:
         The cached explanation is a function of the texts **and** of everything that scores them,
         so all of it belongs in the key: the model's own identity declaration
         (:attr:`~shapash.model.base.TextModel.model_id` — checkpoint, pooling, normalization, head
-        weights), the backend's registered ``name``, its explainer settings, and ``label_names`` (which
+        weights), the backend's registered ``name``, its explainer settings, the explanation space and
+        baseline token it reports (both constructor choices, not class constants — a probability-space
+        and a logit-space ``nlp_shap`` share every other part of the key), and ``label_names`` (which
         fixes the column order of ``y_prob``).
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
@@ -921,7 +926,9 @@ class NlpExplainer:
             # Sorted repr, so two logically identical configs written in a different order agree.
             args = sorted(getattr(backend, "explainer_args", {}).items())
             compute_args = sorted(getattr(backend, "explainer_compute_args", {}).items())
-            backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}"
+            space = getattr(backend, "output_space", None)
+            baseline = getattr(backend, "baseline_token", None)
+            backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}"
         return hash_corpus(text_list, f"{model_id}|{backend_id}|{self.label_names!r}")
 
     def _require_text_model(self) -> TextModel:

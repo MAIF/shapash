@@ -40,6 +40,7 @@ from shapash.model.base import (
     SupportsCaptumIG,
     SupportsEmbeddings,
     SupportsGradients,
+    SupportsLogits,
     SupportsTokenization,
     TextModel,
 )
@@ -135,7 +136,9 @@ def _pool_hidden(hidden: Any, attention_mask: Any, pool: Any) -> Any:
     return (hidden * mask).sum(1) / mask.sum(1)
 
 
-class EncoderClassifierModel(TextModel, SupportsTokenization, SupportsEmbeddings, SupportsGradients, SupportsCaptumIG):
+class EncoderClassifierModel(
+    TextModel, SupportsTokenization, SupportsEmbeddings, SupportsGradients, SupportsCaptumIG, SupportsLogits
+):
     """Full-capability text adapter over any *encoder + classification head* backbone.
 
     Implements prediction, tokenization, the input-embedding table, sentence embeddings in any
@@ -407,6 +410,11 @@ class EncoderClassifierModel(TextModel, SupportsTokenization, SupportsEmbeddings
         """Return ``(n_texts, n_classes)`` softmax probabilities in class-index order."""
         torch = import_optional_module("torch", extra=_NLP_EXTRA)
         out = [torch.softmax(output.logits, dim=-1).cpu().numpy() for _, output in self._batches(list(texts))]
+        return np.vstack(out)
+
+    def predict_logits(self, texts: list[str]) -> np.ndarray:
+        """Return ``(n_texts, n_classes)`` raw pre-softmax logits, columns in :meth:`predict` order."""
+        out = [output.logits.float().cpu().numpy() for _, output in self._batches(list(texts))]
         return np.vstack(out)
 
     def _resolve_pipeline_device(self):
@@ -686,14 +694,35 @@ class EncoderClassifierModel(TextModel, SupportsTokenization, SupportsEmbeddings
         tokens = self.tokenizer.convert_ids_to_tokens(input_ids[0].tolist())
         return input_ids, attention_mask, tokens
 
+    def _baseline_token_id(self) -> int:
+        """The id substituted for content tokens in :meth:`reference_ids`: mask, else pad, else unk, else 0.
+
+        ``mask`` comes first because it is what SHAP's ``Text`` masker substitutes (it takes the
+        tokenizer's ``mask_token``), so LIG and SHAP measure against the same "word absent" input.
+        Aligning on it raised SHAP<->LIG rank agreement from 0.46 to 0.57 on DistilBERT
+        (``docs/architecture/explanation-space.md`` §10.4). Explicit ``None`` checks, not ``or``: id
+        ``0`` is a legitimate token id (BERT's ``[PAD]``, RoBERTa's ``<s>``).
+        """
+        for candidate in (
+            self.tokenizer.mask_token_id,
+            self.tokenizer.pad_token_id,
+            self.tokenizer.unk_token_id,
+        ):
+            if candidate is not None:
+                return int(candidate)
+        return 0
+
+    @property
+    def baseline_token(self) -> str | None:
+        """The token string :meth:`reference_ids` substitutes (e.g. ``"[MASK]"``)."""
+        return self.tokenizer.convert_ids_to_tokens(self._baseline_token_id())
+
     def reference_ids(self, input_ids):
-        """Return baseline ids: content tokens replaced by the pad/mask reference, special tokens kept."""
+        """Return baseline ids: content tokens replaced by :attr:`baseline_token`, special tokens kept."""
         torch = import_optional_module("torch", extra=_NLP_EXTRA)
         ids = input_ids[0].tolist()
         special_mask = self.tokenizer.get_special_tokens_mask(ids, already_has_special_tokens=True)
-        ref_id = self.tokenizer.pad_token_id
-        if ref_id is None:
-            ref_id = self.tokenizer.mask_token_id or self.tokenizer.unk_token_id or 0
+        ref_id = self._baseline_token_id()
         ref = [tid if is_special else ref_id for tid, is_special in zip(ids, special_mask, strict=True)]
         return torch.tensor([ref], device=input_ids.device)
 

@@ -176,7 +176,7 @@ class NlpWebApp:
     info : dict[str, str], optional
         Extra ``label -> value`` facts shown in the header's "ⓘ" popover, layered on top of what
         ``explanation`` already carries (``model_id``, ``architecture`` — each omitted when the
-        value is ``None`` — plus ``n_samples`` and ``n_classes``/``backend_name``,
+        value is ``None`` — plus ``n_samples`` and ``n_classes``/``backend_name``/``output_space``,
         always shown). A key already filled in from ``explanation`` is overridden by *info*; any
         other key is appended after — except ``"Train samples"``, which is placed right after "Test
         samples" since the two are naturally read together. ``NlpExplainer.run_app`` uses this key to
@@ -222,6 +222,7 @@ class NlpWebApp:
             self._info["Train samples"] = info["Train samples"]
         self._info["Number of classes"] = str(explanation.n_classes)
         self._info["Explainer backend"] = explanation.backend_name
+        self._info["Explanation space"] = "logit" if explanation.output_space == "logit" else "probability"
         self._info.update(info or {})
 
         self.app = dash.Dash(

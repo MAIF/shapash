@@ -51,6 +51,13 @@ class TestBackendContractAttributes(unittest.TestCase):
         self.assertEqual(NlpLimeBackend.output_space, "probability")
         self.assertEqual(NlpLimeBackend.requires_model_capabilities, ())
 
+    def test_every_backend_so_far_is_signed_with_no_class_level_baseline(self):
+        # ``baseline_token`` is an instance fact (it depends on the model's tokenizer / masker).
+        for backend_cls in (NlpShapBackend, NlpLimeBackend):
+            with self.subTest(backend=backend_cls.name):
+                self.assertTrue(backend_cls.is_signed)
+                self.assertIsNone(backend_cls.baseline_token)
+
 
 class _PredictOnlyModel(TextModel):
     def predict(self, texts):

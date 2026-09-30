@@ -105,6 +105,8 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
         self.assertEqual(loaded.is_additive, expl.is_additive)
         self.assertEqual(loaded.reference_kind, expl.reference_kind)
         self.assertEqual(loaded.output_space, expl.output_space)
+        self.assertEqual(loaded.is_signed, expl.is_signed)
+        self.assertEqual(loaded.baseline_token, expl.baseline_token)
         self.assertEqual(loaded.label_names, expl.label_names)
         self.assertEqual(loaded.folds_case, expl.folds_case)
 
@@ -168,6 +170,43 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
 
         self.assertEqual(loaded_shap.output_space, "probability")
         self.assertEqual(loaded_lig.output_space, "logit")
+
+    def test_semantics_fields_round_trip(self):
+        expl = replace(
+            _make_explanation(values_ndim=2, with_base=True, with_true=False, with_prob=False),
+            output_space="logit",
+            is_signed=False,
+            baseline_token="[MASK]",
+        )
+        path = self.tmp_path / "semantics.zip"
+        expl.save(path)
+        with zipfile.ZipFile(path) as zf:
+            meta = json.loads(zf.read("meta.json"))
+        self.assertEqual((meta["is_signed"], meta["baseline_token"]), (False, "[MASK]"))
+        loaded = NlpExplanation.load(path)
+        self.assertEqual((loaded.output_space, loaded.is_signed, loaded.baseline_token), ("logit", False, "[MASK]"))
+
+    def test_legacy_file_without_semantics_fields_reads_as_signed_with_unknown_baseline(self):
+        expl = replace(
+            _make_explanation(values_ndim=2, with_base=True, with_true=False, with_prob=False),
+            is_signed=False,
+            baseline_token="[PAD]",
+        )
+        path = self.tmp_path / "pre_semantics.zip"
+        expl.save(path)
+        with zipfile.ZipFile(path) as zin:
+            meta = json.loads(zin.read("meta.json"))
+            del meta["is_signed"], meta["baseline_token"]
+            members = {item.filename: zin.read(item.filename) for item in zin.infolist()}
+        members["meta.json"] = json.dumps(meta).encode()
+        legacy_path = self.tmp_path / "pre_semantics_legacy.zip"
+        with zipfile.ZipFile(legacy_path, "w") as zout:
+            for name, data in members.items():
+                zout.writestr(name, data)
+
+        loaded = NlpExplanation.load(legacy_path)
+        self.assertTrue(loaded.is_signed)
+        self.assertIsNone(loaded.baseline_token)
 
 
 class TestCorpusIdentity(unittest.TestCase):

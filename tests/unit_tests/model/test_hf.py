@@ -15,6 +15,7 @@ pytestmark = pytest.mark.nlp
 
 from torch import nn  # noqa: E402
 
+from shapash.model.base import SupportsLogits, has_capabilities  # noqa: E402
 from shapash.model.hf import HFClassifierModel, HFPipelineModel  # noqa: E402
 
 
@@ -348,3 +349,55 @@ class TestWordAlignment(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _ReferenceTokenizer:
+    """Tokenizer stub exposing only what ``reference_ids`` / ``baseline_token`` read."""
+
+    _VOCAB = {0: "[PAD]", 1: "[CLS]", 2: "[SEP]", 3: "[MASK]", 4: "[UNK]"}
+
+    def __init__(self, mask=3, pad=0, unk=4):
+        self.mask_token_id, self.pad_token_id, self.unk_token_id = mask, pad, unk
+
+    def convert_ids_to_tokens(self, ids):
+        return self._VOCAB.get(ids, f"w{ids}") if isinstance(ids, int) else [self._VOCAB.get(i, f"w{i}") for i in ids]
+
+    def get_special_tokens_mask(self, ids, already_has_special_tokens=True):
+        return [int(i in (1, 2)) for i in ids]
+
+
+class TestBaselineToken(unittest.TestCase):
+    """The LIG baseline is SHAP's masker token (``[MASK]``) whenever the tokenizer has one."""
+
+    def _model(self, **tokenizer_ids):
+        return HFClassifierModel(_TinyClassifier(), _ReferenceTokenizer(**tokenizer_ids), label_names=["neg", "pos"])
+
+    def test_mask_is_preferred_over_pad(self):
+        model = self._model()
+        self.assertEqual(model.baseline_token, "[MASK]")
+        ref = model.reference_ids(torch.tensor([[1, 7, 8, 2]]))
+        self.assertEqual(ref.tolist(), [[1, 3, 3, 2]])  # specials kept, content -> [MASK]
+
+    def test_falls_back_to_pad_then_unk(self):
+        self.assertEqual(self._model(mask=None).baseline_token, "[PAD]")
+        self.assertEqual(self._model(mask=None, pad=None).baseline_token, "[UNK]")
+        self.assertEqual(self._model(mask=None, pad=None, unk=None).baseline_token, "[PAD]")  # id 0
+
+    def test_id_zero_is_a_valid_reference(self):
+        # ``mask_token_id or ...`` would skip a legitimate id 0.
+        model = self._model(mask=None, pad=0)
+        self.assertEqual(model.reference_ids(torch.tensor([[1, 7, 2]])).tolist(), [[1, 0, 2]])
+
+
+class TestPredictLogits(unittest.TestCase):
+    def test_softmax_of_logits_is_predict(self):
+        model = HFClassifierModel(_TinyClassifier(), _FakeTokenizer(), label_names=["neg", "pos"], batch_size=2)
+        texts = ["good movie", "bad", "fine film overall"]
+        logits = model.predict_logits(texts)
+        self.assertEqual(logits.shape, (3, 2))
+        softmax = np.exp(logits) / np.exp(logits).sum(axis=1, keepdims=True)
+        np.testing.assert_allclose(softmax, model.predict(texts), rtol=1e-5)
+
+    def test_classifier_model_advertises_the_capability(self):
+        model = HFClassifierModel(_TinyClassifier(), _FakeTokenizer(), label_names=["neg", "pos"])
+        self.assertTrue(has_capabilities(model, SupportsLogits))

@@ -123,6 +123,10 @@ class NlpLimeBackend(NlpBackend):
                 mask_string=self.mask_string,
                 **self.explainer_args,
             )
+        # ``bow=True`` (LIME's default) removes words outright — no substitute token at all.
+        if not getattr(self.explainer, "bow", True):
+            # ``mask_string=None`` makes LIME fall back to its own "UNKWORDZ".
+            self.baseline_token = getattr(self.explainer, "mask_string", None) or "UNKWORDZ"
 
     def _classifier_fn(self, texts: list[str]) -> np.ndarray:
         """Wrap self.model to guarantee a float numpy array of shape (n, n_classes).

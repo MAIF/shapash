@@ -194,7 +194,12 @@ class NlpCaptumLigBackend(NlpBackend):
         Unused; accepted for interface parity with the other NLP backends.
     explainer_compute_args : dict, optional
         Keyword arguments forwarded to ``LayerIntegratedGradients.attribute`` for every sample and
-        class (e.g. ``{"n_steps": 50, "internal_batch_size": 16}``). ``n_steps`` defaults to 50.
+        class (e.g. ``{"n_steps": 50, "internal_batch_size": 16}``). ``n_steps`` defaults to 100: the
+        ``[MASK]`` reference (see :attr:`baseline_token`) makes the integrand less smooth than ``[PAD]``
+        did: on 100 DistilBERT-emotion texts (predicted class) the worst completeness error was 0.84
+        logits at 50 steps and 0.31 at 100 (``[PAD]``: 0.11 / 0.06). The step count barely moves the
+        word *ranking* — only how exactly the values sum to the logit gap —
+        ``docs/architecture/explanation-space.md`` §10.4 and §10.7.
     show_progress : bool, default False
         When True, wrap the per-sample attribution loop in a ``tqdm`` progress bar (LIG runs one
         integration per class per sample, so a batch is slow). Best-effort: if ``tqdm`` is not
@@ -207,7 +212,7 @@ class NlpCaptumLigBackend(NlpBackend):
     """
 
     name = "nlp_captum_lig"
-    # A constructed point from the tokenizer (model.reference_ids() -> pad/mask ids),
+    # A constructed point from the tokenizer (model.reference_ids() -> mask/pad ids),
     # not learned from data.
     reference_kind = "point"
     # Integrated Gradients satisfies the completeness axiom (Sundararajan, Taly & Yan,
@@ -231,6 +236,8 @@ class NlpCaptumLigBackend(NlpBackend):
     ) -> None:
         super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
         self.show_progress = show_progress
+        # Same token SHAP's Text masker substitutes (the tokenizer's mask token) whenever one exists.
+        self.baseline_token = model.baseline_token
         captum_attr = import_optional_module("captum.attr", extra=_NLP_EXTRA)
         self.explainer = captum_attr.LayerIntegratedGradients(model.logits, model.embedding_layer)
 
@@ -249,7 +256,7 @@ class NlpCaptumLigBackend(NlpBackend):
             token strings per sample.
         """
         model: SupportsCaptumIG = self.model
-        attribute_args = {"n_steps": 50, **self.explainer_compute_args}
+        attribute_args = {"n_steps": 100, **self.explainer_compute_args}
 
         contributions: list[np.ndarray] = []
         base_values: list[np.ndarray] = []

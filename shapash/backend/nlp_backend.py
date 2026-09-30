@@ -69,8 +69,8 @@ class NlpBackend(Backend):
     Owns the ``__init__`` skeleton shared by all text backends (including the
     ``requires_model_capabilities`` check) and the ``get_local_contributions``
     implementation.  Concrete subclasses must implement ``run_explainer`` and
-    return an ``NlpContributions``, and must declare the three class
-    attributes below.
+    return an ``NlpContributions``, and must declare ``reference_kind``,
+    ``is_additive`` and ``output_space`` below.
 
     Class Attributes
     -----------------
@@ -91,13 +91,27 @@ class NlpBackend(Backend):
         grouping and waterfall/force-style charts; ``False`` for LIME, whose local
         surrogate coefficients carry no such guarantee.
     output_space : {"probability", "logit"}
-        Which model output the contributions explain — read off the backend at
+        Which model output the contributions explain — read off the backend *instance* at
         ``explain()`` time and recorded on :class:`~shapash.explainer.nlp_explanation.NlpExplanation`
         so a saved artifact says which. ``"probability"``: the explained quantity is a
         (softmax) probability, which forces per-token cross-class cancellation. ``"logit"``: the
         explained quantity is the model's raw pre-softmax output, which does not cancel. Not an
         affine rescaling of one another; a caller comparing two backends is comparing numbers on
-        different scales unless both report the same space.
+        different scales unless both report the same space. The class attribute is the default; a
+        backend whose space is a constructor choice (``NlpShapBackend``) overrides it per instance,
+        which is why it also enters ``NlpExplainer``'s cache key.
+    is_signed : bool
+        Whether a contribution's sign carries meaning (pushes toward / away from the class). ``True``
+        for every attribution method so far; ``False`` for a magnitude-only method such as unsigned
+        saliency, whose values the diverging colour scales and "pushes toward" wording would misread.
+        Defaults to ``True``.
+    baseline_token : str or None
+        Instance attribute: the token string a perturbation/path method substitutes for "word absent"
+        (``"[MASK]"``, ``"[PAD]"``, ``"..."``), or ``None`` when the method has no single one (LIME
+        removes words) or it is unknown. The baseline input — every content token replaced by it — is
+        what ``base_values`` is the model's output on, for SHAP (the fully masked text) and LIG (the
+        integration start) alike. Two backends measured against different baselines answer different
+        questions even in the same ``output_space``, so it is recorded and keyed too.
     requires_model_capabilities : tuple[type, ...]
         Capability ABCs (from :mod:`shapash.model.base`) the bound model must satisfy,
         checked once here so a new backend declares its needs instead of failing at
@@ -125,7 +139,10 @@ class NlpBackend(Backend):
 
     reference_kind: ClassVar[Literal["distribution", "statistics", "point", "none"]]
     is_additive: ClassVar[bool]
-    output_space: ClassVar[Literal["probability", "logit"]]
+    # Not a ClassVar: the class value is the default, an instance may override it (see above).
+    output_space: Literal["probability", "logit"]
+    is_signed: ClassVar[bool] = True
+    baseline_token: str | None = None
     requires_model_capabilities: ClassVar[tuple[type, ...]] = ()
 
     def __init__(

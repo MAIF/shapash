@@ -309,6 +309,15 @@ class NlpExplanation:
         different spaces are not directly comparable: notably, only ``"probability"``
         forces the per-token cross-class cancellation that :meth:`word_importance`'s
         ``label_idx=None`` collapse relies on (see its Notes section).
+    is_signed : bool
+        Whether a contribution's sign carries meaning — read off the backend at ``explain()``
+        time (see ``NlpBackend.is_signed``). ``False`` for a magnitude-only method, whose values
+        must not be read as pushing toward or away from a class. ``True`` on files saved before
+        this field existed: every backend up to then was signed.
+    baseline_token : str or None
+        The token the backend substituted for an absent word (``"[MASK]"``, ``"[PAD]"``, ``"..."``)
+        — read off the backend instance at ``explain()`` time. ``None`` when the method has no
+        single substitute (LIME removing words) or when the file predates this field.
     """
 
     texts: pd.Series
@@ -328,6 +337,8 @@ class NlpExplanation:
     # NlpExplanation(...) call site (library and test) keeps working unchanged.
     model_id: str | None = None
     architecture: str | None = None
+    is_signed: bool = True
+    baseline_token: str | None = None
 
     # ClassVar, not a field: it is a shared constant, not per-explanation data, so it stays out
     # of ``fields()`` — and therefore out of ``__init__``, ``replace()`` and ``save()``.
@@ -397,6 +408,8 @@ class NlpExplanation:
             "is_additive",
             "reference_kind",
             "output_space",
+            "is_signed",
+            "baseline_token",
             "model_id",
             "architecture",
         }
@@ -1001,6 +1014,8 @@ class NlpExplanation:
             "is_additive": self.is_additive,
             "reference_kind": self.reference_kind,
             "output_space": self.output_space,
+            "is_signed": self.is_signed,
+            "baseline_token": self.baseline_token,
             "label_names": self.label_names,
             "folds_case": self.folds_case,
             "model_id": self.model_id,
@@ -1064,6 +1079,10 @@ class NlpExplanation:
             # explained raw logits, everything else probabilities.
             output_space=meta.get("output_space")
             or ("logit" if meta["backend_name"] == "nlp_captum_lig" else "probability"),
+            # Absent on a file saved before these fields existed: every backend was signed then, and
+            # the baseline token went unrecorded (None reads as "unknown").
+            is_signed=meta.get("is_signed", True),
+            baseline_token=meta.get("baseline_token"),
             # Absent (None) on a file saved before these fields existed, or when the model that
             # produced it exposed no such identity — either way a webapp reading it just omits
             # the fact rather than showing a stale placeholder.

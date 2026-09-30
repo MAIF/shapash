@@ -64,6 +64,22 @@ class TestNlpLimeBackend(unittest.TestCase):
         )
         self.assertFalse(backend.explainer.bow)
 
+    def test_baseline_token_is_none_when_words_are_removed(self):
+        # bow=True (LIME's default) drops words outright: there is no substitute token.
+        self.assertIsNone(self.backend.baseline_token)
+
+    def test_baseline_token_is_the_mask_string_when_words_are_replaced(self):
+        for mask_string, expected in ((None, "UNKWORDZ"), ("[MASK]", "[MASK]")):
+            with self.subTest(mask_string=mask_string):
+                backend = NlpLimeBackend(
+                    _fake_classifier,
+                    label_names=LABEL_NAMES,
+                    mask_string=mask_string,
+                    explainer_args={"bow": False},
+                    explainer_compute_args=_LIME_COMPUTE_ARGS,
+                )
+                self.assertEqual(backend.baseline_token, expected)
+
     # --- _classifier_fn ---
 
     def test_classifier_fn_converts_list_to_array(self):

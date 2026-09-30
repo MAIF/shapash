@@ -490,6 +490,27 @@ class TestExplainCacheKey(unittest.TestCase):
         b = _explainer(label_names=list(reversed(LABEL_NAMES)))
         self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
 
+    def test_output_space_is_part_of_the_key(self):
+        # A per-instance choice (NlpShapBackend(output_space=...)), not visible in name or args.
+        probability, logit = _MarkerBackend(), _MarkerBackend()
+        logit.output_space = "logit"
+        a, b = _explainer(backend=probability), _explainer(backend=logit)
+        self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
+
+    def test_baseline_token_is_part_of_the_key(self):
+        mask, pad = _MarkerBackend(), _MarkerBackend()
+        mask.baseline_token, pad.baseline_token = "[MASK]", "[PAD]"
+        a, b = _explainer(backend=mask), _explainer(backend=pad)
+        self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
+
+    def test_explain_records_the_backend_instance_semantics(self):
+        backend = _MarkerBackend()
+        backend.output_space, backend.baseline_token = "logit", "[MASK]"
+        explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS)
+        self.assertEqual(explanation.output_space, "logit")
+        self.assertEqual(explanation.baseline_token, "[MASK]")
+        self.assertTrue(explanation.is_signed)
+
     def test_key_is_collision_safe_across_text_boundaries(self):
         # Without a separator between texts these two corpora hash identically.
         xpl = _explainer()

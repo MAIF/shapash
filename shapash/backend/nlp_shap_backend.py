@@ -24,11 +24,13 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from typing import Literal, cast
 
 import numpy as np
 import shap
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
+from shapash.model.base import SupportsLogits, TextModel, has_capabilities
 
 # SHAP's masker reports special tokens as blank segments on its offset-mapping path; their
 # attribution is folded into the baseline during word aggregation.
@@ -88,6 +90,38 @@ def _masker_special_tokens(explainer) -> frozenset[str] | None:
     tokenizer = getattr(getattr(explainer, "masker", None), "tokenizer", None)
     specials = getattr(tokenizer, "all_special_tokens", None)
     return frozenset(specials) if specials else None
+
+
+def _resolve_text_model(
+    model: TextModel, masker, output_space: Literal["probability", "logit"]
+) -> tuple[object, object]:
+    """Pick the scoring callable and masker a ``TextModel`` offers for ``output_space``.
+
+    Probability space is the model's own SHAP surface (``shap_callable`` + ``shap_masker``: a
+    pipeline SHAP infers a ``Text`` masker from, or a bare ``predict`` with an explicit one). Logit
+    space wraps :meth:`~shapash.model.base.SupportsLogits.predict_logits`, a bare function, so it
+    always needs an explicit masker — built over the model's tokenizer, which is exactly the masker
+    SHAP would infer from the pipeline, so the two spaces mask identically.
+    """
+    if output_space == "probability":
+        return model.shap_callable, masker if masker is not None else model.shap_masker
+    if not has_capabilities(model, SupportsLogits):
+        raise TypeError(
+            f"output_space='logit' needs a model implementing SupportsLogits; {type(model).__name__} can "
+            "only return probabilities. Use output_space='probability', or an adapter with logit access "
+            "(e.g. HFClassifierModel)."
+        )
+    if masker is None:
+        masker = model.shap_masker
+    if masker is None:
+        tokenizer = getattr(model, "tokenizer", None)
+        if tokenizer is None:
+            raise TypeError(
+                f"output_space='logit' needs a tokenizer to mask text with, and {type(model).__name__} "
+                "exposes none; pass masker= explicitly."
+            )
+        masker = shap.maskers.Text(tokenizer)
+    return cast(SupportsLogits, model).predict_logits, masker
 
 
 def _aggregate_subwords(
@@ -160,9 +194,11 @@ class NlpShapBackend(NlpBackend):
 
     Parameters
     ----------
-    model : callable
-        A text pipeline callable accepted by ``shap.Explainer`` (e.g. a
-        ``transformers.pipeline`` with ``return_all_scores=True``).
+    model : TextModel or callable
+        A :class:`~shapash.model.base.TextModel`, whose scoring surface is chosen by
+        ``output_space``; or a text callable accepted by ``shap.Explainer`` (e.g. a
+        ``transformers.pipeline`` with ``return_all_scores=True``), which is taken to return
+        probabilities.
     preprocessing : None
         Unused; accepted for interface compatibility with ``BaseBackend``.
     label_names : list[str] or None
@@ -199,6 +235,20 @@ class NlpShapBackend(NlpBackend):
         passes. Batching lets them pad into one pass — ~1.9x on distilbert-imdb/GPU — for a
         numerically identical explanation (max|Δ| 1.1e-07), since the explainer's tree traversal
         is untouched.
+    output_space : {"probability", "logit"}, default "probability"
+        Which model output to explain. ``"logit"`` explains the raw pre-softmax scores, needs a
+        ``TextModel`` implementing :class:`~shapash.model.base.SupportsLogits`, and is incompatible
+        with ``explainer_args`` (which bring their own model). Same runtime and masking; the
+        contributions stop cancelling across classes and stop saturating near 0/1, sum exactly to
+        ``logits(x) - base``, and share their scale with ``nlp_captum_lig``
+        (``docs/architecture/explanation-space.md`` §10).
+
+    Raises
+    ------
+    TypeError
+        If ``output_space="logit"`` and ``model`` cannot return logits.
+    ValueError
+        If ``output_space`` is not a known space, or ``"logit"`` is combined with ``explainer_args``.
     """
 
     name = "nlp_shap"
@@ -209,11 +259,11 @@ class NlpShapBackend(NlpBackend):
     # Shapley values satisfy the efficiency axiom by construction, and stay additive
     # even under the Partition/Owen path SHAP silently takes for text. Owen values satisfy efficiency too.
     is_additive = True
-    # ``shap_callable`` resolves to a ``text-classification`` pipeline (softmax output), not
-    # ``model.logits``. This is why per-token attributions cancel across classes: the explained
+    # The default: ``shap_callable`` resolves to a ``text-classification`` pipeline (softmax output),
+    # not ``model.logits``. This is why per-token attributions cancel across classes: the explained
     # quantity sums to 1 for every masked variant, which is a constant-payoff game whose Shapley
-    # values are all zero.
-    output_space = "probability"
+    # values are all zero. ``output_space="logit"`` overrides it per instance.
+    output_space: Literal["probability", "logit"] = "probability"
     requires_model_capabilities = ()  # a plain scoring callable is enough
 
     def __init__(
@@ -225,9 +275,25 @@ class NlpShapBackend(NlpBackend):
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
         batch_size: int | None = 64,
+        output_space: Literal["probability", "logit"] = "probability",
     ) -> None:
+        if output_space not in ("probability", "logit"):
+            raise ValueError(f"output_space must be 'probability' or 'logit', got {output_space!r}.")
+        if output_space == "logit" and explainer_args:
+            raise ValueError(
+                "output_space='logit' cannot be combined with explainer_args: those build the explainer "
+                "around their own model, whose output space this backend cannot check."
+            )
+        if isinstance(model, TextModel):
+            model, masker = _resolve_text_model(model, masker, output_space)
+        elif output_space == "logit":
+            raise TypeError(
+                "output_space='logit' needs a TextModel implementing SupportsLogits; a bare callable's "
+                "output space cannot be checked."
+            )
         super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
         self.masker = masker
+        self.output_space = output_space
 
         # ``_batch_size`` is what ``transformers.Pipeline.__call__`` reads (``None`` means 1) and
         # there is no public setter, so a release that renames it makes this a silent no-op rather
@@ -255,6 +321,9 @@ class NlpShapBackend(NlpBackend):
         # Resolved once: the masker's tokenizer is what decides which segments are special. ``None``
         # when no tokenizer is reachable (bare callable / ``SimpleTokenizer``) — see ``_is_special``.
         self._special_tokens = _masker_special_tokens(self.explainer)
+        # What the masker substitutes for a hidden token: the tokenizer's mask token, or "..." when
+        # it has none (SHAP's own fallback). ``None`` for a custom masker exposing no such attribute.
+        self.baseline_token = getattr(getattr(self.explainer, "masker", None), "mask_token", None)
 
     def run_explainer(self, x) -> NlpContributions:
         """Run the SHAP text explainer and return all explanation components.

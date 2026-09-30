@@ -557,6 +557,14 @@ class TestNlpWebApp(unittest.TestCase):
     def test_layout_built(self):
         self.assertIsNotNone(self.webapp.app.layout)
 
+    def test_info_reports_explanation_space(self):
+        # Right after the backend, so a reader knows whether base/contributions are probabilities or logits.
+        keys = list(self.webapp._info)
+        self.assertEqual(keys[keys.index("Explainer backend") + 1], "Explanation space")
+        self.assertEqual(self.webapp._info["Explanation space"], "probability")
+        logit_app = NlpWebApp(_make_explanation(output_space="logit"), engine=self.xpl)
+        self.assertEqual(logit_app._info["Explanation space"], "logit")
+
     def test_class_selector_options(self):
         # Class selector is now two independent dropdowns: "local-class-selector" (Sentence
         # Highlight / Waterfall) and "global-class-selector" (Word Importance / Embeddings).

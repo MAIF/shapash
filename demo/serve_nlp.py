@@ -81,8 +81,12 @@ see the ``[nlp]`` extra):
 * ``--attribution {shap,lig}`` — sentence-highlight method: ``shap`` (KernelSHAP, default) or ``lig``
   (Captum ``LayerIntegratedGradients``). The two are cached in **separate** subdirectories, so you can
   flip between them freely without ``--recompute``.
+* ``--output-space {probability,logit}`` — the space the contributions live in. ``shap`` explains the
+  softmax probabilities by default and can explain the raw logits instead; ``lig`` is always ``logit``
+  (passing ``probability`` with it is rejected). The space is part of the cache key, so switching needs
+  no ``--recompute`` either. The run-info popover shows which one is displayed.
 * ``--lig-batch-size`` — only used by ``lig``: Captum's ``internal_batch_size``, chunking each sample's
-  50-step integration instead of running it through the model in one shot. Lower it (e.g. ``2`` or
+  100-step integration instead of running it through the model in one shot. Lower it (e.g. ``2`` or
   ``1``) if you hit a CUDA out-of-memory error, especially on memory-hungry architectures like DeBERTa.
 
 ``lig`` is also the method most sensitive to *truncation* actually being configured — every HF
@@ -220,6 +224,7 @@ Usage
     python demo/serve_nlp.py --url-base-path /shapash-nlp-explainer/
     python demo/serve_nlp.py --recompute   # ignore the cache and recompute
     python demo/serve_nlp.py --attribution lig   # Captum LayerIntegratedGradients highlights
+    python demo/serve_nlp.py --output-space logit   # SHAP on raw logits (same space as LIG)
     python demo/serve_nlp.py --model-name distilbert-base-uncased-finetuned-sst-2-english \\
         --dataset-name sst2 --dataset-split validation --text-column sentence
     # A registered custom model against a registered dataset loader (bucketed 5-star -> binary
@@ -256,7 +261,7 @@ import pandas as pd
 import torch
 from torch import nn
 
-from shapash.backend import NlpCaptumLigBackend
+from shapash.backend import NlpBackend, NlpCaptumLigBackend, NlpShapBackend
 from shapash.compute.embeddings import Embedding
 from shapash.explainer.nlp_explainer import NlpExplainer
 from shapash.model import HFClassifierModel, SentenceTransformerModel, TextModel
@@ -298,11 +303,14 @@ class ServeConfig:
     # "first n" slice can be entirely one class.
     seed: int = 0
     attribution: str = "shap"  # sentence-highlight method: "shap" | "lig" (Captum LayerIntegratedGradients)
-    # Captum's LayerIntegratedGradients expands one sample into ``n_steps`` (50) scaled copies and runs
+    # Captum's LayerIntegratedGradients expands one sample into ``n_steps`` (100) scaled copies and runs
     # them through the model as a single batch unless told otherwise — on a memory-hungry architecture
-    # (e.g. DeBERTa-v2/v3's disentangled attention) that batch of 50 can blow past a small GPU's memory.
+    # (e.g. DeBERTa-v2/v3's disentangled attention) that batch of 100 can blow past a small GPU's memory.
     # ``internal_batch_size`` makes Captum chunk that batch instead; lower it further if you still OOM.
     lig_batch_size: int = 8
+    # Explanation space: "probability" | "logit". ``None`` keeps the backend's own — probability for
+    # SHAP, logit for LIG (its only space).
+    output_space: str | None = None
     # Similar-examples reference corpus: the split neighbours are retrieved from (the model's own
     # training split) and how many rows of it to bank. Set ``n_reference=0`` to disable the "Similar
     # Examples" panel.
@@ -496,9 +504,18 @@ def parse_args(argv: list[str] | None = None) -> ServeConfig:
         type=int,
         default=defaults.lig_batch_size,
         help=(
-            "Captum internal_batch_size for --attribution lig: chunks each sample's n_steps=50 "
+            "Captum internal_batch_size for --attribution lig: chunks each sample's n_steps=100 "
             "integration batch instead of running it through the model in one shot. Lower this "
             "(e.g. 2 or 1) if LIG hits a CUDA out-of-memory error."
+        ),
+    )
+    parser.add_argument(
+        "--output-space",
+        choices=["probability", "logit"],
+        default=defaults.output_space,
+        help=(
+            "Space the contributions are explained in. Default: the backend's own (probability for "
+            "shap, logit for lig). lig only supports logit. Part of the cache key, so no --recompute."
         ),
     )
     parser.add_argument(
@@ -544,6 +561,8 @@ def parse_args(argv: list[str] | None = None) -> ServeConfig:
     # then, so the ``is_file()`` test below sees the same path the loaders will (an unexpanded ``~/...``
     # is a nonexistent relative directory, and would slip through this check).
     config = ServeConfig(**vars(args))
+    if config.attribution == "lig" and config.output_space == "probability":
+        parser.error("--attribution lig attributes raw logits only; drop --output-space or pass 'logit'.")
     if config.is_local_dataset and config.dataset_config is not None:
         # --dataset-config only means anything to the hub loader; accepting it here would look like it
         # selected something. (It isn't in the mutually exclusive group above: that pairs the two
@@ -918,15 +937,16 @@ def load_model(config: ServeConfig) -> TextModel:
     return builder(config, device) if builder is not None else _load_hf_classifier(config, device)
 
 
-def build_backend(config: ServeConfig, model: TextModel) -> NlpCaptumLigBackend | None:
-    """Return the attribution backend selected by ``--attribution``.
+def build_backend(config: ServeConfig, model: TextModel) -> NlpBackend | None:
+    """Return the attribution backend selected by ``--attribution`` and ``--output-space``.
 
-    Returns ``None`` for ``"shap"`` so ``NlpExplainer`` builds its default ``NlpShapBackend`` (which
-    needs the model's ``shap_callable`` wiring); ``"lig"`` returns an explicit ``NlpCaptumLigBackend``.
+    Returns ``None`` for probability-space ``"shap"`` so ``NlpExplainer`` builds its default
+    ``NlpShapBackend``; logit-space ``"shap"`` returns an explicit ``NlpShapBackend(output_space="logit")``
+    (needs a model implementing ``SupportsLogits``), and ``"lig"`` an ``NlpCaptumLigBackend``.
     """
     if config.attribution == "lig":
         # LIG runs one integration per class per sample — show a progress bar over the batch.
-        # internal_batch_size chunks each sample's n_steps=50 scaled-copies batch so it doesn't OOM
+        # internal_batch_size chunks each sample's n_steps=100 scaled-copies batch so it doesn't OOM
         # memory-hungry architectures (e.g. DeBERTa) on a small GPU — see ServeConfig.lig_batch_size.
         return NlpCaptumLigBackend(
             model,
@@ -934,6 +954,8 @@ def build_backend(config: ServeConfig, model: TextModel) -> NlpCaptumLigBackend 
             explainer_compute_args={"internal_batch_size": config.lig_batch_size},
             show_progress=True,
         )
+    if config.output_space == "logit":
+        return NlpShapBackend(model, label_names=model.label_names, output_space="logit")
     return None
 
 
@@ -1037,9 +1059,10 @@ def main() -> None:
     # exactly what fit's precompute branch keys on.)
 
     logger.info(
-        "attribution=%s | counterfactual=%s | can_edit=%s | can_counterfactual=%s | can_find_similar=%s"
+        "attribution=%s (%s) | counterfactual=%s | can_edit=%s | can_counterfactual=%s | can_find_similar=%s"
         " | can_detect_label_noise=%s | can_probe_labels=%s",
         config.attribution,
+        xpl.backend.output_space,
         ",".join(name for name, _ in xpl.available_cf_generators()) or "none",
         xpl.can_edit(),
         xpl.can_counterfactual(),

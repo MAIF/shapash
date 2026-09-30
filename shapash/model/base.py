@@ -12,6 +12,8 @@ component can require exactly what it needs and no more:
 * ``SupportsGradients`` — expose per-token gradients of a target-class logit.
 * ``SupportsCaptumIG`` — expose the embedding module + a logits forward pass so a layer-attribution
   method (Captum ``LayerIntegratedGradients``) can attribute through the embeddings.
+* ``SupportsLogits`` — score a list of strings in raw pre-softmax logit space, so a perturbation
+  method (SHAP) can explain logits instead of probabilities.
 
 A prediction-only model (e.g. a HuggingFace pipeline) implements only ``TextModel``; a raw
 classifier with tokenizer access implements all three. Generators check compatibility with
@@ -428,6 +430,15 @@ class SupportsCaptumIG(ABC):
         baseline is a well-formed empty-content sequence.
         """
 
+    @property
+    def baseline_token(self) -> str | None:
+        """The token string :meth:`reference_ids` substitutes for content tokens, or ``None`` if unknown.
+
+        Recorded on the explanation artifact so two backends' baselines can be compared: a method
+        measured against ``[MASK]`` and one measured against ``[PAD]`` answer different questions.
+        """
+        return None
+
     @abstractmethod
     def logits(self, input_ids: Any, attention_mask: Any) -> Any:
         """Return raw classification logits, shape ``(batch, n_classes)`` (the Captum forward func)."""
@@ -453,6 +464,20 @@ class SupportsCaptumIG(ABC):
             token-string heuristic.
         """
         return None
+
+
+class SupportsLogits(ABC):
+    """Capability: score raw text in pre-softmax logit space.
+
+    The text-level counterpart of :meth:`SupportsCaptumIG.logits` (which takes tensors): what a
+    perturbation explainer wraps when it should explain logits rather than the probabilities
+    :meth:`TextModel.predict` returns. Probability-space attributions cancel exactly across classes
+    and saturate near 0/1; logit-space ones do neither (``docs/architecture/explanation-space.md``).
+    """
+
+    @abstractmethod
+    def predict_logits(self, texts: list[str]) -> np.ndarray:
+        """Return ``(n_texts, n_classes)`` raw logits, columns in the same order as :meth:`TextModel.predict`."""
 
 
 @runtime_checkable
