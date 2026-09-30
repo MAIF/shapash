@@ -178,8 +178,8 @@ class NlpWebApp:
         ``explanation`` already carries (``model_id``, ``architecture`` — each omitted when the
         value is ``None`` — plus ``n_samples`` and ``n_classes``/``backend_name``/``output_space``,
         always shown). A key already filled in from ``explanation`` is overridden by *info*; any
-        other key is appended after — except ``"Train samples"``, which is placed right after "Test
-        samples" since the two are naturally read together. ``NlpExplainer.run_app`` uses this key to
+        other key is appended after — except ``"Dataset"``, placed right after the model rows, and
+        ``"Train samples"``, placed right after "Test samples" since the two are naturally read together. ``NlpExplainer.run_app`` uses this key to
         add it (only known post-``fit()``, so it can never live on the model-free ``explanation``) —
         see there for the full picture when going through it rather than constructing ``NlpWebApp``
         directly.
@@ -215,10 +215,13 @@ class NlpWebApp:
             self._info["Model"] = explanation.model_id
         if explanation.architecture:
             self._info["Model architecture"] = explanation.architecture
+        # "Dataset" and "Train samples" come only from *info*. Reserve their slots here (right after
+        # the model and after "Test samples"), so the update() below fills an existing key in place
+        # instead of appending it at the end like any other extra fact.
+        if info and "Dataset" in info:
+            self._info["Dataset"] = info["Dataset"]
         self._info["Test samples"] = str(explanation.n_samples)
         if info and "Train samples" in info:
-            # Reserve the slot here, right after "Test samples", so the update() below fills an
-            # existing key in place instead of appending it at the end like any other extra fact.
             self._info["Train samples"] = info["Train samples"]
         self._info["Number of classes"] = str(explanation.n_classes)
         self._info["Explainer backend"] = explanation.backend_name

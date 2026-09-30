@@ -565,6 +565,18 @@ class TestNlpWebApp(unittest.TestCase):
         logit_app = NlpWebApp(_make_explanation(output_space="logit"), engine=self.xpl)
         self.assertEqual(logit_app._info["Explanation space"], "logit")
 
+    def test_info_places_dataset_and_train_samples_in_reserved_slots(self):
+        app = NlpWebApp(
+            _make_explanation(),
+            engine=self.xpl,
+            info={"Extra": "x", "Train samples": "10", "Dataset": "dair-ai/emotion"},
+        )
+        keys = list(app._info)
+        self.assertEqual(keys.index("Dataset"), keys.index("Test samples") - 1)
+        self.assertEqual(keys.index("Train samples"), keys.index("Test samples") + 1)
+        self.assertLess(keys.index("Dataset"), keys.index("Explainer backend"))
+        self.assertEqual(keys[-1], "Extra")
+
     def test_class_selector_options(self):
         # Class selector is now two independent dropdowns: "local-class-selector" (Sentence
         # Highlight / Waterfall) and "global-class-selector" (Word Importance / Embeddings).
