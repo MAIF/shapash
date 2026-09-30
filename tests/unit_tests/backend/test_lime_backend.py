@@ -53,12 +53,21 @@ class TestLimeBackend(unittest.TestCase):
             contributions = backend_xpl.get_local_contributions(self.x_df, explain_data)
 
             assert contributions is not None
+            assert "base_values" in explain_data
             assert isinstance(contributions, (list, pd.DataFrame, np.ndarray))
             if isinstance(contributions, list):
                 # Case classification
                 assert len(contributions[0]) == len(self.x_df)
             else:
                 assert len(contributions) == len(self.x_df)
+
+            base_values = explain_data["base_values"]
+            assert isinstance(base_values, np.ndarray)
+            if backend_xpl._case == "classification":
+                assert base_values.shape[0] == len(self.x_df)
+                assert base_values.shape[1] == len(backend_xpl._classes)
+            else:
+                assert base_values.shape[0] == len(self.x_df)
 
             features_imp = backend_xpl.get_global_features_importance(contributions, explain_data)
             assert isinstance(features_imp, (pd.Series, list))
@@ -87,6 +96,7 @@ class TestLimeBackend(unittest.TestCase):
 
         assert isinstance(explain_data, dict)
         assert "contributions" in explain_data
+        assert "base_values" in explain_data
 
         contributions = explain_data["contributions"]
         assert isinstance(contributions, list)
@@ -101,3 +111,7 @@ class TestLimeBackend(unittest.TestCase):
         for class_contrib_df in local_contrib:
             assert isinstance(class_contrib_df, pd.DataFrame)
             assert class_contrib_df.shape == (len(x_multi), x_multi.shape[1])
+
+        base_values = explain_data["base_values"]
+        assert isinstance(base_values, np.ndarray)
+        assert base_values.shape == (len(x_multi), 3)

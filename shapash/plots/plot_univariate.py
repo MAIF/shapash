@@ -21,7 +21,7 @@ def plot_distribution(
     palette_name: str = "default",
     nb_cat_max: int = 7,
     nb_hue_max: int = 7,
-    cat_num_threshold: int = 200,
+    cat_num_threshold: int = 15,
     file_name=None,
     auto_open=False,
 ) -> go.Figure:
@@ -59,7 +59,7 @@ def plot_distribution(
     nb_hue_max : int, optional, default=7
         Maximum number of hue categories to display. Categories beyond this limit
         are grouped into a new 'Other' category.
-    cat_num_threshold : int, optional, default=200
+    cat_num_threshold : int, optional, default=15
         Threshold on the number of unique values used to decide whether a numeric
         series is treated as categorical or continuous.
     file_name : str, optional

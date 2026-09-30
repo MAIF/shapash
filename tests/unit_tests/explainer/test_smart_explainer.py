@@ -315,6 +315,40 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.compile(x=df[["x1", "x2"]], additional_data=df[["x3"]])
         assert len(xpl.explainer.additional_features_dict) == 1
 
+    def test_compile_7_with_explain_data_dict(self):
+        """
+        Unit test compile 7
+        checking compile method with explain_data-like dict
+        """
+        np.random.seed(1)
+        df = pd.DataFrame(range(0, 8), columns=["id"])
+        df["y"] = df["id"] % 2
+        df["x1"] = np.random.randint(1, 10, df.shape[0])
+        df["x2"] = np.random.randint(1, 4, df.shape[0])
+        df = df.set_index("id")
+
+        clf = RandomForestClassifier(n_estimators=5, random_state=1).fit(df[["x1", "x2"]], df["y"])
+
+        raw_contrib = pd.DataFrame(
+            np.random.normal(0, 0.1, size=(df.shape[0], 2)),
+            columns=["x1", "x2"],
+            index=df.index,
+        )
+        base_values = np.column_stack(
+            [np.full(df.shape[0], -0.2, dtype=float), np.full(df.shape[0], 0.2, dtype=float)]
+        )
+
+        explain_data = {"contributions": raw_contrib, "base_values": base_values}
+
+        xpl = SmartExplainer(clf)
+        xpl.compile(x=df[["x1", "x2"]], contributions=explain_data)
+
+        assert isinstance(xpl.explainer.explain_data, dict)
+        assert "base_values" in xpl.explainer.explain_data
+        assert np.array_equal(xpl.explainer.explain_data["base_values"], base_values)
+        assert isinstance(xpl.explainer.contributions, list)
+        assert len(xpl.explainer.contributions) == 2
+
     def test_filter_0(self):
         """
         Unit test filter 0
@@ -495,6 +529,66 @@ class TestSmartExplainer(unittest.TestCase):
         assert all(x is None for x in test_list)
         expected_param_dict = {"features_to_hide": None, "threshold": 0.5, "positive": None, "max_contrib": 2}
         self.assertDictEqual(expected_param_dict, xpl.explainer.mask_params)
+
+    def test_local_plot_does_not_mutate_explainer(self):
+        """
+        Regression test for issue #752: drawing a plot must not store a mask on the explainer,
+        since that silently changes what to_pandas() returns for anyone using the object
+        afterwards (see the issue's "drawing a chart changes to_pandas()" reproduction).
+        """
+        rng = np.random.default_rng(0)
+        n = 30
+        x = pd.DataFrame({f"x{i}": rng.normal(size=n) for i in range(25)})
+        y = pd.Series((x["x0"] + rng.normal(size=n) * 0.3 > 0).astype(int), name="y", index=x.index)
+        model = cb.CatBoostClassifier(n_estimators=5).fit(x, y)
+
+        def make_explainer():
+            xpl = SmartExplainer(model)
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x), index=x.index, name="pred"))
+            return xpl
+
+        baseline_pandas = make_explainer().to_pandas()
+        # sanity check: with 25 features and no explicit max_contrib, nothing is hidden yet
+        assert (baseline_pandas.shape[1] - 1) // 3 == 25
+
+        xpl = make_explainer()
+        xpl.plot.local_plot(row_num=0)
+
+        assert not hasattr(xpl, "mask")
+        assert not hasattr(xpl, "masked_contributions")
+        assert not hasattr(xpl, "mask_params")
+        assert_frame_equal(baseline_pandas, xpl.to_pandas())
+
+    def test_to_pandas_does_not_mutate_explainer(self):
+        """
+        Regression test for issue #752 (mirror image): exporting to_pandas() with its own
+        filtering arguments must not persist a mask on the explainer, since that would silently
+        change what a later local_plot() (without an explicit mask_state) draws.
+        """
+        rng = np.random.default_rng(0)
+        n = 30
+        x = pd.DataFrame({f"x{i}": rng.normal(size=n) for i in range(25)})
+        y = pd.Series((x["x0"] + rng.normal(size=n) * 0.3 > 0).astype(int), name="y", index=x.index)
+        model = cb.CatBoostClassifier(n_estimators=5).fit(x, y)
+
+        def make_explainer():
+            xpl = SmartExplainer(model)
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x), index=x.index, name="pred"))
+            return xpl
+
+        baseline_fig = make_explainer().plot.local_plot(row_num=0)
+
+        xpl = make_explainer()
+        xpl.to_pandas(max_contrib=2)
+
+        assert xpl.explainer.mask_params == {
+            "features_to_hide": None,
+            "threshold": None,
+            "positive": None,
+            "max_contrib": None,
+        }
+        fig_after_to_pandas = xpl.plot.local_plot(row_num=0)
+        assert len(fig_after_to_pandas.data) == len(baseline_fig.data)
 
     def test_check_label_name_1(self):
         """
@@ -959,7 +1053,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer.contributions = contributions
         xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
         xpl.explainer.backend.state = SmartState()
-        xpl.explain_data = None
+        xpl.explainer.explain_data = None
         xpl.explainer._case = "regression"
         xpl.explainer.compute_features_import()
         expected = contributions.abs().sum().sort_values(ascending=True)
@@ -988,7 +1082,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer._case = "classification"
         xpl.explainer.backend = ShapBackend(model=DecisionTreeClassifier().fit([[0]], [[0]]))
         xpl.explainer.backend.state = MultiDecorator(SmartState())
-        xpl.explain_data = None
+        xpl.explainer.explain_data = None
         xpl.explainer.compute_features_import()
         expect1 = contrib1.abs().sum().sort_values(ascending=True)
         expect1 = expect1 / expect1.sum()

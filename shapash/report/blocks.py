@@ -7,7 +7,7 @@ import importlib.metadata
 import inspect
 import logging
 from functools import wraps
-from typing import Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import numpy as np
 import pandas as pd
@@ -21,8 +21,9 @@ from shapash.report.data_analysis import perform_global_dataframe_analysis, perf
 from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
-from shapash.utils.utils import compute_sorted_variables_interactions_list_indices
 
+if TYPE_CHECKING:
+    from shapash.explainer import SmartExplainer
 logger = logging.getLogger(__name__)
 
 PALETTE = {
@@ -98,13 +99,14 @@ class ReportBlockMixin:
 
     def __init__(
         self,
-        explainer=None,
+        explainer: SmartExplainer | None = None,
         x_train: pd.DataFrame | None = None,
         y_train: pd.Series | pd.DataFrame | list | None = None,
         y_test: pd.Series | pd.DataFrame | list | None = None,
         max_points: int = 200,
     ) -> None:
-        self.explainer = explainer
+        self.smart_explainer = explainer
+        self.explainer = explainer.explainer if explainer else None
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
         self.x_init = getattr(explainer, "x_init", None)
@@ -115,11 +117,11 @@ class ReportBlockMixin:
         self.max_points = max_points
         self._inside_group = False
 
-        if explainer is not None:
-            if explainer.y_pred is not None:
-                self.y_pred, _ = self._get_values_and_name(explainer.y_pred, "prediction")
+        if self.explainer is not None:
+            if self.explainer.y_pred is not None:
+                self.y_pred, _ = self._get_values_and_name(self.explainer.y_pred, "prediction")
             else:
-                self.y_pred = explainer.model.predict(explainer.x_encoded)
+                self.y_pred = self.explainer.model.predict(self.explainer.x_encoded)
         else:
             self.y_pred = None
 
@@ -306,6 +308,7 @@ class ReportBlockMixin:
     @block
     def block_global_analysis(self, title: str = "") -> BlockContent:
         """Render global summary statistics for prediction and training datasets.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -334,6 +337,7 @@ class ReportBlockMixin:
     @block
     def block_model_analysis(self, title: str = "Model information") -> BlockContent:
         """Render model metadata and parameter tables.
+        Requires explainer.
 
         Parameters
         ----------
@@ -461,6 +465,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render feature distribution by dataset split.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -509,6 +514,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render a feature correlation matrix.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -541,7 +547,7 @@ class ReportBlockMixin:
             resolved_width = width
         fig = explainer.plot.correlations_plot(
             df_train_test,
-            optimized=True,
+            sample_size=10000,
             facet_col="data_train_test",
             max_features=max_features,
             width=resolved_width,
@@ -552,6 +558,7 @@ class ReportBlockMixin:
     @block
     def block_feature_importance(self, title: str = "", label=None) -> BlockContent:
         """Render global feature importance.
+        Requires explainer.
 
         Parameters
         ----------
@@ -583,6 +590,7 @@ class ReportBlockMixin:
         include_all_features: bool = False,
     ) -> BlockContent:
         """Render feature contribution plots.
+        Requires explainer.
 
         Parameters
         ----------
@@ -672,56 +680,15 @@ class ReportBlockMixin:
         return resolved_title, [feature_select, selected_panel]
 
     @block
-    def block_interactions_plot(
-        self,
-        title: str = "",
-        col1: str | None = None,
-        col2: str | None = None,
-        max_points: int | None = None,
-    ) -> BlockContent:
-        """Render an interactions plot between two features.
-
-        Parameters
-        ----------
-        title : str, default=""
-            Optional section title.
-        col1 : str or None, default=None
-            First feature. If None, the method picks a default interaction pair.
-        col2 : str or None, default=None
-            Second feature. If None, the method picks a default interaction pair.
-        max_points : int or None, default=None
-            Maximum number of points used by the plotting backend.
-
-        Returns
-        -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and interactions plot content rendered by the @block decorator.
-
-        Examples
-        --------
-        >>> runtime.block_interactions_plot(col1="age", col2="income")
-        """
-        explainer = self._require_explainer("interactions_plot")
-        feature_one, feature_two = self._resolve_interaction_pair(col1, col2)
-        if max_points is None:
-            effective_max_points = self.max_points
-        else:
-            effective_max_points = max_points
-        fig = explainer.plot.interactions_plot(col1=feature_one, col2=feature_two, max_points=effective_max_points)
-        if title is None:
-            resolved_title = f"{self._feature_label(feature_one)} / {self._feature_label(feature_two)}"
-        else:
-            resolved_title = title
-        return resolved_title, [fig]
-
-    @block
     def block_top_interactions_plot(
         self,
         title: str = "Top interactions plot",
         nb_top_interaction: int = 5,
+        class_label: int | str = -1,
         max_points: int | None = None,
     ) -> BlockContent:
         """Render a plot for the top feature interaction pairs.
+        Requires explainer.
 
         Parameters
         ----------
@@ -729,6 +696,8 @@ class ReportBlockMixin:
             Section title displayed above the interaction figure.
         nb_top_interaction : int, default=5
             Number of top interactions to display.
+        class_label : int or str, default=-1
+            Optional class/target label used to compute and render class-specific interactions.
         max_points : int or None, default=None
             Maximum number of points used by the plotting backend.
 
@@ -748,6 +717,7 @@ class ReportBlockMixin:
             effective_max_points = max_points
         fig = explainer.plot.top_interactions_plot(
             nb_top_interactions=nb_top_interaction,
+            label=class_label,
             max_points=effective_max_points,
         )
         return title, [fig]
@@ -760,6 +730,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render prediction-versus-true target distribution.
+        Requires explainer.
 
         Parameters
         ----------
@@ -902,6 +873,7 @@ class ReportBlockMixin:
     @block
     def block_confusion_matrix(self, title: str = "") -> BlockContent:
         """Render confusion matrix for classification predictions.
+        Requires explainer.
 
         Parameters
         ----------
@@ -917,12 +889,12 @@ class ReportBlockMixin:
         --------
         >>> runtime.block_confusion_matrix()
         """
-        explainer = self._require_explainer("confusion_matrix")
+        smart_explainer = self._require_smart_explainer("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         y_test = cast(TargetValues, self.y_test)
         y_pred = cast(TargetValues, self.y_pred)
-        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=explainer.colors_dict)
+        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.colors_dict)
         if title is None:
             return "Confusion matrix", [fig]
         return title, [fig]
@@ -940,6 +912,7 @@ class ReportBlockMixin:
         height: int = 600,
     ) -> BlockContent:
         """Render lift curve for classification probabilities.
+        Requires explainer.
 
         Parameters
         ----------
@@ -1009,6 +982,7 @@ class ReportBlockMixin:
         show_train: bool = True,
     ) -> BlockContent:
         """Render per-feature univariate analysis with interactive selection.
+        Requires x_train and explainer.
 
         Parameters
         ----------
@@ -1151,22 +1125,15 @@ class ReportBlockMixin:
             raise ValueError(f"{block_type} block requires an explainer on the report instance.")
         return self.explainer
 
+    def _require_smart_explainer(self, block_type: str):
+        if self.smart_explainer is None:
+            raise ValueError(f"{block_type} block requires a smart_explainer on the report instance.")
+        return self.smart_explainer
+
     def _require_train_test_data(self, block_type: str) -> pd.DataFrame:
         if self.df_train_test is None:
             raise ValueError(f"{block_type} block requires x_train and explainer.x_init data on the report instance.")
         return self.df_train_test
-
-    def _resolve_interaction_pair(self, col1: str | None, col2: str | None) -> tuple[str, str]:
-        if col1 and col2:
-            return col1, col2
-        explainer = self._require_explainer("interactions_plot")
-        list_ind, _ = explainer.plot._select_indices_interactions_plot(selection=None, max_points=self.max_points)
-        interaction_values = explainer.get_interaction_values(selection=list_ind)
-        sorted_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
-        if not sorted_indices:
-            raise ValueError("No interaction pair available for interactions_plot block.")
-        first_idx, second_idx = sorted_indices[0]
-        return explainer.columns_dict[first_idx], explainer.columns_dict[second_idx]
 
     def _feature_label(self, feature: str) -> str:
         if self.explainer is None:
@@ -1174,5 +1141,5 @@ class ReportBlockMixin:
         return self.explainer.features_dict.get(feature, feature)
 
     def _feature_distribution_colors(self) -> dict:
-        explainer = self._require_explainer("feature_distribution")
-        return explainer.colors_dict["report_feature_distribution"]
+        smart_explainer = self._require_smart_explainer("feature_distribution")
+        return smart_explainer.colors_dict["report_feature_distribution"]

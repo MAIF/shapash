@@ -70,6 +70,18 @@ class TestStyle_utils(unittest.TestCase):
             style_dict = define_style(palette)
             assert len(list(style_dict.keys())) > 0
 
+    def test_define_style_fonts_have_generic_fallback(self):
+        """
+        Every font family set by define_style must end with a generic family, otherwise the browser
+        falls back to its own default (serif) when the named font is not installed (e.g. "Arial Black").
+        """
+        available_palettes = colors_loading()
+        for palette_name in available_palettes.keys():
+            style_dict = define_style(select_palette(available_palettes, palette_name))
+            for key in ["dict_title", "dict_title_stability", "dict_title_compacity", "dict_xaxis", "dict_yaxis"]:
+                family = style_dict[key]["font"]["family"]
+                assert family.split(",")[-1].strip() == "sans-serif", f"{key}: {family}"
+
     def test_get_pyplot_color(self):
         available_palettes = colors_loading()
         for palette_name in available_palettes.keys():

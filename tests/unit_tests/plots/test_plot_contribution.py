@@ -12,13 +12,19 @@ _add_violin_and_scatter, which now call `.tolist()` before handing customdata
 to a trace.
 """
 
+import json
 import unittest
 
 import numpy as np
 import pandas as pd
 import plotly.io as pio
 
-from shapash.plots.plot_contribution import plot_scatter, plot_violin
+from shapash.plots.plot_contribution import (
+    plot_interactions_scatter,
+    plot_interactions_violin,
+    plot_scatter,
+    plot_violin,
+)
 from shapash.style.style_utils import define_style, get_palette
 
 
@@ -28,8 +34,6 @@ class TestPlotContributionCustomdata(unittest.TestCase):
 
     def _assert_all_customdata_are_plain_lists(self, fig):
         raw = pio.to_json(fig)
-        import json
-
         traces = json.loads(raw)["data"]
         found_customdata = False
         for trace in traces:
@@ -80,6 +84,46 @@ class TestPlotContributionCustomdata(unittest.TestCase):
         )
         self._assert_all_customdata_are_plain_lists(fig)
 
+    def test_plot_interactions_scatter_customdata_is_json_list(self):
+        """Interaction scatter plot must keep customdata as a plain list."""
+        rng = np.random.default_rng(0)
+        index = pd.RangeIndex(50)
+        x_values = pd.DataFrame({"feat_x": rng.normal(size=50)}, index=index)
+        y_values = pd.DataFrame({"interaction": rng.normal(size=50)}, index=index)
+        col_values = pd.DataFrame({"feat_color": rng.normal(size=50)}, index=index)
+
+        fig = plot_interactions_scatter(
+            x_name="feat_x",
+            y_name="interaction",
+            col_name="feat_color",
+            x_values=x_values,
+            y_values=y_values,
+            col_values=col_values,
+            col_scale=self.style_dict["interactions_col_scale"],
+            style_dict=self.style_dict,
+        )
+        self._assert_all_customdata_are_plain_lists(fig)
+
+    def test_plot_interactions_violin_customdata_is_json_list(self):
+        """Interaction violin overlay scatter must keep customdata as a plain list."""
+        rng = np.random.default_rng(0)
+        index = pd.RangeIndex(50)
+        x_values = pd.DataFrame({"feat_x": rng.integers(0, 4, size=50)}, index=index)
+        y_values = pd.DataFrame({"interaction": rng.normal(size=50)}, index=index)
+        col_values = pd.DataFrame({"feat_color": rng.normal(size=50)}, index=index)
+
+        fig = plot_interactions_violin(
+            x_name="feat_x",
+            y_name="interaction",
+            col_name="feat_color",
+            x_values=x_values,
+            y_values=y_values,
+            col_values=col_values,
+            col_scale=self.style_dict["interactions_col_scale"],
+            style_dict=self.style_dict,
+        )
+        self._assert_all_customdata_are_plain_lists(fig)
+
 
 class TestPlotViolinGrid(unittest.TestCase):
     """
@@ -126,6 +170,29 @@ class TestPlotViolinGrid(unittest.TestCase):
             fig.layout.yaxis.title.text,
             "the hidden helper yaxis must not carry a 'Contribution' title - that belongs on yaxis2",
         )
+
+    def test_interactions_violin_yaxis_grid_is_enabled_and_no_title_leaks(self):
+        rng = np.random.default_rng(0)
+        index = pd.RangeIndex(50)
+        x_values = pd.DataFrame({"feat_x": rng.integers(0, 4, size=50)}, index=index)
+        y_values = pd.DataFrame({"interaction": rng.normal(size=50)}, index=index)
+        col_values = pd.DataFrame({"feat_color": rng.normal(size=50)}, index=index)
+
+        fig = plot_interactions_violin(
+            x_name="feat_x",
+            y_name="interaction",
+            col_name="feat_color",
+            x_values=x_values,
+            y_values=y_values,
+            col_values=col_values,
+            col_scale=self.style_dict["interactions_col_scale"],
+            style_dict=self.style_dict,
+        )
+
+        self.assertTrue(fig.layout.yaxis.showgrid)
+        self.assertTrue(fig.layout.yaxis.visible)
+        self.assertFalse(fig.layout.yaxis.showticklabels)
+        self.assertIsNone(fig.layout.yaxis.title.text)
 
 
 if __name__ == "__main__":
