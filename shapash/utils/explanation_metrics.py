@@ -153,7 +153,7 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10):
         # Return instance with its neighbors
         neighbors = dataset.values[neighbors_indices]
         # Add distance column
-        neighbors = np.append(neighbors, c[neighbors_indices].reshape(n_neighbors + 1, 1), axis=1)
+        neighbors = np.append(neighbors, c[neighbors_indices].reshape(-1, 1), axis=1)
         all_neighbors = np.append(all_neighbors, neighbors, axis=0)
 
     # Calculate predictions for all instances and corresponding neighbors
