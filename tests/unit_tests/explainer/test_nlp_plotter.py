@@ -14,6 +14,7 @@ from dataclasses import replace
 
 import numpy as np
 import pandas as pd
+import pytest
 from dash import html
 from plotly import graph_objs as go
 
@@ -421,7 +422,8 @@ class TestPlotterCompare(unittest.TestCase):
         logit = replace(self.ref, output_space="logit")
         fig = self.ref.plot.compare({"LIME": self.lime}, row=0)
         self.assertEqual(list(fig.data[0].y), ["shap", "LIME"])
-        with self.assertWarns(UserWarning):
+        # pytest.warns, not assertWarns: the latter walks sys.modules and trips transformers' lazy imports
+        with pytest.warns(UserWarning):
             fig = self.ref.plot.compare(logit, row=0)
         self.assertEqual(list(fig.data[0].y), ["shap (probability)", "shap (logit)"])
         fig = self.ref.plot.compare({"shap": replace(self.ref)}, row=0)
@@ -429,7 +431,7 @@ class TestPlotterCompare(unittest.TestCase):
 
     def test_warns_across_output_spaces_and_not_within_one(self):
         lig = replace(self.lime, backend_name="nlp_captum_lig", output_space="logit")
-        with self.assertWarnsRegex(UserWarning, "shap=probability, captum_lig=logit"):
+        with pytest.warns(UserWarning, match="shap=probability, captum_lig=logit"):
             self.ref.plot.compare(lig, row=0)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
