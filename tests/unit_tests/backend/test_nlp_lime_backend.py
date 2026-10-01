@@ -1,6 +1,7 @@
 """Unit tests for ``NlpLimeBackend`` — LIME-based word attribution for NLP models."""
 
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -158,6 +159,68 @@ class TestNlpLimeBackend(unittest.TestCase):
                 np.count_nonzero(matrix[:, col]),
                 _LIME_COMPUTE_ARGS["num_features"],
             )
+
+    def test_num_features_defaults_to_the_distinct_word_count(self):
+        # LIME's own default (10) zero-fills every word past the top 10 — indistinguishable from "no effect".
+        text = "one two three four five six seven eight nine ten eleven twelve one"
+        backend = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_compute_args={"num_samples": 50})
+        with patch.object(backend.explainer, "explain_instance", wraps=backend.explainer.explain_instance) as spy:
+            raw = backend.run_explainer([text])
+        self.assertEqual(spy.call_args.kwargs["num_features"], 12)
+        self.assertEqual(len(raw.token_strings[0]), 12)
+
+    def test_every_word_gets_a_weight_by_default(self):
+        text = "one two three four five six seven eight nine ten eleven twelve"
+        backend = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_compute_args={"num_samples": 50})
+        captured = {}
+        original = backend.explainer.explain_instance
+
+        def _capture(*args, **kwargs):
+            captured["exp"] = original(*args, **kwargs)
+            return captured["exp"]
+
+        with patch.object(backend.explainer, "explain_instance", side_effect=_capture):
+            backend.run_explainer([text])
+        for label_idx in range(N_CLASSES):
+            self.assertEqual(len(captured["exp"].local_exp[label_idx]), 12)
+
+    def test_feature_count_follows_the_explainer_settings(self):
+        char = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_args={"char_level": True})
+        self.assertEqual(char._count_features("abca"), 3)
+        positional = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_args={"bow": False})
+        self.assertEqual(positional._count_features("a b a"), 3)
+        self.assertEqual(self.backend._count_features("a b a"), 2)
+        self.assertEqual(self.backend._count_features(""), 1)
+
+    def test_explicit_num_features_is_respected(self):
+        with patch.object(self.backend.explainer, "explain_instance", wraps=self.backend.explainer.explain_instance) as spy:
+            self.backend.run_explainer(_SAMPLE_TEXTS[:1])
+        self.assertEqual(spy.call_args.kwargs["num_features"], _LIME_COMPUTE_ARGS["num_features"])
+
+    def test_default_is_written_into_the_settings(self):
+        # Visible on the backend and part of NlpExplainer's cache key, so a result computed under
+        # LIME's own top-10 default is never reused for "every word".
+        backend = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES)
+        self.assertEqual(backend.explainer_compute_args["num_features"], "all")
+        self.assertEqual(self.backend.explainer_compute_args["num_features"], _LIME_COMPUTE_ARGS["num_features"])
+
+    def test_token_strings_are_plain_str(self):
+        # LIME's own vocabulary is np.str_ (a str subclass, so isinstance alone would not catch it).
+        raw = self.backend.run_explainer(_SAMPLE_TEXTS)
+        self.assertTrue(all(type(w) is str for words in raw.token_strings for w in words))
+
+    def test_show_progress(self):
+        self.assertFalse(self.backend.show_progress)
+        backend = NlpLimeBackend(
+            _fake_classifier, label_names=LABEL_NAMES, explainer_compute_args=_LIME_COMPUTE_ARGS, show_progress=True
+        )
+        self.assertTrue(backend.show_progress)
+        self.assertEqual(len(backend.run_explainer(_SAMPLE_TEXTS).values), len(_SAMPLE_TEXTS))
+
+    def test_caller_settings_dict_is_not_modified(self):
+        settings = {"num_samples": 50}
+        NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_compute_args=settings)
+        self.assertEqual(settings, {"num_samples": 50})
 
     def test_run_explainer_without_label_names_explains_every_column(self):
         # LIME's own default would explain class 1 only, leaving every other column silently zero.

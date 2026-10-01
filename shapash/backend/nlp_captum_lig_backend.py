@@ -26,7 +26,6 @@ implements :class:`~shapash.model.base.SupportsCaptumIG` (e.g. ``HFClassifierMod
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
 
 import numpy as np
 
@@ -302,16 +301,3 @@ class NlpCaptumLigBackend(NlpBackend):
             values=contributions,
             base_values=np.stack(base_values, axis=0),
         )
-
-    def _progress_iter(self, items: list[str]) -> Iterable[str]:
-        """Wrap ``items`` in a ``tqdm`` bar when ``show_progress`` is set, else return it unchanged.
-
-        Best-effort and dependency-free: ``tqdm`` is imported with ``errors="ignore"`` so a missing
-        install simply yields the plain list rather than raising.
-        """
-        if not self.show_progress:
-            return items
-        tqdm_mod = import_optional_module("tqdm", errors="ignore")
-        if tqdm_mod is None:
-            return items
-        return tqdm_mod.tqdm(items, desc="LIG attribution", unit="text")

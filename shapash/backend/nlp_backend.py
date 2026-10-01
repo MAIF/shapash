@@ -18,11 +18,13 @@ subclasses (``NlpShapBackend``, ``NlpLimeBackend``) only need to implement
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import ClassVar, Literal
 
 import numpy as np
 
+from shapash._optional import import_optional_module
 from shapash.backend.backend import Backend
 from shapash.model.base import has_capabilities
 
@@ -195,3 +197,18 @@ class NlpBackend(Backend):
             values=[explain_data.values[i] for i in subset],
             base_values=None if base_values is None else base_values[subset],
         )
+
+    def _progress_iter(self, items: list[str]) -> Iterable[str]:
+        """Wrap ``items`` in a ``tqdm`` bar when the backend's ``show_progress`` is set, else return it unchanged.
+
+        Shared by the backends that loop over texts one at a time (LIG, LIME). Best-effort and
+        dependency-free: ``tqdm`` is imported with ``errors="ignore"`` so a missing install simply
+        yields the plain list rather than raising. Read with ``getattr`` so a backend without the
+        option (or one built via ``object.__new__``) runs silently.
+        """
+        if not getattr(self, "show_progress", False):
+            return items
+        tqdm_mod = import_optional_module("tqdm", errors="ignore")
+        if tqdm_mod is None:
+            return items
+        return tqdm_mod.tqdm(items, desc=f"{self.name} attribution", unit="text")

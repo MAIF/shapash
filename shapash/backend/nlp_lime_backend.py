@@ -8,8 +8,9 @@ returning an ``NlpContributions``. All shared infrastructure
 LIME works at word level (bag-of-words by default) rather than at the subword
 or token level used by SHAP.  Each sample's ``token_strings`` is therefore the
 list of unique vocabulary words found by the ``split_expression`` tokeniser, not
-HuggingFace subword tokens.  Only the top ``num_features`` words per label
-receive a non-zero weight; all others are zero in the dense matrix.
+HuggingFace subword tokens.  Every word is scored by default (``num_features="all"``), so
+a zero weight means LIME found no effect — not that the word fell outside a top-k.
+Shapash's plots pick their own top-k at display time.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 
 try:
-    from lime.lime_text import LimeTextExplainer
+    from lime.lime_text import IndexedCharacters, IndexedString, LimeTextExplainer
 
     _lime_available = True
 except ImportError:
@@ -58,19 +59,27 @@ class NlpLimeBackend(NlpBackend):
         Keyword arguments forwarded to ``LimeTextExplainer.__init__``.
         Supported keys: ``kernel_width``, ``kernel``, ``verbose``,
         ``feature_selection``, ``split_expression``, ``bow``,
-        ``random_state``, ``char_level``.
+        ``random_state`` (pass as an int), ``char_level``.
         Use ``{"explainer": SubclassOfLimeTextExplainer, ...rest...}`` to
         inject a custom explainer class (mirrors the SHAP escape hatch).
     explainer_compute_args : dict, optional
         Keyword arguments forwarded to ``LimeTextExplainer.explain_instance``
-        on every call.  Supported keys: ``num_features`` (default 10),
-        ``num_samples`` (default 5000), ``distance_metric`` (default
+        on every call.  Supported keys: ``num_features`` (default ``"all"``:
+        every word of the text; an int keeps LIME's top-k, zero-filling the
+        rest, which then reads as "no effect"), ``num_samples`` (default 5000), ``distance_metric`` (default
         ``'cosine'``), ``model_regressor``, ``labels``, ``top_labels``.
         If neither ``labels`` nor ``top_labels`` is provided, ``labels`` is
         automatically set to ``range(len(label_names))``.
+    show_progress : bool, default False
+        When True, show a ``tqdm`` progress bar over the texts (LIME scores
+        ``num_samples`` perturbations per text, so a batch is slow). Best-effort:
+        without ``tqdm`` installed the loop runs silently.
 
     Examples
     --------
+    LIME samples random perturbations, so every example fixes ``random_state``: without it the
+    weights change from run to run.
+
     With a ``TextModel`` adapter — the same object ``NlpShapBackend`` and
     ``NlpCaptumLigBackend`` take; ``label_names`` comes from the model:
 
@@ -88,14 +97,15 @@ class NlpLimeBackend(NlpBackend):
     >>> backend = NlpLimeBackend(
     ...     clf.predict_proba,
     ...     label_names=list(clf.classes_),
-    ...     explainer_compute_args={"num_features": 15, "num_samples": 3000},
+    ...     explainer_args={"random_state": 0},
+    ...     explainer_compute_args={"num_samples": 3000},
     ... )
 
     With a HuggingFace pipeline, which must return every class score:
 
     >>> from transformers import pipeline
     >>> pipe = pipeline("text-classification", model="...", top_k=None)
-    >>> backend = NlpLimeBackend(pipe, label_names=["NEGATIVE", "POSITIVE"])
+    >>> backend = NlpLimeBackend(pipe, label_names=["NEGATIVE", "POSITIVE"], explainer_args={"random_state": 0})
 
     Then hand the backend to ``NlpExplainer`` along with the same model (the ``TextModel`` itself
     when you have one — that keeps the What-if Lab available):
@@ -132,6 +142,7 @@ class NlpLimeBackend(NlpBackend):
         mask_string: str | None = None,
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
+        show_progress: bool = False,
     ) -> None:
         if not _lime_available:
             raise ImportError("lime is required for NlpLimeBackend — pip install lime")
@@ -144,6 +155,12 @@ class NlpLimeBackend(NlpBackend):
             model = model.predict
         super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
         self.mask_string = mask_string
+        self.show_progress = show_progress
+        # Written into the settings rather than applied silently, so the choice is visible on the
+        # backend and part of NlpExplainer's cache key — a result computed under LIME's own default
+        # (10) is never served for "every word".
+        # A new dict, not ``setdefault``: the caller's own dict must not be modified.
+        self.explainer_compute_args = {"num_features": "all", **self.explainer_compute_args}
 
         if "explainer" in self.explainer_args:
             lime_params = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
@@ -188,6 +205,24 @@ class NlpLimeBackend(NlpBackend):
             return matrix
         return np.array(result, dtype=np.float64)
 
+    def _count_features(self, text: str) -> int:
+        """Number of features LIME will see in ``text``: its distinct words (or characters).
+
+        Splits the text exactly as ``explain_instance`` is about to — same class, same settings read
+        off the explainer — so ``num_features`` covers every word and LIME zero-fills none. An upper
+        bound would not do: LIME's sparse ``highest_weights`` path pads the selection up to
+        ``num_features`` instead of capping it.
+        """
+        explainer = self.explainer
+        bow = getattr(explainer, "bow", True)
+        mask_string = getattr(explainer, "mask_string", None)
+        if getattr(explainer, "char_level", False):
+            indexed = IndexedCharacters(text, bow=bow, mask_string=mask_string)
+        else:
+            split_expression = getattr(explainer, "split_expression", r"\W+")
+            indexed = IndexedString(text, bow=bow, split_expression=split_expression, mask_string=mask_string)
+        return max(1, indexed.num_words())
+
     def run_explainer(self, x) -> NlpContributions:
         """Run LimeTextExplainer on each sample and normalise output.
 
@@ -220,11 +255,15 @@ class NlpLimeBackend(NlpBackend):
         base_values_list: list[list[float]] = []
         data: list[list[str]] = []
 
-        for text in texts:
-            exp = self.explainer.explain_instance(text, self._classifier_fn, **compute_args)
+        for text in self._progress_iter(texts):
+            text_args = compute_args
+            if compute_args.get("num_features") == "all":
+                text_args = {**compute_args, "num_features": self._count_features(text)}
+            exp = self.explainer.explain_instance(text, self._classifier_fn, **text_args)
 
             indexed_string = exp.domain_mapper.indexed_string
-            vocab: list[str] = list(indexed_string.inverse_vocab)
+            # Plain ``str``: LIME hands back ``np.str_``, which leaks into reprs and serialisation.
+            vocab: list[str] = [str(word) for word in indexed_string.inverse_vocab]
             n_words = len(vocab)
 
             # Dense weight matrix — same shape contract as NlpShapBackend values. Classes LIME did not
