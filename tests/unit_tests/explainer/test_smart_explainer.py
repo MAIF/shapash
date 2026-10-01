@@ -178,6 +178,114 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl.explainer.features_dict["Age"] == "Age (Years Old)"
         assert xpl.explainer.features_dict["Education"] == "Education"
 
+    def test_compile_features_groups_1(self):
+        """Unit test _compile_features_groups happy path."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer.backend = Mock()
+        xpl.explainer.backend.support_groups = True
+        xpl.explainer.state = Mock()
+        xpl.explainer.contributions = pd.DataFrame([[0.1, 0.2], [0.3, 0.4]], columns=["A", "B"], index=[0, 1])
+        xpl.explainer.x_init = pd.DataFrame([[1, 2], [3, 4]], columns=["A", "B"], index=[0, 1])
+        xpl.explainer.x_encoded = xpl.explainer.x_init.copy()
+        xpl.explainer.preprocessing = None
+        xpl.explainer.features_dict = {"A": "A", "B": "B"}
+        xpl.explainer.inv_features_dict = {"A": "A", "B": "B"}
+        xpl.explainer.features_desc = {"A": 2, "B": 2}
+        xpl.explainer.state.compute_grouped_contributions.return_value = pd.DataFrame(
+            [[0.3], [0.7]], columns=["G1"], index=[0, 1]
+        )
+        ranked_groups = {"contrib_sorted": pd.DataFrame([[0.3], [0.7]], columns=["contribution_0"], index=[0, 1])}
+        assigned_groups = {
+            "contrib_sorted": pd.DataFrame([[0.3], [0.7]], columns=["contribution_0"], index=[0, 1]),
+            "x_sorted": pd.DataFrame([[3], [7]], columns=["feature_0"], index=[0, 1]),
+            "var_dict": pd.DataFrame([[0], [0]], columns=["feature_0"], index=[0, 1]),
+        }
+        xpl.explainer.state.rank_contributions.return_value = ranked_groups
+        xpl.explainer.state.assign_contributions.return_value = assigned_groups
+        grouped_x = pd.DataFrame([[3], [7]], columns=["G1"], index=[0, 1])
+        features_groups = {"G1": ["A", "B"]}
+
+        with patch("shapash.explainer.explainer.create_grouped_features_values", return_value=grouped_x):
+            xpl.explainer._compile_features_groups(features_groups)
+
+        assert "G1" in xpl.explainer.features_dict
+        assert xpl.explainer.features_desc["G1"] == 1000
+        assert isinstance(xpl.explainer.data_groups, dict)
+        assert xpl.explainer.columns_dict_groups == {0: "G1"}
+
+    def test_compile_features_groups_2(self):
+        """Unit test _compile_features_groups backend capability guard."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer.backend = Mock()
+        xpl.explainer.backend.support_groups = False
+        xpl.explainer.backend.name = "dummy"
+
+        with self.assertRaises(AssertionError):
+            xpl.explainer._compile_features_groups({"G1": ["A", "B"]})
+
+    def test_compile_columns_order_1(self):
+        """Unit test _compile_columns_order nominal behavior with additional columns."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer.x_encoded = pd.DataFrame([[1, 2]], columns=["A", "B"])
+        xpl.explainer.additional_features_dict = {"_extra": "_extra"}
+
+        output = xpl.explainer._compile_columns_order(["A", "B", "extra"])
+
+        assert output == ["A", "B", "_extra"]
+
+    def test_compile_columns_order_2(self):
+        """Unit test _compile_columns_order missing and extra guards."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer.x_encoded = pd.DataFrame([[1, 2]], columns=["A", "B"])
+        xpl.explainer.additional_features_dict = {"_extra": "_extra"}
+
+        with self.assertRaisesRegex(ValueError, "missing from columns_order"):
+            xpl.explainer._compile_columns_order(["A"])
+
+        with self.assertRaisesRegex(ValueError, "do not exist in x or additional data"):
+            xpl.explainer._compile_columns_order(["A", "B", "unknown"])
+
+    def test_add_4(self):
+        """Unit test add with metadata updates and additional data."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer._case = "classification"
+        xpl.explainer._classes = [0, 1]
+        xpl.explainer.x_init = pd.DataFrame([[1, 2], [3, 4]], columns=["A", "B"], index=[0, 1])
+        xpl.explainer.x_encoded = xpl.explainer.x_init.copy()
+        xpl.explainer.columns_dict = {0: "A", 1: "B"}
+        xpl.explainer.features_dict = {"A": "A", "B": "B"}
+        xpl.explainer.y_pred = pd.Series([0, 1], index=[0, 1], name="pred")
+        y_target = pd.Series([0, 1], index=[0, 1], name="target")
+        additional_data = pd.DataFrame({"extra": [10, 20]}, index=[0, 1])
+
+        xpl.explainer.add(
+            y_target=y_target,
+            label_dict={0: "zero", 1: "one"},
+            features_dict={"A": "Age"},
+            title_story="story",
+            additional_features_dict={"extra": "Extra"},
+            additional_data=additional_data,
+            columns_order=["A", "B", "extra"],
+        )
+
+        assert xpl.explainer.title_story == "story"
+        assert xpl.explainer.label_dict[1] == "one"
+        assert xpl.explainer.features_dict["A"] == "Age"
+        assert "_extra" in xpl.explainer.additional_features_dict
+        assert "_extra" in xpl.explainer.columns_order
+        assert xpl.explainer.prediction_error is not None
+
+    def test_add_5(self):
+        """Unit test add input validation for dict parameters."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer.x_init = pd.DataFrame([[1, 2], [3, 4]], columns=["A", "B"], index=[0, 1])
+
+        with self.assertRaisesRegex(ValueError, "label_dict must be a dict"):
+            xpl.explainer.add(label_dict=[("a", "b")])
+
+        with self.assertRaisesRegex(ValueError, "features_dict must be a dict"):
+            xpl.explainer.add(features_dict=[("a", "b")])
+
     def test_compile_1(self):
         """
         Unit test compile 1
@@ -835,6 +943,76 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.add(features_dict={"Age": "Age (Years Old)"})
         assert xpl.explainer.features_dict["Age"] == "Age (Years Old)"
         assert xpl.explainer.features_dict["Education"] == "Education"
+
+    def test_define_style_1(self):
+        """Unit test define_style update and forwarding to plot."""
+        xpl = SmartExplainer(self.model)
+        xpl.plot.define_style_attributes = Mock()
+
+        with patch("shapash.explainer.smart_explainer.colors_loading", return_value={"dummy": {}}), patch(
+            "shapash.explainer.smart_explainer.select_palette", return_value={"color_1": "blue", "color_2": "red"}
+        ):
+            xpl.define_style(palette_name="custom", colors_dict={"color_2": "green", "color_3": "black"})
+
+        assert xpl.colors_dict["color_1"] == "blue"
+        assert xpl.colors_dict["color_2"] == "green"
+        assert xpl.colors_dict["color_3"] == "black"
+        xpl.plot.define_style_attributes.assert_called_once_with(colors_dict=xpl.colors_dict)
+
+    def test_define_style_2(self):
+        """Unit test define_style requires one argument."""
+        xpl = SmartExplainer(self.model)
+        with self.assertRaisesRegex(ValueError, "At least one of palette_name or colors_dict parameters must be defined"):
+            xpl.define_style()
+
+    def test_check_x_y_attributes_1(self):
+        """Unit test check_x_y_attributes with existing and missing attributes."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer.x_encoded = "X"
+        xpl.explainer.y_pred = "Y"
+
+        assert xpl.check_x_y_attributes("x_encoded", "y_pred") == ["X", "Y"]
+        assert xpl.check_x_y_attributes("x_encoded", "unknown") == ["X", None]
+
+    def test_check_x_y_attributes_2(self):
+        """Unit test check_x_y_attributes input validation."""
+        xpl = SmartExplainer(self.model)
+        with self.assertRaises(ValueError):
+            xpl.check_x_y_attributes(1, "y_pred")
+
+    def test_local_pred_1(self):
+        """Unit test _local_pred classification branch."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer._case = "classification"
+        xpl.explainer.proba_values = pd.DataFrame([[0.2, 0.8], [0.6, 0.4]], columns=[0, 1], index=[10, 11])
+
+        assert xpl._local_pred(index=10, label=1) == 0.8
+
+        xpl.explainer.proba_values = None
+        assert xpl._local_pred(index=10, label=1) is None
+
+    def test_local_pred_2(self):
+        """Unit test _local_pred regression branch with stored y_pred."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer._case = "regression"
+        xpl.explainer.y_pred = pd.DataFrame({"pred": [1.5, 2.5]}, index=[0, 1])
+
+        assert xpl._local_pred(index=1) == 2.5
+
+    def test_local_pred_3(self):
+        """Unit test _local_pred regression branch with model fallback."""
+        xpl = SmartExplainer(self.model)
+        xpl.explainer._case = "regression"
+        xpl.explainer.y_pred = None
+        xpl.explainer.x_encoded = pd.DataFrame({"a": [10, 20]}, index=[0, 1])
+        xpl.explainer.model = Mock()
+        xpl.explainer.model.predict.return_value = np.array([42.0])
+
+        output = xpl._local_pred(index=1)
+
+        assert output == 42.0
+        xpl.explainer.model.predict.assert_called_once()
+        assert_frame_equal(xpl.explainer.model.predict.call_args.args[0], xpl.explainer.x_encoded.loc[[1]])
 
     def test_to_pandas_1(self):
         """
