@@ -367,6 +367,9 @@ class Explainer:
 
     def check_label_name(self, label: Any, origin: str | None = None) -> tuple[int, Any, Any]:
         """Resolve a label identifier into numeric, model-code, and display representations."""
+        if origin not in (None, "num", "code", "value"):
+            raise Exception({"message": "Origin must be 'num', 'code' or 'value'."})
+
         if self._classes is None:
             raise ValueError("Class labels are unavailable for this model.")
 
