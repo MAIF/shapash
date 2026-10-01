@@ -582,7 +582,7 @@ class Consistency:
         weights = [weight.drop(const_cols, axis=1) for weight in weights]
 
         # Only keep features based on largest mean of absolute values
-        mean_contributions = np.mean(np.abs(pd.concat(weights)), axis=0)
+        mean_contributions = pd.concat(weights).abs().mean(axis=0)
         top_features = np.flip(mean_contributions.sort_values(ascending=False)[:max_features].keys())
 
         fig = self.plot_pairwise_consistency(
