@@ -1,6 +1,8 @@
 import itertools
 import unittest
+from unittest.mock import patch
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -96,11 +98,88 @@ class TestConsistency(unittest.TestCase):
         assert len(method_1) == len(method_2) == len(l2)
         assert 1 <= len(l2) <= 5
 
+    def test_consistency_plot(self):
+        """Consistency plot computes comparisons and delegates both renderings."""
+        with patch.object(self.cns, "plot_comparison") as plot_comparison, patch.object(
+            self.cns, "plot_examples"
+        ) as plot_examples:
+            output = self.cns.consistency_plot(max_features=2)
+
+        assert output is None
+        plot_comparison.assert_called_once()
+        plot_examples.assert_called_once()
+        assert plot_examples.call_args.args[-1] == 2
+
     def test_calculate_coords(self):
         _, mean_distances = self.cns.calculate_all_distances(self.cns.methods, self.cns.weights)
         coords = self.cns.calculate_coords(mean_distances)
 
         assert coords.shape == (len(self.cns.methods), 2)
+
+    def test_plot_comparison(self):
+        _, mean_distances = self.cns.calculate_all_distances(self.cns.methods, self.cns.weights)
+        coords = np.array([[0.0, 0.0], [0.5, 0.3], [1.0, 0.0]])
+
+        with patch.object(self.cns, "calculate_coords", return_value=coords), patch.object(
+            self.cns, "draw_arrow"
+        ) as draw_arrow:
+            fig = self.cns.plot_comparison(mean_distances)
+
+        assert len(fig.axes) == 1
+        assert draw_arrow.call_count == len(mean_distances.columns)
+
+    def test_draw_arrow(self):
+        fig, ax = plt.subplots()
+
+        self.cns.draw_arrow(ax, np.array([0.0, 0.0]), np.array([1.0, 1.0]), 0.42)
+
+        assert len(ax.texts) >= 2
+        assert "0.42" in [txt.get_text() for txt in ax.texts]
+
+    def test_plot_examples(self):
+        method_1 = [np.array([0.5, 0.3, -0.2]), np.array([0.1, -0.4, 0.2])]
+        method_2 = [np.array([0.4, 0.2, -0.1]), np.array([0.2, -0.3, 0.1])]
+        l2 = [0.12, 0.56]
+        index = [0, 1]
+        backend_name_1 = ["contrib_1", "contrib_2"]
+        backend_name_2 = ["contrib_2", "contrib_3"]
+
+        fig = self.cns.plot_examples(method_1, method_2, l2, index, backend_name_1, backend_name_2, max_features=2)
+
+        assert len(fig.axes) == 2
+        assert all(ax.get_xlabel() == "Contributions" for ax in fig.axes)
+
+    def test_pairwise_consistency_plot_delegate_and_selection(self):
+        methods = ["contrib_1", "contrib_2"]
+
+        with patch.object(self.cns, "plot_pairwise_consistency", return_value="pairwise-fig") as patched_plot:
+            output = self.cns.pairwise_consistency_plot(methods=methods, selection=[0, 1], max_features=2, max_points=3)
+
+        assert output == "pairwise-fig"
+        patched_plot.assert_called_once()
+        weights_arg, x_arg = patched_plot.call_args.args[0], patched_plot.call_args.args[1]
+        assert len(weights_arg) == 2
+        assert x_arg.shape[0] == 2
+
+    def test_pairwise_consistency_plot_input_validation(self):
+        with self.assertRaisesRegex(ValueError, "Choose 2 methods among methods of the contributions"):
+            self.cns.pairwise_consistency_plot(methods=["contrib_1"])
+
+        with self.assertRaisesRegex(ValueError, "Selection must include multiple points"):
+            self.cns.pairwise_consistency_plot(methods=["contrib_1", "contrib_2"], selection=[0])
+
+        with self.assertRaisesRegex(ValueError, "Parameter selection must be a list"):
+            self.cns.pairwise_consistency_plot(methods=["contrib_1", "contrib_2"], selection=(0, 1))
+
+        cns_without_x = Consistency()
+        cns_without_x.compile(contributions=self.contributions)
+        with self.assertRaisesRegex(ValueError, "x must be defined in the compile to display the plot"):
+            cns_without_x.pairwise_consistency_plot(methods=["contrib_1", "contrib_2"])
+
+        cns_invalid_x = Consistency()
+        cns_invalid_x.compile(contributions=self.contributions, x=self.X.values)
+        with self.assertRaisesRegex(ValueError, "x must be a pandas DataFrame"):
+            cns_invalid_x.pairwise_consistency_plot(methods=["contrib_1", "contrib_2"])
 
     def test_pairwise_consistency_plot(self):
         methods = ["contrib_1", "contrib_3"]
