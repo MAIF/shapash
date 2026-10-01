@@ -1,0 +1,47 @@
+# Build context for demo/Dockerfile (context = repo root — see demo/README.md).
+#
+# The image only needs pyproject.toml, README.md, MANIFEST.in, shapash/, demo/serve_nlp.py
+# and demo/nlp_cache/. Everything below is either huge or irrelevant to the build; without
+# these excludes the context is several GB (.venv alone is multi-GB), which is minutes of
+# upload on a remote Docker host.
+
+# Virtualenvs and VCS
+.git
+.gitignore
+.venv
+venv
+
+# Build / packaging / coverage artifacts
+dist/
+build/
+htmlcov/
+.coverage
+*.egg-info/
+
+# Not used by the image
+docs/
+tutorial/
+tests/
+data/
+dev/
+catboost_info/
+demo/private_model/
+
+# Caches
+**/__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Editor / agent config
+.idea/
+.vscode/
+.claude/
+
+# Optional: ship only the model cache actually being served (saves ~50 MB, and keeps
+# unrelated models' contributions out of the image). Uncomment both lines together —
+# the second re-includes the one directory the default ServeConfig needs.
+# demo/nlp_cache/*/
+# !demo/nlp_cache/bhadresh-savani__distilbert-base-uncased-emotion/

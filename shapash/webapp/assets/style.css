@@ -144,6 +144,22 @@ h4 {
     z-index: 998;
 }
 
+/* NLP app: magnifies a `_tabbed_card` panel to the full viewport (see nlp_app.py's
+   panel-card/panel-expand-btn clientside callback). The card's own flex layout fills whatever
+   box it is given, so no per-panel sizing is needed here beyond taking over the viewport. */
+.fullscreen-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    z-index: 2000 !important;
+    background-color: white;
+}
+
 /* PLOTLY MODEBAR */
 .modebar {
     position: absolute;
@@ -198,6 +214,13 @@ h4 {
     margin-bottom: 0;
 }
 
+/* NLP app: "Model Errors" switch fill, themed via the --errors-switch-color custom property
+   set inline on the switch (see nlp_app.py._build_selection_bar). */
+#errors-only-switch:checked {
+    background-color: var(--errors-switch-color, #f4c000);
+    border-color: var(--errors-switch-color, #f4c000);
+}
+
 .Select-placeholder, .Select__placeholder {
     line-height: 1.4vw !important;
     font-size: calc(0.3rem + 0.5vw) !important;
@@ -248,4 +271,28 @@ button#id_card, .btn-warning {
     font-size: calc(0.3rem + 0.5vw) !important;
     align-items: center;
     padding-top: 0.2vw !important;
+}
+
+/* NUMBER INPUT SIZING */
+/* Bootstrap's .form-control-sm sets a fixed rem font-size/height that never moves with viewport
+   width, while the Class/Rank-by dropdowns right next to these two (.Select-control, above) are
+   deliberately sized in vw so the row's typography scales together as the page is resized — and
+   zooming the browser changes the effective viewport width in CSS px, which is exactly what drives
+   vw. Without this, Min-occur/Top-K stay pinned at a fixed size while their neighbors grow or
+   shrink, so at some zoom levels they look comparatively "off" — too big or too small next to the
+   dropdowns. Matching the same formula keeps every control in this row scaling in lockstep.
+   min-height (and the fixed-px padding it's built from) must be overridden too — Bootstrap derives
+   it from `.form-control-sm`'s own em/rem box model, which stays bigger than 1.4vw's own height
+   below ~2650px viewport width and silently clamps it, so the box height ends up following that
+   different, non-proportional formula instead of actually tracking 1.4vw like its neighbor. */
+#min-occurrences, #topk-input {
+    /* +2px: the dropdown control's height is content-box (its 1px+1px border sits outside the
+       1.4vw), while this is border-box (border included inside it) — without the offset the two
+       land 2px apart at every width, a small but constant mismatch worth closing exactly. */
+    height: calc(1.4vw + 2px) !important;
+    min-height: calc(1.4vw + 2px) !important;
+    line-height: 1.4vw !important;
+    font-size: calc(0.3rem + 0.5vw) !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }

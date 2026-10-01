@@ -85,6 +85,8 @@
       "0": "rgba(52, 55, 54, 0.8)",
       "1": "rgba(52, 55, 54, 0.8)"
     },
+    "nlp_xpl_negative": "rgba(235, 149, 72, 0.9)",
+    "nlp_xpl_positive": "rgba(0, 154, 203, 1)",
     "prediction_plot": {
       "0": "rgba(0, 70, 92, 0.9)",
       "1": "rgba(168, 84, 0, 0.9)"
@@ -207,6 +209,8 @@
       "0": "rgba(52, 55, 54, 0.8)",
       "1": "rgba(52, 55, 54, 0.8)"
     },
+    "nlp_xpl_negative": "rgba(74, 99, 138, 0.7)",
+    "nlp_xpl_positive": "rgba(244, 192, 0, 1.0)",
     "prediction_plot": {
       "0": "rgba(255, 77, 7, 0.9)",
       "1": "rgba(52, 55, 54, 0.9)"
