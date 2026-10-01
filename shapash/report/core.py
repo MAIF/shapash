@@ -7,6 +7,7 @@ import html
 import logging
 import re
 from pathlib import Path
+from typing import Any, Protocol
 
 import panel as pn
 
@@ -16,8 +17,55 @@ from shapash.report.validation import load_report_config
 logger = logging.getLogger(__name__)
 
 
-def generate_report(runtime, config_file: Path, output_file: str) -> None:
-    """Render a Panel report to an HTML file driven by a YAML config."""
+class _ReportBlockRenderer(Protocol):
+    """Interface required from an object that renders report blocks.
+
+    Implementations receive one block configuration and return its Panel view,
+    or ``None`` when the block should not appear in the report.
+    """
+
+    def render_block(self, block_cfg: dict[str, Any]) -> pn.viewable.Viewable | None:
+        """Render a block configuration as a Panel viewable.
+
+        Parameters
+        ----------
+        block_cfg : dict[str, Any]
+            Configuration mapping for one report block.
+
+        Returns
+        -------
+        pn.viewable.Viewable or None
+            Rendered Panel viewable, or ``None`` to omit the block.
+        """
+        ...
+
+
+def generate_report(runtime: _ReportBlockRenderer, config_file: Path, output_file: str) -> None:
+    """Render a YAML-configured Panel report to an HTML file.
+
+    Parameters
+    ----------
+    runtime : _ReportBlockRenderer
+        Renderer implementing the report-block rendering protocol.
+    config_file : Path
+        Path to the YAML report configuration file.
+    output_file : str
+        Destination file path for the generated HTML report.
+
+    Returns
+    -------
+    None
+        The report is written to ``output_file``; no value is returned.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the configuration file does not exist.
+    ValueError
+        If the YAML content is invalid or has an unsupported structure.
+    OSError
+        If the output directory or HTML report cannot be written.
+    """
     pn.extension("plotly")
     cfg_path = config_file.resolve()
     cfg = load_report_config(cfg_path)
@@ -52,13 +100,41 @@ def generate_report(runtime, config_file: Path, output_file: str) -> None:
 
 
 def _slugify(text: str) -> str:
-    """Return a stable slug for navigation anchor IDs."""
+    """Convert text to a lowercase, hyphen-separated navigation anchor.
+
+    Parameters
+    ----------
+    text : str
+        Label to normalize. Runs of non-ASCII-alphanumeric characters
+        become a single hyphen, and leading or trailing hyphens are removed.
+
+    Returns
+    -------
+    str
+        A normalized anchor string, which may be empty if ``text`` contains no
+        ASCII letters or digits.
+    """
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return slug
 
 
-def _block_label(block_cfg: dict) -> str:
-    """Resolve a human-readable block label for the navigation bar."""
+def _block_label(block_cfg: dict[str, Any]) -> str:
+    """Resolve the display label used for a block in the navigation bar.
+
+    The block's non-empty string ``params.title`` takes precedence. Otherwise,
+    its ``type`` value is converted to title case, with ``"Section"`` as the
+    fallback.
+
+    Parameters
+    ----------
+    block_cfg : dict[str, Any]
+        Block configuration mapping.
+
+    Returns
+    -------
+    str
+        A non-empty, human-readable label.
+    """
     params = block_cfg.get("params", {})
     if isinstance(params, dict):
         title = params.get("title")
@@ -73,8 +149,28 @@ def _block_label(block_cfg: dict) -> str:
     return "Section"
 
 
-def _assign_section_ids(blocks: list[dict], used: set[str] | None = None, prefix: str = "section") -> None:
-    """Assign unique anchor IDs to all blocks (including group children)."""
+def _assign_section_ids(blocks: list[dict[str, Any]], used: set[str] | None = None, prefix: str = "section") -> None:
+    """Add unique navigation anchor IDs to blocks and nested group children.
+
+    The input block dictionaries are modified in place by adding a
+    ``_section_id`` entry. IDs are derived from block labels and receive a
+    numeric suffix when needed to avoid collisions.
+
+    Parameters
+    ----------
+    blocks : list[dict[str, Any]]
+        Block configurations to update.
+    used : set[str] or None, default=None
+        Optional set of IDs already assigned. It is updated in place and
+        shared with recursive calls so IDs remain unique across the report.
+    prefix : str, default="section"
+        Prefix used when a label cannot produce a non-empty slug.
+
+    Returns
+    -------
+    None
+        The block mappings and optional ``used`` set are updated in place.
+    """
     used_ids = used if used is not None else set()
     for idx, block in enumerate(blocks, start=1):
         label_slug = _slugify(_block_label(block))
@@ -96,15 +192,51 @@ def _assign_section_ids(blocks: list[dict], used: set[str] | None = None, prefix
 
 
 def _wrap_section_anchor(content: pn.viewable.Viewable, section_id: str | None) -> pn.Column:
-    """Wrap one rendered block with an in-page anchor target."""
+    """Place rendered content in a section container with an optional anchor.
+
+    Parameters
+    ----------
+    content : pn.viewable.Viewable
+        Panel viewable representing the rendered block.
+    section_id : str or None
+        HTML element ID targeted by navigation links, or ``None``
+        to create a section without an anchor element.
+
+    Returns
+    -------
+    pn.Column
+        A stretch-width Panel column containing the anchor, when present, and
+        the rendered content.
+    """
     if not section_id:
         return pn.Column(content, css_classes=["scroll-section"], sizing_mode="stretch_width")
     anchor = pn.pane.HTML(f'<div id="{section_id}" class="scroll-anchor"></div>', sizing_mode="stretch_width")
     return pn.Column(anchor, content, css_classes=["scroll-section"], sizing_mode="stretch_width")
 
 
-def build_navigation_bar(blocks: list[dict]) -> pn.pane.HTML:
-    """Build a sticky in-page navigation bar using Panel HTML pane."""
+def build_navigation_bar(blocks: list[dict[str, Any]]) -> pn.pane.HTML:
+    """Build the report's sticky navigation as a Panel HTML pane.
+
+    Each block becomes a link to its ``_section_id``. Group blocks also include
+    links for their child blocks. Labels and IDs are HTML-escaped before they
+    are inserted into the markup, and the Shapash logo is embedded as a data
+    URL.
+
+    Parameters
+    ----------
+    blocks : list[dict[str, Any]]
+        Top-level block configurations, including assigned section IDs.
+
+    Returns
+    -------
+    pn.pane.HTML
+        A stretch-width ``pn.pane.HTML`` containing the navigation markup.
+
+    Raises
+    ------
+    OSError
+        If the packaged Shapash logo cannot be read.
+    """
     items_html: list[str] = []
     item_count = 0
     for block in blocks:

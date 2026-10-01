@@ -1,12 +1,20 @@
 import re
+from typing import Any
 
 from dash import dcc
+from plotly.graph_objects import Figure
 
 
 class MyGraph(dcc.Graph):
     """Class inherited from dcc.Graph. Add one method for updating graph layout."""
 
-    def __init__(self, figure, component_id, style=None, **kwds):
+    def __init__(
+        self,
+        figure: Figure,
+        component_id: str,
+        style: dict[str, Any] | None = None,
+        **kwds: Any,
+    ) -> None:
         super().__init__(
             id=component_id,
             figure=figure,
@@ -46,12 +54,19 @@ class MyGraph(dcc.Graph):
             }
 
     @staticmethod
-    def adjust_graph_static(figure, x_ax="", y_ax=""):
+    def adjust_graph_static(figure: Figure, x_ax: str = "", y_ax: str = "") -> None:
         """
         Override graph layout for app use
         ----------------------------------------
-        x_ax: title of the x-axis
-        y_ax: title of the y-axis
+        figure : Figure
+            Plotly figure whose layout is updated.
+        x_ax : str
+            Title of the x-axis.
+        y_ax : str
+            Title of the y-axis.
+        Returns
+        -------
+        None
         ---------------------------------------
         """
         main_title, subtitle = split_title_and_subtitle(figure.layout.title.text)
@@ -83,7 +98,7 @@ class MyGraph(dcc.Graph):
         )
 
 
-def split_title_and_subtitle(title: str):
+def split_title_and_subtitle(title: str) -> tuple[str, str | None]:
     """
     Split an HTML-formatted title into a main title and an optional subtitle.
 
@@ -103,7 +118,7 @@ def split_title_and_subtitle(title: str):
 
     Returns
     -------
-    tuple[str, Optional[str]]
+    tuple[str, str | None]
         (main_title, subtitle) where subtitle is None when no subtitle is detected.
         If a subtitle tag is present but empty, an empty string is returned.
 

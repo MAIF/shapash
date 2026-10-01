@@ -79,7 +79,7 @@ class Explainer:
         self.features_groups: dict[str, list[str]] | None = features_groups
         self.local_neighbors: dict[str, np.ndarray] | None = None
         self.features_stability: dict[str, np.ndarray] | None = None
-        self.features_compacity: dict[str, np.ndarray] | None = None
+        self.features_compacity: dict[str, np.ndarray | list[int]] | None = None
         self.contributions: pd.DataFrame | list[pd.DataFrame] | None = None
         self.explain_data: dict[str, Any] | None = None
         self.features_imp: pd.Series | list[pd.Series] | None = None
@@ -163,7 +163,7 @@ class Explainer:
             masks/ordering helpers, and related state).
         """
         if isinstance(self.backend_name, str):
-            backend_cls = get_backend_cls_from_name(self.backend_name)
+            backend_cls = cast(Any, get_backend_cls_from_name(self.backend_name))
             self.backend = backend_cls(
                 model=self.model, preprocessing=self.preprocessing, masker=x, **self.backend_kwargs
             )
@@ -367,6 +367,9 @@ class Explainer:
 
     def check_label_name(self, label: Any, origin: str | None = None) -> tuple[int, Any, Any]:
         """Resolve a label identifier into numeric, model-code, and display representations."""
+        if self._classes is None:
+            raise ValueError("Class labels are unavailable for this model.")
+
         if origin is None:
             if label in self._classes:
                 origin = "code"
@@ -595,6 +598,8 @@ class Explainer:
         -------
         None
         """
+        if self._classes is None:
+            raise ValueError("Class probabilities are only available for classification models")
         self.proba_values = predict_proba(self.model, self.x_encoded, self._classes)
 
     def predict(self) -> None:
@@ -779,8 +784,11 @@ class Explainer:
         AssertionError
             If problem is multi-class classification.
         """
-        if (self._case == "classification") and (len(self._classes) > 2):
-            raise AssertionError("Multi-class classification is not supported")
+        if self._case == "classification":
+            if self._classes is None:
+                raise ValueError("Class labels are unavailable for this model.")
+            if len(self._classes) > 2:
+                raise AssertionError("Multi-class classification is not supported")
 
         all_neighbors = find_neighbors(selection, self.x_encoded, self.model, self._case)
 
@@ -823,8 +831,11 @@ class Explainer:
         AssertionError
             If problem is multi-class classification.
         """
-        if (self._case == "classification") and (len(self._classes) > 2):
-            raise AssertionError("Multi-class classification is not supported")
+        if self._case == "classification":
+            if self._classes is None:
+                raise ValueError("Class labels are unavailable for this model.")
+            if len(self._classes) > 2:
+                raise AssertionError("Multi-class classification is not supported")
 
         features_needed = get_min_nb_features(selection, self.contributions, self._case, distance)
         distance_reached = get_distance(selection, self.contributions, self._case, nb_features)

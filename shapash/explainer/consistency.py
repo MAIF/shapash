@@ -1,9 +1,12 @@
 import itertools
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from category_encoders import OrdinalEncoder
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
@@ -17,16 +20,21 @@ from shapash.utils.utils import adjust_title_height
 class Consistency:
     """Consistency class"""
 
-    def __init__(self, palette_name="default"):
+    def __init__(self, palette_name: str = "default") -> None:
         self._palette_name = palette_name
         self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
 
-    def tuning_colorscale(self, values):
+    def tuning_colorscale(self, values: pd.Series | pd.DataFrame) -> list[list[Any]]:
         """Adapts the color scale to the distribution of points
         Parameters
         ----------
-        values: 1 column pd.DataFrame
+        values : pd.Series or one-column pd.DataFrame
             values whose quantiles must be calculated
+
+        Returns
+        -------
+        list[list[Any]]
+            Plotly color scale stops and colors.
         """
         desc_df = values.describe(percentiles=np.arange(0.1, 1, 0.1).tolist())
         min_pred, max_init = list(desc_df.loc[["min", "max"]].values)
@@ -36,20 +44,25 @@ class Consistency:
         )
         return color_scale
 
-    def compile(self, contributions, x=None, preprocessing=None):
+    def compile(
+        self,
+        contributions: dict[str, pd.DataFrame],
+        x: pd.DataFrame | None = None,
+        preprocessing: Any | None = None,
+    ) -> None:
         """Check whether the contributions respect the correct format:
         contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
         where each contrib_i is a pandas DataFrame
 
         Parameters
         ----------
-        contributions : dict
+        contributions : dict[str, pd.DataFrame]
             Contributions provided by the user if no compute is required.
             Format must be {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
-            where each contrib_i is a pandas DataFrame. By default None
-        x : DataFrame, optional
+            where each contrib_i is a pandas DataFrame.
+        x : pd.DataFrame or None, optional
             Dataset on which to compute consistency metrics, by default None
-        preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+        preprocessing : Any or None, optional
             --> Differents types of preprocessing are available:
 
             - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
@@ -69,14 +82,14 @@ class Consistency:
         self.check_consistency_contributions(self.weights)
         self.index = self.weights[0].index
 
-    def check_consistency_contributions(self, weights):
+    def check_consistency_contributions(self, weights: list[pd.DataFrame]) -> None:
         """
         Assert contributions calculated from different methods are dataframes
         of same shape with same column names and index names
 
         Parameters
         ----------
-        weights : list
+        weights : list[pd.DataFrame]
             List of contributions from different methods
         """
         if weights[0].ndim == 1:
@@ -90,7 +103,7 @@ class Consistency:
         if not all(x.index.tolist() == weights[0].index.tolist() for x in weights):
             raise ValueError("Index names are different between contributions")
 
-    def consistency_plot(self, selection=None, max_features=20):
+    def consistency_plot(self, selection: list[Any] | None = None, max_features: int = 20) -> None:
         """
         The Consistency_plot has the main objective of comparing explainability methods.
 
@@ -105,10 +118,10 @@ class Consistency:
 
         Parameters
         ----------
-        selection: list
+        selection : list[Any] or None, optional
             Contains list of index, subset of the input DataFrame that we use
             for the compute of consitency statistics, by default None
-        max_features: int, optional
+        max_features : int, optional
             Maximum number of displayed features, by default 20
         """
         # Selection
@@ -131,30 +144,30 @@ class Consistency:
         self.plot_comparison(mean_distances)
         self.plot_examples(method_1, method_2, l2, index, backend_name_1, backend_name_2, max_features)
 
-    def calculate_all_distances(self, methods, weights):
+    def calculate_all_distances(self, methods: list[str], weights: list[np.ndarray]) -> tuple[np.ndarray, pd.DataFrame]:
         """
         For each instance, measure a distance between contributions from different methods.
         In addition, calculate the mean distance between each pair of method
 
         Parameters
         ----------
-        methods : list
+        methods : list[str]
             List of methods used in the calculation of contributions
-        weights : list
+        weights : list[np.ndarray]
             List of contributions from different methods
 
         Returns
         -------
-        all_comparisons : array
+        all_comparisons : np.ndarray
             Array containing, for each instance and each pair of methods, the distance between the contribtuions
-        mean_distances : DataFrame
+        mean_distances : pd.DataFrame
             DataFrame storing all pairwise distances between methods
         """
         mean_distances = pd.DataFrame(np.zeros((len(methods), len(methods))), columns=methods, index=methods)
 
         # Initialize a (n choose 2)x4 array (n=num of instances)
         # that will contain : indices of methods that are compared, index of instance, L2 value of instance
-        all_comparisons = np.array([np.repeat(None, 4)])
+        all_comparisons = np.array([np.repeat(np.array([None], dtype=object), 4)])
 
         for index_i, index_j in itertools.combinations(range(len(methods)), 2):
             l2_dist = self.calculate_pairwise_distances(weights, index_i, index_j)
@@ -175,13 +188,13 @@ class Consistency:
 
         return all_comparisons, mean_distances
 
-    def calculate_pairwise_distances(self, weights, index_i, index_j):
+    def calculate_pairwise_distances(self, weights: list[np.ndarray], index_i: int, index_j: int) -> np.ndarray:
         """
         For a specific pair of methods, calculate the distance between the contributions for all instances.
 
         Parameters
         ----------
-        weights : list
+        weights : list[np.ndarray]
             List of contributions from 2 selected methods
         index_i : int
             Index of method 1
@@ -190,7 +203,7 @@ class Consistency:
 
         Returns
         -------
-        l2_dist : array
+        l2_dist : np.ndarray
             Distance between the two selected methods for all instances
         """
         # Normalize weights using L2 norm
@@ -201,53 +214,62 @@ class Consistency:
 
         return l2_dist
 
-    def calculate_mean_distances(self, methods, mean_distances, index_i, index_j, l2_dist):
+    def calculate_mean_distances(
+        self,
+        methods: list[str],
+        mean_distances: pd.DataFrame,
+        index_i: int,
+        index_j: int,
+        l2_dist: np.ndarray,
+    ) -> None:
         """
         Given the contributions of all instances for two selected instances, calculate the distance between them
 
         Parameters
         ----------
-        methods : list
+        methods : list[str]
             List of methods used in the calculation of contributions
-        mean_distances : DataFrame
+        mean_distances : pd.DataFrame
             DataFrame storing all pairwise distances between methods
         index_i : int
             Index of method 1
         index_j : int
             Index of method 2
-        l2_dist : array
+        l2_dist : np.ndarray
             Distance between the two selected methods for all instances
         """
         # Calculate mean distance between the two methods and update the matrix
         mean_distances.loc[methods[index_i], methods[index_j]] = np.mean(l2_dist)
         mean_distances.loc[methods[index_j], methods[index_i]] = np.mean(l2_dist)
 
-    def find_examples(self, mean_distances, all_comparisons, weights):
+    def find_examples(
+        self, mean_distances: pd.DataFrame, all_comparisons: np.ndarray, weights: list[np.ndarray]
+    ) -> tuple[list[np.ndarray], list[np.ndarray], list[Any], list[Any], list[str], list[str]]:
         """
         To illustrate the meaning of distances between methods, extract 5 real examples from the dataset
 
         Parameters
         ----------
-        mean_distances : DataFrame
+        mean_distances : pd.DataFrame
             DataFrame storing all pairwise distances between methods
-        all_comparisons : array
+        all_comparisons : np.ndarray
             Array containing, for each instance and each pair of methods, the distance between the contribtuions
-        weights : list
+        weights : list[np.ndarray]
             List of contributions from 2 selected methods
 
         Returns
         -------
-        method_1 : list
+        method_1 : list[np.ndarray]
             Contributions of 5 instances selected to display in the second plot for method 1
-        method_2 : list
+        method_2 : list[np.ndarray]
             Contributions of 5 instances selected to display in the second plot for method 2
-        l2 : list
+        l2 : list[Any]
             Distance between method_1 and method_2 for the 5 instances
-        index : list
+        index : list[Any]
             Index of the selected example
-        backend_name_1 : list
+        backend_name_1 : list[str]
             Name of the explainability method displayed on the left
-        backend_name_2 : list
+        backend_name_2 : list[str]
             Name of the explainability method displayed on the right
         """
         method_1 = []
@@ -285,33 +307,39 @@ class Consistency:
 
         return method_1, method_2, l2, index, backend_name_1, backend_name_2
 
-    def calculate_coords(self, mean_distances):
+    def calculate_coords(self, mean_distances: pd.DataFrame) -> np.ndarray:
         """
         Calculate 2D coords to position the different methods in the main graph
 
         Parameters
         ----------
-        mean_distances : DataFrame
+        mean_distances : pd.DataFrame
             DataFrame storing all pairwise distances between methods
 
         Returns
         -------
-        Coordinates of each method
+        np.ndarray
+            Coordinates of each method.
         """
         return MDS(n_components=2, metric="precomputed", random_state=0, n_init=4, init="random").fit_transform(
             mean_distances
         )
 
-    def plot_comparison(self, mean_distances):
+    def plot_comparison(self, mean_distances: pd.DataFrame) -> Figure:
         """
         Plot the main graph displaying distances between methods
 
         Parameters
         ----------
-        mean_distances : DataFrame
+        mean_distances : pd.DataFrame
             DataFrame storing all pairwise distances between methods
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Figure comparing the average distances between methods.
         """
-        font = {"color": f"#{50:02x}{50:02x}{50:02x}"}
+        font: dict[str, Any] = {"color": f"#{50:02x}{50:02x}{50:02x}"}
 
         fig, ax = plt.subplots(ncols=1, figsize=(10, 6))
 
@@ -337,7 +365,7 @@ class Consistency:
         for i in range(len(mean_distances.columns)):
             ax.annotate(
                 mean_distances.columns[i],
-                xy=coords[i, :],
+                xy=(float(coords[i, 0]), float(coords[i, 1])),
                 xytext=(-5, 5),
                 textcoords="offset points",
                 ha="right",
@@ -366,53 +394,70 @@ class Consistency:
 
         return fig
 
-    def draw_arrow(self, ax, a, b, dst):
+    def draw_arrow(self, ax: Axes, a: np.ndarray, b: np.ndarray, dst: float) -> None:
         """
         Add an arrow in the main graph between the methods
 
         Parameters
         ----------
-        ax : ax
+        ax : Axes
             Input ax used for the plot
-        a : array
+        a : np.ndarray
             Coordinates of method 1
-        b : array
+        b : np.ndarray
             Coordinates of method 2
         dst : float
             Distance between the methods
         """
         ax.annotate(
             "",
-            xy=a - 0.05 * (a - b),
+            xy=(float(a[0] - 0.05 * (a[0] - b[0])), float(a[1] - 0.05 * (a[1] - b[1]))),
             xycoords="data",
-            xytext=b + 0.05 * (a - b),
+            xytext=(float(b[0] + 0.05 * (a[0] - b[0])), float(b[1] + 0.05 * (a[1] - b[1]))),
             textcoords="data",
             arrowprops=dict(arrowstyle="<->"),
         )
         ax.annotate(
             f"{dst:.2f}",
-            xy=(0.5 * (a[0] + b[0]), 0.5 * (a[1] + b[1])),
+            xy=(float(0.5 * (a[0] + b[0])), float(0.5 * (a[1] + b[1]))),
             xycoords="data",
             textcoords="data",
             ha="center",
         )
 
-    def plot_examples(self, method_1, method_2, l2, index, backend_name_1, backend_name_2, max_features):
-        """
-        Plot the second graph that explains distances via the use of real exmaples extracted from the dataset
+    def plot_examples(
+        self,
+        method_1: list[np.ndarray],
+        method_2: list[np.ndarray],
+        l2: list[Any],
+        index: list[Any],
+        backend_name_1: list[str],
+        backend_name_2: list[str],
+        max_features: int,
+    ) -> Figure:
+        """Plot examples illustrating distances between explanations.
 
         Parameters
         ----------
-        method_1 : list
+        method_1 : list[np.ndarray]
             Contributions of 5 instances selected to display in the second plot for method 1
-        method_2 : list
+        method_2 : list[np.ndarray]
             Contributions of 5 instances selected to display in the second plot for method 2
-        l2 : list
+        l2 : list[Any]
             Distance between method_1 and method_2 for the 5 instances
+        index : list[Any]
+            Index labels of the selected examples.
+        backend_name_1 : list[str]
+            Explainability method names shown on the left.
+        backend_name_2 : list[str]
+            Explainability method names shown on the right.
+        max_features : int
+            Maximum number of features displayed for each example.
 
         Returns
         -------
-        figure
+        matplotlib.figure.Figure
+            Figure comparing selected explanations.
         """
         y = np.arange(method_1[0].shape[0])
         fig, axes = plt.subplots(ncols=len(l2), figsize=(3 * len(l2), 4))
@@ -462,15 +507,15 @@ class Consistency:
 
     def pairwise_consistency_plot(
         self,
-        methods,
-        selection=None,
-        max_features=10,
-        max_points=100,
-        file_name=None,
-        auto_open=False,
-        width=1000,
-        height="auto",
-    ):
+        methods: list[str],
+        selection: list[Any] | None = None,
+        max_features: int = 10,
+        max_points: int = 100,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        width: int = 1000,
+        height: int | Literal["auto"] = "auto",
+    ) -> go.Figure:
         """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point,
         and plots the distribution of those differences.
 
@@ -482,20 +527,20 @@ class Consistency:
 
         Parameters
         ----------
-        methods : list
+        methods : list[str]
             List of explainbility methods to compare
-        selection: list
+        selection : list[Any] or None, optional
             Contains list of index, subset of the input DataFrame that we use
             for the compute of consitency statistics, by default None
-        max_features: int, optional
+        max_features : int, optional
             Maximum number of displayed features, by default 10
         max_points : int, optional
             Maximum number of displayed datapoints per feature, by default 100
-        file_name: string, optional
+        file_name : str or None, optional
             Specify the save path of html files. If it is not provided, no file will be saved.
-        auto_open: bool
+        auto_open : bool, optional
             open automatically the plot, by default False
-        height : str or int, optional
+        height : int or Literal["auto"], optional
             Height of the figure. Default is 'auto'.
         width : int, optional
             Width of the figure. Default is 1000.
@@ -503,7 +548,8 @@ class Consistency:
 
         Returns
         -------
-        figure
+        plotly.graph_objs.Figure
+            Pairwise consistency figure.
         """
         if self.x is None:
             raise ValueError("x must be defined in the compile to display the plot")
@@ -546,32 +592,41 @@ class Consistency:
         return fig
 
     def plot_pairwise_consistency(
-        self, weights, x, top_features, methods, file_name, auto_open, width=1000, height="auto"
-    ):
+        self,
+        weights: list[pd.DataFrame],
+        x: pd.DataFrame,
+        top_features: np.ndarray,
+        methods: list[str],
+        file_name: str | None,
+        auto_open: bool,
+        width: int = 1000,
+        height: int | Literal["auto"] = "auto",
+    ) -> go.Figure:
         """Plot the main graph displaying distances between methods across each feature and data point
 
         Parameters
         ----------
-        weights : list
+        weights : list[pd.DataFrame]
             List of 2 dataframes containing contributions for the selected points
-        x : DataFrame
+        x : pd.DataFrame
             Original input data filtered on selected points
-        top_features : array
+        top_features : np.ndarray
             Top features to display ordered by mean of absolute contributions across all the selected points
-        methods : list
+        methods : list[str]
             List of explainbility methods to compare
-        file_name: string
+        file_name : str or None
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool
             open automatically the plot
-        height : str or int, optional
+        height : int or Literal["auto"], optional
             Height of the figure. Default is 'auto'.
         width : int, optional
             Width of the figure. Default is 1000.
 
         Returns
         -------
-        figure
+        plotly.graph_objs.Figure
+            Pairwise consistency figure.
         """
         # Look for existing OrdinalEncoder. If none, create one for string columns
         if isinstance(self.preprocessing, OrdinalEncoder):
@@ -681,25 +736,33 @@ class Consistency:
         return fig
 
     def _update_pairwise_consistency_fig(
-        self, fig, top_features, xaxis_title, yaxis_title, file_name, auto_open, height="auto", width=1000
-    ):
+        self,
+        fig: go.Figure,
+        top_features: np.ndarray,
+        xaxis_title: str,
+        yaxis_title: str,
+        file_name: str | None,
+        auto_open: bool,
+        height: int | Literal["auto"] = "auto",
+        width: int = 1000,
+    ) -> None:
         """Function used for the pairwise_consistency_plot to update the layout of the plotly figure.
 
         Parameters
         ----------
-        fig : figure
+        fig : plotly.graph_objs.Figure
             Plotly figure
-        top_features : array
+        top_features : np.ndarray
             Top features to display ordered by mean of absolute contributions across all the selected points
         xaxis_title : str
             Title for the x-axis
         yaxis_title : str
             Title for the y-axis
-        file_name: string
+        file_name : str or None
             Specify the save path of html files. If it is not provided, no file will be saved.
-        auto_open: bool
+        auto_open : bool
             open automatically the plot
-        height : str or int, optional
+        height : int or Literal["auto"], optional
             Height of the figure. Default is 'auto'.
         width : int, optional
             Width of the figure. Default is 1000.
@@ -708,11 +771,10 @@ class Consistency:
         -------
         None
         """
-        if height == "auto":
-            height = max(500, 40 * len(top_features) + 300)
+        height_value = max(500, 40 * len(top_features) + 300) if height == "auto" else height
         title = "<br>Pairwise comparison of Consistency:"
         title += "<br><sup>How are differences in contributions distributed across features?</sup>"
-        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
+        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height_value)}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": xaxis_title}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": yaxis_title}
 
@@ -726,7 +788,7 @@ class Consistency:
             yaxis_title=dict_yaxis,
             yaxis=dict(range=[-0.7, len(top_features) - 0.3]),
             yaxis2=dict(range=[-0.7, len(top_features) - 0.3]),
-            height=height,
+            height=height_value,
             width=width,
             margin={"l": 150, "r": 20, "t": 95, "b": 70},
         )
