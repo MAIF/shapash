@@ -9,6 +9,7 @@ something meaningless.
 
 import copy
 import unittest
+import warnings
 from dataclasses import replace
 
 import numpy as np
@@ -364,6 +365,96 @@ class TestPlotterWordProfile(unittest.TestCase):
     def test_absent_in_scope_names_the_scope(self):
         with self.assertRaisesRegex(ValueError, "in the selected samples"):
             self.explanation.plot.word_profile("happy", sample_indices=[3])
+
+
+class TestPlotterCompare(unittest.TestCase):
+    """``compare`` aligns other backends onto this one's units and hands the result to a renderer."""
+
+    def setUp(self):
+        self.ref = _make_explanation()
+        # A LIME-shaped artifact of the same texts: bag of words, its own order, a different scale.
+        self.lime = replace(
+            self.ref,
+            token_strings=[["world", "hello"], ["happy", "i"], ["ok"]],
+            values=[
+                np.array([[5.0, -5.0], [3.0, -3.0]]),
+                np.array([[0.0, 8.0], [0.0, 2.0]]),
+                np.array([[1.0, -1.0]]),
+            ],
+            backend_name="nlp_lime",
+            is_additive=False,
+        )
+
+    def test_heatmap_aligns_the_other_backend_onto_reference_units(self):
+        fig = self.ref.plot.compare(self.lime, row=1, label_idx=1, normalize=None)
+        heat = fig.data[0]
+        self.assertEqual(list(heat.y), ["shap", "lime"])
+        self.assertEqual(list(fig.layout.xaxis.ticktext), ["i", "am", "happy"])
+        z = np.asarray(heat.z, dtype=float)
+        np.testing.assert_allclose(z[0], [0.2, 0.4, 0.6])
+        np.testing.assert_allclose(z[1], [2.0, np.nan, 8.0])
+        self.assertIn("pos", fig.layout.title.text)
+        self.assertIn("lime vs shap", fig.layout.title.text)
+
+    def test_normalizes_by_default(self):
+        z = np.asarray(self.ref.plot.compare(self.lime, row=1, label_idx=1).data[0].z, dtype=float)
+        self.assertEqual(np.nanmax(np.abs(z[1])), 1.0)
+
+    def test_default_class_is_the_predicted_one(self):
+        # Row 1 predicts "neg" (index 0); LIME gave class 0 all zeros.
+        z = np.asarray(self.ref.plot.compare(self.lime, row=1, normalize=None).data[0].z, dtype=float)
+        np.testing.assert_allclose(z[0], [0.1, 0.3, 0.5])
+        np.testing.assert_allclose(z[1], [0.0, np.nan, 0.0])
+
+    def test_bars_and_highlight(self):
+        bars = self.ref.plot.compare([self.lime], row=0, kind="bars")
+        self.assertEqual([t.name for t in bars.data], ["shap", "lime"])
+        self.assertIsInstance(self.ref.plot.compare(self.lime, kind="highlight"), html.Div)
+        self.assertIsInstance(self.ref.plot.compare(self.lime, kind="highlight", notebook=True), DashHtmlPreview)
+
+    def test_max_tokens_keeps_the_strongest_units_in_sentence_order(self):
+        # Normalised: shap [0.33, 0.67, 1.0], lime [0.25, nan, 1.0] — "i" is weakest in both.
+        fig = self.ref.plot.compare(self.lime, row=1, label_idx=1, max_tokens=2)
+        self.assertEqual(list(fig.layout.xaxis.ticktext), ["am", "happy"])
+
+    def test_mapping_sets_labels_and_same_backend_is_told_apart_by_space(self):
+        logit = replace(self.ref, output_space="logit")
+        fig = self.ref.plot.compare({"LIME": self.lime}, row=0)
+        self.assertEqual(list(fig.data[0].y), ["shap", "LIME"])
+        with self.assertWarns(UserWarning):
+            fig = self.ref.plot.compare(logit, row=0)
+        self.assertEqual(list(fig.data[0].y), ["shap (probability)", "shap (logit)"])
+        fig = self.ref.plot.compare({"shap": replace(self.ref)}, row=0)
+        self.assertEqual(list(fig.data[0].y), ["shap", "shap #2"])
+
+    def test_warns_across_output_spaces_and_not_within_one(self):
+        lig = replace(self.lime, backend_name="nlp_captum_lig", output_space="logit")
+        with self.assertWarnsRegex(UserWarning, "shap=probability, captum_lig=logit"):
+            self.ref.plot.compare(lig, row=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            self.ref.plot.compare(self.lime, row=0)
+
+    def test_rejects_a_different_text(self):
+        other = replace(self.lime, texts=self.ref.texts.replace("hello world", "goodbye world"))
+        with self.assertRaisesRegex(ValueError, "different text"):
+            self.ref.plot.compare(other, row=0)
+
+    def test_rejects_different_classes(self):
+        other = replace(self.lime, label_names=["a", "b"])
+        with self.assertRaisesRegex(ValueError, "different classes"):
+            self.ref.plot.compare(other, row=0)
+
+    def test_rejects_unknown_kind(self):
+        with self.assertRaisesRegex(ValueError, "kind"):
+            self.ref.plot.compare(self.lime, kind="violin")
+
+    def test_does_not_touch_either_artifact(self):
+        before = [copy.deepcopy(e.values) for e in (self.ref, self.lime)]
+        self.ref.plot.compare(self.lime, row=1, kind="bars")
+        for exp, values in zip((self.ref, self.lime), before, strict=True):
+            for a, b in zip(exp.values, values, strict=True):
+                np.testing.assert_array_equal(a, b)
 
 
 if __name__ == "__main__":

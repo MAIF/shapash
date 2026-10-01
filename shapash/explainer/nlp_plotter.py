@@ -18,19 +18,23 @@ snapshot reloaded with :meth:`NlpExplanation.load`, which has no model and no ba
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import warnings
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from dash import html
 from plotly import graph_objs as go
 
 from shapash.compute.embeddings import Embedding, projection_coords
+from shapash.compute.token_alignment import align_token_values, backend_agreement, normalize_contributions
 from shapash.explainer.nlp_explanation import (
     WORD_AGGREGATIONS,
     aggregate_word_contributions,
     select_label_column,
     word_contributions_by_sample,
 )
+from shapash.plots.plot_backend_comparison import plot_backend_bars, plot_backend_heatmap, plot_backend_highlight
 from shapash.plots.plot_confusion_matrix import plot_confusion_matrix
 from shapash.plots.plot_scatter import plot_scatter
 from shapash.plots.plot_sentence_highlight import plot_sentence_highlight
@@ -237,6 +241,179 @@ class NlpPlotter:
             tokens=toks, values=values, base_value=base_value if self._exp.is_additive else None
         )
         return DashHtmlPreview(div) if notebook else div
+
+    # ── cross-backend comparison ────────────────────────────────────────────────────────
+    def compare(
+        self,
+        others: NlpExplanation | Sequence[NlpExplanation] | Mapping[str, NlpExplanation],
+        row: int = 0,
+        label_idx: int | None = None,
+        kind: Literal["heatmap", "bars", "highlight"] = "heatmap",
+        normalize: Literal["max_abs", "sum_abs"] | None = "max_abs",
+        max_tokens: int | None = None,
+        top_k: int = 5,
+        title: str | None = None,
+        notebook: bool = False,
+    ) -> go.Figure | html.Div | DashHtmlPreview:
+        """Compare this explanation's contributions on one text with other backends' on the same text.
+
+        This explanation is the *reference*: its word units are the ones displayed, and every other
+        backend's values are aligned onto them (see :mod:`shapash.compute.token_alignment` — LIME's
+        bag-of-words vocabulary does not line up positionally with SHAP's or LIG's word sequence).
+        Pick a sequence backend (SHAP, LIG) as the reference so every occurrence of a word is shown.
+
+        Parameters
+        ----------
+        others : NlpExplanation, sequence of NlpExplanation, or mapping of str to NlpExplanation
+            Explanations of the same texts by other backends (or the same backend configured
+            differently). Labels default to the backend name; pass a mapping to choose them.
+        row : int
+            Positional index of the sample (see :meth:`tokens`). Must hold the same text in every
+            explanation.
+        label_idx : int, optional
+            Class to compare on. ``None`` (default) uses this row's predicted class.
+        kind : {"heatmap", "bars", "highlight"}
+            ``"heatmap"`` — tokens × backends grid; ``"bars"`` — grouped bars per token;
+            ``"highlight"`` — one highlighted sentence per backend (a Dash component).
+        normalize : {"max_abs", "sum_abs", None}
+            How each backend's values are rescaled before display (see
+            :func:`~shapash.compute.token_alignment.normalize_contributions`). Backends explain
+            different quantities (probability, logit, surrogate weights), so the default scales each
+            to ``[-1, 1]``; ``None`` shows raw values, which is only meaningful between backends
+            sharing an ``output_space``.
+        max_tokens : int, optional
+            Keep only the ``max_tokens`` units with the largest magnitude in *any* backend, in
+            sentence order.
+        top_k : int
+            Size of the top set in the agreement line's top-k overlap.
+        title : str, optional
+            Overrides the default, which names the class.
+        notebook : bool
+            For ``kind="highlight"`` only — wrap the component for notebook display (see
+            :meth:`sentence`).
+
+        Returns
+        -------
+        plotly.graph_objs.Figure, dash.html.Div or DashHtmlPreview
+
+        Notes
+        -----
+        A ``NaN`` (drawn as ``·``, a missing bar, or struck-through) means the backend attributed
+        nothing to that unit — LIME drops punctuation. LIME also zero-fills every word outside its
+        ``num_features`` top words, so a LIME ``0`` may mean "not selected" rather than "no effect".
+
+        Backends with a different ``output_space`` (SHAP and LIME in probability, Captum LIG in logit)
+        trigger a ``UserWarning``: rescaling aligns their magnitudes, but probability is a non-linear
+        function of the logits, so even their rankings can legitimately differ.
+
+        The subtitle reports, for each other backend against the reference, the Spearman rank
+        correlation and top-k overlap of the aligned values (see
+        :func:`~shapash.compute.token_alignment.backend_agreement`) — both scale-free, so they do
+        not depend on ``normalize``.
+
+        Examples
+        --------
+        >>> shap_exp.plot.compare({"LIME": lime_exp, "LIG": lig_exp}, row=3, kind="heatmap").show()
+        """
+        exp = self._exp
+        named = self._name_explanations(others)
+        if label_idx is None:
+            label_idx = exp.label_to_idx.get(str(exp.y_pred.iloc[row]), 0)
+        label_idx = self._check_label_idx(label_idx)
+        ref_tokens, ref_values, _ = self._slice(row, label_idx)
+        text = str(exp.texts.iloc[row])
+
+        spaces = {name: other.output_space for name, other in named.items()}
+        if len(set(spaces.values())) > 1:
+            listing = ", ".join(f"{name}={space}" for name, space in spaces.items())
+            warnings.warn(
+                f"Comparing backends across output spaces ({listing}). Normalisation removes the scale gap "
+                "but not the softmax non-linearity, so rankings and agreement scores mix method and space "
+                "differences. For a like-for-like comparison with a logit-space backend, use "
+                "NlpShapBackend(..., output_space='logit').",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        aligned: dict[str, np.ndarray] = {}
+        for name, other in named.items():
+            if str(other.texts.iloc[row]) != text:
+                raise ValueError(f"Row {row} holds a different text in {name!r} than in the reference explanation.")
+            if other.n_classes != exp.n_classes or (
+                other.label_names and exp.label_names and list(other.label_names) != list(exp.label_names)
+            ):
+                raise ValueError(f"{name!r} explains different classes than the reference explanation.")
+            if other is exp:
+                aligned[name] = ref_values
+            else:
+                values = select_label_column(other.values[row], label_idx)
+                aligned[name] = align_token_values(text, ref_tokens, other.token_strings[row], values)
+
+        agreement = backend_agreement(aligned, top_k=top_k)
+        ref_name = next(iter(named))
+        vs_ref = agreement[agreement["backend_a"] == ref_name]
+        subtitle = " · ".join(
+            f"{r.backend_b} vs {ref_name}: ρ={r.spearman:.2f}, top-{top_k}={r.top_k_overlap:.0%}"
+            for r in vs_ref.itertuples()
+        )
+
+        shown = {name: normalize_contributions(v, normalize) for name, v in aligned.items()}
+        if max_tokens is not None and max_tokens < len(ref_tokens):
+            strength = np.nanmax(np.abs(np.vstack(list(shown.values()))), axis=0)
+            keep = np.sort(np.argsort(-np.nan_to_num(strength, nan=-1.0), kind="stable")[:max_tokens])
+            ref_tokens = [ref_tokens[i] for i in keep]
+            shown = {name: v[keep] for name, v in shown.items()}
+
+        if kind == "highlight":
+            div = plot_backend_highlight(ref_tokens, shown, subtitle=subtitle)
+            return DashHtmlPreview(div) if notebook else div
+
+        class_name = self._label_name(label_idx)
+        if title is None:
+            title = f"Backend comparison — {class_name}" if class_name else "Backend comparison"
+        value_label = {"max_abs": "Contribution (÷ max |value|)", "sum_abs": "Share of Σ|value|"}.get(
+            normalize or "", "Contribution (raw)"
+        )
+        if kind == "heatmap":
+            return plot_backend_heatmap(ref_tokens, shown, title=title, subtitle=subtitle, colorbar_title=value_label)
+        if kind == "bars":
+            return plot_backend_bars(ref_tokens, shown, title=title, subtitle=subtitle, xaxis_title=value_label)
+        raise ValueError(f"kind must be 'heatmap', 'bars' or 'highlight', got {kind!r}.")
+
+    def _name_explanations(
+        self, others: NlpExplanation | Sequence[NlpExplanation] | Mapping[str, NlpExplanation]
+    ) -> dict[str, NlpExplanation]:
+        """Reference first, then ``others``, under unique display labels.
+
+        A default label is the backend name without its ``nlp_`` prefix; two explanations from the
+        same backend are told apart by ``output_space`` first (SHAP in probability vs logit space),
+        then by a counter.
+        """
+        exp = self._exp
+        if isinstance(others, Mapping):
+            pairs: list[tuple[str | None, NlpExplanation]] = [(str(k), v) for k, v in others.items()]
+        elif isinstance(others, Sequence):
+            pairs = [(None, o) for o in others]
+        else:
+            pairs = [(None, others)]
+        pairs.insert(0, (None, exp))
+
+        defaults = [o.backend_name.removeprefix("nlp_") for _, o in pairs]
+        # Only entries left to their default label can clash by backend: a caller-chosen label is kept.
+        unnamed = [d for (given, _), d in zip(pairs, defaults, strict=True) if given is None]
+        named: dict[str, NlpExplanation] = {}
+        for (given, other), default in zip(pairs, defaults, strict=True):
+            if given is not None:
+                label = given
+            elif unnamed.count(default) > 1:
+                label = f"{default} ({other.output_space})"
+            else:
+                label = default
+            base, n = label, 2
+            while label in named:
+                label, n = f"{base} #{n}", n + 1
+            named[label] = other
+        return named
 
     # ── batch-level plots ───────────────────────────────────────────────────────────────
     def word_importance(
