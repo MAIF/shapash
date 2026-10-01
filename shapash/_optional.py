@@ -1,9 +1,14 @@
 import importlib
 import warnings
+from types import ModuleType
 from typing import Literal
 
 
-def import_optional_module(module_name: str, extra: str = "", errors: Literal["raise", "warn", "ignore"] = "raise"):
+def import_optional_module(
+    module_name: str,
+    extra: str = "",
+    errors: Literal["raise", "warn", "ignore"] = "raise",
+) -> ModuleType | None:
     """Import an optional dependency by module name.
 
     This helper tries to import the requested module using importlib.
@@ -25,7 +30,7 @@ def import_optional_module(module_name: str, extra: str = "", errors: Literal["r
 
     Returns
     -------
-    module | None
+    ModuleType | None
         The imported module if available, otherwise ``None`` when missing and
         ``errors`` is ``"warn"`` or ``"ignore"``.
 

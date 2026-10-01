@@ -2,11 +2,13 @@
 Filters module
 """
 
+from collections.abc import Sequence
+
 import numpy as np
 import pandas as pd
 
 
-def hide_contributions(var_dict, features_list):
+def hide_contributions(var_dict: pd.DataFrame, features_list: Sequence[object]) -> pd.DataFrame:
     """
     Returns Boolean dataframe depending if the
     feature is present or not in the list of
@@ -14,21 +16,20 @@ def hide_contributions(var_dict, features_list):
 
     Parameters
     ----------
-    var_dict: pd.DataFrame
-        Dataframe with features indexes ordered
-        by contribution.
-    features_list: list
-        List of index, feature to hide.
+    var_dict : pd.DataFrame
+        DataFrame with feature indexes ordered by contribution.
+    features_list : Sequence[object]
+        Feature indexes to hide.
 
     Returns
     -------
     pd.DataFrame
-        Boolean dataframe depend on hidden features.
+        Boolean DataFrame indicating the features that are not hidden.
     """
     return ~var_dict.isin(features_list)
 
 
-def cap_contributions(s_contrib, threshold=0.1):
+def cap_contributions(s_contrib: pd.DataFrame, threshold: float = 0.1) -> pd.DataFrame:
     """
     The function is able to compute a mask indicating where the input matrix
     has values above a given threshold in absolute value.
@@ -43,13 +44,14 @@ def cap_contributions(s_contrib, threshold=0.1):
     Returns
     -------
     pandas.DataFrame
-        Mask with only True of False elements.
+        Boolean mask indicating contributions whose absolute value is at least
+        the threshold.
     """
     mask = s_contrib.abs() >= threshold
     return mask
 
 
-def sign_contributions(dataframe, positive=True):
+def sign_contributions(dataframe: pd.DataFrame, positive: bool = True) -> pd.DataFrame:
     """
     Returns Boolean values depending on
     the signs of local contributions
@@ -59,9 +61,9 @@ def sign_contributions(dataframe, positive=True):
     ----------
     dataframe : pandas.DataFrame
         Local contributions of the model.
-    positive : boolean (default=True)
-        True to evaluate positive value.
-        False to evaluate negative value.
+    positive : bool, optional (default=True)
+        If True, evaluate non-negative values. If False, evaluate negative
+        values.
 
     Returns
     -------
@@ -74,7 +76,7 @@ def sign_contributions(dataframe, positive=True):
         return dataframe < 0
 
 
-def cutoff_contributions_old(dataframe, max_contrib):
+def cutoff_contributions_old(dataframe: pd.DataFrame, max_contrib: int) -> pd.DataFrame:
     """
     The function cutoff_contributions computes a mask on a sorted contribution matrix.
     It outputs True everywhere the contribution is in the top-k,
@@ -82,14 +84,14 @@ def cutoff_contributions_old(dataframe, max_contrib):
 
     Parameters
     ----------
-    dataframe : pd.Dataframe
-        DataFrame is a sorted local contributions matrix.
-    max_contrib: int
+    dataframe : pd.DataFrame
+        Sorted local contributions matrix.
+    max_contrib : int
         The k most important contributions to keep.
 
     Returns
     -------
-    pd.Dataframe
+    pd.DataFrame
         Mask indicating where contributions should be considered.
     """
     mask = np.full_like(dataframe, False).astype(bool)
@@ -97,22 +99,22 @@ def cutoff_contributions_old(dataframe, max_contrib):
     return pd.DataFrame(mask, columns=dataframe.columns, index=dataframe.index)
 
 
-def cutoff_contributions(mask, k=10):
+def cutoff_contributions(mask: pd.DataFrame, k: int = 10) -> pd.DataFrame:
     """
-    Compute a mask that select for each raw the top-k True,
+    Compute a mask that selects the top-k True values for each row,
     k being defined as an option by the user.
 
     Parameters
     ----------
-    mask : pd.Dataframe
+    mask : pd.DataFrame
         Boolean DataFrame indicating sorted contribution we want to hide/show.
-    k: int (default: 10)
-        The number of top feature we want to show.
+    k : int, optional (default=10)
+        The number of top features to show.
 
     Returns
     -------
-    pd.Dataframe
-        Mask where only the k-top contributions are considered.
+    pd.DataFrame
+        Boolean mask where only the top-k contributions are considered.
     """
     # Convert False values to np.nan explicitly without changing data type
     mask_nan = mask.astype(float).replace(0, np.nan)
@@ -121,21 +123,21 @@ def cutoff_contributions(mask, k=10):
     return mask_nan.cumsum(axis=1).isin(range(1, k + 1))
 
 
-def combine_masks(masks_list):
+def combine_masks(masks_list: Sequence[pd.DataFrame]) -> pd.DataFrame:
     """
-    The function combine_masks computes a combined mask from a list of existing masks
-    It outputs True everywhere the value is True for each mask in the list
+    Compute a combined mask from a sequence of existing masks.
+    The output is True only where every mask is True.
 
     Parameters
     ----------
-    masks_list : list of pandas dataframes
-        List of masks used for filtering features et rows
-        the shape of each mask must be equal to the initial dataset shape
+    masks_list : Sequence[pd.DataFrame]
+        Masks used for filtering features and rows. Each mask must have the
+        same shape.
 
     Returns
     -------
-    pd.Dataframe of boolean
-        combination of all masks.
+    pd.DataFrame
+        Boolean combination of all masks.
     """
 
     if len(set(map(lambda x: x.shape, masks_list))) != 1:

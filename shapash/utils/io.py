@@ -32,9 +32,10 @@ _MODEL_FRAMEWORK_MAP = {
 }
 
 
-def save_pickle(obj, path, protocol=pickle.HIGHEST_PROTOCOL):
+def save_pickle(obj: Any, path: str, protocol: int = pickle.HIGHEST_PROTOCOL) -> None:
     """
     Save any python Object in pickle file
+
     Parameters
     ----------
     obj : any Python Object
@@ -62,16 +63,18 @@ def save_pickle(obj, path, protocol=pickle.HIGHEST_PROTOCOL):
         pickle.dump(obj, file, protocol=protocol)
 
 
-def load_pickle(path):
+def load_pickle(path: str) -> Any:
     """
     load any pickle file
+
     Parameters
     ----------
     path : str
         File path where the pickled object is stored.
+
     Returns
     -------
-    object that pickle file contains
+    Any object stored in the pickle file.
     """
 
     if not isinstance(path, str):
@@ -87,7 +90,7 @@ def load_pickle(path):
     return pklobj
 
 
-def load_yml(path):
+def load_yml(path: str) -> Any:
     """
     Loads a yml file
 
@@ -95,10 +98,12 @@ def load_yml(path):
     ----------
     path : str
         File path where the yml file is stored.
+
     Returns
     -------
-    d : dict
-        Python dict containing the parsed yml file.
+    object
+        Python object parsed from the YAML file. Its type depends on the document
+        contents; it is commonly a dict, but may also be a list, scalar, or None.
     """
     if _is_yaml_available is False:
         raise ModuleNotFoundError('Please install PyYAML using "pip install pyyaml" command.')
@@ -126,7 +131,7 @@ def _try_package_version(package_name: str | None) -> str | None:
         return None
 
 
-def _detect_model_framework(model: Any) -> dict:
+def _detect_model_framework(model: Any) -> dict[str, str | None]:
     """
     Inspect ``model`` and return a ``{"name", "version"}`` dict describing its framework.
 
@@ -163,7 +168,7 @@ def _compute_schema_fingerprint(predictor: Any) -> str:
     return f"sha256:{digest}"
 
 
-def _build_predictor_manifest(predictor: Any) -> dict:
+def _build_predictor_manifest(predictor: Any) -> dict[str, Any]:
     """Return the manifest dict describing the runtime state used to save ``predictor``."""
     return {
         "shapash_version": shapash_version,
@@ -175,7 +180,7 @@ def _build_predictor_manifest(predictor: Any) -> dict:
     }
 
 
-def _save_manifest(manifest: dict, predictor_path: str) -> str:
+def _save_manifest(manifest: dict[str, Any], predictor_path: str) -> str:
     """Write ``manifest`` as a sidecar JSON next to the pickle. Returns the manifest path."""
     manifest_path = predictor_path + MANIFEST_SUFFIX
     with open(manifest_path, "w", encoding="utf-8") as f:
@@ -183,7 +188,7 @@ def _save_manifest(manifest: dict, predictor_path: str) -> str:
     return manifest_path
 
 
-def _load_manifest(predictor_path: str) -> dict | None:
+def _load_manifest(predictor_path: str) -> dict[str, Any] | None:
     """Read the sidecar manifest for ``predictor_path``. Returns ``None`` if absent."""
     manifest_path = predictor_path + MANIFEST_SUFFIX
     if not os.path.exists(manifest_path):
@@ -192,7 +197,7 @@ def _load_manifest(predictor_path: str) -> dict | None:
         return json.load(f)
 
 
-def _parse_major_minor(version_str: str) -> tuple | None:
+def _parse_major_minor(version_str: str) -> tuple[int, int] | None:
     """Parse a dotted version string into ``(major, minor)``. Returns ``None`` if unparseable."""
     if not version_str:
         return None
@@ -205,7 +210,7 @@ def _parse_major_minor(version_str: str) -> tuple | None:
     return (major, minor)
 
 
-def _check_predictor_manifest(manifest: dict, predictor: Any) -> None:
+def _check_predictor_manifest(manifest: dict[str, Any], predictor: Any) -> None:
     """
     Validate ``manifest`` against the loaded ``predictor``. Raises ``ValueError`` on
     critical mismatches (schema fingerprint, major shapash version) and emits

@@ -1,5 +1,9 @@
 import warnings
+from collections.abc import Mapping, Sequence
+from typing import Any
 
+import numpy as np
+import pandas as pd
 from plotly import graph_objs as go
 from plotly.offline import plot
 
@@ -7,54 +11,55 @@ from shapash.utils.utils import add_line_break, adjust_title_height, truncate_st
 
 
 def plot_line_comparison(
-    index,
-    feature_values,
-    contributions,
-    style_dict,
-    predictions=None,
-    dict_features=None,
-    subtitle=None,
-    width=900,
-    height=550,
-    file_name=None,
-    auto_open=False,
-):
+    index: Sequence[Any],
+    feature_values: Sequence[Any],
+    contributions: np.ndarray | Sequence[Sequence[float]],
+    style_dict: dict[str, Any],
+    predictions: Sequence[pd.Series] | None = None,
+    dict_features: Mapping[Any, Any] | None = None,
+    subtitle: str | None = None,
+    width: int = 900,
+    height: int = 550,
+    file_name: str | None = None,
+    auto_open: bool = False,
+) -> go.Figure:
     """
     Plotly plot for comparisons. Displays
     the contributions of several individuals. One line represents
     the different contributions of a unique individual.
+
     Parameters
     ----------
-    index: list
-        List of index corresponding to the individuals we want to compare.
-    feature_values: list
-        String list corresponding to the name of the features.
-    contributions: numpy.ndarray
-        Matrix of contributions.
-        Each row corresponds to an individual.
-    style_dict: dict
-        the different styles used in the different outputs of Shapash
-    predictions: list
-        List of pandas.Series containing values of individuals.
-    dict_features: dict
-        Dictionnary of feature names.
-    subtitle: string (default : None)
+    index : sequence[Any]
+        Identifiers of the individuals to compare.
+    feature_values : sequence[Any]
+        Feature labels or identifiers corresponding to the contribution rows.
+    contributions : numpy.ndarray or sequence of sequence[float]
+        Matrix of contributions, with one row per feature and one value per individual.
+    style_dict : dict[str, Any]
+        Styles used in the different outputs of Shapash.
+    predictions : sequence[pandas.Series] or None, optional
+        Feature values for each individual. Required when ``index`` is not empty.
+    dict_features : Mapping[Any, Any] or None, optional
+        Mapping from feature labels to the corresponding prediction-series keys. Required when ``index`` is not empty.
+    subtitle : str or None, optional
         Subtitle to display.
-    width: int (default: 900)
-        Plotly figure - layout width
-    height: int (default: 550)
-        Plotly figure - layout height.
-    file_name: string (optional)
-        File name to use to save the plotly scatter chart. If None the scatter chart will not be saved.
-    auto_open: Boolean (optional)
-        Indicate whether to open the scatter plot or not.
+    width : int, optional
+        Plotly figure layout width, by default 900.
+    height : int, optional
+        Plotly figure layout height, by default 550.
+    file_name : str or None, optional
+        Path for saving the Plotly chart. If None, the chart will not be saved.
+    auto_open : bool, optional
+        Whether to open the saved plot, by default False.
+
     Returns
     -------
-    Plotly Figure Object
+    go.Figure
         Plot of the contributions of individuals, feature by feature.
     """
 
-    topmargin = 80
+    topmargin = 80.0
     dict_xaxis = style_dict["dict_xaxis"] | {"text": None}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}
 
@@ -94,6 +99,8 @@ def plot_line_comparison(
     lines = list()
 
     for i, id_i in enumerate(index):
+        if predictions is None or dict_features is None:
+            raise ValueError("predictions and dict_features are required when index is not empty.")
         x_i = list()
         features = list()
         x_val = predictions[i]
