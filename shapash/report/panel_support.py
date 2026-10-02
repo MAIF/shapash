@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,16 @@ import plotly.graph_objs as go
 
 # Use Tabulator only for wide tables; smaller tables keep the simpler DataFrame pane rendering.
 TABULATOR_MIN_COLUMNS = 10
+
+
+class ReportAnchor(pn.pane.HTML):
+    """A trusted HTML anchor pane for internal report navigation."""
+
+    def __init__(self, anchor_id: str) -> None:
+        super().__init__(
+            f'<div id="{escape(anchor_id, quote=True)}" class="scroll-anchor"></div>',
+            sizing_mode="stretch_width",
+        )
 
 
 def report_js_text() -> str:
@@ -86,6 +97,9 @@ def _add_css_classes(viewable: pn.viewable.Viewable, *classes: str) -> pn.viewab
 
 
 def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
+    if isinstance(viewable, ReportAnchor):
+        return viewable
+
     if isinstance(viewable, pn.pane.Markdown):
         return _add_css_classes(viewable, "content-block")
 
@@ -140,7 +154,9 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
         return viewable
 
     method_info = f" in '{method_name}'" if method_name else ""
-    allowed_types = "Markdown, DataFrame, Plotly, Select, Tabulator, Spacer, ParamFunction, ParamMethod, Row, Column"
+    allowed_types = (
+        "Markdown, DataFrame, Plotly, Select, Tabulator, Spacer, ParamFunction, ParamMethod, ReportAnchor, Row, Column"
+    )
     raise TypeError(
         f"Unsupported Panel object type returned{method_info}: {type(viewable).__name__}. "
         f"Allowed Panel return types: {allowed_types}."
@@ -163,7 +179,7 @@ def _coerce_viewable(item: Any) -> pn.viewable.Viewable:
                 width_policy="max",
                 sizing_mode="stretch_width",
             )
-        return pn.pane.DataFrame(item, index=False, width_policy="min", sizing_mode="stretch_width")
+        return pn.pane.DataFrame(item, index=True, width_policy="min", sizing_mode="stretch_width")
     if isinstance(item, go.Figure):
         return pn.pane.Plotly(item, config={"responsive": True}, sizing_mode="stretch_width")
     raise TypeError(

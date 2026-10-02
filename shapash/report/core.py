@@ -26,7 +26,7 @@ def generate_report(runtime, config_file: Path, output_file: str) -> None:
     _assign_section_ids(cfg["sections"])
 
     rendered_blocks = [runtime.render_block(block_cfg) for block_cfg in cfg["sections"]]
-    nav_bar = build_navigation_bar(cfg["sections"])
+    nav_bar = build_navigation_bar(cfg["sections"], getattr(runtime, "class_navigation_items", None))
 
     out_path = Path(output_file).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,7 +38,7 @@ def generate_report(runtime, config_file: Path, output_file: str) -> None:
         sizing_mode="stretch_width",
     )
     report_layout = pn.Row(
-        pn.Column(nav_bar, css_classes=["report-sidebar"], width=300, sizing_mode="fixed"),
+        pn.Column(nav_bar, css_classes=["report-sidebar"], width=300, sizing_mode="stretch_height"),
         report_content,
         css_classes=["main-report"],
         sizing_mode="stretch_width",
@@ -103,10 +103,14 @@ def _wrap_section_anchor(content: pn.viewable.Viewable, section_id: str | None) 
     return pn.Column(anchor, content, css_classes=["scroll-section"], sizing_mode="stretch_width")
 
 
-def build_navigation_bar(blocks: list[dict]) -> pn.pane.HTML:
+def build_navigation_bar(
+    blocks: list[dict],
+    class_navigation_items: dict[str, list[dict[str, str]]] | None = None,
+) -> pn.pane.HTML:
     """Build a sticky in-page navigation bar using Panel HTML pane."""
     items_html: list[str] = []
     item_count = 0
+    class_navigation_items = class_navigation_items or {}
     for block in blocks:
         block_type = block.get("type")
         label = html.escape(_block_label(block))
@@ -116,9 +120,15 @@ def build_navigation_bar(blocks: list[dict]) -> pn.pane.HTML:
             children_links: list[str] = []
             for child in block.get("blocks", []):
                 child_label = html.escape(_block_label(child))
-                child_id = html.escape(str(child.get("_section_id", "")))
+                child_section_id = str(child.get("_section_id", ""))
+                child_id = html.escape(child_section_id)
                 item_count += 1
                 children_links.append(f'<a class="nav-item nav-child" href="#{child_id}">{child_label}</a>')
+                for class_item in class_navigation_items.get(child_section_id, []):
+                    class_label = html.escape(class_item["label"])
+                    class_anchor = html.escape(class_item["anchor"])
+                    item_count += 1
+                    children_links.append(f'<a class="nav-item nav-child" href="#{class_anchor}">{class_label}</a>')
             items_html.append(
                 "".join(
                     [

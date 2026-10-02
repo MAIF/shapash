@@ -18,12 +18,12 @@ from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, series_dtype
 from shapash.report.core import _wrap_section_anchor
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable
+from shapash.report.panel_support import ReportAnchor, _add_css_classes, _auto_style_viewable, _coerce_viewable
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
 if TYPE_CHECKING:
-    from shapash.explainer import SmartExplainer
+    from shapash.explainer.explainer import Explainer
 logger = logging.getLogger(__name__)
 
 PALETTE = {
@@ -99,23 +99,25 @@ class ReportBlockMixin:
 
     def __init__(
         self,
-        explainer: SmartExplainer | None = None,
+        explainer: Explainer | None = None,
+        colors_dict: dict[str, Any] | None = None,
         x_train: pd.DataFrame | None = None,
         y_train: pd.Series | pd.DataFrame | list | None = None,
         y_test: pd.Series | pd.DataFrame | list | None = None,
         max_points: int = 200,
     ) -> None:
-        self.smart_explainer = explainer
-        self.explainer = explainer.explainer if explainer else None
+        self.explainer = explainer
+        self.colors_dict = colors_dict if colors_dict is not None else {}
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
-        self.x_init = getattr(explainer, "x_init", None)
+        self.x_init = getattr(self.explainer, "x_init", None)
         self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
         self.y_train, self.target_name_train = self._get_values_and_name(y_train, "target")
         self.y_test, self.target_name_test = self._get_values_and_name(y_test, "target")
         self.target_name = self.target_name_train if self.target_name_train is not None else self.target_name_test
         self.max_points = max_points
         self._inside_group = False
+        self.class_navigation_items: dict[str, list[dict[str, str]]] = {}
 
         if self.explainer is not None:
             if self.explainer.y_pred is not None:
@@ -130,6 +132,9 @@ class ReportBlockMixin:
 
         block_type = block_cfg.get("type", "")
         params = block_cfg.get("params", {})
+        if block_type == "class_explainability":
+            params = dict(params)
+            params["navigation_id"] = block_cfg.get("_section_id", "class-explainability")
 
         if block_type == "group":
             previous_inside_group = getattr(self, "_inside_group", False)
@@ -335,7 +340,7 @@ class ReportBlockMixin:
         return title, [stats_table]
 
     @block
-    def block_model_analysis(self, title: str = "Model information") -> BlockContent:
+    def block_model_analysis(self, title: str = "Model information", show_index: bool = False) -> BlockContent:
         """Render model metadata and parameter tables.
         Requires explainer.
 
@@ -343,6 +348,8 @@ class ReportBlockMixin:
         ----------
         title : str, default="Model information"
             Section title displayed above model details.
+        show_index : bool, default=False
+            Whether the model parameter tables display their pandas row index.
 
         Returns
         -------
@@ -385,7 +392,11 @@ class ReportBlockMixin:
                     "Value": [_truncate(val, 300) for _, val in params_items[split_idx:]],
                 }
             )
-            params_table = (left_df, pn.Spacer(width=24), right_df)
+            params_table = (
+                pn.pane.DataFrame(left_df, index=show_index, width_policy="min", sizing_mode="stretch_width"),
+                pn.Spacer(width=24),
+                pn.pane.DataFrame(right_df, index=show_index, width_policy="min", sizing_mode="stretch_width"),
+            )
         else:
             params_df = pd.DataFrame(
                 {
@@ -393,7 +404,12 @@ class ReportBlockMixin:
                     "Value": [_truncate(val, 300) for _, val in params_items],
                 }
             )
-            params_table = params_df
+            params_table = pn.pane.DataFrame(
+                params_df,
+                index=show_index,
+                width_policy="min",
+                sizing_mode="stretch_width",
+            )
 
         content: list[Any] = [
             pn.pane.Markdown(
@@ -581,6 +597,79 @@ class ReportBlockMixin:
         return title, [fig]
 
     @block
+    def block_class_explainability(
+        self,
+        title: str = "Class-specific explainability",
+        label: Any = 1,
+        max_points: int | None = None,
+        navigation_id: str = "class-explainability",
+        include_interactions: bool = False,
+        nb_top_interactions: int = 5,
+    ) -> BlockContent:
+        """Render class-specific feature importance, contributions, and interactions.
+
+        Binary classification renders the requested class only. Multiclass
+        classification renders one set of charts for every model class. Top
+        interactions are included when ``include_interactions`` is True.
+
+        Parameters
+        ----------
+        title : str, default="Class-specific explainability"
+            Section title displayed above the class-specific plots.
+        label : Any, default=1
+            Explained class for binary classification. Ignored for multiclass.
+        max_points : int or None, default=None
+            Maximum number of observations used by contribution plots.
+        navigation_id : str, default="class-explainability"
+            Stable section identifier used to connect class links to their plots.
+        include_interactions : bool, default=False
+            Whether to include a top interactions plot for each displayed class.
+        nb_top_interactions : int, default=5
+            Number of top interaction pairs to show when interactions are included.
+        """
+        explainer = self._require_explainer("class_explainability")
+        if explainer._case != "classification":
+            raise ValueError("class_explainability block is only available for classification.")
+
+        classes = list(explainer._classes)
+        if len(classes) > 2:
+            class_codes = classes
+        else:
+            _, selected_class, _ = explainer.check_label_name(label)
+            class_codes = [selected_class]
+
+        content: list[Any] = []
+        navigation_items: list[dict[str, str]] = []
+        for class_code in class_codes:
+            _, _, class_name = explainer.check_label_name(class_code, origin="code")
+            anchor_id = f"{navigation_id}-class-{len(navigation_items) + 1}"
+            navigation_items.append({"label": str(class_name), "anchor": anchor_id})
+            content.append(ReportAnchor(anchor_id))
+            content.append(pn.pane.Markdown(f"#### Explained class: **{class_name}**"))
+            importance = explainer.plot.features_importance(label=class_code)
+            content.append(pn.pane.Plotly(importance, config={"responsive": True}, sizing_mode="stretch_width"))
+            content.append(
+                self.block_contribution_plot(
+                    title="Feature contributions",
+                    label=class_code,
+                    max_points=max_points,
+                    include_all_features=True,
+                )
+            )
+            if include_interactions:
+                effective_max_points = self.max_points if max_points is None else max_points
+                content.append(pn.pane.Markdown("#### Top feature interactions"))
+                interactions = explainer.plot.top_interactions_plot(
+                    nb_top_interactions=nb_top_interactions,
+                    label=class_code,
+                    max_points=effective_max_points,
+                )
+                content.append(pn.pane.Plotly(interactions, config={"responsive": True}, sizing_mode="stretch_width"))
+
+        self.class_navigation_items[navigation_id] = navigation_items
+        return title, content
+
+    @block
     def block_contribution_plot(
         self,
         feature: str | None = None,
@@ -664,7 +753,7 @@ class ReportBlockMixin:
             feature_panels[label_text] = fig
 
         feature_select = pn.widgets.Select(
-            name="Feature",
+            label="Feature",
             options=list(feature_panels.keys()),
             value=next(iter(feature_panels)),
             sizing_mode="stretch_width",
@@ -783,6 +872,7 @@ class ReportBlockMixin:
         show_train: bool = True,
         width: int = 700,
         height: int = 500,
+        show_index: bool = True,
     ) -> BlockContent:
         """Render target statistics and target distribution analysis.
 
@@ -796,6 +886,8 @@ class ReportBlockMixin:
             Plot width in pixels.
         height : int, default=500
             Plot height in pixels.
+        show_index : bool, default=True
+            Whether the target statistics table displays its pandas row index.
 
         Returns
         -------
@@ -837,6 +929,12 @@ class ReportBlockMixin:
             test_stats=test_stats[target_name],
             train_stats=train_stats[target_name] if train_stats is not None else None,
             names=names,
+        )
+        target_stats = pn.pane.DataFrame(
+            target_stats,
+            index=show_index,
+            width_policy="min",
+            sizing_mode="stretch_width",
         )
 
         distribution_frames = [pd.DataFrame({target_name: y_test_series}).assign(data_train_test="test")]
@@ -889,12 +987,12 @@ class ReportBlockMixin:
         --------
         >>> runtime.block_confusion_matrix()
         """
-        smart_explainer = self._require_smart_explainer("confusion_matrix")
+        colors_dict = self._require_colors_dict("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         y_test = cast(TargetValues, self.y_test)
         y_pred = cast(TargetValues, self.y_pred)
-        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.colors_dict)
+        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=colors_dict)
         if title is None:
             return "Confusion matrix", [fig]
         return title, [fig]
@@ -1071,7 +1169,7 @@ class ReportBlockMixin:
             return title, [pn.pane.Markdown("No feature available.")]
 
         feature_select = pn.widgets.Select(
-            name="Feature",
+            label="Feature",
             options=list(feature_panels.keys()),
             value=next(iter(feature_panels)),
             sizing_mode="stretch_width",
@@ -1125,10 +1223,10 @@ class ReportBlockMixin:
             raise ValueError(f"{block_type} block requires an explainer on the report instance.")
         return self.explainer
 
-    def _require_smart_explainer(self, block_type: str):
-        if self.smart_explainer is None:
-            raise ValueError(f"{block_type} block requires a smart_explainer on the report instance.")
-        return self.smart_explainer
+    def _require_colors_dict(self, block_type: str) -> dict[str, Any]:
+        if not self.colors_dict:
+            raise ValueError(f"{block_type} block requires a colors_dict on the report instance.")
+        return self.colors_dict
 
     def _require_train_test_data(self, block_type: str) -> pd.DataFrame:
         if self.df_train_test is None:
@@ -1141,5 +1239,5 @@ class ReportBlockMixin:
         return self.explainer.features_dict.get(feature, feature)
 
     def _feature_distribution_colors(self) -> dict:
-        smart_explainer = self._require_smart_explainer("feature_distribution")
-        return smart_explainer.colors_dict["report_feature_distribution"]
+        colors_dict = self._require_colors_dict("feature_distribution")
+        return colors_dict["report_feature_distribution"]

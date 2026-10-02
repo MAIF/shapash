@@ -1061,7 +1061,8 @@ class SmartExplainer:
                 x_train = handle_categorical_missing(x_train)
 
             report_runtime = report_block_cls(
-                explainer=self,
+                explainer=self.explainer,
+                colors_dict=self.colors_dict,
                 x_train=x_train,
                 y_train=y_train,
                 y_test=y_test,

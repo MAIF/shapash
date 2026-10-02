@@ -4,6 +4,7 @@
 }
 
 .main-report {
+    height: max-content;
     padding: 24px 32px;
     align-items: flex-start;
     gap: 20px;
@@ -264,12 +265,12 @@ table.dataframe td {
         position: static;
         padding: 8px;
         height: auto;
+        overflow: visible;
     }
 
     .report-sidebar {
-        position: static;
-        top: auto;
-        max-height: none;
-        overflow: visible;
+        max-height: calc(100vh - 32px);
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 }

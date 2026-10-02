@@ -1262,6 +1262,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.generate_report(output_file="test")
         runtime_arg = mock_generate_report.call_args.kwargs["runtime"]
         assert runtime_arg.explainer is xpl.explainer
+        assert runtime_arg.colors_dict is xpl.colors_dict
         mock_generate_report.assert_called_once_with(
             runtime=runtime_arg,
             config_file=unittest.mock.ANY,
