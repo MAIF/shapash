@@ -11,6 +11,8 @@ import plotly.graph_objects as go
 from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
+from shapash.report.core import build_navigation_bar
+from shapash.report.panel_support import ReportAnchor
 from shapash.report.panel_support import apply_report_css
 
 import pytest
@@ -56,7 +58,10 @@ class _DummyBackend(BaseBackend):
 
 class _DummyPlot:
     def __init__(self):
-        self._style_dict = {"dummy": "style"}
+        self._style_dict = {
+            "dummy": "style",
+            "report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"},
+        }
 
     def _tuning_round_digit(self):
         return None
@@ -107,7 +112,21 @@ def _build_runtime() -> ReportBlockMixin:
         y_pred=pd.Series([1, 0, 1], index=x_test.index),
         y_target=y_test,
     )
-    return ReportBlockMixin(explainer=explainer, x_train=x_train, y_train=y_train, y_test=y_test, max_points=10)
+    return ReportBlockMixin(
+        explainer=explainer.explainer,
+        colors_dict=explainer.colors_dict,
+        x_train=x_train,
+        y_train=y_train,
+        y_test=y_test,
+        max_points=10,
+    )
+
+
+def test_report_runtime_uses_prediction_data_from_underlying_explainer():
+    runtime = _build_runtime()
+
+    assert runtime.x_init is runtime.explainer.x_init
+    assert runtime.df_train_test["data_train_test"].value_counts().to_dict() == {"test": 3, "train": 3}
 
 
 class TestSmartReportPanel(unittest.TestCase):
@@ -118,6 +137,13 @@ class TestSmartReportPanel(unittest.TestCase):
 
         self.assertIn(".kv-table", css)
         self.assertIn("@media (max-width: 1200px)", css)
+        main_rules = css.split(".main-report", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        base_rules = css.split(".report-sidebar", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        responsive_rules = css.split("@media (max-width: 1200px)", maxsplit=1)[1]
+        sidebar_rules = responsive_rules.split(".report-sidebar", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        self.assertIn("height: max-content;", main_rules)
+        self.assertIn("position: sticky;", base_rules)
+        self.assertNotIn("position: static;", sidebar_rules)
 
     def test_apply_report_css_registers_styles_once(self):
         css_path = Path(__file__).resolve().parents[3] / "shapash" / "report" / "assets"  / "report_styles.css"
@@ -156,7 +182,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_select_allowed(self, title: str = "Selector"):
-        return [pn.widgets.Select(name="Feature", options=["a", "b"], value="a")]
+        return [pn.widgets.Select(label="Feature", options=["a", "b"], value="a")]
 
     @block
     def block_plotly_allowed(self, title: str = "Plotly"):
@@ -165,7 +191,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_bind_allowed(self, title: str = "Bind"):
-        selector = pn.widgets.Select(name="Feature", options=["a", "b"], value="a")
+        selector = pn.widgets.Select(label="Feature", options=["a", "b"], value="a")
         selected_panel = pn.panel(pn.bind(cast(Any, lambda selected: pn.pane.Markdown(selected)), selector))
         return [selector, selected_panel]
 
@@ -295,6 +321,11 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(result, pn.Column)
         self.assertIn("Model information", result.objects[0].object)
         self.assertIn("**Model used**", result.objects[1].object)
+        self.assertIsInstance(result.objects[2], pn.pane.DataFrame)
+        self.assertFalse(result.objects[2].index)
+
+        result_with_index = runtime.block_model_analysis(show_index=True)
+        self.assertTrue(result_with_index.objects[2].index)
 
     def test_block_performance_metrics_builds_badges(self):
         runtime = _build_runtime()
@@ -327,6 +358,93 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
 
         self.assertIsInstance(corr_result.objects[1], pn.pane.Plotly)
         self.assertIsInstance(fi_result.objects[1], pn.pane.Plotly)
+
+    def test_class_explainability_uses_selected_binary_or_all_multiclass_labels(self):
+        binary_runtime = _build_runtime()
+        with patch.object(
+            binary_runtime.explainer.plot,
+            "features_importance",
+            wraps=binary_runtime.explainer.plot.features_importance,
+        ) as binary_importance, patch.object(
+            binary_runtime.explainer.plot,
+            "contribution_plot",
+            wraps=binary_runtime.explainer.plot.contribution_plot,
+        ) as binary_contributions:
+            binary_runtime.block_class_explainability()
+
+        self.assertEqual([call.kwargs["label"] for call in binary_importance.call_args_list], [1])
+        self.assertEqual([call.kwargs["label"] for call in binary_contributions.call_args_list], [1, 1])
+
+        multiclass_runtime = _build_runtime()
+        multiclass_runtime.explainer._classes = [0, 1, 2]
+        with patch.object(
+            multiclass_runtime.explainer,
+            "check_label_name",
+            side_effect=lambda class_code, origin=None: ([0, 1, 2].index(class_code), class_code, f"Class {class_code}"),
+        ), patch.object(
+            multiclass_runtime.explainer.plot,
+            "features_importance",
+            wraps=multiclass_runtime.explainer.plot.features_importance,
+        ) as multiclass_importance, patch.object(
+            multiclass_runtime.explainer.plot,
+            "contribution_plot",
+            wraps=multiclass_runtime.explainer.plot.contribution_plot,
+        ) as multiclass_contributions:
+            result = multiclass_runtime.block_class_explainability()
+
+        self.assertIsInstance(result, pn.Column)
+        self.assertEqual([call.kwargs["label"] for call in multiclass_importance.call_args_list], [0, 1, 2])
+        self.assertEqual([call.kwargs["label"] for call in multiclass_contributions.call_args_list], [0, 0, 1, 1, 2, 2])
+        class_links = multiclass_runtime.class_navigation_items["class-explainability"]
+        self.assertEqual([item["label"] for item in class_links], ["Class 0", "Class 1", "Class 2"])
+        anchors = [item for item in result.objects if isinstance(item, ReportAnchor)]
+        self.assertEqual([anchor.object for anchor in anchors], [
+            f'<div id="{item["anchor"]}" class="scroll-anchor"></div>' for item in class_links
+        ])
+
+        nav = build_navigation_bar(
+            [
+                {
+                    "type": "group",
+                    "params": {"title": "Model explainability"},
+                    "_section_id": "model-explainability",
+                    "blocks": [
+                        {
+                            "type": "class_explainability",
+                            "params": {"title": "Explained classes"},
+                            "_section_id": "class-explainability",
+                        }
+                    ],
+                }
+            ],
+            {"class-explainability": class_links},
+        )
+        for class_link in class_links:
+            self.assertIn(f'href="#{class_link["anchor"]}"', nav.object)
+            self.assertIn(class_link["label"], nav.object)
+
+    def test_class_explainability_can_include_class_specific_interactions(self):
+        runtime = _build_runtime()
+        runtime.explainer._classes = [0, 1, 2]
+
+        with patch.object(
+            runtime.explainer,
+            "check_label_name",
+            side_effect=lambda class_code, origin=None: ([0, 1, 2].index(class_code), class_code, f"Class {class_code}"),
+        ), patch.object(
+            runtime.explainer.plot,
+            "top_interactions_plot",
+            wraps=runtime.explainer.plot.top_interactions_plot,
+        ) as interactions_plot:
+            result = runtime.block_class_explainability(include_interactions=True, nb_top_interactions=3)
+
+        self.assertIsInstance(result, pn.Column)
+        self.assertEqual([call.kwargs["label"] for call in interactions_plot.call_args_list], [0, 1, 2])
+        self.assertEqual([call.kwargs["nb_top_interactions"] for call in interactions_plot.call_args_list], [3, 3, 3])
+        interaction_panes = [
+            pane for pane in result.objects if isinstance(pane, pn.pane.Plotly) and pane.object.data[0].type == "scatter"
+        ]
+        self.assertEqual(len(interaction_panes), 3)
 
     def test_block_contribution_plot_single_and_all_features(self):
         runtime = _build_runtime()
@@ -372,6 +490,12 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(analysis_result, pn.Column)
         self.assertIn("Target", analysis_result.objects[0].object)
         self.assertIsInstance(analysis_result.objects[2], pn.Row)
+        target_stats = analysis_result.objects[2].objects[0]
+        self.assertIsInstance(target_stats, pn.pane.DataFrame)
+        self.assertTrue(target_stats.index)
+
+        analysis_without_index = runtime.block_target_analysis(title="Target", show_index=False)
+        self.assertFalse(analysis_without_index.objects[2].objects[0].index)
 
     def test_block_confusion_lift_and_univariate_render(self):
         runtime = _build_runtime()
@@ -397,7 +521,7 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(univariate_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(univariate_result.objects[2]).__name__, "ParamFunction")
 
-    def test_smart_explainer_required(self):
+    def test_colors_dict_required_for_report_colors(self):
         rbm = ReportBlockMixin()
         with pytest.raises(ValueError):
-            rbm._require_smart_explainer("block_type")
+            rbm._require_colors_dict("block_type")

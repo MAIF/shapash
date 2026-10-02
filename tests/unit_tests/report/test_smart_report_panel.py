@@ -74,7 +74,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_select_allowed(self, title: str = "Selector"):
-        return [pn.widgets.Select(name="Feature", options=["a", "b"], value="a")]
+        return [pn.widgets.Select(label="Feature", options=["a", "b"], value="a")]
 
     @block
     def block_plotly_allowed(self, title: str = "Plotly"):
@@ -83,7 +83,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_bind_allowed(self, title: str = "Bind"):
-        selector = pn.widgets.Select(name="Feature", options=["a", "b"], value="a")
+        selector = pn.widgets.Select(label="Feature", options=["a", "b"], value="a")
         selected_panel = pn.panel(pn.bind(lambda selected: pn.pane.Markdown(selected), selector))
         return [selector, selected_panel]
 
