@@ -459,5 +459,31 @@ class TestPlotterCompare(unittest.TestCase):
                 np.testing.assert_array_equal(a, b)
 
 
+    def test_compare_corpus_plots_one_dot_per_text(self):
+        fig = self.ref.plot.compare_corpus(self.lime)
+        self.assertEqual([t.name for t in fig.data], ["lime vs shap"])
+        # Rows 1 and 2 have no Spearman (LIME constant on "neg"; a one-word text): one dot left.
+        self.assertEqual(len(fig.data[0].x), 1)
+        self.assertIn("predicted class", fig.layout.title.text)
+        self.assertIn("3 texts · median: lime vs shap", fig.layout.title.text)
+
+    def test_compare_corpus_on_a_fixed_class_and_metric(self):
+        fig = self.ref.plot.compare_corpus({"LIME": self.lime}, rows=[0], label_idx=1, metric="top_k_overlap", top_k=1)
+        self.assertIn("pos", fig.layout.title.text)
+        self.assertIn("1 text ·", fig.layout.title.text)
+        self.assertEqual(fig.layout.xaxis.title.text, "Top-1 overlap")
+        self.assertEqual(self.ref.plot.compare_corpus(self.lime, metric="cosine").layout.xaxis.title.text, "Cosine similarity")
+        self.assertEqual(self.ref.plot.compare_corpus(self.lime, metric="pearson").layout.xaxis.title.text, "Pearson r")
+        self.assertEqual(self.ref.plot.compare_corpus(self.lime, title="X").layout.title.text.split("<br>")[0], "X")
+
+    def test_compare_corpus_warns_at_the_call_site_across_spaces(self):
+        with pytest.warns(UserWarning, match="output spaces") as record:
+            self.ref.plot.compare_corpus(replace(self.lime, output_space="logit"))
+        self.assertEqual(record[0].filename, __file__)
+
+    def test_compare_corpus_rejects_a_bad_class(self):
+        with self.assertRaises(IndexError):
+            self.ref.plot.compare_corpus(self.lime, label_idx=5)
+
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,7 @@
 
 Every function here takes the *already aligned* data — one list of reference word units and, per
 backend, one value per unit (``NaN`` where that backend attributed nothing) — so alignment and
-normalisation stay in :mod:`shapash.compute.token_alignment` and these stay pure renderers.
+normalisation stay in :mod:`shapash.compute.backend_comparison` and these stay pure renderers.
 Reach them through :meth:`~shapash.explainer.nlp_plotter.NlpPlotter.compare`.
 
 Three display options, each answering a slightly different question:
@@ -12,6 +12,9 @@ Three display options, each answering a slightly different question:
 - :func:`plot_backend_bars` — grouped bars per token: *how much* do they differ on a given word?
 - :func:`plot_backend_highlight` — one highlighted copy of the sentence per backend: the familiar
   text-highlight read, stacked so the eye can scan down a column.
+
+:func:`plot_backend_agreement` is the corpus-level counterpart: one agreement score per text,
+reached through :meth:`~shapash.explainer.nlp_plotter.NlpPlotter.compare_corpus`.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 import numpy as np
+import pandas as pd
 from dash import html
 from plotly import graph_objs as go
 
@@ -298,3 +302,93 @@ def plot_backend_highlight(
             html.Div(rows, style={"backgroundColor": "#fafafa", "border": "1px solid #eeeeee", "borderRadius": "4px"}),
         ]
     )
+
+
+def plot_backend_agreement(
+    agreement: pd.DataFrame,
+    metric: str = "spearman",
+    axis_title: str | None = None,
+    title: str = "Backend agreement across texts",
+    subtitle: str | None = None,
+    width: int = 900,
+    height: int | None = None,
+    color: str = BACKEND_COLORS[0],
+) -> go.Figure:
+    """Distribution of one agreement score over many texts: a box plus one dot per text, per backend pair.
+
+    Answers "how much do these backends agree in general, and on which texts do they not?". The box
+    gives the median and quartiles; each dot is a text, and hovering it gives its row and an
+    excerpt, to open with ``compare(row=...)``.
+
+    Parameters
+    ----------
+    agreement : pd.DataFrame
+        One line per (text, backend pair), with columns ``row``, ``text``, ``label``,
+        ``backend_a``, ``backend_b`` and ``metric`` — as returned by
+        :func:`~shapash.explainer.nlp_comparison.corpus_agreement`. Lines whose score is
+        ``NaN`` (undefined for that text) are not drawn.
+    metric : {"spearman", "pearson", "cosine", "sign_agreement", "top_k_overlap"}
+        Which score to show. The three correlations' axis spans ``[-1, 1]``, the two shares ``[0, 1]``.
+    axis_title : str, optional
+        Score-axis label. Defaults to the column name.
+    title, subtitle : str
+        Figure title, and an optional smaller line under it.
+    width, height : int, optional
+        Figure size in pixels. ``height`` defaults to ~70px per pair.
+    color : str
+        One color for every pair: the pairs are told apart by their row, not by hue.
+
+    Returns
+    -------
+    go.Figure
+    """
+    signed = metric in {"spearman", "pearson", "cosine"}
+    if not signed and metric not in {"sign_agreement", "top_k_overlap"}:
+        raise ValueError(f"metric must be 'spearman', 'cosine', 'sign_agreement' or 'top_k_overlap', got {metric!r}.")
+    missing = {"row", "text", "label", "backend_a", "backend_b", metric} - set(agreement.columns)
+    if missing:
+        raise ValueError(f"agreement is missing column(s) {sorted(missing)}.")
+
+    pairs = list(dict.fromkeys(zip(agreement["backend_a"], agreement["backend_b"], strict=True)))
+    fig = go.Figure()
+    for a, b in pairs:
+        scores = agreement[(agreement["backend_a"] == a) & (agreement["backend_b"] == b)].dropna(subset=[metric])
+        excerpts = [t if len(t) <= 80 else t[:77] + "…" for t in scores["text"].astype(str)]
+        fig.add_trace(
+            go.Box(
+                x=scores[metric],
+                name=f"{b} vs {a}",
+                orientation="h",
+                boxpoints="all",
+                jitter=0.5,
+                pointpos=0,
+                hoveron="points",
+                line=dict(color=color, width=1.5),
+                fillcolor="rgba(0,0,0,0)",
+                marker=dict(color=color, size=8, opacity=0.6, line=dict(color="white", width=1)),
+                customdata=np.column_stack([scores["row"], scores["label"].astype(str), excerpts])
+                if len(scores)
+                else None,
+                hovertemplate="<b>row %{customdata[0]}</b> · %{customdata[1]}<br>%{customdata[2]}"
+                "<br>%{x:.2f}<extra></extra>",
+                showlegend=False,
+            )
+        )
+
+    title_text = title if subtitle is None else f"{title}<br><sup>{subtitle}</sup>"
+    fig.update_layout(
+        title=dict(text=title_text, x=0.5),
+        width=width,
+        height=height or 70 * len(pairs) + 200,
+        plot_bgcolor="white",
+        xaxis=dict(
+            title=axis_title or metric,
+            range=[-1.05, 1.05] if signed else [-0.03, 1.03],
+            gridcolor=_GRID,
+            zeroline=signed,
+            zerolinecolor="#bbbbbb",
+        ),
+        yaxis=dict(autorange="reversed", automargin=True, showgrid=False),
+        margin=dict(l=20, r=20, t=80, b=40),
+    )
+    return fig

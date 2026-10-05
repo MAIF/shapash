@@ -18,7 +18,6 @@ snapshot reloaded with :meth:`NlpExplanation.load`, which has no model and no ba
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -26,15 +25,27 @@ import numpy as np
 from dash import html
 from plotly import graph_objs as go
 
+from shapash.compute.backend_comparison import backend_agreement, normalize_contributions
 from shapash.compute.embeddings import Embedding, projection_coords
-from shapash.compute.token_alignment import align_token_values, backend_agreement, normalize_contributions
+from shapash.explainer.nlp_comparison import (
+    align_row,
+    check_comparable,
+    name_explanations,
+    predicted_label_idx,
+    score_rows,
+)
 from shapash.explainer.nlp_explanation import (
     WORD_AGGREGATIONS,
     aggregate_word_contributions,
     select_label_column,
     word_contributions_by_sample,
 )
-from shapash.plots.plot_backend_comparison import plot_backend_bars, plot_backend_heatmap, plot_backend_highlight
+from shapash.plots.plot_backend_comparison import (
+    plot_backend_agreement,
+    plot_backend_bars,
+    plot_backend_heatmap,
+    plot_backend_highlight,
+)
 from shapash.plots.plot_confusion_matrix import plot_confusion_matrix
 from shapash.plots.plot_scatter import plot_scatter
 from shapash.plots.plot_sentence_highlight import plot_sentence_highlight
@@ -258,7 +269,7 @@ class NlpPlotter:
         """Compare this explanation's contributions on one text with other backends' on the same text.
 
         This explanation is the *reference*: its word units are the ones displayed, and every other
-        backend's values are aligned onto them (see :mod:`shapash.compute.token_alignment` — LIME's
+        backend's values are aligned onto them (see :mod:`shapash.compute.backend_comparison` — LIME's
         bag-of-words vocabulary does not line up positionally with SHAP's or LIG's word sequence).
         Pick a sequence backend (SHAP, LIG) as the reference so every occurrence of a word is shown.
 
@@ -277,7 +288,7 @@ class NlpPlotter:
             ``"highlight"`` — one highlighted sentence per backend (a Dash component).
         normalize : {"max_abs", "sum_abs", None}
             How each backend's values are rescaled before display (see
-            :func:`~shapash.compute.token_alignment.normalize_contributions`). Backends explain
+            :func:`~shapash.compute.backend_comparison.normalize_contributions`). Backends explain
             different quantities (probability, logit, surrogate weights), so the default scales each
             to ``[-1, 1]``; ``None`` shows raw values, which is only meaningful between backends
             sharing an ``output_space``.
@@ -308,7 +319,7 @@ class NlpPlotter:
 
         The subtitle reports, for each other backend against the reference, the Spearman rank
         correlation and top-k overlap of the aligned values (see
-        :func:`~shapash.compute.token_alignment.backend_agreement`) — both scale-free, so they do
+        :func:`~shapash.compute.backend_comparison.backend_agreement`) — both scale-free, so they do
         not depend on ``normalize``.
 
         Examples
@@ -316,38 +327,12 @@ class NlpPlotter:
         >>> shap_exp.plot.compare({"LIME": lime_exp, "LIG": lig_exp}, row=3, kind="heatmap").show()
         """
         exp = self._exp
-        named = self._name_explanations(others)
+        named = name_explanations(exp, others)
+        check_comparable(named, stacklevel=2)
         if label_idx is None:
-            label_idx = exp.label_to_idx.get(str(exp.y_pred.iloc[row]), 0)
+            label_idx = predicted_label_idx(exp, row)
         label_idx = self._check_label_idx(label_idx)
-        ref_tokens, ref_values, _ = self._slice(row, label_idx)
-        text = str(exp.texts.iloc[row])
-
-        spaces = {name: other.output_space for name, other in named.items()}
-        if len(set(spaces.values())) > 1:
-            listing = ", ".join(f"{name}={space}" for name, space in spaces.items())
-            warnings.warn(
-                f"Comparing backends across output spaces ({listing}). Normalisation removes the scale gap "
-                "but not the softmax non-linearity, so rankings and agreement scores mix method and space "
-                "differences. For a like-for-like comparison with a logit-space backend, use "
-                "NlpShapBackend(..., output_space='logit').",
-                UserWarning,
-                stacklevel=2,
-            )
-
-        aligned: dict[str, np.ndarray] = {}
-        for name, other in named.items():
-            if str(other.texts.iloc[row]) != text:
-                raise ValueError(f"Row {row} holds a different text in {name!r} than in the reference explanation.")
-            if other.n_classes != exp.n_classes or (
-                other.label_names and exp.label_names and list(other.label_names) != list(exp.label_names)
-            ):
-                raise ValueError(f"{name!r} explains different classes than the reference explanation.")
-            if other is exp:
-                aligned[name] = ref_values
-            else:
-                values = select_label_column(other.values[row], label_idx)
-                aligned[name] = align_token_values(text, ref_tokens, other.token_strings[row], values)
+        ref_tokens, aligned = align_row(named, row, label_idx)
 
         agreement = backend_agreement(aligned, top_k=top_k)
         ref_name = next(iter(named))
@@ -380,40 +365,75 @@ class NlpPlotter:
             return plot_backend_bars(ref_tokens, shown, title=title, subtitle=subtitle, xaxis_title=value_label)
         raise ValueError(f"kind must be 'heatmap', 'bars' or 'highlight', got {kind!r}.")
 
-    def _name_explanations(
-        self, others: NlpExplanation | Sequence[NlpExplanation] | Mapping[str, NlpExplanation]
-    ) -> dict[str, NlpExplanation]:
-        """Reference first, then ``others``, under unique display labels.
+    def compare_corpus(
+        self,
+        others: NlpExplanation | Sequence[NlpExplanation] | Mapping[str, NlpExplanation],
+        rows: Sequence[int] | None = None,
+        label_idx: int | None = None,
+        metric: Literal["spearman", "pearson", "cosine", "sign_agreement", "top_k_overlap"] = "spearman",
+        top_k: int = 5,
+        title: str | None = None,
+    ) -> go.Figure:
+        """How far backends agree over many texts: one dot per text, one row per backend pair.
 
-        A default label is the backend name without its ``nlp_`` prefix; two explanations from the
-        same backend are told apart by ``output_space`` first (SHAP in probability vs logit space),
-        then by a counter.
+        The corpus-level counterpart of :meth:`compare`: the score in ``compare``'s subtitle,
+        computed for every text in ``rows`` (see
+        :func:`~shapash.explainer.nlp_comparison.corpus_agreement` for the table itself). Run it
+        on a sample to see whether two backends tell the same story on this model before choosing
+        one; hover a low dot for its row and open it with ``compare(row=...)``.
+
+        Parameters
+        ----------
+        others : NlpExplanation, sequence of NlpExplanation, or mapping of str to NlpExplanation
+            Explanations of the same texts by other backends, labelled as in :meth:`compare`.
+        rows : sequence of int, optional
+            Positional indices of the texts to score. ``None`` (default) scores every text.
+        label_idx : int, optional
+            Class to compare on. ``None`` (default) uses each text's predicted class.
+        metric : {"spearman", "pearson", "cosine", "sign_agreement", "top_k_overlap"}
+            The score to plot. ``"spearman"`` asks whether every word is ordered the same;
+            ``"pearson"`` and ``"cosine"`` whether the words that carry the attribution agree (see
+            :func:`~shapash.compute.backend_comparison.backend_agreement` for how they differ).
+        top_k : int
+            Size of the top set, for ``metric="top_k_overlap"``.
+        title : str, optional
+            Overrides the default title.
+
+        Returns
+        -------
+        plotly.graph_objs.Figure
+
+        Notes
+        -----
+        Every pair of backends is plotted, not only pairs with this (the reference) explanation.
+        Texts on which a score is undefined — Spearman on a backend that gave every word the same
+        value — are left out of that pair's row. Mixed output spaces warn, as in :meth:`compare`.
+
+        Examples
+        --------
+        >>> shap_exp.plot.compare_corpus({"LIG": lig_exp, "LIME": lime_exp}, rows=range(100)).show()
         """
-        exp = self._exp
-        if isinstance(others, Mapping):
-            pairs: list[tuple[str | None, NlpExplanation]] = [(str(k), v) for k, v in others.items()]
-        elif isinstance(others, Sequence):
-            pairs = [(None, o) for o in others]
-        else:
-            pairs = [(None, others)]
-        pairs.insert(0, (None, exp))
+        if label_idx is not None:
+            label_idx = self._check_label_idx(label_idx)
+        named = name_explanations(self._exp, others)
+        check_comparable(named, stacklevel=2)
+        agreement = score_rows(named, rows=rows, label_idx=label_idx, top_k=top_k)
 
-        defaults = [o.backend_name.removeprefix("nlp_") for _, o in pairs]
-        # Only entries left to their default label can clash by backend: a caller-chosen label is kept.
-        unnamed = [d for (given, _), d in zip(pairs, defaults, strict=True) if given is None]
-        named: dict[str, NlpExplanation] = {}
-        for (given, other), default in zip(pairs, defaults, strict=True):
-            if given is not None:
-                label = given
-            elif unnamed.count(default) > 1:
-                label = f"{default} ({other.output_space})"
-            else:
-                label = default
-            base, n = label, 2
-            while label in named:
-                label, n = f"{base} #{n}", n + 1
-            named[label] = other
-        return named
+        axis_title = {
+            "spearman": "Spearman ρ",
+            "pearson": "Pearson r",
+            "cosine": "Cosine similarity",
+            "sign_agreement": "Sign agreement",
+        }.get(metric, f"Top-{top_k} overlap")
+        medians = agreement.groupby(["backend_a", "backend_b"], sort=False)[metric].median()
+        n_texts = agreement["row"].nunique()
+        subtitle = f"{n_texts} text{'s' if n_texts != 1 else ''} · median: " + ", ".join(
+            f"{b} vs {a} {m:.2f}" for (a, b), m in medians.items()
+        )
+        if title is None:
+            class_name = self._label_name(label_idx) if label_idx is not None else None
+            title = f"Backend agreement — {class_name}" if class_name else "Backend agreement — predicted class"
+        return plot_backend_agreement(agreement, metric=metric, axis_title=axis_title, title=title, subtitle=subtitle)
 
     # ── batch-level plots ───────────────────────────────────────────────────────────────
     def word_importance(
