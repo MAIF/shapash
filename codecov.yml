@@ -1,0 +1,21 @@
+comment:
+  layout: "diff, files"
+  require_changes: true
+
+coverage:
+  # explicit defaults, display only (badge/graph colors, number formatting)
+  precision: 2
+  round: down
+  range: "70...100"
+
+  # Pass/fail checks on PRs
+  status:
+    patch:
+      default:
+        target: 90%
+        threshold: 1%
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
