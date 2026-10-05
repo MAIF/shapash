@@ -2,20 +2,29 @@
 Category_encoder
 """
 
+from typing import Any, Literal, TypeAlias
+
+import category_encoders as ce
 import numpy as np
 import pandas as pd
 
-category_encoder_onehot = "<class 'category_encoders.one_hot.OneHotEncoder'>"
-category_encoder_ordinal = "<class 'category_encoders.ordinal.OrdinalEncoder'>"
-category_encoder_basen = "<class 'category_encoders.basen.BaseNEncoder'>"
-category_encoder_binary = "<class 'category_encoders.binary.BinaryEncoder'>"
-category_encoder_targetencoder = "<class 'category_encoders.target_encoder.TargetEncoder'>"
+EncoderMapping: TypeAlias = dict[str, Any]
+CategoryEncoder: TypeAlias = (
+    ce.OneHotEncoder | ce.OrdinalEncoder | ce.BaseNEncoder | ce.BinaryEncoder | ce.TargetEncoder
+)
+CategoryEncoding: TypeAlias = CategoryEncoder | list[EncoderMapping]
 
-dummies_category_encoder = (category_encoder_onehot, category_encoder_binary, category_encoder_basen)
+category_encoder_onehot: str = "<class 'category_encoders.one_hot.OneHotEncoder'>"
+category_encoder_ordinal: str = "<class 'category_encoders.ordinal.OrdinalEncoder'>"
+category_encoder_basen: str = "<class 'category_encoders.basen.BaseNEncoder'>"
+category_encoder_binary: str = "<class 'category_encoders.binary.BinaryEncoder'>"
+category_encoder_targetencoder: str = "<class 'category_encoders.target_encoder.TargetEncoder'>"
 
-no_dummies_category_encoder = (category_encoder_ordinal, category_encoder_targetencoder)
+dummies_category_encoder: tuple[str, ...] = (category_encoder_onehot, category_encoder_binary, category_encoder_basen)
 
-supported_category_encoder = (
+no_dummies_category_encoder: tuple[str, ...] = (category_encoder_ordinal, category_encoder_targetencoder)
+
+supported_category_encoder: tuple[str, ...] = (
     category_encoder_onehot,
     category_encoder_binary,
     category_encoder_basen,
@@ -24,7 +33,7 @@ supported_category_encoder = (
 )
 
 
-def inv_transform_ce(x_in, encoding):
+def inv_transform_ce(x_in: pd.DataFrame, encoding: CategoryEncoding) -> pd.DataFrame:
     """
     Choose and apply the reversed transformation for the given encoding.
 
@@ -32,15 +41,18 @@ def inv_transform_ce(x_in, encoding):
     ----------
     x_in : pandas.DataFrame
         Prediction set.
-    encoding : list
-        A list of category encoder (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
-        or a list of dict
+    encoding : CategoryEncoder or list of dict
+        A category encoder (OrdinalEncoder/OneHotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+        or a list of mappings.
 
     Returns
     -------
-    pandas.Dataframe
+    pandas.DataFrame
         The reversed transformation for the given encoding.
     """
+    if isinstance(encoding, list):
+        return inv_transform_ordinal(x_in, encoding)
+
     if str(type(encoding)) == category_encoder_ordinal:
         rst = inv_transform_ordinal(x_in, encoding.mapping)
 
@@ -59,16 +71,13 @@ def inv_transform_ce(x_in, encoding):
     elif str(type(encoding)) == category_encoder_targetencoder:
         rst = inv_transform_target(x_in, encoding)
 
-    elif str(type(encoding)) == "<class 'list'>":
-        rst = inv_transform_ordinal(x_in, encoding)
-
     else:
         raise Exception(f"{encoding.__class__.__name__} not supported, no inverse done.")
 
     return rst
 
 
-def inv_transform_target(x_in, enc_target):
+def inv_transform_target(x_in: pd.DataFrame, enc_target: ce.TargetEncoder) -> pd.DataFrame:
     """
     Reversed transformation for target encoded data using target encoded value.
 
@@ -89,18 +98,20 @@ def inv_transform_target(x_in, enc_target):
     ----------
     x_in : pandas.DataFrame
         Prediction set.
-    enc_target : list
-        A list containing a TargetEncoder from category encoder.
+    enc_target : category_encoders.TargetEncoder
+        TargetEncoder instance from category_encoders.
 
     Returns
     -------
-    pandas.Dataframe
+    pandas.DataFrame
         The reversed dataframe.
     """
     for tgt_enc in enc_target.ordinal_encoder.mapping:
         name_target = tgt_enc.get("col")
         mapping_ordinal = enc_target.mapping[name_target]
         mapping_target = tgt_enc.get("mapping")
+        if mapping_target is None:
+            raise ValueError(f"Missing target mapping for column {name_target}.")
         reverse_target = pd.Series(mapping_target.index.values, index=mapping_target)
         rst_target = pd.concat([reverse_target, mapping_ordinal], axis=1, join="inner").fillna(value="NaN")
         aggregate = rst_target.groupby(1)[0].apply(lambda x: " / ".join(map(str, x)))
@@ -119,7 +130,7 @@ def inv_transform_target(x_in, enc_target):
     return x_in
 
 
-def inv_transform_ordinal(x_in, encoding):
+def inv_transform_ordinal(x_in: pd.DataFrame, encoding: list[EncoderMapping]) -> pd.DataFrame:
     """
     Reversed transformation based on ordinal category encoder.
 
@@ -127,12 +138,12 @@ def inv_transform_ordinal(x_in, encoding):
     ----------
     x_in : pandas.DataFrame
         Prediction set.
-    encoding : list
-        A list of dict containing the col, the mapping and the data_type use for reversed transformation.
+    encoding : list of dict
+        Mappings containing ``col``, ``mapping`` and optionally ``data_type`` for inverse transformation.
 
     Returns
     -------
-    pandas.Dataframe
+    pandas.DataFrame
         The reversed dataframe.
     """
     for switch in encoding:
@@ -140,6 +151,8 @@ def inv_transform_ordinal(x_in, encoding):
         if col_name not in x_in.columns:
             raise Exception(f"Columns {col_name} not in dataframe.")
         column_mapping = switch.get("mapping")
+        if column_mapping is None:
+            raise ValueError(f"Missing mapping for column {col_name}.")
         if isinstance(column_mapping, dict):
             inverse = pd.Series(data=column_mapping.keys(), index=column_mapping.values())
         else:
@@ -148,7 +161,7 @@ def inv_transform_ordinal(x_in, encoding):
     return x_in
 
 
-def reverse_basen(x_in, encoding):
+def reverse_basen(x_in: pd.DataFrame, encoding: ce.BaseNEncoder | ce.BinaryEncoder) -> pd.DataFrame:
     """
     Reversed dummies based on baseN category encoder.
 
@@ -156,12 +169,12 @@ def reverse_basen(x_in, encoding):
     ----------
     x_in : pandas.DataFrame
         Prediction set.
-    encoding : list
-        A list of dict containing the col, the mapping and the data_type use for reversed transformation.
+    encoding : category_encoders.BaseNEncoder or category_encoders.BinaryEncoder
+        Fitted encoder whose mapping is used to reverse the encoded columns.
 
     Returns
     -------
-    pandas.Dataframe
+    pandas.DataFrame
         The reversed dummies dataframe for a given baseN encoding encoding.
     """
     x = x_in.copy(deep=True)
@@ -181,7 +194,11 @@ def reverse_basen(x_in, encoding):
     return x
 
 
-def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
+def calc_inv_contrib_ce(
+    x_contrib: pd.DataFrame,
+    encoding: CategoryEncoder | EncoderMapping | list[EncoderMapping],
+    agg_columns: Literal["sum", "first"],
+) -> pd.DataFrame:
     """
     Reversed contribution when category encoder and/or a dict is used.
     If category encoder create multiple columns, we use the mapping to find which contribution columns to sum.
@@ -191,9 +208,9 @@ def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
     ----------
     x_contrib : pandas.DataFrame
         Contributions set.
-    encoding : category_encoders, list, dict
+    encoding : CategoryEncoder, list of dict, or dict
         The processing apply to the original data.
-    agg_columns : str (default: 'sum')
+    agg_columns : str
         Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
 
     Returns
@@ -201,6 +218,9 @@ def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
     pandas.DataFrame
         The aggregate contributions depending on which processing is apply.
     """
+    if isinstance(encoding, (dict, list)):
+        return x_contrib
+
     if str(type(encoding)) in dummies_category_encoder:
         drop_col = []
         for switch in encoding.mapping:
@@ -218,7 +238,7 @@ def calc_inv_contrib_ce(x_contrib, encoding, agg_columns):
         return x_contrib
 
 
-def transform_ce(x_in, encoding):
+def transform_ce(x_in: pd.DataFrame, encoding: CategoryEncoding) -> pd.DataFrame:
     """
     Choose and apply the transformation for the given encoding.
 
@@ -226,13 +246,13 @@ def transform_ce(x_in, encoding):
     ----------
     x_in : pandas.DataFrame
         Raw dataset to apply preprocessing.
-    encoding : list
-        A list of category encoder (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
-        or a list of dict
+    encoding : CategoryEncoder or list of dict
+        A category encoder (OrdinalEncoder/OneHotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)
+        or a list of mappings.
 
     Returns
     -------
-    pandas.Dataframe
+    pandas.DataFrame
         The dataset preprocessed with the given encoding.
     """
     encoder = [
@@ -243,19 +263,18 @@ def transform_ce(x_in, encoding):
         category_encoder_targetencoder,
     ]
 
+    if isinstance(encoding, list):
+        return transform_ordinal(x_in, encoding)
+
     if str(type(encoding)) in encoder:
         rst = encoding.transform(x_in)
-
-    elif isinstance(encoding, list):
-        rst = transform_ordinal(x_in, encoding)
-
     else:
         raise Exception(f"{encoding.__class__.__name__} not supported, no preprocessing done.")
 
     return rst
 
 
-def transform_ordinal(x_in, encoding):
+def transform_ordinal(x_in: pd.DataFrame, encoding: list[EncoderMapping]) -> pd.DataFrame:
     """
     Transformation based on ordinal category encoder.
 
@@ -263,12 +282,12 @@ def transform_ordinal(x_in, encoding):
     ----------
     x_in : pandas.DataFrame
         Raw dataset to apply preprocessing.
-    encoding : list
-        A list of dict containing the col, the mapping and the data_type use for transformation.
+    encoding : list of dict
+        Mappings containing ``col`` and ``mapping`` for transformation.
 
     Returns
     -------
-    pandas.Dataframe
+    pandas.DataFrame
         The dataframe preprocessed.
     """
     for switch in encoding:
@@ -276,26 +295,28 @@ def transform_ordinal(x_in, encoding):
         if col_name not in x_in.columns:
             raise Exception(f"Columns {col_name} not in dataframe.")
         column_mapping = switch.get("mapping")
+        if column_mapping is None:
+            raise ValueError(f"Missing mapping for column {col_name}.")
         if isinstance(column_mapping, dict):
             transform = pd.Series(data=column_mapping.values(), index=column_mapping.keys())
         else:
             transform = pd.Series(data=column_mapping.values, index=column_mapping.index)
-        x_in[col_name] = x_in[col_name].map(transform).astype(switch.get("mapping").values.dtype)
+        x_in[col_name] = x_in[col_name].map(transform).astype(transform.dtype)
     return x_in
 
 
-def get_col_mapping_ce(encoder):
+def get_col_mapping_ce(encoder: CategoryEncoder) -> dict[str, list[str]]:
     """
     Get the columns mapping of a category encoder list.
 
     Parameters
     ----------
-    encoder : category_encoders
-        The encoder used.
+    encoder : CategoryEncoder
+        Fitted category_encoders encoder.
 
     Returns
     -------
-    dict_col_mapping : dict
+    dict[str, list[str]]
         Dict of mapping between dataframe columns before and after encoding.
     """
     if str(type(encoder)) in [

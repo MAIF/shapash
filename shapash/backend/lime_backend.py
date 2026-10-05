@@ -15,16 +15,26 @@ import pandas as pd
 from shapash.backend.base_backend import BaseBackend
 
 
-def _with_feature_names(values, predict_fn, feature_names: list):
-    """
-    Wraps a predict function to ensure feature names are passed when possible.
+def _with_feature_names(
+    values: np.ndarray | pd.DataFrame,
+    predict_fn: Callable[[Any], Any],
+    feature_names: list[str],
+) -> Any:
+    """Wrap a prediction function to pass feature names when possible.
 
     Parameters
     ----------
-    values : array-like or pd.DataFrame
-    predict_fn : callable
-    feature_names : list
+    values : np.ndarray or pd.DataFrame
+        Input values to pass to the prediction function.
+    predict_fn : Callable[[Any], Any]
+        Prediction function to call.
+    feature_names : list[str]
         Explicit column names — no implicit closure over outer scope.
+
+    Returns
+    -------
+    Any
+        The result returned by ``predict_fn``.
     """
     if isinstance(values, pd.DataFrame):
         return predict_fn(values)
@@ -67,12 +77,32 @@ class LimeBackend(BaseBackend):
     name = "lime"
     support_groups = False
 
-    def __init__(self, model, preprocessing=None, data=None, **kwargs):
+    def __init__(
+        self,
+        model: Any,
+        preprocessing: Any | None = None,
+        data: pd.DataFrame | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the LIME backend.
+
+        Parameters
+        ----------
+        model : Any
+            Model to explain.
+        preprocessing : Any or None, optional
+            Preprocessing applied to the model inputs.
+        data : pd.DataFrame or None, optional
+            Data used to initialize the LIME explainer. Defaults to the data
+            passed to :meth:`run_explainer`.
+        **kwargs : Any
+            Additional keyword arguments accepted by the constructor.
+        """
         super().__init__(model, preprocessing)
-        self.explainer = None
+        self.explainer: Any = None
         self.data = data
 
-    def run_explainer(self, x: pd.DataFrame) -> dict:
+    def run_explainer(self, x: pd.DataFrame) -> dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]:
         """
         Computes local contributions using the Lime explainer.
 
@@ -83,7 +113,7 @@ class LimeBackend(BaseBackend):
 
         Returns
         -------
-        dict
+        dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]
             A dict with keys:
             - 'contributions':
                 - pd.DataFrame of shape (n_samples, n_features)
@@ -106,10 +136,12 @@ class LimeBackend(BaseBackend):
 
         model_predict = self.model.predict_proba if self._case == "classification" else self.model.predict
 
-        def predict_fn(values):
+        def predict_fn(values: np.ndarray | pd.DataFrame) -> Any:
             return _with_feature_names(values, model_predict, feature_names)
 
         if self._case == "classification":
+            if self._classes is None:
+                raise ValueError("Classification models must expose their classes.")
             num_classes = len(self._classes)
             if num_classes > 2:
                 contributions, base_values = self._explain_multiclass(x, feature_names, predict_fn, num_classes)
@@ -153,7 +185,7 @@ class LimeBackend(BaseBackend):
         self,
         x: pd.DataFrame,
         feature_names: list[str],
-        predict_fn: Callable,
+        predict_fn: Callable[[Any], Any],
         num_classes: int,
     ) -> tuple[pd.DataFrame, np.ndarray]:
         """
@@ -194,7 +226,7 @@ class LimeBackend(BaseBackend):
         self,
         x: pd.DataFrame,
         feature_names: list[str],
-        predict_fn: Callable,
+        predict_fn: Callable[[Any], Any],
         num_classes: int | None = None,
     ) -> tuple[pd.DataFrame, np.ndarray]:
         """

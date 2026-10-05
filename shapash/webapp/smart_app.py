@@ -2,12 +2,14 @@
 Main class of Web application Shapash
 """
 
+from __future__ import annotations
+
 import ast
 import copy
 import random
 import re
 from math import isfinite, log10
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import dash
 import dash_bootstrap_components as dbc
@@ -16,6 +18,7 @@ import pandas as pd
 import plotly.graph_objs as go
 from dash import ALL, MATCH, dash_table, dcc, html
 from dash.dependencies import Input, Output, State
+from dash.development.base_component import Component
 from dash.exceptions import PreventUpdate
 from flask import Flask
 
@@ -50,8 +53,11 @@ from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.MyGraph import MyGraph
 from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 
+if TYPE_CHECKING:
+    from shapash.explainer.explainer import Explainer
 
-def _create_input_modal(component_id, label, tooltip):
+
+def _create_input_modal(component_id: str, label: str, tooltip: str) -> Component:
     return dbc.Row(
         [
             dbc.Label(label, id=f"{component_id}_label", html_for=component_id, width=8),
@@ -67,21 +73,32 @@ class SmartApp:
     Bridge pattern decoupling the application part from SmartExplainer and SmartPlotter.
     Attributes
     ----------
-    explainer: object
-        Explainer instance to point to.
+    explainer : Explainer
+        Explainer instance used to build the WebApp.
+    app : dash.Dash
+        Dash application instance.
+    server : Flask
+        Flask server backing the Dash application.
     """
 
-    def __init__(self, explainer, settings: dict | None = None, title_story: str | None = None):
+    def __init__(
+        self,
+        explainer: Explainer,
+        settings: dict[str, int | bool] | None = None,
+        title_story: str | None = None,
+    ) -> None:
         """
         Init on class instantiation, everything to be able to run the app on server.
         Parameters
         ----------
         explainer : Explainer
-            Explainer object
-        settings : dict
+            Explainer object used to build the WebApp.
+        settings : dict[str, int | bool] or None, optional
             A dict describing the default webapp settings values to be used
             Possible settings (dict keys) are 'rows', 'points', 'violin', 'features', 'toggle_group'
             Integer values must be positive, and 'toggle_group' must be a boolean.
+        title_story : str or None, optional
+            Custom story title appended to the WebApp title.
         """
         # APP
         self.server = Flask(__name__)
@@ -123,15 +140,18 @@ class SmartApp:
             self.special_cols.extend(["_target_", "_error_"])
         self.explainer.features_imp = self.explainer.state.compute_features_import(self.explainer.contributions)
         if self.explainer._case == "classification":
-            self.label = self.explainer.check_label_name(len(self.explainer._classes) - 1, "num")[1]
-            self.selected_feature = self.explainer.features_imp[-1].idxmax()
-            self.max_threshold = max(
-                [x.map(lambda x: round_to_k(x, k=1)).max().max() for x in self.explainer.contributions]
-            )
+            classes = cast(list[Any], self.explainer._classes)
+            features_imp = cast(list[pd.Series], self.explainer.features_imp)
+            contributions = cast(list[pd.DataFrame], self.explainer.contributions)
+            self.label = self.explainer.check_label_name(len(classes) - 1, "num")[1]
+            self.selected_feature = features_imp[-1].idxmax()
+            self.max_threshold = max([x.map(lambda x: round_to_k(x, k=1)).max().max() for x in contributions])
         else:
             self.label = None
-            self.selected_feature = self.explainer.features_imp.idxmax()
-            self.max_threshold = self.explainer.contributions.map(lambda x: round_to_k(x, k=1)).max().max()
+            features_imp = cast(pd.Series, self.explainer.features_imp)
+            contributions = cast(pd.DataFrame, self.explainer.contributions)
+            self.selected_feature = features_imp.idxmax()
+            self.max_threshold = contributions.map(lambda x: round_to_k(x, k=1)).max().max()
         self.list_index: list = []
         self.subset = None
         self.last_click_data = None
@@ -163,7 +183,7 @@ class SmartApp:
         self.init_callback_settings()
         self.callback_generator()
 
-    def init_data(self, rows=None):
+    def init_data(self, rows: int | None = None) -> None:
         """
         Method which initializes data from explainer object
         """
@@ -244,7 +264,7 @@ class SmartApp:
             {"label": el, "value": label_map.get(el, el)} for el in cluster_colorscale_columns
         ]
 
-    def init_components(self):
+    def init_components(self) -> None:
         """
         Initialize components (graph, table, filter, settings, ...) and insert it inside
         components containers which are created by init_skeleton
@@ -433,7 +453,7 @@ class SmartApp:
 
         self.adjust_menu()
 
-        self.components["table"]["dataset"] = dash_table.DataTable(
+        self.components["table"]["dataset"] = cast(Any, dash_table).DataTable(
             id="dataset",
             data=self.round_dataframe.to_dict("records"),
             tooltip_data=[
@@ -632,13 +652,16 @@ class SmartApp:
                                                             [
                                                                 dcc.Dropdown(
                                                                     id="select_id_card_sorting",
-                                                                    options=[
-                                                                        {"label": "Label", "value": "feature_name"},
-                                                                        {
-                                                                            "label": "Contribution",
-                                                                            "value": "feature_contrib",
-                                                                        },
-                                                                    ],
+                                                                    options=cast(
+                                                                        Any,
+                                                                        [
+                                                                            {"label": "Label", "value": "feature_name"},
+                                                                            {
+                                                                                "label": "Contribution",
+                                                                                "value": "feature_contrib",
+                                                                            },
+                                                                        ],
+                                                                    ),
                                                                     value="feature_name",
                                                                     clearable=False,
                                                                     searchable=False,
@@ -651,10 +674,13 @@ class SmartApp:
                                                             [
                                                                 dcc.Dropdown(
                                                                     id="select_id_card_order",
-                                                                    options=[
-                                                                        {"label": "Ascending", "value": True},
-                                                                        {"label": "Descending", "value": False},
-                                                                    ],
+                                                                    options=cast(
+                                                                        Any,
+                                                                        [
+                                                                            {"label": "Ascending", "value": True},
+                                                                            {"label": "Descending", "value": False},
+                                                                        ],
+                                                                    ),
                                                                     value=True,
                                                                     clearable=False,
                                                                     searchable=False,
@@ -779,10 +805,13 @@ class SmartApp:
             [
                 dbc.Label("Feature(s) to mask:"),
                 dcc.Dropdown(
-                    options=[
-                        {"label": key, "value": value}
-                        for key, value in sorted(self.explainer.inv_features_dict.items(), key=lambda item: item[0])
-                    ],
+                    options=cast(
+                        Any,
+                        [
+                            {"label": key, "value": value}
+                            for key, value in sorted(self.explainer.inv_features_dict.items(), key=lambda item: item[0])
+                        ],
+                    ),
                     value="",
                     multi=True,
                     searchable=True,
@@ -800,7 +829,7 @@ class SmartApp:
             className="filter_dashed",
         )
 
-    def make_skeleton(self):
+    def make_skeleton(self) -> None:
         """
         Describe the app skeleton (bootstrap grid) and initialize components containers
         """
@@ -1167,7 +1196,10 @@ class SmartApp:
                                                                                 ),
                                                                                 dcc.Dropdown(
                                                                                     id="color_param_clusters",
-                                                                                    options=self.cluster_colorscale_columns_options,
+                                                                                    options=cast(
+                                                                                        Any,
+                                                                                        self.cluster_colorscale_columns_options,
+                                                                                    ),
                                                                                     value="predictions",
                                                                                     clearable=False,
                                                                                     style={
@@ -1669,7 +1701,7 @@ class SmartApp:
             style={"overflow-x": "hidden"},
         )
 
-    def adjust_menu(self):
+    def adjust_menu(self) -> None:
         """
         Override menu from explainer object depending on
         classification or regression case.
@@ -1684,7 +1716,7 @@ class SmartApp:
         if self.explainer._case == "classification":
             self.components["menu"]["select_label"].options = [
                 {"label": f"{self.explainer.label_dict[label] if self.explainer.label_dict else label}", "value": label}
-                for label in self.explainer._classes
+                for label in cast(list[Any], self.explainer._classes)
             ]
             self.components["menu"]["classification_badge"].style = on_style
             self.components["menu"]["regression_badge"].style = off_style
@@ -1698,58 +1730,62 @@ class SmartApp:
         else:
             raise ValueError(f"No rule defined for explainer case : {self.explainer._case}")
 
-    def draw_component(self, component_type, component_id, title=None, is_draw_fullscreen=True):
+    def draw_component(
+        self,
+        component_type: str,
+        component_id: str,
+        title: str | None = None,
+        is_draw_fullscreen: bool = True,
+    ) -> list[Component]:
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
         Parameters
         ----------
-        component_type : string
+        component_type : str
             Type of the component. Can be table, graph, ...
-        component_id : string
+        component_id : str
             Id of the component. It must be unique.
         title : string, optional
             by default None
+        is_draw_fullscreen : bool, optional
+            Whether to add a fullscreen control to the component.
         Returns
         -------
-        list
-            list of components
-            (combining for example Graph + embed button to get fullscreen
-            details)
+        list[Component]
+            Components to display, optionally including the fullscreen control.
         """
-        component = [html.H4(title)] if title else []
+        component: list[Component] = [html.H4(title)] if title else []
         component.append(self.components[component_type][component_id])
         if is_draw_fullscreen:
             component.append(self.draw_fullscreen(component_type, component_id))
         return component
 
-    def draw_fullscreen(self, component_type, component_id):
+    def draw_fullscreen(self, component_type: str, component_id: str) -> Component:
         """
         Method which return a component from a type and id.
         It's the method to insert component inside component container.
         Parameters
         ----------
-        component_type : string
+        component_type : str
             Type of the component. Can be table, graph, ...
-        component_id : string
+        component_id : str
             Id of the component. It must be unique.
         Returns
         -------
-        list
-            list of components
-            (combining for example Graph + embed button to get fullscreen
-            details)
+        Component
+            Fullscreen control for the requested component.
         """
         component = html.A(
             html.I("fullscreen", className="material-icons tiny", style={"marginTop": "0.4vw", "marginLeft": "0.05vw"}),
             id=f"ember_{component_id}",
             className="dock-expand",
-            **{"data-component-type": component_type},
-            **{"data-component-id": component_id},
+            **cast(Any, {"data-component-type": component_type}),
+            **cast(Any, {"data-component-id": component_id}),
         )
         return component
 
-    def draw_filter_table(self):
+    def draw_filter_table(self) -> Component:
         """
         Method which returns the filter dataset components block.
         Returns
@@ -1758,7 +1794,7 @@ class SmartApp:
         """
         return self.components["filter"]["filter_dataset"]
 
-    def draw_filter(self):
+    def draw_filter(self) -> list[Component]:
         """
         Method which returns filter components block for local
         contributions plot.
@@ -1767,7 +1803,7 @@ class SmartApp:
         list
             list of components
         """
-        filter_components = [
+        filter_components: list[Component] = [
             html.Div([self.components["filter"]["index"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["threshold"]], style={"padding-bottom": "0.4vw"}),
             html.Div([self.components["filter"]["max_contrib"]], style={"padding-bottom": "0.4vw"}),
@@ -1777,7 +1813,7 @@ class SmartApp:
         return filter_components
 
     @staticmethod
-    def select_point(figure, click_data):
+    def select_point(figure: dict[str, Any], click_data: dict[str, Any] | None) -> None:
         """
         Method which set the selected point in graph component
         corresponding to click_data.
@@ -1788,7 +1824,7 @@ class SmartApp:
             for curve in range(len(figure["data"])):
                 figure["data"][curve].selectedpoints = [point_id] if curve == curve_id else []
 
-    def callback_fullscreen_buttons(self):
+    def callback_fullscreen_buttons(self) -> None:
         """
         Initialize callbacks for each fullscreen button
         the callback alter style of the component (height, ...)
@@ -1876,7 +1912,7 @@ class SmartApp:
 
                     return this_style_card, style_component
 
-    def init_callback_settings(self):
+    def init_callback_settings(self) -> None:
         """Callback settings initialization"""
         app = self.app
         self.components["settings"]["input_rows"]["rows"].value = self.settings["rows"]
@@ -1935,7 +1971,7 @@ class SmartApp:
                         return True
             return False
 
-    def callback_generator(self):
+    def callback_generator(self) -> None:
         """Generates all the app callbacks"""
         app = self.app
 

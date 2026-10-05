@@ -1,4 +1,5 @@
 import copy
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -10,41 +11,45 @@ from shapash.utils.model_synoptic import dict_model_feature
 from shapash.utils.transform import check_transformers, preprocessing_tolist
 
 
-def _is_string_dtype_metadata(dtype_value):
+def _is_string_dtype_metadata(dtype_value: Any) -> bool:
     if not isinstance(dtype_value, str):
         return False
     return dtype_value in {"object", "str", "string"} or dtype_value.startswith("string[")
 
 
-def check_preprocessing(preprocessing=None):
+def check_preprocessing(preprocessing: Any | None = None) -> tuple[bool, bool] | None:
     """
     Check that all transformation of the preprocessing are supported.
 
     Parameters
     ----------
-    preprocessing: category_encoders, ColumnTransformer, list, dict, optional (default: None)
+    preprocessing: Any, optional
         The processing apply to the original data
+
+    Returns
+    -------
+    tuple[bool, bool] or None
+        Whether ColumnTransformer and category encoders are used, or None when preprocessing is None.
     """
     if preprocessing is not None:
         list_preprocessing = preprocessing_tolist(preprocessing)
         use_ct, use_ce = check_transformers(list_preprocessing)
         return use_ct, use_ce
+    return None
 
 
-def check_model(model):
-    """
-    Check if model has a predict_proba method is a one column dataframe of integer or float
-    and if y_pred index matches x_init index
+def check_model(model: Any) -> tuple[Literal["regression", "classification"], list[Any] | None]:
+    """Determine whether a model supports classification or regression.
 
     Parameters
     ----------
-    model: model object
-        model used to check the different values of target estimate predict or predict_proba
+    model: Any
+        Model expected to provide a predict method and, for classification, class metadata.
 
     Returns
     -------
-    string:
-        'regression' or 'classification' according to the attributes of the model
+    tuple[str, list[Any] or None]
+        The model type ('regression' or 'classification') and its classes, if it is a classifier.
     """
     _classes = None
     if hasattr(model, "predict"):
@@ -67,21 +72,25 @@ def check_model(model):
         raise ValueError("No method predict in the specified model. Please, check model parameter")
 
 
-def check_label_dict(label_dict, case, classes=None):
+def check_label_dict(
+    label_dict: dict[Any, Any] | None,
+    case: Literal["regression", "classification"],
+    classes: list[Any] | None = None,
+) -> None:
     """
     Check if label_dict and model _classes match
 
     Parameters
     ----------
-    label_dict: dict
+    label_dict: dict[Any, Any] or None
         Dictionary mapping integer labels to domain names (classification - target values).
-    case: string
+    case: str
         String that informs if the model used is for classification or regression problem.
-    classes: list, None
+    classes: list[Any] or None, optional
         List of labels if the model used is for classification problem, None otherwise.
     """
     if label_dict is not None and case == "classification":
-        if set(classes) != set(list(label_dict.keys())):
+        if set(cast(list[Any], classes)) != set(list(label_dict.keys())):
             raise ValueError(
                 "label_dict and don't match: \n"
                 + f"label_dict keys: {str(list(label_dict.keys()))}\n"
@@ -89,13 +98,13 @@ def check_label_dict(label_dict, case, classes=None):
             )
 
 
-def check_mask_params(mask_params):
+def check_mask_params(mask_params: dict[str, Any]) -> None:
     """
     Check if mask_params given respect the expected format.
 
     Parameters
     ----------
-    mask_params: dict (optional)
+    mask_params: dict[str, Any]
         Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
     """
     if not isinstance(mask_params, dict):
@@ -119,23 +128,32 @@ def check_mask_params(mask_params):
             )
 
 
-def check_y(x=None, y=None, y_name="y_target"):
+def check_y(
+    x: pd.DataFrame | None = None,
+    y: pd.DataFrame | pd.Series | None = None,
+    y_name: str = "y_target",
+) -> pd.DataFrame | None:
     """
     Check that ypred given has the right shape and expected value.
 
     Parameters
     ----------
-    y: pandas.DataFrame (optional)
-        User-specified prediction values.
-    x: pandas.DataFrame
-        Dataset used by the model to perform the prediction (preprocessed or not).
+    x: pandas.DataFrame or None, optional
+        Dataset used by the model to perform the prediction (preprocessed or not). Required when y is not None.
+    y: pandas.DataFrame or pandas.Series or None, optional
+        User-specified prediction values. A Series is converted to a one-column DataFrame.
     y_name: str
         Name of y ("y_target" or "y_pred")
+
+    Returns
+    -------
+    pandas.DataFrame or None
+        The validated values, with a Series converted to a DataFrame, or None when y is None.
     """
     if y is not None:
         if not isinstance(y, pd.DataFrame | pd.Series):
             raise ValueError(f"{y_name} must be a one column pd.Dataframe or pd.Series.")
-        if not y.index.equals(x.index):
+        if not y.index.equals(cast(pd.DataFrame, x).index):
             raise ValueError(f"x and {y_name} should have the same index.")
         if isinstance(y, pd.DataFrame):
             if y.shape[1] > 1:
@@ -151,19 +169,21 @@ def check_y(x=None, y=None, y_name="y_target"):
     return y
 
 
-def check_contribution_object(case, classes, contributions):
-    """
-    Check len of list if _case is "classification"
-    Check contributions object type if _case is "regression"
-    Check type of contributions and transform into (list of) pd.Dataframe if necessary
+def check_contribution_object(
+    case: Literal["regression", "classification"],
+    classes: list[Any] | None,
+    contributions: np.ndarray | pd.DataFrame | list[Any],
+) -> None:
+    """Validate the type and number of contribution objects for the model case.
 
     Parameters
     ----------
-    case: string
+    case: str
         String that informs if the model used is for classification or regression problem.
-    classes: list, None
+    classes: list[Any] or None
         List of labels if the model used is for classification problem, None otherwise.
-    contributions : pandas.DataFrame, np.ndarray or list
+    contributions: pandas.DataFrame, numpy.ndarray or list
+        Contributions for the model; classification requires one object per class.
     """
     if (case == "regression") and (not isinstance(contributions, np.ndarray | pd.DataFrame)):
         raise ValueError(
@@ -175,7 +195,7 @@ def check_contribution_object(case, classes, contributions):
         )
     elif case == "classification":
         if isinstance(contributions, list):
-            if len(contributions) != len(classes):
+            if len(contributions) != len(cast(list[Any], classes)):
                 raise ValueError(
                     """
                     Length of list of contributions parameter is not equal
@@ -194,44 +214,44 @@ def check_contribution_object(case, classes, contributions):
 
 
 def check_consistency_model_features(
-    features_dict,
-    model,
-    columns_dict,
-    features_types,
-    mask_params=None,
-    preprocessing=None,
-    postprocessing=None,
-    list_preprocessing=None,
-    features_groups=None,
-):
+    features_dict: dict[str, str] | None,
+    model: Any,
+    columns_dict: dict[int, str],
+    features_types: dict[str, str],
+    mask_params: dict[str, Any] | None = None,
+    preprocessing: Any | None = None,
+    postprocessing: dict[str, Any] | None = None,
+    list_preprocessing: list[Any] | None = None,
+    features_groups: dict[str, list[str]] | None = None,
+) -> None:
     """
     Check the matching between attributes, features names are same, or include
 
     Parameters
     ----------
-    features_dict: dict
+    features_dict: dict[str, str] or None
         Dictionary mapping technical feature names to domain names.
-    model: model object
+    model: Any
         model used to check the different values of target estimate predict_proba
-    columns_dict: dict
+    columns_dict: dict[int, str]
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
-    features_types: dict
+    features_types: dict[str, str]
         Dictionnary mapping features with the right types needed.
-    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
+    preprocessing: Any, optional
             The processing apply to the original data
-    mask_params: dict (optional)
+    mask_params: dict[str, Any] or None, optional
         Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
-    postprocessing : dict
+    postprocessing: dict[str, Any] or None, optional
         Dictionnary of postprocessing that need to be checked.
-    list_preprocessing: list (optional)
-        list containing all preprocessing.
-    features_groups: list (optional)
-        list containing all groups of features.
+    list_preprocessing: list[Any] or None, optional
+        List containing all preprocessing steps; used when preprocessing is provided.
+    features_groups: dict[str, list[str]] or None, optional
+        Mapping of group names to their feature names.
     """
     # Features dict can include additional entries for groups of features.
     # We don't want to check them here as they may not be in other dict
     features_dict = copy.deepcopy(features_dict)
-    if features_groups is not None:
+    if features_dict is not None and features_groups is not None:
         for feat in features_groups.keys():
             if feat in features_dict.keys():
                 features_dict.pop(feat)
@@ -271,7 +291,7 @@ def check_consistency_model_features(
                 raise ValueError("Features of columns_dict and model must have the same length")
 
     if str(type(preprocessing)) in supported_category_encoder and isinstance(feature_expected_model, list):
-        if set(preprocessing.feature_names_out_) != set(feature_expected_model):
+        if set(cast(Any, preprocessing).feature_names_out_) != set(feature_expected_model):
             raise ValueError(
                 """
                                 One of features returned by the Category_Encoders preprocessing doesn't
@@ -279,7 +299,9 @@ def check_consistency_model_features(
                             """
             )
     elif preprocessing is not None:
-        feature_encoded = get_list_features_names(list_preprocessing, columns_dict)
+        if list_preprocessing is None:
+            raise ValueError("list_preprocessing is required when preprocessing is provided.")
+        feature_encoded = list(get_list_features_names(list_preprocessing, columns_dict))
         if model_expected != len(feature_encoded):
             raise ValueError(
                 """
@@ -299,29 +321,34 @@ def check_consistency_model_features(
         check_postprocessing(features_types, postprocessing)
 
 
-def check_preprocessing_options(columns_dict, features_dict, preprocessing=None, list_preprocessing=None):
+def check_preprocessing_options(
+    columns_dict: dict[int, str],
+    features_dict: dict[str, str],
+    preprocessing: Any | None = None,
+    list_preprocessing: list[Any] | None = None,
+) -> dict[str, Any] | None:
     """
     Check if preprocessing for ColumnTransformer doesn't have "drop" option otherwise compute several
     informations to adapt the SmartPredictor's actions
 
     Parameters
     ----------
-    preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
+    preprocessing: Any, optional
         The processing apply to the original data.
-    columns_dict: dict
+    columns_dict: dict[int, str]
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
-    features_dict: dict
+    features_dict: dict[str, str]
         Dictionary mapping technical feature names to domain names.
-    list_preprocessing: list (optional)
+    list_preprocessing: list[Any] or None, optional
         list containing all preprocessing.
     Returns
     -------
-    None, dict
+    dict[str, Any] or None
         None if there isn't drop options in ColumnTransformer otherwise dict of informations to adapt.
     """
     feature_to_drop = list()
     if preprocessing is not None:
-        for enc in list_preprocessing:
+        for enc in cast(list[Any], list_preprocessing):
             if str(type(enc)) in columntransformer:
                 for options in enc.transformers_:
                     if "drop" in options:
@@ -348,16 +375,15 @@ def check_preprocessing_options(columns_dict, features_dict, preprocessing=None,
         return None
 
 
-def check_consistency_model_label(columns_dict, label_dict=None):
-    """
-    Check the matching between attributes, features names are same, or include
+def check_consistency_model_label(columns_dict: dict[Any, Any], label_dict: dict[Any, Any] | None = None) -> None:
+    """Check that label dictionary keys are present in columns_dict.
 
     Parameters
     ----------
-    columns_dict: dict
-        Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
-    label_dict: dict (optional)
-        Dictionary mapping integer labels to domain names (classification - target values).
+    columns_dict: dict[Any, Any]
+        Mapping of model column identifiers to feature names.
+    label_dict: dict[Any, Any] or None, optional
+        Mapping of model label values to domain names.
     """
 
     if label_dict is not None:
@@ -365,16 +391,18 @@ def check_consistency_model_label(columns_dict, label_dict=None):
             raise ValueError("All features of label_dict must be in model")
 
 
-def check_postprocessing(x, postprocessing=None):
+def check_postprocessing(
+    x: pd.DataFrame | dict[str, str], postprocessing: dict[str, dict[str, Any]] | None = None
+) -> None:
     """
     Check that postprocessing parameter has good attributes matching with x dataset or with dict of types of
     the expected data set x
 
     Parameters
     ----------
-    x: pandas.DataFrame, dict
+    x: pandas.DataFrame or dict[str, str]
         Dataset x without preprocessing or dictionnary mapping features with the right types needed.
-    postprocessing : dict
+    postprocessing: dict[str, dict[str, Any]] or None, optional
         Dictionnary of postprocessing that need to be checked.
     """
     if postprocessing:
@@ -431,37 +459,40 @@ def check_postprocessing(x, postprocessing=None):
                         )
 
 
-def check_features_name(columns_dict, features_dict, features):
+def check_features_name(
+    columns_dict: dict[int, str], features_dict: dict[str, str], features: list[int | str]
+) -> list[int]:
     """
     Convert a list of feature names (string) or features ids into features ids.
     Features names can be part of columns_dict or features_dict.
 
     Parameters
     ----------
-    features : list
-        List of ints (columns ids) or of strings (business names)
-    columns_dict: dict
-    Dictionary mapping integer column number to technical feature names.
-    features_dict: dict
-    Dictionary mapping technical feature names to domain names.
+    columns_dict: dict[int, str]
+        Dictionary mapping integer column number to technical feature names.
+    features_dict: dict[str, str]
+        Dictionary mapping technical feature names to domain names.
+    features: list[int or str]
+        List of integer column ids or strings containing technical or domain names.
 
     Returns
     -------
-    list of ints
+    list[int]
         Columns ids compatible with var_dict
     """
     if all(isinstance(f, int) for f in features):
-        features_ids = features
+        features_ids = cast(list[int], features)
 
     elif all(isinstance(f, str) for f in features):
+        feature_names = cast(list[str], features)
         inv_columns_dict = {v: k for k, v in columns_dict.items()}
         inv_features_dict = {v: k for k, v in features_dict.items()}
 
-        if features_dict and all(f in features_dict.values() for f in features):
-            columns_list = [inv_features_dict[f] for f in features]
+        if features_dict and all(f in features_dict.values() for f in feature_names):
+            columns_list = [inv_features_dict[f] for f in feature_names]
             features_ids = [inv_columns_dict[c] for c in columns_list]
-        elif inv_columns_dict and all(f in columns_dict.values() for f in features):
-            features_ids = [inv_columns_dict[f] for f in features]
+        elif inv_columns_dict and all(f in columns_dict.values() for f in feature_names):
+            features_ids = [inv_columns_dict[f] for f in feature_names]
         else:
             raise ValueError("All features must came from the same dict of features (technical names or domain names).")
 
@@ -475,16 +506,30 @@ def check_features_name(columns_dict, features_dict, features):
     return features_ids
 
 
-def check_additional_data(x, additional_data):
-    """Checks if additional_data is a pandas DataFrame and has the same index as x"""
+def check_additional_data(x: pd.DataFrame, additional_data: pd.DataFrame) -> None:
+    """Validate that additional_data is a DataFrame with the same index as x.
+
+    Parameters
+    ----------
+    x: pandas.DataFrame
+        Reference dataset.
+    additional_data: pandas.DataFrame
+        Additional data to validate.
+    """
     if not isinstance(additional_data, pd.DataFrame):
         raise ValueError("additional_data must be a pd.Dataframe.")
     if not additional_data.index.equals(x.index):
         raise ValueError("x and additional_data should have the same index.")
 
 
-def check_columns_order(columns_order):
-    """Checks if columns_order is a list of strings"""
+def check_columns_order(columns_order: list[str]) -> None:
+    """Validate that columns_order is a list of strings.
+
+    Parameters
+    ----------
+    columns_order: list[str]
+        Column names in the desired order.
+    """
     if not isinstance(columns_order, list):
         raise ValueError("columns_order must be a list.")
     if not all(isinstance(item, str) for item in columns_order):

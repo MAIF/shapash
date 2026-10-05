@@ -2,6 +2,8 @@
 Contributions
 """
 
+from typing import Any, Literal
+
 import numpy as np
 import pandas as pd
 
@@ -10,7 +12,11 @@ from shapash.utils.columntransformer_backend import calc_inv_contrib_ct
 from shapash.utils.transform import check_transformers, preprocessing_tolist
 
 
-def inverse_transform_contributions(contributions, preprocessing=None, agg_columns="sum"):
+def inverse_transform_contributions(
+    contributions: pd.DataFrame,
+    preprocessing: Any | None = None,
+    agg_columns: Literal["sum", "first"] = "sum",
+) -> pd.DataFrame:
     """
     Reverse contribution giving a preprocessing.
 
@@ -26,14 +32,14 @@ def inverse_transform_contributions(contributions, preprocessing=None, agg_colum
     ----------
     contributions : pandas.DataFrame
         Contributions values.
-    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
+    preprocessing : Any or None, optional
         The processing apply to the original data.
-    agg_columns : str (default: 'sum')
+    agg_columns : Literal["sum", "first"], optional
         Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
 
     Returns
     -------
-    pandas.Dataframe
+    pd.DataFrame
         Return the aggregate contributions.
 
     """
@@ -61,27 +67,23 @@ def inverse_transform_contributions(contributions, preprocessing=None, agg_colum
         return x_contrib_invers
 
 
-def rank_contributions(s_df, x_df):
+def rank_contributions(s_df: pd.DataFrame, x_df: pd.DataFrame) -> list[pd.DataFrame]:
     """
     Function to sort contributions and input features
     by decreasing contribution absolute values
 
     Parameters
     ----------
-    s_df: pandas.DataFrame
+    s_df : pd.DataFrame
         Local contributions dataframe.
-    x_df: pandas.DataFrame
+    x_df : pd.DataFrame
         Input features.
 
     Returns
     -------
-    pandas.DataFrame
-        Local contributions sorted by decreasing absolute values.
-    pandas.DataFrame
-        Input features sorted by decreasing contributions absolute values.
-    pandas.DataFrame
-        Input features names sorted for each observation
-        by decreasing contributions absolute values.
+    list[pd.DataFrame]
+        A three-item list containing sorted contributions, sorted features, and
+        the feature indices in sorted order, respectively.
     """
     argsort = np.argsort(-np.abs(s_df.values), axis=1)
     sorted_contrib = np.take_along_axis(s_df.values, argsort, axis=1)
@@ -96,19 +98,20 @@ def rank_contributions(s_df, x_df):
     return [s_ord, x_ord, s_dict]
 
 
-def assign_contributions(ranked):
+def assign_contributions(ranked: list[pd.DataFrame]) -> dict[str, pd.DataFrame]:
     """
     Turn a list of results into a dict.
 
     Parameters
     ----------
-    ranked : list
-        The output of rank_contributions.
+    ranked : list[pd.DataFrame]
+        The three DataFrames returned by :func:`rank_contributions`.
 
     Returns
     -------
-    dict
-        Same data but rearrange into a dict with explicit names.
+    dict[str, pd.DataFrame]
+        The ranked contributions, features, and feature indices under explicit
+        keys.
 
     Raises
     ------
