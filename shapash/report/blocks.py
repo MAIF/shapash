@@ -633,6 +633,8 @@ class ReportBlockMixin:
         explainer = self._require_explainer("class_explainability")
         if explainer._case != "classification":
             raise ValueError("class_explainability block is only available for classification.")
+        if explainer._classes is None:
+            raise ValueError("class_explainability block requires model classes.")
 
         classes = list(explainer._classes)
         if len(classes) > 2:
