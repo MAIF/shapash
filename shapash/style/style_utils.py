@@ -4,6 +4,7 @@ functions for loading and manipulating colors
 
 import json
 import os
+from typing import Any
 
 import numpy as np
 
@@ -32,14 +33,14 @@ def random_color(a: float = 0.6) -> str:
     return f"rgba({r}, {g}, {b}, {a})"
 
 
-def colors_loading():
+def colors_loading() -> dict[str, Any]:
     """
-    colors_loading allows shapash to load a json file which contains different
-    palettes of colors that can be used in the plot
+    Load the JSON file containing the color palettes available to Shapash.
+
     Returns
     -------
-    dict:
-        contains all available pallets
+    dict[str, Any]
+        All available palettes, keyed by palette name.
     """
     current_path = os.path.dirname(os.path.abspath(__file__))
     jsonfile = os.path.join(current_path, "colors.json")
@@ -48,36 +49,41 @@ def colors_loading():
     return colors_dic
 
 
-def select_palette(colors_dic, palette_name):
+def select_palette(colors_dic: dict[str, Any], palette_name: str) -> dict[str, Any]:
     """
-    colors_loading allows shapash to load a json file which contains different
-    palettes of colors that can be used in the plot
+    Selects a palette from the available palettes.
+
     Parameters
     ----------
-    colors_dic : dict
-        dictionnary with every palettes
-    palette_name : String
-        name of the palette
+    colors_dic : dict[str, Any]
+        Dictionary of palettes keyed by name.
+    palette_name : str
+        Name of the palette.
+
     Returns
     -------
-    dict:
-        contains colors of one palette
+    dict[str, Any]
+        Colors of the selected palette.
     """
     if palette_name not in colors_dic.keys():
         raise ValueError(f"Palette {palette_name} not found.")
     return colors_dic[palette_name]
 
 
-def convert_str_color_to_plt_format(txt):
+def convert_str_color_to_plt_format(txt: str) -> list[float]:
     """
     Converts an rgb string format to a tuple of float (used by matplotlib format)
+
     Parameters
     ----------
     txt : str
         a string representation of an rgb color (used by plotly)
+
     Returns
     -------
-    A tuple of float used by matplotlib format
+    list[float]
+        Color components in matplotlib format (RGB or RGBA).
+
     Example
     --------
     >>> convert_str_color_to_plt_format(txt="rgba(244, 192, 0, 1)")
@@ -91,21 +97,23 @@ def convert_str_color_to_plt_format(txt):
         return [float(x) / 255 for x in list_txt]
 
 
-def define_style(palette):
+def define_style(palette: dict[str, Any]) -> dict[str, Any]:
     """
     the define_style function is a function that uses a palette
     to define the different styles used in the different outputs
     of Shapash
+
     Parameters
     ----------
-    palette : dict
-        contains colors of one palette
+    palette : dict[str, Any]
+        Colors of one palette.
+
     Returns
     -------
-    dict :
-        contains different style elements
+    dict[str, Any]
+        Different style elements.
     """
-    style_dict = dict()
+    style_dict: dict[str, Any] = {}
     style_dict["dict_title"] = {
         "xanchor": "center",
         "yanchor": "middle",
@@ -171,34 +179,42 @@ def define_style(palette):
     return style_dict
 
 
-def get_palette(palette_name):
+def get_palette(palette_name: str | None) -> dict[str, Any]:
     """
     Returns a specific palette linked to the input palette_name
+
     Parameters
     ----------
     palette_name : str
-        name of the palette
+        Name of the palette, or None to use the first available palette.
+
     Returns
     -------
-    dict:
-        contains colors of one palette
+    dict[str, Any]
+        Colors of the selected palette.
     """
     if palette_name is None:
         palette_name = list(colors_loading().keys())[0]  # Default palette name
     return select_palette(colors_loading(), palette_name)
 
 
-def get_pyplot_color(colors):
+def get_pyplot_color(
+    colors: str | dict[Any, str] | list[str],
+) -> list[float] | dict[Any, list[float]] | list[list[float]]:
     """
     Returns the color(s) of the color_name key in the palette in matplotlib format.
+
     Parameters
     ----------
-    colors :  str or dict
-        Colors used as a dict or string object
+    colors : str or dict or list
+        A single RGB(A) string, a mapping of keys to RGB(A) strings, or a list
+        of RGB(A) strings.
+
     Returns
     -------
-    dict or tuple
-        the colors in pyplot format
+    list[float] or dict[Any, list[float]] or list[list[float]]
+        RGB(A) components as a list, a mapping of keys to component lists, or
+        a list of component lists, respectively.
     """
     if isinstance(colors, str):
         return convert_str_color_to_plt_format(colors)

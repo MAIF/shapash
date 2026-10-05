@@ -680,10 +680,14 @@ class TestSmartPredictor(unittest.TestCase):
         predictor_1._case = "regression"
         predictor_1._classes = None
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaisesRegex(ValueError, "only available for classification models"):
             predictor_1.predict_proba()
 
         predictor_1 = self.predictor_1
+        predictor_1.model = self.clf_1
+        predictor_1.backend = self.backend_1
+        predictor_1._case = "classification"
+        predictor_1._classes = list(self.clf_1.classes_)
 
         with self.assertRaises(AttributeError):
             predictor_1.predict_proba()

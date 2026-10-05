@@ -2,17 +2,21 @@
 Smart predictor module
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import logging
 import time
 import warnings
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
+import numpy as np
 import pandas as pd
 
 import shapash.explainer.smart_explainer
+from shapash.backend import BaseBackend
 from shapash.decomposition.contributions import assign_contributions, rank_contributions
 from shapash.manipulation.filters import (
     cap_contributions,
@@ -67,7 +71,7 @@ def _instrument(operation: str) -> Callable[..., Any]:
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(fn)
-        def wrapper(self: "SmartPredictor", *args: Any, **kwargs: Any) -> Any:
+        def wrapper(self: SmartPredictor, *args: Any, **kwargs: Any) -> Any:
             fingerprint = self._get_schema_fingerprint()
             extras = {"schema_fingerprint": fingerprint}
             _logger.debug("%s enter", operation, extra=extras)
@@ -150,17 +154,17 @@ class SmartPredictor:
 
     The SmartPredictor Attributes :
 
-    features_dict: dict
+    features_dict: dict[str, str]
         Dictionary mapping technical feature names to domain names.
-    model: model object
-        model used to check the different values of target estimate predict_proba
-    backend: str or backend object
-        backend (explainer) used to compute contributions
-    columns_dict: dict
+    model: object
+        Model used to compute predictions and validate the model type.
+    backend: shapash.backend.BaseBackend
+        Backend (explainer) used to compute contributions.
+    columns_dict: dict[int, str]
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
-    features_types: dict
+    features_types: dict[str, str]
         Dictionary mapping features with the right types needed.
-    label_dict: dict (optional)
+    label_dict: dict[Any, Any] (optional)
         Dictionary mapping integer labels to domain names (classification - target values).
     preprocessing: category_encoders, ColumnTransformer, list or dict (optional)
         The processing apply to the original data.
@@ -200,19 +204,19 @@ class SmartPredictor:
 
     def __init__(
         self,
-        features_dict,
-        model,
-        columns_dict,
-        backend,
-        features_types,
-        label_dict=None,
-        preprocessing=None,
-        postprocessing=None,
-        features_groups=None,
-        mask_params=None,
+        features_dict: dict[str, str],
+        model: Any,
+        columns_dict: dict[int, str],
+        backend: BaseBackend,
+        features_types: dict[str, str],
+        label_dict: dict[Any, Any] | None = None,
+        preprocessing: Any | None = None,
+        postprocessing: dict[str, dict[str, Any]] | None = None,
+        features_groups: dict[str, list[str]] | None = None,
+        mask_params: dict[str, Any] | None = None,
         schema_distribution: dict[Any, dict[str, Any]] | None = None,
         schema_drift_config: SchemaDriftConfig | None = None,
-    ):
+    ) -> None:
         params_dict = [features_dict, features_types, label_dict, columns_dict, postprocessing]
 
         for params in params_dict:
@@ -258,7 +262,7 @@ class SmartPredictor:
         check_consistency_model_label(self.columns_dict, self.label_dict)
         self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing, list_preprocessing)
 
-    def check_model(self):
+    def check_model(self) -> tuple[Literal["classification", "regression"], list[Any] | None]:
         """
         Check if model has a predict_proba method is a one column dataframe of integer or float
         and if y_pred index matches x_init index
@@ -271,27 +275,32 @@ class SmartPredictor:
         _case, _classes = check_model(self.model)
         return _case, _classes
 
-    def check_preprocessing(self):
+    def check_preprocessing(self) -> Any:
         """
         Check that all transformation of the preprocessing are supported.
         """
         return check_preprocessing(self.preprocessing)
 
-    def check_label_dict(self):
+    def check_label_dict(self) -> Any:
         """
         Check if label_dict and model _classes match
         """
         if self._case != "regression":
             return check_label_dict(self.label_dict, self._case, self._classes)
 
-    def check_mask_params(self):
+    def check_mask_params(self) -> None:
         """
         Check if mask_params given respect the expected format.
         """
         return check_mask_params(self.mask_params)
 
     @_instrument("add_input")
-    def add_input(self, x=None, ypred=None, contributions=None):
+    def add_input(
+        self,
+        x: pd.DataFrame | dict[str, Any] | None = None,
+        ypred: pd.DataFrame | pd.Series | None = None,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+    ) -> None:
         """
         The add_input method is the first step to add a dataset for prediction and explainability.
 
@@ -314,9 +323,9 @@ class SmartPredictor:
         ----------
         x: dict, pandas.DataFrame (optional)
             Raw dataset used by the model to perform the prediction (not preprocessed).
-        ypred: pandas.DataFrame (optional)
+        ypred: pandas.DataFrame or pandas.Series (optional)
             User-specified prediction values.
-        contributions: pandas.DataFrame (regression) or list (classification) (optional)
+        contributions: pandas.DataFrame, numpy.ndarray, or list (optional)
             local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding).
         """
         if x is not None and hasattr(x, "shape"):
@@ -378,11 +387,13 @@ class SmartPredictor:
                 },
             )
 
-    def _add_groups_input(self):
+    def _add_groups_input(self) -> None:
         """
         Compute groups of features values, contributions the same way as add_input method
         and stores it in data_groups attribute
         """
+        if self.features_groups is None:
+            raise ValueError("features_groups must be specified to compute grouped input.")
         self.data_groups = dict()
         self.data_groups["x_postprocessed"] = create_grouped_features_values(
             x_init=self.data["x_postprocessed"],
@@ -397,7 +408,7 @@ class SmartPredictor:
             contributions=self.data["contributions"], features_groups=self.features_groups
         )
 
-    def check_dataset_type(self, x=None):
+    def check_dataset_type(self, x: pd.DataFrame | dict[str, Any] | None = None) -> pd.DataFrame:
         """
         Check if dataset x given respect the expected format.
 
@@ -422,7 +433,7 @@ class SmartPredictor:
             x = self.convert_dict_dataset(x)
         return x
 
-    def convert_dict_dataset(self, x):
+    def convert_dict_dataset(self, x: pd.DataFrame | dict[str, Any]) -> pd.DataFrame:
         """
         Convert a dict to a dataframe if the dataset specified is a dict.
 
@@ -455,7 +466,7 @@ class SmartPredictor:
                 ) from err
         return x
 
-    def check_dataset_features(self, x):
+    def check_dataset_features(self, x: pd.DataFrame) -> pd.DataFrame:
         """
         Check if the features of the dataset x has the expected types before using preprocessing and model.
 
@@ -495,18 +506,20 @@ class SmartPredictor:
             )
         return x
 
-    def check_ypred(self, ypred=None):
+    def check_ypred(self, ypred: pd.DataFrame | pd.Series | None = None) -> pd.DataFrame | pd.Series | None:
         """
         Check that ypred given has the right shape and expected value.
 
         Parameters
         ----------
-        ypred: pandas.DataFrame (optional)
+        ypred: pandas.DataFrame or pandas.Series (optional)
             User-specified prediction values.
         """
         return check_y(self.data["x"], ypred)
 
-    def adapt_contributions(self, contributions):
+    def adapt_contributions(
+        self, contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray]
+    ) -> pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray]:
         """
         If _case is "classification" and contributions a np.array or pd.DataFrame
         this function transform contributions matrix in a list of 2 contributions
@@ -523,7 +536,7 @@ class SmartPredictor:
         """
         return adapt_contributions(self._case, contributions)
 
-    def check_contributions(self, contributions):
+    def check_contributions(self, contributions: pd.DataFrame | list[pd.DataFrame]) -> None:
         """
         Check if contributions and prediction set match in terms of shape and index.
         """
@@ -541,7 +554,7 @@ class SmartPredictor:
                 """
             )
 
-    def clean_data(self, x):
+    def clean_data(self, x: pd.DataFrame) -> dict[str, Any]:
         """
         Clean data stored if x is defined and not None.
 
@@ -564,7 +577,7 @@ class SmartPredictor:
         }
 
     @_instrument("predict_proba")
-    def predict_proba(self):
+    def predict_proba(self) -> pd.DataFrame:
         """
         The predict_proba compute the probabilities predicted for each x row defined in add_input.
 
@@ -579,17 +592,23 @@ class SmartPredictor:
         >>> predictor.predict_proba()
 
         """
+        if self._classes is None:
+            raise ValueError("Class probabilities are only available for classification models")
         return predict_proba(self.model, self.data["x_preprocessed"], self._classes)
 
     @_instrument("compute_contributions")
-    def compute_contributions(self, contributions=None, use_groups=None):
+    def compute_contributions(
+        self,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+        use_groups: bool | None = None,
+    ) -> tuple[pd.DataFrame, pd.DataFrame | list[pd.DataFrame]]:
         """
         The compute_contributions compute the contributions associated to data ypred specified.
         Need a data ypred specified in an add_input to display detail_contributions.
 
         Parameters
         -------
-        contributions : object (optional)
+        contributions : pandas.DataFrame, numpy.ndarray, or list (optional)
             Local contributions, or list of local contributions.
         use_groups : bool (optional)
             Whether or not to compute groups of features contributions.
@@ -630,18 +649,24 @@ class SmartPredictor:
             self.data["ypred_init"], contributions, self._case, self._classes, self.label_dict, proba_values
         )
         if use_groups:
+            if self.features_groups is None:
+                raise ValueError("features_groups must be specified to compute grouped contributions.")
             match_contrib = group_contributions(match_contrib, features_groups=self.features_groups)
 
         return y_pred, match_contrib
 
-    def detail_contributions(self, contributions=None, use_groups=None):
+    def detail_contributions(
+        self,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+        use_groups: bool | None = None,
+    ) -> pd.DataFrame:
         """
         The detail_contributions method associates the right contributions with the right data predicted.
         (with ypred specified in add_input or computed automatically)
 
         Parameters
         -------
-        contributions : object (optional)
+        contributions : pandas.DataFrame, numpy.ndarray, or list (optional)
             Local contributions, or list of local contributions.
         use_groups : bool (optional)
             Whether or not to compute groups of features contributions.
@@ -677,7 +702,7 @@ class SmartPredictor:
             self._schema_fingerprint_cache = fingerprint
         return fingerprint
 
-    def save(self, path):
+    def save(self, path: str) -> None:
         """
         Save method allows users to save SmartPredictor object on disk using a pickle file.
         Save method can be useful: you don't have to recompile to display results later.
@@ -706,13 +731,13 @@ class SmartPredictor:
         save_pickle(self, path)
         _save_manifest(_build_predictor_manifest(self), path)
 
-    def apply_preprocessing(self):
+    def apply_preprocessing(self) -> pd.DataFrame:
         """
         Apply preprocessing on new dataset input specified.
         """
         return apply_preprocessing(self.data["x"], self.model, self.preprocessing)
 
-    def filter(self):
+    def filter(self) -> None:
         """
         The filter method is an important method which allows to summarize the local explainability
         by using the user defined mask_params parameters which correspond to its use case.
@@ -735,7 +760,7 @@ class SmartPredictor:
         self.masked_contributions = compute_masked_contributions(self.summary["contrib_sorted"], self.mask)
 
     @_instrument("summarize")
-    def summarize(self, use_groups=None):
+    def summarize(self, use_groups: bool | None = None) -> pd.DataFrame:
         """
         The summarize method allows to display the summary of local explainability.
         This method can be configured with modify_mask method to summarize the explainability to suit needs.
@@ -791,6 +816,8 @@ class SmartPredictor:
                 x for x in self._drop_option["columns_dict_op"].values() if x in data["x_postprocessed"].columns
             ]
             if use_groups:
+                if self.features_groups is None:
+                    raise ValueError("features_groups must be specified to summarize grouped contributions.")
                 columns_to_keep += list(self.features_groups.keys())
             x_preprocessed = data["x_postprocessed"][columns_to_keep]
         else:
@@ -816,7 +843,13 @@ class SmartPredictor:
         # Matching with y_pred
         return pd.concat([data["ypred"], data["summary"]], axis=1)
 
-    def modify_mask(self, features_to_hide=None, threshold=None, positive=None, max_contrib=None):
+    def modify_mask(
+        self,
+        features_to_hide: list[Any] | None = None,
+        threshold: float | None = None,
+        positive: bool | None = None,
+        max_contrib: int | None = None,
+    ) -> None:
         """
         This method allows the users to modify the mask_params values.
         Each parameter is optional, modify_mask method modifies only the values specified in parameters.
@@ -846,18 +879,18 @@ class SmartPredictor:
         2	0	    0.543308	Sex	        2.0	        -0.486667
 
         """
-        Attributes = {
+        attributes: dict[str, Any] = {
             "features_to_hide": features_to_hide,
             "threshold": threshold,
             "positive": positive,
             "max_contrib": max_contrib,
         }
-        for label, attribute in Attributes.items():
+        for label, attribute in attributes.items():
             if attribute is not None:
                 self.mask_params[label] = attribute
 
     @_instrument("predict")
-    def predict(self):
+    def predict(self) -> pd.DataFrame:
         """
         The predict method compute the predicted values for each x row defined in add_input.
 
@@ -892,7 +925,7 @@ class SmartPredictor:
 
         return self.data["ypred_init"]
 
-    def apply_postprocessing(self):
+    def apply_postprocessing(self) -> pd.DataFrame:
         """
         Modifies x Dataframe according to postprocessing modifications, if exists.
 
@@ -911,7 +944,7 @@ class SmartPredictor:
         else:
             return self.data["x"]
 
-    def check_features_name(self, features):
+    def check_features_name(self, features: list[Any]) -> list[int]:
         """
         Convert a list of feature names (string) or features ids into features ids.
         Features names can be part of columns_dict or features_dict.
@@ -928,7 +961,7 @@ class SmartPredictor:
         """
         return check_features_name(self.columns_dict, self.features_dict, features)
 
-    def to_smartexplainer(self):
+    def to_smartexplainer(self) -> shapash.explainer.smart_explainer.SmartExplainer:
         """
         Create a SmartExplainer object compiled with the data specified in add_input method with
         SmartPredictor attributes

@@ -4,7 +4,9 @@ Utils is a group of function for the library
 
 import math
 import socket
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -13,40 +15,45 @@ from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 
 
-def adjust_title_height(figure_height=500):
+def adjust_title_height(figure_height: int | float = 500) -> float:
     """
     Adjust the height of the title according to height of the figure
 
     Parameters
     ----------
-    figure_height : int
+    figure_height : int or float, optional
         height of the figure
 
     Returns
     -------
-    int
+    float
         height of the title
     """
 
     return 1 - 0.1 * 500 / figure_height
 
 
-def suffix_duplicates(lst):
+def suffix_duplicates(lst: list[str]) -> list[str]:
     """
     Adds suffixes (_2, _3, ...) to non-unique elements in a list to make them unique.
 
-    Args:
-        lst (list): The input list of elements (strings) which may contain duplicates.
+    Parameters
+    ----------
+    lst : list of str
+        The input list of strings which may contain duplicates.
 
-    Returns:
-        list: A new list where non-unique elements have suffixes to ensure uniqueness.
+    Returns
+    -------
+    list of str
+        A new list where non-unique elements have suffixes to ensure uniqueness.
 
-    Example:
+    Examples
+    --------
         Input: ["feature1", "feature2", "feature1", "feature2", "feature3"]
         Output: ["feature1", "feature2", "feature1_2", "feature2_2", "feature3"]
     """
 
-    seen = {}
+    seen: dict[str, int] = {}
     result = []
 
     for item in lst:
@@ -64,26 +71,26 @@ def suffix_duplicates(lst):
     return result
 
 
-def get_host_name():
+def get_host_name() -> str:
     """
-    Get the url of the current host
+    Get the hostname of the current host.
     Returns
     -------
-    String
-        host name
+    str
+        Hostname.
     """
     return socket.gethostname()
 
 
-def inclusion(first_x, second_x):
+def inclusion(first_x: Iterable[Any], second_x: Iterable[Any]) -> bool:
     """
     Check if a list is included in another.
 
     Parameters
     ----------
-    first_x : list
+    first_x : Iterable[Any]
         List to evaluate.
-    second_x : list
+    second_x : Iterable[Any]
         Reference list to compare with.
 
     Returns
@@ -94,28 +101,33 @@ def inclusion(first_x, second_x):
     return all(elem in second_x for elem in first_x)
 
 
-def within_dict(list_param, dict_param):
+def within_dict(list_param: Iterable[Any], dict_param: Mapping[Any, Any]) -> bool:
     """
     Check if a list is included in either dict keys or dict values.
 
     Parameters
     ----------
-    list_param : list
+    list_param : Iterable[Any]
         List to evaluate.
-    dict_param : dict
+    dict_param : Mapping[Any, Any]
         Reference dictionary to compare.
+
+    Returns
+    -------
+    bool
+        True if all elements are contained in the dictionary keys or values.
     """
     return inclusion(list_param, dict_param.keys()) or inclusion(list_param, dict_param.values())
 
 
-def is_nested_list(object_param):
+def is_nested_list(object_param: Iterable[Any]) -> bool:
     """
     Check if object is a nested list or not.
 
     Parameters
     ----------
-    object_param : object
-        Any object to check.
+    object_param : Iterable[Any]
+        Iterable to check.
 
     Returns
     -------
@@ -125,14 +137,14 @@ def is_nested_list(object_param):
     return any(isinstance(elem, list) for elem in object_param)
 
 
-def add_line_break(value, nbchar, maxlen=150):
+def add_line_break(value: Any, nbchar: int, maxlen: int = 150) -> Any:
     """
     adding line break in string if necessary
 
     Parameters
     ----------
-    value : string or oither type
-        if string to check in order to add line break
+    value : Any
+        Text to format; non-string values are returned unchanged.
     nbchar : int
         number of characters before line break
     maxlen : int
@@ -140,8 +152,8 @@ def add_line_break(value, nbchar, maxlen=150):
 
     Returns
     -------
-    string
-        original text + line break
+    Any
+        Formatted string, or the original value when it is not a string.
     """
     if isinstance(value, str):
         length = 0
@@ -168,21 +180,21 @@ def add_line_break(value, nbchar, maxlen=150):
         return value
 
 
-def truncate_str(text, maxlen=40):
+def truncate_str(text: Any, maxlen: int = 40) -> Any:
     """
     truncate a string
 
     Parameters
     ----------
-    text : string
-        string to check in order to add line break
+    text : Any
+        Text to truncate; non-string values are returned unchanged.
     maxlen : int
         number of characters before truncation
 
     Returns
     -------
-    string
-        truncated text
+    Any
+        Truncated string, or the original value when it is not a string.
     """
     if isinstance(text, str) and len(text) > maxlen:
         tot_length = 0
@@ -199,14 +211,14 @@ def truncate_str(text, maxlen=40):
     return text
 
 
-def compute_digit_number(value, significant_digits: int = 4):
+def compute_digit_number(value: int | float | np.number | np.ndarray, significant_digits: int = 4) -> int:
     """
     return int, number of digits to display
 
     Parameters
     ----------
-    value : float
-        can be the gap between percentiles
+    value : int, float, numpy.number, or numpy.ndarray
+        Numeric value, which can be the gap between percentiles.
     significant_digits : int, optional, default=4
         Fixed number of significant digits to display.
 
@@ -229,7 +241,7 @@ def compute_digit_number(value, significant_digits: int = 4):
     return digit
 
 
-def tuning_round_digit(values: pd.DataFrame, quantile=(0.25, 0.75)):
+def tuning_round_digit(values: pd.DataFrame, quantile: Sequence[float] = (0.25, 0.75)) -> int:
     """
     return int, number of digits to display
 
@@ -251,40 +263,39 @@ def tuning_round_digit(values: pd.DataFrame, quantile=(0.25, 0.75)):
     return compute_digit_number(p_diff)
 
 
-def add_text(text_list, sep):
+def add_text(text_list: Iterable[str | None], sep: str) -> str:
     """
-    return int, number of digits to display
+    Concatenate non-empty text elements.
 
     Parameters
     ----------
-    text_list : list
-        list of text elements to concat
-    sep: str
-        separatator
+    text_list : iterable of str or None
+        Text elements to concatenate; empty strings and None values are skipped.
+    sep : str
+        Separator used between elements.
 
     Returns
     -------
-    int
-        number of digits
+    str
+        Concatenated text.
     """
     clean_list = [x for x in text_list if x not in ["", None]]
     return sep.join(clean_list)
 
 
-def maximum_difference_sort_value(contributions):
+def maximum_difference_sort_value(contributions: Sequence[Sequence[Any]]) -> int | float | np.number:
     """
     Auxiliary function to sort the contributions for the compare_plot.
     Returns the value of the maximum difference between values in contributions[0].
 
     Parameters
     ----------
-    contributions: list
-        list containing 2 elements:
-        a Numpy.ndarray of contributions of the indexes compared, and the features' names.
+    contributions : sequence
+        Container whose first element holds the contributions to compare and whose second element holds feature names.
 
     Returns
     -------
-    value_max_difference : float
+    value_max_difference : int, float, or numpy.number
         Value of the maximum difference contribution.
     """
     if len(contributions[0]) <= 1:
@@ -301,7 +312,7 @@ def maximum_difference_sort_value(contributions):
     return max_difference
 
 
-def compute_sorted_variables_interactions_list_indices(interaction_values):
+def compute_sorted_variables_interactions_list_indices(interaction_values: np.ndarray) -> np.ndarray:
     """
     Returns the sorted interactions as a list of pairs of indices.
     Computes the (absolute) sum of all contributions of each pair of variables in a 2D matrix.
@@ -315,8 +326,8 @@ def compute_sorted_variables_interactions_list_indices(interaction_values):
 
     Returns
     -------
-    interaction_contrib_sorted_indices : list
-        List containing all pairs of indices in descending order of most important interactions.
+    np.ndarray
+        Array containing pairs of indices in descending order of interaction importance.
     """
     tmp = np.abs(interaction_values).sum(0)
     for i in range(tmp.shape[0]):
@@ -328,7 +339,7 @@ def compute_sorted_variables_interactions_list_indices(interaction_values):
     return interaction_contrib_sorted_indices
 
 
-def get_project_root():
+def get_project_root() -> Path:
     """
     Returns project root absolute path.
     """
@@ -338,7 +349,7 @@ def get_project_root():
     return current_path.parent.parent.parent.resolve()
 
 
-def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> list:
+def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> list[Hashable]:
     """
     Returns the max_features features having top correlations.
 
@@ -349,10 +360,11 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
 
     Returns
     -------
-    list
+    list[Hashable]
+        Feature labels with the highest correlations.
     """
     sorted_corr = corr.abs().unstack().sort_values(kind="quicksort")[::-1]
-    set_features: set = set()
+    set_features: set[Hashable] = set()
     i = 0
     while len(set_features) < max_features and i < len(sorted_corr):
         if sorted_corr.index[i][0] != sorted_corr.index[i][1]:
@@ -364,7 +376,7 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
     return list(set_features)
 
 
-def choose_state(contributions):
+def choose_state(contributions: Any) -> SmartState | MultiDecorator:
     """
     Select implementation of the smart explainer. Typically check if it is a
     multi-class problem, in which case the implementation should be adapted
@@ -372,13 +384,13 @@ def choose_state(contributions):
 
     Parameters
     ----------
-    contributions : object
+    contributions : Any
         Local contributions. Could also be a list of local contributions.
 
     Returns
     -------
-    object
-        SmartState or SmartMultiState, depending on the nature of the input.
+    SmartState or MultiDecorator
+        State implementation selected from the nature of the input.
     """
     if isinstance(contributions, list):
         return MultiDecorator(SmartState())
@@ -386,27 +398,27 @@ def choose_state(contributions):
         return SmartState()
 
 
-def convert_string_to_int_keys(input_dict: dict) -> dict:
+def convert_string_to_int_keys(input_dict: dict[str, Any]) -> dict[int, Any]:
     """
     Returns the dict with integer keys instead of string keys
 
     Parameters
     ----------
-    input_dict: dict
+    input_dict : dict[str, Any]
 
     Returns
     -------
-    dict
+    dict[int, Any]
     """
     return {int(k): v for k, v in input_dict.items()}
 
 
 def tuning_colorscale(
-    init_colorscale,
-    values,
-    keep_quantile=None,
-    quantile_linearization=False,
-):
+    init_colorscale: Sequence[str],
+    values: pd.DataFrame,
+    keep_quantile: tuple[float, float] | None = None,
+    quantile_linearization: bool = False,
+) -> tuple[list[tuple[float, str]], float, float]:
     """
     Adjust the color scale based on the distribution of points.
 
@@ -416,7 +428,7 @@ def tuning_colorscale(
 
     Parameters
     ----------
-    init_colorscale : list
+    init_colorscale : sequence of str
         A list of colors defining the base color scale.
     values : pd.DataFrame
         A one-column DataFrame containing the values for which quantiles need to be calculated.
@@ -433,10 +445,8 @@ def tuning_colorscale(
     Returns
     -------
     tuple
-        A tuple containing:
-        - color_scale : list of tuples (normalized position, color)
-        - cmin : float, minimum value used for color scaling
-        - cmax : float, maximum value used for color scaling
+        A tuple containing the color scale as (normalized position, color) pairs,
+        and the minimum and maximum values used for color scaling.
     """
     # Extract the first column of values
     data = values.iloc[:, 0]
@@ -451,14 +461,14 @@ def tuning_colorscale(
     if nunique == 1:
         unique_value = unique_vals[0]
         color_scale = [(i / (n_colors - 1), c) for i, c in enumerate(init_colorscale)]
-        return color_scale, unique_value, unique_value
+        return color_scale, float(unique_value), float(unique_value)
 
     # Case 2: Number of unique values matches number of colors
     if nunique in [2, n_colors]:
         cmin, cmax = min(unique_vals), max(unique_vals)
         positions = np.linspace(0, 1, n_colors)
         color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale, strict=False)]
-        return color_scale, cmin, cmax
+        return color_scale, float(cmin), float(cmax)
 
     # Case 3: Filter based on quantile range if requested
     if keep_quantile is not None:
@@ -492,19 +502,24 @@ def tuning_colorscale(
             positions = (quantile_values - min_q) / (max_q - min_q)
 
     color_scale = [(float(pos), col) for pos, col in zip(positions, init_colorscale, strict=False)]
-    return color_scale, cmin, cmax
+    return color_scale, float(cmin), float(cmax)
 
 
-def top_contributors(series: pd.Series, threshold: float = 0.9) -> list:
+def top_contributors(series: pd.Series, threshold: float = 0.9) -> list[Hashable]:
     """
     Returns the list of names (index values) that cumulatively contribute up to a given threshold of the total.
 
-    Parameters:
-    - series (pd.Series): A pandas Series sorted in ascending order, with names as the index.
-    - threshold (float): Cumulative contribution threshold (between 0 and 1).
+    Parameters
+    ----------
+    series : pandas.Series
+        A pandas Series sorted in ascending order, with names as the index.
+    threshold : float
+        Cumulative contribution threshold (between 0 and 1).
 
-    Returns:
-    - list: List of names contributing up to the threshold.
+    Returns
+    -------
+    list of Hashable
+        Index values contributing up to the threshold.
     """
     # Check if the series is sorted in ascending order
     if not series.is_monotonic_increasing:
