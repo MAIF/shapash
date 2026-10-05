@@ -168,7 +168,9 @@ def predict_error(
     # ================= CLASSIFICATION =================
     elif model_type == "classification":
         if proba_values is None:
-            prediction_error = (y_target.values != y_pred.values).astype(int)
+            target_values = np.asarray(y_target).reshape(-1)
+            prediction_values = np.asarray(y_pred).reshape(-1)
+            prediction_error = (target_values != prediction_values).astype(int)
             return pd.DataFrame(prediction_error, index=y_target.index, columns=["_error_"])
 
         if classes is None:
