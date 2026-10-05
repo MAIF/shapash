@@ -1,3 +1,5 @@
+from typing import Any, Literal
+
 import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
@@ -7,18 +9,18 @@ from shapash.utils.utils import adjust_title_height, tuning_colorscale
 
 
 def plot_stability_distribution(
-    variability,
-    plot_type,
-    mean_amplitude,
-    dataset,
-    column_names,
-    file_name,
-    auto_open,
-    init_colorscale,
-    style_dict,
-    height="auto",
-    width=900,
-):
+    variability: np.ndarray,
+    plot_type: Literal["boxplot", "violin"],
+    mean_amplitude: np.ndarray,
+    dataset: pd.DataFrame,
+    column_names: np.ndarray,
+    file_name: str | None,
+    auto_open: bool,
+    init_colorscale: str | list[Any],
+    style_dict: dict[str, Any],
+    height: int | Literal["auto"] = "auto",
+    width: int = 900,
+) -> go.Figure | None:
     """
     Generates and displays a stability distribution plot for feature variability using either a boxplot or violin plot.
 
@@ -31,7 +33,7 @@ def plot_stability_distribution(
     variability : numpy.ndarray
         A 2D array where each row represents the local stability (variability) for each feature across instances.
         The X-axis of the plot represents the feature's normalized contribution value variability.
-    plot_type : str
+    plot_type : {"boxplot", "violin"}
         The type of plot to be displayed. Can be either:
         - "boxplot": Displays a boxplot for each feature's variability distribution.
         - "violin": Displays a violin plot for each feature's variability distribution.
@@ -41,28 +43,27 @@ def plot_stability_distribution(
     dataset : pandas.DataFrame
         The original dataset (`x_init`) on which the SHAP values were computed. Used to adjust plot dimensions
         and ensure compatibility with `variability`.
-    column_names : list
-        A list of strings representing the feature names. These names are used as labels for the Y-axis in the plot.
-    file_name : str, optional
-        The file path to save the generated plot as an HTML file. If not provided, the plot will not be saved.
+    column_names : numpy.ndarray
+        An array of feature names used as labels for the Y-axis in the plot.
+    file_name : str or None
+        The HTML output path, or None to skip saving. This argument is required.
     auto_open : bool
         If True, the saved plot will automatically open in the browser. Only applicable if `file_name` is provided.
     init_colorscale : str or list
         The initial colorscale used for displaying the mean amplitude of the SHAP values. This will determine the
         gradient of colors applied to the plot.
-    style_dict : dict
+    style_dict : dict[str, Any]
         A dictionary specifying the various style options such as font size, color, and other aesthetic parameters
         for the plot.
-    height: int or 'auto'
+    height : int or "auto"
         Plotly figure - layout height
-    width: int
+    width : int
         Plotly figure - layout width
 
     Returns
     -------
-    go.Figure
-        A Plotly `Figure` object representing the generated stability distribution plot (either boxplot or violin plot),
-        including a color scale to indicate feature importance.
+    go.Figure or None
+        A Plotly `Figure` including a color scale, or None when the dataset has 500 or more features.
 
     Notes
     -----
@@ -70,7 +71,7 @@ def plot_stability_distribution(
     It also includes a color scale based on the mean SHAP value amplitude to provide insights into feature importance.
     - The function adjusts plot height dynamically based on the number of features in the dataset.
     - Supports saving the generated plot as an interactive HTML file if `file_name` is specified.
-    - If the number of features exceeds 500, the function might not display all features due to space constraints.
+    - If the number of features is 500 or more, the function returns None and does not display the plot.
     """
     # Store distribution of variability in a DataFrame
     var_df = pd.DataFrame(variability, columns=column_names)
@@ -156,38 +157,52 @@ def plot_stability_distribution(
 
         return fig
 
+    return None
+
 
 def _update_stability_fig(
-    fig, x_barlen, y_bar, style_dict, xaxis_title, yaxis_title, file_name, auto_open, height=500, width=900
-):
+    fig: go.Figure,
+    x_barlen: int,
+    y_bar: list[str | float] | np.ndarray,
+    style_dict: dict[str, Any],
+    xaxis_title: str,
+    yaxis_title: str,
+    file_name: str | None,
+    auto_open: bool,
+    height: int = 500,
+    width: int = 900,
+) -> None:
     """
     Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
     to update the layout of the plotly figure.
 
     Parameters
     ----------
-    fig: plotly.graph_objs._figure.Figure
+    fig : go.Figure
         Plotly figure to update
-    x_barlen: int
+    x_barlen : int
         draw a line --> len of x array
-    y_bar: list
+    y_bar: list[str | float] or numpy.ndarray
         draw a line --> y values
-    style_dict: dict
+    style_dict : dict[str, Any]
         the different styles used in the different outputs of Shapash
-    xaxis_title: str
+    xaxis_title : str
         Title of xaxis
-    yaxis_title: str
+    yaxis_title : str
         Title of yaxis
-    file_name: string (optional)
-        Specify the save path of html files. If it is not provided, no file will be saved.
-    auto_open: bool (default=False)
+    file_name : str or None
+        Specify the save path of HTML files, or None to skip saving.
+    auto_open : bool
         open automatically the plot
-    height: int
+    height : int
         Plotly figure - layout height
+    width : int
+        Plotly figure - layout width
 
     Returns
     -------
-    go.Figure
+    None
+        This function updates the figure in place and does not return a value.
     """
     title = "<br>Importance & Local Stability of explanations:"
     title += "<br><sup>How similar are explanations for closeby neighbours?</sup>"
@@ -239,16 +254,16 @@ def _update_stability_fig(
 
 
 def plot_amplitude_vs_stability(
-    mean_variability,
-    mean_amplitude,
-    column_names,
-    file_name,
-    auto_open,
-    col_scale,
-    style_dict,
-    height="auto",
-    width=900,
-):
+    mean_variability: np.ndarray,
+    mean_amplitude: np.ndarray,
+    column_names: np.ndarray,
+    file_name: str | None,
+    auto_open: bool,
+    col_scale: str | list[Any],
+    style_dict: dict[str, Any],
+    height: int | Literal["auto"] = "auto",
+    width: int = 900,
+) -> go.Figure:
     """
     Generates and displays a scatter plot showing the relationship between feature variability and importance.
 
@@ -266,21 +281,21 @@ def plot_amplitude_vs_stability(
     mean_amplitude : numpy.ndarray
         A 1D array representing the average normalized SHAP values (importance) for each feature. These values are
         displayed on the Y-axis of the plot.
-    column_names : list of str
-        The names of the features being plotted. These are used for hover text to identify individual points.
-    file_name : str, optional
-        The file path to save the generated plot as an HTML file. If not provided, the plot will not be saved.
+    column_names : numpy.ndarray
+        The feature names, used for hover text to identify individual points.
+    file_name : str or None
+        The HTML output path, or None to skip saving. This argument is required.
     auto_open : bool
         If True, the saved plot will automatically open in the browser. Only applicable if `file_name` is provided.
     col_scale : list or str
         The color scale used for visualizing feature importance in the scatter plot. Can be either a named color scale
         (e.g., "Viridis") or a custom list of colors.
-    style_dict : dict
+    style_dict : dict[str, Any]
         A dictionary specifying various style options such as font size, axis formatting, and other aesthetic
         properties for the plot.
-    height: int
+    height : int or "auto"
         Plotly figure - layout height
-    width: int
+    width : int
         Plotly figure - layout width
 
     Returns

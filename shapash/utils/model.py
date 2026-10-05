@@ -3,20 +3,27 @@ Model Module
 """
 
 from inspect import ismethod
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
 
-def extract_features_model(model, model_attribute):
+def extract_features_model(model: Any, model_attribute: list[str]) -> Any:
     """
-    Extract features of models if it's possible,
-    If not extract the number features of model
+    Extract model feature metadata, or the model's input feature count.
+
+    Parameters
+    ----------
+    model : Any
+        Model from which to extract feature metadata.
+    model_attribute : list[str]
+        Attribute path to follow, or ["length"] to retrieve ``n_features_in_``.
+
+    Returns
     -------
-    model: model object
-        model used to check the different values of target estimate predict proba
-    model_attribute: String or list
-        if model can give features, attributes to access features, if not 'length'
+    Any
+        The requested model feature metadata.
     """
     if model_attribute[0] == "length":
         return model.n_features_in_
@@ -33,22 +40,31 @@ def extract_features_model(model, model_attribute):
                 return extract_features_model(getattr(model, model_attribute[0]), model_attribute[1:])
 
 
-def predict_proba(model, x_encoded, classes):
+def predict_proba(model: Any, x_encoded: pd.DataFrame, classes: list[Any]) -> pd.DataFrame:
     """
-    The predict_proba compute the proba values for each x_encoded row
+    Compute class probabilities for each row in ``x_encoded``.
+
     Parameters
-    -------
-    model: model object
-        model used to check the different values of target estimate predict proba
-    x_encoded: pandas.DataFrame
+    ----------
+    model : Any
+        Model expected to provide a ``predict_proba`` method.
+    x_encoded : pandas.DataFrame
         Prediction set.
-    classes: list
-        List of labels if the model used is for classification problem, None otherwise.
+    classes : list[Any]
+        Ordered class labels used to name the probability columns.
     Returns
     -------
     pandas.DataFrame
-            dataset of predicted proba for each label.
+        Predicted probability for each class and row.
+
+    Raises
+    ------
+    ValueError
+        If the model has no ``predict_proba`` method or classes are omitted at runtime.
     """
+    if classes is None:
+        raise ValueError("classes must be provided to predict class probabilities")
+
     if hasattr(model, "predict_proba"):
         proba_values = pd.DataFrame(
             model.predict_proba(x_encoded), columns=["class_" + str(x) for x in classes], index=x_encoded.index
@@ -59,21 +75,21 @@ def predict_proba(model, x_encoded, classes):
     return proba_values
 
 
-def predict(model, x_encoded):
+def predict(model: Any, x_encoded: pd.DataFrame) -> pd.DataFrame:
     """
-    The predict function computes the prediction values for each x_encoded row
+    Compute predictions for each row in ``x_encoded``.
 
     Parameters
-    -------
-    model: model object
-        model used to perform predictions
+    ----------
+    model : Any
+        Model expected to provide a ``predict`` method.
     x_encoded: pandas.DataFrame
         Observations on which to compute predictions.
 
     Returns
     -------
     pandas.DataFrame
-            1-column dataframe containing the predictions.
+        One-column DataFrame containing the predictions.
     """
     if hasattr(model, "predict"):
         y_pred = pd.DataFrame(model.predict(x_encoded), columns=["pred"], index=x_encoded.index)
@@ -83,7 +99,13 @@ def predict(model, x_encoded):
     return y_pred
 
 
-def predict_error(y_target, y_pred, model_type, proba_values=None, classes=None):
+def predict_error(
+    y_target: pd.DataFrame | None,
+    y_pred: pd.DataFrame | None,
+    model_type: Literal["regression", "classification"],
+    proba_values: pd.DataFrame | None = None,
+    classes: list[Any] | None = None,
+) -> pd.DataFrame | None:
     """
     Compute prediction errors for regression or classification.
 
@@ -101,27 +123,34 @@ def predict_error(y_target, y_pred, model_type, proba_values=None, classes=None)
             where:
               * `classes` is the ordered list of label codes coming from the model
               * `label_code` is the true label from y_target
-              * `proba_values.iloc[:, col_index]` corresponds to P(class == label_code)
+              * the matching column in `proba_values` corresponds to P(class == label_code)
 
     Parameters
     ----------
-    y_target : pandas.DataFrame
-        One-column DataFrame containing the ground truth labels.
-    y_pred : pandas.DataFrame
-        One-column DataFrame containing the predicted labels.
-    model_type : str
+    y_target : pandas.DataFrame or None
+        One-column DataFrame containing the ground truth labels, or None.
+    y_pred : pandas.DataFrame or None
+        One-column DataFrame containing the predicted labels, or None.
+    model_type : Literal["regression", "classification"]
         Either "regression" or "classification".
-    proba_values : pandas.DataFrame, optional
+    proba_values : pandas.DataFrame or None, optional
         DataFrame of class probabilities returned by model.predict_proba().
         Each column corresponds to a class, in the same order as in `classes`.
-    classes : list, optional
+    classes : list[Any] or None, optional
         Ordered list of class label codes (`model.classes_`), used to map the
-        true label to the correct probability column.
+        true label to the correct probability column when probabilities are supplied.
 
     Returns
     -------
     pandas.DataFrame
-        One-column DataFrame containing the prediction errors, named "_error_".
+        One-column DataFrame containing the prediction errors, named "_error_", or None
+        when either target or predictions are unavailable.
+
+    Raises
+    ------
+    ValueError
+        If class probabilities are provided without classes, or a target label is not
+        present in the supplied classes.
     """
 
     if y_target is None or y_pred is None:
@@ -142,14 +171,14 @@ def predict_error(y_target, y_pred, model_type, proba_values=None, classes=None)
             prediction_error = (y_target.values != y_pred.values).astype(int)
             return pd.DataFrame(prediction_error, index=y_target.index, columns=["_error_"])
 
-        # classes = order of model.classes_
+        if classes is None:
+            raise ValueError("classes must be provided when class probabilities are supplied")
+
         true_labels = y_target.iloc[:, 0]
         label_to_col = {cls: i for i, cls in enumerate(classes)}
-
-        try:
-            col_indices = true_labels.map(label_to_col)
-        except KeyError as err:
-            raise ValueError(f"Unknown label in y_target: {err}") from err
+        col_indices = true_labels.map(label_to_col)
+        if col_indices.isna().any():
+            raise ValueError("Unknown label in y_target")
 
         proba_true = proba_values.to_numpy()[np.arange(len(proba_values)), col_indices.to_numpy()]
 

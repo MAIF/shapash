@@ -2,6 +2,8 @@
 Smart State Module
 """
 
+from typing import Any, Literal
+
 import numpy as np
 import pandas as pd
 
@@ -27,13 +29,13 @@ class SmartState:
     of local contributions. The multi-class case is tackled in SmartMultiState.
     """
 
-    def validate_contributions(self, contributions, x_init):
+    def validate_contributions(self, contributions: np.ndarray | pd.DataFrame, x_init: pd.DataFrame) -> pd.DataFrame:
         """
         Check type of contributions and transform into pd.Dataframe if necessary
 
         Parameters
         ----------
-        contributions : pandas.DataFrame or np.ndarray
+        contributions : pandas.DataFrame or numpy.ndarray
             Local contributions
         x_init : pandas.DataFrame
             Prediction set.
@@ -50,7 +52,12 @@ class SmartState:
         else:
             return contributions
 
-    def inverse_transform_contributions(self, contributions, preprocessing, agg_columns="sum"):
+    def inverse_transform_contributions(
+        self,
+        contributions: pd.DataFrame,
+        preprocessing: Any | None,
+        agg_columns: Literal["sum", "first"] = "sum",
+    ) -> pd.DataFrame:
         """
         Compute local contributions in the original feature space, despite category encoding.
 
@@ -58,10 +65,10 @@ class SmartState:
         ----------
         contributions : pandas.DataFrame
             Local contributions of a model on a prediction set.
-        preprocessing : object
+        preprocessing : Any or None, optional
             Single step of preprocessing, typically a category encoder.
-        agg_columns : str (default: 'sum')
-            Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
+        agg_columns : Literal["sum", "first"], optional
+            Type of aggregation performed. For SHAP, contributions of one-hot encoded variables are summed.
 
         Returns
         -------
@@ -70,7 +77,9 @@ class SmartState:
         """
         return inverse_transform_contributions(contributions, preprocessing, agg_columns)
 
-    def check_contributions(self, contributions, x_init, features_names=True):
+    def check_contributions(
+        self, contributions: pd.DataFrame, x_init: pd.DataFrame, features_names: bool = True
+    ) -> bool:
         """
         Check that contributions and prediction set match in terms of lines and columns.
 
@@ -80,11 +89,11 @@ class SmartState:
             Local contributions to check.
         x_init : pandas.DataFrame
             Prediction set.
-        features_names: bool (optional), defaut = True
-            Boolean whether or not check if contributions and x_init have the same features names
+        features_names : bool, optional (default: True)
+            Whether to check that contributions and x_init have the same feature names.
         Returns
         -------
-        Bool
+        bool
             True if inputs share shape and index. False otherwise.
         """
         if x_init.shape != contributions.shape:
@@ -99,7 +108,7 @@ class SmartState:
                 return False
         return True
 
-    def rank_contributions(self, contributions, x_init):
+    def rank_contributions(self, contributions: pd.DataFrame, x_init: pd.DataFrame) -> list[pd.DataFrame]:
         """
         Rank contributions line by line and build a reference dictionary to the prediction set.
 
@@ -122,7 +131,7 @@ class SmartState:
         """
         return rank_contributions(contributions, x_init)
 
-    def assign_contributions(self, ranked):
+    def assign_contributions(self, ranked: list[pd.DataFrame]) -> dict[str, pd.DataFrame]:
         """
         Turn a list of results into a dict.
 
@@ -143,7 +152,7 @@ class SmartState:
         """
         return assign_contributions(ranked)
 
-    def hide_contributions(self, var_dict, features_list):
+    def hide_contributions(self, var_dict: pd.DataFrame, features_list: list[int]) -> pd.DataFrame:
         """
         Returns Boolean dataframe with True/False depending if the
         feature is present or not in the list of
@@ -154,8 +163,8 @@ class SmartState:
         var_dict: pd.DataFrame
             Dataframe with features indexes ordered
             by contribution.
-        features_list: list
-            List of index, feature to hide.
+        features_list : list of int
+            List of feature indexes to hide.
 
         Returns
         -------
@@ -164,7 +173,7 @@ class SmartState:
         """
         return hide_contributions(var_dict, features_list)
 
-    def cap_contributions(self, s_contrib, threshold=0.1):
+    def cap_contributions(self, s_contrib: pd.DataFrame, threshold: float = 0.1) -> pd.DataFrame:
         """
         Compute a mask indicating where the input matrix
         has values above a given threshold in absolute value.
@@ -173,17 +182,17 @@ class SmartState:
         ----------
         s_contrib : pandas.DataFrame
             Local contributions, positive and negative values.
-        threshold: float, optional (default: 0.1)
+        threshold : float, optional (default: 0.1)
             User defined threshold above which local contributions are hidden.
 
         Returns
         -------
         pandas.DataFrame
-            Mask with only True of False elements.
+            Mask with only True or False elements.
         """
         return cap_contributions(s_contrib, threshold=threshold)
 
-    def sign_contributions(self, dataframe, positive=True):
+    def sign_contributions(self, dataframe: pd.DataFrame, positive: bool = True) -> pd.DataFrame:
         """
         Returns Boolean values depending on
         the signs of local contributions
@@ -193,7 +202,7 @@ class SmartState:
         ----------
         dataframe : pandas.DataFrame
             Local contributions of the model.
-        positive : boolean (default=True)
+        positive : bool, optional (default: True)
             True to evaluate positive value.
             False to evaluate negative value.
 
@@ -204,7 +213,7 @@ class SmartState:
         """
         return sign_contributions(dataframe, positive=positive)
 
-    def cutoff_contributions(self, dataframe, max_contrib):
+    def cutoff_contributions(self, dataframe: pd.DataFrame, max_contrib: int) -> pd.DataFrame:
         """
         The function cutoff_contributions computes a mask on a sorted contribution matrix.
         It outputs True everywhere the contribution is in the top-k,
@@ -214,7 +223,7 @@ class SmartState:
         ----------
         dataframe : pd.Dataframe
             DataFrame is a sorted shapley matrix.
-        max_contrib: int
+        max_contrib : int
             The k most important contributions to keep.
 
         Returns
@@ -224,13 +233,13 @@ class SmartState:
         """
         return cutoff_contributions(dataframe, max_contrib)
 
-    def combine_masks(self, masks):
+    def combine_masks(self, masks: list[pd.DataFrame]) -> pd.DataFrame:
         """
         Combine a list of masks with the AND operator.
 
         Parameters
         ----------
-        masks : list
+        masks : list of pandas.DataFrame
             List of boolean pandas.DataFrames.
 
         Returns
@@ -240,33 +249,33 @@ class SmartState:
         """
         return combine_masks(masks)
 
-    def compute_masked_contributions(self, s_contrib, masks):
+    def compute_masked_contributions(self, s_contrib: pd.DataFrame, masks: pd.DataFrame) -> pd.DataFrame:
         """
         Compute the summed contributions of hidden features.
 
         Parameters
         ----------
-        s_contrib: pd.DataFrame
+        s_contrib : pd.DataFrame
             Matrix with both positive and negative values
-        masks: pd.DataFrame
+        masks : pd.DataFrame
             Matrix with only True or False elements. False elements are the hidden elements.
 
         Returns
         -------
-        pd.series
-            Sum of contributions of hidden features.
+        pd.DataFrame
+            Sum of hidden negative and positive contributions.
         """
         return compute_masked_contributions(s_contrib, masks)
 
-    def init_mask(self, s_contrib, value=True):
+    def init_mask(self, s_contrib: pd.DataFrame, value: bool = True) -> pd.DataFrame:
         """
         Initialize a True mask for the dataset.
 
         Parameters
         ----------
-        s_contrib: pd.DataFrame
+        s_contrib : pd.DataFrame
             Matrix with both positive and negative values
-        value: bool
+        value : bool, optional (default: True)
             Value used for initialize the mask
 
         Returns
@@ -276,7 +285,15 @@ class SmartState:
         """
         return init_mask(s_contrib, value)
 
-    def summarize(self, s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict):
+    def summarize(
+        self,
+        s_contrib: pd.DataFrame,
+        var_dict: pd.DataFrame,
+        x_sorted: pd.DataFrame,
+        mask: pd.DataFrame,
+        columns_dict: dict[Any, str],
+        features_dict: dict[str, str],
+    ) -> pd.DataFrame:
         """
         Compute the summarized contributions of features.
 
@@ -290,10 +307,10 @@ class SmartState:
             Matrix containing the value of each feature
         mask: pd.DataFrame
             Mask to apply during the summary step
-        columns_dict:
-            Dict of column Names, matches column num with column name
-        features_dict:
-            Dict of column Label, matches column name with column label
+        columns_dict : dict
+            Mapping from column indexes to column names.
+        features_dict : dict[str, str]
+            Mapping from technical feature names to display labels.
 
         Returns
         -------
@@ -302,14 +319,14 @@ class SmartState:
         """
         return summarize(s_contrib, var_dict, x_sorted, mask, columns_dict, features_dict)
 
-    def compute_features_import(self, contributions, norm=1):
+    def compute_features_import(self, contributions: pd.DataFrame, norm: int | float = 1) -> pd.Series:
         """
         Compute a relative features importance, sum of absolute values
         of the contributions for each
         features importance compute in base 100
         Parameters
         ----------
-        contributions: pd.DataFrame
+        contributions : pd.DataFrame
             Matrix containing contributions
 
         Returns
@@ -320,7 +337,9 @@ class SmartState:
         """
         return compute_features_import(contributions, norm)
 
-    def compute_grouped_contributions(self, contributions, features_groups):
+    def compute_grouped_contributions(
+        self, contributions: pd.DataFrame, features_groups: dict[str, list[str]]
+    ) -> pd.DataFrame:
         """
         Regroup contributions according to features_groups parameter.
 
@@ -328,8 +347,8 @@ class SmartState:
         ----------
         contributions : pd.DataFrame
             Contributions of each unique feature.
-        features_groups : dict
-            Python dict that inform which features to regroup.
+        features_groups : dict[str, list[str]]
+            Mapping from group names to the feature names to regroup.
 
         Returns
         -------

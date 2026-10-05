@@ -2,11 +2,13 @@
 Select Lines Module
 """
 
+from typing import Any, Literal
+
 import pandas as pd
 from pandas.core.common import flatten
 
 
-def select_lines(dataframe, condition=None):
+def select_lines(dataframe: pd.DataFrame, condition: str | None = None) -> list[Any]:
     """
     Select lines of a pandas.DataFrame based
     on a boolean condition.
@@ -14,12 +16,12 @@ def select_lines(dataframe, condition=None):
     ----------
     dataframe : pandas.DataFrame
         Input dataframe used for the query.
-    condition : string
-        A boolean condition expressed as string.
+    condition : str, optional
+        A boolean condition expressed as a string. If None or empty, no lines are selected.
     Returns
     -------
-    list
-         list of indices, or lines, to select.
+    list[Any]
+        Index labels of the lines to select. Labels can be tuples for a MultiIndex.
     """
     if condition:
         return dataframe.query(condition).index.values.tolist()
@@ -27,28 +29,42 @@ def select_lines(dataframe, condition=None):
         return []
 
 
-def keep_right_contributions(y_pred, contributions, _case, _classes, label_dict, proba_values=None):
+def keep_right_contributions(
+    y_pred: pd.DataFrame,
+    contributions: pd.DataFrame | list[pd.DataFrame],
+    _case: Literal["classification", "regression"],
+    _classes: list[Any] | None,
+    label_dict: dict[Any, Any] | None,
+    proba_values: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Keep the right contributions/summary for the right ypred.
 
     Parameters
     ----------
-    y_pred: pandas.DataFrame (optional)
+    y_pred : pandas.DataFrame
             User-specified prediction values.
-    contributions: pandas.DataFrame (regression) or list (classification) (optional)
-        local contributions aggregated if the preprocessing part requires it (e.g. one-hot encoding)
-        or Result of the summarize step.
-    _case: string
+    contributions : pandas.DataFrame or list[pandas.DataFrame]
+        Local contributions or summarized contributions. A DataFrame is expected for regression,
+        and a list of per-class DataFrames for classification.
+    _case : {"classification", "regression"}
         String that informs if the model used is for classification or regression problem.
-    _classes: list, None
-        List of labels if the model used is for classification problem, None otherwise.
-    label_dict: dict (optional)
-        Dictionary mapping integer labels to domain names (classification - target values).
-    proba_values: pandas.DataFrame
-        the proba values for each row of the specified dataset
+    _classes : list[Any] or None
+        Class labels for classification, or None for regression.
+    label_dict : dict[Any, Any] or None
+        Optional mapping from class labels to domain names.
+    proba_values : pandas.DataFrame or None, optional
+        Probability values for each row, when available.
+
+    Returns
+    -------
+    tuple[pandas.DataFrame, pandas.DataFrame]
+        Predictions (with probabilities appended when provided) and matching contributions.
 
     """
     if _case == "classification":
+        if _classes is None:
+            raise ValueError("_classes must be provided for classification.")
         complete_sum = [list(x) for x in list(zip(*[df.values.tolist() for df in contributions], strict=False))]
         indexclas = [_classes.index(x) for x in list(flatten(y_pred.values))]
         summary = pd.DataFrame(
