@@ -32,7 +32,7 @@ def inverse_transform_contributions(
     ----------
     contributions : pandas.DataFrame
         Contributions values.
-    preprocessing : Any or None, optional
+    preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
         The processing apply to the original data.
     agg_columns : Literal["sum", "first"], optional
         Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.

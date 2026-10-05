@@ -62,7 +62,7 @@ class Consistency:
             where each contrib_i is a pandas DataFrame.
         x : pd.DataFrame or None, optional
             Dataset on which to compute consistency metrics, by default None
-        preprocessing : Any or None, optional
+        preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
             --> Differents types of preprocessing are available:
 
             - A single category_encoders (OrdinalEncoder/OnehotEncoder/BaseNEncoder/BinaryEncoder/TargetEncoder)

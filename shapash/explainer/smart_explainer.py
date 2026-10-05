@@ -1084,7 +1084,7 @@ class SmartExplainer:
             output_file=output_file,
         )
 
-    def _local_pred(self, index: Any, label: int | None = None) -> Any | None:
+    def _local_pred(self, index: int | str | float, label: int | None = None) -> float | None:
         """
         Compute the model prediction or probability for a single observation.
 
@@ -1093,7 +1093,7 @@ class SmartExplainer:
 
         Parameters
         ----------
-        index : Any
+        index : int, str, or float
             Index of the sample for which to compute the prediction.
             Must correspond to a valid index in `x_encoded`.
         label : int or None, optional
@@ -1102,7 +1102,7 @@ class SmartExplainer:
 
         Returns
         -------
-        Any or None
+        float or None
             The predicted value (for regression) or predicted probability
             (for classification), or ``None`` when probabilities are unavailable.
 

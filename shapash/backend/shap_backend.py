@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -19,7 +20,7 @@ class ShapBackend(BaseBackend):
         self,
         model: Any,
         preprocessing: Any | None = None,
-        masker: Any | None = None,
+        masker: shap.maskers.Masker | pd.DataFrame | np.ndarray | Callable[..., Any] | None = None,
         explainer_args: dict[str, Any] | None = None,
         explainer_compute_args: dict[str, Any] | None = None,
     ) -> None:
@@ -29,10 +30,15 @@ class ShapBackend(BaseBackend):
         ----------
         model : Any
             Model to explain.
-        preprocessing : Any or None, optional
+        preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
             Preprocessing applied to the model inputs.
-        masker : Any or None, optional
-            Masker passed to the SHAP explainer.
+        masker : shap.maskers.Masker, pandas.DataFrame, numpy.ndarray, callable, or None, optional
+            SHAP masking strategy, when supported by the selected explainer. A DataFrame
+            or array is used as background data. A callable must accept a binary feature
+            mask via ``mask=...`` and one sample in the model's input format, and return
+            an iterable of masked samples. If None, the selected explainer applies its
+            default behavior. Some specialized explainers, such as TreeExplainer, do
+            not accept a masker.
         explainer_args : dict[str, Any] or None, optional
             Keyword arguments used to construct the SHAP explainer.
         explainer_compute_args : dict[str, Any] or None, optional

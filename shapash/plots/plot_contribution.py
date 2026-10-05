@@ -481,7 +481,9 @@ def plot_scatter(
 
     # add break line to X label if necessary
     args = (max_len_by_row, 120)
-    feature_values_str = feature_values.iloc[:, 0].apply(add_line_break, args=args)
+    feature_values_str = feature_values.iloc[:, 0].apply(
+        lambda value: add_line_break(value, *args) if isinstance(value, str) else value
+    )
     feature_values = pd.DataFrame({column_name: feature_values_str})
 
     if pred is not None:
@@ -670,7 +672,9 @@ def plot_violin(
 
     # add break line to X label if necessary
     args = (max_len_by_row, 120)
-    feature_values_str = feature_values.iloc[:, 0].apply(add_line_break, args=args)
+    feature_values_str = feature_values.iloc[:, 0].apply(
+        lambda value: add_line_break(value, *args) if isinstance(value, str) else value
+    )
     feature_values = pd.DataFrame({column_name: feature_values_str})
 
     contributions = contributions.loc[feature_values.index]

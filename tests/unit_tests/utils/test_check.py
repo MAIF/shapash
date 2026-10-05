@@ -162,6 +162,26 @@ class TestCheck(unittest.TestCase):
         assert _case == "classification"
         self.assertListEqual(_classes, [1, 2])
 
+    def test_check_model_string_classes(self):
+        model = lambda: None
+        model.classes_ = np.array(["cheap", "mid", "high"])
+        model.predict = types.MethodType(self.predict, model)
+
+        case, classes = check_model(model)
+
+        self.assertEqual(case, "classification")
+        self.assertListEqual(classes, ["cheap", "mid", "high"])
+
+    def test_check_model_float_classes(self):
+        model = lambda: None
+        model.classes_ = np.array([1.5, 2.5])
+        model.predict = types.MethodType(self.predict, model)
+
+        case, classes = check_model(model)
+
+        self.assertEqual(case, "classification")
+        self.assertListEqual(classes, [1.5, 2.5])
+
     def test_check_label_dict_1(self):
         """
         Unit test check label dict 1

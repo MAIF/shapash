@@ -35,7 +35,7 @@ class BaseBackend(ABC):
         ----------
         model : Any
             Model used.
-        preprocessing : Any, optional
+        preprocessing : category_encoders, ColumnTransformer, list or dict, optional
             The processing apply to the original data.
         """
         self.model = model
@@ -210,7 +210,7 @@ def _needs_preprocessing(result_cols: list[Any], x: pd.DataFrame, preprocessing:
         Column names present in the contributions.
     x : pd.DataFrame
         The encoded input data.
-    preprocessing : Any or None
+    preprocessing : category_encoders, ColumnTransformer, list or dict or None
         The preprocessing applied to the original data, if any.
 
     Returns
