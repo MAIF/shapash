@@ -1,4 +1,5 @@
 from numbers import Number
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -68,7 +69,7 @@ def _add_density_trace(
     fig: go.Figure,
     x_values: pd.Series,
     y_values: pd.Series,
-    style_dict: dict,
+    style_dict: dict[str, Any],
     include_na_for_categories: bool = False,
 ) -> None:
     """
@@ -139,8 +140,8 @@ def plot_interactions_scatter(
     x_values: pd.DataFrame,
     y_values: pd.DataFrame,
     col_values: pd.DataFrame,
-    col_scale: list,
-    style_dict: dict,
+    col_scale: list[Any],
+    style_dict: dict[str, Any],
     cmin: float | None = None,
     cmax: float | None = None,
     x_values_hover: pd.DataFrame | None = None,
@@ -206,8 +207,8 @@ def plot_interactions_violin(
     x_values: pd.DataFrame,
     y_values: pd.DataFrame,
     col_values: pd.DataFrame,
-    col_scale: list,
-    style_dict: dict,
+    col_scale: list[Any],
+    style_dict: dict[str, Any],
     cmin: float | None = None,
     cmax: float | None = None,
 ) -> go.Figure:
@@ -339,8 +340,8 @@ def update_interactions_fig(
     height: int,
     file_name: str | None,
     auto_open: bool,
-    style_dict: dict,
-    col_scale: list | None = None,
+    style_dict: dict[str, Any],
+    col_scale: list[Any] | None = None,
     cmin: float | None = None,
     cmax: float | None = None,
 ) -> go.Figure:
@@ -396,68 +397,77 @@ def update_interactions_fig(
 
 
 def plot_scatter(
-    feature_values,
-    contributions,
-    feature_name,
-    case,
-    style_dict,
-    pred=None,
-    proba_values=None,
-    col_modality=None,
-    col_scale=None,
-    cmin=None,
-    cmax=None,
-    metadata=None,
-    addnote=None,
-    subtitle=None,
-    max_len_by_row=20,
-    width=900,
-    height=600,
-    file_name=None,
-    auto_open=False,
-    zoom=False,
-):
+    feature_values: pd.DataFrame,
+    contributions: pd.DataFrame,
+    feature_name: str,
+    case: Literal["classification", "regression"],
+    style_dict: dict[str, Any],
+    pred: pd.DataFrame | None = None,
+    proba_values: pd.DataFrame | None = None,
+    col_modality: Any = None,
+    col_scale: list[Any] | None = None,
+    cmin: float | None = None,
+    cmax: float | None = None,
+    metadata: dict[str, Any] | None = None,
+    addnote: str | None = None,
+    subtitle: str | None = None,
+    max_len_by_row: int = 20,
+    width: int = 900,
+    height: int = 600,
+    file_name: str | None = None,
+    auto_open: bool = False,
+    zoom: bool = False,
+) -> go.Figure:
     """
     Scatter plot of one feature contribution across the prediction set.
     Parameters
     ----------
-    feature_values : 1 column pd.Dataframe
+    feature_values : pd.DataFrame
         The values of one feature
-    contributions : 1 column pd.Dataframe
+    contributions : pd.DataFrame
         The contributions associate
-    feature_name : String
+    feature_name : str
         Name of the feature, used in title
-    pred: 1 column pd.DataFrame (optional)
+    pred: pd.DataFrame or None, optional
         predicted values used to color plot - One Vs All in multiclass case
-    case: str
+    case: {"classification", "regression"}
         Type of the model, either 'classification' or 'regression'
-    style_dict: dict
+    style_dict: dict[str, Any]
         the different styles used in the different outputs of Shapash
-    proba_values: 1 column pd.DataFrame (optional)
+    proba_values: pd.DataFrame or None, optional
         predicted proba used to color points - One Vs All in multiclass case
-    col_modality: Int, Float or String (optional)
+    col_modality: Any, optional
         parameter used in classification case,
         specify the modality to color in scatter plot (One Vs All)
-    col_scale: list (optional)
+    col_scale: list or None, optional
         specify the color of points in scatter data
     cmin : float, optional
         The minimum value for the color scale, providing the lower bound for color normalization.
     cmax : float, optional
         The maximum value for the color scale, providing the upper bound for color normalization.
-    addnote : String (default: None)
+    metadata : dict[str, Any] or None, optional
+        Additional values to include in point hover text.
+    addnote : str or None, optional
         Specify a note to display
-    subtitle : String (default: None)
+    subtitle : str or None, optional
         Subtitle to display
-    width : Int (default: 900)
+    max_len_by_row : int, default=20
+        Maximum characters per row when formatting feature values.
+    width : int, default=900
         Plotly figure - layout width
-    height : Int (default: 600)
+    height : int, default=600
         Plotly figure - layout height
-    file_name: string (optional)
+    file_name: str or None, optional
         Specify the save path of html files. If it is not provided, no file will be saved.
-    auto_open: bool (default=False)
+    auto_open: bool, default=False
         open automatically the plot
-    zoom: bool (default=False)
+    zoom: bool, default=False
         graph is currently zoomed
+
+    Returns
+    -------
+    go.Figure
+        The contribution scatter plot.
     """
     fig = go.Figure()
 
@@ -484,7 +494,7 @@ def plot_scatter(
     if metadata:
         metadata = {
             k: [
-                round_to_k(x, 3) if isinstance(x, Number) else x
+                round_to_k(cast(Any, x), 3) if isinstance(x, Number) else x
                 for x in pd.Series(v, index=feature_values.index).reindex(feature_values.index)
             ]
             for k, v in metadata.items()
@@ -584,67 +594,74 @@ def plot_scatter(
 
 
 def plot_violin(
-    feature_values,
-    contributions,
-    feature_name,
-    case,
-    style_dict,
-    pred=None,
-    proba_values=None,
-    col_modality=None,
-    col_scale=None,
-    cmin=None,
-    cmax=None,
-    addnote=None,
-    subtitle=None,
-    max_len_by_row=20,
-    width=900,
-    height=600,
-    file_name=None,
-    auto_open=False,
-    zoom=False,
-):
+    feature_values: pd.DataFrame,
+    contributions: pd.DataFrame,
+    feature_name: str,
+    case: Literal["classification", "regression"],
+    style_dict: dict[str, Any],
+    pred: pd.DataFrame | None = None,
+    proba_values: pd.DataFrame | None = None,
+    col_modality: Any = None,
+    col_scale: list[Any] | None = None,
+    cmin: float | None = None,
+    cmax: float | None = None,
+    addnote: str | None = None,
+    subtitle: str | None = None,
+    max_len_by_row: int = 20,
+    width: int = 900,
+    height: int = 600,
+    file_name: str | None = None,
+    auto_open: bool = False,
+    zoom: bool = False,
+) -> go.Figure:
     """
     Violin plot of one feature contribution across the prediction set.
     Parameters
     ----------
-    feature_values : 1 column pd.Dataframe
+    feature_values : pd.DataFrame
         The values of one feature
-    contributions : 1 column pd.Dataframe
+    contributions : pd.DataFrame
         The contributions associate
-    feature_name : String
+    feature_name : str
         Name of the feature, used in title
-    case: str
+    case: {"classification", "regression"}
         Type of the model, either 'classification' or 'regression'
-    style_dict: dict
+    style_dict: dict[str, Any]
         the different styles used in the different outputs of Shapash
-    pred: 1 column pd.DataFrame (optional)
+    pred: pd.DataFrame or None, optional
         predicted values used to color plot - One Vs All in multiclass case
-    proba_values: 1 column pd.DataFrame (optional)
+    proba_values: pd.DataFrame or None, optional
         predicted proba used to color points - One Vs All in multiclass case
-    col_modality: Int, Float or String (optional)
+    col_modality: Any, optional
         parameter used in classification case,
         specify the modality to color in scatter plot (One Vs All)
-    col_scale: list (optional)
+    col_scale: list or None, optional
         specify the color of points in scatter data
     cmin : float, optional
         The minimum value for the color scale, providing the lower bound for color normalization.
     cmax : float, optional
         The maximum value for the color scale, providing the upper bound for color normalization.
-    addnote : String (default: None)
+    addnote : str or None, optional
         Specify a note to display
-    subtitle : String (default: None)
+    subtitle : str or None, optional
         Subtitle to display
-    width : Int (default: 900)
+    max_len_by_row : int, default=20
+        Maximum characters per row when formatting feature values.
+    width : int, default=900
         Plotly figure - layout width
-    height : Int (default: 600)
+    height : int, default=600
         Plotly figure - layout height
-    file_name: string (optional)
+    file_name: str or None, optional
         Specify the save path of html files. If it is not provided, no file will be saved.
-    auto_open: bool (default=False)
+    auto_open: bool, default=False
         open automatically the plot
-    zoom: bool (default=False)
+    zoom: bool, default=False
         graph is currently zoomed
+
+    Returns
+    -------
+    go.Figure
+        The contribution violin plot.
     """
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -833,23 +850,23 @@ def plot_violin(
 
 
 def _update_contributions_fig(
-    fig,
-    feature_name,
-    pred,
-    proba_values,
-    col_modality,
-    col_scale,
-    cmin,
-    cmax,
-    addnote,
-    subtitle,
-    width,
-    height,
-    file_name,
-    auto_open,
-    case,
-    style_dict,
-):
+    fig: go.Figure,
+    feature_name: str,
+    pred: pd.DataFrame | None,
+    proba_values: pd.DataFrame | None,
+    col_modality: Any,
+    col_scale: list[Any] | None,
+    cmin: float | None,
+    cmax: float | None,
+    addnote: str | None,
+    subtitle: str | None,
+    width: int,
+    height: int,
+    file_name: str | None,
+    auto_open: bool,
+    case: Literal["classification", "regression"],
+    style_dict: dict[str, Any],
+) -> None:
     """
     Function used by both violin and scatter methods for contributions plots in order to
     update the layout of the (already) created plotly figure.
@@ -857,36 +874,36 @@ def _update_contributions_fig(
     ----------
     fig : go.Figure
         Plotly figure to be modified.
-    feature_name : String
+    feature_name : str
         Name of the feature, used in title
-    pred: 1 column pd.DataFrame (optional)
+    pred: pd.DataFrame or None, optional
         predicted values used to color plot - One Vs All in multiclass case
-    proba_values: 1 column pd.DataFrame (optional)
+    proba_values: pd.DataFrame or None, optional
         predicted proba used to color points - One Vs All in multiclass case
-    col_modality: Int, Float or String (optional)
+    col_modality: Any
         parameter used in classification case,
         specify the modality to color in scatter plot (One Vs All)
-    col_scale: list (optional)
+    col_scale: list or None
         specify the color of points in scatter data
     cmin : float, optional
         The minimum value for the color scale, providing the lower bound for color normalization.
     cmax : float, optional
         The maximum value for the color scale, providing the upper bound for color normalization.
-    addnote : String (default: None)
+    addnote : str or None
         Specify a note to display
-    subtitle : String (default: None)
+    subtitle : str or None
         Subtitle to display
-    width : Int (default: 900)
+    width : int
         Plotly figure - layout width
-    height : Int (default: 600)
+    height : int
         Plotly figure - layout height
-    file_name: string (optional)
+    file_name: str or None
         Specify the save path of html files. If it is not provided, no file will be saved.
-    auto_open: bool (default=False)
+    auto_open: bool
         open automatically the plot
-    case: str
+    case: {"classification", "regression"}
         Type of the model, either 'classification' or 'regression'
-    style_dict: dict
+    style_dict: dict[str, Any]
         the different styles used in the different outputs of Shapash
     """
     title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
@@ -897,7 +914,7 @@ def _update_contributions_fig(
         elif subtitle:
             title += "<br><sup>" + subtitle + "</sup>"
         else:
-            title += "<br><sup>" + addnote + "</sup>"
+            title += "<br><sup>" + str(addnote) + "</sup>"
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(feature_name, 110)}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": "Contribution"}
@@ -951,15 +968,19 @@ def _update_contributions_fig(
         plot(fig, filename=file_name, auto_open=auto_open)
 
 
-def _update_xaxis_labels(fig, xs, zoom=False):
+def _update_xaxis_labels(fig: go.Figure, xs: list[Any], zoom: bool = False) -> None:
     """
     Updates the x-axis labels of a Plotly figure based on label length and zoom status.
     Shortens labels if they are longer than a specified threshold.
 
-    Parameters:
-    - fig: The Plotly figure object to update.
-    - xs: A list of x-axis label strings.
-    - zoom: Boolean indicating whether zoom is enabled.
+    Parameters
+    ----------
+    fig : plotly.graph_objects.Figure
+        The Plotly figure object to update.
+    xs : list of Any
+        A list of x-axis label strings.
+    zoom : bool, default=False
+        Whether zoom is enabled.
     """
 
     # Define common x-axis parameters
@@ -1002,16 +1023,21 @@ def _update_xaxis_labels(fig, xs, zoom=False):
     fig.update_xaxes(**params)
 
 
-def _calculate_percentage_intervals(data, bins=20):
+def _calculate_percentage_intervals(data: pd.Series, bins: int = 20) -> np.ndarray:
     """
     Calculates the percentage of data points within each interval of a binned distribution.
 
-    Parameters:
-    - data: DataFrame containing the data to bin and calculate percentages for.
-    - bins: Number of bins to use for the distribution.
+    Parameters
+    ----------
+    data : pandas.Series
+        Series containing the data to bin and calculate percentages for.
+    bins : int, default=20
+        Number of bins to use for the distribution.
 
-    Returns:
-    - A numpy array of the percentage of points in the interval corresponding to each original data point.
+    Returns
+    -------
+    numpy.ndarray
+        Percentage of points in the interval corresponding to each original data point.
     """
     # Binning data into intervals and calculating the percentage of points in each interval
     intervals = pd.cut(data, bins, duplicates="drop")
@@ -1025,20 +1051,39 @@ def _calculate_percentage_intervals(data, bins=20):
     return percentage_series
 
 
-def _create_jittered_points(numerical_features, percentages, mean=0, std=0.6, clip_min=-1, clip_max=1, side="both"):
+def _create_jittered_points(
+    numerical_features: np.ndarray | list[int],
+    percentages: np.ndarray,
+    mean: float = 0,
+    std: float = 0.6,
+    clip_min: float = -1,
+    clip_max: float = 1,
+    side: Literal["both", "negative", "positive"] = "both",
+) -> np.ndarray:
     """
     Creates jittered points by applying a random normal perturbation scaled by calculated percentages.
 
-    Parameters:
-    - numerical_features: The numerical features to which jitter will be added.
-    - percentages: The percentages to scale the jitter by.
-    - mean: Mean of the normal distribution to generate jitter.
-    - std: Standard deviation of the normal distribution to generate jitter.
-    - clip_min: Minimum value to clip the jitter values to.
-    - clip_max: Maximum value to clip the jitter values to.
+    Parameters
+    ----------
+    numerical_features : numpy.ndarray or list of int
+        Numeric x coordinates to which jitter will be added.
+    percentages : numpy.ndarray
+        Per-point proportions used to scale the jitter.
+    mean : float, default=0
+        Mean of the normal distribution used to generate jitter.
+    std : float, default=0.6
+        Standard deviation of the normal distribution used to generate jitter.
+    clip_min : float, default=-1
+        Minimum jitter value.
+    clip_max : float, default=1
+        Maximum jitter value.
+    side : {'both', 'negative', 'positive'}, default='both'
+        Direction in which the jitter is applied.
 
-    Returns:
-    - A numpy array of jittered points.
+    Returns
+    -------
+    numpy.ndarray
+        Jittered points.
     """
     # Creating jittered points
     rng = np.random.default_rng(seed=79)
@@ -1059,18 +1104,27 @@ def _create_jittered_points(numerical_features, percentages, mean=0, std=0.6, cl
     return jittered_points
 
 
-def _prepare_hover_text(feature_values, pred, feature_name):
+def _prepare_hover_text(
+    feature_values: pd.DataFrame,
+    pred: pd.DataFrame | None,
+    feature_name: str,
+) -> tuple[pd.DataFrame, str]:
     """
     Prepares the hover text for a Plotly plot based on feature values and predictions.
 
-    Parameters:
-    - feature_values: A pandas DataFrame of feature values.
-    - pred: A pandas Series of predictions, can be None.
-    - feature_name: The name of the feature for which the hover text is being prepared.
+    Parameters
+    ----------
+    feature_values : pandas.DataFrame
+        Feature values.
+    pred : pandas.DataFrame or None
+        Predictions, or None.
+    feature_name : str
+        Name of the feature for which the hover text is being prepared.
 
-    Returns:
-    - A pandas DataFrame containing the hover text.
-    - The hover template to be used in Plotly.
+    Returns
+    -------
+    tuple of pandas.DataFrame and str
+        Hover-text DataFrame and Plotly hover template.
     """
     # Building the base text for hover
     hv_text = [
@@ -1093,22 +1147,22 @@ def _prepare_hover_text(feature_values, pred, feature_name):
 
 
 def _add_violin_and_scatter(
-    fig,
-    feature_cond,
-    contributions,
-    feature_values,
-    hovertext_df,
-    colorpoints,
-    col_scale,
-    cmin,
-    cmax,
-    hovertemplate,
-    i,
-    c,
-    line_color,
-    secondary_y=True,
-    side="both",
-):
+    fig: go.Figure,
+    feature_cond: pd.Series,
+    contributions: pd.DataFrame,
+    feature_values: pd.DataFrame,
+    hovertext_df: pd.DataFrame,
+    colorpoints: pd.DataFrame | None,
+    col_scale: list[Any] | None,
+    cmin: float | None,
+    cmax: float | None,
+    hovertemplate: str,
+    i: int,
+    c: Any,
+    line_color: str,
+    secondary_y: bool = True,
+    side: Literal["both", "negative", "positive"] = "both",
+) -> None:
     """Adds a Violin trace and a Scatter trace based on specified conditions."""
     y = contributions.loc[feature_cond].iloc[:, 0].values
     if len(y) > 0:
@@ -1118,7 +1172,7 @@ def _add_violin_and_scatter(
         _add_violin_trace(fig, c, x, y, side, line_color, hovertext, secondary_y)
 
         percentage_series = _calculate_percentage_intervals(contributions.loc[feature_cond].iloc[:, 0], bins=20)
-        x = _create_jittered_points(x, percentage_series, side=side)
+        x_jittered = _create_jittered_points(x, percentage_series, side=side)
         if colorpoints is not None:
             colorpoints_selected = colorpoints.loc[feature_cond].values.flatten()
         customdata = np.stack(
@@ -1135,10 +1189,20 @@ def _add_violin_and_scatter(
                 "cmax": cmax,
             }
 
-        _add_scatter_trace(fig, x, y, c, marker, hovertext, hovertemplate, customdata, secondary_y)
+        _add_scatter_trace(fig, x_jittered, y, c, marker, hovertext, hovertemplate, customdata, secondary_y)
 
 
-def _add_scatter_trace(fig, x, y, name, marker, hovertext, hovertemplate, customdata, secondary_y=True):
+def _add_scatter_trace(
+    fig: go.Figure,
+    x: Any,
+    y: Any,
+    name: Any,
+    marker: dict[str, Any] | None,
+    hovertext: Any,
+    hovertemplate: str,
+    customdata: Any,
+    secondary_y: bool = True,
+) -> None:
     """Adds a Scatter trace to the figure."""
     fig.add_trace(
         go.Scatter(
@@ -1156,7 +1220,16 @@ def _add_scatter_trace(fig, x, y, name, marker, hovertext, hovertemplate, custom
     )
 
 
-def _add_violin_trace(fig, name, x, y, side, line_color, hovertext, secondary_y=True):
+def _add_violin_trace(
+    fig: go.Figure,
+    name: Any,
+    x: Any,
+    y: np.ndarray,
+    side: Literal["both", "negative", "positive"],
+    line_color: str,
+    hovertext: Any,
+    secondary_y: bool = True,
+) -> None:
     """Adds a Violin trace to the figure."""
     # Violin plot has a problem if for one violin all the points have the same contribution value
     rng = np.random.default_rng(seed=79)

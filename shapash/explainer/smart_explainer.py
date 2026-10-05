@@ -111,7 +111,8 @@ class SmartExplainer:
         computations. Each key defines a group name, and its value is a list of
         feature names.
 
-        Example:
+        Examples
+        --------
         >>> {
         ...   'feature_group_1': ['feature3', 'feature7', 'feature24'],
         ...   'feature_group_2': ['feature1', 'feature12']
@@ -679,7 +680,7 @@ class SmartExplainer:
             use_groups=use_groups,
         )
 
-    def init_app(self, settings: dict[str, Any] | None = None):
+    def init_app(self, settings: dict[str, Any] | None = None) -> None:
         """
         Initialize a SmartApp instance for the current SmartExplainer object.
 
@@ -689,7 +690,7 @@ class SmartExplainer:
 
         Parameters
         ----------
-        settings : dict, optional
+        settings : dict[str, Any] or None, optional
             Dictionary specifying default configuration values for the WebApp.
             Possible keys include:
             - `'rows'` : int — number of rows to display by default
@@ -783,7 +784,7 @@ class SmartExplainer:
             wsgi_server = make_server(host, port, self.smartapp.server)
             server_instance = CustomThread(target=wsgi_server.serve_forever)
 
-            def _kill():
+            def _kill() -> None:
                 wsgi_server.shutdown()
                 server_instance.killed = True
 
