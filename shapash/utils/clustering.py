@@ -1,5 +1,7 @@
 import logging
 import re
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -21,7 +23,7 @@ def compute_tsne_projection(
     values_to_project: pd.DataFrame,
     random_state: int = 79,
     perplexity: int | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> np.ndarray:
     """
     Compute a 2D TSNE projection of high-dimensional data.
 
@@ -37,10 +39,8 @@ def compute_tsne_projection(
 
     Returns
     -------
-    x : np.ndarray
-        1D array containing the x coordinates of the TSNE projection.
-    y : np.ndarray
-        1D array containing the y coordinates of the TSNE projection.
+    np.ndarray
+        Array of shape ``(n_samples, 2)`` containing the projected coordinates.
     """
     n_samples = values_to_project.shape[0]
     if perplexity is None:
@@ -62,9 +62,9 @@ def build_tsne_title(
     subtitle: str | None,
     addnote: str | None,
     *,
-    style_dict: dict,
+    style_dict: dict[str, Any],
     height: int,
-) -> dict:
+) -> dict[str, Any]:
     """
     Build the Plotly title dictionary for a TSNE projection plot.
 
@@ -76,14 +76,14 @@ def build_tsne_title(
         Subtitle displayed below the main title.
     addnote : str or None
         Additional note displayed with the subtitle.
-    style_dict : dict
+    style_dict : dict[str, Any]
         Style dictionary containing the ``dict_title`` base configuration.
     height : int
         Figure height, used to adjust the vertical position of the title.
 
     Returns
     -------
-    dict
+    dict[str, Any]
         Plotly title dictionary (text + positioning).
     """
     if not title:
@@ -441,7 +441,9 @@ def scale_points_within_cluster(
     return X_scaled
 
 
-def _resolve_colorscale(colorscale):
+def _resolve_colorscale(
+    colorscale: str | Sequence[tuple[float, str]],
+) -> list[np.ndarray]:
     if isinstance(colorscale, str):
         cs = get_colorscale(colorscale)
     else:
@@ -455,7 +457,7 @@ def _resolve_colorscale(colorscale):
     return colors
 
 
-def _interpolate_color(colors, t):
+def _interpolate_color(colors: list[np.ndarray], t: float) -> np.ndarray:
     n = len(colors)
     if n == 1:
         return colors[0]
@@ -468,7 +470,13 @@ def _interpolate_color(colors, t):
     return (1 - w) * colors[i0] + w * colors[i1]
 
 
-def value_to_rgba(value, colorscale, cmin, cmax, alpha=0.3):
+def value_to_rgba(
+    value: float,
+    colorscale: str | Sequence[tuple[float, str]],
+    cmin: float,
+    cmax: float,
+    alpha: float = 0.3,
+) -> str:
     """
     Map a scalar value to an RGBA color string using a continuous colorscale.
 
@@ -481,9 +489,9 @@ def value_to_rgba(value, colorscale, cmin, cmax, alpha=0.3):
     ----------
     value : float
         Scalar value to map to a color.
-    colorscale : str or list
-        Colorscale definition. Can be a named colorscale or an explicit list
-        of colors used for interpolation.
+    colorscale : str or sequence of tuple[float, str]
+        Colorscale definition. Can be a named colorscale or an explicit sequence
+        of normalized positions and color strings.
     cmin : float
         Minimum value of the normalization range.
     cmax : float
@@ -517,7 +525,9 @@ def value_to_rgba(value, colorscale, cmin, cmax, alpha=0.3):
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def encode_color_value(color_value):
+def encode_color_value(
+    color_value: pd.Series,
+) -> tuple[pd.Series, bool, dict[int, str] | None]:
     """
     Encode color_value for plotting.
     - Numeric: returned as-is
@@ -527,7 +537,7 @@ def encode_color_value(color_value):
     -------
     encoded_values : pd.Series
     is_categorical : bool
-    label_mapping : dict or None
+    label_mapping : dict[int, str] or None
     """
 
     is_categorical = is_text_like(color_value, strict_object=False)

@@ -5,40 +5,53 @@ Override threading custom module
 import sys
 import threading
 from collections.abc import Callable
+from types import FrameType
+from typing import Any
+
+TraceCallback = Callable[[FrameType, str, Any], Any]
 
 
 class CustomThread(threading.Thread):
     """
-    Python ovveride threading class
-    Used to kill a thread from python object
+    Thread subclass that can be stopped from another Python object.
+
+    Stopping is cooperative: the traced thread raises ``SystemExit`` at its
+    next line event after ``kill`` is called.
+
     Parameters
     ----------
-    threading : threading.Thread
-        Thread which you want to instanciate
-    on_kill : Callable, optional
-        Extra callback invoked when the thread is killed, in addition to
-        stopping the traced run loop (e.g. to shut down a server bound to
-        this thread).
+    *args : Any
+        Positional arguments forwarded to :class:`threading.Thread`.
+    on_kill : Callable[[], None], optional
+        Callback invoked synchronously in the calling thread before the
+        traced thread is marked for stopping.
+    **keywords : Any
+        Keyword arguments forwarded to :class:`threading.Thread`.
     """
 
-    def __init__(self, *args, on_kill: Callable[[], None] | None = None, **keywords):
+    def __init__(
+        self,
+        *args: Any,
+        on_kill: Callable[[], None] | None = None,
+        **keywords: Any,
+    ) -> None:
         threading.Thread.__init__(self, *args, **keywords)
         self.killed = False
-        self.__run_backup = None
+        self.__run_backup: Callable[[], None] = self.run
         self.on_kill = on_kill
 
-    def start(self):
+    def start(self) -> None:
         """Starts the thread"""
         self.__run_backup = self.run
-        self.run = self.__run
+        object.__setattr__(self, "run", self.__run)
         threading.Thread.start(self)
 
-    def __run(self):
+    def __run(self) -> None:
         sys.settrace(self.globaltrace)
         self.__run_backup()
-        self.run = self.__run_backup
+        object.__setattr__(self, "run", self.__run_backup)
 
-    def globaltrace(self, frame, event, arg):
+    def globaltrace(self, frame: FrameType, event: str, arg: Any) -> TraceCallback | None:
         """
         Track the global trace
         """
@@ -47,7 +60,7 @@ class CustomThread(threading.Thread):
         else:
             return None
 
-    def localtrace(self, frame, event, arg):
+    def localtrace(self, frame: FrameType, event: str, arg: Any) -> TraceCallback:
         """
         Track the local trace
         """
@@ -56,7 +69,7 @@ class CustomThread(threading.Thread):
                 raise SystemExit()
         return self.localtrace
 
-    def kill(self):
+    def kill(self) -> None:
         """
         Kill the current Thread
         """

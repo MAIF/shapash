@@ -3,12 +3,15 @@ Transform Module
 """
 
 import re
+from typing import Any, Literal, TypeAlias
 
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 
 from shapash.utils.category_encoder_backend import (
+    CategoryEncoder,
     get_col_mapping_ce,
     inv_transform_ce,
     supported_category_encoder,
@@ -23,12 +26,15 @@ from shapash.utils.columntransformer_backend import (
 )
 from shapash.utils.dtypes import text_like_columns
 
+Preprocessing: TypeAlias = CategoryEncoder | ColumnTransformer | dict[str, Any] | list[Any] | None
+ContributionData: TypeAlias = pd.DataFrame | np.ndarray | list[Any]
+
 # TODO
 # encode targeted variable ? from sklearn.preprocessing import LabelEncoder
 # make an easy version for dict, not writing all mapping
 
 
-def inverse_transform(x_init, preprocessing=None):
+def inverse_transform(x_init: pd.DataFrame, preprocessing: Preprocessing = None) -> pd.DataFrame:
     """
     Reverse transformation giving a preprocessing.
 
@@ -50,13 +56,13 @@ def inverse_transform(x_init, preprocessing=None):
     ----------
     x_init : pandas.DataFrame
         Prediction set.
-    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
-        The processing apply to the original data
+    preprocessing : CategoryEncoder, ColumnTransformer, list, dict, or None, optional
+        The preprocessing applied to the original data.
 
     Returns
     -------
-    pandas.Dataframe
-        return the dataframe before preprocessing.
+    pandas.DataFrame
+        The dataframe before preprocessing.
     """
 
     if preprocessing is None:
@@ -79,7 +85,7 @@ def inverse_transform(x_init, preprocessing=None):
         return x_inverse
 
 
-def apply_preprocessing(x_init, model, preprocessing=None):
+def apply_preprocessing(x_init: pd.DataFrame, model: Any, preprocessing: Preprocessing = None) -> pd.DataFrame:
     """
     Apply preprocessing on a raw dataset giving a preprocessing.
 
@@ -101,15 +107,15 @@ def apply_preprocessing(x_init, model, preprocessing=None):
     ----------
     x_init : pandas.DataFrame
         Raw dataset to apply preprocessing.
-    model: model object
-        model used to check the different values of target estimate predict_proba
-    preprocessing : category_encoders, ColumnTransformer, list, dict, optional (default: None)
-        The processing to apply to the original data
+    model : Any
+        Model used to check target values for ``estimate`` and ``predict_proba``.
+    preprocessing : CategoryEncoder, ColumnTransformer, list, dict, or None, optional
+        The preprocessing to apply to the original data.
 
     Returns
     -------
-    pandas.Dataframe
-        return the dataframe with preprocessing.
+    pandas.DataFrame
+        The dataframe after preprocessing.
     """
 
     if preprocessing is None:
@@ -128,26 +134,26 @@ def apply_preprocessing(x_init, model, preprocessing=None):
         return x_init
 
 
-def preprocessing_tolist(preprocess):
+def preprocessing_tolist(preprocess: Preprocessing) -> list[Any]:
     """
     Transform preprocess into a list, if preprocess contains a dict, transform the dict into a list of dict.
 
     Parameters
     ----------
-    preprocess : category_encoders, ColumnTransformer, list, dict, optional (default: None)
-        The processing apply to the original data
+    preprocess : CategoryEncoder, ColumnTransformer, list, dict, or None
+        The preprocessing applied to the original data.
 
     Returns
     -------
-    list
-        A list containing all preprocessing.
+    list of Any
+        A list containing all preprocessing steps.
     """
     list_encoding = preprocess if isinstance(preprocess, list) else [preprocess]
     list_encoding = [[x] if isinstance(x, dict) else x for x in list_encoding]
     return list_encoding
 
 
-def check_transformers(list_encoding):
+def check_transformers(list_encoding: list[Any]) -> tuple[bool, bool]:
     """
     Check that all transformation are supported.
         - a single category encoders transformer
@@ -165,15 +171,14 @@ def check_transformers(list_encoding):
 
     Parameters
     ----------
-    list_encoding : list
-        A list containing at least one transformation
+    list_encoding : list of Any
+        A list containing the preprocessing steps to validate.
 
     Returns
     -------
-        use_ct : boolean
-            true if column transformer is used
-        use_ce : boolean
-            true if category encoder is used
+        tuple of bool
+            Flags indicating whether a ColumnTransformer and a category encoder
+            are used, respectively.
 
     """
 
@@ -225,25 +230,24 @@ def check_transformers(list_encoding):
     return use_ct, use_ce
 
 
-def apply_postprocessing(x_init, postprocessing):
+def apply_postprocessing(x_init: pd.DataFrame, postprocessing: dict[str, dict[str, Any]]) -> pd.DataFrame:
     """
     Transforms x_init depending on postprocessing parameters.
 
     Parameters
     ----------
-    x_init: pandas.Dataframe
-        Dataframe that needs to be modified
-    postprocessing: dict
-        Modifications to apply in x_init dataframe.
+    x_init : pandas.DataFrame
+        Dataframe to modify.
+    postprocessing : dict[str, dict[str, Any]]
+        Modifications to apply to the dataframe, keyed by feature name.
 
     Returns
     -------
-    pandas.Dataframe
-        Modified DataFrame.
+    pandas.DataFrame
+        Modified dataframe.
     """
     new_preds = x_init.copy()
-    for feature_name in postprocessing.keys():
-        dict_postprocessing = postprocessing[feature_name]
+    for feature_name, dict_postprocessing in postprocessing.items():
         data_modif = new_preds[feature_name]
         new_datai = list()
 
@@ -278,7 +282,9 @@ def apply_postprocessing(x_init, postprocessing):
     return new_preds
 
 
-def adapt_contributions(case, contributions):
+def adapt_contributions(
+    case: Literal["classification", "regression"], contributions: ContributionData
+) -> ContributionData | list[ContributionData]:
     """
     If _case is "classification" and contributions a np.array or pd.DataFrame
     this function transform contributions matrix in a list of 2 contributions
@@ -286,15 +292,15 @@ def adapt_contributions(case, contributions):
 
     Parameters
     ----------
-    case: string
-        String which precised if it's a regression problem or a classification one.
-    contributions: pandas.DataFrame, np.ndarray or list
+    case : str
+        Whether the problem is a regression or classification problem.
+    contributions : pandas.DataFrame, numpy.ndarray, or list
         Contribution of each feature to the predicted value.
 
     Returns
     -------
-        pandas.DataFrame, np.ndarray or list
-        contributions object modified
+        pandas.DataFrame, numpy.ndarray, or list
+        The contributions, possibly adapted for classification.
     """
     # For classification with numpy arrays, we first transform the last dimension in lists
     # So that we have the following format : [contributions_class_0, contributions_class_1, ...]
@@ -308,7 +314,7 @@ def adapt_contributions(case, contributions):
         return contributions
 
 
-def get_preprocessing_mapping(x_encoded, preprocessing=None):
+def get_preprocessing_mapping(x_encoded: pd.DataFrame, preprocessing: Preprocessing = None) -> dict[Any, list[Any]]:
     """
     Get the columns mapping from preprocessing.
 
@@ -316,13 +322,13 @@ def get_preprocessing_mapping(x_encoded, preprocessing=None):
     ----------
     x_encoded : pd.DataFrame
         Pandas dataframe after encoder transformations
-    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
-        The processing apply to the original data
+    preprocessing : CategoryEncoder, ColumnTransformer, list, dict, or None
+        The preprocessing applied to the original data.
 
     Returns
     -------
-    dict
-        the mapping between columns names before and after preprocessing.
+    dict[Any, list[Any]]
+        Mapping from column names before preprocessing to names after preprocessing.
     """
     if preprocessing is None:
         return {}
@@ -356,7 +362,9 @@ def get_preprocessing_mapping(x_encoded, preprocessing=None):
     return dict_col_mapping
 
 
-def get_features_transform_mapping(x_init, x_encoded, preprocessing=None):
+def get_features_transform_mapping(
+    x_init: pd.DataFrame, x_encoded: pd.DataFrame, preprocessing: Preprocessing = None
+) -> dict[Any, list[Any]]:
     """
     Get the columns mapping from preprocessing and add missing columns that are not used or changed in preprocessing.
 
@@ -366,13 +374,13 @@ def get_features_transform_mapping(x_init, x_encoded, preprocessing=None):
         Pandas dataframe before preprocessing transformations
     x_encoded : pd.DataFrame
         Pandas dataframe after preprocessing transformations
-    preprocessing : category_encoders or ColumnTransformer or list or dict or list of dict
-        The processing apply to the original data
+    preprocessing : CategoryEncoder, ColumnTransformer, list, dict, or None
+        The preprocessing applied to the original data.
 
     Returns
     -------
-    dict
-        the mapping between columns names before and after preprocessing.
+    dict[Any, list[Any]]
+        Mapping from column names before preprocessing to names after preprocessing.
     """
     dict_all_cols_mapping = dict()
     dict_all_cols_mapping.update(get_preprocessing_mapping(x_encoded=x_encoded, preprocessing=preprocessing))
@@ -390,7 +398,12 @@ def handle_categorical_missing(df: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     df : pd.DataFrame
-        Pandas dataframe on which we will replace the missing values
+        Dataframe in which to replace missing values in categorical columns.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A copy of the dataframe with missing categorical values replaced by ``"missing"``.
     """
     categorical_cols = text_like_columns(df, strict_object=False)
     df_handle_missing = df.copy()
