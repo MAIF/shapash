@@ -88,8 +88,8 @@ class _DummyBlocks(ReportBlockMixin):
         return [selector, selected_panel]
 
     @block
-    def block_panel_type_not_allowed(self, title: str = "HTML"):
-        return [pn.pane.HTML("<b>html</b>")]
+    def block_panel_type_not_allowed(self, title: str = "Button"):
+        return [pn.widgets.Button(name="Click")]
 
     @block
     def block_non_panel_type_not_allowed(self, title: str = "Object"):

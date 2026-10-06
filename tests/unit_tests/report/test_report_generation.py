@@ -12,7 +12,6 @@ from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
 from shapash.report.core import build_navigation_bar
-from shapash.report.panel_support import ReportAnchor
 from shapash.report.panel_support import apply_report_css
 
 import pytest
@@ -195,8 +194,8 @@ class _DummyBlocks(ReportBlockMixin):
         return [selector, selected_panel]
 
     @block
-    def block_panel_type_not_allowed(self, title: str = "HTML"):
-        return [pn.pane.HTML("<b>html</b>")]
+    def block_panel_type_not_allowed(self, title: str = "Button"):
+        return [pn.widgets.Button(name="Click")]
 
     @block
     def block_non_panel_type_not_allowed(self, title: str = "Object"):
@@ -396,7 +395,13 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertEqual([call.kwargs["label"] for call in multiclass_contributions.call_args_list], [0, 0, 1, 1, 2, 2])
         class_links = multiclass_runtime.class_navigation_items["class-explainability"]
         self.assertEqual([item["label"] for item in class_links], ["Class 0", "Class 1", "Class 2"])
-        anchors = [item for item in result.objects if isinstance(item, ReportAnchor)]
+        anchors = [
+            child
+            for item in result.objects
+            if isinstance(item, pn.Column)
+            for child in item.objects
+            if isinstance(child, pn.pane.HTML)
+        ]
         self.assertEqual([anchor.object for anchor in anchors], [
             f'<div id="{item["anchor"]}" class="scroll-anchor"></div>' for item in class_links
         ])
@@ -441,7 +446,11 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertEqual([call.kwargs["label"] for call in interactions_plot.call_args_list], [0, 1, 2])
         self.assertEqual([call.kwargs["nb_top_interactions"] for call in interactions_plot.call_args_list], [3, 3, 3])
         interaction_panes = [
-            pane for pane in result.objects if isinstance(pane, pn.pane.Plotly) and pane.object.data[0].type == "scatter"
+            pane
+            for section in result.objects
+            if isinstance(section, pn.Column)
+            for pane in section.select(pn.pane.Plotly)
+            if pane.object.data[0].type == "scatter"
         ]
         self.assertEqual(len(interaction_panes), 3)
 

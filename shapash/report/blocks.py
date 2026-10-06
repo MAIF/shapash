@@ -19,7 +19,7 @@ from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, series_dtype
 from shapash.report.core import _wrap_section_anchor
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.panel_support import ReportAnchor, _add_css_classes, _auto_style_viewable, _coerce_viewable
+from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
@@ -659,11 +659,10 @@ class ReportBlockMixin:
             _, _, class_name = explainer.check_label_name(class_code, origin="code")
             anchor_id = f"{navigation_id}-class-{len(navigation_items) + 1}"
             navigation_items.append({"label": str(class_name), "anchor": anchor_id})
-            content.append(ReportAnchor(anchor_id))
-            content.append(pn.pane.Markdown(f"#### Explained class: **{class_name}**"))
+            class_content: list[pn.viewable.Viewable] = [pn.pane.Markdown(f"#### Explained class: **{class_name}**")]
             importance = explainer.plot.features_importance(label=class_code)
-            content.append(pn.pane.Plotly(importance, config={"responsive": True}, sizing_mode="stretch_width"))
-            content.append(
+            class_content.append(pn.pane.Plotly(importance, config={"responsive": True}, sizing_mode="stretch_width"))
+            class_content.append(
                 self.block_contribution_plot(
                     title="Feature contributions",
                     label=class_code,
@@ -673,13 +672,18 @@ class ReportBlockMixin:
             )
             if include_interactions:
                 effective_max_points = self.max_points if max_points is None else max_points
-                content.append(pn.pane.Markdown("#### Top feature interactions"))
+                class_content.append(pn.pane.Markdown("#### Top feature interactions"))
                 interactions = explainer.plot.top_interactions_plot(
                     nb_top_interactions=nb_top_interactions,
                     label=class_code,
                     max_points=effective_max_points,
                 )
-                content.append(pn.pane.Plotly(interactions, config={"responsive": True}, sizing_mode="stretch_width"))
+                class_content.append(
+                    pn.pane.Plotly(interactions, config={"responsive": True}, sizing_mode="stretch_width")
+                )
+
+            class_section = _wrap_section_anchor(pn.Column(*class_content, sizing_mode="stretch_width"), anchor_id)
+            content.append(class_section)
 
         self.class_navigation_items[navigation_id] = navigation_items
         return title, content
