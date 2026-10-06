@@ -709,13 +709,19 @@ def handle_page_navigation(
     """
     Handle the navigation between different pages based on user input.
 
-    Args:
-        triggered_input (str): The input that triggered the navigation.
-        page (Union[int, str]): The current page number.
-        selected_feature (Optional[str]): The currently selected feature.
+    Parameters
+    ----------
+    triggered_input : str
+        The input that triggered the navigation.
+    page : int | str
+        The current page number.
+    selected_feature : str | None
+        The currently selected feature.
 
-    Returns:
-        tuple[int, Optional[str]]: Updated page number and selected feature.
+    Returns
+    -------
+    tuple[int, str | None]
+        Updated page number and selected feature.
     """
     page = int(page)
     if triggered_input == "page_left.n_clicks":
@@ -734,13 +740,19 @@ def update_click_data_on_subset_changes_if_needed(click_data: dict, triggered_in
     """
     Update the click data when there are changes in the subset of data.
 
-    Args:
-        click_data (dict): The current click data.
-        triggered_input (str): The input that triggered the update.
-        nclicks_del (list): The number of delete clicks.
+    Parameters
+    ----------
+    click_data : dict
+        The current click data.
+    triggered_input : str
+        The input that triggered the update.
+    nclicks_del : list
+        The number of delete clicks.
 
-    Returns:
-        dict: Updated click data.
+    Returns
+    -------
+    dict
+        Updated click data.
     """
     if click_data and (
         triggered_input in ["apply_filter.n_clicks", "reset_dropdown_button.n_clicks", "dataset.data"]
@@ -754,12 +766,17 @@ def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str | Non
     """
     Retrieve the selected feature from the click data.
 
-    Args:
-        click_data (dict): The click data.
-        inv_features_dict (dict): Dictionary mapping feature IDs to feature names.
+    Parameters
+    ----------
+    click_data : dict
+        The click data.
+    inv_features_dict : dict
+        Dictionary mapping feature IDs to feature names.
 
-    Returns:
-        Optional[str]: The selected feature, if any.
+    Returns
+    -------
+    str | None
+        The selected feature, if any.
     """
     return inv_features_dict.get(get_feature_from_clicked_data(click_data)) if click_data else None
 
@@ -778,18 +795,31 @@ def handle_group_display_logic(
     """
     Handle the display logic for feature groups.
 
-    Args:
-        bool_group (bool): Whether to display feature groups.
-        triggered_input (str): The input that triggered the update.
-        selected_feature (Optional[str]): The currently selected feature.
-        click_data (Optional[dict]): The current click data.
-        click_data_store (dict): Stored click data.
-        features_groups (dict): Dictionary of feature groups.
-        features_dict (dict): Dictionary of features.
+    Parameters
+    ----------
+    bool_group : bool
+        Whether to display feature groups.
+    triggered_input : str
+        The input that triggered the update.
+    selected_feature : str | None
+        The currently selected feature.
+    selected_click_data : object
+        The currently selected click data.
+    click_data : dict | None
+        The current click data.
+    click_data_store : dict
+        Stored click data.
+    selected_click_data_store : object
+        Stored selected click data.
+    features_groups : dict
+        Dictionary of feature groups.
+    features_dict : dict
+        Dictionary of features.
 
-    Returns:
-        tuple[Optional[str], Optional[str], Optional[dict], object]: Updated selected feature,
-        group name, click data, and selected click data.
+    Returns
+    -------
+    tuple[str | None, str | None, dict | None, object]
+        Updated selected feature, group name, click data, and selected click data.
     """
     group_name = None
     selected_feature_group = None
@@ -827,20 +857,28 @@ def handle_group_display_logic(
 
 
 def determine_total_pages_and_display(
-    explainer: "Explainer", features: int, bool_group: bool, group_name: str, page: int
+    explainer: "Explainer", features: int, bool_group: bool, group_name: str | None, page: int
 ) -> tuple[int, dict[str, str], int]:
     """
     Determine the total number of pages and the display properties.
 
-    Args:
-        explainer (Explainer): The explainer object.
-        features (int): Number of features to display per page.
-        bool_group (bool): Whether to display groups.
-        group_name (str): Name of the feature group.
-        page (int): Current page number.
+    Parameters
+    ----------
+    explainer : Explainer
+        The explainer object.
+    features : int
+        Number of features to display per page.
+    bool_group : bool
+        Whether to display groups.
+    group_name : str | None
+        Name of the selected feature group, if any.
+    page : int
+        Current page number.
 
-    Returns:
-        tuple[int, dict[str, str], int]: Total pages, display properties, and updated page number.
+    Returns
+    -------
+    tuple[int, dict[str, str], int]
+        Total pages, CSS display properties, and updated page number.
     """
     display_groups = explainer.features_groups is not None and bool_group
     if explainer._case == "classification":
@@ -870,8 +908,10 @@ def adjust_figure_layout(figure: Figure) -> None:
     """
     Adjust the layout of the figure.
 
-    Args:
-        figure (Figure): The figure to adjust.
+    Parameters
+    ----------
+    figure : Figure
+        The figure to adjust.
     """
     MyGraph.adjust_graph_static(figure, x_ax="Mean absolute Contribution")
     figure.layout.clickmode = "event+select"

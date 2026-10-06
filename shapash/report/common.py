@@ -1,10 +1,11 @@
 import builtins
 import os
 import shutil
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from enum import Enum
 from importlib import import_module
 from numbers import Number
+from typing import Any
 
 import pandas as pd
 from pandas.api.types import is_bool_dtype, is_numeric_dtype
@@ -23,20 +24,24 @@ class ReportTemplate(Enum):
     # FULL = "full_report.yml"
     # ...
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
 
-def export_report_yml(template_id: ReportTemplate | str, output_path: str = "."):
+def export_report_yml(template_id: ReportTemplate | str, output_path: str = ".") -> None:
     """
     Export a report template YAML file to the given output path.
 
     Parameters
     ----------
-    template_id : ReportTemplate
+    template_id : ReportTemplate or str
         Identifier of the report template to export.
     output_path : str, default="."
         Destination directory or file path where the template is copied.
+
+    Returns
+    -------
+    None
     """
     template_file_path = os.path.join(os.path.dirname(__file__), "assets", str(template_id))
     shutil.copy(template_file_path, output_path)
@@ -51,7 +56,7 @@ class VarType(Enum):
     TYPE_NUM = "Numeric"
     TYPE_UNSUPPORTED = "Unsupported"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
 
@@ -70,6 +75,7 @@ def series_dtype(s: pd.Series, cat_num_threshold: int = 15) -> VarType:
     Returns
     -------
     VarType
+        Categorical, numeric, or unsupported, according to the series dtype and cardinality.
     """
     if is_bool_dtype(s):
         return VarType.TYPE_CAT
@@ -105,28 +111,39 @@ def numeric_is_continuous(s: pd.Series, threshold: int = 15) -> bool:
     return n_unique > threshold
 
 
-def compute_col_types(df_all: pd.DataFrame | None) -> dict:
+def compute_col_types(df_all: pd.DataFrame | None) -> dict[Hashable, VarType]:
     """
     Computes the type of each column and stores the result in a dict.
 
     Parameters
     ----------
-    df_all : pd.DataFrame, optional
+    df_all : pd.DataFrame or None
+        DataFrame whose columns are classified, or None.
 
     Returns
     -------
-    col_types : dict
-        The types of each column
+    col_types : dict[Hashable, VarType]
+        Mapping from each column label to its inferred variable type.
     """
     if df_all is None:
         return {}
     return {col: series_dtype(df_all[col]) for col in df_all.columns}
 
 
-def get_callable(path: str):
+def get_callable(path: str) -> type | Callable[..., Any]:
     """
     This function is similar to the _locate function in Hydra library
     Locate an object by name or dotted path, importing as necessary.
+
+    Parameters
+    ----------
+    path : str
+        Dotted path to an importable object.
+
+    Returns
+    -------
+    type or Callable[..., Any]
+        The class or callable resolved from the path.
     """
     if path == "":
         raise ImportError("Empty path")
@@ -186,22 +203,23 @@ def load_saved_df(path: str) -> pd.DataFrame | None:
         return None
 
 
-def display_value(value: float, thousands_separator: str = ",", decimal_separator: str = ".") -> str:
+def display_value(value: int | float, thousands_separator: str = ",", decimal_separator: str = ".") -> str:
     """
     Display a value as a string with specific format.
 
     Parameters
     ----------
-    value : float
-        Value to display.
-    thousands_separator : str
+    value : int or float
+        Numeric value to display.
+    thousands_separator : str, default=","
         The separator used to separate thousands.
-    decimal_separator : str
+    decimal_separator : str, default="."
         The separator used to separate decimal values.
 
     Returns
     -------
     str
+        The formatted value.
 
     Examples
     --------
@@ -213,22 +231,27 @@ def display_value(value: float, thousands_separator: str = ",", decimal_separato
     return value_str.replace("/thousands/", thousands_separator).replace("/decimal/", decimal_separator)
 
 
-def replace_dict_values(obj: dict, replace_fn: Callable, *args) -> dict:
+def replace_dict_values(obj: dict[Any, Any], replace_fn: Callable[..., Any], *args: Any) -> dict[Any, Any]:
     """
     Recursively iterates over all values of obj and changes its values using the replace_fn
 
     Parameters
     ----------
-    obj : dict
-    replace_fn : callable
+    obj : dict[Any, Any]
+        Dictionary whose nested values are updated in place.
+    replace_fn : Callable[..., Any]
+        Function applied to numeric values, with ``args`` passed as additional arguments.
+    *args : Any
+        Additional positional arguments forwarded to ``replace_fn``.
 
     Returns
     -------
-    dict
+    dict[Any, Any]
+        The mutated input dictionary.
     """
     for k, v in obj.items():
         if isinstance(v, dict):
-            obj[k] = replace_dict_values(v, replace_fn)
+            obj[k] = replace_dict_values(v, replace_fn, *args)
         elif isinstance(v, Number):
             obj[k] = replace_fn(v, *args)
     return obj

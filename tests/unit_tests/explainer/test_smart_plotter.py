@@ -1263,6 +1263,103 @@ class TestSmartPlotter(unittest.TestCase):
 
         assert np.isclose(base_value, 0.6)
 
+    def test_get_waterfall_base_value_base_values_list_requires_label(self):
+        self.smart_explainer.explainer._case = "classification"
+        self.smart_explainer.explainer.explain_data = {"base_values": [np.array([0.1, 0.2]), np.array([0.3, 0.4])]}
+
+        with self.assertRaises(ValueError):
+            self.smart_explainer.plot._get_waterfall_base_value(["person_A"], label_num=None)
+
+    def test_get_waterfall_base_value_base_values_series(self):
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.explain_data = {
+            "base_values": pd.Series([1.5, 2.5], index=["person_A", "person_B"])
+        }
+
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_B"], label_num=None)
+
+        assert output == 2.5
+
+    def test_get_waterfall_base_value_base_values_ndarray_1d_class_vector(self):
+        self.smart_explainer.explainer._case = "classification"
+        self.smart_explainer.explainer._classes = [0, 1]
+        self.smart_explainer.explainer.explain_data = {"base_values": np.array([0.12, 0.34])}
+
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_A"], label_num=1)
+
+        assert np.isclose(output, 0.34)
+
+    def test_get_waterfall_base_value_base_values_ndarray_1d_per_sample(self):
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.explain_data = {"base_values": np.array([3.0, 4.0])}
+
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_B"], label_num=None)
+
+        assert np.isclose(output, 4.0)
+
+    def test_get_waterfall_base_value_base_values_ndarray_2d_per_sample_by_class(self):
+        self.smart_explainer.explainer._case = "classification"
+        self.smart_explainer.explainer._classes = [0, 1]
+        self.smart_explainer.explainer.explain_data = {"base_values": np.array([[0.1, 0.9], [0.2, 0.8]])}
+
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_B"], label_num=1)
+
+        assert np.isclose(output, 0.8)
+
+    def test_get_waterfall_base_value_expected_value_list_fallback(self):
+        self.smart_explainer.explainer._case = "classification"
+        self.smart_explainer.explainer._classes = [0, 1]
+        self.smart_explainer.explainer.explain_data = {}
+
+        class DummyExplainer:
+            expected_value = [0.11, 0.89]
+
+        self.smart_explainer.explainer.backend.explainer = DummyExplainer()
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_A"], label_num=1)
+
+        assert np.isclose(output, 0.89)
+
+    def test_get_waterfall_base_value_classification_y_pred_fallback(self):
+        self.smart_explainer.explainer._case = "classification"
+        self.smart_explainer.explainer._classes = [0, 1]
+        self.smart_explainer.explainer.explain_data = {}
+        self.smart_explainer.explainer.proba_values = None
+        self.smart_explainer.explainer.y_pred = pd.DataFrame([1, 0], index=["person_A", "person_B"], columns=["pred"])
+
+        class DummyExplainer:
+            pass
+
+        self.smart_explainer.explainer.backend.explainer = DummyExplainer()
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_A"], label_num=1)
+
+        assert np.isclose(output, 0.5)
+
+    def test_get_waterfall_base_value_default_zero(self):
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.explain_data = {}
+        self.smart_explainer.explainer.y_pred = None
+
+        class DummyExplainer:
+            pass
+
+        self.smart_explainer.explainer.backend.explainer = DummyExplainer()
+        output = self.smart_explainer.plot._get_waterfall_base_value(["person_A"], label_num=None)
+
+        assert output == 0.0
+
+    def test_get_waterfall_order_value_and_absolute(self):
+        contrib = [2.0, -3.0, 0.0, 1.0]
+
+        by_value = self.smart_explainer.plot._get_waterfall_order(contrib, order="value")
+        by_absolute = self.smart_explainer.plot._get_waterfall_order(contrib, order="absolute")
+
+        assert by_value == [0, 3, 2, 1]
+        assert by_absolute == [2, 3, 0, 1]
+
+    def test_get_waterfall_order_invalid(self):
+        with self.assertRaises(ValueError):
+            self.smart_explainer.plot._get_waterfall_order([1.0, -1.0], order="unknown")
+
     def test_contribution_plot_1(self):
         """
         Classification
@@ -2193,6 +2290,39 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].type == "bar"
         assert output.data[1].type == "bar"
         assert output.data[2].type == "bar"
+
+    def test_features_importance_page_invalid(self):
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.features_groups = None
+        self.smart_explainer.explainer.features_imp = pd.Series([1, 2, 3], index=["X1", "X2", "X3"])
+        self.smart_explainer.explainer.contributions = self.contrib1
+
+        with patch.object(self.smart_explainer.explainer, "compute_features_import", return_value=None):
+            with self.assertRaises(ValueError):
+                self.smart_explainer.plot.features_importance(page="invalid-page")
+
+    def test_features_importance_page_integer_wraparound(self):
+        self.smart_explainer.explainer._case = "regression"
+        self.smart_explainer.explainer.features_groups = None
+        self.smart_explainer.explainer.features_imp = pd.Series([1, 2, 3, 4, 5], index=["A", "B", "C", "D", "E"])
+        self.smart_explainer.explainer.contributions = pd.DataFrame(
+            [[1, 2, 3, 4, 5], [2, 3, 4, 5, 6]],
+            columns=["A", "B", "C", "D", "E"],
+            index=["person_A", "person_B"],
+        )
+        captured = {}
+
+        def fake_plot_feature_importance(**kwargs):
+            captured["global_feat_imp"] = kwargs["global_feat_imp"]
+            return go.Figure()
+
+        with patch.object(self.smart_explainer.explainer, "compute_features_import", return_value=None), patch(
+            "shapash.explainer.smart_plotter.plot_feature_importance", side_effect=fake_plot_feature_importance
+        ):
+            output = self.smart_explainer.plot.features_importance(page=4, max_features=2)
+
+        assert isinstance(output, go.Figure)
+        assert captured["global_feat_imp"].index.tolist() == ["D", "E"]
 
     def test_local_pred_1(self):
         xpl = self.smart_explainer.explainer
@@ -3196,6 +3326,47 @@ class TestSmartPlotter(unittest.TestCase):
         assert f"at least {approx*100:.0f}%" in output.data[0].hovertemplate
         assert f"Top {nb_features} features" in output.data[1].hovertemplate
 
+    @patch("shapash.explainer.explainer.Explainer.compute_features_compacity")
+    def test_compacity_plot_selection_none_triggers_compute(self, compute_features_compacity):
+        self.smart_explainer.explainer.features_compacity = None
+        self.smart_explainer.plot.last_compacity_selection = False
+
+        def _fake_compute(selection, tolerance, nb_features):
+            self.smart_explainer.explainer.features_compacity = {
+                "features_needed": [1] * len(selection),
+                "distance_reached": np.array([0.1] * len(selection)),
+            }
+
+        compute_features_compacity.side_effect = _fake_compute
+
+        self.smart_explainer.plot.compacity_plot(selection=None, force=False)
+
+        compute_features_compacity.assert_called_once()
+
+    def test_compacity_plot_invalid_selection_type(self):
+        with self.assertRaises(ValueError):
+            self.smart_explainer.plot.compacity_plot(selection="not-a-list")
+
+    def test_distribution_plot_with_and_without_target(self):
+        captured = {}
+
+        def fake_plot_distribution(data, col, **kwargs):
+            captured["columns"] = data.columns.tolist()
+            captured["col"] = col
+            return go.Figure()
+
+        self.smart_explainer.explainer.y_target = pd.DataFrame([0, 1], columns=["target"], index=self.x_init.index)
+        with patch("shapash.explainer.smart_plotter.plot_distribution", side_effect=fake_plot_distribution):
+            output = self.smart_explainer.plot.distribution_plot(col="X1", hue="target")
+        assert isinstance(output, go.Figure)
+        assert "target" in captured["columns"]
+
+        self.smart_explainer.explainer.y_target = None
+        with patch("shapash.explainer.smart_plotter.plot_distribution", side_effect=fake_plot_distribution):
+            output = self.smart_explainer.plot.distribution_plot(col="X1")
+        assert isinstance(output, go.Figure)
+        assert "target" not in captured["columns"]
+
         """
         Regression
         """
@@ -3653,6 +3824,30 @@ class TestSmartPlotter(unittest.TestCase):
         assert type(output) is go.Figure
         assert len(output.data) == 1
         assert output.data[0].type == "scatter"
+
+    def test_clustering_by_explainability_plot_missing_model(self):
+        explainer = type("NoModelExplainer", (), {})()
+        plotter = self.smart_explainer.plot.__class__(explainer, colors_dict=get_palette("default"))
+
+        with self.assertRaises(AssertionError):
+            plotter.clustering_by_explainability_plot()
+
+    def test_clustering_by_explainability_plot_invalid_case(self):
+        self.smart_explainer.explainer._case = "invalid"
+
+        with self.assertRaises(ValueError):
+            self.smart_explainer.plot.clustering_by_explainability_plot()
+
+    def test_clustering_by_explainability_plot_missing_contributions(self):
+        self.smart_explainer.explainer._case = "regression"
+        saved_contrib = self.smart_explainer.explainer.contributions
+        del self.smart_explainer.explainer.contributions
+
+        try:
+            with self.assertRaises(ValueError):
+                self.smart_explainer.plot.clustering_by_explainability_plot()
+        finally:
+            self.smart_explainer.explainer.contributions = saved_contrib
 
     def test_confusion_matrix_plot(self):
         """

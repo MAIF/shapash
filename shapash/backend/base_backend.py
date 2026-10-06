@@ -28,14 +28,14 @@ class BaseBackend(ABC):
     support_groups = True
     supported_cases = ["classification", "regression"]
 
-    def __init__(self, model: Any, preprocessing: Any | None = None):
+    def __init__(self, model: Any, preprocessing: Any | None = None) -> None:
         """Create a backend instance using a given implementation.
 
         Parameters
         ----------
-        model : any
+        model : Any
             Model used.
-        preprocessing: category_encoders, ColumnTransformer, list or dict
+        preprocessing : Any, optional
             The processing apply to the original data.
         """
         self.model = model
@@ -201,9 +201,22 @@ class BaseBackend(ABC):
             return contributions
 
 
-def _needs_preprocessing(result_cols, x, preprocessing):
-    """
-    Checks if preprocessing is needed depending on the preprocessing used.
+def _needs_preprocessing(result_cols: list[Any], x: pd.DataFrame, preprocessing: Any | None) -> bool:
+    """Check whether preprocessing is needed for the contribution columns.
+
+    Parameters
+    ----------
+    result_cols : list[Any]
+        Column names present in the contributions.
+    x : pd.DataFrame
+        The encoded input data.
+    preprocessing : Any or None
+        The preprocessing applied to the original data, if any.
+
+    Returns
+    -------
+    bool
+        Whether preprocessing is needed to map contribution columns.
     """
     mapping = get_preprocessing_mapping(x, preprocessing)
     cols_after_preprocessing = [x for list_c in mapping.values() for x in list_c]
