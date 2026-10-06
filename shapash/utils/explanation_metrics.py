@@ -226,11 +226,18 @@ def shap_neighbors(instance, x_encoded, contributions, mode, neighbor_positions=
     Returns
     -------
     norm_shap_values : array
-        Normalized SHAP values (with corresponding sign) of instance and its neighbors
+        Normalized SHAP values (with corresponding sign) in neighborhood order:
+        the selected instance first, followed by its neighbors in distance order.
     average_diff : array
         Variability (stddev / mean) of normalized SHAP values (using L1) across neighbors for each feature
     norm_abs_shap_values[0, :] : array
         Normalized absolute SHAP value of the instance
+
+    Raises
+    ------
+    ValueError
+        If `neighbor_positions` is omitted and duplicate feature rows make the
+        neighborhood row identities ambiguous.
     """
     # Extract SHAP values for instance and neighbors
     # :-2 indicates that two columns are disregarded : distance to instance and model output

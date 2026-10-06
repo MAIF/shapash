@@ -4,6 +4,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeClassifier
 
 from shapash.utils.explanation_metrics import (
     _compute_distance,
@@ -108,6 +109,26 @@ class TestExplanationMetrics(unittest.TestCase):
 
         assert positions[0][0] == 4
         assert len(positions[0]) == len(neighbors[0]) == 3
+
+    def test_find_neighbors_classification_returns_filtered_positions(self):
+        x = pd.DataFrame(
+            {
+                "A": [0.0, 0.1, 1.0, 1.1, 2.0, 2.1],
+                "B": [0.0, 0.1, 1.0, 1.1, 2.0, 2.1],
+            },
+            index=["low", "selected-low", "high", "selected-high", "higher", "highest"],
+        )
+        model = DecisionTreeClassifier(max_depth=1, random_state=0).fit(x, [0, 0, 1, 1, 1, 1])
+        selection = ["selected-high", "selected-low"]
+
+        with patch("shapash.utils.explanation_metrics._get_radius", return_value=np.inf):
+            neighbors, positions = find_neighbors(
+                selection, x, model, "classification", n_neighbors=3, return_positions=True
+            )
+
+        for selected, neighborhood, neighborhood_positions in zip(selection, neighbors, positions, strict=True):
+            assert neighborhood_positions[0] == x.index.get_loc(selected)
+            assert len(neighborhood_positions) == len(neighborhood)
 
     def test_shap_neighbors_uses_neighborhood_order_without_positions(self):
         x = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [1.0, 2.0, 3.0]})

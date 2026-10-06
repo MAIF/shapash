@@ -1295,36 +1295,48 @@ class TestSmartExplainer(unittest.TestCase):
         assert runtime_arg is block_instance
         assert runtime_arg.user_initialized is True
 
-    def test_compute_features_stability_1(self):
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list("ABCD"))
-        selection = [1, 3]
-        X = df.iloc[:, :-1]
-        y = df.iloc[:, -1]
-        model = DecisionTreeRegressor().fit(X, y)
-
+    @staticmethod
+    def _make_stability_explainer():
+        index = [f"row-{i}" for i in range(12)]
+        x = pd.DataFrame(
+            {
+                "A": [1.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 1.0, 1.1, 12.0, 13.0],
+                "B": [1.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 1.0, 1.0, 12.0, 13.0],
+            },
+            index=index,
+        )
+        contributions = pd.DataFrame(5.0, index=index, columns=x.columns)
+        contributions.loc["row-0"] = [9.0, 1.0]
+        contributions.loc["row-3"] = [2.0, 8.0]
+        contributions.loc["row-8"] = [1.0, 9.0]
+        model = DecisionTreeRegressor(random_state=0).fit(x, np.full(len(x), 10.0))
         xpl = SmartExplainer(model)
-        xpl.compile(x=X)
+        xpl.compile(x=x, contributions=contributions)
+        return xpl, contributions
 
-        xpl.explainer.compute_features_stability(selection)
-        expected = (len(selection), X.shape[1])
+    def test_compute_features_stability_multiple_rows_uses_selected_amplitudes(self):
+        xpl, contributions = self._make_stability_explainer()
+        selection = ["row-8", "row-3"]
 
-        assert xpl.explainer.features_stability["variability"].shape == expected
-        assert xpl.explainer.features_stability["amplitude"].shape == expected
+        with patch("shapash.utils.explanation_metrics._get_radius", return_value=np.inf):
+            xpl.explainer.compute_features_stability(selection)
 
-    def test_compute_features_stability_2(self):
-        df = pd.DataFrame(np.random.randint(1, 100, size=(15, 4)), columns=list("ABCD"))
-        selection = [1]
-        X = df.iloc[:, :-1]
-        y = df.iloc[:, -1]
-        model = DecisionTreeRegressor().fit(X, y)
+        expected_amplitude = contributions.loc[selection].abs().to_numpy()
+        expected_amplitude = expected_amplitude / expected_amplitude.sum(axis=1, keepdims=True)
+        assert np.allclose(xpl.explainer.features_stability["amplitude"], expected_amplitude)
+        assert xpl.explainer.features_stability["variability"].shape == expected_amplitude.shape
 
-        xpl = SmartExplainer(model)
-        xpl.compile(x=X)
+    def test_compute_features_stability_single_row_uses_selected_amplitude(self):
+        xpl, contributions = self._make_stability_explainer()
+        selection = ["row-8"]
 
-        xpl.explainer.compute_features_stability(selection)
-        expected = X.shape[1]
+        with patch("shapash.utils.explanation_metrics._get_radius", return_value=np.inf):
+            xpl.explainer.compute_features_stability(selection)
 
-        assert xpl.explainer.local_neighbors["norm_shap"].shape[1] == expected
+        expected_amplitude = contributions.loc[selection[0]].abs().to_numpy()
+        expected_amplitude = expected_amplitude / expected_amplitude.sum()
+        actual_amplitude = np.abs(xpl.explainer.local_neighbors["norm_shap"][0])
+        assert np.allclose(actual_amplitude, expected_amplitude)
 
     def test_compute_features_compacity(self):
         df = pd.DataFrame(np.random.randint(0, 100, size=(15, 4)), columns=list("ABCD"))
