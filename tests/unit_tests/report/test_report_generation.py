@@ -140,9 +140,9 @@ class TestSmartReportPanel(unittest.TestCase):
         base_rules = css.split(".report-sidebar", maxsplit=1)[1].split("}", maxsplit=1)[0]
         responsive_rules = css.split("@media (max-width: 1200px)", maxsplit=1)[1]
         sidebar_rules = responsive_rules.split(".report-sidebar", maxsplit=1)[1].split("}", maxsplit=1)[0]
-        self.assertIn("height: max-content;", main_rules)
+        self.assertIn("overflow: visible !important;", main_rules)
         self.assertIn("position: sticky;", base_rules)
-        self.assertNotIn("position: static;", sidebar_rules)
+        self.assertIn("position: static;", sidebar_rules)
 
     def test_apply_report_css_registers_styles_once(self):
         css_path = Path(__file__).resolve().parents[3] / "shapash" / "report" / "assets"  / "report_styles.css"

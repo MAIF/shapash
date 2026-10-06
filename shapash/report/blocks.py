@@ -426,7 +426,7 @@ class ReportBlockMixin:
 
         content: list[Any] = [
             pn.pane.Markdown(
-                "\n".join(
+                "  \n".join(
                     [
                         f"**Model used**: {model.__class__.__name__}",
                         f"**Library**: {model_module}",
