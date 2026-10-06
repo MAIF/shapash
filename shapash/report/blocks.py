@@ -24,6 +24,7 @@ from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
 if TYPE_CHECKING:
+    from shapash.explainer import SmartExplainer
     from shapash.explainer.explainer import Explainer
 logger = logging.getLogger(__name__)
 
@@ -102,15 +103,14 @@ class ReportBlockMixin:
 
     def __init__(
         self,
-        explainer: Explainer | None = None,
-        colors_dict: dict[str, Any] | None = None,
+        explainer: SmartExplainer | None = None,
         x_train: pd.DataFrame | None = None,
         y_train: pd.Series | pd.DataFrame | list[Any] | None = None,
         y_test: pd.Series | pd.DataFrame | list[Any] | None = None,
         max_points: int = 200,
     ) -> None:
-        self.explainer = explainer
-        self.colors_dict = colors_dict if colors_dict is not None else {}
+        self.smart_explainer = explainer
+        self.explainer = explainer.explainer if explainer else None
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
         self.x_init = getattr(self.explainer, "x_init", None)
@@ -994,12 +994,12 @@ class ReportBlockMixin:
         --------
         >>> runtime.block_confusion_matrix()
         """
-        colors_dict = self._require_colors_dict("confusion_matrix")
+        smart_explainer = self._require_smart_explainer("confusion_matrix")
         if self.y_test is None or self.y_pred is None:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         y_test = cast(TargetValues, self.y_test)
         y_pred = cast(TargetValues, self.y_pred)
-        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=colors_dict)
+        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.colors_dict)
         if title is None:
             return "Confusion matrix", [fig]
         return title, [fig]
@@ -1231,10 +1231,10 @@ class ReportBlockMixin:
             raise ValueError(f"{block_type} block requires an explainer on the report instance.")
         return self.explainer
 
-    def _require_colors_dict(self, block_type: str) -> dict[str, Any]:
-        if not self.colors_dict:
-            raise ValueError(f"{block_type} block requires a colors_dict on the report instance.")
-        return self.colors_dict
+    def _require_smart_explainer(self, block_type: str) -> SmartExplainer:
+        if self.smart_explainer is None:
+            raise ValueError(f"{block_type} block requires a smart_explainer on the report instance.")
+        return self.smart_explainer
 
     def _require_train_test_data(self, block_type: str) -> pd.DataFrame:
         if self.df_train_test is None:
@@ -1246,6 +1246,6 @@ class ReportBlockMixin:
             return feature
         return self.explainer.features_dict.get(feature, feature)
 
-    def _feature_distribution_colors(self) -> dict:
-        colors_dict = self._require_colors_dict("feature_distribution")
-        return colors_dict["report_feature_distribution"]
+    def _feature_distribution_colors(self) -> dict[str, Any]:
+        smart_explainer = self._require_smart_explainer("feature_distribution")
+        return smart_explainer.colors_dict["report_feature_distribution"]

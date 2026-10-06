@@ -113,8 +113,7 @@ def _build_runtime() -> ReportBlockMixin:
         y_target=y_test,
     )
     return ReportBlockMixin(
-        explainer=explainer.explainer,
-        colors_dict=explainer.colors_dict,
+        explainer=explainer,
         x_train=x_train,
         y_train=y_train,
         y_test=y_test,
@@ -521,7 +520,7 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(univariate_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(univariate_result.objects[2]).__name__, "ParamFunction")
 
-    def test_colors_dict_required_for_report_colors(self):
+    def test_smart_explainer_required(self):
         rbm = ReportBlockMixin()
         with pytest.raises(ValueError):
-            rbm._require_colors_dict("block_type")
+            rbm._require_smart_explainer("block_type")
