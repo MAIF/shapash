@@ -202,15 +202,24 @@ class LimeBackend(BaseBackend):
 
         Parameters
         ----------
+        x : pd.DataFrame
+            Input observations to explain. Each row is explained once with
+            :meth:`lime.lime_tabular.LimeTabularExplainer.explain_instance`.
+        feature_names : list[str]
+            Ordered list of feature names used to build each per-class
+            contributions dataframe and preserve the original column order.
         predict_fn : Callable
             Batch prediction callable passed to LIME. It must accept multiple
             perturbed rows at once and return class probabilities, with one output
             row per input row (shape ``(n_samples, n_classes)``).
+        num_classes : int
+            Number of target classes to explain.
 
         Returns
         -------
-        tuple[pd.DataFrame, np.ndarray]
-            - One DataFrame of shape (n_samples, n_features) per class.
+        tuple[list[pd.DataFrame], np.ndarray]
+            - One DataFrame of shape (n_samples, n_features) per class,
+              ordered by class index.
             - Local intercepts of shape (n_samples, n_classes).
         """
         # One explain_instance call per sample — O(n_samples)
