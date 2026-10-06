@@ -86,9 +86,6 @@ def _add_css_classes(viewable: pn.viewable.Viewable, *classes: str) -> pn.viewab
 
 
 def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
-    if isinstance(viewable, pn.pane.HTML):
-        return viewable
-
     if isinstance(viewable, pn.pane.Markdown):
         return _add_css_classes(viewable, "content-block")
 
@@ -97,6 +94,9 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
         if getattr(viewable, "width_policy", None) == "min":
             classes.append("fit-content-table")
         return _add_css_classes(viewable, *classes)
+
+    if isinstance(viewable, pn.pane.HTML):
+        return viewable
 
     if isinstance(viewable, pn.pane.Plotly):
         return viewable
