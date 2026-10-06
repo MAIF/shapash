@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
-from shapash.report.core import build_navigation_bar
+from shapash.report.core import _inject_favicon_links, _resolve_report_title, build_navigation_bar
 from shapash.report.panel_support import apply_report_css
 
 import pytest
@@ -125,6 +125,32 @@ def test_report_runtime_uses_prediction_data_from_underlying_explainer():
 
     assert runtime.x_init is runtime.explainer.x_init
     assert runtime.df_train_test["data_train_test"].value_counts().to_dict() == {"test": 3, "train": 3}
+
+
+def test_inject_favicon_links_replaces_existing_icons():
+        html_text = """
+<html>
+    <head>
+        <title>Panel</title>
+        <link rel=\"icon\" href=\"https://cdn.example/icon.png\">
+    </head>
+    <body></body>
+</html>
+"""
+        updated = _inject_favicon_links(html_text, favicon_href="data:image/png;base64,AAA")
+
+        assert "<title>Panel</title>" in updated
+        assert "https://cdn.example/icon.png" not in updated
+        assert '<link rel="icon" href="data:image/png;base64,AAA">' in updated
+        assert '<link rel="shortcut icon" href="data:image/png;base64,AAA">' in updated
+        assert '<link rel="apple-touch-icon" href="data:image/png;base64,AAA">' in updated
+
+
+def test_resolve_report_title_falls_back_to_default_when_missing():
+        class _RuntimeWithoutTitle:
+                smart_explainer = type("SE", (), {"title_story": ""})()
+
+        assert _resolve_report_title(_RuntimeWithoutTitle(), report_title=None) == "Shapash Report"
 
 
 class TestSmartReportPanel(unittest.TestCase):

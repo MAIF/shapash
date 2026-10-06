@@ -1444,6 +1444,7 @@ class TestSmartExplainer(unittest.TestCase):
             runtime=runtime_arg,
             config_file=unittest.mock.ANY,
             output_file="test",
+            report_title="",
         )
 
     @patch("shapash.explainer.smart_explainer.generate_smart_report")
