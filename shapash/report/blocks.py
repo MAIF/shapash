@@ -396,9 +396,19 @@ class ReportBlockMixin:
                 }
             )
             params_table = (
-                pn.pane.DataFrame(left_df, index=show_index, width_policy="min", sizing_mode="stretch_width"),
+                pn.pane.DataFrame(
+                    left_df,
+                    index=show_index,
+                    width_policy="min",
+                    sizing_mode="stretch_width",
+                ),
                 pn.Spacer(width=24),
-                pn.pane.DataFrame(right_df, index=show_index, width_policy="min", sizing_mode="stretch_width"),
+                pn.pane.DataFrame(
+                    right_df,
+                    index=show_index,
+                    width_policy="min",
+                    sizing_mode="stretch_width",
+                ),
             )
         else:
             params_df = pd.DataFrame(

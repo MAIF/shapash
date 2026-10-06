@@ -67,6 +67,7 @@ def generate_report(runtime: _ReportBlockRenderer, config_file: Path, output_fil
         If the output directory or HTML report cannot be written.
     """
     pn.extension("plotly")
+    pn.config.respect_explicit_sizing = True
     cfg_path = config_file.resolve()
     cfg = load_report_config(cfg_path)
     print(f"Loading config → {cfg_path}")
