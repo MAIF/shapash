@@ -3,7 +3,7 @@ import warnings
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_line_break, adjust_title_height, truncate_str
+from shapash.utils.utils import add_line_break, adjust_title_height, format_missing_value, truncate_str
 
 
 def plot_line_comparison(
@@ -108,7 +108,7 @@ def plot_line_comparison(
                 f"Id: <b>{add_line_break(id_i, 40, 160)}</b>"
                 + f"<br /><b>{add_line_break(feat, 40, 160)}</b> <br />"
                 + f"Contribution: {contrib[i]:.4f} <br />Value: "
-                + str(add_line_break(pred_x_val, 40, 160))
+                + str(add_line_break(format_missing_value(pred_x_val), 40, 160))
             )
 
         lines.append(

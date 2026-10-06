@@ -4,10 +4,12 @@ import numpy as np
 import pandas as pd
 
 from shapash.utils.utils import (
+    MISSING_VALUE_DISPLAY,
     add_line_break,
     compute_digit_number,
     compute_sorted_variables_interactions_list_indices,
     compute_top_correlations_features,
+    format_missing_value,
     inclusion,
     is_nested_list,
     maximum_difference_sort_value,
@@ -160,3 +162,34 @@ class TestUtils(unittest.TestCase):
         list_features = compute_top_correlations_features(corr=corr, max_features=5)
 
         assert len(list_features) == 5
+
+    def test_format_missing_value_1(self):
+        """
+        Test null values are unified to the missing display value
+        """
+        assert format_missing_value(np.nan) == MISSING_VALUE_DISPLAY
+        assert format_missing_value(None) == MISSING_VALUE_DISPLAY
+        assert format_missing_value(pd.NA) == MISSING_VALUE_DISPLAY
+        assert format_missing_value(pd.NaT) == MISSING_VALUE_DISPLAY
+
+    def test_format_missing_value_2(self):
+        """
+        Test non-null values are kept unchanged
+        """
+        assert format_missing_value("") == ""
+        assert format_missing_value(0) == 0
+        assert format_missing_value(3.2) == 3.2
+        assert format_missing_value("abc") == "abc"
+
+    def test_format_missing_value_3(self):
+        """
+        Test non-scalar values are kept unchanged
+        """
+        value = [1, np.nan]
+        assert format_missing_value(value) is value
+
+    def test_format_missing_value_4(self):
+        """
+        Test custom missing display value
+        """
+        assert format_missing_value(np.nan, missing_display="N/A") == "N/A"
