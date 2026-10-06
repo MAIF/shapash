@@ -1,20 +1,22 @@
+from typing import Any, Literal
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import normalize
 
 
-def _df_to_array(instances):
+def _df_to_array(instances: pd.DataFrame | pd.Series | np.ndarray) -> np.ndarray:
     """
     Transform inputs into arrays
 
     Parameters
     ----------
-    instances : DataFrame, Series or array
+    instances : pandas.DataFrame, pandas.Series or numpy.ndarray
         Input data
 
     Returns
     -------
-    instances : array
+    numpy.ndarray
         Transformed features
     """
     if isinstance(instances, pd.DataFrame):
@@ -25,18 +27,20 @@ def _df_to_array(instances):
         return instances
 
 
-def _compute_distance(x1, x2, mean_vector, epsilon=0.0000001):
+def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, epsilon: float = 0.0000001) -> float:
     """
     Compute distances between data points by using L1 on normalized data : sum(abs(x1-x2)/(mean_vector+epsilon))
 
     Parameters
     ----------
-    x1 : array
+    x1 : numpy.ndarray
         First vector
-    x2 : array
+    x2 : numpy.ndarray
         Second vector
-    mean_vector : array
+    mean_vector : numpy.ndarray
         Each value of this vector is the std.dev for each feature in dataset
+    epsilon : float, optional
+        Small value added to the standard deviation to avoid division by zero, by default 0.0000001
 
     Returns
     -------
@@ -47,15 +51,15 @@ def _compute_distance(x1, x2, mean_vector, epsilon=0.0000001):
     return diff
 
 
-def _compute_similarities(instance, dataset):
+def _compute_similarities(instance: np.ndarray, dataset: np.ndarray) -> np.ndarray:
     """
     Compute pairwise distances between an instance and all other data points
 
     Parameters
     ----------
-    instance : 1D array
+    instance : 1D numpy.ndarray
         Reference data point
-    dataset : 2D array
+    dataset : 2D numpy.ndarray
         Entire dataset used to identify neighbors
 
     Returns
@@ -74,19 +78,19 @@ def _compute_similarities(instance, dataset):
     return similarity_distance
 
 
-def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
+def _get_radius(dataset: np.ndarray, n_neighbors: int, sample_size: int = 500, percentile: float = 95) -> float:
     """
     Calculate the maximum allowed distance between points to be considered as neighbors
 
     Parameters
     ----------
-    dataset : DataFrame
+    dataset : numpy.ndarray
         Pool to sample from and calculate a radius
     n_neighbors : int
         Maximum number of neighbors considered per instance
     sample_size : int, optional
         Number of data points to sample from dataset, by default 500
-    percentile : int, optional
+    percentile : float, optional
         Percentile used to calculate the distance threshold, by default 95
 
     Returns
@@ -115,7 +119,14 @@ def _get_radius(dataset, n_neighbors, sample_size=500, percentile=95):
     return np.percentile(ordered_x.flatten(), percentile)
 
 
-def find_neighbors(selection, dataset, model, mode, n_neighbors=10, return_positions=False):
+def find_neighbors(
+    selection: list[Any],
+    dataset: pd.DataFrame,
+    model: Any,
+    mode: Literal["classification", "regression"],
+    n_neighbors: int = 10,
+    return_positions: bool = False,
+) -> list[np.ndarray] | tuple[list[np.ndarray], list[np.ndarray]]:
     """
     For each instance, select neighbors based on 3 criteria:
 
@@ -125,13 +136,13 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10, return_posit
 
     Parameters
     ----------
-    selection : list
-        Indices of rows to be displayed on the stability plot
-    dataset : DataFrame
+    selection : list[Any]
+        Row labels to be displayed on the stability plot
+    dataset : pandas.DataFrame
         Entire dataset used to identify neighbors
-    model : model object
-        ML model
-    mode : str
+    model : Any
+        ML model with a ``predict`` method for regression or a ``predict_proba`` method for classification
+    mode : {"classification", "regression"}
         "classification" or "regression"
     n_neighbors : int, optional
         Top N neighbors initially allowed, by default 10
@@ -140,16 +151,16 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10, return_posit
 
     Returns
     -------
-    all_neighbors : list of 2D arrays
+    list of numpy.ndarray
         Wrap all instances with corresponding neighbors in a list with length (#instances).
-        Each array has shape (#neighbors, #features) where #neighbors includes the instance itself.
-    all_positions : list of arrays, optional
-        Dataset row positions for each neighborhood, returned when `return_positions` is True.
+        Each array has shape (#neighbors, #features + 2), including the instance, its distance, and its prediction.
+    all_positions : list of numpy.ndarray, optional
+        Dataset row positions for each neighborhood, returned when ``return_positions`` is True.
     """
     instances = dataset.loc[selection].values
     selected_positions = dataset.index.get_indexer_for(selection)
 
-    all_neighbors = np.empty((0, instances.shape[1] + 1), float)
+    neighbor_rows = np.empty((0, instances.shape[1] + 1), float)
     all_positions = []
     """Filter 1 : Pick top N closest neighbors"""
     for selected_position, instance in zip(selected_positions, instances, strict=True):
@@ -163,20 +174,20 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10, return_posit
         neighbors = dataset.values[neighbors_indices]
         # Add distance column
         neighbors = np.append(neighbors, c[neighbors_indices].reshape(n_neighbors + 1, 1), axis=1)
-        all_neighbors = np.append(all_neighbors, neighbors, axis=0)
+        neighbor_rows = np.append(neighbor_rows, neighbors, axis=0)
         all_positions.append(neighbors_indices)
 
     # Calculate predictions for all instances and corresponding neighbors
     if mode == "regression":
         # For XGB it is necessary to add columns in df, otherwise columns mismatch
-        predictions = model.predict(pd.DataFrame(all_neighbors[:, :-1], columns=dataset.columns))
+        predictions = model.predict(pd.DataFrame(neighbor_rows[:, :-1], columns=dataset.columns))
     elif mode == "classification":
-        predictions = model.predict_proba(pd.DataFrame(all_neighbors[:, :-1], columns=dataset.columns))[:, 1]
+        predictions = model.predict_proba(pd.DataFrame(neighbor_rows[:, :-1], columns=dataset.columns))[:, 1]
 
     # Add prediction column
-    all_neighbors = np.append(all_neighbors, predictions.reshape(all_neighbors.shape[0], 1), axis=1)
+    neighbor_rows = np.append(neighbor_rows, predictions.reshape(neighbor_rows.shape[0], 1), axis=1)
     # Split back into original chunks (1 chunck = instance + neighbors)
-    all_neighbors = np.split(all_neighbors, instances.shape[0])
+    all_neighbors = np.split(neighbor_rows, instances.shape[0])
 
     """Filter 2 : neighbors with similar blackbox output"""
     # Remove points if prediction is far away from instance prediction
@@ -206,44 +217,59 @@ def find_neighbors(selection, dataset, model, mode, n_neighbors=10, return_posit
     return all_neighbors
 
 
-def shap_neighbors(instance, x_encoded, contributions, mode, neighbor_positions=None):
+def shap_neighbors(
+    instance: np.ndarray,
+    x_encoded: pd.DataFrame,
+    contributions: pd.DataFrame | list[pd.DataFrame],
+    mode: Literal["classification", "regression"],
+    neighbor_positions: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     For an instance and corresponding neighbors, calculate various
     metrics (described below) that are useful to evaluate local stability
 
     Parameters
     ----------
-    instance : 2D array
+    instance : numpy.ndarray
         Instance + neighbours with corresponding features
-    x_encoded : DataFrame
+    x_encoded : pandas.DataFrame
         Entire dataset used to identify neighbors
-    contributions : DataFrame
-        Calculated contribution values for the dataset
-    neighbor_positions : array, optional
-        Dataset row positions returned by `find_neighbors`. Required to distinguish rows
+    contributions : pandas.DataFrame or list of pandas.DataFrame
+        Calculated contribution values for the dataset, optionally one DataFrame per class
+    mode : {"classification", "regression"}
+        Prediction task. For binary classification, contributions for the positive class are used.
+    neighbor_positions : numpy.ndarray, optional
+        Dataset row positions returned by ``find_neighbors``. Required to distinguish rows
         with identical feature values.
 
     Returns
     -------
-    norm_shap_values : array
-        Normalized SHAP values (with corresponding sign) in neighborhood order:
-        the selected instance first, followed by its neighbors in distance order.
-    average_diff : array
+    tuple of numpy.ndarray
+        ``(norm_shap_values, average_diff, norm_abs_shap_values[0, :])``
+
+        norm_shap_values : numpy.ndarray
+        Normalized SHAP values (with corresponding sign) in neighborhood order: the selected
+        instance first, followed by its neighbors in distance order.
+        average_diff : numpy.ndarray
         Variability (stddev / mean) of normalized SHAP values (using L1) across neighbors for each feature
-    norm_abs_shap_values[0, :] : array
+        norm_abs_shap_values[0, :] : numpy.ndarray
         Normalized absolute SHAP value of the instance
 
     Raises
     ------
     ValueError
-        If `neighbor_positions` is omitted and duplicate feature rows make the
+        If a list of contributions is incompatible with the selected mode, or if
+        ``neighbor_positions`` is omitted and duplicate feature rows make the
         neighborhood row identities ambiguous.
     """
     # Extract SHAP values for instance and neighbors
     # :-2 indicates that two columns are disregarded : distance to instance and model output
     # If classification, select contrbutions of one class only
-    if mode == "classification" and len(contributions) == 2:
-        contributions = contributions[1]
+    if isinstance(contributions, list):
+        if mode == "classification" and len(contributions) == 2:
+            contributions = contributions[1]
+        else:
+            raise ValueError("Expected a single contribution DataFrame for the selected mode")
     if neighbor_positions is None:
         ind = (
             pd.merge(pd.DataFrame(instance[:, :-2], columns=x_encoded.columns), x_encoded.reset_index(), how="inner")
@@ -271,7 +297,12 @@ def shap_neighbors(instance, x_encoded, contributions, mode, neighbor_positions=
     return norm_shap_values, average_diff, norm_abs_shap_values[0, :]
 
 
-def get_min_nb_features(selection, contributions, mode, distance):
+def get_min_nb_features(
+    selection: list[Any],
+    contributions: pd.DataFrame | list[pd.DataFrame],
+    mode: Literal["classification", "regression"],
+    distance: float,
+) -> list[int]:
     """
     Determine the minimum number of features needed for the prediction \
     of the interpretability method to be *close enough* \
@@ -293,25 +324,28 @@ def get_min_nb_features(selection, contributions, mode, distance):
 
     Parameters
     ----------
-    selection : list
-        Indices of rows to be displayed on the stability plot
-    contributions : DataFrame
-        Calculated contribution values for the dataset
-    mode : str
+    selection : list[Any]
+        Row labels to analyze
+    contributions : pandas.DataFrame or list of pandas.DataFrame
+        Calculated contribution values for the dataset, optionally one DataFrame per class
+    mode : {"classification", "regression"}
         "classification" or "regression"
-    distance : float, optional
-        How close we want to be from model with all features, by default 0.1 (10%)
+    distance : float
+        How close we want to be from the model with all features, between 0 and 1
 
     Returns
     -------
-    features_needed : list
+    list of int
         List of minimum number of required features (for each instance) to be close enough to the prediction (ex: [4, 7, 8...])
     """
     if not (0 <= distance <= 1):
         raise ValueError("Distance should be between 0 and 1")
 
-    if mode == "classification" and len(contributions) == 2:
-        contributions = contributions[1]
+    if isinstance(contributions, list):
+        if mode == "classification" and len(contributions) == 2:
+            contributions = contributions[1]
+        else:
+            raise ValueError("Expected a single contribution DataFrame for the selected mode")
     contributions = contributions.loc[selection].values
     features_needed = []
     # For each instance, add features one by one (ordered by SHAP) until we get close enough
@@ -335,36 +369,44 @@ def get_min_nb_features(selection, contributions, mode, distance):
     return features_needed
 
 
-def get_distance(selection, contributions, mode, nb_features):
+def get_distance(
+    selection: list[Any],
+    contributions: pd.DataFrame | list[pd.DataFrame],
+    mode: Literal["classification", "regression"],
+    nb_features: int,
+) -> np.ndarray:
     """
     Determine how close we get to the output with all features by using only a subset of them
 
     Parameters
     ----------
-    selection : list
-        Indices of rows to be displayed on the stability plot
-    contributions : DataFrame
-        Calculated contribution values for the dataset
-    mode : str
+    selection : list[Any]
+        Row labels to analyze
+    contributions : pandas.DataFrame or list of pandas.DataFrame
+        Calculated contribution values for the dataset, optionally one DataFrame per class
+    mode : {"classification", "regression"}
         "classification" or "regression"
-    nb_features : int, optional
-        Number of features used, by default 5
+    nb_features : int
+        Number of features used
 
     Returns
     -------
-    distance : array
+    numpy.ndarray
         List of distances for each instance by using top selected features (ex: np.array([0.12, 0.16...])).
 
         * For regression:
 
             * normalized distance between the output of current model and output of full model
 
-        * For classifciation:
+        * For classification:
 
             * distance between probability outputs (absolute value)
     """
-    if mode == "classification" and len(contributions) == 2:
-        contributions = contributions[1]
+    if isinstance(contributions, list):
+        if mode == "classification" and len(contributions) == 2:
+            contributions = contributions[1]
+        else:
+            raise ValueError("Expected a single contribution DataFrame for the selected mode")
     if nb_features > contributions.shape[1]:
         raise ValueError(
             f"nb_features ({nb_features}) exceeds the number of available features ({contributions.shape[1]})"
