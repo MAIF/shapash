@@ -78,9 +78,10 @@ how rows are sampled.
 The sentence-highlight attribution method is selectable (a Captum-backed alternative to the default,
 see the ``[nlp]`` extra):
 
-* ``--attribution {shap,lig}`` — sentence-highlight method: ``shap`` (KernelSHAP, default) or ``lig``
-  (Captum ``LayerIntegratedGradients``). The two are cached in **separate** subdirectories, so you can
-  flip between them freely without ``--recompute``.
+* ``--attribution {shap,lig}`` — sentence-highlight method: ``shap`` (SHAP's Partition explainer,
+  masking the model's token ids; default) or ``lig`` (Captum ``LayerIntegratedGradients``). The two
+  are cached in **separate** subdirectories, so you can flip between them freely without
+  ``--recompute``.
 * ``--output-space {probability,logit}`` — the space the contributions live in. ``shap`` explains the
   softmax probabilities by default and can explain the raw logits instead; ``lig`` is always ``logit``
   (passing ``probability`` with it is rejected). The space is part of the cache key, so switching needs
@@ -89,9 +90,10 @@ see the ``[nlp]`` extra):
   100-step integration instead of running it through the model in one shot. Lower it (e.g. ``2`` or
   ``1``) if you hit a CUDA out-of-memory error, especially on memory-hungry architectures like DeBERTa.
 
-``lig`` is also the method most sensitive to *truncation* actually being configured — every HF
-classifier here is built through ``HFClassifierModel.from_pretrained(..., max_length="auto")``, which
-resolves a safe length even when the checkpoint's tokenizer reports none.
+Both methods explain the model's own encoding, so both depend on *truncation* actually being
+configured — every HF classifier here is built through
+``HFClassifierModel.from_pretrained(..., max_length="auto")``, which resolves a safe length even when
+the checkpoint's tokenizer reports none.
 
 Both counterfactual generators are offered live in the What-if Lab — ``hotflip`` (gradient-based token
 substitution) and ``ablation`` (leave-one-out token removal) — and are switched from a
@@ -963,9 +965,9 @@ def build_reducer() -> pacmap.PaCMAP:
     """The dimensionality reducer for the scatter — a *demo* choice, not a library one.
 
     ``NlpExplainer.compute_embeddings`` owns everything that must stay consistent (which space the
-    texts are embedded in, and the caching of the vectors); the reducer is applied on top, because which manifold method suits your data is a modelling decision.
-    PaCMAP is a good default for text clusters; swap in UMAP, t-SNE, or drop the argument entirely for
-    the built-in PCA.
+    texts are embedded in, and the caching of the vectors); the reducer is applied on top, because
+    which manifold method suits your data is a modelling decision. PaCMAP is a good default for text
+    clusters; swap in UMAP, t-SNE, or drop the argument entirely for the built-in PCA.
     """
     return pacmap.PaCMAP(n_components=2, n_neighbors=5, MN_ratio=0.5, FP_ratio=2.0)
 
@@ -1059,10 +1061,11 @@ def main() -> None:
     # exactly what fit's precompute branch keys on.)
 
     logger.info(
-        "attribution=%s (%s) | counterfactual=%s | can_edit=%s | can_counterfactual=%s | can_find_similar=%s"
-        " | can_detect_label_noise=%s | can_probe_labels=%s",
+        "attribution=%s (%s, masking=%s) | counterfactual=%s | can_edit=%s | can_counterfactual=%s"
+        " | can_find_similar=%s | can_detect_label_noise=%s | can_probe_labels=%s",
         config.attribution,
         xpl.backend.output_space,
+        getattr(xpl.backend, "masking", "-"),  # SHAP only: token ids, or strings for a pipeline-only model
         ",".join(name for name, _ in xpl.available_cf_generators()) or "none",
         xpl.can_edit(),
         xpl.can_counterfactual(),
