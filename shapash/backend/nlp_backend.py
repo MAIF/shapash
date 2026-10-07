@@ -58,11 +58,17 @@ class NlpContributions:
         Baseline prediction for each sample, shape ``(n_samples, n_classes)``
         or ``(n_samples,)``. ``None`` when the backend has no reference at all
         (see :attr:`NlpBackend.reference_kind`).
+    token_spans : list[list[tuple[tuple[int, int], ...]]] or None
+        Per sample, per unit: the ``(start, end)`` character spans of the source text the unit
+        stands for — one for a word, one per occurrence for a bag-of-words unit, none when the
+        backend could not place it. The coordinate backends share (see
+        :mod:`shapash.compute.spans`). ``None`` when the backend records no spans at all.
     """
 
     token_strings: list[list[str]]
     values: list[np.ndarray]
     base_values: np.ndarray | None
+    token_spans: list[list[tuple[tuple[int, int], ...]]] | None = None
 
 
 class NlpBackend(Backend):
@@ -196,6 +202,7 @@ class NlpBackend(Backend):
             token_strings=[explain_data.token_strings[i] for i in subset],
             values=[explain_data.values[i] for i in subset],
             base_values=None if base_values is None else base_values[subset],
+            token_spans=None if explain_data.token_spans is None else [explain_data.token_spans[i] for i in subset],
         )
 
     def _progress_iter(self, items: list[str]) -> Iterable[str]:

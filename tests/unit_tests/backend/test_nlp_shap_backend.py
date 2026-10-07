@@ -10,7 +10,7 @@ from unittest.mock import patch
 import numpy as np
 
 from shapash.backend import NlpShapBackend, get_backend_cls_from_name
-from shapash.backend.nlp_shap_backend import _aggregate_subwords
+from shapash.backend.nlp_shap_backend import _aggregate_subwords, _segment_offsets
 from shapash.model.base import SupportsLogits, TextModel
 
 
@@ -32,7 +32,7 @@ class TestAggregateSubwords(unittest.TestCase):
         contribs = np.array([[1.0, 0.0], [2.0, 1.0], [3.0, 2.0], [4.0, 3.0], [5.0, 4.0], [6.0, 5.0]], dtype=float)
         base = np.array([10.0, 20.0])
 
-        words, word_contribs, new_base = _aggregate_subwords(tokens, contribs, base)
+        words, word_contribs, new_base, _ = _aggregate_subwords(tokens, contribs, base)
 
         self.assertEqual(words, ["i", "am", "happy"])
         # "happy" = "hap" + "py ": contributions summed.
@@ -48,7 +48,7 @@ class TestAggregateSubwords(unittest.TestCase):
         contribs = np.arange(8 * 2, dtype=float).reshape(8, 2)
         base = np.zeros(2)
 
-        words, word_contribs, new_base = _aggregate_subwords(tokens, contribs, base)
+        words, word_contribs, new_base, _ = _aggregate_subwords(tokens, contribs, base)
 
         self.assertEqual(words, ["i", "don", "'", "t", "feel", "sad"])
         np.testing.assert_allclose(new_base + word_contribs.sum(axis=0), base + contribs.sum(axis=0))
@@ -81,7 +81,7 @@ class TestAggregateSubwords(unittest.TestCase):
         ]
         contribs = np.arange(len(tokens), dtype=float).reshape(-1, 1)
 
-        words, word_contribs, new_base = _aggregate_subwords(tokens, contribs, np.zeros(1))
+        words, word_contribs, new_base, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
 
         self.assertEqual(
             words,
@@ -115,7 +115,7 @@ class TestAggregateSubwords(unittest.TestCase):
         tokens = ["", "The", " acting", " was", " superb", "!", "!", "!", " I", " enjoy", ""]
         contribs = np.arange(len(tokens), dtype=float).reshape(-1, 1)
 
-        words, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
+        words, _, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
 
         self.assertEqual(words, ["The", "acting", "was", "superb", "!", "!", "!", "I", "enjoy"])
 
@@ -123,7 +123,7 @@ class TestAggregateSubwords(unittest.TestCase):
         for tokens in (["up", "dating "], [" up", "dating"]):
             with self.subTest(tokens=tokens):
                 contribs = np.array([[1.0], [2.0]])
-                words, word_contribs, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
+                words, word_contribs, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
                 self.assertEqual(words, ["updating"])
                 np.testing.assert_allclose(word_contribs, [[3.0]])
 
@@ -131,7 +131,7 @@ class TestAggregateSubwords(unittest.TestCase):
         # CJK has no inter-word spaces, so a character-class rule would see one long word run.
         tokens = ["\u6211", "\u559c", "\u6b22"]
         contribs = np.arange(3, dtype=float).reshape(-1, 1)
-        words, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
+        words, _, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
         self.assertEqual(words, ["\u6211", "\u559c", "\u6b22"])
 
     def test_korean_subwords_still_merge(self):
@@ -139,7 +139,7 @@ class TestAggregateSubwords(unittest.TestCase):
         # Hangul is deliberately excluded from the unsegmented-script list.
         tokens = ["\uc601\ud654", "\ub294 ", "\uc88b", "\uc558\ub2e4"]
         contribs = np.arange(4, dtype=float).reshape(-1, 1)
-        words, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
+        words, _, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
         self.assertEqual(words, ["\uc601\ud654\ub294", "\uc88b\uc558\ub2e4"])
 
     def test_bracket_text_folds_into_baseline_only_without_a_special_set(self):
@@ -147,21 +147,21 @@ class TestAggregateSubwords(unittest.TestCase):
         tokens = ["ha ", "[LAUGHTER] ", "good "]
         contribs = np.array([[1.0], [2.0], [3.0]])
 
-        words, _, new_base = _aggregate_subwords(
+        words, _, new_base, _ = _aggregate_subwords(
             tokens, contribs, np.zeros(1), special_tokens=frozenset({"[CLS]", "[SEP]"})
         )
         self.assertEqual(words, ["ha", "[LAUGHTER]", "good"])
         np.testing.assert_allclose(new_base, [0.0])
 
         # Without one (bare callable), the bracket regex still guards against leaking [CLS]/[SEP].
-        words, _, new_base = _aggregate_subwords(["[CLS] ", "good ", "[SEP] "], contribs, np.zeros(1))
+        words, _, new_base, _ = _aggregate_subwords(["[CLS] ", "good ", "[SEP] "], contribs, np.zeros(1))
         self.assertEqual(words, ["good"])
         np.testing.assert_allclose(new_base, [4.0])
 
     def test_declared_special_token_folds_into_baseline(self):
         tokens = ["<s> ", "good ", "</s> "]
         contribs = np.array([[1.0], [2.0], [3.0]])
-        words, word_contribs, new_base = _aggregate_subwords(
+        words, word_contribs, new_base, _ = _aggregate_subwords(
             tokens, contribs, np.zeros(1), special_tokens=frozenset({"<s>", "</s>"})
         )
         self.assertEqual(words, ["good"])
@@ -173,7 +173,7 @@ class TestAggregateSubwords(unittest.TestCase):
         contribs = np.random.default_rng(0).normal(size=(5, 3))
         base = np.array([0.5, -0.5, 1.0])
 
-        _, word_contribs, new_base = _aggregate_subwords(tokens, contribs, base)
+        _, word_contribs, new_base, _ = _aggregate_subwords(tokens, contribs, base)
 
         # base + Σ over words must equal the original base + Σ over every token (nothing lost).
         np.testing.assert_allclose(new_base + word_contribs.sum(axis=0), base + contribs.sum(axis=0))
@@ -181,7 +181,7 @@ class TestAggregateSubwords(unittest.TestCase):
     def test_all_special_returns_empty_words(self):
         tokens = ["", ""]
         contribs = np.array([[1.0, 2.0], [3.0, 4.0]])
-        words, word_contribs, new_base = _aggregate_subwords(tokens, contribs, np.zeros(2))
+        words, word_contribs, new_base, _ = _aggregate_subwords(tokens, contribs, np.zeros(2))
         self.assertEqual(words, [])
         self.assertEqual(word_contribs.shape, (0, 2))
         np.testing.assert_allclose(new_base, [4.0, 6.0])
@@ -190,9 +190,84 @@ class TestAggregateSubwords(unittest.TestCase):
         # The final real word before the closing special token often has no trailing space.
         tokens = ["", "hello ", "world", ""]
         contribs = np.array([[0.0], [1.0], [2.0], [0.0]])
-        words, word_contribs, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
+        words, word_contribs, _, _ = _aggregate_subwords(tokens, contribs, np.zeros(1))
         self.assertEqual(words, ["hello", "world"])
         np.testing.assert_allclose(word_contribs, [[1.0], [2.0]])
+
+
+class TestWordSpans(unittest.TestCase):
+    """With the masker tokenizer's offsets, words are placed in the source text and read off it.
+
+    Segments and offsets are copied from real ``shap.maskers.Text(tokenizer).token_segments`` runs.
+    """
+
+    def test_tokens_sharing_a_character_are_one_word_read_from_the_source(self):
+        # albert-base-v2: SentencePiece gives a bare "▁" the offsets of the "é" after it, so
+        # token_segments hands that "é" to two tokens and concatenation printed "éétait".
+        text = "Le café était bon"
+        segments = ["", "Le ", "café ", "é", "éta", "it ", "bon", ""]
+        offsets = [(0, 0), (0, 2), (3, 7), (8, 9), (8, 11), (11, 13), (14, 17), (0, 0)]
+        contribs = np.arange(8, dtype=float)[:, None]
+        words, values, base, spans = _aggregate_subwords(segments, contribs, np.zeros(1), text=text, offsets=offsets)
+        self.assertEqual(words, ["Le", "café", "était", "bon"])
+        self.assertEqual(spans, [((0, 2),), ((3, 7),), ((8, 13),), ((14, 17),)])
+        np.testing.assert_allclose(values[:, 0], [1.0, 2.0, 3 + 4 + 5, 6.0])
+        self.assertEqual(base[0], 0 + 7)
+
+    def test_a_multi_byte_character_split_across_tokens_is_one_word(self):
+        # roberta-base: byte-level BPE splits the emoji into two tokens mapped to the same character;
+        # each became its own "😍" unit.
+        text = "I love it 😍 so"
+        segments = ["", "I ", "love ", "it ", "😍", "😍 ", "so", ""]
+        offsets = [(0, 0), (0, 1), (2, 6), (7, 9), (10, 11), (10, 11), (12, 14), (0, 0)]
+        words, values, _, spans = _aggregate_subwords(
+            segments, np.ones((8, 1)), np.zeros(1), text=text, offsets=offsets
+        )
+        self.assertEqual(words, ["I", "love", "it", "😍", "so"])
+        self.assertEqual(spans[3], ((10, 11),))
+        self.assertEqual(values[3, 0], 2.0)
+
+    def test_without_offsets_words_are_located_by_search(self):
+        words, _, _, spans = _aggregate_subwords(
+            ["", "up", "dating ", ""], np.ones((4, 1)), np.zeros(1), text="updating"
+        )
+        self.assertEqual((words, spans), (["updating"], [((0, 8),)]))
+
+    def test_without_text_there_are_no_spans(self):
+        _, _, _, spans = _aggregate_subwords(["a ", "b"], np.ones((2, 1)), np.zeros(1))
+        self.assertEqual(spans, [(), ()])
+
+    def test_offsets_that_do_not_match_the_segments_are_ignored(self):
+        words, _, _, spans = _aggregate_subwords(
+            ["ab "], np.ones((1, 1)), np.zeros(1), text="ab", offsets=[(0, 1), (1, 2)]
+        )
+        self.assertEqual((words, spans), (["ab"], [((0, 2),)]))
+
+
+class _OffsetTokenizer:
+    def __init__(self, offsets=None, error=None):
+        self.offsets, self.error = offsets, error
+
+    def __call__(self, text, return_offsets_mapping=False):
+        if self.error is not None:
+            raise self.error
+        return {"offset_mapping": self.offsets}
+
+
+def _explainer_with(tokenizer):
+    masker = type("Masker", (), {"tokenizer": tokenizer})()
+    return type("Explainer", (), {"masker": masker})()
+
+
+class TestSegmentOffsets(unittest.TestCase):
+    def test_reads_the_masker_tokenizer(self):
+        explainer = _explainer_with(_OffsetTokenizer([(0, 0), (0, 2), None]))
+        self.assertEqual(_segment_offsets(explainer, "ab", 3), [(0, 0), (0, 2), (0, 0)])
+
+    def test_none_when_unavailable_or_mismatched(self):
+        self.assertIsNone(_segment_offsets(object(), "ab", 1))
+        self.assertIsNone(_segment_offsets(_explainer_with(_OffsetTokenizer(error=NotImplementedError())), "ab", 1))
+        self.assertIsNone(_segment_offsets(_explainer_with(_OffsetTokenizer([(0, 2)])), "ab", 3))
 
 
 class FakeShapExplanation:
@@ -222,6 +297,7 @@ class TestRunExplainer(unittest.TestCase):
         raw = backend.run_explainer(["updating"])
 
         self.assertEqual(raw.token_strings, [["updating"]])
+        self.assertEqual(raw.token_spans, [[((0, 8),)]])
         np.testing.assert_allclose(raw.values[0], [[5.0, 3.0]])
         # CLS ([1,0]) + SEP ([4,3]) folded into the base.
         np.testing.assert_allclose(raw.base_values, [[0.1 + 1.0 + 4.0, 0.2 + 0.0 + 3.0]])

@@ -14,22 +14,32 @@ the word-level highlights ``nlp_captum_lig_backend`` produces — and folds spec
 into the baseline so ``base + Σ(word contributions)`` keeps SHAP's additive guarantee.
 
 Word boundaries come from :func:`_merges`: flush on source-text whitespace *or* on a word/non-word
-transition. A whitespace-only rule (what this module used previously) is wrong in two ways — it
+transition — except that tokens sharing a source character always merge (see below). A whitespace-only rule (what this module used previously) is wrong in two ways — it
 glues punctuation onto its neighbours whenever the source has no space around it (``"superb!!!"``,
 ``"enjoy.Overall,I"``), and under the leading-space fallback regime it never fires at all, so an
 entire sample collapses into a single "word".
+
+Each word also records the character span it covers (``NlpContributions.token_spans``), read off the
+masker tokenizer's offset mapping — the same call ``token_segments`` makes and then discards — and
+its display string is that span of the source text. Concatenating segments instead is wrong when
+two tokens share a character, which offsets make visible: byte-level BPE splits a multi-byte
+character (``é``, an emoji) across tokens that all map to it, and SentencePiece can give a bare
+``▁`` the offsets of the character after it. ``token_segments`` then hands each of those tokens the
+same character, so concatenation printed ``éétait`` and an emoji became two "words". Tokens whose
+spans overlap are one word, and the word's text comes from the source, never from the segments.
 """
 
 from __future__ import annotations
 
 import re
-import unicodedata
+from collections.abc import Sequence
 from typing import Literal, cast
 
 import numpy as np
 import shap
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
+from shapash.compute.spans import Span, is_unsegmented_script, locate_spans, span_from_offsets, trim_span
 from shapash.model.base import SupportsLogits, TextModel, has_capabilities
 
 # SHAP's masker reports special tokens as blank segments on its offset-mapping path; their
@@ -42,14 +52,6 @@ _BLANK_RE = re.compile(r"^\s*$")
 # ``[LAUGHTER]``, which would then be silently folded into the baseline instead of shown as a word.
 _BRACKET_SPECIAL_RE = re.compile(r"^\[.*\]$")
 
-# Scripts written without inter-word spaces. A character-class boundary test sees such a sentence as
-# one uninterrupted run of word characters, so :func:`_merges` would collapse it into a single
-# "word"; breaking between these characters keeps units at the character level instead — the only
-# tokenizer-free option, and what ``BertPreTokenizer`` does anyway (it inserts whitespace around
-# CJK). Hangul is deliberately absent: Korean *is* space-segmented, so its subword pieces must merge
-# like any other alphabetic script's.
-_UNSEGMENTED_SCRIPTS = ("CJK", "HIRAGANA", "KATAKANA", "THAI", "LAO", "KHMER", "MYANMAR")
-
 
 def _is_special(segment: str, special_tokens: frozenset[str] | None) -> bool:
     """True when ``segment`` is a special token whose attribution belongs in the baseline."""
@@ -59,11 +61,6 @@ def _is_special(segment: str, special_tokens: frozenset[str] | None) -> bool:
     if special_tokens is not None:
         return stripped in special_tokens
     return bool(_BRACKET_SPECIAL_RE.match(stripped))
-
-
-def _is_unsegmented_script(char: str) -> bool:
-    """True when ``char`` belongs to a script written without spaces between words."""
-    return unicodedata.name(char, "").startswith(_UNSEGMENTED_SCRIPTS)
 
 
 def _merges(buffer: str, following: str) -> bool:
@@ -82,7 +79,10 @@ def _merges(buffer: str, following: str) -> bool:
     last, first = buffer[-1], following[0]
     if not (last.isalnum() or last == "_") or not (first.isalnum() or first == "_"):
         return False
-    return not (_is_unsegmented_script(last) or _is_unsegmented_script(first))
+    # A script written without spaces (CJK, Thai, ...) would otherwise collapse into one "word";
+    # breaking between its characters keeps units at the character level instead — the only
+    # tokenizer-free option, and what ``BertPreTokenizer`` does anyway.
+    return not (is_unsegmented_script(last) or is_unsegmented_script(first))
 
 
 def _masker_special_tokens(explainer) -> frozenset[str] | None:
@@ -90,6 +90,25 @@ def _masker_special_tokens(explainer) -> frozenset[str] | None:
     tokenizer = getattr(getattr(explainer, "masker", None), "tokenizer", None)
     specials = getattr(tokenizer, "all_special_tokens", None)
     return frozenset(specials) if specials else None
+
+
+def _segment_offsets(explainer, text: str, n_segments: int) -> list[Span] | None:
+    """Character offsets of the tokens behind ``text``'s SHAP segments, or ``None`` when unavailable.
+
+    Repeats the call ``shap.maskers.Text.token_segments`` makes on its offset-mapping path, whose
+    offsets it uses and discards. ``None`` — so spans fall back to locating the words in the text —
+    when no tokenizer is reachable, it cannot return offsets (a slow tokenizer: SHAP is then on its
+    leading-space regime), or the count does not match the segments.
+    """
+    tokenizer = getattr(getattr(explainer, "masker", None), "tokenizer", None)
+    if tokenizer is None:
+        return None
+    try:
+        offsets = tokenizer(text, return_offsets_mapping=True)["offset_mapping"]
+    except (NotImplementedError, TypeError, KeyError, ValueError):
+        return None
+    spans = [(0, 0) if o is None else (int(o[0]), int(o[1])) for o in offsets]
+    return spans if len(spans) == n_segments else None
 
 
 def _resolve_text_model(
@@ -129,11 +148,14 @@ def _aggregate_subwords(
     contributions: np.ndarray,
     base_values: np.ndarray,
     special_tokens: frozenset[str] | None = None,
-) -> tuple[list[str], np.ndarray, np.ndarray]:
-    """Merge SHAP's segments into whole words and fold specials into the baseline.
+    text: str | None = None,
+    offsets: Sequence[Span] | None = None,
+) -> tuple[list[str], np.ndarray, np.ndarray, list[tuple[Span, ...]]]:
+    """Merge SHAP's segments into whole words, fold specials into the baseline, and locate each word.
 
     Word boundaries come from :func:`_merges`, so punctuation becomes its own unit while genuine
-    subword pieces still merge. Special-token attribution is added to ``base_values`` rather than
+    subword pieces still merge; with ``offsets``, tokens covering a shared character merge too (see
+    the module docstring). Special-token attribution is added to ``base_values`` rather than
     discarded, so ``base + Σ(word contributions)`` still equals the model output.
 
     Parameters
@@ -148,25 +170,46 @@ def _aggregate_subwords(
         The masker tokenizer's ``all_special_tokens``. When given, non-blank specials are detected
         by membership — model-derived, not guessed. When ``None`` (a bare scoring callable, or a
         tokenizer-less masker), the bracket regex :data:`_BRACKET_SPECIAL_RE` stands in.
+    text : str or None
+        The explained text. Needed for ``offsets`` to be used, and to locate words without them.
+    offsets : sequence of (int, int) or None
+        Each segment's token offsets into ``text`` (:func:`_segment_offsets`). When given, word
+        spans and strings come from them; otherwise words are located in ``text`` by search, the
+        approximate path left for a masker that exposes no offsets.
 
     Returns
     -------
-    tuple[list[str], np.ndarray, np.ndarray]
-        Word strings, per-word contributions ``(n_words, n_classes)``, and the adjusted baseline
-        ``(n_classes,)`` with special-token attribution folded in.
+    tuple[list[str], np.ndarray, np.ndarray, list[tuple[tuple[int, int], ...]]]
+        Word strings, per-word contributions ``(n_words, n_classes)``, the adjusted baseline
+        ``(n_classes,)`` with special-token attribution folded in, and each word's character spans
+        (``()`` where it could not be placed; all ``()`` without ``text``).
     """
+    offs: Sequence[Span] = offsets if text is not None and offsets is not None and len(offsets) == len(tokens) else ()
+    use_offsets = bool(offs)
     words: list[str] = []
     word_rows: list[np.ndarray] = []
+    word_spans: list[tuple[Span, ...]] = []
     base = base_values.astype(float).copy()
     buffer_text = ""
     buffer_row: np.ndarray | None = None
+    buffer_positions: list[int] = []
 
     def _flush() -> None:
-        nonlocal buffer_text, buffer_row
+        nonlocal buffer_text, buffer_row, buffer_positions
         if buffer_row is not None:
-            words.append(buffer_text.strip())
+            span = trim_span(text, span_from_offsets(offs, buffer_positions)) if use_offsets and text else None
+            words.append(text[span[0] : span[1]] if span is not None and text is not None else buffer_text.strip())
             word_rows.append(buffer_row)
-            buffer_text, buffer_row = "", None
+            word_spans.append((span,) if span is not None else ())
+            buffer_text, buffer_row, buffer_positions = "", None, []
+
+    def _shares_a_character(i: int) -> bool:
+        """Whether token ``i + 1`` covers a character the current word already does."""
+        if not use_offsets or i + 1 >= len(tokens):
+            return False
+        span = span_from_offsets(offs, buffer_positions)
+        start, end = offs[i + 1]
+        return span is not None and end > start and start < span[1]
 
     for i, (tok, row) in enumerate(zip(tokens, contributions, strict=True)):
         if _is_special(tok, special_tokens):
@@ -175,15 +218,18 @@ def _aggregate_subwords(
             continue
         buffer_text += tok
         buffer_row = row.astype(float).copy() if buffer_row is None else buffer_row + row
+        buffer_positions.append(i)
         # A special token never continues a word (it is blank, or bracketed), so the raw next
         # segment is lookahead enough — no need to skip over specials to find the next content one.
         following = tokens[i + 1] if i + 1 < len(tokens) else ""
-        if not _merges(buffer_text, following):
+        if not (_merges(buffer_text, following) or _shares_a_character(i)):
             _flush()
     _flush()
 
+    if not use_offsets and text is not None:
+        word_spans = locate_spans(text, words)
     stacked = np.stack(word_rows, axis=0) if word_rows else np.zeros((0, contributions.shape[-1]))
-    return words, stacked, base
+    return words, stacked, base, word_spans
 
 
 class NlpShapBackend(NlpBackend):
@@ -348,21 +394,26 @@ class NlpShapBackend(NlpBackend):
         contributions: list[np.ndarray] = []
         base_values: list[np.ndarray] = []
         data: list[list[str]] = []
-        for tokens, values, base in zip(
-            shap_explanation.data, shap_explanation.values, shap_explanation.base_values, strict=True
+        spans: list[list[tuple[Span, ...]]] = []
+        for text, tokens, values, base in zip(
+            list(x), shap_explanation.data, shap_explanation.values, shap_explanation.base_values, strict=True
         ):
-            words, word_contribs, word_base = _aggregate_subwords(
+            words, word_contribs, word_base, word_spans = _aggregate_subwords(
                 list(tokens),
                 np.asarray(values),
                 np.asarray(base),
                 special_tokens=getattr(self, "_special_tokens", None),
+                text=str(text),
+                offsets=_segment_offsets(self.explainer, str(text), len(tokens)),
             )
             data.append(words)
             contributions.append(word_contribs)
             base_values.append(word_base)
+            spans.append(word_spans)
 
         return NlpContributions(
             token_strings=data,
             values=contributions,
             base_values=np.stack(base_values, axis=0),
+            token_spans=spans,
         )

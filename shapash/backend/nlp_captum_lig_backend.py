@@ -18,6 +18,14 @@ values live in raw logit space — **not** the same space ``NlpShapBackend`` rep
 the pipeline's softmax probability output, not ``model.logits``, so the two backends' numbers are on
 different scales and are not directly comparable.
 
+Each word is then placed in the source text through the tokenizer's offsets
+(:meth:`~shapash.model.base.SupportsCaptumIG.token_offsets`): its span is recorded
+(``NlpContributions.token_spans``) and its display string is that span of the text, not the
+tokenizer's rebuilt string — which an uncased tokenizer lowercases and strips of accents, and which
+reads ``[UNK]`` for an emoji. A word covering only whitespace (byte-level BPE gives a lone ``Ġ``/``Ċ``
+its own word id on a double space or a newline) is not a word: its attribution goes to the baseline,
+like a special token's.
+
 Unlike the SHAP/LIME backends (which wrap a plain text callable), this backend needs the embedding
 module and a logits forward pass, so it consumes a :class:`~shapash.model.base.TextModel` that
 implements :class:`~shapash.model.base.SupportsCaptumIG` (e.g. ``HFClassifierModel``).
@@ -31,6 +39,7 @@ import numpy as np
 
 from shapash._optional import import_optional_module
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
+from shapash.compute.spans import Span, locate_spans, span_from_offsets, trim_span
 from shapash.model.base import SupportsCaptumIG
 
 _NLP_EXTRA = 'Install the NLP extra: pip install "shapash[nlp]".'
@@ -171,6 +180,50 @@ def _valid_alignment(
     return alignment
 
 
+def _place_words(
+    text: str,
+    words: list[str],
+    contributions: np.ndarray,
+    base_values: np.ndarray,
+    word_positions: list[list[int]] | None,
+    offsets: list[tuple[int, int]] | None,
+) -> tuple[list[str], np.ndarray, np.ndarray, list[tuple[Span, ...]]]:
+    """Give each word its span and its source-text string; fold whitespace-only words into the baseline.
+
+    With ``word_positions`` (the exact tokenizer grouping) and ``offsets``, a word's span is read off
+    its tokens' offsets. Without them — a slow tokenizer, which reports neither — words keep their
+    token-built strings and are located in ``text`` by search, the approximate path.
+
+    Returns
+    -------
+    tuple[list[str], np.ndarray, np.ndarray, list[tuple[tuple[int, int], ...]]]
+        Words, their contributions, the baseline (with any folded word's attribution), and spans.
+    """
+    if word_positions is None or offsets is None:
+        return words, contributions, base_values, locate_spans(text, words)
+    base = base_values.astype(float).copy()
+    keep: list[int] = []
+    placed: list[str] = []
+    spans: list[tuple[Span, ...]] = []
+    for k, positions in enumerate(word_positions):
+        span = trim_span(text, span_from_offsets(offsets, positions))
+        if span is None:
+            base = base + contributions[k]  # covers no visible character: not a word (see module docstring)
+            continue
+        keep.append(k)
+        placed.append(text[span[0] : span[1]])
+        spans.append((span,))
+    return placed, contributions[keep], base, spans
+
+
+def _valid_offsets(offsets: list[tuple[int, int]] | None, n_tokens: int) -> list[tuple[int, int]] | None:
+    """Return ``offsets`` only when there is exactly one per attributed token, else ``None``.
+
+    The same guard as :func:`_valid_alignment`: offsets come from a second encoding of the text.
+    """
+    return offsets if offsets is not None and len(offsets) == n_tokens else None
+
+
 def _model_special_tokens(model: SupportsCaptumIG) -> set[str] | None:
     """Return the model tokenizer's ``all_special_tokens`` as a set, or ``None`` when unavailable."""
     specials = getattr(getattr(model, "tokenizer", None), "all_special_tokens", None)
@@ -260,6 +313,7 @@ class NlpCaptumLigBackend(NlpBackend):
         contributions: list[np.ndarray] = []
         base_values: list[np.ndarray] = []
         data: list[list[str]] = []
+        spans: list[list[tuple[Span, ...]]] = []
 
         for text in self._progress_iter(list(x)):
             input_ids, attention_mask, tokens = model.encode(text)
@@ -286,18 +340,24 @@ class NlpCaptumLigBackend(NlpBackend):
             # heuristic (with the model's own special set) only for a slow tokenizer.
             stacked = np.stack(per_class, axis=-1)  # (seq, n_classes)
             alignment = _valid_alignment(model.word_alignment(text), n_tokens=stacked.shape[0])
+            offsets = _valid_offsets(getattr(model, "token_offsets", lambda _: None)(text), n_tokens=stacked.shape[0])
             if alignment is not None:
                 word_tokens, word_contribs, base_logits = _aggregate_by_alignment(stacked, base_logits, alignment)
             else:
                 word_tokens, word_contribs, base_logits = _aggregate_subwords(
                     list(tokens), stacked, base_logits, special_tokens=_model_special_tokens(model)
                 )
+            word_tokens, word_contribs, base_logits, word_spans = _place_words(
+                text, word_tokens, word_contribs, base_logits, None if alignment is None else alignment[1], offsets
+            )
             contributions.append(word_contribs)  # (n_words, n_classes)
             base_values.append(base_logits)
             data.append(word_tokens)
+            spans.append(word_spans)
 
         return NlpContributions(
             token_strings=data,
             values=contributions,
             base_values=np.stack(base_values, axis=0),
+            token_spans=spans,
         )

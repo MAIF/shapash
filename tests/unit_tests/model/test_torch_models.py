@@ -6,6 +6,7 @@ in that the fused backbone honours the backbone contract and that every capabili
 shared spine unchanged.
 """
 
+import re
 import unittest
 from types import SimpleNamespace
 
@@ -302,12 +303,18 @@ class _FastFakeTokenizer(_FakeTokenizer):
 
     is_fast = True
 
-    def __call__(self, texts, padding=True, truncation=True, return_tensors=None, max_length=None):
+    def __call__(
+        self, texts, padding=True, truncation=True, return_tensors=None, max_length=None, return_offsets_mapping=False
+    ):
         self.calls.append({"truncation": truncation, "max_length": max_length})
         words = texts.split() if isinstance(texts, str) else list(texts)
         if truncation and max_length is not None:
             words = words[:max_length]
-        return _FastEnc(list(range(len(words))), list(range(len(words))))
+        enc = _FastEnc(list(range(len(words))), list(range(len(words))))
+        if return_offsets_mapping:
+            starts = [m.start() for m in re.finditer(r"\S+", texts)][: len(words)]
+            enc["offset_mapping"] = [(start, start + len(word)) for start, word in zip(starts, words, strict=True)]
+        return enc
 
     def convert_ids_to_tokens(self, ids):
         return [f"t{i}" for i in ids]
@@ -349,11 +356,13 @@ class TestMaxLength(unittest.TestCase):
             "encode": lambda m: m.encode(long_text),
             "token_gradients": lambda m: m.token_gradients(long_text, target_class=0),
             "word_alignment": lambda m: m.word_alignment(long_text),
+            "token_offsets": lambda m: m.token_offsets(long_text),
         }
         for name, run in paths.items():
             with self.subTest(path=name):
-                # word_alignment short-circuits on a slow tokenizer, so give it a fast one.
-                tokenizer = _FastFakeTokenizer() if name == "word_alignment" else _FakeTokenizer()
+                # word_alignment/token_offsets short-circuit on a slow tokenizer, so give them a fast one.
+                fast = name in {"word_alignment", "token_offsets"}
+                tokenizer = _FastFakeTokenizer() if fast else _FakeTokenizer()
                 model = self._model(max_length=3, tokenizer=tokenizer)
                 run(model)
                 self.assertTrue(model.tokenizer.calls, f"{name} performed no tokenization")
@@ -368,6 +377,12 @@ class TestMaxLength(unittest.TestCase):
         words, word_positions, _ = model.word_alignment(" ".join(f"w{i}" for i in range(20)))
         self.assertEqual(len(words), 3)
         self.assertTrue(all(p < 3 for pos in word_positions for p in pos))
+
+    def test_token_offsets_index_the_truncated_axis_and_need_a_fast_tokenizer(self):
+        text = "alpha beta  gamma delta"
+        offsets = self._model(max_length=3, tokenizer=_FastFakeTokenizer()).token_offsets(text)
+        self.assertEqual([text[a:b] for a, b in offsets], ["alpha", "beta", "gamma"])
+        self.assertIsNone(self._model(tokenizer=_FakeTokenizer()).token_offsets(text))
 
     def test_encode_and_gradients_agree_on_length(self):
         model = self._model(max_length=4)

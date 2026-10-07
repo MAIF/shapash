@@ -209,6 +209,54 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
         self.assertIsNone(loaded.baseline_token)
 
 
+class TestTokenSpans(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.path = Path(self._tmp.name) / "spans.zip"
+        # One span per word, several for a bag-of-words unit, none for an unplaced unit; a sample
+        # with zero units.
+        self.spans = [[((0, 5),), ((6, 11),)], [((0, 1),), ((2, 4), (20, 22)), ()], []]
+        self.expl = replace(
+            _make_explanation(values_ndim=2, with_base=True, with_true=False, with_prob=False), token_spans=self.spans
+        )
+
+    def test_round_trip(self):
+        self.expl.save(self.path)
+        with zipfile.ZipFile(self.path) as zf:
+            self.assertTrue(json.loads(zf.read("meta.json"))["has_token_spans"])
+        self.assertEqual(NlpExplanation.load(self.path).token_spans, self.spans)
+
+    def test_a_file_without_spans_loads_none(self):
+        replace(self.expl, token_spans=None).save(self.path)
+        with zipfile.ZipFile(self.path) as zf:
+            self.assertNotIn("token_spans.parquet", zf.namelist())
+        self.assertIsNone(NlpExplanation.load(self.path).token_spans)
+
+    def test_a_file_from_before_spans_existed_loads_none(self):
+        self.expl.save(self.path)
+        with zipfile.ZipFile(self.path) as zin:
+            meta = json.loads(zin.read("meta.json"))
+            del meta["has_token_spans"]
+            members = {i.filename: zin.read(i.filename) for i in zin.infolist() if i.filename != "token_spans.parquet"}
+        members["meta.json"] = json.dumps(meta).encode()
+        legacy = self.path.with_name("legacy.zip")
+        with zipfile.ZipFile(legacy, "w") as zout:
+            for name, data in members.items():
+                zout.writestr(name, data)
+        self.assertIsNone(NlpExplanation.load(legacy).token_spans)
+
+    def test_spans_must_match_the_units(self):
+        with self.assertRaisesRegex(ValueError, "Sample 1: 2 token_spans entries for 3"):
+            replace(self.expl, token_spans=[self.spans[0], self.spans[1][:2], []])
+        with self.assertRaisesRegex(ValueError, "2 sample"):
+            replace(self.expl, token_spans=self.spans[:2])
+
+    def test_is_a_computed_field_carried_by_relabelled(self):
+        relabelled = self.expl.relabelled(self.expl.texts.reset_index(drop=True))
+        self.assertIs(relabelled.token_spans, self.expl.token_spans)
+
+
 class TestCorpusIdentity(unittest.TestCase):
     """``corpus_id`` — the texts-only digest that pairs an explanation with its embeddings.
 

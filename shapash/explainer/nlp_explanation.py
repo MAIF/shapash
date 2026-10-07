@@ -318,6 +318,11 @@ class NlpExplanation:
         The token the backend substituted for an absent word (``"[MASK]"``, ``"[PAD]"``, ``"..."``)
         — read off the backend instance at ``explain()`` time. ``None`` when the method has no
         single substitute (LIME removing words) or when the file predates this field.
+    token_spans : list[list[tuple[tuple[int, int], ...]]] or None
+        Per sample, per unit: the ``(start, end)`` character spans of ``texts`` the unit stands for
+        — one for a word, one per occurrence for a bag-of-words unit (LIME). The coordinate every
+        backend shares, which is what lets two backends' units be compared without matching strings
+        (:mod:`shapash.compute.spans`). ``None`` on a file saved before this field existed.
     """
 
     texts: pd.Series
@@ -339,6 +344,7 @@ class NlpExplanation:
     architecture: str | None = None
     is_signed: bool = True
     baseline_token: str | None = None
+    token_spans: list[list[tuple[tuple[int, int], ...]]] | None = None
 
     # ClassVar, not a field: it is a shared constant, not per-explanation data, so it stays out
     # of ``fields()`` — and therefore out of ``__init__``, ``replace()`` and ``save()``.
@@ -371,6 +377,25 @@ class NlpExplanation:
         if self.base_values is not None:
             self.base_values.setflags(write=False)
         self._check_shared_index()
+        self._check_token_spans()
+
+    def _check_token_spans(self) -> None:
+        """:attr:`token_spans`, when present, must give every unit of every sample its spans.
+
+        Raises
+        ------
+        ValueError
+            If a sample has a different number of span entries than of units.
+        """
+        if self.token_spans is None:
+            return
+        if len(self.token_spans) != len(self.token_strings):
+            raise ValueError(
+                f"token_spans has {len(self.token_spans)} sample(s), token_strings {len(self.token_strings)}."
+            )
+        for i, (spans, tokens) in enumerate(zip(self.token_spans, self.token_strings, strict=True)):
+            if len(spans) != len(tokens):
+                raise ValueError(f"Sample {i}: {len(spans)} token_spans entries for {len(tokens)} unit(s).")
 
     def _check_shared_index(self) -> None:
         """Every index-bearing field must be indexed like :attr:`texts`.
@@ -410,6 +435,7 @@ class NlpExplanation:
             "output_space",
             "is_signed",
             "baseline_token",
+            "token_spans",
             "model_id",
             "architecture",
         }
@@ -1006,6 +1032,7 @@ class NlpExplanation:
         """
         contrib_df, base_df, values_ndim = _contributions_to_frames(self.token_strings, self.values, self.base_values)
         samples_df = _samples_to_frame(self.texts, self.y_pred, self.y_prob, self.y_true)
+        spans_df = None if self.token_spans is None else _spans_to_frame(self.token_spans)
 
         meta = {
             "shapash_version": _shapash_version,
@@ -1028,6 +1055,7 @@ class NlpExplanation:
             "values_ndim": values_ndim,
             "has_base_values": base_df is not None,
             "has_ground_truth": self.y_true is not None,
+            "has_token_spans": spans_df is not None,
         }
 
         with zipfile.ZipFile(Path(path), "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -1036,6 +1064,8 @@ class NlpExplanation:
             if base_df is not None:
                 _write_parquet(zf, "base_values.parquet", base_df)
             _write_parquet(zf, "samples.parquet", samples_df)
+            if spans_df is not None:
+                _write_parquet(zf, "token_spans.parquet", spans_df)
 
     @classmethod
     def load(cls, path: str | Path) -> NlpExplanation:
@@ -1056,6 +1086,8 @@ class NlpExplanation:
             contrib_df = _read_parquet(zf, "contributions.parquet")
             base_df = _read_parquet(zf, "base_values.parquet") if meta.get("has_base_values", True) else None
             samples_df = _read_parquet(zf, "samples.parquet")
+            # Absent on a file saved before units carried spans.
+            spans_df = _read_parquet(zf, "token_spans.parquet") if meta.get("has_token_spans", False) else None
 
         token_strings, values, base_values = _frames_to_contributions(
             contrib_df, base_df, meta["values_ndim"], meta["n_samples"], meta["n_classes"]
@@ -1088,6 +1120,7 @@ class NlpExplanation:
             # the fact rather than showing a stale placeholder.
             model_id=meta.get("model_id"),
             architecture=meta.get("architecture"),
+            token_spans=None if spans_df is None else _frame_to_spans(spans_df, [len(t) for t in token_strings]),
         )
 
 
@@ -1187,6 +1220,25 @@ def _frames_to_contributions(
     if values_ndim == 1:
         base_values = base_values[:, 0]
     return token_strings, values, base_values
+
+
+def _spans_to_frame(token_spans: list[list[tuple[tuple[int, int], ...]]]) -> pd.DataFrame:
+    """Per-unit spans -> one row per span. A unit with several spans (LIME) has several rows, one with none has none."""
+    rows = [
+        (sample_idx, token_idx, start, end)
+        for sample_idx, sample in enumerate(token_spans)
+        for token_idx, unit in enumerate(sample)
+        for start, end in unit
+    ]
+    return pd.DataFrame(rows, columns=["sample_idx", "token_idx", "start", "end"]).astype("int64")
+
+
+def _frame_to_spans(df: pd.DataFrame, n_units: list[int]) -> list[list[tuple[tuple[int, int], ...]]]:
+    """Inverse of :func:`_spans_to_frame`; ``n_units`` restores units (and samples) that had no span."""
+    collected: list[list[list[tuple[int, int]]]] = [[[] for _ in range(n)] for n in n_units]
+    for sample_idx, token_idx, start, end in df[["sample_idx", "token_idx", "start", "end"]].itertuples(index=False):
+        collected[sample_idx][token_idx].append((int(start), int(end)))
+    return [[tuple(unit) for unit in sample] for sample in collected]
 
 
 def _samples_to_frame(

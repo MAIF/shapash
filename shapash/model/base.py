@@ -465,6 +465,22 @@ class SupportsCaptumIG(ABC):
         """
         return None
 
+    def token_offsets(self, text: str) -> list[tuple[int, int]] | None:
+        """Character offsets into ``text`` of each token :meth:`encode` produces.
+
+        Positions index the same subword axis as :meth:`encode` and :meth:`word_alignment`. Special
+        tokens cover no character (``(0, 0)``). This is what places an attributed word in the source
+        text, so it can be shown as written and compared with another backend's units without
+        matching strings (an uncased tokenizer's ``cafe`` is not a substring of ``café``).
+
+        Returns
+        -------
+        list of (int, int) or None
+            ``(start, end)`` per token, or ``None`` when the tokenizer cannot report offsets (a slow
+            tokenizer), so the caller falls back to locating words by their strings.
+        """
+        return None
+
 
 class SupportsLogits(ABC):
     """Capability: score raw text in pre-softmax logit space.

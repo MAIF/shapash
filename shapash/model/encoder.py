@@ -761,3 +761,16 @@ class EncoderClassifierModel(
                 word_positions[-1].append(i)
         words = [self.tokenizer.convert_tokens_to_string([tokens[i] for i in pos]).strip() for pos in word_positions]
         return words, word_positions, special_positions
+
+    def token_offsets(self, text: str) -> list[tuple[int, int]] | None:
+        """Character offsets of each token, re-encoded with :meth:`encode`'s truncation (see base ABC).
+
+        ``None`` for a slow tokenizer, which cannot return an offset mapping.
+        """
+        if not getattr(self.tokenizer, "is_fast", False):
+            return None
+        try:
+            offsets = self._tokenize(text, return_offsets_mapping=True)["offset_mapping"]
+        except (NotImplementedError, TypeError, KeyError):
+            return None
+        return [(0, 0) if o is None else (int(o[0]), int(o[1])) for o in offsets]

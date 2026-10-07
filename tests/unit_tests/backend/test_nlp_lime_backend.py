@@ -125,6 +125,15 @@ class TestNlpLimeBackend(unittest.TestCase):
 
     # --- run_explainer ---
 
+    def test_run_explainer_records_every_occurrence_of_each_word(self):
+        text = "good movie, good cast"
+        raw = self.backend.run_explainer([text])
+        spans = dict(zip(raw.token_strings[0], raw.token_spans[0], strict=True))
+        self.assertEqual(spans["good"], ((0, 4), (12, 16)))
+        self.assertEqual(spans["cast"], ((17, 21),))
+        for word, unit in spans.items():
+            self.assertTrue(all(text[a:b] == word for a, b in unit))
+
     def test_run_explainer_returns_nlp_contributions(self):
         raw = self.backend.run_explainer(_SAMPLE_TEXTS)
         self.assertIsInstance(raw, NlpContributions)
@@ -193,7 +202,9 @@ class TestNlpLimeBackend(unittest.TestCase):
         self.assertEqual(self.backend._count_features(""), 1)
 
     def test_explicit_num_features_is_respected(self):
-        with patch.object(self.backend.explainer, "explain_instance", wraps=self.backend.explainer.explain_instance) as spy:
+        with patch.object(
+            self.backend.explainer, "explain_instance", wraps=self.backend.explainer.explain_instance
+        ) as spy:
             self.backend.run_explainer(_SAMPLE_TEXTS[:1])
         self.assertEqual(spy.call_args.kwargs["num_features"], _LIME_COMPUTE_ARGS["num_features"])
 

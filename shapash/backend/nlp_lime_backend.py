@@ -11,6 +11,10 @@ list of unique vocabulary words found by the ``split_expression`` tokeniser, not
 HuggingFace subword tokens.  Every word is scored by default (``num_features="all"``), so
 a zero weight means LIME found no effect — not that the word fell outside a top-k.
 Shapash's plots pick their own top-k at display time.
+
+Each word records the character span of every occurrence (``NlpContributions.token_spans``), read
+off LIME's own ``IndexedString`` — so a bag-of-words unit carries all the places its one weight
+stands for, which is what lets it be compared with a backend that attributes each occurrence.
 """
 
 from __future__ import annotations
@@ -254,6 +258,7 @@ class NlpLimeBackend(NlpBackend):
         contributions: list[np.ndarray] = []
         base_values_list: list[list[float]] = []
         data: list[list[str]] = []
+        spans: list[list[tuple[tuple[int, int], ...]]] = []
 
         for text in self._progress_iter(texts):
             text_args = compute_args
@@ -277,9 +282,24 @@ class NlpLimeBackend(NlpBackend):
             contributions.append(weight_matrix)
             base_values_list.append([exp.intercept.get(i, 0.0) for i in range(n_classes)])
             data.append(vocab)
+            spans.append(_word_spans(indexed_string, vocab))
 
         return NlpContributions(
             token_strings=data,
             values=contributions,
             base_values=np.array(base_values_list),
+            token_spans=spans,
         )
+
+
+def _word_spans(indexed_string, vocab: list[str]) -> list[tuple[tuple[int, int], ...]]:
+    """Every occurrence's ``(start, end)`` for each of LIME's features, from its ``IndexedString``.
+
+    ``string_position`` gives a word's start offsets — all occurrences under ``bow=True``, its one
+    position otherwise — in the text LIME split, which is the text it was handed.
+    """
+    out = []
+    for word_id, word in enumerate(vocab):
+        starts = np.atleast_1d(indexed_string.string_position(word_id))
+        out.append(tuple((int(start), int(start) + len(word)) for start in starts))
+    return out

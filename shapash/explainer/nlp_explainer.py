@@ -57,6 +57,14 @@ def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
 
 
+# Version of how backends cut a text into units and what each unit carries. It enters the cache key
+# because the key covers texts/model/backend but not shapash itself: when a release changes the
+# units (v2 — every unit carries its character spans, unit strings are read off the source text,
+# whitespace-only LIG units fold into the baseline), entries computed before would otherwise be
+# served unchanged. Bump it whenever a backend's units change.
+_UNITS_LAYOUT = "units-v2"
+
+
 def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
     """Read a cached explanation, or return ``None`` when the entry cannot be read.
 
@@ -386,6 +394,7 @@ class NlpExplainer:
                     token_strings=contributions.token_strings,
                     values=contributions.values,
                     base_values=contributions.base_values,
+                    token_spans=contributions.token_spans,
                     y_pred=y_pred,
                     y_prob=y_prob,
                     y_true=None,
@@ -953,7 +962,7 @@ class NlpExplainer:
             space = getattr(backend, "output_space", None)
             baseline = getattr(backend, "baseline_token", None)
             backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}"
-        return hash_corpus(text_list, f"{model_id}|{backend_id}|{self.label_names!r}")
+        return hash_corpus(text_list, f"{_UNITS_LAYOUT}|{model_id}|{backend_id}|{self.label_names!r}")
 
     def _require_text_model(self) -> TextModel:
         text_model = getattr(self, "_text_model", None)
