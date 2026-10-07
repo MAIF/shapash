@@ -251,3 +251,14 @@ class TestNlpExplainerDefault:
         )
         assert strings.backend.masking == "text"
         assert default._compute_key([TEXT]) != strings._compute_key([TEXT])
+
+
+class TestProgress:
+    def test_a_bar_over_the_texts_unless_silent(self, capsys):
+        pytest.importorskip("tqdm")
+        model = AdditiveModel()
+        NlpShapBackend(model, label_names=model.label_names).run_explainer([TEXT, TEXT])
+        assert "nlp_shap attribution" in capsys.readouterr().err
+        silent = NlpShapBackend(model, label_names=model.label_names, explainer_compute_args={"silent": True})
+        silent.run_explainer([TEXT])
+        assert capsys.readouterr().err == ""

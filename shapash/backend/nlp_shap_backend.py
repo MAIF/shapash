@@ -509,6 +509,8 @@ class NlpShapBackend(NlpBackend):
         under the same ``max_evals`` and deterministically shifts the values, within the error band
         above. Worth ~1.6x on short texts; 0.98x and 2.2x peak memory on imdb-length ones, where a
         512-token forward pass already saturates the GPU.
+
+        ``silent=True`` hides the progress bar over the texts, shown by default as SHAP does.
     batch_size : int or None, optional
         Batch size applied to ``model`` when it is a ``transformers`` pipeline that does not
         already have one (string path only). Default 64. Pass ``None`` to leave the pipeline untouched. Distinct from
@@ -674,13 +676,17 @@ class NlpShapBackend(NlpBackend):
         base_values: list[np.ndarray] = []
         data: list[list[str]] = []
         spans: list[list[tuple[Span, ...]]] = []
-        for text in map(str, texts):
+        # One explainer call per text, so SHAP's own progress bar (on by default, off with
+        # ``silent=True``) would never show: draw it over the texts instead, and keep each call quiet.
+        compute_args = {**self.explainer_compute_args, "silent": True}
+        show_progress = not self.explainer_compute_args.get("silent", False)
+        for text in self._progress_iter(list(map(str, texts)), enabled=show_progress):
             encoding = masker.encoding(text)
             if encoding.layout.n_pieces == 0:  # nothing to hide: the text's own score is the baseline
                 values = np.zeros((0, 0))
                 base = self.model(encoding.input_ids[None, :])[0]
             else:
-                explanation = self.explainer([text], **self.explainer_compute_args)
+                explanation = self.explainer([text], **compute_args)
                 values, base = explanation.values[0], explanation.base_values[0]
             words, word_values, word_base, word_spans = encoding.layout.aggregate(values, base)
             data.append(words)

@@ -205,15 +205,16 @@ class NlpBackend(Backend):
             token_spans=None if explain_data.token_spans is None else [explain_data.token_spans[i] for i in subset],
         )
 
-    def _progress_iter(self, items: list[str]) -> Iterable[str]:
-        """Wrap ``items`` in a ``tqdm`` bar when the backend's ``show_progress`` is set, else return it unchanged.
+    def _progress_iter(self, items: list[str], enabled: bool | None = None) -> Iterable[str]:
+        """Wrap ``items`` in a ``tqdm`` bar when progress is on, else return it unchanged.
 
-        Shared by the backends that loop over texts one at a time (LIG, LIME). Best-effort and
-        dependency-free: ``tqdm`` is imported with ``errors="ignore"`` so a missing install simply
-        yields the plain list rather than raising. Read with ``getattr`` so a backend without the
-        option (or one built via ``object.__new__``) runs silently.
+        Shared by the backends that loop over texts one at a time (LIG, LIME, token-id SHAP). Progress
+        is on when ``enabled`` says so, or, when it is ``None``, when the backend's ``show_progress`` is
+        set. Best-effort and dependency-free: ``tqdm`` is imported with ``errors="ignore"`` so a missing
+        install simply yields the plain list rather than raising. ``show_progress`` is read with
+        ``getattr`` so a backend without the option (or one built via ``object.__new__``) runs silently.
         """
-        if not getattr(self, "show_progress", False):
+        if not (getattr(self, "show_progress", False) if enabled is None else enabled):
             return items
         tqdm_mod = import_optional_module("tqdm", errors="ignore")
         if tqdm_mod is None:
