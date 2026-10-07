@@ -7,24 +7,21 @@ token — the same per-token, per-class shape SHAP produces, so the webapp and t
 ``plot_sentence_highlight`` / ``plot_token_highlight`` renderers consume it unchanged.
 
 LIG attributes at the tokenizer's *subword* granularity (``[CLS]``, ``[SEP]``, ``##`` continuation
-pieces). To match the word-level highlights the SHAP backend produces, ``_aggregate_subwords`` merges
-each word's subwords into a single contribution and folds the special tokens' attribution into the
-baseline (see below) — so the output carries whole words, not ``##`` fragments.
+pieces). To match the word-level highlights the SHAP backend produces, each word's subwords are
+summed into a single contribution and the special tokens' attribution folds into the baseline (see
+below), so the output carries whole words, not ``##`` fragments.
 
 LIG is a *completion* method: for each class ``c`` the token attributions sum to
 ``logits(x)[c] - logits(baseline)[c]``. We therefore report ``base_values[c] = logits(baseline)[c]``
 so the additive ``base + Σ = total`` summary in ``plot_sentence_highlight`` stays consistent. These
-values live in raw logit space — **not** the same space ``NlpShapBackend`` reports: SHAP explains
-the pipeline's softmax probability output, not ``model.logits``, so the two backends' numbers are on
-different scales and are not directly comparable.
+values live in raw logit space — the space ``NlpShapBackend(output_space="logit")`` reports; its
+default explains softmax probabilities, on a different scale.
 
-Each word is then placed in the source text through the tokenizer's offsets
-(:meth:`~shapash.model.base.SupportsCaptumIG.token_offsets`): its span is recorded
-(``NlpContributions.token_spans``) and its display string is that span of the text, not the
-tokenizer's rebuilt string — which an uncased tokenizer lowercases and strips of accents, and which
-reads ``[UNK]`` for an emoji. A word covering only whitespace (byte-level BPE gives a lone ``Ġ``/``Ċ``
-its own word id on a double space or a newline) is not a word: its attribution goes to the baseline,
-like a special token's.
+With the tokenizer's offsets (:meth:`~shapash.model.base.SupportsCaptumIG.token_offsets`), words
+come from :func:`~shapash.compute.word_layout.word_layout`, the layout the SHAP backend masks: each
+word records its span (``NlpContributions.token_spans``) and reads as that span of the text, and a word
+covering only whitespace folds into the baseline, like a special token. Without offsets (a slow
+tokenizer), words keep their token-built strings and are located in the text by search.
 
 Unlike the SHAP/LIME backends (which wrap a plain text callable), this backend needs the embedding
 module and a logits forward pass, so it consumes a :class:`~shapash.model.base.TextModel` that
@@ -39,7 +36,8 @@ import numpy as np
 
 from shapash._optional import import_optional_module
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
-from shapash.compute.spans import Span, locate_spans, span_from_offsets, trim_span
+from shapash.compute.spans import Span, locate_spans
+from shapash.compute.word_layout import word_layout
 from shapash.model.base import SupportsCaptumIG
 
 _NLP_EXTRA = 'Install the NLP extra: pip install "shapash[nlp]".'
@@ -180,42 +178,6 @@ def _valid_alignment(
     return alignment
 
 
-def _place_words(
-    text: str,
-    words: list[str],
-    contributions: np.ndarray,
-    base_values: np.ndarray,
-    word_positions: list[list[int]] | None,
-    offsets: list[tuple[int, int]] | None,
-) -> tuple[list[str], np.ndarray, np.ndarray, list[tuple[Span, ...]]]:
-    """Give each word its span and its source-text string; fold whitespace-only words into the baseline.
-
-    With ``word_positions`` (the exact tokenizer grouping) and ``offsets``, a word's span is read off
-    its tokens' offsets. Without them — a slow tokenizer, which reports neither — words keep their
-    token-built strings and are located in ``text`` by search, the approximate path.
-
-    Returns
-    -------
-    tuple[list[str], np.ndarray, np.ndarray, list[tuple[tuple[int, int], ...]]]
-        Words, their contributions, the baseline (with any folded word's attribution), and spans.
-    """
-    if word_positions is None or offsets is None:
-        return words, contributions, base_values, locate_spans(text, words)
-    base = base_values.astype(float).copy()
-    keep: list[int] = []
-    placed: list[str] = []
-    spans: list[tuple[Span, ...]] = []
-    for k, positions in enumerate(word_positions):
-        span = trim_span(text, span_from_offsets(offsets, positions))
-        if span is None:
-            base = base + contributions[k]  # covers no visible character: not a word (see module docstring)
-            continue
-        keep.append(k)
-        placed.append(text[span[0] : span[1]])
-        spans.append((span,))
-    return placed, contributions[keep], base, spans
-
-
 def _valid_offsets(offsets: list[tuple[int, int]] | None, n_tokens: int) -> list[tuple[int, int]] | None:
     """Return ``offsets`` only when there is exactly one per attributed token, else ``None``.
 
@@ -287,7 +249,7 @@ class NlpCaptumLigBackend(NlpBackend):
     ) -> None:
         super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
         self.show_progress = show_progress
-        # Same token SHAP's Text masker substitutes (the tokenizer's mask token) whenever one exists.
+        # The token SHAP substitutes too (the tokenizer's mask token) whenever one exists.
         self.baseline_token = model.baseline_token
         captum_attr = import_optional_module("captum.attr", extra=_NLP_EXTRA)
         self.explainer = captum_attr.LayerIntegratedGradients(model.logits, model.embedding_layer)
@@ -340,15 +302,21 @@ class NlpCaptumLigBackend(NlpBackend):
             stacked = np.stack(per_class, axis=-1)  # (seq, n_classes)
             alignment = _valid_alignment(model.word_alignment(text), n_tokens=stacked.shape[0])
             offsets = _valid_offsets(getattr(model, "token_offsets", lambda _: None)(text), n_tokens=stacked.shape[0])
-            if alignment is not None:
-                word_tokens, word_contribs, base_logits = _aggregate_by_alignment(stacked, base_logits, alignment)
-            else:
-                word_tokens, word_contribs, base_logits = _aggregate_subwords(
-                    list(tokens), stacked, base_logits, special_tokens=_model_special_tokens(model)
+            if alignment is not None and offsets is not None:
+                # The exact path: words, their spans and strings from the model's own encoding.
+                layout = word_layout(text, alignment[1], offsets)
+                word_tokens, word_contribs, base_logits, word_spans = layout.aggregate(
+                    stacked, base_logits, per="token"
                 )
-            word_tokens, word_contribs, base_logits, word_spans = _place_words(
-                text, word_tokens, word_contribs, base_logits, None if alignment is None else alignment[1], offsets
-            )
+            else:
+                # No offsets to place words with: keep the token-built strings and search for them.
+                if alignment is not None:
+                    word_tokens, word_contribs, base_logits = _aggregate_by_alignment(stacked, base_logits, alignment)
+                else:
+                    word_tokens, word_contribs, base_logits = _aggregate_subwords(
+                        list(tokens), stacked, base_logits, special_tokens=_model_special_tokens(model)
+                    )
+                word_spans = locate_spans(text, word_tokens)
             contributions.append(word_contribs)  # (n_words, n_classes)
             base_values.append(base_logits)
             data.append(word_tokens)

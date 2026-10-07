@@ -5,6 +5,44 @@
 (``get_local_contributions``, common ``__init__`` skeleton) lives in
 ``NlpBackend`` (see ``nlp_backend.py``).
 
+It masks text one of two ways: in the model's token ids when the model exposes them, as a string
+otherwise.
+
+Token-id masking
+----------------
+``shap.maskers.Text`` masks *strings*: it cuts the text into segments, glues the kept ones back
+together with ``" [MASK]"`` for the hidden ones, and lets the model tokenize the result again. Two
+things go wrong on the way, and both change what the model is asked:
+
+- with nothing masked, the glued string is not the text. Tokens sharing a character (a byte-level
+  BPE emoji or ``’``, a SentencePiece ``▁`` holding the next character's offsets) put it in two
+  segments, so ``était`` becomes ``éétait``; runs of whitespace collapse to one space. SHAP stays
+  additive, but for that other string;
+- hiding one token changes its neighbours. Tokenizing ``"<mask>love"`` again gives ``love``
+  where the text had ``Ġlove``, and ``"[MASK]believably"`` turns ``##bel`` into ``bel``, so a
+  coalition is not "these tokens hidden, the others as they were".
+
+A model exposing its token ids (:class:`~shapash.model.base.SupportsCaptumIG`, with a fast
+tokenizer) is masked in its ids instead, by :class:`_TokenIdMasker`. The text is encoded once, by
+the model (its truncation, its special tokens); a masked input is that encoding with the hidden
+positions set to the model's :meth:`~shapash.model.base.SupportsCaptumIG.reference_ids`, the
+``[MASK]`` reference LIG integrates from. With nothing hidden the model sees exactly its encoding of
+the text, every masked input has the same length, and with everything hidden it sees LIG's
+reference.
+
+What SHAP perturbs are the pieces of the text's :class:`~shapash.compute.word_layout.WordLayout`: a
+word's tokens, with tokens sharing a character as one piece, so a masked input never holds half a
+character. Special tokens stay as they are in every input. The hierarchy SHAP's Partition explainer
+walks keeps each word one branch (its pieces first, then words pairwise), so a word's value, the sum
+of its pieces', is its Owen value as a single player. Words are then reported as LIG reports them,
+through the same layout.
+
+String masking
+--------------
+Any other model (a pipeline, a bare callable, or an explicit ``masker=`` / ``explainer_args``) goes
+through ``shap.maskers.Text`` and keeps the defects above. The rest of this docstring is about that
+path.
+
 ``shap.maskers.Text.token_segments`` emits *segments* of the source string rather than the
 tokenizer's raw subword strings, and it does so in three different regimes: the offset-mapping path
 slices each token up to the start of the next (so a segment carries the *trailing* gap text), the
@@ -33,14 +71,19 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from typing import Literal, cast
+from dataclasses import dataclass, field
+from typing import Any, Literal, cast
 
 import numpy as np
 import shap
 
+from shapash._optional import import_optional_module
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.compute.spans import Span, is_unsegmented_script, locate_spans, span_from_offsets, trim_span
-from shapash.model.base import SupportsLogits, TextModel, has_capabilities
+from shapash.compute.word_layout import WordLayout, word_layout
+from shapash.model.base import SupportsCaptumIG, SupportsLogits, TextModel, has_capabilities
+
+_NLP_EXTRA = 'Install the NLP extra: pip install "shapash[nlp]".'
 
 # SHAP's masker reports special tokens as blank segments on its offset-mapping path; their
 # attribution is folded into the baseline during word aggregation.
@@ -232,6 +275,198 @@ def _aggregate_subwords(
     return words, stacked, base, word_spans
 
 
+# ----------------------------------------------------------------------------------------------------
+# Token-id masking (see the module docstring)
+# ----------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _Encoding:
+    """One text as :class:`_TokenIdMasker` masks it: the model's encoding, its reference, its words.
+
+    Attributes
+    ----------
+    input_ids : np.ndarray
+        The model's encoding of the text, ``(seq,)``.
+    reference_ids : np.ndarray
+        ``input_ids`` with every piece's tokens set to the model's reference id, ``(seq,)``.
+    layout : WordLayout
+        The text's words; their pieces are the features SHAP masks.
+    feature_of_token : np.ndarray
+        Each token's feature index, ``-1`` for a token in no feature (a special token).
+    """
+
+    input_ids: np.ndarray
+    reference_ids: np.ndarray
+    layout: WordLayout
+    feature_of_token: np.ndarray = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        owner = np.full(len(self.input_ids), -1, dtype=int)
+        for f, positions in enumerate(self.layout.pieces):
+            owner[positions] = f
+        object.__setattr__(self, "feature_of_token", owner)
+
+
+def _supports_token_ids(model: Any) -> bool:
+    """Whether ``model`` can be masked in its token ids.
+
+    It needs the id-level surface of :class:`~shapash.model.base.SupportsCaptumIG` (``encode``,
+    ``reference_ids``, ``logits``) and a tokenizer that reports word ids and offsets — a fast one;
+    a slow tokenizer reports neither, so pieces could not be grouped into words or placed.
+    """
+    if not has_capabilities(model, SupportsCaptumIG):
+        return False
+    try:
+        return model.word_alignment("a") is not None and model.token_offsets("a") is not None
+    except Exception:  # noqa: BLE001 — a probe: any failure means "not supported", never a crash
+        return False
+
+
+def _encode(model: SupportsCaptumIG, text: str) -> _Encoding:
+    """Encode ``text`` with ``model`` and cut the encoding into words and pieces.
+
+    Raises
+    ------
+    ValueError
+        When the model's word alignment or offsets do not cover its encoding (they come from
+        separate tokenizer calls, so a tokenizer disagreeing with itself would misplace every value).
+    """
+    input_ids, _, _ = model.encode(text)
+    ids = np.asarray(input_ids[0].tolist(), dtype=np.int64)
+    alignment = model.word_alignment(text)
+    offsets = model.token_offsets(text)
+    if alignment is None or offsets is None or len(offsets) != len(ids):
+        raise ValueError(f"{type(model).__name__} gave no word alignment or offsets matching its encoding of {text!r}.")
+    layout = word_layout(text, alignment[1], offsets)
+    reference = np.asarray(model.reference_ids(input_ids)[0].tolist(), dtype=np.int64)
+    masked = np.zeros(len(ids), dtype=bool)
+    masked[[p for piece in layout.pieces for p in piece]] = True
+    return _Encoding(input_ids=ids, reference_ids=np.where(masked, reference, ids), layout=layout)
+
+
+def _balanced(nodes: list[int], rows: list[list[float]], sizes: dict[int, int], next_id: int) -> tuple[int, int]:
+    """Merge ``nodes`` pairwise, level by level, into one; append the merges to ``rows``."""
+    while len(nodes) > 1:
+        merged = []
+        for a, b in zip(nodes[::2], nodes[1::2], strict=False):
+            sizes[next_id] = sizes[a] + sizes[b]
+            rows.append([a, b, 0.0, sizes[next_id]])
+            merged.append(next_id)
+            next_id += 1
+        if len(nodes) % 2:
+            merged.append(nodes[-1])
+        nodes = merged
+    return nodes[0], next_id
+
+
+def _clustering(layout: WordLayout) -> np.ndarray:
+    """The feature hierarchy, as the linkage matrix SHAP's Partition explainer reads.
+
+    Each word's pieces merge first, so every word is one branch; the words then merge pairwise with
+    their neighbours. Heights are the cluster sizes, rescaled to ``(0, 1]``, which is also what
+    ``shap.maskers.Text`` uses.
+    """
+    n = layout.n_pieces
+    rows: list[list[float]] = []
+    sizes = dict.fromkeys(range(n), 1)
+    next_id, first = n, 0
+    word_nodes = []
+    for word in layout.words:
+        node, next_id = _balanced(list(range(first, first + len(word))), rows, sizes, next_id)
+        word_nodes.append(node)
+        first += len(word)
+    if word_nodes:
+        _balanced(word_nodes, rows, sizes, next_id)
+    tree = np.array(rows, dtype=float).reshape(-1, 4)
+    if len(tree):
+        tree[:, 2] = tree[:, 3] / tree[:, 3].max()
+    return tree
+
+
+class _TokenIdMasker(shap.maskers.Masker):
+    """SHAP masker hiding a text's pieces in the model's own encoding (see the module docstring).
+
+    Parameters
+    ----------
+    model : SupportsCaptumIG
+        The model whose encoding is masked; :func:`_supports_token_ids` must hold.
+    """
+
+    # The ``Text`` masker's default: SHAP's batch size moves which nodes the Owen loop expands under
+    # a ``max_evals`` budget, so keeping it keeps the documented trade-offs of that knob.
+    default_batch_size = 5
+
+    def __init__(self, model: SupportsCaptumIG) -> None:
+        self.model = model
+        self.immutable_outputs = True
+        # What a hidden token becomes, read like ``shap.maskers.Text.mask_token``.
+        self.mask_token = model.baseline_token
+        self._text: str | None = None
+        self._encoding: _Encoding | None = None
+
+    def encoding(self, s: str) -> _Encoding:
+        """The :class:`_Encoding` of ``s``, cached for the text being explained."""
+        if self._encoding is None or s != self._text:
+            self._encoding, self._text = _encode(self.model, s), s
+        return self._encoding
+
+    def __call__(self, mask: np.ndarray, s: str) -> tuple[np.ndarray]:
+        """The encoding of ``s`` with every feature ``mask`` hides set to its reference id."""
+        encoding = self.encoding(s)
+        owner = encoding.feature_of_token
+        hidden = owner >= 0
+        hidden[hidden] = ~np.asarray(mask, dtype=bool)[owner[hidden]]
+        return (np.where(hidden, encoding.reference_ids, encoding.input_ids)[None, :],)
+
+    def shape(self, s: str) -> tuple[int, int]:
+        """One masked input per mask, over the text's features."""
+        return (1, self.encoding(s).layout.n_pieces)
+
+    def mask_shapes(self, s: str) -> list[tuple[int]]:
+        """One boolean per feature."""
+        return [(self.encoding(s).layout.n_pieces,)]
+
+    def feature_names(self, s: str) -> list[list[str]]:
+        """Each feature's tokens, as the tokenizer writes them."""
+        encoding = self.encoding(s)
+        convert = self.model.tokenizer.convert_ids_to_tokens  # type: ignore[attr-defined]
+        return [["".join(convert(encoding.input_ids[piece].tolist())) for piece in encoding.layout.pieces]]
+
+    def clustering(self, s: str) -> np.ndarray:
+        """See :func:`_clustering`."""
+        return _clustering(self.encoding(s).layout)
+
+
+class _TokenIdScorer:
+    """The model scored on token ids, as SHAP calls it with :class:`_TokenIdMasker`'s inputs.
+
+    Parameters
+    ----------
+    model : SupportsCaptumIG
+        The model behind the masker.
+    output_space : {"probability", "logit"}
+        ``"logit"`` returns :meth:`~shapash.model.base.SupportsCaptumIG.logits`; ``"probability"``
+        their softmax, which is what :meth:`~shapash.model.base.TextModel.predict` returns for a
+        model exposing logits.
+    """
+
+    def __init__(self, model: SupportsCaptumIG, output_space: Literal["probability", "logit"]) -> None:
+        self.model = model
+        self.output_space = output_space
+
+    def __call__(self, input_ids: np.ndarray) -> np.ndarray:
+        """``(n, n_classes)`` scores for ``n`` same-length id rows (one text's masked inputs)."""
+        torch = import_optional_module("torch", extra=_NLP_EXTRA)
+        device = self.model.embedding_layer.weight.device
+        ids = torch.as_tensor(np.asarray(input_ids), dtype=torch.long, device=device)
+        with torch.no_grad():
+            logits = self.model.logits(ids, torch.ones_like(ids)).float()
+        if self.output_space == "probability":
+            logits = torch.softmax(logits, dim=-1)
+        return logits.cpu().numpy()
+
+
 class NlpShapBackend(NlpBackend):
     """SHAP backend for text classification models (HuggingFace pipelines, etc.).
 
@@ -244,14 +479,18 @@ class NlpShapBackend(NlpBackend):
         A :class:`~shapash.model.base.TextModel`, whose scoring surface is chosen by
         ``output_space``; or a text callable accepted by ``shap.Explainer`` (e.g. a
         ``transformers.pipeline`` with ``return_all_scores=True``), which is taken to return
-        probabilities.
+        probabilities. A ``TextModel`` exposing token ids (``SupportsCaptumIG`` with a fast tokenizer)
+        is masked in its own encoding (see the module docstring) unless ``masker`` or
+        ``explainer_args`` is given.
     preprocessing : None
         Unused; accepted for interface compatibility with ``BaseBackend``.
     label_names : list[str] or None
         Class names in the same order as the model output columns.
     masker : any, optional
-        Forwarded to ``shap.Explainer`` when ``explainer_args`` is not given.
-        Typically ``None`` for text (SHAP auto-selects a ``TextMasker``).
+        Forwarded to ``shap.Explainer`` when ``explainer_args`` is not given. Typically ``None``: a
+        model exposing token ids is then masked in its encoding, and SHAP infers a ``Text`` masker
+        for a pipeline. Passing one (e.g. ``shap.maskers.Text(tokenizer)``) always takes the string
+        path.
     explainer_args : dict, optional
         Keyword arguments forwarded to ``shap.Explainer.__init__``.
         Use ``{"explainer": SomeExplainerClass, ...}`` to inject a custom
@@ -264,7 +503,7 @@ class NlpShapBackend(NlpBackend):
         converged: any imdb review over ~40 words exhausts it and lands 8-45% (max|Δ| / max|value|)
         from the fully-traversed explanation, which costs 3k-23k evals.
 
-        ``batch_size`` (default: the ``Text`` masker's 5) caps how many masked variants reach
+        ``batch_size`` (default 5, on both masking paths) caps how many masked variants reach
         ``model`` per call, and is *not* free. The Owen loop drains a whole batch from its
         best-first queue before pushing any children, so a larger batch expands different nodes
         under the same ``max_evals`` and deterministically shifts the values, within the error band
@@ -272,7 +511,7 @@ class NlpShapBackend(NlpBackend):
         512-token forward pass already saturates the GPU.
     batch_size : int or None, optional
         Batch size applied to ``model`` when it is a ``transformers`` pipeline that does not
-        already have one. Default 64. Pass ``None`` to leave the pipeline untouched. Distinct from
+        already have one (string path only). Default 64. Pass ``None`` to leave the pipeline untouched. Distinct from
         the explainer's ``batch_size`` above: this one only regroups the strings SHAP has already
         chosen, so it never changes the explanation.
 
@@ -297,9 +536,9 @@ class NlpShapBackend(NlpBackend):
     """
 
     name = "nlp_shap"
-    # No reference is learned from data: the ``Text`` masker infers its own masking
-    # scheme from the pipeline/tokenizer (``masker=None`` below), so ``fit`` has
-    # nothing backend-specific to learn here.
+    # No reference is learned from data: a hidden token becomes the model's reference id (token-id
+    # masking) or the tokenizer's mask token (``Text`` masker), so ``fit`` has nothing
+    # backend-specific to learn here.
     reference_kind = "none"
     # Shapley values satisfy the efficiency axiom by construction, and stay additive
     # even under the Partition/Owen path SHAP silently takes for text. Owen values satisfy efficiency too.
@@ -329,7 +568,14 @@ class NlpShapBackend(NlpBackend):
                 "output_space='logit' cannot be combined with explainer_args: those build the explainer "
                 "around their own model, whose output space this backend cannot check."
             )
-        if isinstance(model, TextModel):
+        # How the text is masked: in the model's own encoding whenever it allows it and the caller
+        # brought no masker or explainer of their own (see the module docstring).
+        self.masking: Literal["token_ids", "text"] = "text"
+        if isinstance(model, TextModel) and masker is None and not explainer_args and _supports_token_ids(model):
+            masker = _TokenIdMasker(model)  # type: ignore[arg-type]
+            model = _TokenIdScorer(model, output_space)  # type: ignore[arg-type]
+            self.masking = "token_ids"
+        elif isinstance(model, TextModel):
             model, masker = _resolve_text_model(model, masker, output_space)
         elif output_space == "logit":
             raise TypeError(
@@ -357,6 +603,8 @@ class NlpShapBackend(NlpBackend):
             self.explainer = self.explainer_args["explainer"](**shap_params)
         elif self.explainer_args:
             self.explainer = shap.Explainer(**self.explainer_args)
+        elif self.masking == "token_ids":
+            self.explainer = shap.Explainer(model, masker=self.masker, algorithm="partition")
         else:
             # ``masker=None`` lets SHAP auto-infer a Text masker from a transformers pipeline (the
             # HFClassifierModel/pipeline path); an explicit masker is required when ``model`` is a plain
@@ -388,6 +636,8 @@ class NlpShapBackend(NlpBackend):
             Ragged list of value arrays, baseline predictions, and token
             strings per sample.
         """
+        if getattr(self, "masking", "text") == "token_ids":
+            return self._run_token_ids(list(x))
         shap_explanation = self.explainer(x, **self.explainer_compute_args)
 
         contributions: list[np.ndarray] = []
@@ -410,6 +660,33 @@ class NlpShapBackend(NlpBackend):
             base_values.append(word_base)
             spans.append(word_spans)
 
+        return NlpContributions(
+            token_strings=data,
+            values=contributions,
+            base_values=np.stack(base_values, axis=0),
+            token_spans=spans,
+        )
+
+    def _run_token_ids(self, texts: list[str]) -> NlpContributions:
+        """Explain each text on its token-id features, then report its words (see the module docstring)."""
+        masker: _TokenIdMasker = self.masker
+        contributions: list[np.ndarray] = []
+        base_values: list[np.ndarray] = []
+        data: list[list[str]] = []
+        spans: list[list[tuple[Span, ...]]] = []
+        for text in map(str, texts):
+            encoding = masker.encoding(text)
+            if encoding.layout.n_pieces == 0:  # nothing to hide: the text's own score is the baseline
+                values = np.zeros((0, 0))
+                base = self.model(encoding.input_ids[None, :])[0]
+            else:
+                explanation = self.explainer([text], **self.explainer_compute_args)
+                values, base = explanation.values[0], explanation.base_values[0]
+            words, word_values, word_base, word_spans = encoding.layout.aggregate(values, base)
+            data.append(words)
+            contributions.append(word_values)
+            base_values.append(word_base)
+            spans.append(word_spans)
         return NlpContributions(
             token_strings=data,
             values=contributions,

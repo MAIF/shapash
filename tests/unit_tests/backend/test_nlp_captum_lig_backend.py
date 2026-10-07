@@ -13,7 +13,6 @@ from shapash.backend import NlpCaptumLigBackend, get_backend_cls_from_name
 from shapash.backend.nlp_captum_lig_backend import (
     _aggregate_by_alignment,
     _aggregate_subwords,
-    _place_words,
     _valid_offsets,
 )
 from shapash.model.base import SupportsCaptumIG, TextModel
@@ -136,37 +135,8 @@ class TestAggregateByAlignment(unittest.TestCase):
         np.testing.assert_allclose(new_base + word_contribs.sum(axis=0), base + contribs.sum(axis=0))
 
 
-class TestPlaceWords(unittest.TestCase):
-    """Words read off the source text through token offsets — offsets copied from real tokenizers."""
-
-    def test_words_are_shown_as_written(self):
-        # distilbert-base-uncased: the tokenizer rebuilds "cafe" and "[UNK]"; the text says otherwise.
-        text = "Le café 😍"
-        offsets = [(0, 0), (0, 2), (3, 6), (6, 7), (8, 9), (0, 0)]
-        words, values, base, spans = _place_words(
-            text, ["le", "cafe", "[UNK]"], np.array([[1.0], [2.0], [3.0]]), np.zeros(1), [[1], [2, 3], [4]], offsets
-        )
-        self.assertEqual(words, ["Le", "café", "😍"])
-        self.assertEqual(spans, [((0, 2),), ((3, 7),), ((8, 9),)])
-        np.testing.assert_allclose(values[:, 0], [1.0, 2.0, 3.0])
-        self.assertEqual(base[0], 0.0)
-
-    def test_whitespace_only_words_fold_into_the_baseline(self):
-        # roberta-base on "Hello  world\n\nok": a lone "Ġ" (zero-width) and two "Ċ" get word ids.
-        text = "Hello  world\n\nok"
-        offsets = [(0, 0), (0, 5), (6, 6), (7, 12), (12, 13), (13, 14), (14, 16), (0, 0)]
-        positions = [[1], [2], [3], [4], [5], [6]]
-        contribs = np.arange(1.0, 7.0)[:, None]
-        words, values, base, _ = _place_words(
-            text, ["Hello", "", "world", "", "", "ok"], contribs, np.zeros(1), positions, offsets
-        )
-        self.assertEqual(words, ["Hello", "world", "ok"])
-        np.testing.assert_allclose(values[:, 0], [1.0, 3.0, 6.0])
-        self.assertEqual(base[0], 2 + 4 + 5)  # completeness kept: nothing is dropped
-
-    def test_without_offsets_words_keep_their_strings_and_are_located(self):
-        words, _, _, spans = _place_words("I am", ["i", "am"], np.ones((2, 1)), np.zeros(1), None, None)
-        self.assertEqual((words, spans), (["i", "am"], [((0, 1),), ((2, 4),)]))
+class TestValidOffsets(unittest.TestCase):
+    """Offsets come from a second tokenizer call: used only when they match the attributed tokens."""
 
     def test_valid_offsets_need_one_entry_per_token(self):
         self.assertIsNone(_valid_offsets([(0, 1)], n_tokens=2))

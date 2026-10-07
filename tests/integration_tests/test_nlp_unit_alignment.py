@@ -9,7 +9,9 @@ double spaces, newlines), and check the invariants alignment relies on:
 
 - every unit is placed: it has spans, and its string is the source text at its span;
 - no unit is whitespace;
-- SHAP and LIG cover the same characters, since both read the same tokenizer's offsets;
+- SHAP and LIG report the same units, since both read the model's own encoding;
+- SHAP is additive against the text itself: it masks token ids, so the model never sees a rebuilt string;
+- SHAP in probability space (its default) compares with LIME, which explains probabilities too;
 - aligning backends drops nothing: each backend's values sum to the same total before and after.
 
 The models are randomly initialised from each checkpoint's config at a tiny size, so only the config
@@ -17,7 +19,10 @@ and tokenizer are downloaded; the numbers mean nothing, the units are real. Skip
 or ``lime`` extra is missing or a checkpoint cannot be fetched.
 """
 
+import warnings
+
 import numpy as np
+import pandas as pd
 import pytest
 
 transformers = pytest.importorskip("transformers")
@@ -91,6 +96,7 @@ def explanations(request):
         "shap": NlpShapBackend(
             model, label_names=LABELS, output_space="logit", explainer_compute_args={"max_evals": 500}
         ),
+        "shap_prob": NlpShapBackend(model, label_names=LABELS, explainer_compute_args={"max_evals": 500}),
         "lig": NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2}),
         "lime": NlpLimeBackend(model, label_names=LABELS, explainer_compute_args={"num_samples": 50}),
     }
@@ -99,19 +105,8 @@ def explanations(request):
         for name, backend in backends.items()
     }
     out["model"] = model
-    out["shap_masker"] = backends["shap"].explainer.masker
+    assert backends["shap"].masking == "token_ids"
     return out
-
-
-def _shap_input(masker, text: str) -> str:
-    """The string SHAP's ``Text`` masker hands the model when nothing is masked.
-
-    Not always ``text``: the masker rebuilds it from its segments, so it collapses whitespace and,
-    where tokens share a character (an emoji split by byte-level BPE), repeats it. An upstream
-    behaviour of ``shap.maskers.Text``, outside what alignment can fix.
-    """
-    segments, _ = masker.token_segments(text)
-    return str(masker(np.ones(len(segments), dtype=bool), text)[0][0])
 
 
 @pytest.mark.parametrize("backend", ["shap", "lig", "lime"])
@@ -129,25 +124,53 @@ def test_every_unit_is_placed_and_reads_as_written(explanations, backend):
             assert all(a[1] <= b[0] for a, b in zip(flat, flat[1:], strict=False))
 
 
-def test_shap_and_lig_cover_the_same_characters(explanations):
+def test_shap_and_lig_report_the_same_units(explanations):
+    shap, lig = explanations["shap"], explanations["lig"]
     for row, text in enumerate(TEXTS):
-        covered = {}
-        for backend in ("shap", "lig"):
-            chars = set()
-            for ((start, end),) in explanations[backend].token_spans[row]:
-                chars.update(range(start, end))
-            covered[backend] = chars
-        assert covered["shap"] == covered["lig"], f"row {row}: {text!r}"
-        visible = {i for i, c in enumerate(text) if not c.isspace()}
-        assert covered["shap"] <= visible
+        assert shap.token_spans[row] == lig.token_spans[row], f"row {row}: {text!r}"
+        assert shap.token_strings[row] == lig.token_strings[row]
 
 
-def test_shap_stays_exactly_additive_after_merging(explanations):
-    # Against the string SHAP explains (see _shap_input): merging units must not move the total.
+def test_shap_is_exactly_additive_against_the_text_itself(explanations):
     exp, model = explanations["shap"], explanations["model"]
-    logits = model.predict_logits([_shap_input(explanations["shap_masker"], text) for text in TEXTS])
+    logits = model.predict_logits(TEXTS)
     for row in range(len(TEXTS)):
         np.testing.assert_allclose(exp.base_values[row] + exp.values[row].sum(axis=0), logits[row], atol=1e-4)
+
+
+def test_shap_and_lig_measure_against_the_same_reference(explanations):
+    # Both hide every content token behind the model's reference id, so both baselines are the
+    # reference's logits — except where a whitespace-only word (a byte-level "Ġ"/"Ċ") folds its own,
+    # method-specific value into them: compare on texts without one.
+    shap, lig = explanations["shap"], explanations["lig"]
+    for row, text in enumerate(TEXTS):
+        if any(c in text for c in "\n\t") or "  " in text:
+            continue
+        np.testing.assert_allclose(shap.base_values[row], lig.base_values[row], atol=1e-4)
+
+
+def test_shap_and_lime_compare_in_probability_space(explanations):
+    prob, logit, lime = explanations["shap_prob"], explanations["shap"], explanations["lime"]
+    assert (prob.output_space, lime.output_space) == ("probability", "probability")
+    # The output space changes the values, never the units.
+    assert prob.token_spans == logit.token_spans and prob.token_strings == logit.token_strings
+    probs = explanations["model"].predict(TEXTS)
+    for row in range(len(TEXTS)):
+        np.testing.assert_allclose(prob.base_values[row] + prob.values[row].sum(axis=0), probs[row], atol=1e-5)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # same space: no cross-space warning
+        df = corpus_agreement(prob, {"lime": lime}, label_idx=1)
+    assert len(df) == len(TEXTS)
+    assert np.isfinite(df.spearman.fillna(0)).all()
+    # LIME splits words its own way, so coverage is partial, but it is the same against either space.
+    pd.testing.assert_series_equal(
+        df.coverage.reset_index(drop=True),
+        corpus_agreement(logit, {"lime": lime}, label_idx=1).coverage.reset_index(drop=True),
+    )
+    for row in range(len(TEXTS)):
+        units, aligned = align_row(name_explanations(prob, {"lime": lime}), row, 1)
+        assert np.isfinite(aligned["shap"]).all()
+        assert np.nansum(aligned["shap"]) == pytest.approx(prob.values[row][:, 1].sum(), rel=1e-6, abs=1e-9)
 
 
 @pytest.mark.parametrize("label_idx", [0, 1])
@@ -178,20 +201,40 @@ def test_corpus_agreement_runs_on_every_family(explanations):
 
 def test_a_truncated_backend_shows_as_partial_coverage():
     model = _tiny_model(CHECKPOINTS["wordpiece-uncased"])
-    model.max_length = 8  # LIG truncates; SHAP's masker segments the whole text
+    model.max_length = 8  # SHAP and LIG explain the encoding, cut at 6 words; LIME splits the whole text
     text = ["one two three four five six seven eight nine ten eleven twelve"]
-    shap = NlpExplainer(
-        model,
-        label_names=LABELS,
-        backend=NlpShapBackend(
-            model, label_names=LABELS, output_space="logit", explainer_compute_args={"max_evals": 200}
-        ),
-    ).explain(text)
-    lig = NlpExplainer(
-        model,
-        label_names=LABELS,
-        backend=NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2}),
-    ).explain(text)
-    assert len(lig.token_strings[0]) < len(shap.token_strings[0])
-    row = corpus_agreement(shap, {"lig": lig}, label_idx=0).iloc[0]
-    assert 0 < row.coverage < 1
+    explain = {
+        name: NlpExplainer(model, label_names=LABELS, backend=backend).explain(text)
+        for name, backend in {
+            "shap": NlpShapBackend(
+                model, label_names=LABELS, output_space="logit", explainer_compute_args={"max_evals": 200}
+            ),
+            "lig": NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2}),
+            "lime": NlpLimeBackend(model, label_names=LABELS, explainer_compute_args={"num_samples": 50}),
+        }.items()
+    }
+    assert explain["shap"].token_strings == explain["lig"].token_strings == [text[0].split()[:6]]
+    def coverage(other):
+        return corpus_agreement(explain["shap"], {other: explain[other]}, label_idx=0).coverage.iloc[0]
+
+    assert coverage("lig") == 1.0
+    assert coverage("lime") == pytest.approx(0.5)
+
+
+@pytest.mark.parametrize("missing", ["offsets", "alignment and offsets"])
+def test_lig_without_offsets_locates_its_words(monkeypatch, missing):
+    # A slow tokenizer reports no offsets (and no word ids): words keep their token-built strings
+    # and are found in the text by search. On a plain lowercase text that gives the offsets path's units
+    # and values.
+    model = _tiny_model(CHECKPOINTS["wordpiece-uncased"])
+    text = ["i love unbelievably good tea"]
+    backend = NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2})
+    exact = backend.run_explainer(text)
+    monkeypatch.setattr(model, "token_offsets", lambda text: None)
+    if missing == "alignment and offsets":
+        monkeypatch.setattr(model, "word_alignment", lambda text: None)
+    located = backend.run_explainer(text)
+    assert exact.token_strings == located.token_strings == [text[0].split()]
+    assert exact.token_spans == located.token_spans == [[((0, 1),), ((2, 6),), ((7, 19),), ((20, 24),), ((25, 28),)]]
+    np.testing.assert_allclose(located.values[0], exact.values[0], atol=1e-6)
+    np.testing.assert_allclose(located.base_values, exact.base_values, atol=1e-6)

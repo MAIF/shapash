@@ -19,6 +19,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
+from shapash.__version__ import __version__
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_shap_backend import NlpShapBackend
 from shapash.compute.diagnostics.label_noise import (
@@ -57,20 +58,12 @@ def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
 
 
-# Version of how backends cut a text into units and what each unit carries. It enters the cache key
-# because the key covers texts/model/backend but not shapash itself: when a release changes the
-# units (v2 — every unit carries its character spans, unit strings are read off the source text,
-# whitespace-only LIG units fold into the baseline), entries computed before would otherwise be
-# served unchanged. Bump it whenever a backend's units change.
-_UNITS_LAYOUT = "units-v2"
-
-
 def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
     """Read a cached explanation, or return ``None`` when the entry cannot be read.
 
-    An unreadable entry is a **miss, not a failure**: the cache key covers texts/model/backend but
-    not the shapash version, so a layout change leaves entries the new reader cannot parse, and a
-    cache exists so the caller need not care whether the answer was on disk.
+    An unreadable entry is a **miss, not a failure**: a damaged file, or one written by a shapash
+    build whose layout this reader cannot parse (the key changes with every release, not with every
+    commit), and a cache exists so the caller need not care whether the answer was on disk.
     :meth:`NlpExplanation.load` called directly still raises.
 
     Scoped to the errors a stale or damaged entry produces (a missing meta key or parquet member,
@@ -170,17 +163,16 @@ class NlpExplainer:
             self._text_model = None
 
         # Default backend only when the caller brought none. Building it reads the model's SHAP surface
-        # (``shap_callable`` + its companion ``shap_masker``: ``None`` for a pipeline-backed model, which
-        # SHAP can infer a Text masker from; explicit when the callable is a bare scoring function) —
-        # which must not happen when an explicit backend makes those values unused, or an adapter that
-        # never intends to be explained by SHAP could not be used at all.
+        # (its token ids when it exposes them; otherwise ``shap_callable`` + its companion
+        # ``shap_masker``, see ``NlpShapBackend``) — which must not happen when an explicit backend
+        # makes that surface unused, or an adapter that never intends to be explained by SHAP could not
+        # be used at all.
         if backend is not None:
             self.backend: NlpBackend = backend
         else:
             self.backend = NlpShapBackend(
-                model=self._text_model.shap_callable if self._text_model is not None else model,
+                model=self._text_model if self._text_model is not None else model,
                 label_names=self.label_names,
-                masker=self._text_model.shap_masker if self._text_model is not None else None,
                 explainer_args=explainer_args or {},
                 explainer_compute_args=explainer_compute_args or {},
             )
@@ -939,10 +931,11 @@ class NlpExplainer:
         The cached explanation is a function of the texts **and** of everything that scores them,
         so all of it belongs in the key: the model's own identity declaration
         (:attr:`~shapash.model.base.TextModel.model_id` — checkpoint, pooling, normalization, head
-        weights), the backend's registered ``name``, its explainer settings, the explanation space and
-        baseline token it reports (both constructor choices, not class constants — a probability-space
-        and a logit-space ``nlp_shap`` share every other part of the key), and ``label_names`` (which
-        fixes the column order of ``y_prob``).
+        weights), the backend's registered ``name``, its explainer settings, the explanation space,
+        baseline token and masking it reports (constructor choices, not class constants — a
+        probability-space and a logit-space ``nlp_shap`` share every other part of the key), and
+        ``label_names`` (which fixes the column order of ``y_prob``). The shapash version is in it too: a
+        release may change how backends compute or cut units, and must not read an older one's entries.
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
         the model, or the label order and pointing at the same ``cache_dir`` silently reloads the
@@ -961,8 +954,11 @@ class NlpExplainer:
             compute_args = sorted(getattr(backend, "explainer_compute_args", {}).items())
             space = getattr(backend, "output_space", None)
             baseline = getattr(backend, "baseline_token", None)
-            backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}"
-        return hash_corpus(text_list, f"{_UNITS_LAYOUT}|{model_id}|{backend_id}|{self.label_names!r}")
+            # How SHAP masks (token ids or strings) changes its values, and an explicit ``masker=``
+            # selects the string path without touching any other part of the key.
+            masking = getattr(backend, "masking", None)
+            backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}:{masking}"
+        return hash_corpus(text_list, f"{__version__}|{model_id}|{backend_id}|{self.label_names!r}")
 
     def _require_text_model(self) -> TextModel:
         text_model = getattr(self, "_text_model", None)

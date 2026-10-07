@@ -697,8 +697,9 @@ class EncoderClassifierModel(
     def _baseline_token_id(self) -> int:
         """The id substituted for content tokens in :meth:`reference_ids`: mask, else pad, else unk, else 0.
 
-        ``mask`` comes first because it is what SHAP's ``Text`` masker substitutes (it takes the
-        tokenizer's ``mask_token``), so LIG and SHAP measure against the same "word absent" input.
+        ``mask`` comes first because it is what SHAP substitutes for a hidden token too — through
+        these reference ids when it masks token ids, through the tokenizer's ``mask_token`` with
+        ``shap.maskers.Text`` — so LIG and SHAP measure against the same "word absent" input.
         Aligning on it raised SHAP<->LIG rank agreement from 0.46 to 0.57 on DistilBERT.
         Explicit ``None`` checks, not ``or``: id ``0`` is a legitimate token id (BERT's ``[PAD]``,
         RoBERTa's ``<s>``).
