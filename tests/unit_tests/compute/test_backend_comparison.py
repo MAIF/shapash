@@ -1,81 +1,139 @@
-"""Unit tests for ``shapash.compute.backend_comparison`` — putting backends' word units side by side.
+"""Unit tests for ``shapash.compute.backend_comparison`` — putting backends' units side by side.
 
-The token lists below are copied from real ``nlp_shap`` / ``nlp_lime`` / ``nlp_captum_lig`` runs on
-``distilbert-base-uncased-emotion``: SHAP keeps case and punctuation, LIG lowercases, LIME emits a
-case-sensitive bag of distinct words with punctuation dropped.
+Token lists are copied from real ``nlp_shap`` / ``nlp_captum_lig`` / ``nlp_lime`` runs, each on the
+tokenizer named in the test. Spans are what those runs record: the characters of the text a unit
+covers, whatever string the backend printed for it.
 """
 
 import numpy as np
 import pytest
 
-from shapash.compute.backend_comparison import (
-    align_token_values,
-    backend_agreement,
-    locate_tokens,
-    normalize_contributions,
-)
+from shapash.compute.backend_comparison import align_units, backend_agreement, normalize_contributions
 
 TEXT = "The waiting room was cold and I felt nervous, really nervous, about the results."
 SHAP_TOKENS = ["The", "waiting", "room", "was", "cold", "and", "I", "felt", "nervous", ","]
 SHAP_TOKENS += ["really", "nervous", ",", "about", "the", "results", "."]
-LIG_TOKENS = [t.lower() for t in SHAP_TOKENS]
 LIME_TOKENS = ["The", "waiting", "room", "was", "cold", "and", "I", "felt", "nervous", "really", "about", "the"]
 LIME_TOKENS += ["results"]
 
 
-class TestLocateTokens:
-    def test_repeated_words_map_to_successive_occurrences(self):
-        spans = locate_tokens(TEXT, SHAP_TOKENS)
-        assert [TEXT[a:b] for a, b in spans] == SHAP_TOKENS
-        assert spans[8] != spans[11]  # the two "nervous"
-
-    def test_case_is_ignored(self):
-        assert locate_tokens(TEXT, LIG_TOKENS) == locate_tokens(TEXT, SHAP_TOKENS)
-
-    def test_a_short_word_is_not_found_inside_a_longer_one(self):
-        # A plain substring search would place "i" inside "didn".
-        assert locate_tokens("I didn't, did i", ["didn", "i"]) == [(2, 6), (14, 15)]
-
-    def test_contraction_pieces_still_match(self):
-        assert locate_tokens("didn't", ["didn", "'", "t"]) == [(0, 4), (4, 5), (5, 6)]
-
-    def test_missing_token_gets_none_and_keeps_the_cursor(self):
-        assert locate_tokens("a b", ["a", "[SEP]", "b"]) == [(0, 1), None, (2, 3)]
-
-    def test_unspaced_script_falls_back_to_substring_search(self):
-        assert locate_tokens("我喜欢你", ["我", "喜欢", "你"]) == [(0, 1), (1, 3), (3, 4)]
+def _spans(text, words):
+    """Each word's span, taking successive occurrences — what a sequence backend records."""
+    out, cursor = [], 0
+    for word in words:
+        start = text.index(word, cursor)
+        out.append(((start, start + len(word)),))
+        cursor = start + len(word)
+    return out
 
 
-class TestAlignTokenValues:
-    def test_identical_tokenization_is_the_identity(self):
+def _bag_spans(text, words):
+    """Every occurrence of each distinct word — what LIME's bag of words records."""
+    import re
+
+    return [tuple((m.start(), m.end()) for m in re.finditer(rf"\b{re.escape(w)}\b", text)) for w in words]
+
+
+def _labels(text, groups):
+    return [text[a:b] for a, b in groups]
+
+
+class TestAlignUnits:
+    def test_identical_units_are_the_identity(self):
         values = np.arange(len(SHAP_TOKENS), dtype=float)
-        np.testing.assert_array_equal(align_token_values(TEXT, SHAP_TOKENS, SHAP_TOKENS, values), values)
+        groups, aligned = align_units(
+            {"a": (_spans(TEXT, SHAP_TOKENS), values), "b": (_spans(TEXT, SHAP_TOKENS), values)}
+        )
+        assert _labels(TEXT, groups) == SHAP_TOKENS
+        np.testing.assert_array_equal(aligned["b"], values)
 
-    def test_lowercased_tokenization_aligns_by_span(self):
-        values = np.arange(len(LIG_TOKENS), dtype=float)
-        np.testing.assert_array_equal(align_token_values(TEXT, SHAP_TOKENS, LIG_TOKENS, values), values)
+    def test_strings_play_no_part(self):
+        # distilbert-base-uncased LIG on "Le café était très bon.": the tokenizer lowercases and strips
+        # accents, so none of its strings but "bon" and "." occur in the text. Its spans do.
+        text = "Le café était très bon."
+        shap = _spans(text, ["Le", "café", "était", "très", "bon", "."])
+        values = np.arange(6, dtype=float)
+        groups, aligned = align_units({"shap": (shap, values), "lig": (shap, values * 10)})
+        assert _labels(text, groups) == ["Le", "café", "était", "très", "bon", "."]
+        np.testing.assert_array_equal(aligned["lig"], values * 10)
 
     def test_bag_of_words_reaches_every_occurrence_and_skips_punctuation(self):
-        values = np.arange(1.0, len(LIME_TOKENS) + 1)
-        out = align_token_values(TEXT, SHAP_TOKENS, LIME_TOKENS, values)
-        lime = dict(zip(LIME_TOKENS, values, strict=True))
-        for token, value in zip(SHAP_TOKENS, out, strict=True):
-            if token in {",", "."}:
+        lime_values = np.arange(1.0, len(LIME_TOKENS) + 1)
+        groups, aligned = align_units(
+            {
+                "shap": (_spans(TEXT, SHAP_TOKENS), np.zeros(len(SHAP_TOKENS))),
+                "lime": (_bag_spans(TEXT, LIME_TOKENS), lime_values),
+            }
+        )
+        lime = dict(zip(LIME_TOKENS, lime_values, strict=True))
+        for label, value in zip(_labels(TEXT, groups), aligned["lime"], strict=True):
+            if label in {",", "."}:
                 assert np.isnan(value)
             else:
-                assert value == lime[token]
-        # The second "nervous" has no LIME span of its own: it gets the one bag-of-words weight.
-        assert out[8] == out[11] == lime["nervous"]
+                assert value == lime[label]
+        # Both "nervous": the one bag-of-words weight stands for each.
+        assert aligned["lime"][8] == aligned["lime"][11] == lime["nervous"]
 
     def test_bag_of_words_keeps_case_distinct_words_apart(self):
-        values = np.arange(1.0, len(LIME_TOKENS) + 1)
-        out = align_token_values(TEXT, SHAP_TOKENS, LIME_TOKENS, values)
-        assert out[0] == values[LIME_TOKENS.index("The")]
-        assert out[14] == values[LIME_TOKENS.index("the")]
+        lime_values = np.arange(1.0, len(LIME_TOKENS) + 1)
+        _, aligned = align_units(
+            {
+                "shap": (_spans(TEXT, SHAP_TOKENS), np.zeros(len(SHAP_TOKENS))),
+                "lime": (_bag_spans(TEXT, LIME_TOKENS), lime_values),
+            }
+        )
+        assert aligned["lime"][0] == lime_values[LIME_TOKENS.index("The")]
+        assert aligned["lime"][14] == lime_values[LIME_TOKENS.index("the")]
+
+    def test_a_coarser_backend_merges_the_finer_units_it_spans(self):
+        # xlm-roberta LIG groups by whitespace ("didn't", "great."), SHAP splits at punctuation.
+        text = "I didn't love it, great."
+        shap_words = ["I", "didn", "'", "t", "love", "it", ",", "great", "."]
+        lig_words = ["I", "didn't", "love", "it,", "great."]
+        shap_values = np.arange(1.0, 10.0)
+        groups, aligned = align_units(
+            {"shap": (_spans(text, shap_words), shap_values), "lig": (_spans(text, lig_words), np.arange(5.0))}
+        )
+        assert _labels(text, groups) == lig_words
+        # Each group carries the sum of the finer backend's units inside it: nothing is dropped.
+        np.testing.assert_array_equal(aligned["shap"], [1.0, 2 + 3 + 4, 5.0, 6 + 7, 8 + 9])
+        np.testing.assert_array_equal(aligned["lig"], np.arange(5.0))
+        assert aligned["shap"].sum() == shap_values.sum()
+
+    def test_a_unit_starting_inside_another_is_not_lost(self):
+        # roberta LIG keeps "'t" whole; LIME drops the apostrophe and keeps "t" — which starts after
+        # the group starts, and used to come back NaN.
+        text = "I didn't"
+        _, aligned = align_units(
+            {
+                "lig": (_spans(text, ["I", "didn", "'t"]), np.array([1.0, 2.0, 3.0])),
+                "lime": (_bag_spans(text, ["I", "didn", "t"]), np.array([10.0, 20.0, 30.0])),
+            }
+        )
+        np.testing.assert_array_equal(aligned["lime"], [10.0, 20.0, 30.0])
+
+    def test_a_backend_that_stops_early_is_nan_on_the_rest(self):
+        # LIG truncates at the model's max length; SHAP does not.
+        text = "one two three"
+        _, aligned = align_units(
+            {
+                "shap": (_spans(text, ["one", "two", "three"]), np.ones(3)),
+                "lig": (_spans(text, ["one", "two"]), np.ones(2)),
+            }
+        )
+        assert np.isnan(aligned["lig"][2]) and not np.isnan(aligned["shap"]).any()
+
+    def test_a_unit_without_spans_is_left_out(self):
+        _, aligned = align_units({"a": ([((0, 1),), ()], np.array([1.0, 5.0]))})
+        np.testing.assert_array_equal(aligned["a"], [1.0])
+
+    def test_two_dimensional_values(self):
+        _, aligned = align_units({"a": ([((0, 1),), ((0, 1),)], np.array([[1.0, 2.0], [3.0, 4.0]]))})
+        np.testing.assert_array_equal(aligned["a"], [[4.0, 6.0]])
 
     def test_rejects_mismatched_values(self):
-        with pytest.raises(ValueError, match="one entry per token"):
-            align_token_values("a b", ["a", "b"], ["a", "b"], np.array([1.0]))
+        with pytest.raises(ValueError, match="1 value"):
+            align_units({"a": ([((0, 1),), ((2, 3),)], np.array([1.0]))})
 
 
 class TestNormalize:
@@ -144,6 +202,10 @@ class TestBackendAgreement:
     def test_constant_backend_has_no_rank_correlation(self):
         df = backend_agreement({"a": np.array([1.0, 2.0, 3.0]), "b": np.zeros(3)})
         assert np.isnan(df.iloc[0].spearman) and np.isnan(df.iloc[0].pearson)
+
+    def test_coverage_is_the_share_of_units_both_attributed(self):
+        df = backend_agreement({"a": np.array([1.0, 2.0, 3.0, np.nan]), "b": np.array([1.0, np.nan, 3.0, 4.0])})
+        assert df.iloc[0].coverage == 0.5
 
     def test_no_shared_unit_gives_nan(self):
         df = backend_agreement({"a": np.array([1.0, np.nan]), "b": np.array([np.nan, 1.0])})

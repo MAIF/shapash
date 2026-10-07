@@ -1,137 +1,62 @@
 """Compare NLP backends' contributions on one text, at the array level: align, rescale, score agreement.
 
 This module knows nothing about explanations; the layer that reads them is
-:mod:`shapash.explainer.nlp_comparison`. Its first job is alignment, since backends do not
-agree on what a "token" is, even after each one merges subwords back into words:
+:mod:`shapash.explainer.nlp_comparison`. Its first job is alignment, since backends do not agree on
+what a unit is, even after each one merges subwords back into words:
 
-- ``nlp_shap`` and ``nlp_captum_lig`` emit words in sentence order, punctuation as its own unit —
-  but LIG reads them back off the tokenizer, so an uncased model hands back ``"the"`` where SHAP
-  kept ``"The"``.
-- ``nlp_lime`` (``bow=True``, its default) emits each *distinct* word once, in first-appearance
-  order, case-sensitive, with punctuation dropped by its ``split_expression``. A word that occurs
-  twice gets one weight that stands for every occurrence.
+- ``nlp_shap`` splits wherever a letter meets a non-letter: ``"didn" "'" "t"``, ``"great" "."``.
+- ``nlp_captum_lig`` groups by the tokenizer's ``word_ids()``, i.e. its pre-tokenizer's pieces:
+  ``"didn" "'" "t"`` on WordPiece, ``"didn" "'t"`` on byte-level BPE, ``"didn't"`` and ``"great."``
+  on SentencePiece, which splits on whitespace only.
+- ``nlp_lime`` (``bow=True``, its default) emits each *distinct* word once, punctuation dropped; one
+  weight stands for every occurrence.
 
-A positional ``zip`` across backends is therefore wrong as soon as LIME is involved. This module
-locates every backend's tokens in the source text to get character spans, then reads each
-reference unit's value off the other backend in three steps:
-
-1. **span** — the other backend's token that starts inside the reference unit's span;
-2. **exact word** — otherwise, the other backend's token with the same string (this is how a
-   repeated word reaches LIME's single bag-of-words weight);
-3. **case-folded word** — otherwise, the same match ignoring case.
-
-A unit none of these resolve is ``NaN``: the backend did not attribute it (LIME and punctuation),
-which is different from attributing it zero.
+So neither position nor string identifies a unit across backends. Character spans do (see
+:mod:`shapash.compute.spans`): every unit records the source characters it covers, and
+:func:`align_units` reads all backends on the finest groups they can all be expressed in — the
+spans of every unit, merged where they overlap. A group's value is the sum of the backend's units
+inside it (each occurrence of a bag-of-words unit counts), and ``NaN`` when the backend has no unit
+there: it did not attribute those characters (LIME and punctuation), which is different from
+attributing them zero.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
 
-
-def locate_tokens(text: str, tokens: Sequence[str]) -> list[tuple[int, int] | None]:
-    """Character span of each token in ``text``, searched left to right, ignoring case.
-
-    Each search starts where the previous match ended, so a repeated word maps to its successive
-    occurrences. A token that cannot be found (special tokens, normalisation the tokenizer applied)
-    gets ``None`` and leaves the cursor where it was, so one miss does not shift every later token.
-
-    Parameters
-    ----------
-    text : str
-        The source text the tokens were produced from.
-    tokens : sequence of str
-        Token strings in the order the backend emitted them.
-
-    Returns
-    -------
-    list of (int, int) or None
-        ``(start, end)`` per token, ``None`` where the token was not found.
-    """
-    haystack = text.casefold()
-    cursor = 0
-    spans: list[tuple[int, int] | None] = []
-    for token in tokens:
-        needle = str(token).strip().casefold()
-        start = _find_word(haystack, needle, cursor) if needle else -1
-        if start < 0:
-            spans.append(None)
-            continue
-        end = start + len(needle)
-        spans.append((start, end))
-        cursor = end
-    return spans
+from shapash.compute.spans import Span, aggregate, association_matrix, merge_overlapping
 
 
-def _find_word(haystack: str, needle: str, cursor: int) -> int:
-    """First occurrence of ``needle`` at or after ``cursor`` that is not part of a longer word.
-
-    A plain substring search would place LIME's ``"i"`` inside ``"didn"``. Word-boundary guards
-    apply only on the sides where ``needle`` itself starts/ends with a word character, so
-    punctuation tokens and contraction pieces (``"'"``, ``"t"`` after ``"didn'"``) still match.
-    Falls back to the plain substring search for scripts written without spaces (CJK), where no
-    boundary exists to guard.
-    """
-    left = r"(?<!\w)" if re.match(r"\w", needle) else ""
-    right = r"(?!\w)" if re.search(r"\w$", needle) else ""
-    found = re.compile(left + re.escape(needle) + right).search(haystack, cursor)
-    return found.start() if found else haystack.find(needle, cursor)
-
-
-def align_token_values(
-    text: str,
-    reference_tokens: Sequence[str],
-    tokens: Sequence[str],
-    values: np.ndarray,
-) -> np.ndarray:
-    """Project one backend's per-token ``values`` onto ``reference_tokens``.
-
-    See the module docstring for the three matching steps.
+def align_units(
+    units: Mapping[str, tuple[Sequence[Sequence[Span]], np.ndarray]],
+) -> tuple[list[Span], dict[str, np.ndarray]]:
+    """Read several backends' unit values on one set of groups of the same text.
 
     Parameters
     ----------
-    text : str
-        The source text both tokenizations come from.
-    reference_tokens : sequence of str
-        The units to align onto, in sentence order.
-    tokens : sequence of str
-        The other backend's tokens.
-    values : np.ndarray
-        The other backend's 1-D contributions, one per entry of ``tokens``.
+    units : mapping of str to (sequence of spans per unit, np.ndarray)
+        Backend name → its units' spans and their values, ``(n_units,)`` or
+        ``(n_units, n_classes)``. A unit with no span cannot be placed and is left out.
 
     Returns
     -------
-    np.ndarray
-        Shape ``(len(reference_tokens),)``. ``NaN`` where the other backend attributed nothing.
+    tuple of (list of (int, int), dict of str to np.ndarray)
+        The groups' spans, in text order, and per backend its values on them (``NaN`` where it has
+        no unit). Groups are the units' spans merged where they overlap
+        (:func:`~shapash.compute.spans.merge_overlapping`), so where every backend splits the text
+        alike, a group is exactly one unit of each.
     """
-    values = np.asarray(values, dtype=float)
-    if values.ndim != 1 or len(values) != len(tokens):
-        raise ValueError(f"values must be 1-D with one entry per token, got shape {values.shape} for {len(tokens)}.")
-
-    ref_spans = locate_tokens(text, reference_tokens)
-    spans = locate_tokens(text, tokens)
-
-    by_start = {span[0]: i for i, span in enumerate(spans) if span is not None}
-    exact: dict[str, int] = {}
-    folded: dict[str, int] = {}
-    for i, token in enumerate(tokens):
-        exact.setdefault(str(token), i)
-        folded.setdefault(str(token).casefold(), i)
-
-    out = np.full(len(reference_tokens), np.nan)
-    for j, (ref_token, ref_span) in enumerate(zip(reference_tokens, ref_spans, strict=True)):
-        match = None
-        if ref_span is not None:
-            match = next((by_start[p] for p in range(*ref_span) if p in by_start), None)
-        if match is None:
-            match = exact.get(str(ref_token), folded.get(str(ref_token).casefold()))
-        if match is not None:
-            out[j] = values[match]
-    return out
+    groups = merge_overlapping(span for spans, _ in units.values() for unit in spans for span in unit)
+    aligned = {}
+    for name, (spans, raw) in units.items():
+        values = np.asarray(raw, dtype=float)
+        if len(spans) != len(values):
+            raise ValueError(f"{name!r}: {len(values)} value(s) for {len(spans)} unit(s).")
+        aligned[name] = aggregate(association_matrix(groups, spans), values)
+    return groups, aligned
 
 
 def normalize_contributions(values: np.ndarray, method: str | None = "max_abs") -> np.ndarray:
@@ -176,6 +101,7 @@ AGREEMENT_SCORES = [
     "top_k_overlap",
     "top_share_a",
     "top_share_b",
+    "coverage",
 ]
 
 
@@ -209,6 +135,10 @@ def backend_agreement(aligned: Mapping[str, np.ndarray], top_k: int = 5) -> pd.D
         And, per backend, over the units it attributed: ``top_share_a`` / ``top_share_b``, the
         largest unit's share of the total magnitude — how concentrated the attribution is, which
         says how much to trust ``spearman`` against ``cosine``.
+
+        And ``coverage``: the share of units both backends attributed, i.e. what the scores above
+        stand on. Low coverage is expected against LIME on punctuation-heavy text; on two sequence
+        backends it means they attribute different parts of the text (one truncated, say).
 
         All are scale-free, so they are safe across backends with different output spaces.
     """
@@ -245,6 +175,7 @@ def backend_agreement(aligned: Mapping[str, np.ndarray], top_k: int = 5) -> pd.D
                     "top_k_overlap": overlap,
                     "top_share_a": _top_share(va),
                     "top_share_b": _top_share(vb),
+                    "coverage": float(both.mean()) if len(both) else np.nan,
                 }
             )
     return pd.DataFrame(rows, columns=AGREEMENT_SCORES)

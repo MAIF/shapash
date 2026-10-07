@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from shapash.compute.backend_comparison import AGREEMENT_SCORES, align_token_values, backend_agreement
+from shapash.compute.backend_comparison import AGREEMENT_SCORES, align_units, backend_agreement
+from shapash.compute.spans import UnitSpans, locate_all, locate_spans
 from shapash.explainer.nlp_explanation import select_label_column
 
 if TYPE_CHECKING:
@@ -63,7 +64,7 @@ def name_explanations(
 
 
 def check_comparable(named: Mapping[str, NlpExplanation], stacklevel: int = 2) -> None:
-    """Raise if the explanations explain different classes; warn if they are in different output spaces.
+    """Raise if the explanations explain different classes; warn on different output spaces or missing spans.
 
     Parameters
     ----------
@@ -91,14 +92,39 @@ def check_comparable(named: Mapping[str, NlpExplanation], stacklevel: int = 2) -
             stacklevel=stacklevel + 1,
         )
 
+    unplaced = [name for name, other in named.items() if other.token_spans is None]
+    if unplaced:
+        warnings.warn(
+            f"{', '.join(map(repr, unplaced))} carry no character spans (saved by an older shapash), so "
+            "their units are located by searching the text for their strings. That misplaces words a "
+            "tokenizer rewrote (stripped accents, [UNK], normalised characters). Re-run explain() for "
+            "an exact alignment.",
+            UserWarning,
+            stacklevel=stacklevel + 1,
+        )
+
 
 def predicted_label_idx(explanation: NlpExplanation, row: int) -> int:
     """Column index of the class ``explanation`` predicted for ``row`` (0 when it cannot be resolved)."""
     return explanation.label_to_idx.get(str(explanation.y_pred.iloc[row]), 0)
 
 
+def unit_spans(explanation: NlpExplanation, row: int) -> list[UnitSpans]:
+    """Each unit's character spans in ``row``'s text.
+
+    Read off :attr:`~shapash.explainer.nlp_explanation.NlpExplanation.token_spans`. An artifact saved
+    before units carried spans gets them by search instead: every occurrence of each word for LIME's
+    bag of words, successive occurrences otherwise — approximate, which :func:`check_comparable` warns
+    about.
+    """
+    if explanation.token_spans is not None:
+        return list(explanation.token_spans[row])
+    text, tokens = str(explanation.texts.iloc[row]), explanation.token_strings[row]
+    return locate_all(text, tokens) if explanation.backend_name == "nlp_lime" else locate_spans(text, tokens)
+
+
 def align_row(named: Mapping[str, NlpExplanation], row: int, label_idx: int) -> tuple[list[str], dict[str, np.ndarray]]:
-    """One text's contributions for one class, every backend aligned onto the reference's word units.
+    """One text's contributions for one class, every backend read on the same units.
 
     Parameters
     ----------
@@ -112,25 +138,23 @@ def align_row(named: Mapping[str, NlpExplanation], row: int, label_idx: int) -> 
     Returns
     -------
     tuple of (list of str, dict of str to np.ndarray)
-        The reference's word units, and per label the aligned 1-D values (``NaN`` = not attributed).
+        The units as written in the text, and per label the aligned 1-D values (``NaN`` = not
+        attributed). Units are every backend's units merged where they overlap
+        (:func:`~shapash.compute.backend_comparison.align_units`): the reference's words wherever no
+        other backend groups the text more coarsely.
     """
     reference = next(iter(named.values()))
     if not -len(reference) <= row < len(reference):
         raise IndexError(f"row={row} is out of range for {len(reference)} sample(s).")
     text = str(reference.texts.iloc[row])
-    ref_tokens = list(reference.token_strings[row])
-    ref_values = np.asarray(select_label_column(reference.values[row], label_idx), dtype=float)
 
-    aligned: dict[str, np.ndarray] = {}
+    units = {}
     for name, other in named.items():
-        if other is reference:
-            aligned[name] = ref_values
-            continue
-        if len(other) != len(reference) or str(other.texts.iloc[row]) != text:
+        if other is not reference and (len(other) != len(reference) or str(other.texts.iloc[row]) != text):
             raise ValueError(f"Row {row} holds a different text in {name!r} than in the reference explanation.")
-        values = select_label_column(other.values[row], label_idx)
-        aligned[name] = align_token_values(text, ref_tokens, other.token_strings[row], values)
-    return ref_tokens, aligned
+        units[name] = (unit_spans(other, row), select_label_column(other.values[row], label_idx))
+    groups, aligned = align_units(units)
+    return [text[start:end] for start, end in groups], aligned
 
 
 def corpus_agreement(
@@ -151,8 +175,8 @@ def corpus_agreement(
     Parameters
     ----------
     reference : NlpExplanation
-        The explanation whose word units the others are aligned onto. Prefer a sequence backend
-        (SHAP, LIG) over LIME's bag of words.
+        The explanation the others are named and checked against; units are shared by all (see
+        :func:`align_row`).
     others : NlpExplanation, sequence of NlpExplanation, or mapping of str to NlpExplanation
         Explanations of the same texts by other backends. Labels as in ``compare``.
     rows : sequence of int, optional

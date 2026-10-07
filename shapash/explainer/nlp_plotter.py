@@ -268,10 +268,12 @@ class NlpPlotter:
     ) -> go.Figure | html.Div | DashHtmlPreview:
         """Compare this explanation's contributions on one text with other backends' on the same text.
 
-        This explanation is the *reference*: its word units are the ones displayed, and every other
-        backend's values are aligned onto them (see :mod:`shapash.compute.backend_comparison` — LIME's
-        bag-of-words vocabulary does not line up positionally with SHAP's or LIG's word sequence).
-        Pick a sequence backend (SHAP, LIG) as the reference so every occurrence of a word is shown.
+        This explanation is the *reference* the agreement line scores the others against. Every
+        backend is read on the same units, placed by the character spans each unit covers (see
+        :mod:`shapash.compute.backend_comparison`): its own words wherever the backends split the text
+        alike, a larger unit where one backend groups more coarsely (SentencePiece's ``"didn't"``
+        against SHAP's ``"didn" "'" "t"``), each backend's value there being the sum of its units
+        inside. A LIME word counts at every occurrence, since its one weight stands for all of them.
 
         Parameters
         ----------

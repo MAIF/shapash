@@ -55,6 +55,7 @@ def _make_explanation(
         is_additive=is_additive,
         reference_kind="distribution" if with_base else "none",
         output_space="probability",
+        token_spans=[[((0, 5),), ((6, 11),)], [((0, 1),), ((2, 4),), ((5, 10),)], [((0, 2),)]],
     )
 
 
@@ -377,6 +378,7 @@ class TestPlotterCompare(unittest.TestCase):
         self.lime = replace(
             self.ref,
             token_strings=[["world", "hello"], ["happy", "i"], ["ok"]],
+            token_spans=[[((6, 11),), ((0, 5),)], [((5, 10),), ((0, 1),)], [((0, 2),)]],
             values=[
                 np.array([[5.0, -5.0], [3.0, -3.0]]),
                 np.array([[0.0, 8.0], [0.0, 2.0]]),

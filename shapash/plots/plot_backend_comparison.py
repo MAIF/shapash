@@ -1,7 +1,7 @@
 """Side-by-side views of several NLP backends' contributions on the same text.
 
-Every function here takes the *already aligned* data — one list of reference word units and, per
-backend, one value per unit (``NaN`` where that backend attributed nothing) — so alignment and
+Every function here takes the *already aligned* data — one list of units shared by all backends and,
+per backend, one value per unit (``NaN`` where that backend attributed nothing) — so alignment and
 normalisation stay in :mod:`shapash.compute.backend_comparison` and these stay pure renderers.
 Reach them through :meth:`~shapash.explainer.nlp_plotter.NlpPlotter.compare`.
 
@@ -234,7 +234,7 @@ def plot_backend_highlight(
     """One highlighted copy of the sentence per backend, stacked.
 
     Each row is colored on its own magnitude scale (its largest unit is fully saturated), since
-    backends' raw values are in different units. Every row renders the same reference units with
+    backends' raw values are in different units. Every row renders the same shared units with
     the same padding, so a word sits at the same horizontal position in every row as long as the
     rows wrap at the same width.
 
