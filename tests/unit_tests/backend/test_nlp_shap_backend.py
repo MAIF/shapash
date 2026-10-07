@@ -376,7 +376,7 @@ class _LogitModel(_ProbabilityOnlyModel, SupportsLogits):
 
 
 class TestOutputSpace(unittest.TestCase):
-    """``output_space`` is a constructor choice, read back off the instance (explanation-space.md §8, phase 3)."""
+    """``output_space`` is a constructor choice, read back off the instance."""
 
     def test_unknown_space_is_refused(self):
         with self.assertRaises(ValueError):

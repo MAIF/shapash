@@ -699,9 +699,9 @@ class EncoderClassifierModel(
 
         ``mask`` comes first because it is what SHAP's ``Text`` masker substitutes (it takes the
         tokenizer's ``mask_token``), so LIG and SHAP measure against the same "word absent" input.
-        Aligning on it raised SHAP<->LIG rank agreement from 0.46 to 0.57 on DistilBERT
-        (``docs/architecture/explanation-space.md`` §10.4). Explicit ``None`` checks, not ``or``: id
-        ``0`` is a legitimate token id (BERT's ``[PAD]``, RoBERTa's ``<s>``).
+        Aligning on it raised SHAP<->LIG rank agreement from 0.46 to 0.57 on DistilBERT.
+        Explicit ``None`` checks, not ``or``: id ``0`` is a legitimate token id (BERT's ``[PAD]``,
+        RoBERTa's ``<s>``).
         """
         for candidate in (
             self.tokenizer.mask_token_id,

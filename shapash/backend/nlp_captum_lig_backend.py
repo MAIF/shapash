@@ -250,8 +250,7 @@ class NlpCaptumLigBackend(NlpBackend):
         ``[MASK]`` reference (see :attr:`baseline_token`) makes the integrand less smooth than ``[PAD]``
         did: on 100 DistilBERT-emotion texts (predicted class) the worst completeness error was 0.84
         logits at 50 steps and 0.31 at 100 (``[PAD]``: 0.11 / 0.06). The step count barely moves the
-        word *ranking* — only how exactly the values sum to the logit gap —
-        ``docs/architecture/explanation-space.md`` §10.4 and §10.7.
+        word *ranking* — only how exactly the values sum to the logit gap.
     show_progress : bool, default False
         When True, wrap the per-sample attribution loop in a ``tqdm`` progress bar (LIG runs one
         integration per class per sample, so a batch is slow). Best-effort: if ``tqdm`` is not

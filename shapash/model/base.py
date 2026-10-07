@@ -488,7 +488,7 @@ class SupportsLogits(ABC):
     The text-level counterpart of :meth:`SupportsCaptumIG.logits` (which takes tensors): what a
     perturbation explainer wraps when it should explain logits rather than the probabilities
     :meth:`TextModel.predict` returns. Probability-space attributions cancel exactly across classes
-    and saturate near 0/1; logit-space ones do neither (``docs/architecture/explanation-space.md``).
+    and saturate near 0/1; logit-space ones do neither.
     """
 
     @abstractmethod

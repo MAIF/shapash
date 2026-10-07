@@ -161,7 +161,7 @@ class TestNlpExplanationRoundTrip(unittest.TestCase):
 
     def test_legacy_file_without_output_space_defaults_by_backend(self):
         # nlp_captum_lig has always explained raw logits, everything else probabilities — a single
-        # global default would mislabel one of the two. See docs/architecture/explanation-space.md §5.3.
+        # global default would mislabel one of the two.
         shap_expl = _make_explanation(values_ndim=2, with_base=True, with_true=True, with_prob=True)
         lig_expl = replace(shap_expl, backend_name="nlp_captum_lig")
 

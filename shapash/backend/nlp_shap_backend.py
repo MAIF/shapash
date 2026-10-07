@@ -286,8 +286,7 @@ class NlpShapBackend(NlpBackend):
         ``TextModel`` implementing :class:`~shapash.model.base.SupportsLogits`, and is incompatible
         with ``explainer_args`` (which bring their own model). Same runtime and masking; the
         contributions stop cancelling across classes and stop saturating near 0/1, sum exactly to
-        ``logits(x) - base``, and share their scale with ``nlp_captum_lig``
-        (``docs/architecture/explanation-space.md`` §10).
+        ``logits(x) - base``, and share their scale with ``nlp_captum_lig``.
 
     Raises
     ------

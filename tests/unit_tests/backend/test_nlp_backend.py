@@ -37,7 +37,7 @@ class TestIsPunctuation(unittest.TestCase):
 
 
 class TestBackendContractAttributes(unittest.TestCase):
-    """``reference_kind`` / ``is_additive`` / ``output_space`` / `requires_model_capabilities`` (A9 / A11)."""
+    """``reference_kind`` / ``is_additive`` / ``output_space`` / ``requires_model_capabilities``."""
 
     def test_nlp_shap_backend(self):
         self.assertEqual(NlpShapBackend.reference_kind, "none")
@@ -87,7 +87,7 @@ class _RequiresEmbeddings(_MinimalBackend):
 
 
 class TestRequiresModelCapabilitiesGuard(unittest.TestCase):
-    """``NlpBackend.__init__`` centralizes the capability check (A11 point 2)."""
+    """``NlpBackend.__init__`` centralizes the capability check."""
 
     def test_raises_when_model_lacks_required_capability(self):
         with self.assertRaises(TypeError):
