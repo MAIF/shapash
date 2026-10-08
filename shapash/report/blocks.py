@@ -731,9 +731,6 @@ class ReportBlockMixin:
             else:
                 effective_max_points = max_points
             fig = explainer.plot.contribution_plot(feature, label=label, max_points=effective_max_points)
-            for trace in fig.data:
-                if trace.type == "bar":
-                    trace.marker.color = "lightgrey"
             if title is None:
                 return self._feature_label(feature), [fig]
             return title, [fig]
@@ -751,33 +748,35 @@ class ReportBlockMixin:
             key=lambda current_feature: (str(self._feature_label(current_feature)).lower(), str(current_feature)),
         )
 
-        feature_panels: dict[str, pn.viewable.Viewable] = {}
+        feature_to_label: dict[str, str] = {}
         for feature_name in sorted_features:
-            if max_points is None:
-                effective_max_points = self.max_points
-            else:
-                effective_max_points = max_points
-            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
-            for trace in fig.data:
-                if trace.type == "bar":
-                    trace.marker.color = "lightgrey"
-
             base_label = str(self._feature_label(feature_name))
             label_text = base_label
             suffix = 2
-            while label_text in feature_panels:
+            while label_text in feature_to_label:
                 label_text = f"{base_label} ({suffix})"
                 suffix += 1
-            feature_panels[label_text] = build_plotly_pane(fig)
+            feature_to_label[label_text] = feature_name
 
         feature_select = pn.widgets.Select(
             label="Feature",
-            options=list(feature_panels.keys()),
-            value=next(iter(feature_panels)),
+            options=list(feature_to_label.keys()),
+            value=next(iter(feature_to_label)),
             sizing_mode="stretch_width",
         )
+
+        if max_points is None:
+            effective_max_points = self.max_points
+        else:
+            effective_max_points = max_points
+
+        def _render_feature_panel(selected_label: str) -> pn.viewable.Viewable:
+            feature_name = feature_to_label[selected_label]
+            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
+            return build_plotly_pane(fig)
+
         selected_panel = pn.panel(
-            pn.bind(cast(Any, lambda selected: feature_panels[selected]), feature_select), sizing_mode="stretch_width"
+            pn.bind(cast(Any, _render_feature_panel), feature_select), sizing_mode="stretch_width"
         )
 
         if title is None:
