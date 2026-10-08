@@ -1002,6 +1002,7 @@ class SmartExplainer:
             Optional custom block runtime used to resolve block methods during report generation.
             The instance must already be fully initialized by the user and should implement
             methods named `block_<type>` for YAML block entries.
+
         Returns
         -------
         None
