@@ -40,10 +40,26 @@ class _ReportBlockRenderer(Protocol):
         ...
 
 
-def _resolve_report_title(runtime: _ReportBlockRenderer, report_title: str | None) -> str:
-    """Resolve the document title shown in the browser tab."""
-    if isinstance(report_title, str) and report_title.strip():
-        return report_title.strip()
+def _resolve_report_title(runtime: _ReportBlockRenderer, sections: list[dict[str, Any]]) -> str:
+    """Resolve the document title shown in the browser tab.
+
+    Priority order:
+    1. Top-level ``header`` (or ``title``) block ``params.title``
+    2. ``runtime.smart_explainer.title_story``
+    3. ``"Shapash Report"``
+    """
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_type = section.get("type")
+        if section_type not in {"header", "title"}:
+            continue
+        params = section.get("params", {})
+        if not isinstance(params, dict):
+            continue
+        section_title = params.get("title")
+        if isinstance(section_title, str) and section_title.strip():
+            return section_title.strip()
 
     smart_explainer = getattr(runtime, "smart_explainer", None)
     title_story = getattr(smart_explainer, "title_story", None)
@@ -53,23 +69,21 @@ def _resolve_report_title(runtime: _ReportBlockRenderer, report_title: str | Non
     return "Shapash Report"
 
 
-def _resolve_report_favicon_href(output_path: Path) -> str:
+def _resolve_report_favicon_href(output_path: Path) -> str | None:
     """Resolve the favicon href for the generated report.
 
-    Prefer the packaged webapp `favicon.ico` copied next to the report output.
-    Fall back to an embedded PNG data URL if the `.ico` asset is unavailable.
+    Prefer embedding the packaged webapp ``favicon.ico`` as a data URL.
+    Return ``None`` when the asset is unavailable so the default favicon
+    behavior applies.
     """
+    del output_path  # Kept for API compatibility.
+
     webapp_favicon_path = Path(__file__).resolve().parent.parent / "webapp" / "assets" / "favicon.ico"
     if webapp_favicon_path.exists():
-        report_favicon_path = output_path.parent / "shapash-favicon.ico"
-        favicon_bytes = webapp_favicon_path.read_bytes()
-        if (not report_favicon_path.exists()) or report_favicon_path.read_bytes() != favicon_bytes:
-            report_favicon_path.write_bytes(favicon_bytes)
-        return report_favicon_path.name
+        favicon_data = base64.b64encode(webapp_favicon_path.read_bytes()).decode("ascii")
+        return f"data:image/x-icon;base64,{favicon_data}"
 
-    logo_path = Path(__file__).resolve().parent.parent / "style" / "shapash-fond-clair.png"
-    logo_data = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{logo_data}"
+    return None
 
 
 def _inject_favicon_links(html_text: str, favicon_href: str) -> str:
@@ -100,6 +114,8 @@ def _apply_html_head_metadata(output_path: Path) -> None:
     """Update the generated report HTML with favicon metadata."""
     html_text = output_path.read_text(encoding="utf-8")
     favicon_href = _resolve_report_favicon_href(output_path)
+    if not favicon_href:
+        return
     updated_html = _inject_favicon_links(html_text, favicon_href=favicon_href)
     if updated_html != html_text:
         output_path.write_text(updated_html, encoding="utf-8")
@@ -109,7 +125,6 @@ def generate_report(
     runtime: _ReportBlockRenderer,
     config_file: Path,
     output_file: str,
-    report_title: str | None = None,
 ) -> None:
     """Render a YAML-configured Panel report to an HTML file.
 
@@ -164,7 +179,7 @@ def generate_report(
     )
     report_layout.append(pn.pane.HTML(f"<script>{report_js_text()}</script>", sizing_mode="stretch_width"))
 
-    resolved_title = _resolve_report_title(runtime=runtime, report_title=report_title)
+    resolved_title = _resolve_report_title(runtime=runtime, sections=cfg["sections"])
     with open(str(out_path), mode="w", encoding="utf-8") as f:
         report_layout.save(f, embed=True, title=resolved_title)
 

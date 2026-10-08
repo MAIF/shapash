@@ -152,11 +152,28 @@ def test_inject_favicon_links_replaces_existing_icons():
         assert '<link rel="apple-touch-icon" href="data:image/png;base64,AAA">' in updated
 
 
-def test_resolve_report_title_falls_back_to_default_when_missing():
-        class _RuntimeWithoutTitle:
-                smart_explainer = type("SE", (), {"title_story": ""})()
+def test_resolve_report_title_uses_header_block_title_when_available():
+    class _RuntimeWithoutStory:
+        smart_explainer = type("SE", (), {"title_story": ""})()
 
-        assert _resolve_report_title(_RuntimeWithoutTitle(), report_title=None) == "Shapash Report"
+    sections = [{"type": "header", "params": {"title": "My report title"}}]
+    assert _resolve_report_title(_RuntimeWithoutStory(), sections=sections) == "My report title"
+
+
+def test_resolve_report_title_falls_back_to_title_story_when_header_missing():
+    class _RuntimeWithStory:
+        smart_explainer = type("SE", (), {"title_story": "Story title"})()
+
+    sections = [{"type": "model_analysis", "params": {"title": "Model analysis"}}]
+    assert _resolve_report_title(_RuntimeWithStory(), sections=sections) == "Story title"
+
+
+def test_resolve_report_title_falls_back_to_default_when_missing():
+    class _RuntimeWithoutTitle:
+        smart_explainer = type("SE", (), {"title_story": ""})()
+
+    sections = [{"type": "model_analysis", "params": {"title": "Model analysis"}}]
+    assert _resolve_report_title(_RuntimeWithoutTitle(), sections=sections) == "Shapash Report"
 
 
 def test_inject_favicon_links_appends_tags_when_head_is_missing():
@@ -167,18 +184,15 @@ def test_inject_favicon_links_appends_tags_when_head_is_missing():
     assert updated.endswith('</html>\n<link rel="icon" href="favicon.ico">\n<link rel="shortcut icon" href="favicon.ico">\n<link rel="apple-touch-icon" href="favicon.ico">\n')
 
 
-def test_resolve_report_favicon_href_copies_packaged_favicon(tmp_path):
+def test_resolve_report_favicon_href_embeds_packaged_favicon(tmp_path):
     output_path = tmp_path / "report.html"
 
     href = _resolve_report_favicon_href(output_path)
 
-    copied = tmp_path / "shapash-favicon.ico"
-    assert href == "shapash-favicon.ico"
-    assert copied.exists()
-    assert copied.read_bytes()
+    assert href.startswith("data:image/x-icon;base64,")
 
 
-def test_resolve_report_favicon_href_falls_back_to_embedded_logo_data_url(tmp_path):
+def test_resolve_report_favicon_href_returns_none_when_packaged_favicon_missing(tmp_path):
     output_path = tmp_path / "report.html"
     original_exists = Path.exists
 
@@ -190,7 +204,7 @@ def test_resolve_report_favicon_href_falls_back_to_embedded_logo_data_url(tmp_pa
     with patch("pathlib.Path.exists", new=_patched_exists):
         href = _resolve_report_favicon_href(output_path)
 
-    assert href.startswith("data:image/png;base64,")
+    assert href is None
 
 
 def test_apply_html_head_metadata_injects_favicon_links(tmp_path):
@@ -449,7 +463,7 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
             binary_runtime.block_class_explainability()
 
         self.assertEqual([call.kwargs["label"] for call in binary_importance.call_args_list], [1])
-        self.assertEqual([call.kwargs["label"] for call in binary_contributions.call_args_list], [1, 1])
+        self.assertEqual([call.kwargs["label"] for call in binary_contributions.call_args_list], [1])
 
         multiclass_runtime = _build_runtime()
         multiclass_runtime.explainer._classes = [0, 1, 2]
@@ -470,7 +484,7 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
 
         self.assertIsInstance(result, pn.Column)
         self.assertEqual([call.kwargs["label"] for call in multiclass_importance.call_args_list], [0, 1, 2])
-        self.assertEqual([call.kwargs["label"] for call in multiclass_contributions.call_args_list], [0, 0, 1, 1, 2, 2])
+        self.assertEqual([call.kwargs["label"] for call in multiclass_contributions.call_args_list], [0, 1, 2])
         class_links = multiclass_runtime.class_navigation_items["class-explainability"]
         self.assertEqual([item["label"] for item in class_links], ["Class 0", "Class 1", "Class 2"])
         anchors = [

@@ -971,7 +971,6 @@ class SmartExplainer:
         yaml_path: str | Path | None = None,
         max_points: int = 200,
         block_instance: ReportBlockMixin | None = None,
-        report_title: str | None = None,
     ) -> None:
         """
         Generate an interactive HTML report summarizing the model and its explainability.
@@ -1003,10 +1002,6 @@ class SmartExplainer:
             Optional custom block runtime used to resolve block methods during report generation.
             The instance must already be fully initialized by the user and should implement
             methods named `block_<type>` for YAML block entries.
-        report_title : str, optional
-            HTML document title displayed in the browser tab.
-            If None, Shapash uses ``self.title_story`` when available, otherwise a default title.
-
         Returns
         -------
         None
@@ -1086,7 +1081,6 @@ class SmartExplainer:
             runtime=report_runtime,
             config_file=config_file,
             output_file=output_file,
-            report_title=report_title if report_title is not None else self.title_story,
         )
 
     def _local_pred(self, index: Any, label: int | None = None) -> Any | None:

@@ -272,7 +272,6 @@ def generate_report(
     case: str,
     report_mode: str = "default",
     output_file: str | Path | None = None,
-    report_title: str | None = None,
 ) -> Path:
     """Train one supported example model and export its Shapash HTML report."""
     custom_cases = {("titanic", "classification"), ("house_prices", "regression")}
@@ -297,13 +296,13 @@ def generate_report(
     model.fit(X_train_encoded, y_train)
     y_pred = pd.DataFrame({"pred": model.predict(X_test_encoded)}, index=X_test.index)
 
-    title = report_title or f"{dataset.replace('_', ' ').title()} {case.title()} Report"
+    title_story = f"{dataset.replace('_', ' ').title()} {case.title()} Report"
     explainer = SmartExplainer(
         model=model,
         preprocessing=encoder,
         features_dict=labels,
         label_dict=target_names,
-        title_story=title,
+        title_story=title_story,
     )
     explainer.compile(x=X_test_encoded, y_pred=y_pred, y_target=y_test)
 
@@ -320,7 +319,7 @@ def generate_report(
         report_path = Path(output_file)
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
-    report_args = {"output_file": str(report_path), "report_title": title}
+    report_args = {"output_file": str(report_path)}
     block_instance = _build_custom_blocks(case, dataset, explainer, X_train_encoded, y_train, y_test)
     if block_instance is None:
         report_args.update(x_train=X_train_encoded, y_train=y_train, y_test=y_test)
@@ -344,14 +343,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--case", choices=["classification", "regression", "multiclass"], default="classification")
     parser.add_argument("--report-mode", choices=["default", "custom"], default="default")
     parser.add_argument("--output", type=Path, help="HTML output path")
-    parser.add_argument("--title", type=str, help="Report title shown in browser tab")
     if not (argv if argv is not None else sys.argv[1:]):
         parser.print_help()
         return
 
     args = parser.parse_args(argv)
     try:
-        output_path = generate_report(args.dataset, args.case, args.report_mode, args.output, args.title)
+        output_path = generate_report(args.dataset, args.case, args.report_mode, args.output)
     except ValueError as exc:
         parser.error(str(exc))
     print(f"Report generated: {output_path}")
