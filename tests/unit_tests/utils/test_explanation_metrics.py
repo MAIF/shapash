@@ -62,6 +62,20 @@ class TestExplanationMetrics(unittest.TestCase):
         assert len(t) == len(selection)
         assert t[0].shape[1] == X.shape[1] + 2
 
+    def test_find_neighbors_with_fewer_rows_than_requested(self):
+        rng = np.random.default_rng(seed=79)
+        df = pd.DataFrame(rng.integers(0, 100, size=(5, 4)), columns=list("ABCD"))
+        X = df.iloc[:, :-1]
+        y = df.iloc[:, -1] + 100
+        model = LinearRegression().fit(X, y)
+
+        neighbors = find_neighbors([1], X, model, "regression", n_neighbors=10)
+
+        assert len(neighbors) == 1
+        assert 0 < neighbors[0].shape[0] <= len(X)
+        assert neighbors[0].shape[1] == X.shape[1] + 2
+        np.testing.assert_array_equal(neighbors[0][0, : X.shape[1]], X.loc[1].values)
+
     def test_shap_neighbors(self):
         rng = np.random.default_rng(seed=79)
         df = pd.DataFrame(rng.integers(0, 100, size=(15, 4)), columns=list("ABCD"))

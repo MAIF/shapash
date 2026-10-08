@@ -986,10 +986,10 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer._case = "classification"
         xpl.explainer.proba_values = pd.DataFrame([[0.2, 0.8], [0.6, 0.4]], columns=[0, 1], index=[10, 11])
 
-        assert xpl._local_pred(index=10, label=1) == 0.8
+        assert xpl.explainer._local_pred(index=10, label=1) == 0.8
 
         xpl.explainer.proba_values = None
-        assert xpl._local_pred(index=10, label=1) is None
+        assert xpl.explainer._local_pred(index=10, label=1) is None
 
     def test_local_pred_2(self):
         """Unit test _local_pred regression branch with stored y_pred."""
@@ -997,7 +997,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer._case = "regression"
         xpl.explainer.y_pred = pd.DataFrame({"pred": [1.5, 2.5]}, index=[0, 1])
 
-        assert xpl._local_pred(index=1) == 2.5
+        assert xpl.explainer._local_pred(index=1) == 2.5
 
     def test_local_pred_3(self):
         """Unit test _local_pred regression branch with model fallback."""
@@ -1008,7 +1008,7 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.explainer.model = Mock()
         xpl.explainer.model.predict.return_value = np.array([42.0])
 
-        output = xpl._local_pred(index=1)
+        output = xpl.explainer._local_pred(index=1)
 
         assert output == 42.0
         xpl.explainer.model.predict.assert_called_once()
