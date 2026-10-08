@@ -11,7 +11,13 @@ import plotly.graph_objects as go
 from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
-from shapash.report.core import _inject_favicon_links, _resolve_report_title, build_navigation_bar
+from shapash.report.core import (
+    _apply_html_head_metadata,
+    _inject_favicon_links,
+    _resolve_report_favicon_href,
+    _resolve_report_title,
+    build_navigation_bar,
+)
 from shapash.report.panel_support import apply_report_css
 
 import pytest
@@ -153,6 +159,52 @@ def test_resolve_report_title_falls_back_to_default_when_missing():
         assert _resolve_report_title(_RuntimeWithoutTitle(), report_title=None) == "Shapash Report"
 
 
+def test_inject_favicon_links_appends_tags_when_head_is_missing():
+    html_text = "<html><body>Report</body></html>"
+
+    updated = _inject_favicon_links(html_text, favicon_href="favicon.ico")
+
+    assert updated.endswith('</html>\n<link rel="icon" href="favicon.ico">\n<link rel="shortcut icon" href="favicon.ico">\n<link rel="apple-touch-icon" href="favicon.ico">\n')
+
+
+def test_resolve_report_favicon_href_copies_packaged_favicon(tmp_path):
+    output_path = tmp_path / "report.html"
+
+    href = _resolve_report_favicon_href(output_path)
+
+    copied = tmp_path / "shapash-favicon.ico"
+    assert href == "shapash-favicon.ico"
+    assert copied.exists()
+    assert copied.read_bytes()
+
+
+def test_resolve_report_favicon_href_falls_back_to_embedded_logo_data_url(tmp_path):
+    output_path = tmp_path / "report.html"
+    original_exists = Path.exists
+
+    def _patched_exists(current_path):
+        if str(current_path).endswith("webapp/assets/favicon.ico"):
+            return False
+        return original_exists(current_path)
+
+    with patch("pathlib.Path.exists", new=_patched_exists):
+        href = _resolve_report_favicon_href(output_path)
+
+    assert href.startswith("data:image/png;base64,")
+
+
+def test_apply_html_head_metadata_injects_favicon_links(tmp_path):
+    report_path = tmp_path / "report.html"
+    report_path.write_text("<html><head><title>Panel</title></head><body></body></html>", encoding="utf-8")
+
+    _apply_html_head_metadata(report_path)
+
+    updated = report_path.read_text(encoding="utf-8")
+    assert '<link rel="icon" href=' in updated
+    assert '<link rel="shortcut icon" href=' in updated
+    assert '<link rel="apple-touch-icon" href=' in updated
+
+
 class TestSmartReportPanel(unittest.TestCase):
 
     def test_report_css_text_loads_stylesheet_content(self):
@@ -221,7 +273,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_panel_type_not_allowed(self, title: str = "Button"):
-        return [pn.widgets.Button(name="Click")]
+        return [pn.widgets.Button(label="Click")]
 
     @block
     def block_non_panel_type_not_allowed(self, title: str = "Object"):
@@ -479,6 +531,42 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
             if pane.object.data[0].type == "scatter"
         ]
         self.assertEqual(len(interaction_panes), 3)
+
+    def test_class_explainability_requires_classification_case(self):
+        runtime = _build_runtime()
+        runtime.explainer._case = "regression"
+
+        with self.assertRaises(ValueError) as context:
+            runtime.block_class_explainability()
+
+        self.assertIn("only available for classification", str(context.exception))
+
+    def test_class_explainability_requires_model_classes(self):
+        runtime = _build_runtime()
+        runtime.explainer._classes = None
+
+        with self.assertRaises(ValueError) as context:
+            runtime.block_class_explainability()
+
+        self.assertIn("requires model classes", str(context.exception))
+
+    def test_render_block_for_class_explainability_passes_section_id_as_navigation_id(self):
+        runtime = _build_runtime()
+
+        result = runtime.render_block(
+            {
+                "type": "class_explainability",
+                "params": {"title": "Explained classes"},
+                "_section_id": "custom-class-explainability",
+            }
+        )
+
+        self.assertIsInstance(result, pn.Column)
+        self.assertIn("custom-class-explainability", runtime.class_navigation_items)
+        self.assertEqual(
+            [item["anchor"] for item in runtime.class_navigation_items["custom-class-explainability"]],
+            ["custom-class-explainability-class-1"],
+        )
 
     def test_block_contribution_plot_single_and_all_features(self):
         runtime = _build_runtime()
