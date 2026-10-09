@@ -8,6 +8,7 @@ import tempfile
 import unittest
 import warnings
 from os import path
+from unittest.mock import patch
 
 import catboost as cb
 import numpy as np
@@ -117,6 +118,7 @@ class TestSmartPredictorManifest(unittest.TestCase):
             with pytest.raises(ValueError, match="schema fingerprint mismatch"):
                 load_smartpredictor(pkl)
 
+    @patch("shapash.utils.io.shapash_version", "2.9.0")
     def test_load_with_major_version_mismatch_raises(self) -> None:
         predictor = self._make_predictor()
         with tempfile.TemporaryDirectory() as tmp:
@@ -131,9 +133,8 @@ class TestSmartPredictorManifest(unittest.TestCase):
             with pytest.raises(ValueError, match="Major version mismatch"):
                 load_smartpredictor(pkl)
 
+    @patch("shapash.utils.io.shapash_version", "2.9.0")
     def test_load_with_minor_version_mismatch_warns(self) -> None:
-        from shapash.__version__ import VERSION
-
         predictor = self._make_predictor()
         with tempfile.TemporaryDirectory() as tmp:
             pkl = os.path.join(tmp, "predictor.pkl")
@@ -141,7 +142,7 @@ class TestSmartPredictorManifest(unittest.TestCase):
             manifest_path = pkl + MANIFEST_SUFFIX
             with open(manifest_path, encoding="utf-8") as f:
                 manifest = json.load(f)
-            manifest["shapash_version"] = f"{VERSION[0]}.{VERSION[1] + 1}.0"
+            manifest["shapash_version"] = "2.10.0"
             with open(manifest_path, "w", encoding="utf-8") as f:
                 json.dump(manifest, f)
             with pytest.warns(UserWarning, match="Minor version skew"):
