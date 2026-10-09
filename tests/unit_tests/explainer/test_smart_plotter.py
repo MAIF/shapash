@@ -502,7 +502,7 @@ class TestSmartPlotter(unittest.TestCase):
 
     @patch("shapash.explainer.smart_explainer.SmartExplainer.filter")
     @patch("shapash.explainer.smart_plotter.select_lines")
-    @patch("shapash.explainer.smart_explainer.SmartExplainer._local_pred")
+    @patch("shapash.explainer.smart_explainer.Explainer._local_pred")
     def test_local_plot_groups_features(self, local_pred, select_lines, filter):
         """
         Unit test local plot 6 for groups of features

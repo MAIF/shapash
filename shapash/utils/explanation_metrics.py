@@ -125,7 +125,8 @@ def find_neighbors(
     model: Any,
     mode: Literal["classification", "regression"],
     n_neighbors: int = 10,
-) -> list[np.ndarray]:
+    return_positions: bool = False,
+) -> list[np.ndarray] | tuple[list[np.ndarray], list[np.ndarray]]:
     """
     For each instance, select neighbors based on 3 criteria:
 
@@ -145,26 +146,36 @@ def find_neighbors(
         "classification" or "regression"
     n_neighbors : int, optional
         Top N neighbors initially allowed, by default 10
+    return_positions : bool, optional
+        Also return the dataset row positions in the same order as each neighborhood
 
     Returns
     -------
     list of numpy.ndarray
         Wrap all instances with corresponding neighbors in a list with length (#instances).
         Each array has shape (#neighbors, #features + 2), including the instance, its distance, and its prediction.
+    all_positions : list of numpy.ndarray, optional
+        Dataset row positions for each neighborhood, returned when ``return_positions`` is True.
     """
     instances = dataset.loc[selection].values
+    selected_positions = dataset.index.get_indexer_for(selection)
 
     neighbor_rows = np.empty((0, instances.shape[1] + 1), float)
+    all_positions = []
     """Filter 1 : Pick top N closest neighbors"""
-    for instance in instances:
+    for selected_position, instance in zip(selected_positions, instances, strict=True):
         c = _compute_similarities(instance, dataset.values)
         # Pick indices of the closest neighbors (and include instance itself)
         neighbors_indices = np.argsort(c)[: n_neighbors + 1]
+        if selected_position not in neighbors_indices:
+            neighbors_indices[-1] = selected_position
+        neighbors_indices = np.r_[selected_position, neighbors_indices[neighbors_indices != selected_position]]
         # Return instance with its neighbors
         neighbors = dataset.values[neighbors_indices]
         # Add distance column
-        neighbors = np.append(neighbors, c[neighbors_indices].reshape(n_neighbors + 1, 1), axis=1)
+        neighbors = np.append(neighbors, c[neighbors_indices].reshape(-1, 1), axis=1)
         neighbor_rows = np.append(neighbor_rows, neighbors, axis=0)
+        all_positions.append(neighbors_indices)
 
     # Calculate predictions for all instances and corresponding neighbors
     if mode == "regression":
@@ -183,10 +194,14 @@ def find_neighbors(
     if mode == "regression":
         # Trick : use enumerate to allow the modifcation directly on the iterator
         for i, neighbors in enumerate(all_neighbors):
-            all_neighbors[i] = neighbors[abs(neighbors[:, -1] - neighbors[0, -1]) < 0.1 * abs(neighbors[0, -1])]
+            keep = abs(neighbors[:, -1] - neighbors[0, -1]) < 0.1 * abs(neighbors[0, -1])
+            all_neighbors[i] = neighbors[keep]
+            all_positions[i] = all_positions[i][keep]
     elif mode == "classification":
         for i, neighbors in enumerate(all_neighbors):
-            all_neighbors[i] = neighbors[abs(neighbors[:, -1] - neighbors[0, -1]) < 0.1]
+            keep = abs(neighbors[:, -1] - neighbors[0, -1]) < 0.1
+            all_neighbors[i] = neighbors[keep]
+            all_positions[i] = all_positions[i][keep]
 
     """Filter 3 : neighbors below a distance threshold"""
     # Remove points if distance is bigger than radius
@@ -194,7 +209,11 @@ def find_neighbors(
 
     for i, neighbors in enumerate(all_neighbors):
         # -2 indicates the distance column
-        all_neighbors[i] = neighbors[neighbors[:, -2] < radius]
+        keep = neighbors[:, -2] < radius
+        all_neighbors[i] = neighbors[keep]
+        all_positions[i] = all_positions[i][keep]
+    if return_positions:
+        return all_neighbors, all_positions
     return all_neighbors
 
 
@@ -203,6 +222,7 @@ def shap_neighbors(
     x_encoded: pd.DataFrame,
     contributions: pd.DataFrame | list[pd.DataFrame],
     mode: Literal["classification", "regression"],
+    neighbor_positions: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     For an instance and corresponding neighbors, calculate various
@@ -218,6 +238,9 @@ def shap_neighbors(
         Calculated contribution values for the dataset, optionally one DataFrame per class
     mode : {"classification", "regression"}
         Prediction task. For binary classification, contributions for the positive class are used.
+    neighbor_positions : numpy.ndarray, optional
+        Dataset row positions returned by ``find_neighbors``. Required to distinguish rows
+        with identical feature values.
 
     Returns
     -------
@@ -225,26 +248,39 @@ def shap_neighbors(
         ``(norm_shap_values, average_diff, norm_abs_shap_values[0, :])``
 
         norm_shap_values : numpy.ndarray
-        Normalized SHAP values (with corresponding sign) of instance and its neighbors
+        Normalized SHAP values (with corresponding sign) in neighborhood order: the selected
+        instance first, followed by its neighbors in distance order.
         average_diff : numpy.ndarray
         Variability (stddev / mean) of normalized SHAP values (using L1) across neighbors for each feature
         norm_abs_shap_values[0, :] : numpy.ndarray
         Normalized absolute SHAP value of the instance
+
+    Raises
+    ------
+    ValueError
+        If a list of contributions is incompatible with the selected mode, or if
+        ``neighbor_positions`` is omitted and duplicate feature rows make the
+        neighborhood row identities ambiguous.
     """
     # Extract SHAP values for instance and neighbors
     # :-2 indicates that two columns are disregarded : distance to instance and model output
-    ind = (
-        pd.merge(x_encoded.reset_index(), pd.DataFrame(instance[:, :-2], columns=x_encoded.columns), how="inner")
-        .set_index(x_encoded.index.name if x_encoded.index.name is not None else "index")
-        .index
-    )
     # If classification, select contrbutions of one class only
     if isinstance(contributions, list):
         if mode == "classification" and len(contributions) == 2:
             contributions = contributions[1]
         else:
             raise ValueError("Expected a single contribution DataFrame for the selected mode")
-    shap_values = contributions.loc[ind]
+    if neighbor_positions is None:
+        ind = (
+            pd.merge(pd.DataFrame(instance[:, :-2], columns=x_encoded.columns), x_encoded.reset_index(), how="inner")
+            .set_index(x_encoded.index.name if x_encoded.index.name is not None else "index")
+            .index
+        )
+        if len(ind) != len(instance):
+            raise ValueError("Feature rows are not unique; pass neighbor_positions to identify the neighbors")
+        shap_values = contributions.loc[ind]
+    else:
+        shap_values = contributions.iloc[neighbor_positions]
     # For neighbors comparison, the sign of SHAP values is taken into account
     norm_shap_values = normalize(shap_values, axis=1, norm="l1")
     # But not for the average impact of the features across the dataset

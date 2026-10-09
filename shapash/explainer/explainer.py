@@ -793,10 +793,14 @@ class Explainer:
             if len(self._classes) > 2:
                 raise AssertionError("Multi-class classification is not supported")
 
-        all_neighbors = find_neighbors(selection, self.x_encoded, self.model, self._case)
+        all_neighbors, all_positions = find_neighbors(
+            selection, self.x_encoded, self.model, self._case, return_positions=True
+        )
 
         if len(selection) == 1:
-            norm_shap, _, _ = shap_neighbors(all_neighbors[0], self.x_encoded, self.contributions, self._case)
+            norm_shap, _, _ = shap_neighbors(
+                all_neighbors[0], self.x_encoded, self.contributions, self._case, neighbor_positions=all_positions[0]
+            )
             self.local_neighbors = {"norm_shap": norm_shap}
         else:
             numb_expl = len(selection)
@@ -804,7 +808,11 @@ class Explainer:
             variability = np.zeros((numb_expl, self.x_init.shape[1]))
             for i in range(numb_expl):
                 (_, variability[i, :], amplitude[i, :]) = shap_neighbors(
-                    all_neighbors[i], self.x_encoded, self.contributions, self._case
+                    all_neighbors[i],
+                    self.x_encoded,
+                    self.contributions,
+                    self._case,
+                    neighbor_positions=all_positions[i],
                 )
             self.features_stability = {"variability": variability, "amplitude": amplitude}
 
