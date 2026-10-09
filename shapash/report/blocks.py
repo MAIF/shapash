@@ -19,7 +19,7 @@ from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, series_dtype
 from shapash.report.core import _wrap_section_anchor
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable
+from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable, build_plotly_pane
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
@@ -113,13 +113,14 @@ class ReportBlockMixin:
         self.explainer = explainer.explainer if explainer else None
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
-        self.x_init = getattr(explainer, "x_init", None)
+        self.x_init = getattr(self.explainer, "x_init", None)
         self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
         self.y_train, self.target_name_train = self._get_values_and_name(y_train, "target")
         self.y_test, self.target_name_test = self._get_values_and_name(y_test, "target")
         self.target_name = self.target_name_train if self.target_name_train is not None else self.target_name_test
         self.max_points = max_points
         self._inside_group = False
+        self.class_navigation_items: dict[str, list[dict[str, str]]] = {}
 
         if self.explainer is not None:
             if self.explainer.y_pred is not None:
@@ -134,6 +135,9 @@ class ReportBlockMixin:
 
         block_type = block_cfg.get("type", "")
         params = block_cfg.get("params", {})
+        if block_type == "class_explainability":
+            params = dict(params)
+            params["navigation_id"] = block_cfg.get("_section_id", "class-explainability")
 
         if block_type == "group":
             previous_inside_group = getattr(self, "_inside_group", False)
@@ -339,7 +343,7 @@ class ReportBlockMixin:
         return title, [stats_table]
 
     @block
-    def block_model_analysis(self, title: str = "Model information") -> BlockContent:
+    def block_model_analysis(self, title: str = "Model information", show_index: bool = False) -> BlockContent:
         """Render model metadata and parameter tables.
         Requires explainer.
 
@@ -347,6 +351,8 @@ class ReportBlockMixin:
         ----------
         title : str, default="Model information"
             Section title displayed above model details.
+        show_index : bool, default=False
+            Whether the model parameter tables display their pandas row index.
 
         Returns
         -------
@@ -389,7 +395,21 @@ class ReportBlockMixin:
                     "Value": [_truncate(val, 300) for _, val in params_items[split_idx:]],
                 }
             )
-            params_table = (left_df, pn.Spacer(width=24), right_df)
+            params_table = (
+                pn.pane.DataFrame(
+                    left_df,
+                    index=show_index,
+                    width_policy="min",
+                    sizing_mode="stretch_width",
+                ),
+                pn.Spacer(width=24),
+                pn.pane.DataFrame(
+                    right_df,
+                    index=show_index,
+                    width_policy="min",
+                    sizing_mode="stretch_width",
+                ),
+            )
         else:
             params_df = pd.DataFrame(
                 {
@@ -397,11 +417,16 @@ class ReportBlockMixin:
                     "Value": [_truncate(val, 300) for _, val in params_items],
                 }
             )
-            params_table = params_df
+            params_table = pn.pane.DataFrame(
+                params_df,
+                index=show_index,
+                width_policy="min",
+                sizing_mode="stretch_width",
+            )
 
         content: list[Any] = [
             pn.pane.Markdown(
-                "\n".join(
+                "  \n".join(
                     [
                         f"**Model used**: {model.__class__.__name__}",
                         f"**Library**: {model_module}",
@@ -585,6 +610,83 @@ class ReportBlockMixin:
         return title, [fig]
 
     @block
+    def block_class_explainability(
+        self,
+        title: str = "Class-specific explainability",
+        label: Any = 1,
+        max_points: int | None = None,
+        navigation_id: str = "class-explainability",
+        include_interactions: bool = False,
+        nb_top_interactions: int = 5,
+    ) -> BlockContent:
+        """Render class-specific feature importance, contributions, and interactions.
+
+        Binary classification renders the requested class only. Multiclass
+        classification renders one set of charts for every model class. Top
+        interactions are included when ``include_interactions`` is True.
+
+        Parameters
+        ----------
+        title : str, default="Class-specific explainability"
+            Section title displayed above the class-specific plots.
+        label : Any, default=1
+            Explained class for binary classification. Ignored for multiclass.
+        max_points : int or None, default=None
+            Maximum number of observations used by contribution plots.
+        navigation_id : str, default="class-explainability"
+            Stable section identifier used to connect class links to their plots.
+        include_interactions : bool, default=False
+            Whether to include a top interactions plot for each displayed class.
+        nb_top_interactions : int, default=5
+            Number of top interaction pairs to show when interactions are included.
+        """
+        explainer = self._require_explainer("class_explainability")
+        if explainer._case != "classification":
+            raise ValueError("class_explainability block is only available for classification.")
+        if explainer._classes is None:
+            raise ValueError("class_explainability block requires model classes.")
+
+        classes = list(explainer._classes)
+        if len(classes) > 2:
+            class_codes = classes
+        else:
+            _, selected_class, _ = explainer.check_label_name(label)
+            class_codes = [selected_class]
+
+        content: list[Any] = []
+        navigation_items: list[dict[str, str]] = []
+        for class_code in class_codes:
+            _, _, class_name = explainer.check_label_name(class_code, origin="code")
+            anchor_id = f"{navigation_id}-class-{len(navigation_items) + 1}"
+            navigation_items.append({"label": str(class_name), "anchor": anchor_id})
+            class_content: list[pn.viewable.Viewable] = [pn.pane.Markdown(f"#### Explained class: **{class_name}**")]
+            importance = explainer.plot.features_importance(label=class_code)
+            class_content.append(build_plotly_pane(importance))
+            class_content.append(
+                self.block_contribution_plot(
+                    title="Feature contributions",
+                    label=class_code,
+                    max_points=max_points,
+                    include_all_features=True,
+                )
+            )
+            if include_interactions:
+                effective_max_points = self.max_points if max_points is None else max_points
+                class_content.append(pn.pane.Markdown("#### Top feature interactions"))
+                interactions = explainer.plot.top_interactions_plot(
+                    nb_top_interactions=nb_top_interactions,
+                    label=class_code,
+                    max_points=effective_max_points,
+                )
+                class_content.append(build_plotly_pane(interactions))
+
+            class_section = _wrap_section_anchor(pn.Column(*class_content, sizing_mode="stretch_width"), anchor_id)
+            content.append(class_section)
+
+        self.class_navigation_items[navigation_id] = navigation_items
+        return title, content
+
+    @block
     def block_contribution_plot(
         self,
         feature: str | None = None,
@@ -629,9 +731,6 @@ class ReportBlockMixin:
             else:
                 effective_max_points = max_points
             fig = explainer.plot.contribution_plot(feature, label=label, max_points=effective_max_points)
-            for trace in fig.data:
-                if trace.type == "bar":
-                    trace.marker.color = "lightgrey"
             if title is None:
                 return self._feature_label(feature), [fig]
             return title, [fig]
@@ -649,33 +748,35 @@ class ReportBlockMixin:
             key=lambda current_feature: (str(self._feature_label(current_feature)).lower(), str(current_feature)),
         )
 
-        feature_panels: dict[str, pn.viewable.Viewable] = {}
+        feature_to_label: dict[str, str] = {}
         for feature_name in sorted_features:
-            if max_points is None:
-                effective_max_points = self.max_points
-            else:
-                effective_max_points = max_points
-            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
-            for trace in fig.data:
-                if trace.type == "bar":
-                    trace.marker.color = "lightgrey"
-
             base_label = str(self._feature_label(feature_name))
             label_text = base_label
             suffix = 2
-            while label_text in feature_panels:
+            while label_text in feature_to_label:
                 label_text = f"{base_label} ({suffix})"
                 suffix += 1
-            feature_panels[label_text] = fig
+            feature_to_label[label_text] = feature_name
 
         feature_select = pn.widgets.Select(
-            name="Feature",
-            options=list(feature_panels.keys()),
-            value=next(iter(feature_panels)),
+            label="Feature",
+            options=list(feature_to_label.keys()),
+            value=next(iter(feature_to_label)),
             sizing_mode="stretch_width",
         )
+
+        if max_points is None:
+            effective_max_points = self.max_points
+        else:
+            effective_max_points = max_points
+
+        def _render_feature_panel(selected_label: str) -> pn.viewable.Viewable:
+            feature_name = feature_to_label[selected_label]
+            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
+            return build_plotly_pane(fig)
+
         selected_panel = pn.panel(
-            pn.bind(cast(Any, lambda selected: feature_panels[selected]), feature_select), sizing_mode="stretch_width"
+            pn.bind(cast(Any, _render_feature_panel), feature_select), sizing_mode="stretch_width"
         )
 
         if title is None:
@@ -788,6 +889,7 @@ class ReportBlockMixin:
         show_train: bool = True,
         width: int = 700,
         height: int = 500,
+        show_index: bool = True,
     ) -> BlockContent:
         """Render target statistics and target distribution analysis.
 
@@ -801,6 +903,8 @@ class ReportBlockMixin:
             Plot width in pixels.
         height : int, default=500
             Plot height in pixels.
+        show_index : bool, default=True
+            Whether the target statistics table displays its pandas row index.
 
         Returns
         -------
@@ -842,6 +946,12 @@ class ReportBlockMixin:
             test_stats=test_stats[target_name],
             train_stats=train_stats[target_name] if train_stats is not None else None,
             names=names,
+        )
+        target_stats = pn.pane.DataFrame(
+            target_stats,
+            index=show_index,
+            width_policy="min",
+            sizing_mode="stretch_width",
         )
 
         distribution_frames = [pd.DataFrame({target_name: y_test_series}).assign(data_train_test="test")]
@@ -1078,7 +1188,7 @@ class ReportBlockMixin:
             return title, [pn.pane.Markdown("No feature available.")]
 
         feature_select = pn.widgets.Select(
-            name="Feature",
+            label="Feature",
             options=list(feature_panels.keys()),
             value=next(iter(feature_panels)),
             sizing_mode="stretch_width",

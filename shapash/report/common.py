@@ -227,6 +227,9 @@ def display_value(value: int | float, thousands_separator: str = ",", decimal_se
     '1,255,000'
 
     """
+    if pd.isna(value):
+        return "N/A"
+
     value_str = f"{value:,}".replace(",", "/thousands/").replace(".", "/decimal/")
     return value_str.replace("/thousands/", thousands_separator).replace("/decimal/", decimal_separator)
 

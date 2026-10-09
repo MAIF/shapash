@@ -40,7 +40,92 @@ class _ReportBlockRenderer(Protocol):
         ...
 
 
-def generate_report(runtime: _ReportBlockRenderer, config_file: Path, output_file: str) -> None:
+def _resolve_report_title(runtime: _ReportBlockRenderer, sections: list[dict[str, Any]]) -> str:
+    """Resolve the document title shown in the browser tab.
+
+    Priority order:
+    1. Top-level ``header`` (or ``title``) block ``params.title``
+    2. ``runtime.smart_explainer.title_story``
+    3. ``"Shapash Report"``
+    """
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_type = section.get("type")
+        if section_type not in {"header", "title"}:
+            continue
+        params = section.get("params", {})
+        if not isinstance(params, dict):
+            continue
+        section_title = params.get("title")
+        if isinstance(section_title, str) and section_title.strip():
+            return section_title.strip()
+
+    smart_explainer = getattr(runtime, "smart_explainer", None)
+    title_story = getattr(smart_explainer, "title_story", None)
+    if isinstance(title_story, str) and title_story.strip():
+        return title_story.strip()
+
+    return "Shapash Report"
+
+
+def _resolve_report_favicon_href(output_path: Path) -> str | None:
+    """Resolve the favicon href for the generated report.
+
+    Prefer embedding the packaged webapp ``favicon.ico`` as a data URL.
+    Return ``None`` when the asset is unavailable so the default favicon
+    behavior applies.
+    """
+    del output_path  # Kept for API compatibility.
+
+    webapp_favicon_path = Path(__file__).resolve().parent.parent / "webapp" / "assets" / "favicon.ico"
+    if webapp_favicon_path.exists():
+        favicon_data = base64.b64encode(webapp_favicon_path.read_bytes()).decode("ascii")
+        return f"data:image/x-icon;base64,{favicon_data}"
+
+    return None
+
+
+def _inject_favicon_links(html_text: str, favicon_href: str) -> str:
+    """Inject favicon tags in exported report HTML head."""
+    html_text = re.sub(
+        r"<link[^>]+rel=\"(?:apple-touch-icon|icon|shortcut icon)\"[^>]*>",
+        "",
+        html_text,
+        flags=re.IGNORECASE,
+    )
+
+    icon_tags = "\n".join(
+        [
+            f'<link rel="icon" href="{html.escape(favicon_href)}">',
+            f'<link rel="shortcut icon" href="{html.escape(favicon_href)}">',
+            f'<link rel="apple-touch-icon" href="{html.escape(favicon_href)}">',
+        ]
+    )
+
+    if "</head>" in html_text:
+        html_text = html_text.replace("</head>", f"  {icon_tags}\n</head>", 1)
+    else:
+        html_text = f"{html_text}\n{icon_tags}\n"
+    return html_text
+
+
+def _apply_html_head_metadata(output_path: Path) -> None:
+    """Update the generated report HTML with favicon metadata."""
+    html_text = output_path.read_text(encoding="utf-8")
+    favicon_href = _resolve_report_favicon_href(output_path)
+    if not favicon_href:
+        return
+    updated_html = _inject_favicon_links(html_text, favicon_href=favicon_href)
+    if updated_html != html_text:
+        output_path.write_text(updated_html, encoding="utf-8")
+
+
+def generate_report(
+    runtime: _ReportBlockRenderer,
+    config_file: Path,
+    output_file: str,
+) -> None:
     """Render a YAML-configured Panel report to an HTML file.
 
     Parameters
@@ -67,6 +152,7 @@ def generate_report(runtime: _ReportBlockRenderer, config_file: Path, output_fil
         If the output directory or HTML report cannot be written.
     """
     pn.extension("plotly")
+    pn.config.respect_explicit_sizing = True
     cfg_path = config_file.resolve()
     cfg = load_report_config(cfg_path)
     print(f"Loading config → {cfg_path}")
@@ -74,7 +160,7 @@ def generate_report(runtime: _ReportBlockRenderer, config_file: Path, output_fil
     _assign_section_ids(cfg["sections"])
 
     rendered_blocks = [runtime.render_block(block_cfg) for block_cfg in cfg["sections"]]
-    nav_bar = build_navigation_bar(cfg["sections"])
+    nav_bar = build_navigation_bar(cfg["sections"], getattr(runtime, "class_navigation_items", None))
 
     out_path = Path(output_file).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,15 +172,18 @@ def generate_report(runtime: _ReportBlockRenderer, config_file: Path, output_fil
         sizing_mode="stretch_width",
     )
     report_layout = pn.Row(
-        pn.Column(nav_bar, css_classes=["report-sidebar"], width=300, sizing_mode="fixed"),
+        pn.Column(nav_bar, css_classes=["report-sidebar"], width=300, sizing_mode="stretch_height"),
         report_content,
         css_classes=["main-report"],
         sizing_mode="stretch_width",
     )
     report_layout.append(pn.pane.HTML(f"<script>{report_js_text()}</script>", sizing_mode="stretch_width"))
 
+    resolved_title = _resolve_report_title(runtime=runtime, sections=cfg["sections"])
     with open(str(out_path), mode="w", encoding="utf-8") as f:
-        report_layout.save(f, embed=True)
+        report_layout.save(f, embed=True, title=resolved_title)
+
+    _apply_html_head_metadata(out_path)
 
     logger.info("Report saved → %s", output_file)
 
@@ -214,7 +303,10 @@ def _wrap_section_anchor(content: pn.viewable.Viewable, section_id: str | None) 
     return pn.Column(anchor, content, css_classes=["scroll-section"], sizing_mode="stretch_width")
 
 
-def build_navigation_bar(blocks: list[dict[str, Any]]) -> pn.pane.HTML:
+def build_navigation_bar(
+    blocks: list[dict],
+    class_navigation_items: dict[str, list[dict[str, str]]] | None = None,
+) -> pn.pane.HTML:
     """Build the report's sticky navigation as a Panel HTML pane.
 
     Each block becomes a link to its ``_section_id``. Group blocks also include
@@ -225,7 +317,18 @@ def build_navigation_bar(blocks: list[dict[str, Any]]) -> pn.pane.HTML:
     Parameters
     ----------
     blocks : list[dict[str, Any]]
-        Top-level block configurations, including assigned section IDs.
+        Top-level block configurations, including assigned section IDs. Group
+        blocks may contain a ``"blocks"`` key whose child blocks are rendered
+        as nested navigation entries.
+    class_navigation_items : dict[str, list[dict[str, str]]] | None, optional
+        Mapping from a child block section ID to additional navigation entries.
+        Each entry must provide:
+            - ``"label"``: text displayed in the navigation.
+            - ``"anchor"``: target HTML anchor identifier.
+        These entries are rendered beneath the corresponding child block and
+        are typically used to expose class-specific sections in classification
+        reports. If ``None``, no additional class-level navigation items are
+        added.
 
     Returns
     -------
@@ -239,6 +342,7 @@ def build_navigation_bar(blocks: list[dict[str, Any]]) -> pn.pane.HTML:
     """
     items_html: list[str] = []
     item_count = 0
+    class_navigation_items = class_navigation_items or {}
     for block in blocks:
         block_type = block.get("type")
         label = html.escape(_block_label(block))
@@ -248,9 +352,15 @@ def build_navigation_bar(blocks: list[dict[str, Any]]) -> pn.pane.HTML:
             children_links: list[str] = []
             for child in block.get("blocks", []):
                 child_label = html.escape(_block_label(child))
-                child_id = html.escape(str(child.get("_section_id", "")))
+                child_section_id = str(child.get("_section_id", ""))
+                child_id = html.escape(child_section_id)
                 item_count += 1
                 children_links.append(f'<a class="nav-item nav-child" href="#{child_id}">{child_label}</a>')
+                for class_item in class_navigation_items.get(child_section_id, []):
+                    class_label = html.escape(class_item["label"])
+                    class_anchor = html.escape(class_item["anchor"])
+                    item_count += 1
+                    children_links.append(f'<a class="nav-item nav-child" href="#{class_anchor}">{class_label}</a>')
             items_html.append(
                 "".join(
                     [

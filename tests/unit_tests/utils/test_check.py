@@ -314,7 +314,7 @@ class TestCheck(unittest.TestCase):
         train_ordinal_all = enc_ordinal_all.transform(train)
         preprocessing = enc_ordinal_all
 
-        y = pd.DataFrame({"y_class": [0, 0, 0, 1]})
+        y = pd.Series([0, 0, 0, 1], name="y_class")
 
         model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
 
@@ -364,7 +364,7 @@ class TestCheck(unittest.TestCase):
         train_ordinal_all = enc_ordinal_all.transform(train)
         preprocessing = enc_ordinal_all
 
-        y = pd.DataFrame({"y_class": [0, 0, 0, 1]})
+        y = pd.Series([0, 0, 0, 1], name="y_class")
 
         model = cb.CatBoostClassifier(n_estimators=1).fit(train_ordinal_all, y)
 
@@ -417,7 +417,7 @@ class TestCheck(unittest.TestCase):
         train_ordinal_all = enc_ordinal_all.transform(train)
         preprocessing = enc_ordinal_all
 
-        y = pd.DataFrame({"y_class": [0, 0, 0, 1]})
+        y = pd.Series([0, 0, 0, 1], name="y_class")
 
         for model in self.modellist:
             print(type(model))

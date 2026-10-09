@@ -1,0 +1,3 @@
+# Keep generated HTML reports local.
+*
+!.gitignore

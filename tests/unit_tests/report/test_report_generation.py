@@ -11,6 +11,13 @@ import plotly.graph_objects as go
 from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
 from shapash.report.blocks import ReportBlockMixin, block
+from shapash.report.core import (
+    _apply_html_head_metadata,
+    _inject_favicon_links,
+    _resolve_report_favicon_href,
+    _resolve_report_title,
+    build_navigation_bar,
+)
 from shapash.report.panel_support import apply_report_css
 
 import pytest
@@ -56,7 +63,10 @@ class _DummyBackend(BaseBackend):
 
 class _DummyPlot:
     def __init__(self):
-        self._style_dict = {"dummy": "style"}
+        self._style_dict = {
+            "dummy": "style",
+            "report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"},
+        }
 
     def _tuning_round_digit(self):
         return None
@@ -107,7 +117,106 @@ def _build_runtime() -> ReportBlockMixin:
         y_pred=pd.Series([1, 0, 1], index=x_test.index),
         y_target=y_test,
     )
-    return ReportBlockMixin(explainer=explainer, x_train=x_train, y_train=y_train, y_test=y_test, max_points=10)
+    return ReportBlockMixin(
+        explainer=explainer,
+        x_train=x_train,
+        y_train=y_train,
+        y_test=y_test,
+        max_points=10,
+    )
+
+
+def test_report_runtime_uses_prediction_data_from_underlying_explainer():
+    runtime = _build_runtime()
+
+    assert runtime.x_init is runtime.explainer.x_init
+    assert runtime.df_train_test["data_train_test"].value_counts().to_dict() == {"test": 3, "train": 3}
+
+
+def test_inject_favicon_links_replaces_existing_icons():
+        html_text = """
+<html>
+    <head>
+        <title>Panel</title>
+        <link rel=\"icon\" href=\"https://cdn.example/icon.png\">
+    </head>
+    <body></body>
+</html>
+"""
+        updated = _inject_favicon_links(html_text, favicon_href="data:image/png;base64,AAA")
+
+        assert "<title>Panel</title>" in updated
+        assert "https://cdn.example/icon.png" not in updated
+        assert '<link rel="icon" href="data:image/png;base64,AAA">' in updated
+        assert '<link rel="shortcut icon" href="data:image/png;base64,AAA">' in updated
+        assert '<link rel="apple-touch-icon" href="data:image/png;base64,AAA">' in updated
+
+
+def test_resolve_report_title_uses_header_block_title_when_available():
+    class _RuntimeWithoutStory:
+        smart_explainer = type("SE", (), {"title_story": ""})()
+
+    sections = [{"type": "header", "params": {"title": "My report title"}}]
+    assert _resolve_report_title(_RuntimeWithoutStory(), sections=sections) == "My report title"
+
+
+def test_resolve_report_title_falls_back_to_title_story_when_header_missing():
+    class _RuntimeWithStory:
+        smart_explainer = type("SE", (), {"title_story": "Story title"})()
+
+    sections = [{"type": "model_analysis", "params": {"title": "Model analysis"}}]
+    assert _resolve_report_title(_RuntimeWithStory(), sections=sections) == "Story title"
+
+
+def test_resolve_report_title_falls_back_to_default_when_missing():
+    class _RuntimeWithoutTitle:
+        smart_explainer = type("SE", (), {"title_story": ""})()
+
+    sections = [{"type": "model_analysis", "params": {"title": "Model analysis"}}]
+    assert _resolve_report_title(_RuntimeWithoutTitle(), sections=sections) == "Shapash Report"
+
+
+def test_inject_favicon_links_appends_tags_when_head_is_missing():
+    html_text = "<html><body>Report</body></html>"
+
+    updated = _inject_favicon_links(html_text, favicon_href="favicon.ico")
+
+    assert updated.endswith('</html>\n<link rel="icon" href="favicon.ico">\n<link rel="shortcut icon" href="favicon.ico">\n<link rel="apple-touch-icon" href="favicon.ico">\n')
+
+
+def test_resolve_report_favicon_href_embeds_packaged_favicon(tmp_path):
+    output_path = tmp_path / "report.html"
+
+    href = _resolve_report_favicon_href(output_path)
+
+    assert href.startswith("data:image/x-icon;base64,")
+
+
+def test_resolve_report_favicon_href_returns_none_when_packaged_favicon_missing(tmp_path):
+    output_path = tmp_path / "report.html"
+    original_exists = Path.exists
+
+    def _patched_exists(current_path):
+        if str(current_path).endswith("webapp/assets/favicon.ico"):
+            return False
+        return original_exists(current_path)
+
+    with patch("pathlib.Path.exists", new=_patched_exists):
+        href = _resolve_report_favicon_href(output_path)
+
+    assert href is None
+
+
+def test_apply_html_head_metadata_injects_favicon_links(tmp_path):
+    report_path = tmp_path / "report.html"
+    report_path.write_text("<html><head><title>Panel</title></head><body></body></html>", encoding="utf-8")
+
+    _apply_html_head_metadata(report_path)
+
+    updated = report_path.read_text(encoding="utf-8")
+    assert '<link rel="icon" href=' in updated
+    assert '<link rel="shortcut icon" href=' in updated
+    assert '<link rel="apple-touch-icon" href=' in updated
 
 
 class TestSmartReportPanel(unittest.TestCase):
@@ -118,6 +227,13 @@ class TestSmartReportPanel(unittest.TestCase):
 
         self.assertIn(".kv-table", css)
         self.assertIn("@media (max-width: 1200px)", css)
+        main_rules = css.split(".main-report", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        base_rules = css.split(".report-sidebar", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        responsive_rules = css.split("@media (max-width: 1200px)", maxsplit=1)[1]
+        sidebar_rules = responsive_rules.split(".report-sidebar", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        self.assertIn("overflow: visible !important;", main_rules)
+        self.assertIn("position: sticky;", base_rules)
+        self.assertIn("position: static;", sidebar_rules)
 
     def test_apply_report_css_registers_styles_once(self):
         css_path = Path(__file__).resolve().parents[3] / "shapash" / "report" / "assets"  / "report_styles.css"
@@ -156,7 +272,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_select_allowed(self, title: str = "Selector"):
-        return [pn.widgets.Select(name="Feature", options=["a", "b"], value="a")]
+        return [pn.widgets.Select(label="Feature", options=["a", "b"], value="a")]
 
     @block
     def block_plotly_allowed(self, title: str = "Plotly"):
@@ -165,13 +281,13 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_bind_allowed(self, title: str = "Bind"):
-        selector = pn.widgets.Select(name="Feature", options=["a", "b"], value="a")
+        selector = pn.widgets.Select(label="Feature", options=["a", "b"], value="a")
         selected_panel = pn.panel(pn.bind(cast(Any, lambda selected: pn.pane.Markdown(selected)), selector))
         return [selector, selected_panel]
 
     @block
-    def block_panel_type_not_allowed(self, title: str = "HTML"):
-        return [pn.pane.HTML("<b>html</b>")]
+    def block_panel_type_not_allowed(self, title: str = "Button"):
+        return [pn.widgets.Button(label="Click")]
 
     @block
     def block_non_panel_type_not_allowed(self, title: str = "Object"):
@@ -295,6 +411,11 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(result, pn.Column)
         self.assertIn("Model information", result.objects[0].object)
         self.assertIn("**Model used**", result.objects[1].object)
+        self.assertIsInstance(result.objects[2], pn.pane.DataFrame)
+        self.assertFalse(result.objects[2].index)
+
+        result_with_index = runtime.block_model_analysis(show_index=True)
+        self.assertTrue(result_with_index.objects[2].index)
 
     def test_block_performance_metrics_builds_badges(self):
         runtime = _build_runtime()
@@ -327,6 +448,139 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
 
         self.assertIsInstance(corr_result.objects[1], pn.pane.Plotly)
         self.assertIsInstance(fi_result.objects[1], pn.pane.Plotly)
+
+    def test_class_explainability_uses_selected_binary_or_all_multiclass_labels(self):
+        binary_runtime = _build_runtime()
+        with patch.object(
+            binary_runtime.explainer.plot,
+            "features_importance",
+            wraps=binary_runtime.explainer.plot.features_importance,
+        ) as binary_importance, patch.object(
+            binary_runtime.explainer.plot,
+            "contribution_plot",
+            wraps=binary_runtime.explainer.plot.contribution_plot,
+        ) as binary_contributions:
+            binary_runtime.block_class_explainability()
+
+        self.assertEqual([call.kwargs["label"] for call in binary_importance.call_args_list], [1])
+        self.assertEqual([call.kwargs["label"] for call in binary_contributions.call_args_list], [1])
+
+        multiclass_runtime = _build_runtime()
+        multiclass_runtime.explainer._classes = [0, 1, 2]
+        with patch.object(
+            multiclass_runtime.explainer,
+            "check_label_name",
+            side_effect=lambda class_code, origin=None: ([0, 1, 2].index(class_code), class_code, f"Class {class_code}"),
+        ), patch.object(
+            multiclass_runtime.explainer.plot,
+            "features_importance",
+            wraps=multiclass_runtime.explainer.plot.features_importance,
+        ) as multiclass_importance, patch.object(
+            multiclass_runtime.explainer.plot,
+            "contribution_plot",
+            wraps=multiclass_runtime.explainer.plot.contribution_plot,
+        ) as multiclass_contributions:
+            result = multiclass_runtime.block_class_explainability()
+
+        self.assertIsInstance(result, pn.Column)
+        self.assertEqual([call.kwargs["label"] for call in multiclass_importance.call_args_list], [0, 1, 2])
+        self.assertEqual([call.kwargs["label"] for call in multiclass_contributions.call_args_list], [0, 1, 2])
+        class_links = multiclass_runtime.class_navigation_items["class-explainability"]
+        self.assertEqual([item["label"] for item in class_links], ["Class 0", "Class 1", "Class 2"])
+        anchors = [
+            child
+            for item in result.objects
+            if isinstance(item, pn.Column)
+            for child in item.objects
+            if isinstance(child, pn.pane.HTML)
+        ]
+        self.assertEqual([anchor.object for anchor in anchors], [
+            f'<div id="{item["anchor"]}" class="scroll-anchor"></div>' for item in class_links
+        ])
+
+        nav = build_navigation_bar(
+            [
+                {
+                    "type": "group",
+                    "params": {"title": "Model explainability"},
+                    "_section_id": "model-explainability",
+                    "blocks": [
+                        {
+                            "type": "class_explainability",
+                            "params": {"title": "Explained classes"},
+                            "_section_id": "class-explainability",
+                        }
+                    ],
+                }
+            ],
+            {"class-explainability": class_links},
+        )
+        for class_link in class_links:
+            self.assertIn(f'href="#{class_link["anchor"]}"', nav.object)
+            self.assertIn(class_link["label"], nav.object)
+
+    def test_class_explainability_can_include_class_specific_interactions(self):
+        runtime = _build_runtime()
+        runtime.explainer._classes = [0, 1, 2]
+
+        with patch.object(
+            runtime.explainer,
+            "check_label_name",
+            side_effect=lambda class_code, origin=None: ([0, 1, 2].index(class_code), class_code, f"Class {class_code}"),
+        ), patch.object(
+            runtime.explainer.plot,
+            "top_interactions_plot",
+            wraps=runtime.explainer.plot.top_interactions_plot,
+        ) as interactions_plot:
+            result = runtime.block_class_explainability(include_interactions=True, nb_top_interactions=3)
+
+        self.assertIsInstance(result, pn.Column)
+        self.assertEqual([call.kwargs["label"] for call in interactions_plot.call_args_list], [0, 1, 2])
+        self.assertEqual([call.kwargs["nb_top_interactions"] for call in interactions_plot.call_args_list], [3, 3, 3])
+        interaction_panes = [
+            pane
+            for section in result.objects
+            if isinstance(section, pn.Column)
+            for pane in section.select(pn.pane.Plotly)
+            if pane.object.data[0].type == "scatter"
+        ]
+        self.assertEqual(len(interaction_panes), 3)
+
+    def test_class_explainability_requires_classification_case(self):
+        runtime = _build_runtime()
+        runtime.explainer._case = "regression"
+
+        with self.assertRaises(ValueError) as context:
+            runtime.block_class_explainability()
+
+        self.assertIn("only available for classification", str(context.exception))
+
+    def test_class_explainability_requires_model_classes(self):
+        runtime = _build_runtime()
+        runtime.explainer._classes = None
+
+        with self.assertRaises(ValueError) as context:
+            runtime.block_class_explainability()
+
+        self.assertIn("requires model classes", str(context.exception))
+
+    def test_render_block_for_class_explainability_passes_section_id_as_navigation_id(self):
+        runtime = _build_runtime()
+
+        result = runtime.render_block(
+            {
+                "type": "class_explainability",
+                "params": {"title": "Explained classes"},
+                "_section_id": "custom-class-explainability",
+            }
+        )
+
+        self.assertIsInstance(result, pn.Column)
+        self.assertIn("custom-class-explainability", runtime.class_navigation_items)
+        self.assertEqual(
+            [item["anchor"] for item in runtime.class_navigation_items["custom-class-explainability"]],
+            ["custom-class-explainability-class-1"],
+        )
 
     def test_block_contribution_plot_single_and_all_features(self):
         runtime = _build_runtime()
@@ -372,6 +626,12 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(analysis_result, pn.Column)
         self.assertIn("Target", analysis_result.objects[0].object)
         self.assertIsInstance(analysis_result.objects[2], pn.Row)
+        target_stats = analysis_result.objects[2].objects[0]
+        self.assertIsInstance(target_stats, pn.pane.DataFrame)
+        self.assertTrue(target_stats.index)
+
+        analysis_without_index = runtime.block_target_analysis(title="Target", show_index=False)
+        self.assertFalse(analysis_without_index.objects[2].objects[0].index)
 
     def test_block_confusion_lift_and_univariate_render(self):
         runtime = _build_runtime()

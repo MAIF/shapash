@@ -12,6 +12,7 @@ sections:
   - type: model_analysis
     params:
       title: "Model analysis"
+      show_index: false
 
   - type: group
     params:
@@ -29,6 +30,7 @@ sections:
         params:
           title: "Target analysis"
           show_train: true
+          show_index: true
 
   - type: group
     params:
