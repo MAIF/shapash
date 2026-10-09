@@ -14,6 +14,24 @@ import plotly.graph_objs as go
 TABULATOR_MIN_COLUMNS = 10
 
 
+def build_plotly_pane(figure: go.Figure) -> pn.pane.Plotly:
+    """Create a report-safe Plotly pane with autosize normalization.
+
+    Some Plotly versions bundled by Panel can raise runtime errors during
+    resize when figures carry explicit width/height values in exported HTML.
+    Enforcing autosize and clearing explicit dimensions avoids that code path
+    while preserving responsive rendering in the report layout.
+    """
+    normalized_figure = go.Figure(figure)
+    normalized_figure.update_layout(width=None, height=None, autosize=True)
+    return pn.pane.Plotly(
+        normalized_figure,
+        config={"responsive": True},
+        link_figure=False,
+        sizing_mode="stretch_width",
+    )
+
+
 def report_js_text() -> str:
     """Load report JavaScript once for Panel report export."""
     js_path = Path(__file__).resolve().parent / "assets" / "report_script.js"
@@ -95,6 +113,9 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
             classes.append("fit-content-table")
         return _add_css_classes(viewable, *classes)
 
+    if isinstance(viewable, pn.pane.HTML):
+        return viewable
+
     if isinstance(viewable, pn.pane.Plotly):
         return viewable
 
@@ -140,7 +161,9 @@ def _auto_style_viewable(viewable: Any, method_name: str | None = None) -> Any:
         return viewable
 
     method_info = f" in '{method_name}'" if method_name else ""
-    allowed_types = "Markdown, DataFrame, Plotly, Select, Tabulator, Spacer, ParamFunction, ParamMethod, Row, Column"
+    allowed_types = (
+        "Markdown, HTML, DataFrame, Plotly, Select, Tabulator, Spacer, ParamFunction, ParamMethod, Row, Column"
+    )
     raise TypeError(
         f"Unsupported Panel object type returned{method_info}: {type(viewable).__name__}. "
         f"Allowed Panel return types: {allowed_types}."
@@ -163,9 +186,9 @@ def _coerce_viewable(item: Any) -> pn.viewable.Viewable:
                 width_policy="max",
                 sizing_mode="stretch_width",
             )
-        return pn.pane.DataFrame(item, index=False, width_policy="min", sizing_mode="stretch_width")
+        return pn.pane.DataFrame(item, index=True, width_policy="min", sizing_mode="stretch_width")
     if isinstance(item, go.Figure):
-        return pn.pane.Plotly(item, config={"responsive": True}, sizing_mode="stretch_width")
+        return build_plotly_pane(item)
     raise TypeError(
         f"Unsupported block return type: {type(item).__name__}. "
         "Supported types: strings, pandas DataFrame, Plotly Figures, Panel Viewable."
