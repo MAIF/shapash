@@ -303,29 +303,18 @@ This github repository offers many tutorials to allow you to easily get started 
 
 ## 🤝 Contributors
 
-<div align="left">
-  <div style="display: flex; align-items: flex-start;">
-    <a href="https://maif.github.io/projets.html" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
-    </a>
-    <a href="https://www.quantmetry.com/" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%"/>
-    </a>
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" />
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" />
-    <a href="https://www.sixfoissept.com/en/" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%"/>
-    </a>
-  </div>
-</div>
-
+<p align="left">
+  <a href="https://maif.github.io/projets.html" title="MAIF"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_maif.png" width="18%" alt="Logo MAIF" /></a>
+  <a href="https://p16.inria.fr" title="Projet P16 Inria"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_P16.png" width="18%" alt="Logo P16 Inria" /></a>
+  <a href="https://www.inria.fr" title="Inria"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_inria.png" width="18%" alt="Logo Inria" /></a>
+  <a href="https://www.quantmetry.com/" title="Quantmetry"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_quantmetry.png" width="18%" alt="Logo Quantmetry" /></a>
+  <img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_societe_generale.png" width="18%" alt="Logo Societe Generale" />
+  <img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_groupe_vyv.png" width="18%" alt="Logo Groupe VYV" />
+  <a href="https://www.sixfoissept.com/en/" title="SixFoisSept"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_SixfoisSept.png" width="18%" alt="Logo SixFoisSept" /></a>
+</p>
 
 ## 🏆 Awards
 
-<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" />
-</a>
+<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png"><img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" /></a>
 
-<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
-  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" />
-</a>
+<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html"><img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" /></a>
