@@ -38,7 +38,7 @@ def check_preprocessing(preprocessing: Any | None = None) -> tuple[bool, bool] |
     return None
 
 
-def check_model(model: Any) -> tuple[Literal["regression", "classification"], list[Any] | None]:
+def check_model(model: Any) -> tuple[Literal["regression", "classification"], list[int | float | str] | None]:
     """Determine whether a model supports classification or regression.
 
     Parameters
@@ -48,10 +48,10 @@ def check_model(model: Any) -> tuple[Literal["regression", "classification"], li
 
     Returns
     -------
-    tuple[str, list[Any] or None]
+    tuple[str, list[int | float | str] or None]
         The model type ('regression' or 'classification') and its classes, if it is a classifier.
     """
-    _classes = None
+    _classes: list[int | float | str] | None = None
     if hasattr(model, "predict"):
         if hasattr(model, "predict_proba") or any(hasattr(model, attrib) for attrib in ["classes_", "_classes"]):
             if hasattr(model, "_classes"):
@@ -60,6 +60,15 @@ def check_model(model: Any) -> tuple[Literal["regression", "classification"], li
                 _classes = model.classes_
             if isinstance(_classes, np.ndarray):
                 _classes = _classes.tolist()
+            if _classes is not None:
+                if not isinstance(_classes, list):
+                    raise ValueError("Model classes must be provided as a list or NumPy array")
+                _classes = [
+                    class_label.item() if isinstance(class_label, np.generic) else class_label
+                    for class_label in _classes
+                ]
+                if not all(isinstance(class_label, int | float | str) for class_label in _classes):
+                    raise ValueError("Model class labels must be integers, floats, or strings")
             if hasattr(model, "predict_proba") and _classes == []:
                 _classes = [0, 1]  # catboost binary
             if hasattr(model, "predict_proba") and _classes is None:
@@ -75,7 +84,7 @@ def check_model(model: Any) -> tuple[Literal["regression", "classification"], li
 def check_label_dict(
     label_dict: dict[Any, Any] | None,
     case: Literal["regression", "classification"],
-    classes: list[Any] | None = None,
+    classes: list[int | float | str] | None = None,
 ) -> None:
     """
     Check if label_dict and model _classes match
@@ -86,11 +95,11 @@ def check_label_dict(
         Dictionary mapping integer labels to domain names (classification - target values).
     case: str
         String that informs if the model used is for classification or regression problem.
-    classes: list[Any] or None, optional
+    classes: list[int or float or str] or None, optional
         List of labels if the model used is for classification problem, None otherwise.
     """
     if label_dict is not None and case == "classification":
-        if set(cast(list[Any], classes)) != set(list(label_dict.keys())):
+        if set(cast(list[int | float | str], classes)) != set(list(label_dict.keys())):
             raise ValueError(
                 "label_dict and don't match: \n"
                 + f"label_dict keys: {str(list(label_dict.keys()))}\n"
@@ -171,7 +180,7 @@ def check_y(
 
 def check_contribution_object(
     case: Literal["regression", "classification"],
-    classes: list[Any] | None,
+    classes: list[int | float | str] | None,
     contributions: np.ndarray | pd.DataFrame | list[Any],
 ) -> None:
     """Validate the type and number of contribution objects for the model case.
@@ -180,7 +189,7 @@ def check_contribution_object(
     ----------
     case: str
         String that informs if the model used is for classification or regression problem.
-    classes: list[Any] or None
+    classes: list[int or float or str] or None
         List of labels if the model used is for classification problem, None otherwise.
     contributions: pandas.DataFrame, numpy.ndarray or list
         Contributions for the model; classification requires one object per class.
@@ -195,7 +204,7 @@ def check_contribution_object(
         )
     elif case == "classification":
         if isinstance(contributions, list):
-            if len(contributions) != len(cast(list[Any], classes)):
+            if len(contributions) != len(cast(list[int | float | str], classes)):
                 raise ValueError(
                     """
                     Length of list of contributions parameter is not equal

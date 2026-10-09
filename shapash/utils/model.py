@@ -40,7 +40,7 @@ def extract_features_model(model: Any, model_attribute: list[str]) -> Any:
                 return extract_features_model(getattr(model, model_attribute[0]), model_attribute[1:])
 
 
-def predict_proba(model: Any, x_encoded: pd.DataFrame, classes: list[Any]) -> pd.DataFrame:
+def predict_proba(model: Any, x_encoded: pd.DataFrame, classes: list[int | float | str]) -> pd.DataFrame:
     """
     Compute class probabilities for each row in ``x_encoded``.
 
@@ -104,7 +104,7 @@ def predict_error(
     y_pred: pd.DataFrame | None,
     model_type: Literal["regression", "classification"],
     proba_values: pd.DataFrame | None = None,
-    classes: list[Any] | None = None,
+    classes: list[int | float | str] | None = None,
 ) -> pd.DataFrame | None:
     """
     Compute prediction errors for regression or classification.
@@ -136,7 +136,7 @@ def predict_error(
     proba_values : pandas.DataFrame or None, optional
         DataFrame of class probabilities returned by model.predict_proba().
         Each column corresponds to a class, in the same order as in `classes`.
-    classes : list[Any] or None, optional
+    classes : list[int or float or str] or None, optional
         Ordered list of class label codes (`model.classes_`), used to map the
         true label to the correct probability column when probabilities are supplied.
 

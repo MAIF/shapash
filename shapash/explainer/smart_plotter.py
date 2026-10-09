@@ -1814,7 +1814,9 @@ class SmartPlotter:
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self._explainer.features_desc[feature_values1.columns.values[0]]), 8])
         args = (max_len_by_row, 120)
-        feature_values_str = feature_values1.iloc[:, 0].apply(add_line_break, args=args)
+        feature_values_str = feature_values1.iloc[:, 0].apply(
+            lambda value: add_line_break(value, *args) if isinstance(value, str) else value
+        )
         feature_values1 = pd.DataFrame({feature_values1.columns[0]: feature_values_str})
 
         # selecting the best plot : Scatter, Violin?

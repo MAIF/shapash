@@ -65,7 +65,7 @@ class SmartState:
         ----------
         contributions : pandas.DataFrame
             Local contributions of a model on a prediction set.
-        preprocessing : Any or None, optional
+        preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
             Single step of preprocessing, typically a category encoder.
         agg_columns : Literal["sum", "first"], optional
             Type of aggregation performed. For SHAP, contributions of one-hot encoded variables are summed.

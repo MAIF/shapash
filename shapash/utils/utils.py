@@ -137,14 +137,14 @@ def is_nested_list(object_param: Iterable[Any]) -> bool:
     return any(isinstance(elem, list) for elem in object_param)
 
 
-def add_line_break(value: Any, nbchar: int, maxlen: int = 150) -> Any:
+def add_line_break(value: str, nbchar: int, maxlen: int = 150) -> str:
     """
     adding line break in string if necessary
 
     Parameters
     ----------
-    value : Any
-        Text to format; non-string values are returned unchanged.
+    value : str
+        Text to format.
     nbchar : int
         number of characters before line break
     maxlen : int
@@ -152,32 +152,32 @@ def add_line_break(value: Any, nbchar: int, maxlen: int = 150) -> Any:
 
     Returns
     -------
-    Any
-        Formatted string, or the original value when it is not a string.
+    str
+        Formatted string.
     """
-    if isinstance(value, str):
-        length = 0
-        tot_length = 0
-        input_word = value.split()
-        final_sep = []
-        for w in input_word[:-1]:
-            length = length + len(w)
-            tot_length = tot_length + len(w)
-            if tot_length <= maxlen:
-                if length >= nbchar:
-                    length = 0
-                    final_sep.append("<br />")
-                else:
-                    final_sep.append(" ")
-        if len(final_sep) == len(input_word) - 1:
-            last_char = ""
-        else:
-            last_char = "..."
+    if not isinstance(value, str):
+        raise TypeError("value must be a string")
 
-        new_string = "".join(sum(zip(input_word, final_sep + [""], strict=False), ())[:-1]) + last_char
-        return new_string
+    length = 0
+    tot_length = 0
+    input_word = value.split()
+    final_sep = []
+    for w in input_word[:-1]:
+        length = length + len(w)
+        tot_length = tot_length + len(w)
+        if tot_length <= maxlen:
+            if length >= nbchar:
+                length = 0
+                final_sep.append("<br />")
+            else:
+                final_sep.append(" ")
+    if len(final_sep) == len(input_word) - 1:
+        last_char = ""
     else:
-        return value
+        last_char = "..."
+
+    new_string = "".join(sum(zip(input_word, final_sep + [""], strict=False), ())[:-1]) + last_char
+    return new_string
 
 
 def truncate_str(text: Any, maxlen: int = 40) -> Any:
