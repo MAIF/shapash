@@ -172,7 +172,7 @@ class SmartPredictor:
         Dictionary of postprocessing modifications to apply in x_init dataframe.
     _case: string
         String that informs if the model used is for classification or regression problem.
-    _classes: list, None
+    _classes: list[int | float | str] | None
         List of labels if the model used is for classification problem, None otherwise.
     mask_params: dict (optional)
         Dictionary that specify how to summarize the explainability.
@@ -262,7 +262,7 @@ class SmartPredictor:
         check_consistency_model_label(self.columns_dict, self.label_dict)
         self._drop_option = check_preprocessing_options(columns_dict, features_dict, preprocessing, list_preprocessing)
 
-    def check_model(self) -> tuple[Literal["classification", "regression"], list[Any] | None]:
+    def check_model(self) -> tuple[Literal["classification", "regression"], list[int | float | str] | None]:
         """
         Check if model has a predict_proba method is a one column dataframe of integer or float
         and if y_pred index matches x_init index

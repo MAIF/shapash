@@ -162,6 +162,77 @@ class TestCheck(unittest.TestCase):
         assert _case == "classification"
         self.assertListEqual(_classes, [1, 2])
 
+    def test_check_model_string_classes(self):
+        model = lambda: None
+        model.classes_ = np.array(["cheap", "mid", "high"])
+        model.predict = types.MethodType(self.predict, model)
+
+        case, classes = check_model(model)
+
+        self.assertEqual(case, "classification")
+        self.assertListEqual(classes, ["cheap", "mid", "high"])
+
+    def test_check_model_float_classes(self):
+        model = lambda: None
+        model.classes_ = np.array([1.5, 2.5])
+        model.predict = types.MethodType(self.predict, model)
+
+        case, classes = check_model(model)
+
+        self.assertEqual(case, "classification")
+        self.assertListEqual(classes, [1.5, 2.5])
+
+    def test_check_model_numpy_scalar_classes_are_cast(self):
+        model = lambda: None
+        model.classes_ = [np.int64(1), np.float64(2.5)]
+        model.predict = types.MethodType(self.predict, model)
+
+        case, classes = check_model(model)
+
+        self.assertEqual(case, "classification")
+        self.assertListEqual(classes, [1, 2.5])
+
+    def test_check_model_classes_not_list_or_array_raises(self):
+        model = lambda: None
+        model.classes_ = (0, 1)
+        model.predict = types.MethodType(self.predict, model)
+
+        with pytest.raises(ValueError, match="Model classes must be provided as a list or NumPy array"):
+            check_model(model)
+
+    def test_check_model_classes_invalid_label_type_raises(self):
+        model = lambda: None
+        model.classes_ = ["ok", {"bad": "label"}]
+        model.predict = types.MethodType(self.predict, model)
+
+        with pytest.raises(ValueError, match="Model class labels must be integers, floats, or strings"):
+            check_model(model)
+
+    def test_check_model_predict_proba_and_empty_classes_default_binary(self):
+        model = lambda: None
+        model.classes_ = []
+        model.predict = types.MethodType(self.predict, model)
+        model.predict_proba = types.MethodType(self.predict_proba, model)
+
+        case, classes = check_model(model)
+
+        self.assertEqual(case, "classification")
+        self.assertListEqual(classes, [0, 1])
+
+    def test_check_model_predict_proba_without_classes_raises(self):
+        model = lambda: None
+        model.predict = types.MethodType(self.predict, model)
+        model.predict_proba = types.MethodType(self.predict_proba, model)
+
+        with pytest.raises(ValueError, match="No attribute _classes, classification model not supported"):
+            check_model(model)
+
+    def test_check_model_without_predict_raises(self):
+        model = lambda: None
+
+        with pytest.raises(ValueError, match="No method predict"):
+            check_model(model)
+
     def test_check_label_dict_1(self):
         """
         Unit test check label dict 1
@@ -564,6 +635,69 @@ class TestCheck(unittest.TestCase):
         check_postprocessing(features_types, case_postprocessing)
         check_postprocessing(features_types, regex_postprocessing)
 
+    def test_check_postprocessing_case_dict_non_string_metadata_raises(self):
+        features_types = {"Col1": "int64"}
+        case_postprocessing = {"Col1": {"type": "case", "rule": "lower"}}
+
+        with pytest.raises(ValueError, match="Expected string dtype metadata"):
+            check_postprocessing(features_types, case_postprocessing)
+
+    def test_check_postprocessing_regex_dict_non_string_metadata_raises(self):
+        features_types = {"Col1": "float64"}
+        regex_postprocessing = {"Col1": {"type": "regex", "rule": {"in": "A", "out": "a"}}}
+
+        with pytest.raises(ValueError, match="Expected string dtype metadata"):
+            check_postprocessing(features_types, regex_postprocessing)
+
+    def test_check_postprocessing_case_dict_non_string_type_metadata_raises(self):
+        features_types = {"Col1": np.dtype("O")}
+        case_postprocessing = {"Col1": {"type": "case", "rule": "upper"}}
+
+        with pytest.raises(ValueError, match="Expected string dtype metadata"):
+            check_postprocessing(features_types, case_postprocessing)
+
+    def test_check_postprocessing_case_dataframe_non_string_raises(self):
+        x_init = pd.DataFrame({"Col1": [1, 2]})
+        case_postprocessing = {"Col1": {"type": "case", "rule": "lower"}}
+
+        with pytest.raises(ValueError, match="Expected a string dtype"):
+            check_postprocessing(x_init, case_postprocessing)
+
+    def test_check_postprocessing_regex_dataframe_non_string_raises(self):
+        x_init = pd.DataFrame({"Col1": [1.2, 2.4]})
+        regex_postprocessing = {"Col1": {"type": "regex", "rule": {"in": "A", "out": "a"}}}
+
+        with pytest.raises(ValueError, match="Expected a string dtype"):
+            check_postprocessing(x_init, regex_postprocessing)
+
+    def test_check_postprocessing_case_rule_unknown_raises(self):
+        features_types = {"Col1": "object"}
+        case_postprocessing = {"Col1": {"type": "case", "rule": "capitalize"}}
+
+        with pytest.raises(ValueError, match="Case modification unknown"):
+            check_postprocessing(features_types, case_postprocessing)
+
+    def test_check_postprocessing_regex_rule_keys_invalid_raises(self):
+        features_types = {"Col1": "object"}
+        regex_postprocessing = {"Col1": {"type": "regex", "rule": {"pattern": "A", "replace": "a"}}}
+
+        with pytest.raises(ValueError, match="must be 'in' and 'out'"):
+            check_postprocessing(features_types, regex_postprocessing)
+
+    def test_check_postprocessing_values_must_be_dict_raises(self):
+        features_types = {"Col1": "object"}
+        postprocessing = {"Col1": ["type", "case"]}
+
+        with pytest.raises(ValueError, match="values must be a dict"):
+            check_postprocessing(features_types, postprocessing)
+
+    def test_check_postprocessing_type_invalid_raises(self):
+        features_types = {"Col1": "object"}
+        postprocessing = {"Col1": {"type": "unknown", "rule": "A"}}
+
+        with pytest.raises(ValueError, match="Wrong postprocessing method"):
+            check_postprocessing(features_types, postprocessing)
+
     def test_check_preprocessing_options_1(self):
         """
         Unit test check_preprocessing_options 1
@@ -629,3 +763,12 @@ class TestCheck(unittest.TestCase):
         with pytest.raises(Exception) as exc_info:
             check_columns_order(columns_order)
         assert str(exc_info.value) == "All elements in columns_order must be strings."
+
+    def test_check_y_series_numeric_column_name_is_preserved(self):
+        x_init = pd.DataFrame(data=np.array([[1, 2], [3, 4]]), columns=["Col1", "Col2"])
+        y_pred = pd.Series(data=np.array([0, 1], dtype=np.int64), index=x_init.index, name=0)
+
+        y_checked = check_y(x_init, y_pred)
+
+        assert isinstance(y_checked, pd.DataFrame)
+        assert y_checked.columns.tolist() == [0]
