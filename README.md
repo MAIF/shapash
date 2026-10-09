@@ -306,24 +306,29 @@ This github repository offers many tutorials to allow you to easily get started 
 <div align="left">
   <div style="display: flex; align-items: flex-start;">
     <a href="https://maif.github.io/projets.html" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
+      <img align=middle src="docs/_static/logo_maif.png" width="18%"/>
+    </a>
+    <a href="https://p16.inria.fr" >
+      <img align=middle src="docs/_static/logo_p16.png" width="18%"/>
+    </a>
+    <a href="https://www.inria.fr" >
+      <img align=middle src="docs/_static/logo_inria.png" width="18%"/>
     </a>
     <a href="https://www.quantmetry.com/" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%"/>
+      <img align=middle src="docs/_static/logo_quantmetry.png" width="18%"/>
     </a>
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" />
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" />
+    <img align=middle src="docs/_static/logo_societe_generale.png" width="18%" />
+    <img align=middle src="docs/_static/logo_groupe_vyv.png" width="18%" />
     <a href="https://www.sixfoissept.com/en/" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%"/>
+      <img align=middle src="docs/_static/logo_SixfoisSept.png" width="18%"/>
     </a>
   </div>
 </div>
 
-
 ## 🏆 Awards
 
-<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" />
+<a href="docs/_static/awards-argus-or.png">
+  <img align="left" src="docs/_static/awards-argus-or.png" width="180" />
 </a>
 
 <a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
