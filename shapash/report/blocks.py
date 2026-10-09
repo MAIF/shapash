@@ -188,7 +188,10 @@ class ReportBlockMixin:
                 return result
             if isinstance(result, str):
                 return pn.pane.Markdown(result)
-            return pn.panel(result)
+            viewable = pn.panel(result)
+            if not isinstance(viewable, pn.viewable.Viewable):
+                raise TypeError(f"{func_path} returned {type(result).__name__}, which is not embeddable in a report.")
+            return viewable
         except Exception as exc:
             logger.error("Custom block '%s' raised: %s", func_path, exc)
             return render_block_error(func_path, exc)
@@ -381,6 +384,8 @@ class ReportBlockMixin:
             text = str(value)
             return text if len(text) <= max_len else text[: max_len - 3] + "..."
 
+        # A tuple is rendered side by side as a row by the @block decorator
+        params_table: pn.pane.DataFrame | tuple[Any, ...]
         if len(params_items) > 15:
             split_idx = len(params_items) // 2
             left_df = pd.DataFrame(
