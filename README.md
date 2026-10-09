@@ -305,22 +305,22 @@ This github repository offers many tutorials to allow you to easily get started 
 
 <div align="left">
   <div style="display: flex; align-items: flex-start;">
-    <a href="https://maif.github.io/projets.html" >
-      <img align=middle src="docs/_static/logo_maif.png" width="18%"/>
+    <a href="https://maif.github.io/projets.html" title="MAIF">
+      <img align="middle" src="docs/_static/logo_maif.png" width="18%" alt="Logo MAIF"/>
     </a>
-    <a href="https://p16.inria.fr" >
-      <img align=middle src="docs/_static/logo_p16.png" width="18%"/>
+    <a href="https://p16.inria.fr" title="Projet P16 Inria">
+      <img align="middle" src="docs/_static/logo_P16.png" width="18%" alt="Logo P16 Inria"/>
     </a>
-    <a href="https://www.inria.fr" >
-      <img align=middle src="docs/_static/logo_inria.png" width="18%"/>
+    <a href="https://www.inria.fr" title="Inria">
+      <img align="middle" src="docs/_static/logo_inria.png" width="18%" alt="Logo Inria"/>
     </a>
-    <a href="https://www.quantmetry.com/" >
-      <img align=middle src="docs/_static/logo_quantmetry.png" width="18%"/>
+    <a href="https://www.quantmetry.com/" title="Quantmetry">
+      <img align="middle" src="docs/_static/logo_quantmetry.png" width="18%" alt="Logo Quantmetry"/>
     </a>
-    <img align=middle src="docs/_static/logo_societe_generale.png" width="18%" />
-    <img align=middle src="docs/_static/logo_groupe_vyv.png" width="18%" />
-    <a href="https://www.sixfoissept.com/en/" >
-      <img align=middle src="docs/_static/logo_SixfoisSept.png" width="18%"/>
+    <img align="middle" src="docs/_static/logo_societe_generale.png" width="18%" alt="Logo Societe Generale" />
+    <img align="middle" src="docs/_static/logo_groupe_vyv.png" width="18%" alt="Logo Groupe VYV" />
+    <a href="https://www.sixfoissept.com/en/" title="SixFoisSept">
+      <img align="middle" src="docs/_static/logo_SixfoisSept.png" width="18%" alt="Logo SixFoisSept"/>
     </a>
   </div>
 </div>
