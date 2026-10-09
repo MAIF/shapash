@@ -179,3 +179,29 @@ class TestBlockDecorator(unittest.TestCase):
             runtime.block_non_panel_type_not_allowed()
 
         self.assertIn("Unsupported block return type", str(context.exception))
+
+
+def _custom_returns_plain_object(runtime):
+    return {"a": 1}
+
+
+def _custom_returns_template(runtime):
+    return pn.template.BootstrapTemplate()
+
+
+class TestRenderCustomBlock(unittest.TestCase):
+    def _render(self, func_name):
+        return _DummyBlocks().render_block({"type": "custom", "function": f"{__name__}.{func_name}", "params": {}})
+
+    def test_custom_block_coerces_plain_object_with_pn_panel(self):
+        result = self._render("_custom_returns_plain_object")
+
+        self.assertIsInstance(result, pn.viewable.Viewable)
+        self.assertNotIsInstance(result, pn.pane.Alert)
+
+    def test_custom_block_returning_non_viewable_renders_error(self):
+        result = self._render("_custom_returns_template")
+
+        self.assertIsInstance(result, pn.pane.Alert)
+        self.assertIn("BootstrapTemplate", result.object)
+        self.assertIn("not embeddable in a report", result.object)
