@@ -304,13 +304,13 @@ This github repository offers many tutorials to allow you to easily get started 
 ## 🤝 Contributors
 
 <p align="left">
-  <a href="https://maif.github.io/projets.html" title="MAIF"><img src="docs/_static/logo_maif.png" width="18%" alt="Logo MAIF" /></a>
-  <a href="https://p16.inria.fr" title="Projet P16 Inria"><img src="docs/_static/logo_P16.png" width="18%" alt="Logo P16 Inria" /></a>
-  <a href="https://www.inria.fr" title="Inria"><img src="docs/_static/logo_inria.png" width="18%" alt="Logo Inria" /></a>
-  <a href="https://www.quantmetry.com/" title="Quantmetry"><img src="docs/_static/logo_quantmetry.png" width="18%" alt="Logo Quantmetry" /></a>
-  <img src="docs/_static/logo_societe_generale.png" width="18%" alt="Logo Societe Generale" />
-  <img src="docs/_static/logo_groupe_vyv.png" width="18%" alt="Logo Groupe VYV" />
-  <a href="https://www.sixfoissept.com/en/" title="SixFoisSept"><img src="docs/_static/logo_SixfoisSept.png" width="18%" alt="Logo SixFoisSept" /></a>
+  <a href="https://maif.github.io/projets.html" title="MAIF"><img align="middle" src="docs/_static/logo_maif.png" width="18%" alt="Logo MAIF" /></a>
+  <a href="https://p16.inria.fr" title="Projet P16 Inria"><img align="middle" src="docs/_static/logo_P16.png" width="18%" alt="Logo P16 Inria" /></a>
+  <a href="https://www.inria.fr" title="Inria"><img align="middle" src="docs/_static/logo_inria.png" width="18%" alt="Logo Inria" /></a>
+  <a href="https://www.quantmetry.com/" title="Quantmetry"><img align="middle" src="docs/_static/logo_quantmetry.png" width="18%" alt="Logo Quantmetry" /></a>
+  <img align="middle" src="docs/_static/logo_societe_generale.png" width="18%" alt="Logo Societe Generale" />
+  <img align="middle" src="docs/_static/logo_groupe_vyv.png" width="18%" alt="Logo Groupe VYV" />
+  <a href="https://www.sixfoissept.com/en/" title="SixFoisSept"><img align="middle" src="docs/_static/logo_SixfoisSept.png" width="18%" alt="Logo SixFoisSept" /></a>
 </p>
 
 ## 🏆 Awards
