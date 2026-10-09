@@ -52,6 +52,7 @@ sections:
   - type: model_analysis
     params:
       title: "Model analysis"
+      show_index: false
 
   - type: group
     params:
@@ -72,6 +73,7 @@ sections:
         params:
           title: "Target analysis"
           show_train: true
+          show_index: true
 
       # Correlation matrix; reduce `max_features` for faster/lighter reports.
       - type: correlations_plot

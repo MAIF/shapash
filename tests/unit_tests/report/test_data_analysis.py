@@ -76,3 +76,23 @@ class TestDataAnalysis(unittest.TestCase):
         df = None
         d = perform_univariate_dataframe_analysis(df, col_types=compute_col_types(df))
         assert d == {}
+
+    def test_perform_univariate_analysis_formats_empty_numeric_split(self):
+        full_data = pd.DataFrame({"continuous_data": np.arange(20)})
+        prediction_data = pd.DataFrame({"continuous_data": [np.nan, np.nan, np.nan]})
+
+        stats = perform_univariate_dataframe_analysis(
+            prediction_data,
+            col_types=compute_col_types(full_data),
+        )
+
+        assert stats["continuous_data"] == {
+            "count": "0",
+            "mean": "N/A",
+            "std": "N/A",
+            "min": "N/A",
+            "25%": "N/A",
+            "50%": "N/A",
+            "75%": "N/A",
+            "max": "N/A",
+        }
