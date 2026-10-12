@@ -11,7 +11,7 @@ from .nlp_shap_backend import NlpShapBackend
 from .shap_backend import ShapBackend
 
 
-def get_backend_cls_from_name(name: str) -> type[BaseBackend]:
+def get_backend_cls_from_name(name: str) -> type[Backend]:
     """Find a backend class by its name.
 
     Parameters
@@ -21,7 +21,7 @@ def get_backend_cls_from_name(name: str) -> type[BaseBackend]:
 
     Returns
     -------
-    type[BaseBackend]
+    type[Backend]
         The backend class matching ``name``.
 
     Raises

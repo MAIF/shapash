@@ -1,7 +1,24 @@
 import importlib
 import warnings
 from types import ModuleType
-from typing import Literal
+from typing import Literal, overload
+
+
+@overload
+def import_optional_module(
+    module_name: str,
+    extra: str = ...,
+    errors: Literal["raise"] = ...,
+) -> ModuleType: ...
+
+
+@overload
+def import_optional_module(
+    module_name: str,
+    extra: str = ...,
+    *,
+    errors: Literal["warn", "ignore"],
+) -> ModuleType | None: ...
 
 
 def import_optional_module(
