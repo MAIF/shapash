@@ -109,7 +109,17 @@ todo_include_todos = True
 import subprocess  # noqa: E402
 
 # Generates the report example in the documentation
-subprocess.call(["python", "../scripts/generate_report.py", "--case", "classification", "--output", "../tutorial/generate_report/output/report.html"])
+subprocess.run(
+    [
+        sys.executable,
+        "../scripts/generate_report.py",
+        "--case",
+        "classification",
+        "--output",
+        "../tutorial/generate_report/output/report.html",
+    ],
+    check=True,
+)
 html_extra_path = ["../tutorial/generate_report/output/report.html"]
 
 
