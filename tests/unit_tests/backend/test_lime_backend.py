@@ -3,6 +3,7 @@ Unit tests lime backend.
 """
 
 import unittest
+from types import SimpleNamespace
 
 import category_encoders as ce
 import numpy as np
@@ -43,6 +44,28 @@ class TestLimeBackend(unittest.TestCase):
             backend_xpl = LimeBackend(model, preprocessing=ce.OrdinalEncoder())
             assert hasattr(backend_xpl, "preprocessing")
             assert isinstance(backend_xpl.preprocessing, ce.OrdinalEncoder)
+
+    def test_extract_intercept_supports_lime_formats_and_fallbacks(self):
+        cases = [
+            ({0: 1.5, 1: 2.5}, 1, 2.5),
+            ({"0": "1.5", "1": "2.5"}, 1, 2.5),
+            ({0: 1.5, 1: 2.5}, 3, 1.5),
+            ([1.5, 2.5], 1, 2.5),
+            ((1.5, 2.5), 3, 1.5),
+            ("2.5", None, 2.5),
+            (2.5, None, 2.5),
+            ({}, 1, 0.0),
+            ([], 1, 0.0),
+            ("not a number", None, 0.0),
+            (object(), None, 0.0),
+            (None, None, 0.0),
+        ]
+        for intercept, class_idx, expected in cases:
+            with self.subTest(intercept=intercept, class_idx=class_idx):
+                explanation = SimpleNamespace(intercept=intercept)
+                self.assertEqual(LimeBackend._extract_intercept(explanation, class_idx), expected)
+
+        self.assertEqual(LimeBackend._extract_intercept(SimpleNamespace()), 0.0)
 
     def test_get_global_contributions(self):
         for model in self.model_list:

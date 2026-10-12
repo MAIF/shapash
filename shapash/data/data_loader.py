@@ -4,7 +4,9 @@ Data loader module
 
 import json
 import os
+from http.client import HTTPResponse
 from pathlib import Path
+from typing import Any, Literal
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -12,19 +14,19 @@ from urllib.request import urlopen
 import pandas as pd
 
 
-def _safe_urlopen(url: str, **kwargs):
+def _safe_urlopen(url: str, **kwargs: Any) -> HTTPResponse:
     """Open an HTTPS URL safely with forwarded request options.
 
     Parameters
     ----------
     url : str
         URL to open. Only HTTPS schemes are allowed.
-    **kwargs
+    **kwargs : Any
         Keyword arguments forwarded to :func:`urllib.request.urlopen`.
 
     Returns
     -------
-    file-like
+    HTTPResponse
         The response object returned by :func:`urllib.request.urlopen`.
 
     Raises
@@ -37,9 +39,8 @@ def _safe_urlopen(url: str, **kwargs):
     return urlopen(url, **kwargs)  # noqa: S310
 
 
-def _find_file(data_path, github_data_url, filename):
-    """
-    Finds file path on disk if it exists or gets file path on github.
+def _find_file(data_path: str, github_data_url: str, filename: str) -> str:
+    """Find a file locally or verify its availability at the remote URL.
 
     Parameters
     ----------
@@ -53,7 +54,12 @@ def _find_file(data_path, github_data_url, filename):
     Returns
     -------
     str
-        Founded file path.
+        Local path or remote URL of the file.
+
+    Raises
+    ------
+    ConnectionError
+        If the file is not available locally and cannot be reached remotely.
     """
     file = os.path.join(data_path, filename)
     if os.path.isfile(file) is False:
@@ -66,10 +72,11 @@ def _find_file(data_path, github_data_url, filename):
     return file
 
 
-def data_loading(dataset):
+def data_loading(
+    dataset: Literal["titanic", "house_prices", "telco_customer_churn", "us_car_accident"],
+) -> pd.DataFrame | tuple[pd.DataFrame, dict[str, str]]:
     """
-    data_loading allows shapash user to try the library with small but clear datasets.
-    Titanic, house_prices or telco_customer_churn data.
+    Load one of the sample datasets supported by Shapash.
 
     Example
     ----------
@@ -78,18 +85,20 @@ def data_loading(dataset):
 
     Parameters
     ----------
-    dataset : String
-        Dataset's name to return.
-         - 'titanic'
-         - 'house_prices'
-         - 'telco_customer_churn'
+    dataset : str
+        Dataset name: ``'titanic'``, ``'house_prices'``,
+        ``'telco_customer_churn'`` or ``'us_car_accident'``.
 
     Returns
     -------
-    data : pandas.DataFrame
-        Dataset required
-    dict : (Dictionnary, Optional)
-        If exist, columns labels dictionnary associated to the dataset.
+    pandas.DataFrame or tuple[pandas.DataFrame, dict[str, str]]
+        The dataset as a DataFrame. For ``'titanic'`` and ``'house_prices'``,
+        returns a tuple containing the DataFrame and its column-label mapping.
+
+    Raises
+    ------
+    ValueError
+        If ``dataset`` is not one of the supported dataset names.
     """
     data_path = str(Path(__file__).parents[2] / "data")
     if dataset == "house_prices":

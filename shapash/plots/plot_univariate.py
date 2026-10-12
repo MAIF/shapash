@@ -1,4 +1,5 @@
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -15,16 +16,16 @@ def plot_distribution(
     df_all: pd.DataFrame,
     col: str,
     hue: str | None = None,
-    colors_dict: dict | None = None,
+    colors_dict: dict[str, Any] | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
     nb_cat_max: int = 7,
     nb_hue_max: int = 7,
     cat_num_threshold: int = 15,
-    file_name=None,
-    auto_open=False,
-) -> go.Figure:
+    file_name: str | None = None,
+    auto_open: bool = False,
+) -> go.Figure | None:
     """
     Generate a Plotly figure displaying the univariate distribution of a feature
     (continuous or categorical) in the dataset.
@@ -44,7 +45,7 @@ def plot_distribution(
         The name of the column of interest whose distribution is to be visualized.
     hue : Optional[str], optional
         The name of the column used to differentiate between groups (e.g., 'train' and 'test').
-    colors_dict : Optional[dict], optional
+    colors_dict : dict[str, Any] or None, optional
         A dictionary specifying the colors to be used for each group. If not provided,
         a default color palette will be used.
     width : int, optional, default=700
@@ -62,15 +63,16 @@ def plot_distribution(
     cat_num_threshold : int, optional, default=15
         Threshold on the number of unique values used to decide whether a numeric
         series is treated as categorical or continuous.
-    file_name : str, optional
+    file_name : str or None, optional
         Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
     auto_open : bool, optional
         If True, the plot will automatically open in a web browser after being generated, by default False.
 
     Returns
     -------
-    go.Figure
-        A Plotly figure object representing the distribution of the feature.
+    go.Figure or None
+        A Plotly figure object representing the distribution, or None when a
+        continuous feature has fewer than five data points.
     """
 
     if col not in df_all.columns:
@@ -119,14 +121,14 @@ def plot_continuous_distribution(
     df_all: pd.DataFrame,
     col: str,
     hue: str | None = None,
-    colors_dict: dict | None = None,
+    colors_dict: dict[str, Any] | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
     nb_hue_max: int = 7,
-    file_name=None,
-    auto_open=False,
-) -> go.Figure:
+    file_name: str | None = None,
+    auto_open: bool = False,
+) -> go.Figure | None:
     """
     Returns a Plotly figure containing the distribution of a continuous feature.
 
@@ -138,7 +140,7 @@ def plot_continuous_distribution(
         The column of interest
     hue : Optional[str]
         The column used to distinguish the values (e.g., 'train' and 'test').
-    colors_dict : Optional[dict]
+    colors_dict : dict[str, Any] or None
         Dictionary of colors for hue levels.
     width : int, optional, default=700
         The width of the generated figure, in pixels.
@@ -149,15 +151,16 @@ def plot_continuous_distribution(
     nb_hue_max : int, optional, default=7
         Maximum number of hue categories to display. Categories beyond this limit
         are grouped into a new 'Other' category.
-    file_name : str, optional
+    file_name : str or None, optional
         Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
     auto_open : bool, optional
         If True, the plot will automatically open in a web browser after being generated, by default False.
 
     Returns
     -------
-    go.Figure
-        Plotly figure object representing the KDE plot.
+    go.Figure or None
+        Plotly figure object representing the KDE plot, or None when there are
+        fewer than five data points and no hue is specified.
     """
     if colors_dict:
         style_dict = {}
@@ -234,7 +237,7 @@ def plot_continuous_distribution(
                 f"Not enough data points to plot the curve in the hue column '{hue}'. "
                 "At least 5 data points are required."
             )
-            return
+            return None
         kde = gaussian_kde(filtered_data[col])
         x_values = np.linspace(filtered_data[col].min(), filtered_data[col].max(), 500)
         y_values = kde(x_values)
@@ -296,12 +299,12 @@ def plot_categorical_distribution(
     hue: str | None = None,
     nb_cat_max: int = 7,
     nb_hue_max: int = 7,
-    colors_dict: dict | None = None,
+    colors_dict: dict[str, Any] | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
-    file_name=None,
-    auto_open=False,
+    file_name: str | None = None,
+    auto_open: bool = False,
 ) -> go.Figure:
     """
     Returns a Plotly Figure containing the distribution of a categorical feature.
@@ -323,7 +326,7 @@ def plot_categorical_distribution(
     nb_hue_max : int, optional, default=7
         Maximum number of hue categories to display. Categories beyond this limit
         are grouped into a new 'Other' category.
-    colors_dict : Optional[dict]
+    colors_dict : dict[str, Any] or None
         Dictionary of colors for categories.
     width : int, optional, default=700
         The width of the generated figure, in pixels.
@@ -331,7 +334,7 @@ def plot_categorical_distribution(
         The height of the generated figure, in pixels.
     palette_name : str, optional, default="default"
         The name of the color palette to use if `colors_dict` is not provided.
-    file_name : str, optional
+    file_name : str or None, optional
         Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
     auto_open : bool, optional
         If True, the plot will automatically open in a web browser after being generated, by default False.

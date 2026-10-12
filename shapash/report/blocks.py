@@ -6,6 +6,7 @@ import importlib
 import importlib.metadata
 import inspect
 import logging
+from collections.abc import Callable
 from functools import wraps
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
@@ -18,12 +19,13 @@ from shapash.plots.plot_univariate import plot_distribution
 from shapash.report.common import compute_col_types, series_dtype
 from shapash.report.core import _wrap_section_anchor
 from shapash.report.data_analysis import perform_global_dataframe_analysis, perform_univariate_dataframe_analysis
-from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable
+from shapash.report.panel_support import _add_css_classes, _auto_style_viewable, _coerce_viewable, build_plotly_pane
 from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
 if TYPE_CHECKING:
     from shapash.explainer import SmartExplainer
+    from shapash.explainer.explainer import Explainer
 logger = logging.getLogger(__name__)
 
 PALETTE = {
@@ -36,9 +38,10 @@ PALETTE = {
 TARGET_DISTRIBUTION_COLORS = {"pred": "#2255aa", "true": "#f4c000"}
 BlockContent: TypeAlias = tuple[str, list[Any]]
 TargetValues: TypeAlias = np.ndarray[Any, Any] | list[Any]
+ReportBlockConfig: TypeAlias = dict[str, Any]
 
 
-def block(method):
+def block(method: Callable[..., Any]) -> Callable[..., pn.Column]:
     """Wrap block output in a standard report section container.
 
     Decorated methods can return either ``(title, body)`` or a bare body value.
@@ -48,7 +51,7 @@ def block(method):
     """
 
     @wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrapped(self: Any, *args: Any, **kwargs: Any) -> pn.Column:
         result = method(self, *args, **kwargs)
 
         # get block method results
@@ -56,6 +59,7 @@ def block(method):
             title, body = result
         else:  # handle missing title
             body = result
+            title = ""
             try:
                 bound_args = inspect.signature(method).bind(self, *args, **kwargs)
                 bound_args.apply_defaults()
@@ -101,21 +105,22 @@ class ReportBlockMixin:
         self,
         explainer: SmartExplainer | None = None,
         x_train: pd.DataFrame | None = None,
-        y_train: pd.Series | pd.DataFrame | list | None = None,
-        y_test: pd.Series | pd.DataFrame | list | None = None,
+        y_train: pd.Series | pd.DataFrame | list[Any] | None = None,
+        y_test: pd.Series | pd.DataFrame | list[Any] | None = None,
         max_points: int = 200,
     ) -> None:
         self.smart_explainer = explainer
         self.explainer = explainer.explainer if explainer else None
         self.x_train_init = x_train
         self.x_train_pre = self._preprocess_train_data(x_train)
-        self.x_init = getattr(explainer, "x_init", None)
+        self.x_init = getattr(self.explainer, "x_init", None)
         self.df_train_test = self._create_train_test_df(test=self.x_init, train=self.x_train_pre)
         self.y_train, self.target_name_train = self._get_values_and_name(y_train, "target")
         self.y_test, self.target_name_test = self._get_values_and_name(y_test, "target")
         self.target_name = self.target_name_train if self.target_name_train is not None else self.target_name_test
         self.max_points = max_points
         self._inside_group = False
+        self.class_navigation_items: dict[str, list[dict[str, str]]] = {}
 
         if self.explainer is not None:
             if self.explainer.y_pred is not None:
@@ -125,11 +130,14 @@ class ReportBlockMixin:
         else:
             self.y_pred = None
 
-    def render_block(self, block_cfg: dict):
+    def render_block(self, block_cfg: ReportBlockConfig) -> pn.viewable.Viewable | None:
         """Dispatch one YAML block entry to the matching block_* method."""
 
         block_type = block_cfg.get("type", "")
         params = block_cfg.get("params", {})
+        if block_type == "class_explainability":
+            params = dict(params)
+            params["navigation_id"] = block_cfg.get("_section_id", "class-explainability")
 
         if block_type == "group":
             previous_inside_group = getattr(self, "_inside_group", False)
@@ -168,7 +176,7 @@ class ReportBlockMixin:
             logger.error("Block '%s' raised: %s", block_type, exc)
             return render_block_error(block_type, exc)
 
-    def _render_custom(self, block_cfg: dict):
+    def _render_custom(self, block_cfg: ReportBlockConfig) -> pn.viewable.Viewable:
         """Call an arbitrary importable function."""
         func_path = block_cfg.get("function", "")
         params = block_cfg.get("params", {})
@@ -180,7 +188,10 @@ class ReportBlockMixin:
                 return result
             if isinstance(result, str):
                 return pn.pane.Markdown(result)
-            return pn.panel(result)
+            viewable = pn.panel(result)
+            if not isinstance(viewable, pn.viewable.Viewable):
+                raise TypeError(f"{func_path} returned {type(result).__name__}, which is not embeddable in a report.")
+            return viewable
         except Exception as exc:
             logger.error("Custom block '%s' raised: %s", func_path, exc)
             return render_block_error(func_path, exc)
@@ -228,8 +239,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[str]]
-            Section title and markdown content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and markdown content.
         """
         if not content:
             return title, ["No information available."]
@@ -245,20 +256,20 @@ class ReportBlockMixin:
         return title, ["  \n".join(lines)]
 
     @block
-    def block_badge_row(self, title: str = "", badges: list | None = None) -> BlockContent:
+    def block_badge_row(self, title: str = "", badges: list[dict[str, str]] | None = None) -> BlockContent:
         """Render a row of summary badges.
 
         Parameters
         ----------
         title : str, default=""
             Optional section title.
-        badges : list or None, default=None
+        badges : list[dict[str, str]] or None, default=None
             List of dictionaries with keys such as ``label``, ``value``, and ``color``.
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and badge row content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and badge row content.
 
         Examples
         --------
@@ -317,8 +328,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and statistics table content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and statistics table.
 
         Examples
         --------
@@ -335,7 +346,7 @@ class ReportBlockMixin:
         return title, [stats_table]
 
     @block
-    def block_model_analysis(self, title: str = "Model information") -> BlockContent:
+    def block_model_analysis(self, title: str = "Model information", show_index: bool = False) -> BlockContent:
         """Render model metadata and parameter tables.
         Requires explainer.
 
@@ -343,11 +354,13 @@ class ReportBlockMixin:
         ----------
         title : str, default="Model information"
             Section title displayed above model details.
+        show_index : bool, default=False
+            Whether the model parameter tables display their pandas row index.
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and model details content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and model details.
 
         Examples
         --------
@@ -371,6 +384,8 @@ class ReportBlockMixin:
             text = str(value)
             return text if len(text) <= max_len else text[: max_len - 3] + "..."
 
+        # A tuple is rendered side by side as a row by the @block decorator
+        params_table: pn.pane.DataFrame | tuple[Any, ...]
         if len(params_items) > 15:
             split_idx = len(params_items) // 2
             left_df = pd.DataFrame(
@@ -385,7 +400,21 @@ class ReportBlockMixin:
                     "Value": [_truncate(val, 300) for _, val in params_items[split_idx:]],
                 }
             )
-            params_table = (left_df, pn.Spacer(width=24), right_df)
+            params_table = (
+                pn.pane.DataFrame(
+                    left_df,
+                    index=show_index,
+                    width_policy="min",
+                    sizing_mode="stretch_width",
+                ),
+                pn.Spacer(width=24),
+                pn.pane.DataFrame(
+                    right_df,
+                    index=show_index,
+                    width_policy="min",
+                    sizing_mode="stretch_width",
+                ),
+            )
         else:
             params_df = pd.DataFrame(
                 {
@@ -393,11 +422,16 @@ class ReportBlockMixin:
                     "Value": [_truncate(val, 300) for _, val in params_items],
                 }
             )
-            params_table = params_df
+            params_table = pn.pane.DataFrame(
+                params_df,
+                index=show_index,
+                width_policy="min",
+                sizing_mode="stretch_width",
+            )
 
         content: list[Any] = [
             pn.pane.Markdown(
-                "\n".join(
+                "  \n".join(
                     [
                         f"**Model used**: {model.__class__.__name__}",
                         f"**Library**: {model_module}",
@@ -415,7 +449,7 @@ class ReportBlockMixin:
         self,
         title: str = "Model performance",
         color: str = "orange",
-        metrics: list | None = None,
+        metrics: list[dict[str, str]] | None = None,
     ) -> pn.Column:
         """Compute and render selected evaluation metrics as badges.
 
@@ -425,7 +459,7 @@ class ReportBlockMixin:
             Section title displayed above metric badges.
         color : str, default="orange"
             Badge color name used for rendered metric pills.
-        metrics : list or None, default=None
+        metrics : list[dict[str, str]] or None, default=None
             Metric specifications with import path and optional display name.
 
         Returns
@@ -459,7 +493,7 @@ class ReportBlockMixin:
     def block_feature_distribution(
         self,
         feature: str,
-        title: str = "",
+        title: str | None = "",
         dataset_split: str = "data_train_test",
         width: int = 700,
         height: int = 500,
@@ -471,8 +505,8 @@ class ReportBlockMixin:
         ----------
         feature : str
             Feature name to visualize.
-        title : str, default=""
-            Optional custom section title.
+        title : str or None, default=""
+            Optional custom section title. If None, the feature label is used.
         dataset_split : str, default="data_train_test"
             Column used as hue to separate train/test distributions.
         width : int, default=700
@@ -482,8 +516,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and feature distribution viewable rendered by the @block decorator.
+        pn.Column
+            Section container with the title and feature distribution plot.
 
         Examples
         --------
@@ -529,8 +563,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and correlations plot content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and correlations plot.
 
         Examples
         --------
@@ -556,7 +590,7 @@ class ReportBlockMixin:
         return title, [fig]
 
     @block
-    def block_feature_importance(self, title: str = "", label=None) -> BlockContent:
+    def block_feature_importance(self, title: str = "", label: Any = None) -> BlockContent:
         """Render global feature importance.
         Requires explainer.
 
@@ -569,8 +603,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and feature-importance content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and feature-importance plot.
 
         Examples
         --------
@@ -581,11 +615,88 @@ class ReportBlockMixin:
         return title, [fig]
 
     @block
+    def block_class_explainability(
+        self,
+        title: str = "Class-specific explainability",
+        label: Any = 1,
+        max_points: int | None = None,
+        navigation_id: str = "class-explainability",
+        include_interactions: bool = False,
+        nb_top_interactions: int = 5,
+    ) -> BlockContent:
+        """Render class-specific feature importance, contributions, and interactions.
+
+        Binary classification renders the requested class only. Multiclass
+        classification renders one set of charts for every model class. Top
+        interactions are included when ``include_interactions`` is True.
+
+        Parameters
+        ----------
+        title : str, default="Class-specific explainability"
+            Section title displayed above the class-specific plots.
+        label : Any, default=1
+            Explained class for binary classification. Ignored for multiclass.
+        max_points : int or None, default=None
+            Maximum number of observations used by contribution plots.
+        navigation_id : str, default="class-explainability"
+            Stable section identifier used to connect class links to their plots.
+        include_interactions : bool, default=False
+            Whether to include a top interactions plot for each displayed class.
+        nb_top_interactions : int, default=5
+            Number of top interaction pairs to show when interactions are included.
+        """
+        explainer = self._require_explainer("class_explainability")
+        if explainer._case != "classification":
+            raise ValueError("class_explainability block is only available for classification.")
+        if explainer._classes is None:
+            raise ValueError("class_explainability block requires model classes.")
+
+        classes = list(explainer._classes)
+        if len(classes) > 2:
+            class_codes = classes
+        else:
+            _, selected_class, _ = explainer.check_label_name(label)
+            class_codes = [selected_class]
+
+        content: list[Any] = []
+        navigation_items: list[dict[str, str]] = []
+        for class_code in class_codes:
+            _, _, class_name = explainer.check_label_name(class_code, origin="code")
+            anchor_id = f"{navigation_id}-class-{len(navigation_items) + 1}"
+            navigation_items.append({"label": str(class_name), "anchor": anchor_id})
+            class_content: list[pn.viewable.Viewable] = [pn.pane.Markdown(f"#### Explained class: **{class_name}**")]
+            importance = explainer.plot.features_importance(label=class_code)
+            class_content.append(build_plotly_pane(importance))
+            class_content.append(
+                self.block_contribution_plot(
+                    title="Feature contributions",
+                    label=class_code,
+                    max_points=max_points,
+                    include_all_features=True,
+                )
+            )
+            if include_interactions:
+                effective_max_points = self.max_points if max_points is None else max_points
+                class_content.append(pn.pane.Markdown("#### Top feature interactions"))
+                interactions = explainer.plot.top_interactions_plot(
+                    nb_top_interactions=nb_top_interactions,
+                    label=class_code,
+                    max_points=effective_max_points,
+                )
+                class_content.append(build_plotly_pane(interactions))
+
+            class_section = _wrap_section_anchor(pn.Column(*class_content, sizing_mode="stretch_width"), anchor_id)
+            content.append(class_section)
+
+        self.class_navigation_items[navigation_id] = navigation_items
+        return title, content
+
+    @block
     def block_contribution_plot(
         self,
         feature: str | None = None,
-        title: str = "",
-        label=None,
+        title: str | None = "",
+        label: Any = None,
         max_points: int | None = None,
         include_all_features: bool = False,
     ) -> BlockContent:
@@ -596,8 +707,8 @@ class ReportBlockMixin:
         ----------
         feature : str or None, default=None
             Feature name for single-feature mode.
-        title : str, default=""
-            Optional section title.
+        title : str or None, default=""
+            Optional section title. If None, a generated title is used.
         label : Any, default=None
             Optional class/target label.
         max_points : int or None, default=None
@@ -607,8 +718,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and contribution content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and contribution plots.
 
         Examples
         --------
@@ -625,9 +736,6 @@ class ReportBlockMixin:
             else:
                 effective_max_points = max_points
             fig = explainer.plot.contribution_plot(feature, label=label, max_points=effective_max_points)
-            for trace in fig.data:
-                if trace.type == "bar":
-                    trace.marker.color = "lightgrey"
             if title is None:
                 return self._feature_label(feature), [fig]
             return title, [fig]
@@ -637,40 +745,43 @@ class ReportBlockMixin:
 
         feature_names = list(explainer.x_init.columns)
         if not feature_names:
-            return title, [pn.pane.Markdown("No feature available.")]
+            resolved_title = title if title is not None else "Features contribution plots"
+            return resolved_title, [pn.pane.Markdown("No feature available.")]
 
         sorted_features = sorted(
             feature_names,
             key=lambda current_feature: (str(self._feature_label(current_feature)).lower(), str(current_feature)),
         )
 
-        feature_panels: dict[str, pn.viewable.Viewable] = {}
+        feature_to_label: dict[str, str] = {}
         for feature_name in sorted_features:
-            if max_points is None:
-                effective_max_points = self.max_points
-            else:
-                effective_max_points = max_points
-            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
-            for trace in fig.data:
-                if trace.type == "bar":
-                    trace.marker.color = "lightgrey"
-
             base_label = str(self._feature_label(feature_name))
             label_text = base_label
             suffix = 2
-            while label_text in feature_panels:
+            while label_text in feature_to_label:
                 label_text = f"{base_label} ({suffix})"
                 suffix += 1
-            feature_panels[label_text] = fig
+            feature_to_label[label_text] = feature_name
 
         feature_select = pn.widgets.Select(
-            name="Feature",
-            options=list(feature_panels.keys()),
-            value=next(iter(feature_panels)),
+            label="Feature",
+            options=list(feature_to_label.keys()),
+            value=next(iter(feature_to_label)),
             sizing_mode="stretch_width",
         )
+
+        if max_points is None:
+            effective_max_points = self.max_points
+        else:
+            effective_max_points = max_points
+
+        def _render_feature_panel(selected_label: str) -> pn.viewable.Viewable:
+            feature_name = feature_to_label[selected_label]
+            fig = explainer.plot.contribution_plot(feature_name, label=label, max_points=effective_max_points)
+            return build_plotly_pane(fig)
+
         selected_panel = pn.panel(
-            pn.bind(cast(Any, lambda selected: feature_panels[selected]), feature_select), sizing_mode="stretch_width"
+            pn.bind(cast(Any, _render_feature_panel), feature_select), sizing_mode="stretch_width"
         )
 
         if title is None:
@@ -703,8 +814,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and top-interactions plot content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and top-interactions plot.
 
         Examples
         --------
@@ -725,7 +836,7 @@ class ReportBlockMixin:
     @block
     def block_target_distribution(
         self,
-        title: str = "",
+        title: str | None = "",
         width: int = 700,
         height: int = 500,
     ) -> BlockContent:
@@ -734,8 +845,8 @@ class ReportBlockMixin:
 
         Parameters
         ----------
-        title : str, default=""
-            Optional section title.
+        title : str or None, default=""
+            Optional section title. If None, a default title is used.
         width : int, default=700
             Plot width in pixels.
         height : int, default=500
@@ -743,8 +854,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and target distribution content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and target distribution plot.
 
         Examples
         --------
@@ -783,6 +894,7 @@ class ReportBlockMixin:
         show_train: bool = True,
         width: int = 700,
         height: int = 500,
+        show_index: bool = True,
     ) -> BlockContent:
         """Render target statistics and target distribution analysis.
 
@@ -796,11 +908,13 @@ class ReportBlockMixin:
             Plot width in pixels.
         height : int, default=500
             Plot height in pixels.
+        show_index : bool, default=True
+            Whether the target statistics table displays its pandas row index.
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and target-analysis content rendered by the @block decorator.
+        pn.Column
+            Section container with the title, target statistics, and distribution plot.
 
         Examples
         --------
@@ -838,6 +952,12 @@ class ReportBlockMixin:
             train_stats=train_stats[target_name] if train_stats is not None else None,
             names=names,
         )
+        target_stats = pn.pane.DataFrame(
+            target_stats,
+            index=show_index,
+            width_policy="min",
+            sizing_mode="stretch_width",
+        )
 
         distribution_frames = [pd.DataFrame({target_name: y_test_series}).assign(data_train_test="test")]
         if y_train_series is not None:
@@ -852,16 +972,17 @@ class ReportBlockMixin:
             width=width,
             height=height,
         )
-        fig.update_layout(
-            title={
-                **fig.layout.title.to_plotly_json(),
-                "x": 0.5,
-                "xanchor": "center",
-                "y": 0.0,
-                "yanchor": "bottom",
-            },
-            margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
-        )
+        if fig is not None:
+            fig.update_layout(
+                title={
+                    **fig.layout.title.to_plotly_json(),
+                    "x": 0.5,
+                    "xanchor": "center",
+                    "y": 0.0,
+                    "yanchor": "bottom",
+                },
+                margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
+            )
 
         dtype_label = str(series_dtype(y_test_series))
         content = [
@@ -871,19 +992,19 @@ class ReportBlockMixin:
         return title, content
 
     @block
-    def block_confusion_matrix(self, title: str = "") -> BlockContent:
+    def block_confusion_matrix(self, title: str | None = "") -> BlockContent:
         """Render confusion matrix for classification predictions.
         Requires explainer.
 
         Parameters
         ----------
-        title : str, default=""
-            Optional section title.
+        title : str or None, default=""
+            Optional section title. If None, a default title is used.
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and confusion matrix content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and confusion matrix.
 
         Examples
         --------
@@ -902,7 +1023,7 @@ class ReportBlockMixin:
     @block
     def block_lift_curve(
         self,
-        title: str = "",
+        title: str | None = "",
         label: int | str = -1,
         selection: list[Any] | None = None,
         nb: int = 100,
@@ -916,8 +1037,8 @@ class ReportBlockMixin:
 
         Parameters
         ----------
-        title : str, default=""
-            Optional section title.
+        title : str or None, default=""
+            Optional section title. If None, a default title is used.
         label : int or str, default=-1
             Class identifier used to select the target probability column.
         selection : list[Any] or None, default=None
@@ -935,8 +1056,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and lift curve content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and lift curve.
 
         Examples
         --------
@@ -993,8 +1114,8 @@ class ReportBlockMixin:
 
         Returns
         -------
-        tuple[str, list[pn.viewable.Viewable]]
-            Section title and univariate analysis content rendered by the @block decorator.
+        pn.Column
+            Section container with the title and interactive univariate analysis.
 
         Examples
         --------
@@ -1033,16 +1154,17 @@ class ReportBlockMixin:
                 hue=col_splitter,
                 colors_dict=self._feature_distribution_colors(),
             )
-            fig.update_layout(
-                title={
-                    **fig.layout.title.to_plotly_json(),
-                    "x": 0.5,
-                    "xanchor": "center",
-                    "y": 0.0,
-                    "yanchor": "bottom",
-                },
-                margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
-            )
+            if fig is not None:
+                fig.update_layout(
+                    title={
+                        **fig.layout.title.to_plotly_json(),
+                        "x": 0.5,
+                        "xanchor": "center",
+                        "y": 0.0,
+                        "yanchor": "bottom",
+                    },
+                    margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
+                )
             col_stats = stats_to_table(
                 test_stats=test_stats[col],
                 train_stats=train_stats[col] if train_stats is not None else None,
@@ -1071,7 +1193,7 @@ class ReportBlockMixin:
             return title, [pn.pane.Markdown("No feature available.")]
 
         feature_select = pn.widgets.Select(
-            name="Feature",
+            label="Feature",
             options=list(feature_panels.keys()),
             value=next(iter(feature_panels)),
             sizing_mode="stretch_width",
@@ -1113,19 +1235,19 @@ class ReportBlockMixin:
             raise ValueError('"data_train_test" column must be renamed as it is reserved by smart report runtime')
         if test is None and train is None:
             return None
-        frames = []
+        frames: list[pd.DataFrame] = []
         if test is not None:
             frames.append(test.assign(data_train_test="test"))
         if train is not None:
             frames.append(train.assign(data_train_test="train"))
         return pd.concat(frames).reset_index(drop=True)
 
-    def _require_explainer(self, block_type: str):
+    def _require_explainer(self, block_type: str) -> Explainer:
         if self.explainer is None:
             raise ValueError(f"{block_type} block requires an explainer on the report instance.")
         return self.explainer
 
-    def _require_smart_explainer(self, block_type: str):
+    def _require_smart_explainer(self, block_type: str) -> SmartExplainer:
         if self.smart_explainer is None:
             raise ValueError(f"{block_type} block requires a smart_explainer on the report instance.")
         return self.smart_explainer
@@ -1140,6 +1262,6 @@ class ReportBlockMixin:
             return feature
         return self.explainer.features_dict.get(feature, feature)
 
-    def _feature_distribution_colors(self) -> dict:
+    def _feature_distribution_colors(self) -> dict[str, Any]:
         smart_explainer = self._require_smart_explainer("feature_distribution")
         return smart_explainer.colors_dict["report_feature_distribution"]

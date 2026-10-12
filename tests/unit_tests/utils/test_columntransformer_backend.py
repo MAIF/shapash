@@ -988,6 +988,45 @@ class TestInverseTransformColumnsTransformer(unittest.TestCase):
         assert len(feature_names_3) == 2
         assert len(feature_names_4) == 4
 
+    def test_get_names_branches(self):
+        """Test all naming fallbacks handled by get_names."""
+
+        class TransformerWithNames:
+            def get_feature_names_out(self):
+                return ["feature_a", "feature_b"]
+
+        class TransformerWithoutNames:
+            pass
+
+        class ColumnTransformerWithoutDataFrameColumns:
+            _n_features = 3
+
+        column_transformer = type("ColumnTransformerStub", (), {})()
+        column_transformer._df_columns = pd.Index(["first", "second", "third"])
+
+        assert get_names("transformer", "drop", ["first"], column_transformer) == []
+        assert get_names("transformer", TransformerWithoutNames(), [], column_transformer) == []
+        assert get_names("transformer", "passthrough", ["first", "second"], column_transformer) == [
+            "first",
+            "second",
+        ]
+        pd.testing.assert_index_equal(
+            get_names("transformer", "passthrough", slice(1, 3), column_transformer),
+            pd.Index(["second", "third"]),
+        )
+        assert get_names(
+            "transformer", "passthrough", [0, 2], ColumnTransformerWithoutDataFrameColumns()
+        ) == ["x0", "x2"]
+        assert get_names("transformer", TransformerWithoutNames(), ["first", "second"], column_transformer) == [
+            "transformer__first",
+            "transformer__second",
+        ]
+        assert get_names("transformer", TransformerWithoutNames(), None, column_transformer) == []
+        assert get_names("transformer", TransformerWithNames(), ["first"], column_transformer) == [
+            "transformer__feature_a",
+            "transformer__feature_b",
+        ]
+
     def test_get_list_features_names_1(self):
         """
         Unit test get_list_features_names 1

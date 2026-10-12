@@ -1,9 +1,11 @@
 import copy
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
 from dash import dcc, html
+from dash.exceptions import PreventUpdate
 from sklearn.tree import DecisionTreeClassifier
 
 from shapash import SmartExplainer
@@ -22,12 +24,16 @@ from shapash.webapp.utils.callbacks import (
     get_id_card_features,
     get_indexes_from_datatable,
     handle_page_navigation,
+    handle_group_display_logic,
     select_data_from_bool_filters,
     select_data_from_date_filters,
     select_data_from_numeric_filters,
     select_data_from_prediction_picking,
     select_data_from_str_filters,
+    determine_total_pages_and_display,
+    get_selected_feature,
     update_click_data_on_subset_changes,
+    update_click_data_on_subset_changes_if_needed,
     update_features_to_display,
 )
 
@@ -277,6 +283,106 @@ class TestCallbacks(unittest.TestCase):
         }
         click_data = update_click_data_on_subset_changes(click_data)
         assert click_data == self.click_data
+
+    def test_update_click_data_on_subset_changes_if_needed(self):
+        click_data = copy.deepcopy(self.click_data)
+
+        updated = update_click_data_on_subset_changes_if_needed(click_data, "apply_filter.n_clicks", [])
+        assert updated == self.click_data
+
+        unchanged = update_click_data_on_subset_changes_if_needed(
+            copy.deepcopy(self.click_data), "unrelated_input", [None]
+        )
+        assert unchanged == self.click_data
+
+        deleted = update_click_data_on_subset_changes_if_needed(
+            copy.deepcopy(self.click_data), "del_dropdown_button.1.n_clicks", [1]
+        )
+        assert deleted == self.click_data
+
+        assert update_click_data_on_subset_changes_if_needed(None, "dataset.data", []) is None
+
+    def test_get_selected_feature(self):
+        click_data = {"points": [{"label": "<b>technical_feature</b>"}]}
+        assert get_selected_feature(click_data, {"technical_feature": "Domain feature"}) == "Domain feature"
+        assert get_selected_feature(click_data, {}) is None
+        assert get_selected_feature(None, {"technical_feature": "Domain feature"}) is None
+
+    def test_handle_group_display_logic(self):
+        features_groups = {"group": ["feature"]}
+        click_data = {"points": [{"label": "Feature"}]}
+
+        result = handle_group_display_logic(
+            True,
+            "card_global_feature_importance.n_clicks",
+            "feature",
+            None,
+            copy.deepcopy(click_data),
+            click_data,
+            {},
+            features_groups,
+            {"group": "Group label"},
+        )
+        assert result == (None, "group", {"points": [{"label": "Group label"}]}, None)
+
+        result = handle_group_display_logic(
+            True,
+            "goback_feature_importance.n_clicks",
+            "feature",
+            None,
+            copy.deepcopy(click_data),
+            {},
+            None,
+            features_groups,
+            {},
+        )
+        assert result == (None, None, None, None)
+
+        result = handle_group_display_logic(False, "unrelated_input", "feature", "selected", click_data, {}, None, {}, {})
+        assert result == ("feature", None, click_data, "selected")
+
+        with self.assertRaises(PreventUpdate):
+            handle_group_display_logic(
+                True,
+                "card_global_feature_importance.n_clicks",
+                "feature",
+                click_data,
+                copy.deepcopy(click_data),
+                {},
+                click_data,
+                features_groups,
+                {},
+            )
+
+    def test_determine_total_pages_and_display(self):
+        classification = SimpleNamespace(
+            _case="classification", features_groups=None, features_imp=[[1, 2, 3, 4]], features_imp_groups=None
+        )
+        assert determine_total_pages_and_display(classification, 2, False, None, 4) == (2, {"display": "flex"}, 2)
+
+        regression = SimpleNamespace(
+            _case="regression", features_groups={"group": ["feature"]}, features_imp=[1, 2, 3], features_imp_groups=[[1]]
+        )
+        assert determine_total_pages_and_display(regression, 2, True, None, 2) == (1, {"display": "none"}, 2)
+        assert determine_total_pages_and_display(regression, 2, False, "group", 2) == (2, {"display": "none"}, 2)
+
+        with self.assertRaisesRegex(ValueError, "Feature importances are missing"):
+            determine_total_pages_and_display(
+                SimpleNamespace(_case="classification", features_groups=None, features_imp=None, features_imp_groups=None),
+                2,
+                False,
+                None,
+                1,
+            )
+
+        with self.assertRaisesRegex(ValueError, "Unknown explainer case"):
+            determine_total_pages_and_display(
+                SimpleNamespace(_case="unknown", features_groups=None, features_imp=[], features_imp_groups=None),
+                2,
+                False,
+                None,
+                1,
+            )
 
     def test_get_figure_zoom(self):
         zoom_active = get_figure_zoom(None)

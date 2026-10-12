@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import shap
@@ -13,7 +16,34 @@ class ShapBackend(BaseBackend):
     column_aggregation = "sum"
     name = "shap"
 
-    def __init__(self, model, preprocessing=None, masker=None, explainer_args=None, explainer_compute_args=None):
+    def __init__(
+        self,
+        model: Any,
+        preprocessing: Any | None = None,
+        masker: shap.maskers.Masker | pd.DataFrame | np.ndarray | Callable[..., Any] | None = None,
+        explainer_args: dict[str, Any] | None = None,
+        explainer_compute_args: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the SHAP backend.
+
+        Parameters
+        ----------
+        model : Any
+            Model to explain.
+        preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
+            Preprocessing applied to the model inputs.
+        masker : shap.maskers.Masker, pandas.DataFrame, numpy.ndarray, callable, or None, optional
+            SHAP masking strategy, when supported by the selected explainer. A DataFrame
+            or array is used as background data. A callable must accept a binary feature
+            mask via ``mask=...`` and one sample in the model's input format, and return
+            an iterable of masked samples. If None, the selected explainer applies its
+            default behavior. Some specialized explainers, such as TreeExplainer, do
+            not accept a masker.
+        explainer_args : dict[str, Any] or None, optional
+            Keyword arguments used to construct the SHAP explainer.
+        explainer_compute_args : dict[str, Any] or None, optional
+            Keyword arguments passed when computing SHAP explanations.
+        """
         super().__init__(model, preprocessing)
         self.masker = masker
         self.explainer_args = explainer_args if explainer_args else {}
@@ -45,7 +75,7 @@ class ShapBackend(BaseBackend):
             else:
                 raise ValueError("The model is not recognized by Shapash! Model: " + str(model))
 
-    def run_explainer(self, x: pd.DataFrame) -> dict:
+    def run_explainer(self, x: pd.DataFrame) -> dict[str, Any]:
         """
         Computes and returns local contributions using Shap explainer
 
@@ -56,8 +86,8 @@ class ShapBackend(BaseBackend):
 
         Returns
         -------
-        explain_data : dict
-            Dictionary with ``contributions`` key containing the SHAP values array.
+        explain_data : dict[str, Any]
+            Mapping containing SHAP contributions and base values.
         """
         print("INFO: Shap explainer type -", self.explainer)
         contributions = self.explainer(x, **self.explainer_compute_args)

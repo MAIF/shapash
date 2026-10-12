@@ -2,8 +2,12 @@
 sklearn columntransformer
 """
 
+from collections.abc import Iterable
+from typing import Any, Literal
+
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 
 from shapash.utils.category_encoder_backend import (
@@ -51,7 +55,7 @@ supported_sklearn = (
 )
 
 
-def inv_transform_ct(x_in, encoding):
+def inv_transform_ct(x_in: pd.DataFrame, encoding: Any) -> pd.DataFrame:
     """
     Inverse transform when using a ColumnsTransformer.
 
@@ -63,14 +67,14 @@ def inv_transform_ct(x_in, encoding):
 
     Parameters
     ----------
-    x_in : pandas.DataFrame
+    x_in : pd.DataFrame
         Prediction set.
-    encoding : list
-        The list must contain a single ColumnsTransformer and an optional list of dict.
+    encoding : Any
+        A fitted ColumnTransformer or a list of ordinal encoders.
 
     Returns
     -------
-    pandas.Dataframe
+    pd.DataFrame
         The reversed transformation for the given list of encoding.
     """
     if str(type(encoding)) == columntransformer:
@@ -112,28 +116,30 @@ def inv_transform_ct(x_in, encoding):
     return rst
 
 
-def inv_transform_ce_in_ct(x_in, init, name_encoding, col_encoding, ct_encoding):
+def inv_transform_ce_in_ct(
+    x_in: pd.DataFrame, init: int, name_encoding: str, col_encoding: Any, ct_encoding: Any
+) -> tuple[pd.DataFrame, int]:
     """
     Inverse transform when using category_encoder in ColumnsTransformer preprocessing.
 
     Parameters
     ----------
-    x_in : pandas.DataFrame
+    x_in : pd.DataFrame
         Data processed.
-    init : np.int
+    init : int
         Columns index that give the first column to look at.
-    name_encoding : String
+    name_encoding : str
         Name of the encoding give by the user.
-    col_encoding : list
+    col_encoding : Any
         Processed features name.
-    ct_encoding : category_encoder
+    ct_encoding : Any
         Type of encoding.
 
     Returns
     -------
-    frame : pandas.Dataframe
+    frame : pd.DataFrame
         The reversed transformation for the given list of encoding.
-    init : np.int
+    init : int
         Index of the last column use to make the transformation.
     """
     colname_output = [name_encoding + "_" + val for val in col_encoding]
@@ -147,28 +153,30 @@ def inv_transform_ce_in_ct(x_in, init, name_encoding, col_encoding, ct_encoding)
     return frame, init
 
 
-def inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_encoding):
+def inv_transform_sklearn_in_ct(
+    x_in: pd.DataFrame, init: int, name_encoding: str, col_encoding: Any, ct_encoding: Any
+) -> tuple[pd.DataFrame, int]:
     """
     Inverse transform when using sklearn in ColumnsTransformer preprocessing.
 
     Parameters
     ----------
-    x_in : pandas.DataFrame
+    x_in : pd.DataFrame
         Data processed.
-    init : np.int
+    init : int
         Columns index that give the first column to look at.
-    name_encoding : String
+    name_encoding : str
         Name of the encoding give by the user.
-    col_encoding : list
+    col_encoding : Any
         Processed features name.
-    ct_encoding : sklearn, category_encoder
+    ct_encoding : Any
         Type of encoding.
 
     Returns
     -------
-    frame : pandas.Dataframe
+    frame : pd.DataFrame
         The reversed transformation for the given list of encoding.
-    init : np.int
+    init : int
         Index of the last column use to make the transformation.
     """
     colname_output = [name_encoding + "_" + val for val in col_encoding]
@@ -183,7 +191,7 @@ def inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_enco
     return frame, init
 
 
-def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
+def calc_inv_contrib_ct(x_contrib: pd.DataFrame, encoding: Any, agg_columns: Literal["sum", "first"]) -> pd.DataFrame:
     """
     Reversed contribution when ColumnTransformer is used.
 
@@ -192,16 +200,16 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
 
     Parameters
     ----------
-    x_contrib : pandas.DataFrame
+    x_contrib : pd.DataFrame
         Contributions set.
-    encoding : ColumnTransformer, list, dict
+    encoding : Any
         The processing apply to the original data.
     agg_columns : str (default: 'sum')
         Type of aggregation performed. For Shap we want so sum contributions of one hot encoded variables.
 
     Returns
     -------
-    pandas.Dataframe
+    pd.DataFrame
         The aggregate contributions depending on which processing is apply.
     """
 
@@ -262,7 +270,7 @@ def calc_inv_contrib_ct(x_contrib, encoding, agg_columns):
         return x_contrib
 
 
-def transform_ct(x_in, model, encoding):
+def transform_ct(x_in: pd.DataFrame, model: Any, encoding: Any) -> pd.DataFrame:
     """
     Transform when using a ColumnsTransformer.
 
@@ -274,16 +282,16 @@ def transform_ct(x_in, model, encoding):
 
     Parameters
     ----------
-    x_in : pandas.DataFrame
+    x_in : pd.DataFrame
         Raw dataset to apply preprocessing
-    model: model object
+    model : Any
         model used to check the different values of target estimate predict_proba
-    encoding : list
-        The list must contain a single ColumnsTransformer and an optional list of dict.
+    encoding : Any
+        A fitted ColumnTransformer or a list of ordinal encoders.
 
     Returns
     -------
-    pandas.Dataframe
+    pd.DataFrame
         The data preprocessed for the given list of encoding.
     """
     if str(type(encoding)) == columntransformer:
@@ -310,26 +318,26 @@ def transform_ct(x_in, model, encoding):
     return rst
 
 
-def get_names(name, trans, column, column_transformer):
+def get_names(name: str, trans: Any, column: Any, column_transformer: ColumnTransformer) -> Iterable[str]:
     """
     Allow to extract features names from one encoder of the ColumnTransformer.
     If the right names aren't available, It creates a list with customized names.
 
     Parameters
     ----------
-    name: string
+    name: str
         String which indicates the name of the transformer.
-    trans: sklearn encoder or category_encoders
+    trans: Any
         One of the encoder fitted through the ColumnTransformer.
-    column: list
-        List of features impacted by the specific transformer.
-    column_transformer: sklearn ColumnTransformer
+    column: Any
+        Column selector used by the transformer.
+    column_transformer: ColumnTransformer
         The fitted ColumnTransformer containing the specific encoder.
 
     Returns
     -------
-    list:
-        List of returned features when specific transformer is applied.
+    Iterable[str]
+        Feature names returned when the specific transformer is applied.
     """
     if trans == "drop" or (hasattr(column, "__len__") and not len(column)):
         return []
@@ -351,22 +359,22 @@ def get_names(name, trans, column, column_transformer):
     return [name + "__" + f for f in trans.get_feature_names_out()]
 
 
-def get_feature_names(column_transformer):
+def get_feature_names(column_transformer: ColumnTransformer) -> list[str]:
     """
     Allow to extract all features names from encoders of the ColumnTransformer once it has been applied.
     If the right names aren't available, It creates a list with customized names.
 
     Parameters
     ----------
-    column_transformer: sklearn ColumnTransformer
+    column_transformer: ColumnTransformer
         The fitted ColumnTransformer containing the specific encoder.
 
     Returns
     -------
-    feature_names: list
+    feature_names: list[str]
         List of returned features names when ColumnTransformer is applied.
     """
-    feature_names = []
+    feature_names: list[str] = []
     l_transformers = list(
         column_transformer._iter(fitted=True, column_as_labels=False, skip_drop=True, skip_empty_columns=True)
     )
@@ -377,19 +385,21 @@ def get_feature_names(column_transformer):
     return feature_names
 
 
-def get_list_features_names(list_preprocessing, columns_dict):
+def get_list_features_names(list_preprocessing: list[Any], columns_dict: dict[Any, str]) -> Iterable[str]:
     """
     Allow to extract all features names from encoders when a list of preprocessing is uesd once it has been applied.
     If the right names aren't available, It creates a list with customized names.
 
     Parameters
     ----------
-    list_preprocessing: list
+    list_preprocessing: list[Any]
         The fitted list_preprocessing containing the specific encoders.
+    columns_dict: dict[Any, str]
+        Mapping of input column identifiers to feature names.
 
     Returns
     -------
-    feature_names: list
+    Iterable[str]
         List of returned features names when list_preprocessing is applied.
 
     """
@@ -405,9 +415,21 @@ def get_list_features_names(list_preprocessing, columns_dict):
     return feature_expected
 
 
-def get_feature_out(estimator, feature_in):
+def get_feature_out(estimator: Any, feature_in: Any) -> tuple[Any, Any]:
     """
-    Returns estimator features out if it has get_feature_names_out method, else features_in
+    Return an estimator's output features and categories when available, otherwise the input features.
+
+    Parameters
+    ----------
+    estimator: Any
+        Fitted transformer to inspect.
+    feature_in: Any
+        Input feature names or selectors.
+
+    Returns
+    -------
+    tuple[Any, Any]
+        Output feature names and categories, or input features and an empty category list.
     """
     if hasattr(estimator, "get_feature_names_out") and hasattr(estimator, "categories_"):
         return estimator.get_feature_names_out(), estimator.categories_
@@ -417,23 +439,23 @@ def get_feature_out(estimator, feature_in):
         return feature_in, []
 
 
-def get_col_mapping_ct(encoder, x_encoded):
+def get_col_mapping_ct(encoder: ColumnTransformer, x_encoded: pd.DataFrame) -> dict[str, list[Any]]:
     """
     Get the columns mapping of a column transformer encoder.
 
     Parameters
     ----------
-    encoder : ColumnTransformer
+    encoder: ColumnTransformer
         The encoder used.
-    x_encoded : pd.DataFrame
+    x_encoded: pd.DataFrame
         Pandas dataframe after encoder transformations
 
     Returns
     -------
-    dict_col_mapping : dict
+    dict_col_mapping: dict[str, list[Any]]
         Dict of mapping between dataframe columns before and after encoding.
     """
-    dict_col_mapping = dict()
+    dict_col_mapping: dict[str, list[Any]] = {}
     idx_encoded = 0
     for name, estimator, features in encoder.transformers_:
         if name != "remainder":

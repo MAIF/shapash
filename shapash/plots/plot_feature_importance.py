@@ -1,3 +1,6 @@
+from collections.abc import Collection
+from typing import Any, Literal, cast
+
 import numpy as np
 import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
@@ -9,56 +12,55 @@ from shapash.utils.utils import adjust_title_height
 
 
 def plot_feature_importance(
-    mode,
-    global_feat_imp,
-    contributions_case,
-    style_dict,
-    features_groups_keys=None,
-    features_dict=None,
-    inv_features_dict=None,
-    local_imp_lev1=None,
-    local_imp_lev2=None,
-    subset_feat_imp=None,
-    display_groups=False,
-    title="",
-    addnote="",
-    subtitle="",
-    global_feat_imp_name="Global",
-    subset_feat_imp_name="Subset",
-    width=900,
-    height=500,
-    file_name=None,
-    auto_open=False,
-    zoom=False,
-    normalize_by_nb_samples=False,
-    degree="slider",
-):
+    mode: Literal["global", "global-local", "cumulative"],
+    global_feat_imp: pd.Series,
+    contributions_case: pd.DataFrame,
+    style_dict: dict[str, Any],
+    features_groups_keys: Collection[str] | None = None,
+    features_dict: dict[str, str] | None = None,
+    inv_features_dict: dict[str, str] | None = None,
+    local_imp_lev1: pd.Series | None = None,
+    local_imp_lev2: pd.Series | None = None,
+    subset_feat_imp: pd.Series | None = None,
+    display_groups: bool = False,
+    title: str = "",
+    addnote: str = "",
+    subtitle: str = "",
+    global_feat_imp_name: str = "Global",
+    subset_feat_imp_name: str = "Subset",
+    width: int = 900,
+    height: int = 500,
+    file_name: str | None = None,
+    auto_open: bool = False,
+    zoom: bool = False,
+    normalize_by_nb_samples: bool = False,
+    degree: int | float | Literal["slider"] = "slider",
+) -> go.Figure:
     """
     Generate feature importance plots using different modes such as global, global-local, or cumulative contributions.
 
     Parameters
     ----------
-    mode : str
+    mode : {"global", "global-local", "cumulative"}
         Defines the type of plot to generate. Accepts 'global', 'global-local', or 'cumulative'.
-    global_feat_imp : pandas.DataFrame
-        Dataframe containing global feature importance values.
+    global_feat_imp : pandas.Series
+        Series containing global feature importance values.
     contributions_case : pandas.DataFrame
         Dataframe containing contribution values for individual cases (used for cumulative mode).
-    style_dict : dict
+    style_dict : dict[str, Any]
         Dictionary containing styles for the plot (e.g., color, font sizes, etc.).
-    features_groups_keys : dict, optional
-        Dictionary containing groups of features. The keys represent group names, and the values are lists of feature names.
-        Used to group features in the display, by default None.
-    features_dict : dict, optional
+    features_groups_keys : collection of str, optional
+        Group names used to identify grouped features, by default None.
+    features_dict : dict[str, str], optional
         Dictionary mapping technical feature names to domain names, by default None.
-    inv_features_dict : dict, optional
+    inv_features_dict : dict[str, str], optional
         Inverse dictionary of `features_dict`, used for displaying original feature names, by default None.
-    local_imp_lev1 : pandas.DataFrame, optional
-        Dataframe containing semi-local feature importance values (level 1), used in 'global-local' mode, by default None.
-    local_imp_lev2 : pandas.DataFrame, optional
-        Dataframe containing local feature importance values (level 2), used in 'global-local' mode, by default None.
-    subset_feat_imp : pandas.DataFrame, optional
-        Dataframe containing a subset of feature importance values for selective display, by default None.
+    local_imp_lev1 : pandas.Series, optional
+        Series containing semi-local feature importance values (level 1), used in 'global-local' mode, by default None.
+    local_imp_lev2 : pandas.Series, optional
+        Series containing local feature importance values (level 2), used in 'global-local' mode, by default None.
+    subset_feat_imp : pandas.Series, optional
+        Series containing a subset of feature importance values for selective display, by default None.
     display_groups : bool, optional
         Whether to display feature groups in the plot. If True, features will be grouped accordingly, by default False.
     title : str, optional
@@ -83,8 +85,8 @@ def plot_feature_importance(
         If True, the plot will be zoomed in, by default False.
     normalize_by_nb_samples : bool, optional
         Whether to normalize the cumulative contributions by the number of samples (used in cumulative mode), by default False.
-    degree : str, optional
-        Degree of the cumulative plot, often represented as a slider, by default "slider".
+    degree : int, float or "slider", optional
+        Normalization degree in cumulative mode, or "slider" to enable the interactive slider, by default "slider".
 
     Returns
     -------
@@ -112,6 +114,8 @@ def plot_feature_importance(
     if features_dict is not None:
         global_feat_imp.index = global_feat_imp.index.map(features_dict)
         if mode == "global-local":
+            if local_imp_lev1 is None or local_imp_lev2 is None:
+                raise ValueError("Local importance series are required when mode is 'global-local'.")
             local_imp_lev1.index = local_imp_lev1.index.map(features_dict)
             local_imp_lev2.index = local_imp_lev2.index.map(features_dict)
         if subset_feat_imp is not None:
@@ -189,36 +193,36 @@ def plot_feature_importance(
 
 
 def _plot_features_import(
-    feature_imp1,
-    style_dict,
-    inv_features_dict,
-    features_groups_keys=None,
-    feature_imp2=None,
-    title="Features Importance",
-    addnote=None,
-    subtitle=None,
-    feature_imp1_name="Global",
-    feature_imp2_name="Subset",
-    width=900,
-    height=500,
-    file_name=None,
-    auto_open=False,
-    zoom=False,
-):
+    feature_imp1: pd.Series,
+    style_dict: dict[str, Any],
+    inv_features_dict: dict[str, str],
+    features_groups_keys: Collection[str] | None = None,
+    feature_imp2: pd.Series | None = None,
+    title: str = "Features Importance",
+    addnote: str | None = None,
+    subtitle: str | None = None,
+    feature_imp1_name: str = "Global",
+    feature_imp2_name: str = "Subset",
+    width: int = 900,
+    height: int = 500,
+    file_name: str | None = None,
+    auto_open: bool = False,
+    zoom: bool = False,
+) -> go.Figure:
     """
     Plot features importance computed with the prediction set.
     Parameters
     ----------
-    feature_imp1 : pd.Series
-        Feature importance computed with every rows
-    style_dict: dict
+    feature_imp1 : pandas.Series
+        Feature importance computed with every row.
+    style_dict : dict[str, Any]
         the different styles used in the different outputs of Shapash
-    inv_features_dict: dict
+    inv_features_dict : dict[str, str]
         Inverse features_dict mapping.
-    features_groups_keys : dict, optional (default: None)
+    features_groups_keys : collection of str, optional (default: None)
         Keys of the dictionnary containing features that should be grouped together.
-    feature_imp2 : pd.Series, optional (default: None)
-        The contributions associate
+    feature_imp2 : pandas.Series, optional (default: None)
+        Feature importance values for a subset of rows.
     title : str
         Title of the plot, default set to 'Features Importance'
     addnote : String (default: None)
@@ -245,11 +249,11 @@ def _plot_features_import(
     # Add subtitle and / or addnote
     if subtitle or addnote:
         if subtitle and addnote:
-            title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            title += f"<br><sup>{subtitle} - {addnote}</sup>"
         elif subtitle:
-            title += "<br><sup>" + subtitle + "</sup>"
+            title += f"<br><sup>{subtitle}</sup>"
         else:
-            title += "<br><sup>" + addnote + "</sup>"
+            title += f"<br><sup>{addnote}</sup>"
         topmargin = topmargin + 15
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
@@ -322,32 +326,32 @@ def _plot_features_import(
 
 
 def _plot_local_features_import(
-    feat_imp,
-    style_dict,
-    inv_features_dict,
-    title="Features Importance Global-Local",
-    features_groups_keys=None,
-    addnote=None,
-    subtitle=None,
-    width=900,
-    height=500,
-    file_name=None,
-    auto_open=False,
-    zoom=False,
-):
+    feat_imp: dict[str, pd.Series],
+    style_dict: dict[str, Any],
+    inv_features_dict: dict[str, str],
+    title: str = "Features Importance Global-Local",
+    features_groups_keys: Collection[str] | None = None,
+    addnote: str | None = None,
+    subtitle: str | None = None,
+    width: int = 900,
+    height: int = 500,
+    file_name: str | None = None,
+    auto_open: bool = False,
+    zoom: bool = False,
+) -> go.Figure:
     """
     Plot features importance computed with the prediction set.
     Parameters
     ----------
-    feat_imp : dict of pd.Series
-        Feature importance computed with every rows :global, semi-local and local
-    style_dict: dict
+    feat_imp : dict[str, pandas.Series]
+        Feature importance series for the global, semi-local, and local levels.
+    style_dict : dict[str, Any]
         the different styles used in the different outputs of Shapash
-    inv_features_dict: dict
+    inv_features_dict : dict[str, str]
         Inverse features_dict mapping.
     title : str
         Title of the plot, default set to 'Features Importance'
-    features_groups_keys : dict, optional (default: None)
+    features_groups_keys : collection of str, optional (default: None)
         Keys of the dictionnary containing features that should be grouped together.
     addnote : String (default: None)
         Specify a note to display
@@ -368,11 +372,11 @@ def _plot_local_features_import(
     # Add subtitle and / or addnote
     if subtitle or addnote:
         if subtitle and addnote:
-            title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            title += f"<br><sup>{subtitle} - {addnote}</sup>"
         elif subtitle:
-            title += "<br><sup>" + subtitle + "</sup>"
+            title += f"<br><sup>{subtitle}</sup>"
         else:
-            title += "<br><sup>" + addnote + "</sup>"
+            title += f"<br><sup>{addnote}</sup>"
         topmargin = topmargin + 15
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
     dict_xaxis = style_dict["dict_xaxis"] | {"text": "Mean absolute Contribution"}
@@ -442,33 +446,33 @@ def _plot_local_features_import(
 
 
 def _plot_feature_contributions_cumulative(
-    feature_imp1,
-    contributions_case,
-    style_dict,
-    inv_features_dict,
-    title="Feature Contributions Cumulative Plot",
-    addnote=None,
-    subtitle=None,
-    width=900,
-    height=500,
-    normalize_by_nb_samples=False,
-    degree="slider",
-    file_name=None,
-    auto_open=False,
-    zoom=False,
-):
+    feature_imp1: pd.Series,
+    contributions_case: pd.DataFrame,
+    style_dict: dict[str, Any],
+    inv_features_dict: dict[str, str],
+    title: str = "Feature Contributions Cumulative Plot",
+    addnote: str | None = None,
+    subtitle: str | None = None,
+    width: int = 900,
+    height: int = 500,
+    normalize_by_nb_samples: bool = False,
+    degree: int | float | Literal["slider"] = "slider",
+    file_name: str | None = None,
+    auto_open: bool = False,
+    zoom: bool = False,
+) -> go.Figure:
     """
     Generates a cumulative plot of feature contributions with a slider to adjust the degree.
 
     Parameters
     ----------
-    feature_imp1 : pandas.DataFrame
-        DataFrame containing the importance values of each feature. The index represents feature names.
+    feature_imp1 : pandas.Series
+        Series containing the importance values of each feature. The index represents feature names.
     contributions_case : pandas.DataFrame
         DataFrame containing the individual feature contributions for each case (row).
-    style_dict : dict
+    style_dict : dict[str, Any]
         Dictionary specifying style options such as color schemes and line styles.
-    inv_features_dict : dict
+    inv_features_dict : dict[str, str]
         Dictionary mapping feature names to their corresponding indices in `contributions_case`.
     title : str, optional
         Title of the plot. Default is "Feature Contributions Cumulative Plot".
@@ -482,7 +486,7 @@ def _plot_feature_contributions_cumulative(
         The height of the plot in pixels. Default is 500.
     normalize_by_nb_samples : bool, optional
         Whether to normalize each feature's cumulative contribution by the number of samples. Default is False.
-    degree : str or float, optional
+    degree : int, float or "slider", optional
         Degree of normalization to apply. If 'slider', an interactive slider will be added to control the normalization
         degree in the range [0, 1]. Default is "slider".
     file_name : str, optional
@@ -508,14 +512,14 @@ def _plot_feature_contributions_cumulative(
     Raises
     ------
     ValueError
-        If `feature_imp1` or `contributions_case` is not a DataFrame, or if there are issues with indexing features.
+        If there are issues with indexing features.
     """
     # Number of features
     num_features = len(feature_imp1)
 
     # Generate color scale
     col_scale = get_pyplot_color(colors=style_dict["feature_contributions_cumulative"])
-    cmap = LinearSegmentedColormap.from_list("feature_contributions_cumulative", col_scale, N=256)
+    cmap = LinearSegmentedColormap.from_list("feature_contributions_cumulative", cast(Any, col_scale), N=256)
     colors = [cmap(i / num_features) for i in range(num_features)]
     colors_hex = [f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}" for r, g, b, _ in colors]
 
@@ -543,16 +547,19 @@ def _plot_feature_contributions_cumulative(
         else:
             serie_tot += serie
 
+    if serie_tot is None:
+        raise ValueError("feature_imp1 must contain at least one feature.")
+
     # Create the Plotly traces for each series
     topmargin = 80
     # Add subtitle and / or addnote
     if subtitle or addnote:
         if subtitle and addnote:
-            title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+            title += f"<br><sup>{subtitle} - {addnote}</sup>"
         elif subtitle:
-            title += "<br><sup>" + subtitle + "</sup>"
+            title += f"<br><sup>{subtitle}</sup>"
         else:
-            title += "<br><sup>" + addnote + "</sup>"
+            title += f"<br><sup>{addnote}</sup>"
         topmargin = topmargin + 15
     dict_t = style_dict["dict_title"] | {"text": title, "y": adjust_title_height(height)}
 
@@ -571,7 +578,7 @@ def _plot_feature_contributions_cumulative(
             serie_values /= pd.Series(range(1, len(serie_values) + 1))
 
         # Apply initial degree-based normalization
-        if degree not in [0, "slider"]:
+        if degree != 0 and degree != "slider":
             serie_values /= serie_tot**degree
 
         # Append the trace for the current series
@@ -682,29 +689,32 @@ def _plot_feature_contributions_cumulative(
 
 
 def _apply_bold_formatting(
-    global_feat_imp,
-    local_imp_lev1,
-    local_imp_lev2,
-    subset_feat_imp,
-    mode,
-    features_groups_keys=None,
-    inv_features_dict=None,
-):
+    global_feat_imp: pd.Series,
+    local_imp_lev1: pd.Series | None,
+    local_imp_lev2: pd.Series | None,
+    subset_feat_imp: pd.Series | None,
+    mode: Literal["global", "global-local", "cumulative"],
+    features_groups_keys: Collection[str] | None = None,
+    inv_features_dict: dict[str, str] | None = None,
+) -> tuple[pd.Series, pd.Series | None, pd.Series | None, pd.Series | None]:
     """Apply bold formatting to feature names for feature groups."""
 
-    def bold_feature_name(index):
+    if inv_features_dict is None:
+        inv_features_dict = {}
+    if features_groups_keys is None:
+        features_groups_keys = ()
+
+    def bold_feature_name(index: Any) -> str:
         feature_name = str(index)
         if inv_features_dict.get(index) in features_groups_keys:
             return f"<b>{feature_name}"
         return feature_name
 
-    if inv_features_dict is None:
-        inv_features_dict = {}
-    if features_groups_keys is None:
-        features_groups_keys = {}
     global_feat_imp.index = [bold_feature_name(f) for f in global_feat_imp.index]
 
     if mode == "global-local":
+        if local_imp_lev1 is None or local_imp_lev2 is None:
+            raise ValueError("Local importance series are required when mode is 'global-local'.")
         local_imp_lev1.index = [bold_feature_name(f) for f in global_feat_imp.index]
         local_imp_lev2.index = [bold_feature_name(f) for f in global_feat_imp.index]
     if subset_feat_imp is not None:

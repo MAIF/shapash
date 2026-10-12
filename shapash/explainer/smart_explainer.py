@@ -111,7 +111,8 @@ class SmartExplainer:
         computations. Each key defines a group name, and its value is a list of
         feature names.
 
-        Example:
+        Examples
+        --------
         >>> {
         ...   'feature_group_1': ['feature3', 'feature7', 'feature24'],
         ...   'feature_group_2': ['feature1', 'feature12']
@@ -679,7 +680,7 @@ class SmartExplainer:
             use_groups=use_groups,
         )
 
-    def init_app(self, settings: dict[str, Any] | None = None):
+    def init_app(self, settings: dict[str, Any] | None = None) -> None:
         """
         Initialize a SmartApp instance for the current SmartExplainer object.
 
@@ -689,7 +690,7 @@ class SmartExplainer:
 
         Parameters
         ----------
-        settings : dict, optional
+        settings : dict[str, Any] or None, optional
             Dictionary specifying default configuration values for the WebApp.
             Possible keys include:
             - `'rows'` : int — number of rows to display by default
@@ -783,7 +784,7 @@ class SmartExplainer:
             wsgi_server = make_server(host, port, self.smartapp.server)
             server_instance = CustomThread(target=wsgi_server.serve_forever)
 
-            def _kill():
+            def _kill() -> None:
                 wsgi_server.shutdown()
                 server_instance.killed = True
 
@@ -1082,53 +1083,3 @@ class SmartExplainer:
             config_file=config_file,
             output_file=output_file,
         )
-
-    def _local_pred(self, index, label=None):
-        """
-        Compute the model prediction or probability for a single observation.
-
-        This internal method retrieves the prediction or class probability
-        corresponding to a specific sample index.
-
-        Parameters
-        ----------
-        index : int, str, or float
-            Index of the sample for which to compute the prediction.
-            Must correspond to a valid index in `x_encoded`.
-        label : int, optional
-            Class label for which to extract the probability in classification tasks.
-            If `None`, the method returns the prediction for the main target.
-
-        Returns
-        -------
-        float
-            The predicted value (for regression) or predicted probability
-            (for classification).
-
-        Notes
-        -----
-        - For classification, returns the class probability if `proba_values` are available.
-        - For regression, returns the predicted numeric value.
-        - This is an internal helper used primarily for visualization.
-
-        Example
-        -------
-        >>> # Retrieve the predicted value for observation at index 12
-        >>> xpl._local_pred(index=12)
-        0.7421
-        """
-        if self.explainer._case == "classification":
-            if self.explainer.proba_values is not None:
-                value = self.explainer.proba_values.iloc[:, [label]].loc[index].values[0]
-            else:
-                value = None
-        elif self.explainer._case == "regression":
-            if self.explainer.y_pred is not None:
-                value = self.explainer.y_pred.loc[index]
-            else:
-                value = self.explainer.model.predict(self.explainer.x_encoded.loc[[index]])[0]
-
-        if isinstance(value, pd.Series):
-            value = value.values[0]
-
-        return value
