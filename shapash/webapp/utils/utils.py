@@ -1,8 +1,10 @@
+from typing import Any, Literal
+
 import pandas as pd
 from pandas.api.types import is_any_real_numeric_dtype
 
 
-def round_to_k(x, k):
+def round_to_k(x: float | int, k: int) -> float | int:
     """
     Round float to k significant digits.
 
@@ -10,7 +12,7 @@ def round_to_k(x, k):
 
     Parameters
     ----------
-    x : float
+    x : float or int
         number to round
     k : int
         the number of significant figures
@@ -25,18 +27,19 @@ def round_to_k(x, k):
     return int(new_x) if new_x % 1 == 0 else new_x
 
 
-def get_index_type(data):
+def get_index_type(data: pd.DataFrame) -> Literal["number", "text"]:
     """
     Identify the type of the dataframe index.
+
     Parameters
     ----------
-    data : pd.DataFrame
+    data : pandas.DataFrame
         Dataset of the features
 
     Returns
     -------
-    str
-        Type numeric or text of the dataset index
+    Literal["number", "text"]
+        Whether the dataset index is numeric or textual
     """
     if is_any_real_numeric_dtype(data.index):
         return "number"
@@ -44,14 +47,15 @@ def get_index_type(data):
         return "text"
 
 
-def check_row(data, index):
+def check_row(data: list[dict[str, Any]], index: int | str | None) -> int | None:
     """
     Identify the row number of datatable for a specific index
+
     Parameters
     ----------
-    data : dash_table.DataTable.data
+    data : list[dict[str, Any]]
         data display in datatable
-    index : int or str
+    index : int or str or None
         index from the dataset to identify
 
     Returns
@@ -67,9 +71,12 @@ def check_row(data, index):
     return row
 
 
-def split_filter_part(filter_part):
+def split_filter_part(
+    filter_part: str,
+) -> tuple[str | None, str | None, str | float | None] | list[None]:
     """
     Transform dash.datatable filter part into pandas.DataFrame filter (source code : Dash documentation)
+
     Parameters
     ----------
     filter_part : str
@@ -77,8 +84,9 @@ def split_filter_part(filter_part):
 
     Returns
     -------
-    tuple :
-        column, operator, value of the filter part
+    tuple[str | None, str | None, str | float | None] or list[None]
+        Column, operator and value of the filter part; returns a list of three None values
+        when no supported operator is found
 
     """
     operators = [
@@ -100,7 +108,7 @@ def split_filter_part(filter_part):
                 value_part = value_part.strip()
                 v0 = value_part[0]
                 if v0 == value_part[-1] and v0 in ("'", '"', "`"):
-                    value = value_part[1:-1].replace("\\" + v0, v0)
+                    value: str | float = value_part[1:-1].replace("\\" + v0, v0)
                 else:
                     try:
                         value = float(value_part)
@@ -114,7 +122,7 @@ def split_filter_part(filter_part):
     return [None] * 3
 
 
-def apply_filter(df, filter_query):
+def apply_filter(df: pd.DataFrame, filter_query: str) -> pd.DataFrame:
     """
     Apply a filter query from dash.datable to a pandas.DataFrame (source code : Dash documentation)
 

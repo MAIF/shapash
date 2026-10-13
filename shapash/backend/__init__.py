@@ -6,9 +6,23 @@ from .lime_backend import LimeBackend
 from .shap_backend import ShapBackend
 
 
-def get_backend_cls_from_name(name):
-    """
-    Scan current module to find the right backend with given name.
+def get_backend_cls_from_name(name: str) -> type[BaseBackend]:
+    """Find a backend class by its name.
+
+    Parameters
+    ----------
+    name : str
+        Name of the backend to find.
+
+    Returns
+    -------
+    type[BaseBackend]
+        The backend class matching ``name``.
+
+    Raises
+    ------
+    ValueError
+        If no backend class matches ``name``.
     """
     list_cls = [
         cls

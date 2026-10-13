@@ -8,7 +8,14 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from shapash.manipulation.summarize import compute_corr, compute_features_import, group_contributions, summarize_el
+from shapash.manipulation.summarize import (
+    contribution_weighted_corr,
+    contribution_weighted_corr_matrix,
+    compute_corr,
+    compute_features_import,
+    group_contributions,
+    summarize_el,
+)
 
 
 class TestSummarize(unittest.TestCase):
@@ -156,3 +163,61 @@ class TestComputeCorr(unittest.TestCase):
     def test_compute_corr_unknown_method_raises(self):
         with self.assertRaises(NotImplementedError):
             compute_corr(self.df, "spearman")
+
+
+class TestContributionWeightedCorr(unittest.TestCase):
+    def test_contribution_weighted_corr_perfect_positive_corr(self):
+        result = contribution_weighted_corr(pd.Series([1.0, 2.0, 3.0]), pd.Series([2.0, 4.0, 6.0]))
+        assert np.isclose(result, 1.0)
+
+    def test_contribution_weighted_corr_treats_nan_as_zero(self):
+        result = contribution_weighted_corr(pd.Series([1.0, np.nan, -1.0]), pd.Series([2.0, 0.0, -2.0]))
+        assert np.isclose(result, 1.0)
+
+    def test_contribution_weighted_corr_returns_zero_without_variation(self):
+        result = contribution_weighted_corr(pd.Series([0.0, 0.0, 0.0]), pd.Series([1.0, -1.0, 2.0]))
+        assert result == 0.0
+
+    def test_contribution_weighted_corr_raises_on_invalid_input(self):
+        with self.assertRaises(ValueError):
+            contribution_weighted_corr([[1.0], [2.0]], [1.0, 2.0])
+
+        with self.assertRaises(ValueError):
+            contribution_weighted_corr([1.0, 2.0], [1.0])
+
+        with self.assertRaises(ValueError):
+            contribution_weighted_corr([1.0, np.inf], [1.0, 2.0])
+
+
+class TestContributionWeightedCorrMatrix(unittest.TestCase):
+    def test_contribution_weighted_corr_matrix_is_symmetric(self):
+        contrib_values = pd.DataFrame(
+            {
+                "feature_1": [1.0, 2.0, 3.0],
+                "feature_2": [2.0, 4.0, 6.0],
+                "feature_3": [-1.0, 0.0, 1.0],
+            }
+        )
+
+        result = contribution_weighted_corr_matrix(contrib_values)
+
+        assert result.shape == (3, 3)
+        assert list(result.index) == list(contrib_values.columns)
+        assert list(result.columns) == list(contrib_values.columns)
+        assert np.allclose(np.diag(result), 1.0)
+        assert np.allclose(result, result.T)
+        assert np.isclose(result.loc["feature_1", "feature_2"], 1.0)
+        assert np.isclose(
+            result.loc["feature_1", "feature_3"],
+            contribution_weighted_corr(contrib_values["feature_1"], contrib_values["feature_3"]),
+        )
+
+    def test_contribution_weighted_corr_matrix_raises_on_invalid_input(self):
+        with self.assertRaises(ValueError):
+            contribution_weighted_corr_matrix([1.0, 2.0, 3.0])
+
+        with self.assertRaises(ValueError):
+            contribution_weighted_corr_matrix(np.empty((0, 2)))
+
+        with self.assertRaises(ValueError):
+            contribution_weighted_corr_matrix(np.array([[1.0, np.inf]]))

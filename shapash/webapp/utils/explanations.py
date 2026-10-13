@@ -8,13 +8,25 @@ Created on Mon Oct  3 15:12:08 2022
 class Explanations:
     """
     Contains the explanations of all "?" buttons in the app.
+
+    Attributes
     ----------
-    explanations: object
-        SmartApp instance to point to.
+    detail_feature : str
+        Explanation displayed for the detailed feature contribution plot.
+    feature_selector : str
+        Explanation displayed for the feature selector plot.
+    prediction_picking : str
+        Explanation displayed for the prediction picking plot.
+    clusters : str
+        Explanation displayed for the cluster projection plot.
+    feature_importance : str
+        Explanation displayed for the feature importance plot.
+    filter : str
+        Explanation displayed for the filter controls.
     """
 
-    def __init__(self):
-        self.detail_feature = """
+    def __init__(self) -> None:
+        self.detail_feature: str = """
                         **Local interpretability:** the understanding of the decision
                         process for a single sample
                         is provided by displaying each most important feature's contributions
@@ -30,7 +42,7 @@ class Explanations:
                         just increase the number of features to display, and mechanically,
                         the sum of the remaining contribution will decrease.
                         """
-        self.feature_selector = """
+        self.feature_selector: str = """
                                 **How does a feature affect the prediction?**
                                 The point's colour indicates the value of the prediction. \n
                                 The position on x-axis and y-axis respectively represents the
@@ -46,7 +58,7 @@ class Explanations:
                                 by a curve if the values are considered continuous or by bars if
                                 they are considered discrete.
                                 """
-        self.prediction_picking = """
+        self.prediction_picking: str = """
                                 **What are the samples with correct or wrong predictions?**
                                 This graph enables to visualize and select samples to understand
                                 their explainability **dynamically** with the other graphs.\n
@@ -60,7 +72,7 @@ class Explanations:
 
                                 To reset the select, double click on the figure.
                                 """
-        self.clusters = """
+        self.clusters: str = """
                             **How are predictions distributed in the projection space?**
 
                             This graph allows you to visualize and select samples on the 2D projection map
@@ -77,7 +89,7 @@ class Explanations:
 
                             To reset the select, double click on the figure.
                             """
-        self.feature_importance = """
+        self.feature_importance: str = """
                                 **Global feature importance** is by default the sum of
                                 *individual contributions*,
                                 computed on the complete dataset.
@@ -91,7 +103,7 @@ class Explanations:
                                 the group detail is available by clicking on the grouped variable
                                 (displayed in dark orange).
                                 """
-        self.filter = """
+        self.filter: str = """
                       **To create a new filter**, you must click on the
                       *Add Filter* button. You can create as many filters as you want.
 

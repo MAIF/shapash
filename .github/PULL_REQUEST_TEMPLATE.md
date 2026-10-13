@@ -1,5 +1,8 @@
 # IMPORTANT: Please do not create a Pull Request without creating an issue first.
 
+**Please note that your pull request must target the upstream develop branch.  
+Check the latest revision of CONTRIBUTING.md if needed.**
+
 Any change needs to be discussed before proceeding. Failure to do so may result in the rejection of the pull request.
 
 Please provide enough information so that others can review your pull request:

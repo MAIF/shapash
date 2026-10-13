@@ -76,6 +76,26 @@ class TestPlots(unittest.TestCase):
         assert fig.data[0].type == "scatter"
         assert fig.data[1].type == "scatter"
 
+    def test_plot_continuous_distribution_high_cardinality_with_colors_dict(self):
+        df = pd.DataFrame(
+            {
+                "int_data": np.arange(201),
+                "data_train_test": ["train", "test"] * 100 + ["train"],
+            }
+        )
+
+        fig = plot_continuous_distribution(
+            df,
+            "int_data",
+            hue="data_train_test",
+            colors_dict={"train": "red", "test": "blue"},
+        )
+
+        assert len(fig.data) == 2
+        assert {trace.name: trace.line.color for trace in fig.data} == {"train": "red", "test": "blue"}
+        assert min(trace.x[0] for trace in fig.data) == 2
+        assert max(trace.x[-1] for trace in fig.data) == 198
+
     def test_plot_categorical_distribution_1(self):
         df = pd.DataFrame(
             {"int_data": [0, 0, 0, 1, 1, 0], "data_train_test": ["train", "train", "train", "train", "test", "test"]}

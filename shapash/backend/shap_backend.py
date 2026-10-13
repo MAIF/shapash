@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import shap
@@ -13,18 +16,49 @@ class ShapBackend(BaseBackend):
     column_aggregation = "sum"
     name = "shap"
 
-    def __init__(self, model, preprocessing=None, masker=None, explainer_args=None, explainer_compute_args=None):
+    def __init__(
+        self,
+        model: Any,
+        preprocessing: Any | None = None,
+        masker: shap.maskers.Masker | pd.DataFrame | np.ndarray | Callable[..., Any] | None = None,
+        explainer_args: dict[str, Any] | None = None,
+        explainer_compute_args: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the SHAP backend.
+
+        Parameters
+        ----------
+        model : Any
+            Model to explain.
+        preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
+            Preprocessing applied to the model inputs.
+        masker : shap.maskers.Masker, pandas.DataFrame, numpy.ndarray, callable, or None, optional
+            SHAP masking strategy, when supported by the selected explainer. A DataFrame
+            or array is used as background data. A callable must accept a binary feature
+            mask via ``mask=...`` and one sample in the model's input format, and return
+            an iterable of masked samples. If None, the selected explainer applies its
+            default behavior. Some specialized explainers, such as TreeExplainer, do
+            not accept a masker.
+        explainer_args : dict[str, Any] or None, optional
+            Keyword arguments used to construct the SHAP explainer.
+        explainer_compute_args : dict[str, Any] or None, optional
+            Keyword arguments passed when computing SHAP explanations.
+        """
         super().__init__(model, preprocessing)
         self.masker = masker
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
 
+        shap_parameters = {"model": model, "masker": self.masker, **self.explainer_args}
+
         if self.explainer_args:
             if "explainer" in self.explainer_args.keys():
-                shap_parameters = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
-                self.explainer = self.explainer_args["explainer"](**shap_parameters)
+                # For explicit explainer classes, keep user-provided kwargs only.
+                # Some SHAP explainers (e.g. TreeExplainer) do not accept `masker`.
+                explainer_args = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
+                self.explainer = self.explainer_args["explainer"](**explainer_args)
             else:
-                self.explainer = shap.Explainer(**self.explainer_args)
+                self.explainer = shap.Explainer(**shap_parameters)
         else:
             if shap.explainers.Linear.supports_model_with_masker(model, self.masker):
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
@@ -41,7 +75,7 @@ class ShapBackend(BaseBackend):
             else:
                 raise ValueError("The model is not recognized by Shapash! Model: " + str(model))
 
-    def run_explainer(self, x: pd.DataFrame) -> dict:
+    def run_explainer(self, x: pd.DataFrame) -> dict[str, Any]:
         """
         Computes and returns local contributions using Shap explainer
 
@@ -52,16 +86,18 @@ class ShapBackend(BaseBackend):
 
         Returns
         -------
-        explain_data : pd.DataFrame or list of pd.DataFrame
-            local contributions
+        explain_data : dict[str, Any]
+            Mapping containing SHAP contributions and base values.
         """
         print("INFO: Shap explainer type -", self.explainer)
         contributions = self.explainer(x, **self.explainer_compute_args)
-        explain_data = dict(contributions=contributions.values)
+        explain_data = dict(contributions=contributions.values, base_values=getattr(contributions, "base_values", None))
         return explain_data
 
 
-def get_shap_interaction_values(x_df, explainer):
+def get_shap_interaction_values(
+    x_df: pd.DataFrame, explainer: shap.TreeExplainer, class_index: int | None = None
+) -> np.ndarray:
     """
     Compute the shap interaction values for a given dataframe.
     Also checks if the explainer is a TreeExplainer.
@@ -72,6 +108,9 @@ def get_shap_interaction_values(x_df, explainer):
         DataFrame for which will be computed the interaction values using the explainer.
     explainer : shap.TreeExplainer
         explainer object used to compute the interaction values.
+    class_index : int, optional
+        Class index to select in classification / multi-output settings.
+        If None, outputs are aggregated by summing across classes.
 
     Returns
     -------
@@ -86,9 +125,51 @@ def get_shap_interaction_values(x_df, explainer):
 
     shap_interaction_values = explainer.shap_interaction_values(x_df)
 
-    # For models with vector outputs the previous function returns one array for each output.
-    # We sum the contributions here.
+    # For models with vector outputs the previous function may return one array for each output
+    # (list of arrays) or an array with an extra output dimension.
+    # We either select one class/output if requested, or sum across outputs to keep
+    # shape (#samples, #features, #features).
     if isinstance(shap_interaction_values, list):
-        shap_interaction_values = np.sum(shap_interaction_values, axis=0)
+        if class_index is None:
+            shap_interaction_values = np.sum(shap_interaction_values, axis=0)
+        else:
+            shap_interaction_values = shap_interaction_values[class_index]
+    elif isinstance(shap_interaction_values, np.ndarray) and shap_interaction_values.ndim == 4:
+        n_samples = len(x_df)
+        n_features = x_df.shape[1]
+
+        is_sample_first_layout = (
+            shap_interaction_values.shape[0] == n_samples
+            and shap_interaction_values.shape[1] == n_features
+            and shap_interaction_values.shape[2] == n_features
+        )
+        is_output_first_layout = (
+            shap_interaction_values.shape[1] == n_samples
+            and shap_interaction_values.shape[2] == n_features
+            and shap_interaction_values.shape[3] == n_features
+        )
+
+        if is_sample_first_layout and not is_output_first_layout:
+            # shape: (#samples, #features, #features, #outputs)
+            if class_index is None:
+                shap_interaction_values = np.sum(shap_interaction_values, axis=-1)
+            else:
+                shap_interaction_values = shap_interaction_values[..., class_index]
+        elif is_output_first_layout and not is_sample_first_layout:
+            # shape: (#outputs, #samples, #features, #features)
+            if class_index is None:
+                shap_interaction_values = np.sum(shap_interaction_values, axis=0)
+            else:
+                shap_interaction_values = shap_interaction_values[class_index, ...]
+        elif is_sample_first_layout and is_output_first_layout:
+            # Ambiguous rare case where sample, feature and output dimensions have
+            # identical sizes. Preserve the previous sample-first interpretation.
+            if class_index is None:
+                shap_interaction_values = np.sum(shap_interaction_values, axis=-1)
+            else:
+                shap_interaction_values = shap_interaction_values[..., class_index]
+        else:
+            # Fallback: preserve previous behavior by aggregating on last axis.
+            shap_interaction_values = np.sum(shap_interaction_values, axis=-1)
 
     return shap_interaction_values

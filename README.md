@@ -4,8 +4,12 @@
 
 <p align="center">
   <!-- Tests -->
-  <a href="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg">
-    <img src="https://github.com/MAIF/shapash/workflows/Build%20%26%20Test/badge.svg" alt="tests">
+  <a href="https://github.com/MAIF/shapash/actions/workflows/main.yml">
+    <img src="https://github.com/MAIF/shapash/workflows/CI/badge.svg" alt="tests">
+  </a>
+  <!-- Codecov -->
+  <a href="https://codecov.io/gh/MAIF/shapash">
+    <img src="https://codecov.io/gh/MAIF/shapash/branch/master/graph/badge.svg" alt="codecov">
   </a>
   <!-- PyPi -->
   <a href="https://img.shields.io/pypi/v/shapash">
@@ -73,7 +77,7 @@ Shapash is suitable for Regression, Binary Classification and Multiclass problem
 | 1.7.x         |  Variabilize Colors <br>                                                                   | Giving possibility to have your own colour palette for outputs adapted to your design                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/variabilize-colors.png" width="50" title="variabilize-colors">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common02-colors.ipynb)
 | 1.6.x         |  Explainability Quality Metrics <br> [Article](https://towardsdatascience.com/building-confidence-on-explainability-methods-66b9ee575514)                                                                   | To help increase confidence in explainability methods, you can evaluate the relevance of your explainability using 3 metrics: **Stability**, **Consistency** and **Compacity**                   |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/quality-metrics.png" width="50" title="quality-metrics">](https://github.com/MAIF/shapash/blob/master/tutorial/explainability_quality/tuto-quality01-Builing-confidence-explainability.ipynb)
 | 1.4.x         |  Groups of features <br> [Demo](https://shapash-demo2.ossbymaif.fr/)                  | You can now regroup features that share common properties together. <br>This option can be useful if your model has a lot of features. |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/groups_features.gif" width="120" title="groups-features">](https://github.com/MAIF/shapash/blob/master/tutorial/common/tuto-common01-groups_of_features.ipynb)    |
-| 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-report01.ipynb)    |
+| 1.3.x         |  Shapash Report <br> [Demo](https://shapash.readthedocs.io/en/latest/report.html)     | A standalone HTML report that constitutes a basis of an audit document.                                                                |  [<img src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/report-icon.png" width="50" title="shapash-report">](https://github.com/MAIF/shapash/blob/master/tutorial/generate_report/tuto-shapash-regression-report.ipynb)    |
 
 ## 🔥 Features
 
@@ -198,8 +202,8 @@ app = xpl.run_app()
 [Live Demo Shapash-Monitor](https://shapash-demo.ossbymaif.fr/)
 
 - Step 4: Generate the Shapash Report
-  > This step allows to generate a standalone html report of your project using the different splits
-  of your dataset and also the metrics you used:
+  > This step generates a standalone HTML report from a block-based layout.
+  You can optionally provide a YAML file to customize report sections and blocks.
 
 ```python
 xpl.generate_report(
@@ -208,6 +212,7 @@ xpl.generate_report(
     x_train=xtrain,
     y_train=ytrain,
     y_test=ytest,
+    yaml_path="path/to/report_config.yml",  # Optional: custom block configuration
     title_story="House prices report",
     title_description="""This document is a data science report of the kaggle house prices tutorial project.
         It was generated using the Shapash library.""",
@@ -286,7 +291,7 @@ This github repository offers many tutorials to allow you to easily get started 
 
 <details><summary><b>Generate a report of your project</b> </summary>
 
-- [Generate a standalone HTML report of your project with generate_report](tutorial/generate_report/tuto-shapash-report01.ipynb)
+- [Generate a standalone HTML report of your project with generate_report](tutorial/generate_report/tuto-shapash-regression-report.ipynb)
 
 </details>
 
@@ -298,29 +303,18 @@ This github repository offers many tutorials to allow you to easily get started 
 
 ## 🤝 Contributors
 
-<div align="left">
-  <div style="display: flex; align-items: flex-start;">
-    <a href="https://maif.github.io/projets.html" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_maif.png" width="18%"/>
-    </a>
-    <a href="https://www.quantmetry.com/" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_quantmetry.png" width="18%"/>
-    </a>
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_societe_generale.png" width="18%" />
-    <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_groupe_vyv.png" width="18%" />
-    <a href="https://www.sixfoissept.com/en/" >
-      <img align=middle src="https://github.com/MAIF/shapash/blob/master/docs/_static/logo_SixfoisSept.png" width="18%"/>
-    </a>
-  </div>
-</div>
-
+<p align="left">
+  <a href="https://maif.github.io/projets.html" title="MAIF"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_maif.png" width="18%" alt="Logo MAIF" /></a>
+  <a href="https://p16.inria.fr" title="Projet P16 Inria"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_P16.png" width="18%" alt="Logo P16 Inria" /></a>
+  <a href="https://www.inria.fr" title="Inria"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_inria.png" width="18%" alt="Logo Inria" /></a>
+  <a href="https://www.quantmetry.com/" title="Quantmetry"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_quantmetry.png" width="18%" alt="Logo Quantmetry" /></a>
+  <img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_societe_generale.png" width="18%" alt="Logo Societe Generale" />
+  <img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_groupe_vyv.png" width="18%" alt="Logo Groupe VYV" />
+  <a href="https://www.sixfoissept.com/en/" title="SixFoisSept"><img align="middle" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/logo_SixfoisSept.png" width="18%" alt="Logo SixFoisSept" /></a>
+</p>
 
 ## 🏆 Awards
 
-<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png">
-  <img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" />
-</a>
+<a href="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png"><img align="left" src="https://raw.githubusercontent.com/MAIF/shapash/master/docs/_static/awards-argus-or.png" width="180" /></a>
 
-<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html">
-  <img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" />
-</a>
+<a href="https://www.kdnuggets.com/2021/04/shapash-machine-learning-models-understandable.html"><img src="https://www.kdnuggets.com/images/tkb-2104-g.png?raw=true" width="65" /></a>

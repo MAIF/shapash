@@ -76,3 +76,13 @@ def test_predict_error_works(y_target, y_pred, model_type, proba_values, classes
     else:
         # DataFrame comparison
         pd.testing.assert_frame_equal(result, expected)
+
+
+def test_predict_error_requires_classes_for_probabilities():
+    with pytest.raises(ValueError, match="classes must be provided"):
+        predict_error(y1, y1, "classification", proba_values1)
+
+
+def test_predict_error_rejects_unknown_target_label():
+    with pytest.raises(ValueError, match="Unknown label in y_target"):
+        predict_error(y1, y1, "classification", proba_values1, classes=[2, 3, 4])

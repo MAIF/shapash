@@ -1,0 +1,398 @@
+"""Smart report orchestration for block-based HTML reports."""
+
+from __future__ import annotations
+
+import base64
+import html
+import logging
+import re
+from pathlib import Path
+from typing import Any, Protocol
+
+import panel as pn
+
+from shapash.report.panel_support import apply_report_css, report_js_text
+from shapash.report.validation import load_report_config
+
+logger = logging.getLogger(__name__)
+
+
+class _ReportBlockRenderer(Protocol):
+    """Interface required from an object that renders report blocks.
+
+    Implementations receive one block configuration and return its Panel view,
+    or ``None`` when the block should not appear in the report.
+    """
+
+    def render_block(self, block_cfg: dict[str, Any]) -> pn.viewable.Viewable | None:
+        """Render a block configuration as a Panel viewable.
+
+        Parameters
+        ----------
+        block_cfg : dict[str, Any]
+            Configuration mapping for one report block.
+
+        Returns
+        -------
+        pn.viewable.Viewable or None
+            Rendered Panel viewable, or ``None`` to omit the block.
+        """
+        ...
+
+
+def _resolve_report_title(runtime: _ReportBlockRenderer, sections: list[dict[str, Any]]) -> str:
+    """Resolve the document title shown in the browser tab.
+
+    Priority order:
+    1. Top-level ``header`` (or ``title``) block ``params.title``
+    2. ``runtime.smart_explainer.title_story``
+    3. ``"Shapash Report"``
+    """
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_type = section.get("type")
+        if section_type not in {"header", "title"}:
+            continue
+        params = section.get("params", {})
+        if not isinstance(params, dict):
+            continue
+        section_title = params.get("title")
+        if isinstance(section_title, str) and section_title.strip():
+            return section_title.strip()
+
+    smart_explainer = getattr(runtime, "smart_explainer", None)
+    title_story = getattr(smart_explainer, "title_story", None)
+    if isinstance(title_story, str) and title_story.strip():
+        return title_story.strip()
+
+    return "Shapash Report"
+
+
+def _resolve_report_favicon_href(output_path: Path) -> str | None:
+    """Resolve the favicon href for the generated report.
+
+    Prefer embedding the packaged webapp ``favicon.ico`` as a data URL.
+    Return ``None`` when the asset is unavailable so the default favicon
+    behavior applies.
+    """
+    del output_path  # Kept for API compatibility.
+
+    webapp_favicon_path = Path(__file__).resolve().parent.parent / "webapp" / "assets" / "favicon.ico"
+    if webapp_favicon_path.exists():
+        favicon_data = base64.b64encode(webapp_favicon_path.read_bytes()).decode("ascii")
+        return f"data:image/x-icon;base64,{favicon_data}"
+
+    return None
+
+
+def _inject_favicon_links(html_text: str, favicon_href: str) -> str:
+    """Inject favicon tags in exported report HTML head."""
+    html_text = re.sub(
+        r"<link[^>]+rel=\"(?:apple-touch-icon|icon|shortcut icon)\"[^>]*>",
+        "",
+        html_text,
+        flags=re.IGNORECASE,
+    )
+
+    icon_tags = "\n".join(
+        [
+            f'<link rel="icon" href="{html.escape(favicon_href)}">',
+            f'<link rel="shortcut icon" href="{html.escape(favicon_href)}">',
+            f'<link rel="apple-touch-icon" href="{html.escape(favicon_href)}">',
+        ]
+    )
+
+    if "</head>" in html_text:
+        html_text = html_text.replace("</head>", f"  {icon_tags}\n</head>", 1)
+    else:
+        html_text = f"{html_text}\n{icon_tags}\n"
+    return html_text
+
+
+def _apply_html_head_metadata(output_path: Path) -> None:
+    """Update the generated report HTML with favicon metadata."""
+    html_text = output_path.read_text(encoding="utf-8")
+    favicon_href = _resolve_report_favicon_href(output_path)
+    if not favicon_href:
+        return
+    updated_html = _inject_favicon_links(html_text, favicon_href=favicon_href)
+    if updated_html != html_text:
+        output_path.write_text(updated_html, encoding="utf-8")
+
+
+def generate_report(
+    runtime: _ReportBlockRenderer,
+    config_file: Path,
+    output_file: str,
+) -> None:
+    """Render a YAML-configured Panel report to an HTML file.
+
+    Parameters
+    ----------
+    runtime : _ReportBlockRenderer
+        Renderer implementing the report-block rendering protocol.
+    config_file : Path
+        Path to the YAML report configuration file.
+    output_file : str
+        Destination file path for the generated HTML report.
+
+    Returns
+    -------
+    None
+        The report is written to ``output_file``; no value is returned.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the configuration file does not exist.
+    ValueError
+        If the YAML content is invalid or has an unsupported structure.
+    OSError
+        If the output directory or HTML report cannot be written.
+    """
+    pn.extension("plotly")
+    pn.config.respect_explicit_sizing = True
+    cfg_path = config_file.resolve()
+    cfg = load_report_config(cfg_path)
+    print(f"Loading config → {cfg_path}")
+
+    _assign_section_ids(cfg["sections"])
+
+    rendered_blocks = [runtime.render_block(block_cfg) for block_cfg in cfg["sections"]]
+    nav_bar = build_navigation_bar(cfg["sections"], getattr(runtime, "class_navigation_items", None))
+
+    out_path = Path(output_file).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    apply_report_css(custom_css=cfg.get("custom_css"), base_dir=cfg_path.parent)
+    report_content = pn.Column(
+        *[block for block in rendered_blocks if block is not None],
+        css_classes=["report-content"],
+        sizing_mode="stretch_width",
+    )
+    report_layout = pn.Row(
+        pn.Column(nav_bar, css_classes=["report-sidebar"], width=300, sizing_mode="stretch_height"),
+        report_content,
+        css_classes=["main-report"],
+        sizing_mode="stretch_width",
+    )
+    report_layout.append(pn.pane.HTML(f"<script>{report_js_text()}</script>", sizing_mode="stretch_width"))
+
+    resolved_title = _resolve_report_title(runtime=runtime, sections=cfg["sections"])
+    with open(str(out_path), mode="w", encoding="utf-8") as f:
+        report_layout.save(f, embed=True, title=resolved_title)
+
+    _apply_html_head_metadata(out_path)
+
+    logger.info("Report saved → %s", output_file)
+
+
+def _slugify(text: str) -> str:
+    """Convert text to a lowercase, hyphen-separated navigation anchor.
+
+    Parameters
+    ----------
+    text : str
+        Label to normalize. Runs of non-ASCII-alphanumeric characters
+        become a single hyphen, and leading or trailing hyphens are removed.
+
+    Returns
+    -------
+    str
+        A normalized anchor string, which may be empty if ``text`` contains no
+        ASCII letters or digits.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug
+
+
+def _block_label(block_cfg: dict[str, Any]) -> str:
+    """Resolve the display label used for a block in the navigation bar.
+
+    The block's non-empty string ``params.title`` takes precedence. Otherwise,
+    its ``type`` value is converted to title case, with ``"Section"`` as the
+    fallback.
+
+    Parameters
+    ----------
+    block_cfg : dict[str, Any]
+        Block configuration mapping.
+
+    Returns
+    -------
+    str
+        A non-empty, human-readable label.
+    """
+    params = block_cfg.get("params", {})
+    if isinstance(params, dict):
+        title = params.get("title")
+    else:
+        title = ""
+    if isinstance(title, str) and title.strip():
+        return title.strip()
+    block_type = block_cfg.get("type", "section")
+    label = str(block_type).replace("_", " ").strip().title()
+    if label:
+        return label
+    return "Section"
+
+
+def _assign_section_ids(blocks: list[dict[str, Any]], used: set[str] | None = None, prefix: str = "section") -> None:
+    """Add unique navigation anchor IDs to blocks and nested group children.
+
+    The input block dictionaries are modified in place by adding a
+    ``_section_id`` entry. IDs are derived from block labels and receive a
+    numeric suffix when needed to avoid collisions.
+
+    Parameters
+    ----------
+    blocks : list[dict[str, Any]]
+        Block configurations to update.
+    used : set[str] or None, default=None
+        Optional set of IDs already assigned. It is updated in place and
+        shared with recursive calls so IDs remain unique across the report.
+    prefix : str, default="section"
+        Prefix used when a label cannot produce a non-empty slug.
+
+    Returns
+    -------
+    None
+        The block mappings and optional ``used`` set are updated in place.
+    """
+    used_ids = used if used is not None else set()
+    for idx, block in enumerate(blocks, start=1):
+        label_slug = _slugify(_block_label(block))
+        if label_slug:
+            base = label_slug
+        else:
+            base = f"{prefix}-{idx}"
+        candidate = base
+        suffix = 2
+        while candidate in used_ids:
+            candidate = f"{base}-{suffix}"
+            suffix += 1
+        used_ids.add(candidate)
+        block["_section_id"] = candidate
+        if block.get("type") == "group":
+            children = block.get("blocks", [])
+            if isinstance(children, list):
+                _assign_section_ids(children, used=used_ids, prefix=f"{candidate}-item")
+
+
+def _wrap_section_anchor(content: pn.viewable.Viewable, section_id: str | None) -> pn.Column:
+    """Place rendered content in a section container with an optional anchor.
+
+    Parameters
+    ----------
+    content : pn.viewable.Viewable
+        Panel viewable representing the rendered block.
+    section_id : str or None
+        HTML element ID targeted by navigation links, or ``None``
+        to create a section without an anchor element.
+
+    Returns
+    -------
+    pn.Column
+        A stretch-width Panel column containing the anchor, when present, and
+        the rendered content.
+    """
+    if not section_id:
+        return pn.Column(content, css_classes=["scroll-section"], sizing_mode="stretch_width")
+    anchor = pn.pane.HTML(f'<div id="{section_id}" class="scroll-anchor"></div>', sizing_mode="stretch_width")
+    return pn.Column(anchor, content, css_classes=["scroll-section"], sizing_mode="stretch_width")
+
+
+def build_navigation_bar(
+    blocks: list[dict],
+    class_navigation_items: dict[str, list[dict[str, str]]] | None = None,
+) -> pn.pane.HTML:
+    """Build the report's sticky navigation as a Panel HTML pane.
+
+    Each block becomes a link to its ``_section_id``. Group blocks also include
+    links for their child blocks. Labels and IDs are HTML-escaped before they
+    are inserted into the markup, and the Shapash logo is embedded as a data
+    URL.
+
+    Parameters
+    ----------
+    blocks : list[dict[str, Any]]
+        Top-level block configurations, including assigned section IDs. Group
+        blocks may contain a ``"blocks"`` key whose child blocks are rendered
+        as nested navigation entries.
+    class_navigation_items : dict[str, list[dict[str, str]]] | None, optional
+        Mapping from a child block section ID to additional navigation entries.
+        Each entry must provide:
+            - ``"label"``: text displayed in the navigation.
+            - ``"anchor"``: target HTML anchor identifier.
+        These entries are rendered beneath the corresponding child block and
+        are typically used to expose class-specific sections in classification
+        reports. If ``None``, no additional class-level navigation items are
+        added.
+
+    Returns
+    -------
+    pn.pane.HTML
+        A stretch-width ``pn.pane.HTML`` containing the navigation markup.
+
+    Raises
+    ------
+    OSError
+        If the packaged Shapash logo cannot be read.
+    """
+    items_html: list[str] = []
+    item_count = 0
+    class_navigation_items = class_navigation_items or {}
+    for block in blocks:
+        block_type = block.get("type")
+        label = html.escape(_block_label(block))
+        section_id = html.escape(str(block.get("_section_id", "")))
+        if block_type == "group":
+            item_count += 1
+            children_links: list[str] = []
+            for child in block.get("blocks", []):
+                child_label = html.escape(_block_label(child))
+                child_section_id = str(child.get("_section_id", ""))
+                child_id = html.escape(child_section_id)
+                item_count += 1
+                children_links.append(f'<a class="nav-item nav-child" href="#{child_id}">{child_label}</a>')
+                for class_item in class_navigation_items.get(child_section_id, []):
+                    class_label = html.escape(class_item["label"])
+                    class_anchor = html.escape(class_item["anchor"])
+                    item_count += 1
+                    children_links.append(f'<a class="nav-item nav-child" href="#{class_anchor}">{class_label}</a>')
+            items_html.append(
+                "".join(
+                    [
+                        '<div class="nav-group">',
+                        f'<a class="nav-item nav-group-title" href="#{section_id}">{label}</a>',
+                        '<div class="nav-group-children">',
+                        *children_links,
+                        "</div>",
+                        "</div>",
+                    ]
+                )
+            )
+            continue
+
+        item_count += 1
+        items_html.append(f'<a class="nav-item" href="#{section_id}">{label}</a>')
+
+    logo_path = Path(__file__).resolve().parent.parent / "style" / "shapash-fond-clair.png"
+    logo_data = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    logo_html = f'<div class="nav-logo"><img src="data:image/png;base64,{logo_data}" alt="Shapash logo" /></div>'
+
+    nav_scale = max(0.62, min(1.0, 24 / max(1, item_count)))
+    nav_html = "".join(
+        [
+            f'<nav class="report-nav" style="--nav-scale: {nav_scale:.3f};">',
+            logo_html,
+            '<div class="nav-current" aria-live="polite">',
+            '<span class="nav-current-label">You are here</span>',
+            '<span class="nav-current-value">Top of report</span>',
+            "</div>",
+            *items_html,
+            "</nav>",
+        ]
+    )
+    return pn.pane.HTML(nav_html, sizing_mode="stretch_width")

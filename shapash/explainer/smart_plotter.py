@@ -4,19 +4,28 @@ Smart plotter module
 
 import math
 import random
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
+from matplotlib.figure import Figure
 from pandas.api.types import is_bool_dtype, is_numeric_dtype
 from plotly import graph_objs as go
 from plotly.offline import plot
 
+from shapash.manipulation.mask import compute_mask
 from shapash.manipulation.select_lines import select_lines
 from shapash.manipulation.summarize import project_feature_values_1d
 from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
-from shapash.plots.plot_contribution import plot_scatter, plot_violin
-from shapash.plots.plot_correlations import plot_correlations
+from shapash.plots.plot_contribution import (
+    plot_interactions_scatter,
+    plot_interactions_violin,
+    plot_scatter,
+    plot_violin,
+    update_interactions_fig,
+)
+from shapash.plots.plot_correlations import plot_contributions_correlations, plot_correlations
 from shapash.plots.plot_evaluation_metrics import (
     compute_kmeans_labels,
     compute_tsne_projection,
@@ -26,10 +35,10 @@ from shapash.plots.plot_evaluation_metrics import (
     plot_scatter_prediction,
 )
 from shapash.plots.plot_feature_importance import plot_feature_importance
-from shapash.plots.plot_interactions import plot_interactions_scatter, plot_interactions_violin, update_interactions_fig
 from shapash.plots.plot_line_comparison import plot_line_comparison
 from shapash.plots.plot_stability import plot_amplitude_vs_stability, plot_stability_distribution
 from shapash.plots.plot_univariate import plot_distribution
+from shapash.report.common import VarType, series_dtype
 from shapash.style.style_utils import colors_loading, define_style, select_palette
 from shapash.utils.sampling import subset_sampling
 from shapash.utils.utils import (
@@ -54,13 +63,13 @@ class SmartPlotter:
     just use the following syntax
     Attributes :
     explainer: object
-        SmartExplainer instance to point to.
+        Explainer compute object (delegating to SmartExplainer state).
     Example
     --------
     >>> xpl.plot.my_plot_method(param=value)
     """
 
-    def __init__(self, explainer, colors_dict=None):
+    def __init__(self, explainer: Any, colors_dict: dict[str, Any] | None = None) -> None:
         self._explainer = explainer
         if colors_dict:
             self._style_dict = define_style(colors_dict)
@@ -71,17 +80,21 @@ class SmartPlotter:
         self._last_compacity_selection = False
         self._tuning_round_digit()
 
-    def define_style_attributes(self, colors_dict):
+    def define_style_attributes(self, colors_dict: dict[str, Any]) -> None:
         """
         define_style_attributes allows shapash user to change the color of plot
         Parameters
         ----------
-        colors_dict: dict
+        colors_dict : dict[str, Any]
             Dict of the colors used in the different plots
+
+        Returns
+        -------
+        None
         """
         self._style_dict = define_style(colors_dict)
 
-    def _tuning_round_digit(self):
+    def _tuning_round_digit(self) -> None:
         """
         adapts the display of the number of digit to the distribution of points
         """
@@ -91,24 +104,26 @@ class SmartPlotter:
         else:
             self._round_digit = 0
 
-    def _get_selection(self, line, var_dict, x_val, contrib):
+    def _get_selection(
+        self, line: list[Any], var_dict: pd.DataFrame, x_val: pd.DataFrame, contrib: pd.DataFrame
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         An auxiliary function to select the row of interest.
         Parameters
         ----------
-        line: list
+        line : list[Any]
             A one element list containing the index of the observation of interest.
-        var_dict: pandas.DataFrame
+        var_dict : pd.DataFrame
             A dataframe that indicates for each observation (each row)
             the index of the sorted contribution
             (sorted by descending order, in absolute values).
-        x_val: pandas.DataFrame
+        x_val : pd.DataFrame
             A dataframe with sorted features for each observation.
-        contrib: pandas.DataFrame
+        contrib : pd.DataFrame
             A dataframe with sorted contributions for each observation.
         Returns
         -------
-        numpy arrays
+        tuple[np.ndarray, np.ndarray, np.ndarray]
             Unidimensional numpy arrays containing the values for one observation.
         """
         contrib = contrib.loc[line[0], :].values
@@ -117,7 +132,15 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
-    def _apply_mask_one_line(self, line, var_dict, x_val, contrib, label=None):
+    def _apply_mask_one_line(
+        self,
+        line: list[Any],
+        var_dict: np.ndarray,
+        x_val: np.ndarray,
+        contrib: np.ndarray,
+        label: int | None = None,
+        mask_state: dict[str, Any] | None = None,
+    ) -> tuple[list[Any], list[Any], list[Any]]:
         """
         An auxiliary function to select the mask to apply before plotting local
         explanation.
@@ -134,17 +157,28 @@ class SmartPlotter:
             Unidimensional numpy array containing the values for the observation of interest.
         label: integer (default None)
             specify the pd.DataFrame of the mask list (classification case) to apply
+        mask_state: dict (default None)
+            `{"mask": ..., "masked_contributions": ..., "mask_params": ...}` computed locally
+            (e.g. via `compute_mask`). When given, it is used instead of reading `mask` off the
+            explainer, so a one-off mask never has to be stored there.
         Returns
         -------
-        lists
-            Masked input lists.
+        var_dict: list
+            `var_dict`, restricted to the unmasked positions.
+        x_val: list
+            `x_val`, restricted to the unmasked positions.
+        contrib: list
+            `contrib`, restricted to the unmasked positions.
         """
         mask = np.array([True] * len(contrib))
-        if hasattr(self._explainer, "mask"):
-            if isinstance(self._explainer.mask, list):
-                mask = self._explainer.mask[label].loc[line[0], :].values
+        explainer_mask = mask_state["mask"] if mask_state is not None else getattr(self._explainer, "mask", None)
+        if explainer_mask is not None:
+            if isinstance(explainer_mask, list):
+                # a list of masks only occurs in the classification case, where `label` is
+                # always resolved to an int (see SmartExplainer.check_label_name) before reaching here
+                mask = explainer_mask[cast(int, label)].loc[line[0], :].values
             else:
-                mask = self._explainer.mask.loc[line[0], :].values
+                mask = explainer_mask.loc[line[0], :].values
 
         contrib = contrib[mask]
         x_val = x_val[mask]
@@ -152,31 +186,67 @@ class SmartPlotter:
 
         return var_dict.tolist(), x_val.tolist(), contrib.tolist()
 
-    def _check_masked_contributions(self, line, var_dict, x_val, contrib, label=None):
+    def _check_masked_contributions(
+        self,
+        line: list[Any],
+        var_dict: list[Any],
+        x_val: list[Any],
+        contrib: list[Any],
+        label: int | None = None,
+        mask_state: dict[str, Any] | None = None,
+    ) -> tuple[list[Any], list[Any], list[Any]]:
         """
         Check for masked contributions and update features_values and contrib
         to take the sum of masked contributions into account.
+
         Parameters
         ----------
         line: list
             If the label is of string type, check if it can be changed to integer to select the
             good dataframe object.
-        var_dict: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
-        x_val: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
-        contrib: numpy array
-            Unidimensional numpy array containing the values for the observation of interest.
+        var_dict: list
+            List containing the values for the observation of interest, as returned by
+            `_apply_mask_one_line`.
+        x_val: list
+            List containing the values for the observation of interest, as returned by
+            `_apply_mask_one_line`.
+        contrib: list
+            List containing the values for the observation of interest, as returned by
+            `_apply_mask_one_line`.
+        label: integer (default None)
+            specify the pd.DataFrame of the masked_contributions list (classification case) to apply
+        mask_state: dict (default None)
+            `{"mask": ..., "masked_contributions": ..., "mask_params": ...}` computed locally
+            (e.g. via `compute_mask`). When given, it is used instead of reading
+            `masked_contributions` off the explainer.
+
         Returns
         -------
-        numpy arrays
-            Input arrays updated with masked contributions.
+        var_dict: list
+            `var_dict`, extended with a label per hidden contribution that was masked.
+        x_val: list
+            `x_val`, extended with a placeholder value per hidden contribution that was masked.
+        contrib: list
+            `contrib`, extended with the summed value of each hidden contribution that was masked.
         """
-        if hasattr(self._explainer, "masked_contributions"):
-            if isinstance(self._explainer.masked_contributions, list):
-                ext_contrib = self._explainer.masked_contributions[label].loc[line[0], :].values
+        explainer_masked_contributions = (
+            mask_state["masked_contributions"]
+            if mask_state is not None
+            else getattr(self._explainer, "masked_contributions", None)
+        )
+        if explainer_masked_contributions is not None:
+            if isinstance(explainer_masked_contributions, list):
+                # a list of masked contributions only occurs in the classification case, where
+                # `label` is always resolved to an int before reaching here
+                masked_contrib = explainer_masked_contributions[cast(int, label)]
             else:
-                ext_contrib = self._explainer.masked_contributions.loc[line[0], :].values
+                masked_contrib = explainer_masked_contributions
+
+            # No hidden contributions are available until a filter computation fills this structure.
+            if masked_contrib.empty or line[0] not in masked_contrib.index:
+                return var_dict, x_val, contrib
+
+            ext_contrib = masked_contrib.loc[line[0], :].values
 
             ext_var_dict = ["Hidden Negative Contributions", "Hidden Positive Contributions"]
             ext_x = ["", ""]
@@ -195,22 +265,307 @@ class SmartPlotter:
 
         return var_dict, x_val, contrib
 
+    def _get_waterfall_base_value(self, line: list[Any], label_num: int | None = None) -> float:
+        """
+        Retrieve the baseline value used to build a local waterfall plot.
+
+        The baseline value is determined using the following priority order:
+
+        1. ``explain_data["base_values"]`` when available.
+        2. Backend explainer ``expected_value`` when available.
+        3. Empirical mean prediction computed from model outputs.
+
+        Parameters
+        ----------
+        line : list[Any]
+            Row identifier used to retrieve the corresponding observation
+            baseline value.
+        label_num : int | None, default=None
+            Target class index for classification tasks. Ignored for
+            regression models.
+
+        Returns
+        -------
+        float
+            Baseline value associated with the selected observation and
+            target label.
+        """
+
+        explain_data = self._explainer.explain_data
+        if isinstance(explain_data, dict) and explain_data.get("base_values") is not None:
+            base_values = explain_data["base_values"]
+            if isinstance(base_values, list):
+                if label_num is None:
+                    raise ValueError("label_num cannot be None when base_values is a list")
+                base_candidate = base_values[label_num]
+            else:
+                base_candidate = base_values
+
+            if isinstance(base_candidate, pd.DataFrame | pd.Series):
+                return float(np.asarray(base_candidate.loc[line[0]]).reshape(-1)[0])
+
+            if isinstance(base_candidate, np.ndarray):
+                n_samples = len(self._explainer.x_init)
+                idx = self._explainer.x_init.index.get_loc(line[0])
+
+                if base_candidate.ndim == 0:
+                    return float(base_candidate)
+                if base_candidate.ndim == 1:
+                    if self._explainer._case == "classification" and base_candidate.size == len(
+                        self._explainer._classes
+                    ):
+                        return float(base_candidate[label_num])
+                    if base_candidate.size == n_samples:
+                        return float(base_candidate[idx])
+                    return float(base_candidate[label_num])
+                if base_candidate.ndim == 2:
+                    if base_candidate.shape[0] == n_samples:
+                        return float(base_candidate[idx, label_num])
+                    return float(base_candidate[label_num, idx])
+
+                return float(base_candidate.reshape(-1)[0])
+
+            return float(base_candidate)
+
+        expected_value = None
+        backend = getattr(self._explainer, "backend", None)
+        backend_explainer = getattr(backend, "explainer", None)
+        if backend_explainer is not None and hasattr(backend_explainer, "expected_value"):
+            expected_value = backend_explainer.expected_value
+
+        if expected_value is not None:
+            if isinstance(expected_value, list | np.ndarray):
+                expected_array = np.array(expected_value).reshape(-1)
+                if label_num is None:
+                    return float(expected_array[0])
+                return float(expected_array[label_num])
+            return float(expected_value)
+
+        if self._explainer._case == "classification":
+            if (
+                label_num is not None
+                and hasattr(self._explainer, "proba_values")
+                and self._explainer.proba_values is not None
+            ):
+                return float(self._explainer.proba_values.iloc[:, label_num].mean())
+            if label_num is not None and hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+                label_code = self._explainer._classes[label_num]
+                return float((self._explainer.y_pred.iloc[:, 0] == label_code).mean())
+        elif self._explainer._case == "regression":
+            if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+                return float(self._explainer.y_pred.iloc[:, 0].mean())
+
+        return 0.0
+
+    def _get_waterfall_classification_coupled_outputs(
+        self,
+        line: list[Any],
+        data: dict[str, Any],
+    ) -> tuple[
+        object,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """
+        Rebuild coupled class outputs for a local waterfall explanation.
+
+        For the selected observation, this method computes one additive score
+        per class using:
+
+            score(class) = base_score(class) + sum(feature contributions)
+
+        These scores are then converted into probabilities using a softmax
+        transformation so that class probabilities remain coupled across
+        all classes.
+
+        Parameters
+        ----------
+        line : list
+            One-element list containing the index of the selected observation.
+        data : dict
+            Explainability data structure containing class-wise sorted feature
+            contributions in ``data["contrib_sorted"]``.
+
+        Returns
+        -------
+        tuple[object, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Tuple containing:
+            - predicted_class: predicted class label.
+            - probs: final class probabilities.
+            - base_probs: class probabilities computed from baseline scores.
+            - scores: final additive class scores.
+            - base_scores: baseline additive class scores.
+        """
+        classes = list(self._explainer._classes)
+        contrib_sorted = data["contrib_sorted"]
+
+        base_scores = np.array(
+            [self._get_waterfall_base_value(line, label_num=class_idx) for class_idx in range(len(classes))]
+        )
+        scores = np.array(
+            [
+                base_scores[class_idx] + float(np.sum(contrib_sorted[class_idx].loc[line[0], :].values.astype(float)))
+                for class_idx in range(len(classes))
+            ]
+        )
+
+        probs = self._softmax_from_scores(scores)
+        base_probs = self._softmax_from_scores(base_scores)
+
+        predicted_idx = int(np.argmax(probs))
+        predicted_class = classes[predicted_idx]
+
+        return predicted_class, probs, base_probs, scores, base_scores
+
+    def _softmax_from_scores(self, scores: np.ndarray | list[float]) -> np.ndarray:
+        """
+        Convert additive class scores into normalized probabilities.
+
+        Parameters
+        ----------
+        scores : np.ndarray | list[float]
+            Raw class scores.
+
+        Returns
+        -------
+        np.ndarray
+            Probability vector whose elements sum to 1.
+
+        Notes
+        -----
+        A max-shift stabilization is applied before exponentiation to improve
+        numerical stability and reduce the risk of overflow.
+        """
+        scores = np.asarray(scores, dtype=float)
+        stabilized = scores - np.max(scores)
+        exp_scores = np.exp(stabilized)
+        return exp_scores / np.sum(exp_scores)
+
+    def _get_waterfall_classification_tooltips(
+        self,
+        line: list[Any],
+        data: dict[str, Any],
+        contrib: list[float],
+        label_num: int,
+    ) -> list[str]:
+        """
+        Build waterfall tooltip text for classification local explanations.
+
+        Each tooltip line displays the cumulative additive score for the
+        explained class together with its coupled probability. Probabilities
+        are recomputed from all class scores using a softmax transformation
+        after each contribution step.
+
+        Parameters
+        ----------
+        line : list
+            One-element list containing the index of the selected observation.
+        data : dict
+            Explainability data structure containing class-wise sorted
+            contributions.
+        contrib : list[float]
+            Displayed contributions for the explained class after filtering
+            and masking.
+        label_num : int
+            Index of the explained class in ``self._explainer._classes``.
+
+        Returns
+        -------
+        list[str]
+            Ordered tooltip strings used by the waterfall plot.
+
+        Notes
+        -----
+        Contributions are processed using the same ordering as the waterfall
+        display: positive contributions (largest absolute values first),
+        followed by zero contributions, then negative contributions.
+        """
+        _, coupled_probs, _, coupled_scores, coupled_base_scores = self._get_waterfall_classification_coupled_outputs(
+            line, data
+        )
+        final_scores = np.array(coupled_scores, dtype=float)
+        base_scores = np.array(coupled_base_scores, dtype=float)
+        tooltips = [f"Proba: <b>{float(self._softmax_from_scores(base_scores)[label_num]):.4f}</b>"]
+
+        final_prob = (
+            float(coupled_probs[label_num])
+            if coupled_probs is not None
+            else float(self._softmax_from_scores(final_scores)[label_num])
+        )
+
+        running_scores = base_scores.copy()
+        for contrib_idx, contrib_value in enumerate(contrib):
+            running_scores[label_num] += contrib_value
+            if contrib_idx == len(contrib) - 1:
+                tooltips.append(f"Proba: <b>{final_prob:.4f}</b>")
+            else:
+                tooltips.append(f"Proba: <b>{float(self._softmax_from_scores(running_scores)[label_num]):.4f}</b>")
+
+        tooltips.append(f"Proba: <b>{final_prob:.4f}</b>")
+
+        return tooltips
+
+    def _get_waterfall_order(
+        self,
+        contrib: list[float],
+        order: Literal["value", "absolute"],
+    ) -> list[int]:
+        """Return contribution indices in the requested waterfall order.
+
+        Parameters
+        ----------
+        contrib : list[float]
+            Contributions to order.
+        order : Literal["value", "absolute"]
+            Sort by signed value or by absolute magnitude.
+
+        Returns
+        -------
+        list[int]
+            Contribution indices in display order.
+        """
+        if order == "value":
+            positive = [i for i, value in enumerate(contrib) if value > 0]
+            zero = [i for i, value in enumerate(contrib) if value == 0]
+            negative = [i for i, value in enumerate(contrib) if value < 0]
+
+            positive.sort(key=lambda i: contrib[i], reverse=True)
+            negative.sort(key=lambda i: contrib[i], reverse=True)
+
+            return positive + zero + negative
+
+        if order == "absolute":
+            return sorted(
+                range(len(contrib)),
+                key=lambda i: abs(contrib[i]),
+                reverse=False,
+            )
+
+        raise ValueError("waterfall_contribution_order must be 'value' or 'absolute'.")
+
     def local_plot(
         self,
-        index=None,
-        row_num=None,
-        query=None,
-        label=None,
-        show_masked=True,
-        show_predict=True,
-        display_groups=None,
-        yaxis_max_label=12,
-        width=900,
-        height=550,
-        file_name=None,
-        auto_open=False,
-        zoom=False,
-    ):
+        index: Any | None = None,
+        row_num: int | None = None,
+        query: str | None = None,
+        label: int | str | None = None,
+        show_masked: bool = True,
+        show_predict: bool = True,
+        plot_type: Literal["bar", "waterfall"] = "bar",
+        display_groups: bool | None = None,
+        yaxis_max_label: int = 12,
+        width: int = 900,
+        height: int = 550,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        zoom: bool = False,
+        waterfall_baseline_position: Literal["top", "bottom"] = "bottom",
+        waterfall_contribution_order: Literal["value", "absolute"] = "absolute",
+        waterfall_xaxis_start: float | int | Literal["auto"] | None = None,
+        mask_state: dict[str, Any] | None = None,
+    ) -> go.Figure:
         """
         The local_plot method is used to display the local contributions of
         an individual in the dataset.
@@ -219,48 +574,78 @@ class SmartPlotter:
         preprocessing is used here to make this graph more intelligible
         index, row_num or query parameter can be used to select the local explanations to display
         local_plot tutorial offers a lot of examples (please check tutorial part of this doc)
+
         Parameters
         ----------
-        index: string, int, float, ... type of index in x_val input matrix (default None)
+        index : Any or None, optional, default=None
             1rst option, to select a row whose local contribution will be displayed.
             Use this parameter to select a row by index
-        row_num: int (default None)
+        row_num : int or None, optional, default=None
             2nd option, specify the row number to select the row whose local
             contribution will be displayed.
-        query: string
+        query : str or None, optional, default=None
             3rd option: Boolean condition that must filter only one line of the prediction
             set before plotting.
-        label: integer or string (default None)
-            If the label is of string type, check if it can be changed to integer to select the
-            good dataframe object.
-        show_masked: bool (default: False)
+        label : int or str or None, optional, default=None
+            Class index, model label, or display label to explain. In classification,
+            ``None`` selects the last class (equivalent to ``-1``). Ignored in regression.
+        show_masked : bool, optional, default=True
             show the sum of the contributions of the hidden variable
-        show_predict: bool (default: True)
+        show_predict : bool, optional, default=True
             show predict or predict proba value
-        yaxis_max_label: int
+        plot_type : Literal["bar", "waterfall"], optional, default="bar"
+            Type of local plot. Available values are:
+            - "bar": standard local contribution bar chart
+            - "waterfall": cumulative local explanation with baseline value
+        yaxis_max_label : int, default=12
             Maximum number of variables to display labels on the y axis
-        display_groups : bool (default: None)
+        display_groups : bool or None, optional, default=None
             Whether or not to display groups of features. This option is
             only useful if groups of features are declared when compiling
             SmartExplainer object.
-        width : Int (default: 900)
+        width : int, default=900
             Plotly figure - layout width
-        height : Int (default: 550)
+        height : int, default=550
             Plotly figure - layout height
-        file_name: string (optional)
+        file_name : str or None, optional
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
+        auto_open : bool, optional, default=False
             Indicate whether to open the bar plot or not.
-        zoom: bool (default=False)
+        zoom : bool, optional, default=False
             graph is currently zoomed
+        waterfall_baseline_position : Literal["top", "bottom"], default="bottom"
+            Position of the baseline in waterfall mode.
+            - "top": baseline is displayed at the top and prediction at the bottom.
+            - "bottom": baseline is displayed at the bottom and prediction at the top.
+        waterfall_contribution_order : Literal["value", "absolute"], default="absolute"
+            Ordering of contributions in waterfall mode.
+            - "value": sort contributions by decreasing signed value.
+            This preserves the current behavior.
+            - "absolute": sort contributions by decreasing absolute value.
+        waterfall_xaxis_start : float or int or Literal["auto"] or None, optional, default=None
+            Start value of x-axis in waterfall mode.
+            - None: keep default automatic axis behavior
+            - "auto": compute an intelligent start based on baseline/prediction scale
+            - numeric value: force a manual x-axis start
+        mask_state : dict[str, Any] or None, optional, default=None
+            `{"mask": ..., "masked_contributions": ..., "mask_params": ...}`, as returned by
+            `shapash.manipulation.mask.compute_mask`. When given, it is used for this plot
+            instead of reading (or implicitly computing and storing) a mask on the explainer -
+            useful for callers, such as a UI slider, that need a one-off mask without mutating
+            the explainer.
+
         Returns
         -------
-        Plotly Figure Object
-            Input arrays updated with masked contributions.
+        plotly.graph_objs.Figure
+            The local contribution bar chart for the selected observation.
+
         Example
         --------
         >>> xpl.plot.local_plot(row_num=0)
         """
+        if plot_type not in {"bar", "waterfall"}:
+            raise ValueError("plot_type must be either 'bar' or 'waterfall'.")
+
         display_groups = (
             True if (display_groups is not False and self._explainer.features_groups is not None) else False
         )
@@ -286,25 +671,38 @@ class SmartPlotter:
         if len(line) != 1:
             if len(line) > 1:
                 raise ValueError("Only one line/observation must match the condition")
-            contrib = []
-            x_val = []
-            var_dict = []
+            contrib: Any = []
+            x_val: Any = []
+            var_dict: Any = []
 
         else:
-            # apply filter if the method have not yet been asked in order to limit the number of feature to display
-            if (
-                not hasattr(self._explainer, "mask_params")  # If the filter method has not been called yet
-                # Or if the already computed mask was not updated with current display_groups parameter
-                or (
+            # Resolve the mask to use for this plot without ever mutating the explainer:
+            # 1. an explicit mask_state passed by the caller (e.g. a UI control's current state)
+            # 2. the mask already stored via an explicit filter() call, if still valid for the
+            #    current display_groups parameter
+            # 3. otherwise a locally computed default mask (max_contrib=20), never stored
+            if mask_state is not None:
+                pass
+            elif hasattr(self._explainer, "mask_params") and (
+                (
                     isinstance(data["contrib_sorted"], pd.DataFrame)
-                    and len(data["contrib_sorted"].columns) != len(self._explainer.mask.columns)
+                    and isinstance(self._explainer.mask, pd.DataFrame)
+                    and len(data["contrib_sorted"].columns) == len(self._explainer.mask.columns)
                 )
                 or (
                     isinstance(data["contrib_sorted"], list)
-                    and len(data["contrib_sorted"][0].columns) != len(self._explainer.mask[0].columns)
+                    and isinstance(self._explainer.mask, list)
+                    and len(data["contrib_sorted"][0].columns) == len(self._explainer.mask[0].columns)
                 )
             ):
-                self._explainer.filter(max_contrib=20, display_groups=display_groups)
+                mask_state = {
+                    "mask": self._explainer.mask,
+                    "masked_contributions": self._explainer.masked_contributions,
+                    "mask_params": self._explainer.mask_params,
+                }
+            else:
+                mask, masked_contributions, mask_params = compute_mask(self._explainer.state, data, max_contrib=20)
+                mask_state = {"mask": mask, "masked_contributions": masked_contributions, "mask_params": mask_params}
 
             if self._explainer._case == "classification":
                 if label is None:
@@ -316,12 +714,45 @@ class SmartPlotter:
                 x_val = data["x_sorted"][label_num]
                 var_dict = data["var_dict"][label_num]
 
+                waterfall_tooltips = None
+                coupled_predicted_class = None
+
+                if plot_type == "waterfall":
+                    coupled_predicted_class, _, _, _, _ = self._get_waterfall_classification_coupled_outputs(line, data)
+
                 if show_predict is True:
+                    subtitle_parts = [f"Explained class: <b>{label_value}</b>"]
+
+                    predicted_class = None
+                    if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+                        predicted_class = self._explainer.y_pred.loc[line[0]].values[0]
+                    elif hasattr(self._explainer, "proba_values") and self._explainer.proba_values is not None:
+                        predicted_class_index = int(np.argmax(self._explainer.proba_values.loc[line[0]].to_numpy()))
+                        predicted_class = self._explainer._classes[predicted_class_index]
+                    elif coupled_predicted_class is not None:
+                        predicted_class = coupled_predicted_class
+
+                    if predicted_class is not None:
+                        predicted_class_value = (
+                            self._explainer.label_dict.get(predicted_class, predicted_class)
+                            if self._explainer.label_dict is not None
+                            else predicted_class
+                        )
+                        subtitle_parts.append(f"Predicted class: <b>{predicted_class_value}</b>")
+
+                    if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                        target_value = self._explainer.y_target.loc[line[0]].values[0]
+                        if self._explainer.label_dict is not None:
+                            target_value = self._explainer.label_dict.get(target_value, target_value)
+                        subtitle_parts.append(f"Target: <b>{target_value}</b>")
+
                     pred = self._explainer._local_pred(line[0], label_num)
                     if pred is None:
-                        subtitle = f"Response: <b>{label_value}</b> - No proba available"
+                        subtitle_parts.append("No proba available")
                     else:
-                        subtitle = f"Response: <b>{label_value}</b> - Proba: <b>{pred:.4f}</b>"
+                        subtitle_parts.append(f"Proba: <b>{pred:.4f}</b>")
+
+                    subtitle = " - ".join(subtitle_parts)
 
             elif self._explainer._case == "regression":
                 contrib = data["contrib_sorted"]
@@ -334,10 +765,25 @@ class SmartPlotter:
                         digit = self._round_digit
                     else:
                         digit = compute_digit_number(pred_value)
-                    subtitle = f"Predict: <b>{round(pred_value, digit)}</b>"
+                    subtitle_parts = [f"Predict: <b>{round(pred_value, digit)}</b>"]
+                    target_raw_value = None
+                    if hasattr(self._explainer, "y_target") and self._explainer.y_target is not None:
+                        target_raw_value = self._explainer.y_target.loc[line[0]].values[0]
+                        subtitle_parts.append(f"Target: <b>{round(target_raw_value, digit)}</b>")
+
+                    error_value = None
+                    if target_raw_value is not None:
+                        error_value = abs(target_raw_value - pred_value)
+
+                    if error_value is not None:
+                        digit = compute_digit_number(error_value)
+                        subtitle_parts.append(f"Prediction error: <b>{round(error_value, digit)}</b>")
+                    subtitle = " - ".join(subtitle_parts)
 
             var_dict, x_val, contrib = self._get_selection(line, var_dict, x_val, contrib)
-            var_dict, x_val, contrib = self._apply_mask_one_line(line, var_dict, x_val, contrib, label=label_num)
+            var_dict, x_val, contrib = self._apply_mask_one_line(
+                line, var_dict, x_val, contrib, label=label_num, mask_state=mask_state
+            )
             # use label of each column
             if display_groups:
                 var_dict = [self._explainer.features_dict[self._explainer.x_init_groups.columns[x]] for x in var_dict]
@@ -345,7 +791,7 @@ class SmartPlotter:
                 var_dict = [self._explainer.features_dict[self._explainer.columns_dict[x]] for x in var_dict]
             if show_masked:
                 var_dict, x_val, contrib = self._check_masked_contributions(
-                    line, var_dict, x_val, contrib, label=label_num
+                    line, var_dict, x_val, contrib, label=label_num, mask_state=mask_state
                 )
             # Filtering all negative or positive contrib if specify in mask
             exclusion = []
@@ -360,40 +806,59 @@ class SmartPlotter:
                 del x_val[expl]
                 del contrib[expl]
 
+            if plot_type == "waterfall":
+                waterfall_order = self._get_waterfall_order(contrib, waterfall_contribution_order)
+                var_dict = [var_dict[i] for i in waterfall_order]
+                x_val = [x_val[i] for i in waterfall_order]
+                contrib = [contrib[i] for i in waterfall_order]
+
+                if self._explainer._case == "classification":
+                    waterfall_tooltips = self._get_waterfall_classification_tooltips(line, data, contrib, label_num)
+
+        base_value = self._get_waterfall_base_value(line, label_num=label_num) if plot_type == "waterfall" else None
+
         fig = plot_bar_chart(
-            line,
-            var_dict,
-            x_val,
-            contrib,
-            self._style_dict,
-            self._explainer.features_groups,
-            self._explainer.x_init,
-            self._explainer.features_dict,
-            self._explainer.inv_features_dict,
-            yaxis_max_label,
-            subtitle,
-            width,
-            height,
-            file_name,
-            auto_open,
-            zoom,
+            index_value=line,
+            var_dict=var_dict,
+            x_val=x_val,
+            contrib=contrib,
+            style_dict=self._style_dict,
+            features_groups=self._explainer.features_groups,
+            x_init=self._explainer.x_init,
+            features_dict=self._explainer.features_dict,
+            inv_features_dict=self._explainer.inv_features_dict,
+            yaxis_max_label=yaxis_max_label,
+            subtitle=subtitle,
+            plot_type=plot_type,
+            base_value=base_value,
+            width=width,
+            height=height,
+            file_name=file_name,
+            auto_open=auto_open,
+            zoom=zoom,
+            waterfall_baseline_position=waterfall_baseline_position,
+            waterfall_xaxis_start=waterfall_xaxis_start,
+            waterfall_tooltips=waterfall_tooltips
+            if self._explainer._case == "classification" and plot_type == "waterfall"
+            else None,
         )
+
         return fig
 
     def contribution_plot(
         self,
-        col,
-        selection=None,
-        label=-1,
-        violin_maxf=10,
-        max_points=2000,
-        proba=True,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-        zoom=False,
-    ):
+        col: str | int,
+        selection: list[Any] | None = None,
+        label: int | str = -1,
+        violin_maxf: int = 10,
+        max_points: int = 2000,
+        proba: bool = True,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        zoom: bool = False,
+    ) -> go.Figure:
         """
         Display a contribution plot using Plotly for a selected feature.
 
@@ -409,7 +874,7 @@ class SmartPlotter:
         ----------
         col : str or int
             The name, label, or column index of the feature to be plotted.
-        selection : list, optional
+        selection : list[Any] or None, optional
             List of row indices to plot (i.e., a subset of the input DataFrame).
             If None, all rows are considered (up to `max_points`).
         label : int or str, default=-1
@@ -476,7 +941,7 @@ class SmartPlotter:
                 col_label = col_name
 
         list_ind, addnote = subset_sampling(
-            self._explainer.x_init, selection, max_points, None if col_is_group else col, col_value_count
+            self._explainer.x_init, selection, max_points, None if col_is_group else col_name, col_value_count
         )
 
         col_value = None
@@ -491,7 +956,7 @@ class SmartPlotter:
             subcontrib = contributions[label_num]
             if self._explainer.y_pred is not None:
                 col_value = self._explainer._classes[label_num]
-            subtitle = f"Response: <b>{label_value}</b>"
+            subtitle = f"Explained class: <b>{label_value}</b>"
             # predict proba Color scale
             if proba and self._explainer.proba_values is not None:
                 proba_values = self._explainer.proba_values.iloc[:, [label_num]]
@@ -535,7 +1000,7 @@ class SmartPlotter:
         if col_is_group:
             feature_values = project_feature_values_1d(
                 feature_values,
-                col,
+                cast(str, col),
                 self._explainer.x_init,
                 self._explainer.x_encoded,
                 self._explainer.preprocessing,
@@ -632,22 +1097,22 @@ class SmartPlotter:
 
     def features_importance(
         self,
-        mode="global",
-        max_features=20,
-        page="top",
-        selection=None,
-        label=-1,
-        group_name=None,
-        display_groups=True,
-        force=False,
-        width=900,
-        height=500,
-        file_name=None,
-        auto_open=False,
-        zoom=False,
-        normalize_by_nb_samples=False,
-        degree="slider",
-    ):
+        mode: Literal["global", "global-local", "cumulative"] = "global",
+        max_features: int = 20,
+        page: int | Literal["top", "worst"] = "top",
+        selection: list[Any] | None = None,
+        label: int | str = -1,
+        group_name: str | None = None,
+        display_groups: bool = True,
+        force: bool = False,
+        width: int = 900,
+        height: int = 500,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        zoom: bool = False,
+        normalize_by_nb_samples: bool = False,
+        degree: float | Literal["slider"] = "slider",
+    ) -> go.Figure:
         """
         Display a Plotly feature importance plot.
 
@@ -656,7 +1121,7 @@ class SmartPlotter:
 
         Parameters
         ----------
-        mode : str, optional, default: 'global'
+        mode : Literal["global", "global-local", "cumulative"], optional
             Defines the type of plot to display.
             - 'global': Displays the feature importance plot from a global perspective.
             - 'global-local': Shows the global feature importance plot with local importance indicators.
@@ -664,12 +1129,12 @@ class SmartPlotter:
         max_features : int, optional, default: 20
             Limits the number of features to display in the plot.
             For example, `max_features=20` will display the 20 most important features.
-        page : int or str, optional, default: 'top'
+        page : int or Literal["top", "worst"], optional
             Allows the user to select which set of features to display.
             - 'top': Shows the most important features.
             - 'worst': Shows the least important features.
             - Page number (integer) allows navigation between different sets of features.
-        selection : list, optional, default: None
+        selection : list[Any] or None, optional
             Specifies a subset of features to compare to the global feature importance.
             This is only applicable when `mode` is set to 'global'. If provided, the list must contain
             indices corresponding to the subset of features to be displayed.
@@ -699,7 +1164,7 @@ class SmartPlotter:
         normalize_by_nb_samples : bool, optional, default: False
             Normalizes feature importance by the number of samples.
             This is only applicable when `mode` is set to 'cumulative'.
-        degree : int, optional, default: 0
+        degree : float or Literal["slider"], optional
             Degree of adjustment to apply to the cumulative feature contributions curve.
             This is only applicable when `mode` is set to 'cumulative'.
 
@@ -713,7 +1178,27 @@ class SmartPlotter:
         >>> xpl.plot.features_importance()
         """
 
-        def get_feature_importance_page(features_importance, page, max_features):
+        def get_feature_importance_page(
+            features_importance: pd.Series,
+            page: int | Literal["top", "worst"],
+            max_features: int,
+        ) -> pd.Series:
+            """Select one page of feature importances.
+
+            Parameters
+            ----------
+            features_importance : pd.Series
+                Feature importances to paginate.
+            page : int or Literal["top", "worst"]
+                Page number or named end of the ranking.
+            max_features : int
+                Number of features to return.
+
+            Returns
+            -------
+            pd.Series
+                Selected feature importances.
+            """
             if isinstance(page, int):
                 nb_features = len(features_importance)
                 nb_page_max = nb_features // max_features + 1
@@ -795,7 +1280,7 @@ class SmartPlotter:
             label_num, _, label_value = self._explainer.check_label_name(label)
             features_importance_case = features_importance[label_num]
             contributions_case = contributions[label_num]
-            subtitle = f"Response: <b>{label_value}</b>"
+            subtitle = f"Explained class: <b>{label_value}</b>"
 
         # Regression case
         elif self._explainer._case == "regression":
@@ -850,8 +1335,19 @@ class SmartPlotter:
             degree=degree,
         )
 
-    def _get_group_feature_importance(self, group_name):
-        """Retrieve the feature importance for a specific group of features."""
+    def _get_group_feature_importance(self, group_name: str) -> pd.Series | list[pd.Series]:
+        """Retrieve feature importance values for a feature group.
+
+        Parameters
+        ----------
+        group_name : str
+            Name of the feature group.
+
+        Returns
+        -------
+        pd.Series or list[pd.Series]
+            Feature importances for the group, per class when applicable.
+        """
         if isinstance(self._explainer.features_imp, list):
             return [
                 label_feat_imp.loc[label_feat_imp.index.isin(self._explainer.features_groups[group_name])]
@@ -861,8 +1357,31 @@ class SmartPlotter:
             self._explainer.features_imp.index.isin(self._explainer.features_groups[group_name])
         ]
 
-    def _get_local_feature_importance(self, indices, local_imp_lev1, local_imp_lev2, label_num=None):
-        """Retrieve local feature importance for global-local mode."""
+    def _get_local_feature_importance(
+        self,
+        indices: pd.Index,
+        local_imp_lev1: Any,
+        local_imp_lev2: Any,
+        label_num: int | None = None,
+    ) -> tuple[Any, Any]:
+        """Retrieve local feature importance for global-local mode.
+
+        Parameters
+        ----------
+        indices : pd.Index
+            Feature labels to retain.
+        local_imp_lev1 : Any
+            First-level local feature importances, optionally split by class.
+        local_imp_lev2 : Any
+            Second-level local feature importances, optionally split by class.
+        label_num : int or None, optional
+            Class index to select for classification.
+
+        Returns
+        -------
+        tuple[Any, Any]
+            First- and second-level importances restricted to ``indices``.
+        """
         if label_num is not None:
             local_imp_lev1 = local_imp_lev1[label_num]
             local_imp_lev2 = local_imp_lev2[label_num]
@@ -872,18 +1391,53 @@ class SmartPlotter:
 
         return local_imp_lev1, local_imp_lev2
 
-    def _get_subset_importance(self, contributions, selection):
-        """Retrieve feature importance for a subset of features, if specified."""
+    def _get_subset_importance(
+        self,
+        contributions: pd.DataFrame,
+        selection: list[Any] | None,
+    ) -> pd.Series | None:
+        """Retrieve feature importance for a selected subset of rows.
+
+        Parameters
+        ----------
+        contributions : pd.DataFrame
+            Contribution matrix used to compute the global importance.
+        selection : list[Any] or None
+            Row indices to include, or ``None`` to skip subset importance.
+
+        Returns
+        -------
+        pd.Series or None
+            Feature importances for the subset, or ``None`` when no selection
+            was requested.
+        """
         if selection is not None:
             return self._explainer.backend.get_global_features_importance(
                 contributions=contributions, explain_data=self._explainer.explain_data, subset=selection
             )
         return None
 
-    def _build_additional_notes(self, subset_feat_imp, selection, max_features):
-        """Generate additional notes to display in the plot."""
+    def _build_additional_notes(
+        self, subset_feat_imp: Any | None, selection: list[Any] | None, max_features: int
+    ) -> str:
+        """Generate additional notes to display in the plot.
+
+        Parameters
+        ----------
+        subset_feat_imp : Any or None
+            Feature importances computed for a selected subset, if any.
+        selection : list[Any] or None
+            Row indices used for the subset.
+        max_features : int
+            Maximum number of features displayed.
+
+        Returns
+        -------
+        str
+            Additional plot note, or an empty string when no note applies.
+        """
         addnote = ""
-        if subset_feat_imp is not None:
+        if subset_feat_imp is not None and selection is not None:
             subset_len = len(selection)
             total_len = self._explainer.x_init.shape[0]
             addnote = add_text(
@@ -897,29 +1451,29 @@ class SmartPlotter:
 
     def compare_plot(
         self,
-        index=None,
-        row_num=None,
-        label=None,
-        max_features=20,
-        width=900,
-        height=550,
-        show_predict=True,
-        file_name=None,
-        auto_open=True,
-    ):
+        index: list[Any] | None = None,
+        row_num: list[int] | None = None,
+        label: int | str | None = None,
+        max_features: int = 20,
+        width: int = 900,
+        height: int = 550,
+        show_predict: bool = True,
+        file_name: str | None = None,
+        auto_open: bool = True,
+    ) -> go.Figure:
         """
         Plotly comparison plot of several individuals' contributions. Plots contributions feature by feature.
         Allows to see the differences of contributions between two or more individuals,
         with each individual represented by a unique line.
         Parameters
         ----------
-        index: list
+        index : list[Any] or None, optional
             1st option to select individual rows.
-            Int list of index referencing rows.
-        row_num: list
+            List of row index labels referencing the input DataFrame.
+        row_num : list[int] or None, optional
             2nd option to select individual rows.
             int list corresponding to the row numbers of individuals (starting at 0).
-        label: int or string (default: None)
+        label : int or str or None, optional
             If the label is of string type, check if it can be changed to integer to select the
             good dataframe object.
         max_features: int (optional, default: 20)
@@ -947,7 +1501,7 @@ class SmartPlotter:
         if sum(arg is not None for arg in [row_num, index]) != 1:
             raise ValueError("You have to specify just one of these arguments: index, row_num")
         # Getting indexes in a list
-        line_reference = []
+        line_reference: list[Any] = []
         if index is not None:
             for ident in index:
                 if ident in self._explainer.x_init.index:
@@ -975,7 +1529,7 @@ class SmartPlotter:
             if show_predict:
                 preds = [self._explainer._local_pred(line, label_num) for line in line_reference]
                 subtitle = (
-                    f"Response: <b>{label_value}</b> - "
+                    f"Explained class: <b>{label_value}</b> - "
                     + "Probas: "
                     + " ; ".join(
                         [
@@ -998,13 +1552,13 @@ class SmartPlotter:
                     ]
                 )
 
-        new_contrib = list()
+        new_contrib: Any = list()
         for ident in line_reference:
             new_contrib.append(contrib.loc[ident])
         new_contrib = np.array(new_contrib).T
 
         # Well labels if available
-        feature_values = [0] * len(contrib.columns)
+        feature_values: Any = [0] * len(contrib.columns)
         if hasattr(self._explainer, "columns_dict"):
             for i, name in enumerate(contrib.columns):
                 feature_name = self._explainer.features_dict[name]
@@ -1035,95 +1589,162 @@ class SmartPlotter:
 
         return fig
 
-    def _select_indices_interactions_plot(self, selection, max_points):
+    def _select_indices_interactions_plot(
+        self,
+        selection: list[Any] | np.ndarray | None,
+        max_points: int,
+        sampling_col: str | tuple[str, str] | None = None,
+        col_value_count: int | tuple[int, int] = 0,
+    ) -> tuple[list[Any] | np.ndarray, str | None]:
         """
-        Method used for sampling indices.
+        Select row indices for interaction plots.
+
+        This method delegates to the same sampling utility as contribution
+        plots, including smart sampling when a driving column or a crossed
+        pair of columns is provided.
+
         Parameters
         ----------
-        selection : list
-            Contains list of index, subset of the input DataFrame that we want to plot
+        selection : list or numpy.ndarray, optional
+            Explicit row indices to keep. If None, sampling is performed over
+            the full compiled dataset.
         max_points : int
-            Maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
+            Maximum number of rows to keep for plotting.
+        sampling_col : str or tuple(str, str), optional
+            Column name (or crossed pair of column names) used to drive smart sampling.
+            If None, random sampling is used when needed.
+        col_value_count : int or tuple(int, int), optional
+            Number of unique values for sampling_col, or per-column unique counts
+            when sampling on a crossed pair of features.
+
         Returns
         -------
-        list_ind : list
-            List of indices to select
-        addnote : str
-            Text to inform the user the selection that has been done.
+        list_ind : list or numpy.ndarray
+            Row indices selected for the plot.
+        addnote : str or None
+            Optional note describing the applied sampling strategy.
         """
+        selection_list = selection.tolist() if isinstance(selection, np.ndarray) else selection
+
         # Sampling
-        addnote = None
-        if selection is None:
-            # interaction_selection attribute is used to store already computed indices of interaction_values
-            if hasattr(self, "interaction_selection"):
-                list_ind = self.interaction_selection
-            elif self._explainer.x_init.shape[0] <= max_points:
-                list_ind = self._explainer.x_init.index.tolist()
-            else:
-                list_ind = random.sample(self._explainer.x_init.index.tolist(), max_points)
-                addnote = "Length of random Subset : "
-        elif isinstance(selection, list):
-            if len(selection) <= max_points:
-                list_ind = selection
-                addnote = "Length of user-defined Subset : "
-            elif hasattr(self, "interaction_selection"):
-                if set(selection).issubset(set(self.interaction_selection)):
-                    list_ind = self.interaction_selection
-            else:
-                list_ind = random.sample(selection, max_points)
-                addnote = "Length of random Subset : "
-        else:
-            raise ValueError("parameter selection must be a list")
-        self.interaction_selection = list_ind
+        list_ind, addnote = subset_sampling(
+            self._explainer.x_init,
+            selection_list,
+            max_points,
+            sampling_col,
+            col_value_count,
+        )
 
         return list_ind, addnote
 
-    def interactions_plot(
-        self,
-        col1,
-        col2,
-        selection=None,
-        violin_maxf=10,
-        max_points=500,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-    ):
+    def _order_interactions_pair(
+        self, col_id1: int, col_id2: int, list_ind: list[Any] | np.ndarray, cat_num_threshold: int
+    ) -> tuple[int, int]:
         """
-        Diplays a Plotly scatter plot or violin plot of two selected features and their combined
-        contributions for each of their values.
-        This plot allows the user to understand how the different combinations of values of the
-        two selected features influence the importance of the two features in the model output.
-        A sample is taken if the number of points to be displayed is too large
+        Order an interaction pair for readability on the x-axis.
+
+        Rules:
+        - categorical + numeric: categorical is placed on x-axis
+        - numeric + numeric: keep input order
+        - categorical + categorical: higher-cardinality variable is placed on x-axis
+
         Parameters
         ----------
-        col1: String or Int
-            Name, label name or column number of the first column whose contributions we want to plot
-        col2: String or Int
-            Name, label name or column number of the second column whose contributions we want to plot
-        selection: list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
-        violin_maxf: int (optional, default: 10)
-            maximum number modality to plot violin. If the feature specified with col argument
-            has more modalities than violin_maxf, a scatter plot will be choose
-        max_points: int (optional, default: 2000)
-            maximum number of points to plot in contribution plot. if input dataset is bigger than
-            max_points, a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        width : Int (default: 900)
-            Plotly figure - layout width
-        height : Int (default: 600)
-            Plotly figure - layout height
-        file_name: string (optional)
-            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
-            Indicate whether to open the bar plot or not.
+        col_id1 : int
+            Column index of the first feature.
+        col_id2 : int
+            Column index of the second feature.
+        list_ind : list or numpy.ndarray
+            Row indices used to inspect current feature distributions.
+        cat_num_threshold : int
+            Threshold used to discriminate categorical from numerical series.
+
         Returns
         -------
-        Plotly Figure Object
+        tuple of int
+            Ordered pair of feature indices to plot.
+        """
+        col_name1 = self._explainer.columns_dict[col_id1]
+        col_name2 = self._explainer.columns_dict[col_id2]
+
+        s1 = self._explainer.x_init.loc[list_ind, col_name1]
+        s2 = self._explainer.x_init.loc[list_ind, col_name2]
+
+        t1 = series_dtype(s1, cat_num_threshold=cat_num_threshold)
+        t2 = series_dtype(s2, cat_num_threshold=cat_num_threshold)
+
+        # Rule 1: cat + num -> categorical on x-axis
+        if t1 == VarType.TYPE_NUM and t2 == VarType.TYPE_CAT:
+            return col_id2, col_id1
+        if t1 == VarType.TYPE_CAT and t2 == VarType.TYPE_NUM:
+            return col_id1, col_id2
+
+        # Rule 3: cat + cat -> higher-cardinality variable on x-axis
+        if t1 == VarType.TYPE_CAT and t2 == VarType.TYPE_CAT:
+            n1 = s1.nunique(dropna=False)
+            n2 = s2.nunique(dropna=False)
+            if n2 > n1:
+                return col_id2, col_id1
+
+        return col_id1, col_id2
+
+    def interactions_plot(
+        self,
+        col1: str | int,
+        col2: str | int,
+        selection: list[Any] | np.ndarray | None = None,
+        label: int | str = -1,
+        violin_maxf: int = 10,
+        max_points: int = 500,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        auto_order: bool = True,
+    ) -> go.Figure:
+        """
+        Display a Plotly interaction plot for two selected features.
+
+        Depending on the number of modalities on the x-axis feature, the plot
+        is rendered either as a scatter plot or as a violin plot with point
+        dispersion. A sample is taken if the number of displayed rows is too
+        large.
+
+        Parameters
+        ----------
+        col1 : str or int
+            Name, display label, or column index of the first feature.
+        col2 : str or int
+            Name, display label, or column index of the second feature.
+        selection : list[Any] or np.ndarray or None, optional
+            Explicit row indices to plot.
+        label : int or str, default=-1
+            Class label used in classification settings. It follows the same
+            behavior as contribution_plot: select one class to display interactions.
+        violin_maxf : int, default=10
+            Maximum number of unique values allowed on the x-axis feature to
+            use a violin plot. Above this threshold, a scatter plot is used.
+        max_points : int, default=500
+            Maximum number of rows to display.
+        width : int, default=900
+            Plotly figure width.
+        height : int, default=600
+            Plotly figure height.
+        file_name : str, optional
+            Output file path used to save the figure.
+        auto_open : bool, default=False
+            Whether to automatically open the saved figure.
+        auto_order : bool, default=True
+            If True, automatically reorder the pair for readability:
+            categorical on x-axis against numeric, and for two categoricals
+            place the highest-cardinality variable on x-axis.
+            If False, the order provided by the user is preserved.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            The generated interaction figure.
+
         Example
         --------
         >>> xpl.plot.interactions_plot(0, 1)
@@ -1133,37 +1754,69 @@ class SmartPlotter:
             raise ValueError("parameters col1 and col2 must be string or int.")
 
         col_id1 = self._explainer.check_features_name([col1])[0]
-        col_name1 = self._explainer.columns_dict[col_id1]
-
         col_id2 = self._explainer.check_features_name([col2])[0]
+
+        list_ind_for_order = selection if isinstance(selection, list) else self._explainer.x_init.index.tolist()
+
+        if auto_order:
+            col_id1, col_id2 = self._order_interactions_pair(
+                col_id1,
+                col_id2,
+                list_ind_for_order,
+                cat_num_threshold=violin_maxf,
+            )
+        col_name1 = self._explainer.columns_dict[col_id1]
         col_name2 = self._explainer.columns_dict[col_id2]
 
         col_value_count1 = self._explainer.features_desc[col_name1]
+        col_value_count2 = self._explainer.features_desc[col_name2]
 
-        list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
+        list_ind, addnote = self._select_indices_interactions_plot(
+            selection=selection,
+            max_points=max_points,
+            sampling_col=(col_name1, col_name2),
+            col_value_count=(col_value_count1, col_value_count2),
+        )
 
-        if addnote is not None:
-            addnote = add_text(
-                [addnote, f"{len(list_ind)} ({int(np.round(100 * len(list_ind) / self._explainer.x_init.shape[0]))}%)"],
-                sep="",
-            )
+        subtitle = None
+        if self._explainer._case == "classification":
+            _, _, label_value = self._explainer.check_label_name(label)
+            subtitle = f"Explained class: <b>{label_value}</b>"
 
         # Subset
-        if self._explainer.postprocessing_modifications:
-            feature_values1 = self._explainer.x_contrib_plot.loc[list_ind, col_name1].to_frame()
-            feature_values2 = self._explainer.x_contrib_plot.loc[list_ind, col_name2].to_frame()
-        else:
-            feature_values1 = self._explainer.x_init.loc[list_ind, col_name1].to_frame()
-            feature_values2 = self._explainer.x_init.loc[list_ind, col_name2].to_frame()
+        # Use display-ready values (x_init) so transcoding/postprocessing dictionaries
+        # are reflected consistently on axes labels and hover.
+        feature_values1 = self._explainer.x_init.loc[list_ind, col_name1].to_frame()
+        feature_values2 = self._explainer.x_init.loc[list_ind, col_name2].to_frame()
 
-        interaction_values = self._explainer.get_interaction_values(selection=list_ind)[:, col_id1, col_id2]
+        if series_dtype(
+            feature_values1.iloc[:, 0], cat_num_threshold=violin_maxf
+        ) == VarType.TYPE_CAT and is_numeric_dtype(feature_values1.iloc[:, 0]):
+            feature_values1 = feature_values1.copy()
+            feature_values1[col_name1] = feature_values1.iloc[:, 0].astype(str)
+
+        col_scale = self._style_dict["interactions_col_scale"]
+        cmin = None
+        cmax = None
+        if is_numeric_dtype(feature_values2.iloc[:, 0]):
+            col_scale, cmin, cmax = tuning_colorscale(
+                self._style_dict["interactions_col_scale"],
+                feature_values2,
+                keep_quantile=(0.05, 0.95),
+            )
+
+        interaction_values = self._explainer.get_interaction_values(selection=list_ind, label=label)[
+            :, col_id1, col_id2
+        ]
         if col_id1 != col_id2:
             interaction_values = interaction_values * 2
 
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self._explainer.features_desc[feature_values1.columns.values[0]]), 8])
         args = (max_len_by_row, 120)
-        feature_values_str = feature_values1.iloc[:, 0].apply(add_line_break, args=args)
+        feature_values_str = feature_values1.iloc[:, 0].apply(
+            lambda value: add_line_break(value, *args) if isinstance(value, str) else value
+        )
         feature_values1 = pd.DataFrame({feature_values1.columns[0]: feature_values_str})
 
         # selecting the best plot : Scatter, Violin?
@@ -1175,8 +1828,10 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=self._style_dict["interactions_col_scale"],
+                col_scale=col_scale,
                 style_dict=self._style_dict,
+                cmin=cmin,
+                cmax=cmax,
             )
         else:
             fig = plot_interactions_violin(
@@ -1186,8 +1841,10 @@ class SmartPlotter:
                 x_values=feature_values1,
                 y_values=pd.DataFrame(interaction_values, index=feature_values1.index),
                 col_values=feature_values2,
-                col_scale=self._style_dict["interactions_col_scale"],
+                col_scale=col_scale,
                 style_dict=self._style_dict,
+                cmin=cmin,
+                cmax=cmax,
             )
 
         update_interactions_fig(
@@ -1195,56 +1852,66 @@ class SmartPlotter:
             col_name1=col_name1,
             col_name2=col_name2,
             addnote=addnote,
+            subtitle=subtitle,
             width=width,
             height=height,
             file_name=file_name,
             auto_open=auto_open,
             style_dict=self._style_dict,
+            col_scale=col_scale,
+            cmin=cmin,
+            cmax=cmax,
         )
 
         return fig
 
     def top_interactions_plot(
         self,
-        nb_top_interactions=5,
-        selection=None,
-        violin_maxf=10,
-        max_points=500,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-    ):
+        nb_top_interactions: int = 5,
+        selection: list[Any] | np.ndarray | None = None,
+        label: int | str = -1,
+        violin_maxf: int = 10,
+        max_points: int = 500,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
         """
-        Displays a dynamic plot with the `nb_top_interactions` most important interactions existing
-        between two variables.
-        The most important interactions are determined computing the sum of all absolute shap interactions
-        values between all existing pairs of variables.
-        A button allows to select and display the corresponding features values and their shap contribution values.
+        Display a dynamic figure for the most important feature interactions.
+
+        The most important interactions are determined by the sum of absolute
+        SHAP interaction values over all pairs of variables. Each pair can then
+        be displayed through a dropdown menu, reusing the same ordering rules
+        as ``interactions_plot(auto_order=True)``.
+
         Parameters
         ----------
         nb_top_interactions : int
             Number of top interactions to display.
-        selection : list (optional)
-            Contains list of index, subset of the input DataFrame that we want to plot
-        violin_maxf : int (optional, default: 10)
-            maximum number modality to plot violin. If the feature specified with col argument
-            has more modalities than violin_maxf, a scatter plot will be choose
-        max_points : int (optional, default: 500)
-            maximum number to plot in contribution plot. if input dataset is bigger than max_points,
-            a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
-        width : Int (default: 900)
-            Plotly figure - layout width
-        height : Int (default: 600)
-            Plotly figure - layout height
-        file_name: string (optional)
-            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
-        auto_open: Boolean (optional)
-            Indicate whether to open the bar plot or not.
+        selection : list[Any] or np.ndarray or None, optional
+            Explicit row indices to plot.
+        label : int or str, default=-1
+            Class label used in classification settings. It follows the same
+            behavior as contribution_plot: select one class to display interactions.
+        violin_maxf : int, default=10
+            Maximum number of unique values allowed on the x-axis feature to
+            use a violin plot. Above this threshold, a scatter plot is used.
+        max_points : int, default=500
+            Maximum number of rows to display.
+        width : int, default=900
+            Plotly figure width.
+        height : int, default=600
+            Plotly figure height.
+        file_name : str, optional
+            Output file path used to save the figure.
+        auto_open : bool, default=False
+            Whether to automatically open the saved figure.
+
         Returns
         -------
         go.Figure
+
         Example
         --------
         >>> xpl.plot.top_interactions_plot()
@@ -1252,39 +1919,133 @@ class SmartPlotter:
 
         list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
-        interaction_values = self._explainer.get_interaction_values(selection=list_ind)
+        subtitle = None
+        if self._explainer._case == "classification":
+            _, _, label_value = self._explainer.check_label_name(label)
+            subtitle = f"Explained class: <b>{label_value}</b>"
+
+        interaction_values = self._explainer.get_interaction_values(selection=list_ind, label=label)
 
         sorted_top_features_indices = compute_sorted_variables_interactions_list_indices(interaction_values)
 
         indices_to_plot = sorted_top_features_indices[:nb_top_interactions]
+        ordered_indices_to_plot = []
         interactions_indices_traces_mapping = []
+        interactions_indices_coloraxis_mapping = []
+        interactions_indices_xaxis_mapping = []
+        interactions_indices_yaxis_mapping = []
+        interactions_indices_yaxis2_mapping = []
         fig = go.Figure()
+
+        def _extract_xaxis_mapping(xaxis: Any) -> dict[str, Any]:
+            """Extract explicitly configured x-axis properties.
+
+            Parameters
+            ----------
+            xaxis : Any
+                Plotly x-axis object.
+
+            Returns
+            -------
+            dict[str, Any]
+                Non-null axis properties suitable for updating another figure.
+            """
+            keys = ["type", "tickmode", "tickvals", "ticktext", "range", "dtick", "tickangle"]
+            out = {}
+            for key in keys:
+                val = getattr(xaxis, key, None)
+                if val is not None:
+                    out[key] = list(val) if isinstance(val, tuple) else val
+            return out
+
+        def _extract_yaxis_mapping(yaxis: Any | None) -> dict[str, Any]:
+            """Extract explicitly configured y-axis properties.
+
+            Parameters
+            ----------
+            yaxis : Any or None
+                Plotly y-axis object, if present.
+
+            Returns
+            -------
+            dict[str, Any]
+                Non-null axis properties, or an empty mapping when absent.
+            """
+            if yaxis is None:
+                return {}
+            keys = ["side", "range", "showticklabels", "showgrid", "visible", "overlaying", "autorange"]
+            out = {}
+            for key in keys:
+                val = getattr(yaxis, key, None)
+                if val is not None:
+                    out[key] = list(val) if isinstance(val, tuple) else val
+            return out
+
         for i, ids in enumerate(indices_to_plot):
             id0, id1 = ids
+            id0, id1 = self._order_interactions_pair(id0, id1, list_ind, cat_num_threshold=violin_maxf)
+            ordered_indices_to_plot.append((id0, id1))
 
             fig_one_interaction = self.interactions_plot(
                 col1=self._explainer.columns_dict[id0],
                 col2=self._explainer.columns_dict[id1],
-                selection=selection,
+                selection=list_ind,
+                label=label,
                 violin_maxf=violin_maxf,
                 max_points=max_points,
                 width=width,
                 height=height,
                 file_name=None,
                 auto_open=False,
+                auto_order=True,
             )
 
             # The number of traces of each figure is stored
             interactions_indices_traces_mapping.append(len(fig_one_interaction.data))
+            interactions_indices_coloraxis_mapping.append(
+                {
+                    "colorscale": fig_one_interaction.layout.coloraxis.colorscale,
+                    "cmin": fig_one_interaction.layout.coloraxis.cmin,
+                    "cmax": fig_one_interaction.layout.coloraxis.cmax,
+                }
+            )
+            interactions_indices_xaxis_mapping.append(_extract_xaxis_mapping(fig_one_interaction.layout.xaxis))
+            interactions_indices_yaxis_mapping.append(_extract_yaxis_mapping(fig_one_interaction.layout.yaxis))
+            interactions_indices_yaxis2_mapping.append(_extract_yaxis_mapping(fig_one_interaction.layout.yaxis2))
 
             for trace in fig_one_interaction.data:
                 trace.visible = True if i == 0 else False
                 fig.add_trace(trace=trace)
 
-        def generate_title_dict(col_name1, col_name2, addnote):
+        def generate_title_dict(
+            col_name1: str, col_name2: str, addnote: str | None, subtitle: str | None
+        ) -> dict[str, Any]:
+            """Build a Plotly title from a feature pair and optional notes.
+
+            Parameters
+            ----------
+            col_name1 : str
+                Name of the first feature.
+            col_name2 : str
+                Name of the second feature.
+            addnote : str or None
+                Optional sampling note.
+            subtitle : str or None
+                Optional plot subtitle.
+
+            Returns
+            -------
+            dict[str, Any]
+                Plotly title configuration.
+            """
             title = f"<b>{truncate_str(col_name1)} and {truncate_str(col_name2)}</b> shap interaction values"
-            if addnote:
-                title += f"<span style='font-size: 12px;'><br />{add_text([addnote], sep=' - ')}</span>"
+            if subtitle or addnote:
+                if subtitle and addnote:
+                    title += "<br><sup>" + subtitle + " - " + addnote + "</sup>"
+                elif subtitle:
+                    title += "<br><sup>" + subtitle + "</sup>"
+                elif addnote:
+                    title += "<br><sup>" + addnote + "</sup>"
             dict_t = self._style_dict["dict_title"] | {
                 "text": title,
                 "y": 0.88,
@@ -1294,7 +2055,34 @@ class SmartPlotter:
             }
             return dict_t
 
-        fig.layout.coloraxis.colorscale = self._style_dict["interactions_col_scale"]
+        first_coloraxis = interactions_indices_coloraxis_mapping[0]
+        first_xaxis = interactions_indices_xaxis_mapping[0]
+        first_yaxis = interactions_indices_yaxis_mapping[0]
+        first_yaxis2 = interactions_indices_yaxis2_mapping[0]
+        fig.layout.coloraxis.colorscale = (
+            first_coloraxis["colorscale"]
+            if first_coloraxis["colorscale"] is not None
+            else self._style_dict["interactions_col_scale"]
+        )
+        if first_coloraxis["cmin"] is not None and first_coloraxis["cmax"] is not None:
+            fig.layout.coloraxis.cmin = first_coloraxis["cmin"]
+            fig.layout.coloraxis.cmax = first_coloraxis["cmax"]
+        fig.update_xaxes(**first_xaxis)
+        fig.update_layout(yaxis=first_yaxis, yaxis2=first_yaxis2)
+
+        # Plotly updatemenus uses paper coordinates (not pixels).
+        # Convert target pixel offsets from the top-left of the full figure
+        # into normalized paper coordinates to keep a stable visual position.
+        margin_left = 90
+        margin_right = 20
+        margin_top = 120
+        margin_bottom = 70
+        menu_left_px = 12
+        menu_top_px = 12
+        plot_width = max(width - margin_left - margin_right, 1)
+        plot_height = max(height - margin_top - margin_bottom, 1)
+        menu_x = (menu_left_px - margin_left) / plot_width
+        menu_y = 1 + (margin_top - menu_top_px) / plot_height
         updatemenus = [
             dict(
                 active=0,
@@ -1313,56 +2101,61 @@ class SmartPlotter:
                                 },
                                 {
                                     "xaxis": {
+                                        **interactions_indices_xaxis_mapping[id_trace],
                                         "title": {
                                             **{"text": self._explainer.columns_dict[i]},
                                             **self._style_dict["dict_xaxis"],
-                                        }
+                                        },
                                     },
+                                    "yaxis": interactions_indices_yaxis_mapping[id_trace],
+                                    "yaxis2": interactions_indices_yaxis2_mapping[id_trace],
                                     "legend": {"title": {"text": self._explainer.columns_dict[j]}},
                                     "coloraxis": {
                                         "colorbar": {"title": {"text": self._explainer.columns_dict[j]}},
-                                        "colorscale": fig.layout.coloraxis.colorscale,
+                                        "colorscale": (
+                                            interactions_indices_coloraxis_mapping[id_trace]["colorscale"]
+                                            if interactions_indices_coloraxis_mapping[id_trace]["colorscale"]
+                                            is not None
+                                            else self._style_dict["interactions_col_scale"]
+                                        ),
+                                        **(
+                                            {
+                                                "cmin": interactions_indices_coloraxis_mapping[id_trace]["cmin"],
+                                                "cmax": interactions_indices_coloraxis_mapping[id_trace]["cmax"],
+                                            }
+                                            if interactions_indices_coloraxis_mapping[id_trace]["cmin"] is not None
+                                            and interactions_indices_coloraxis_mapping[id_trace]["cmax"] is not None
+                                            else {}
+                                        ),
                                     },
                                     "title": generate_title_dict(
-                                        self._explainer.columns_dict[i], self._explainer.columns_dict[j], addnote
+                                        self._explainer.columns_dict[i],
+                                        self._explainer.columns_dict[j],
+                                        addnote,
+                                        subtitle,
                                     ),
                                 },
                             ],
                         )
-                        for id_trace, (i, j) in enumerate(indices_to_plot)
+                        for id_trace, (i, j) in enumerate(ordered_indices_to_plot)
                     ]
                 ),
                 direction="down",
-                pad={"r": 10, "t": 10},
+                pad={"r": 10, "t": 0},
                 showactive=True,
-                x=0.37,
+                x=menu_x,
                 xanchor="left",
-                y=1.25,
+                y=menu_y,
                 yanchor="top",
             )
         ]
-        fig.update_layout(
-            xaxis_title=self._explainer.columns_dict[sorted_top_features_indices[0][0]],
-            yaxis_title="Shap interaction value",
-            updatemenus=updatemenus,
-            annotations=[
-                dict(
-                    text=f"Sorted top {len(indices_to_plot)} SHAP interaction Variables :",
-                    x=0,
-                    xref="paper",
-                    y=1.2,
-                    yref="paper",
-                    align="left",
-                    showarrow=False,
-                )
-            ],
-        )
 
         update_interactions_fig(
             fig=fig,
-            col_name1=self._explainer.columns_dict[sorted_top_features_indices[0][0]],
-            col_name2=self._explainer.columns_dict[sorted_top_features_indices[0][1]],
+            col_name1=self._explainer.columns_dict[ordered_indices_to_plot[0][0]],
+            col_name2=self._explainer.columns_dict[ordered_indices_to_plot[0][1]],
             addnote=addnote,
+            subtitle=subtitle,
             width=width,
             height=height,
             file_name=None,
@@ -1370,7 +2163,14 @@ class SmartPlotter:
             style_dict=self._style_dict,
         )
 
-        fig.update_layout(title={"y": 0.88, "x": 0.5, "xanchor": "center", "yanchor": "top"})
+        fig.update_layout(
+            title={"y": 0.88, "x": 0.5, "xanchor": "center", "yanchor": "top"},
+            updatemenus=updatemenus,
+            margin={"l": margin_left, "r": margin_right, "t": margin_top, "b": margin_bottom},
+            xaxis_title=self._explainer.columns_dict[ordered_indices_to_plot[0][0]],
+            yaxis_title="Shap interaction value",
+            barmode="overlay",
+        )
 
         if file_name:
             plot(fig, filename=file_name, auto_open=auto_open)
@@ -1379,19 +2179,19 @@ class SmartPlotter:
 
     def correlations_plot(
         self,
-        df=None,
-        optimized=False,
-        max_features=20,
-        features_to_hide=None,
-        facet_col=None,
-        how="phik",
-        width=900,
-        height=500,
-        degree=2.5,
-        decimals=2,
-        file_name=None,
-        auto_open=False,
-    ):
+        df: pd.DataFrame | None = None,
+        sample_size: int | None = None,
+        max_features: int = 20,
+        features_to_hide: list[str] | None = None,
+        facet_col: str | None = None,
+        how: Literal["phik", "pearson"] = "phik",
+        width: int = 900,
+        height: int = 500,
+        degree: float = 2.5,
+        decimals: int = 2,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
         """
         Correlations matrix heatmap plot.
         The method can use phik or pearson correlations.
@@ -1400,23 +2200,23 @@ class SmartPlotter:
         ----------
         df : pd.DataFrame, optional
             DataFrame for which we want to compute correlations. Will use x_init by default.
-        optimized : boolean, optional
-            True if we want to potentially accelerate the computation of the correlation matrix by reducing the
-            lenght of the data and the number of modalties per columns.
-        max_features : int (default: 10)
+        sample_size : int | None, default=None
+            Maximum number of rows used to compute the correlation matrix.
+            If ``None``, no sampling is performed.
+        max_features : int (default: 20)
             Max number of features to show on the matrix.
         features_to_hide : list (optional)
             List of features that will not appear on the graph
         facet_col : str (optional)
             Name of the column used to split the graph in two (or more) plots. One correlation
             subplot will be computed for each value of this column.
-        how : str (default: 'phik')
+        how : Literal["phik", "pearson"], optional
             Correlation method used. 'phik' or 'pearson' are possible values. 'phik' is used by default.
         width : Int (default: 900)
             Plotly figure - layout width
-        height : Int (default: 600)
+        height : Int (default: 500)
             Plotly figure - layout height
-        degree  : int, optional, (default 2.5)
+        degree : float, optional, default=2.5
             degree applied on the correlation matrix in order to focus more or less the clustering
             on strong correlated variables
         decimals : int, optional, (default 2)
@@ -1439,7 +2239,7 @@ class SmartPlotter:
             df=df,
             style_dict=self._style_dict,
             features_dict=self._explainer.features_dict,
-            optimized=optimized,
+            sample_size=sample_size,
             max_features=max_features,
             features_to_hide=features_to_hide,
             facet_col=facet_col,
@@ -1454,7 +2254,96 @@ class SmartPlotter:
 
         return fig
 
-    def local_neighbors_plot(self, index, max_features=10, file_name=None, auto_open=False, height="auto", width=900):
+    def contributions_correlations_plot(
+        self,
+        df: pd.DataFrame | None = None,
+        label: int | str | None = None,
+        sample_size: int | None = None,
+        max_features: int = 20,
+        features_to_hide: list[str] | None = None,
+        facet_col: str | None = None,
+        width: int = 900,
+        height: int = 500,
+        degree: float = 2.5,
+        decimals: int = 2,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
+        """
+        Contribution-weighted correlations matrix heatmap plot.
+
+        Parameters
+        ----------
+        df : pd.DataFrame, optional
+            DataFrame used for faceting when `facet_col` is provided. Will use x_init by default.
+        label : int or str, optional
+            Label to select in classification mode. If omitted, the first label is used.
+        sample_size : int | None, default=None
+            Maximum number of rows used to compute the correlation matrix.
+            If ``None``, no sampling is performed.
+        max_features : int, default=20
+            Max number of features to show on the matrix.
+        features_to_hide : list (optional)
+            List of features that will not appear on the graph.
+        facet_col : str (optional)
+            Name of the column used to split the graph in two (or more) plots.
+        width : Int (default: 900)
+            Plotly figure - layout width
+        height : Int (default: 600)
+            Plotly figure - layout height
+        degree : float, optional, default=2.5
+            degree applied on the correlation matrix in order to focus more or less the clustering
+            on strong correlated variables
+        decimals : int, optional, (default 2)
+            number of decimals to plot for correlation values
+        file_name: string (optional)
+            File name to use to save the plotly bar chart. If None the bar chart will not be saved.
+        auto_open: Boolean (optional)
+            Indicate whether to open the bar plot or not.
+
+        Returns
+        -------
+        go.Figure
+        """
+        if df is None:
+            df = self._explainer.x_init.copy()
+
+        if self._explainer._case == "classification":
+            if label is None:
+                label = 0
+            label_num, _, _ = self._explainer.check_label_name(label)
+            contributions = self._explainer.contributions[label_num]
+        else:
+            contributions = self._explainer.contributions
+
+        fig = plot_contributions_correlations(
+            contributions=contributions,
+            df=df,
+            style_dict=self._style_dict,
+            features_dict=self._explainer.features_dict,
+            sample_size=sample_size,
+            max_features=max_features,
+            features_to_hide=features_to_hide,
+            facet_col=facet_col,
+            width=width,
+            height=height,
+            degree=degree,
+            decimals=decimals,
+            file_name=file_name,
+            auto_open=auto_open,
+        )
+
+        return fig
+
+    def local_neighbors_plot(
+        self,
+        index: Any,
+        max_features: int | None = 10,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        height: int | Literal["auto"] = "auto",
+        width: int = 900,
+    ) -> go.Figure:
         """
         The Local_neighbors_plot has the main objective of increasing confidence \
         in interpreting the contribution values of a selected instance.
@@ -1479,23 +2368,23 @@ class SmartPlotter:
 
         Parameters
         ----------
-        index: int
+        index : Any
             Contains index row of the input DataFrame that we use to display contribution values in the neighborhood
-        max_features: int, optional
+        max_features : int or None, optional
             Maximum number of displayed features, by default 10
         file_name: string, optional
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
-        height : str or int, optional
+        height : int or Literal["auto"], optional
             Height of the figure. Default is 'auto'.
         width : int, optional
             Width of the figure. Default is 900.
 
         Returns
         -------
-        fig
-            The figure that will be displayed
+        go.Figure
+            Plotly figure showing the selected instance and its neighbors.
         """
         if index not in self._explainer.x_init.index:
             raise ValueError("Index must exist in pandas dataframe")
@@ -1504,7 +2393,19 @@ class SmartPlotter:
 
         column_names = np.array([self._explainer.features_dict.get(x) for x in self._explainer.x_init.columns])
 
-        def ordinal(n):
+        def ordinal(n: int) -> str:
+            """Format an integer with its English ordinal suffix.
+
+            Parameters
+            ----------
+            n : int
+                Integer to format.
+
+            Returns
+            -------
+            str
+                Integer followed by its ordinal suffix.
+            """
             return f"{n}{'tsnrhtdd'[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4]}"
 
         # Compute explanations for instance and neighbors
@@ -1545,11 +2446,10 @@ class SmartPlotter:
             ]
         )
 
-        if height == "auto":
-            height = max(500, 11 * g_df.shape[0] * g_df.shape[1])
+        height_value = max(500, 11 * g_df.shape[0] * g_df.shape[1]) if height == "auto" else height
         title = f"<br>Comparing local explanations in a neighborhood - Id: <b>{index}</b>"
         title += "<br><sup>How similar are explanations for closeby neighbours?</sup>"
-        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height)}
+        dict_t = self._style_dict["dict_title_stability"] | {"text": title, "y": adjust_title_height(height_value)}
         dict_xaxis = self._style_dict["dict_xaxis"] | {"text": "Normalized contribution values"}
         dict_yaxis = self._style_dict["dict_yaxis"] | {"text": ""}
 
@@ -1562,7 +2462,7 @@ class SmartPlotter:
             yaxis_title=dict_yaxis,
             hovermode="closest",
             barmode="group",
-            height=height,
+            height=height_value,
             legend={"traceorder": "reversed"},
             xaxis={"side": "bottom"},
             margin={"l": 150, "r": 20, "t": 95, "b": 70},
@@ -1578,16 +2478,16 @@ class SmartPlotter:
 
     def stability_plot(
         self,
-        selection=None,
-        max_points=500,
-        force=False,
-        max_features=10,
-        distribution="none",
-        file_name=None,
-        auto_open=False,
-        height="auto",
-        width=900,
-    ):
+        selection: list[Any] | None = None,
+        max_points: int = 500,
+        force: bool = False,
+        max_features: int | None = 10,
+        distribution: Literal["none", "boxplot", "violin"] = "none",
+        file_name: str | None = None,
+        auto_open: bool = False,
+        height: int | Literal["auto"] = "auto",
+        width: int = 900,
+    ) -> go.Figure:
         """
         The Stability_plot has the main objective of increasing confidence in contribution values, \
         and helping determine if we can trust an explanation.
@@ -1614,26 +2514,31 @@ class SmartPlotter:
             distance = |output_{allFeatures} - output_{currentFeatures}|
         Parameters
         ----------
-        selection: list
+        selection : list[Any] or None, optional
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
         max_points: int, optional
             Maximum number to plot in compacity plot, by default 500
         force: bool, optional
             force == True, force the compute of stability values, by default False
-        distribution: str, optional
+        max_features : int or None, optional
+            Maximum number of features displayed in distribution plots.
+        distribution : Literal["none", "boxplot", "violin"], optional
             Add distribution of variability for each feature, by default 'none'.
             The other values are 'boxplot' or 'violin' that specify the type of plot
         file_name: string, optional
             Specify the save path of html files. If it is not provided, no file will be saved, by default None
         auto_open: bool, optional
             open automatically the plot, by default False
-        height: int or 'auto'
+        height : int or Literal["auto"], optional
             Plotly figure - layout height
         width: int
             Plotly figure - layout width
 
         Returns
         -------
+        go.Figure
+            Plotly figure for the selected stability visualization.
+
         If single instance:
             * plot -- Normalized contribution values of instance and neighbors
         If multiple instances:
@@ -1719,16 +2624,16 @@ class SmartPlotter:
 
     def compacity_plot(
         self,
-        selection=None,
-        max_points=2000,
-        force=False,
-        approx=0.9,
-        nb_features=5,
-        file_name=None,
-        auto_open=False,
-        height=600,
-        width=900,
-    ):
+        selection: list[Any] | None = None,
+        max_points: int = 2000,
+        force: bool = False,
+        approx: float = 0.9,
+        nb_features: int = 5,
+        file_name: str | None = None,
+        auto_open: bool = False,
+        height: int = 600,
+        width: int = 900,
+    ) -> go.Figure:
         """
         The Compacity_plot has the main objective of determining if a small subset of features
         can be extracted to provide a simpler explanation of the model.
@@ -1748,7 +2653,7 @@ class SmartPlotter:
             distance = |output_{allFeatures} - output_{currentFeatures}|
         Parameters
         ----------
-        selection: list
+        selection : list[Any] or None, optional
             Contains list of index, subset of the input DataFrame that we use for the compute of stability statistics
         max_points: int, optional
             Maximum number to plot in compacity plot, by default 2000
@@ -1766,6 +2671,11 @@ class SmartPlotter:
             height of the plot, by default 600
         width:  int, optional
             width of the plot, by default 900
+
+        Returns
+        -------
+        go.Figure
+            Compacity plot.
         """
         # Sampling
         if selection is None:
@@ -1774,11 +2684,11 @@ class SmartPlotter:
             else:
                 list_ind = random.sample(self._explainer.x_init.index.tolist(), max_points)
             # By default, don't compute calculation if it has already been done
-            if (self._explainer.features_compacity is None) or self.last_compacity_selection or force:
+            if (self._explainer.features_compacity is None) or self._last_compacity_selection or force:
                 self._explainer.compute_features_compacity(list_ind, 1 - approx, nb_features)
             else:
                 print("Computed values from previous call are used")
-            self.last_compacity_selection = False
+            self._last_compacity_selection = False
         elif isinstance(selection, list):
             if len(selection) > max_points:
                 print(
@@ -1811,14 +2721,14 @@ class SmartPlotter:
 
     def scatter_plot_prediction(
         self,
-        selection=None,
-        label=-1,
-        max_points=2000,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-    ):
+        selection: list[Any] | None = None,
+        label: int | str = -1,
+        max_points: int = 2000,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
         """
         scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
         This plot represents Trues Values versus Predicted Values.
@@ -1828,7 +2738,7 @@ class SmartPlotter:
 
         Parameters
         ----------
-        selection: list (optional)
+        selection : list[Any] or None, optional
             Contains list of index, subset of the input DataFrame that we want to plot
         label: integer or string (default -1)
             If the label is of string type, check if it can be changed to integer to select the
@@ -1836,7 +2746,7 @@ class SmartPlotter:
         max_points: int (optional, default: 2000)
             maximum number to plot in contribution plot. if input dataset is bigger than max_points,
             a sample limits the number of points to plot.
-            nb: you can also limit the number using 'selection' parameter.
+            The `selection` parameter can also limit the number of plotted points.
         width : Int (default: 900)
             Plotly figure - layout width
         height : Int (default: 600)
@@ -1845,6 +2755,11 @@ class SmartPlotter:
             Specify the save path of html files. If it is not provided, no file will be saved.
         auto_open: bool (default=False)
             open automatically the plot
+
+        Returns
+        -------
+        go.Figure
+            Scatter or violin plot comparing predictions with target values.
         """
 
         # Classification Case
@@ -1885,12 +2800,12 @@ class SmartPlotter:
         width: int = 700,
         height: int = 500,
         color_quantile_cap: float | None = None,
-        file_name=None,
-        auto_open=False,
-    ):
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> Figure:
         """
-        Returns a matplotlib figure containing a confusion matrix that is computed using y_true and
-        y_pred parameters.
+        Return a Matplotlib confusion matrix computed from the explainer's
+        ``y_target`` and ``y_pred`` attributes.
 
         On imbalanced datasets, the dominant class can crush the color scale and
         make the other cells look identical. Set the optional `color_quantile_cap` parameter
@@ -1899,15 +2814,13 @@ class SmartPlotter:
 
         Parameters
         ----------
-        y_true : array-like
-            Ground truth (correct) target values.
-        y_pred : array-like
-            Estimated targets as returned by a classifier.
-        colors_dict : dict
-            dict of colors used
-        width : int, optional, default=7
+        file_name : str or None, optional
+            Path to save the figure. If None, the figure is not saved.
+        auto_open : bool, optional
+            Whether to open the saved figure automatically.
+        width : int, optional, default=700
             The width of the generated figure, in inches.
-        height : int, optional, default=4
+        height : int, optional, default=500
             The height of the generated figure, in inches.
         color_quantile_cap : float, optional, default=None
             Upper quantile used to cap the cell color, useful on
@@ -1915,7 +2828,8 @@ class SmartPlotter:
 
         Returns
         -------
-        matplotlib.pyplot.Figure
+        matplotlib.figure.Figure
+            Confusion matrix figure.
         """
 
         # Classification Case
@@ -2018,9 +2932,9 @@ class SmartPlotter:
         height: int = 500,
         nb_cat_max: int = 7,
         nb_hue_max: int = 7,
-        cat_num_threshold: int = 200,
-        file_name=None,
-        auto_open=False,
+        cat_num_threshold: int = 15,
+        file_name: str | None = None,
+        auto_open: bool = False,
     ) -> go.Figure:
         """
         Generate a Plotly figure displaying the univariate distribution of a feature
@@ -2049,7 +2963,7 @@ class SmartPlotter:
         nb_hue_max : int, optional, default=7
             Maximum number of hue categories to display. Categories beyond this limit
             are grouped into a new 'Other' category.
-        cat_num_threshold : int, optional, default=200
+        cat_num_threshold : int, optional, default=15
             Threshold on the number of unique values used to decide whether a numeric
             series is treated as categorical or continuous.
         file_name : str, optional
@@ -2083,25 +2997,25 @@ class SmartPlotter:
 
     def clustering_by_explainability_plot(
         self,
-        color_value="predictions",
-        show_clusters=True,
-        show_points=True,
-        active_cluster=None,
-        n_clusters=10,
-        keep_quantile=(0.05, 0.95),
-        max_points=2000,
-        selection=None,
-        label=-1,
-        threshold_top_features=0.95,
-        random_state=79,
-        marker_size=10,
-        style_dict=None,
-        opacity=0.8,
-        width=900,
-        height=600,
-        file_name=None,
-        auto_open=False,
-    ):
+        color_value: str | list[str] = "predictions",
+        show_clusters: bool = True,
+        show_points: bool = True,
+        active_cluster: int | None = None,
+        n_clusters: int = 10,
+        keep_quantile: tuple[float, float] = (0.05, 0.95),
+        max_points: int = 2000,
+        selection: list[Any] | None = None,
+        label: int | str = -1,
+        threshold_top_features: float = 0.95,
+        random_state: int = 79,
+        marker_size: int = 10,
+        style_dict: dict[str, Any] | None = None,
+        opacity: float = 0.8,
+        width: int = 900,
+        height: int = 600,
+        file_name: str | None = None,
+        auto_open: bool = False,
+    ) -> go.Figure:
         """
         Generate a 2D TSNE projection plot (or multiple plots) based on SHAP-like feature contributions.
 
@@ -2143,7 +3057,7 @@ class SmartPlotter:
         label : int or str, optional, default=-1
             Label to use in classification tasks (e.g., class index or name). Ignored in regression.
 
-        threshold_top_features : float, optional, default=0.9
+        threshold_top_features : float, optional, default=0.95
             Feature selection threshold based on mean absolute contribution values. Only features contributing
             to the cumulative threshold are retained for projection.
 
@@ -2254,6 +3168,8 @@ class SmartPlotter:
             )
             return fig
 
+        cluster_projections: np.ndarray | None = getattr(self, "cluster_projections", None)
+
         if self._explainer._case == "classification":
             if len(self._explainer.contributions) <= 2:
                 values_to_project = self._explainer.contributions[label_num].loc[list_ind, top_contributors_col]
@@ -2265,9 +3181,9 @@ class SmartPlotter:
                 values_to_project = pd.concat(contribs, axis=1, ignore_index=False)
 
             to_compute = False
-            if not hasattr(self, "cluster_projections"):
+            if cluster_projections is None:
                 to_compute = True
-            elif self.cluster_projections.shape[0] != len(list_ind):
+            elif cluster_projections.shape[0] != len(list_ind):
                 to_compute = True
 
             if not pd.Index(list_ind).equals(getattr(self, "cluster_index", None)):
@@ -2279,12 +3195,13 @@ class SmartPlotter:
                 self.n_clusters = n_clusters
 
             if to_compute:
-                self.cluster_projections = compute_tsne_projection(
-                    values_to_project=values_to_project,
-                    random_state=random_state,
+                cluster_projections = cast(
+                    np.ndarray,
+                    compute_tsne_projection(values_to_project=values_to_project, random_state=random_state),
                 )
+                self.cluster_projections = cluster_projections
                 self.cluster_labels, self.cluster_centers = compute_kmeans_labels(
-                    self.cluster_projections, n_clusters=n_clusters
+                    cluster_projections, n_clusters=n_clusters
                 )
 
             y_proba_values = self._explainer.proba_values.copy()
@@ -2337,8 +3254,8 @@ class SmartPlotter:
                 df_pred = pd.concat(dfs, axis=1).set_index(y_proba_target.columns[0])
                 df_pred.columns = cols
 
-                subtitle = f"Response: <b>{label_value}</b>"
-                hv_text = {"points": [], "clusters": []}
+                subtitle = f"Explained class: <b>{label_value}</b>"
+                hv_text: dict[str, list[Any]] = {"points": [], "clusters": []}
                 for el in color_value:
                     # Build hover text
                     hv_text_el = []
@@ -2420,9 +3337,9 @@ class SmartPlotter:
             values_to_project = self._explainer.contributions.loc[list_ind, top_contributors_col]
 
             to_compute = False
-            if not hasattr(self, "cluster_projections"):
+            if cluster_projections is None:
                 to_compute = True
-            elif self.cluster_projections.shape[0] != len(list_ind):
+            elif cluster_projections.shape[0] != len(list_ind):
                 to_compute = True
 
             if not pd.Index(list_ind).equals(getattr(self, "cluster_index", None)):
@@ -2434,13 +3351,14 @@ class SmartPlotter:
                 self.n_clusters = n_clusters
 
             if to_compute:
-                self.cluster_projections = compute_tsne_projection(
-                    values_to_project=values_to_project,
-                    random_state=random_state,
+                cluster_projections = cast(
+                    np.ndarray,
+                    compute_tsne_projection(values_to_project=values_to_project, random_state=random_state),
                 )
+                self.cluster_projections = cluster_projections
 
                 self.cluster_labels, self.cluster_centers = compute_kmeans_labels(
-                    self.cluster_projections, n_clusters=n_clusters
+                    cluster_projections, n_clusters=n_clusters
                 )
 
             # Always available
@@ -2548,6 +3466,8 @@ class SmartPlotter:
                             r"Select a color_value among the valid options ('predictions', 'targets', 'errors' or a column name within your data)."
                         )
 
+        if cluster_projections is None:
+            raise RuntimeError("The clustering projection could not be computed.")
         title = "Clustering by Explainability"
 
         color_value_data = [el.loc[list_ind, :] for el in color_value_data]
@@ -2563,7 +3483,7 @@ class SmartPlotter:
             show_points=show_points,
             active_cluster=active_cluster,
             n_clusters=n_clusters,
-            projections=self.cluster_projections,
+            projections=cluster_projections,
             labels=self.cluster_labels,
             centers=self.cluster_centers,
             keep_quantile=keep_quantile,

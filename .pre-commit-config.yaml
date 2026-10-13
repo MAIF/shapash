@@ -40,10 +40,8 @@ repos:
     hooks:
     -   id: mypy
         name: mypy
-        # Runs from the local dev venv (not an isolated pre-commit env) so it sees
-        # shapash's actual dependencies. Path is explicit (not just `mypy`) so it
-        # also works from GUI clients like VSCode, whose PATH isn't venv-activated.
-        entry: .venv/bin/mypy shapash
+        # Try module invocation first, then PATH command, then local .venv fallback.
+        entry: bash -lc 'python -m mypy shapash; exit_code=$?; if [ "$exit_code" -ne 0 ]; then mypy shapash; exit_code=$?; fi; if [ "$exit_code" -eq 127 ] && [ -x .venv/bin/mypy ]; then .venv/bin/mypy shapash; exit_code=$?; fi; if [ "$exit_code" -eq 127 ]; then echo "mypy not found (python -m mypy, PATH mypy, and .venv/bin/mypy)"; fi; exit "$exit_code"'
         language: system
         pass_filenames: false
         files: ^shapash/.*\.py$

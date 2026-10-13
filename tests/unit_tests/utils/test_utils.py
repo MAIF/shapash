@@ -82,8 +82,8 @@ class TestUtils(unittest.TestCase):
         assert t == "this is a..."
 
     def test_add_line_break_1(self):
-        t = add_line_break(3453, 10)
-        assert t == 3453
+        with self.assertRaises(TypeError):
+            add_line_break(3453, 10)
 
     def test_add_line_break_2(self):
         t = add_line_break("this is a very long sentence in order to make a very great test", 10)
