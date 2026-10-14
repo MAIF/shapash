@@ -24,10 +24,14 @@ build:
   jobs:
     post_checkout:
       - git fetch --unshallow --tags || true
+    # `doc` is a dependency group, which `python.install` below cannot install
+    post_install:
+      - python -m pip install --upgrade "pip>=25.1"
+      - python -m pip install --group doc
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
   install:
     - method: pip
       path: .
-      extra_requirements: [doc, report]
+      extra_requirements: [report]
