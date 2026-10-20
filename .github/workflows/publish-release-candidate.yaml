@@ -10,6 +10,9 @@ concurrency:
   cancel-in-progress: false
 
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build
@@ -17,19 +20,18 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v6
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           python-version: "3.13"
       - name: Build package
-        run: |
-          python -m pip install --upgrade build
-          python -m build
+        run: uv build
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: python-package-distributions
           path: dist/
@@ -47,12 +49,12 @@ jobs:
 
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: python-package-distributions
           path: dist/
       - name: Publish distribution to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -64,12 +66,12 @@ jobs:
     permissions: {}
 
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: python-package-distributions
           path: dist/
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: "3.13"
       - name: Resolve package version from tag
@@ -86,8 +88,9 @@ jobs:
         run: |
           python3 -m venv .venv-smoke
           . .venv-smoke/bin/activate
+          # Only shapash comes from TestPyPI: anyone can upload there, so dependencies must come from PyPI.
           for attempt in 1 2 3 4 5; do
-            if pip install --pre -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "shapash==${RELEASE_VERSION}"; then
+            if pip install --no-deps -i https://test.pypi.org/simple/ "shapash==${RELEASE_VERSION}"; then
               break
             fi
             if [ "${attempt}" -eq 5 ]; then
@@ -97,4 +100,6 @@ jobs:
             echo "Install not available yet on TestPyPI, retrying in 30s (attempt ${attempt}/5)..."
             sleep 30
           done
+          # Already installed, so pip keeps it and installs its dependencies from PyPI.
+          pip install "shapash==${RELEASE_VERSION}"
           python -c "import shapash; print(shapash.__version__)"
