@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  # Refresh the versions pinned in uv.lock, which CI tests against. `widen` edits pyproject.toml only
+  # when a release falls above an upper cap: it raises the cap and leaves the lower bound untouched.
+  - package-ecosystem: "uv"
+    directory: "/"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+    versioning-strategy: "widen"
+    groups:
+      uv-dependencies:
+        # Minor and patch releases of everything, in one weekly PR. Major releases get a PR each:
+        # for dash, plotly and pandas they raise the upper cap, which needs manual checks first.
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    cooldown:
+      default-days: 7  # Keep in sync with `exclude-newer` in pyproject.toml
+
+  # Keep the third-party GitHub Actions used by the workflows up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7
