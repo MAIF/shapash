@@ -47,7 +47,7 @@ dependencies = [
     "pyarrow>=17.0.0",
     "scikit-learn>=1.8.0",
     "scipy>=1.13.0",
-    "shap>=0.46.0",
+    "shap>=0.50.0",
     "shapely>=2.0.4",
 ]
 
