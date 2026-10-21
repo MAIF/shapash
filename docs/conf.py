@@ -43,6 +43,8 @@ autosummary_generate = True
 autodoc_default_options = {"members": True, "show-inheritance": True}
 autodoc_member_order = "bysource"
 autodoc_typehints = "description"
+# "block_header()" rather than "ReportBlockMixin.block_header()" in the page table of contents
+toc_object_entries_show_parents = "hide"
 # The torch adapters subclass torch classes at import time; torch is not installed to build the docs.
 autodoc_mock_imports = ["torch"]
 napoleon_numpy_docstring = True
@@ -79,6 +81,8 @@ html_theme_options = {
     "navigation_with_keys": False,
     "show_toc_level": 2,
 }
+# These pages have no sub-pages, so the section navigation would be empty
+html_sidebars = {"overview": [], "installation-instructions/index": []}
 html_context = {
     "github_user": "MAIF",
     "github_repo": "shapash",

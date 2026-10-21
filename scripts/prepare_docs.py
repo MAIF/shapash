@@ -23,9 +23,28 @@ DOCS_DIR = PROJECT_ROOT / "docs"
 TUTORIALS_DOC_DIR = DOCS_DIR / "tutorials"
 REPORT_PATH = DOCS_DIR / "_generated" / "report.html"
 
+# Section title of each tutorial folder; other folders get their name, capitalized
+TITLES = {
+    "overview": "First steps",
+    "common": "Feature groups and colors",
+    "debug_and_what_if": "Debugging and what-if analysis",
+    "domain_examples": "Domain examples",
+    "explainability_quality": "Explainability quality",
+    "explainer_and_backend": "Backends",
+    "generate_report": "Shapash Report",
+    "generate_webapp": "Web app",
+    "nlp": "Text data (NLP)",
+    "plots_and_charts": "Plots and charts",
+    "postprocess": "Postprocessing",
+    "predictor_to_production": "SmartPredictor",
+    "production_and_ops": "Production and operations",
+    "use_encoders": "Encoders",
+}
 
-def _copy_notebooks(src_dir: Path, dst_dir: Path, title: str) -> None:
+
+def _copy_notebooks(src_dir: Path, dst_dir: Path, name: str) -> None:
     """Copy the notebooks of ``src_dir`` into ``dst_dir`` and write an ``index.rst`` listing them."""
+    title = TITLES.get(name, name.replace("_", " ").capitalize())
     dst_dir.mkdir(parents=True, exist_ok=True)
     for notebook in sorted(src_dir.glob("*.ipynb")):
         shutil.copyfile(notebook, dst_dir / notebook.name)
