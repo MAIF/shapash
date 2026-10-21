@@ -4,7 +4,7 @@ Installation instructions
 Installing
 ----------
 
-**Shapash** is intended to work with Python versions 3.9 to 3.12. Installation can be done with pip:
+**Shapash** requires Python 3.11 or newer. Installation can be done with pip:
 
 .. code:: bash
 
@@ -187,7 +187,7 @@ If you have an error message like this one:
     See the log file for details:  /tmp/jupyterlab-debug-y_g3xxpq.log
 
 (source :
-`plotly <https://plotly.com/python/getting-started/#jupyter-notebook-support>`__)
+`plotly <https://plotly.com/python/getting-started/#Jupyter-Notebook-Support>`__)
 
 Check your installation
 -----------------------

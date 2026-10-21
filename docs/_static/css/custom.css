@@ -1,0 +1,4 @@
+/* Let wide code blocks in docstring parameter lists scroll instead of widening the whole list */
+dl.field-list > dd {
+  min-width: 0;
+}
