@@ -9,16 +9,24 @@ on:
       types: [opened, synchronize, reopened]
 
 name: SonarQube
+permissions:
+  contents: read
+
 jobs:
   sonarqube:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Skip PRs from forks and from Dependabot: neither gets the repository secrets.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       with:
         fetch-depth: 0
+        persist-credentials: false
     - name: SonarQube Scanner
-      uses: SonarSource/sonarqube-scan-action@v8.2.2 # see the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
+      uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4  # v8.2.2
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
