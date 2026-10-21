@@ -228,7 +228,7 @@ checks, the tests and the build pass, push your branch to your fork:
 ```
 git add <file>
 git commit -m "Fix ..."
-git push origin feature/my-contribution
+git push -u origin feature/my-contribution
 ```
 
 ## Open a pull request
