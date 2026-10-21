@@ -17,6 +17,20 @@ Tabular data
    utils.load_smartpredictor.load_smartpredictor
    data.data_loader.data_loading
 
+Report and standalone plots
+---------------------------
+
+.. autosummary::
+
+   report.ReportTemplate
+   report.export_report_yml
+   report.blocks.ReportBlockMixin
+   report.blocks.block
+   plots.plot_univariate.plot_distribution
+   plots.plot_correlations.plot_correlations
+   plots.plot_evaluation_metrics.plot_confusion_matrix
+   plots.plot_feature_importance.plot_feature_importance
+
 Backends
 --------
 
@@ -49,5 +63,7 @@ Text data (NLP)
    shapash.predictor
    shapash.load_smartpredictor
    shapash.data
+   shapash.report
+   shapash.plots
    shapash.backend
    shapash.nlp
