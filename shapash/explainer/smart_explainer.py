@@ -88,8 +88,8 @@ class SmartExplainer:
         - A dict
         - A list of dict
     postprocessing : dict, optional (default: None)
-        Dictionnary of postprocessing modifications to apply in x_init dataframe.
-        Dictionnary with feature names as keys (or number, or well labels referencing to features names),
+        Dictionary of postprocessing modifications to apply in x_init dataframe.
+        Dictionary with feature names as keys (or number, or well labels referencing to features names),
         which modifies dataset features by features.
         Different types of postprocessing are available, but the syntax is this one:
         one key by features, 5 different types of modifications::
