@@ -199,15 +199,29 @@ If your change affects how users work with Shapash, update the documentation alo
 - The tutorial notebooks are in `tutorial/`. If you change a feature a tutorial demonstrates, update
   and re-run that notebook.
 
-To build the documentation locally (the notebook pages need [pandoc](https://pandoc.org/installing.html)
-installed):
+To build the documentation locally:
 
 ```
 uv sync --group doc
 make docs
 ```
 
-This builds the HTML pages in `docs/_build/html/` and opens them in your browser.
+This builds the HTML pages in `docs/_build/html/` and opens them in your browser. Without `make`
+(on Windows, for example), run the two steps yourself:
+
+```
+python scripts/prepare_docs.py
+sphinx-build -W --keep-going docs docs/_build/html
+```
+
+`scripts/prepare_docs.py` copies the tutorial notebooks into `docs/tutorials/` and generates the demo
+report; add `--skip-report` to reuse the report from a previous run.
+
+Like CI, which builds the documentation on every pull request, these commands fail on any Sphinx
+warning (`--keep-going` still lists them all).
+
+To check the external links, for example before a release, run `make -C docs linkcheck` after a
+documentation build.
 
 ## Change dependencies
 
