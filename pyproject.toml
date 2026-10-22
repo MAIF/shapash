@@ -94,10 +94,15 @@ doc = [
     "sphinxcontrib-qthelp==1.0.3",
     "sphinxcontrib-serializinghtml==1.1.5",
 ]
+
+# Jupyter kernel for running the tutorial notebooks: `uv sync --group notebook`
+notebook = ["ipykernel"]
+
 dev-all = [
     {include-group = "dev"},
     {include-group = "test"},
     {include-group = "doc"},
+    {include-group = "notebook"},
     "shapash[nlp]",
 ]
 
