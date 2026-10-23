@@ -339,7 +339,12 @@ class SmartApp:
                         ]
                     )
                 ),
-                dbc.ModalFooter(dbc.Button("Apply", id="apply", className="ml-auto")),
+                dbc.ModalFooter(
+                    [
+                        dbc.FormText(f"shapash version : {'.'.join(str(p) for p in VERSION)}"),
+                        dbc.Button("Apply", id="apply", className="ml-auto"),
+                    ]
+                ),
             ],
             id="modal",
         )
@@ -841,26 +846,14 @@ class SmartApp:
                     [
                         dbc.Col(
                             html.A(
-                                [
-                                    dbc.Row(
-                                        [
-                                            dbc.Col(
-                                                [html.Img(src=self.logo, style={"width": "2.2vw"})], className="col-1"
-                                            ),
-                                            dbc.Col([html.H4("Shapash Monitor", id="shapash_title")]),
-                                        ],
-                                        align="center",
-                                        style={"color": self.title_menu_color},
-                                    ),
-                                    dbc.Row(
-                                        [
-                                            html.P(
-                                                f"version : {'.'.join(str(p) for p in VERSION)}",
-                                                style={"color": "white", "size": "0.1em", "margin": "0px 0px 0px 0px"},
-                                            )
-                                        ]
-                                    ),
-                                ],
+                                dbc.Row(
+                                    [
+                                        dbc.Col([html.Img(src=self.logo, style={"width": "2.2vw"})], className="col-1"),
+                                        dbc.Col([html.H4("Shapash Monitor", id="shapash_title")]),
+                                    ],
+                                    align="center",
+                                    style={"color": self.title_menu_color},
+                                ),
                                 href="https://github.com/MAIF/shapash",
                                 target="_blank",
                             ),
