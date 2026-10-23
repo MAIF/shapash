@@ -63,6 +63,12 @@ intersphinx_mapping = {
 if os.environ.get("SHAPASH_DOCS_OFFLINE") == "1":
     intersphinx_mapping = {}
 
+# -- Copy button -------------------------------------------------------------
+
+# Copy the code without its Python and shell prompts, so it can be pasted and run as is
+copybutton_prompt_text = r">>> |\.\.\. |\$ |PS C:\\> "
+copybutton_prompt_is_regexp = True
+
 # -- Notebooks ---------------------------------------------------------------
 
 # Tutorials are rendered with the outputs saved in the notebooks: running them takes too long.
@@ -79,6 +85,8 @@ html_logo = "_static/shapash-resize.png"
 html_favicon = "assets/images/logos/favicon.png"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+# The reST source of a page is of little use to readers; the API pages link to the Python source.
+html_show_sourcelink = False
 html_theme_options = {
     "github_url": "https://github.com/MAIF/shapash",
     "icon_links": [
