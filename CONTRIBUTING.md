@@ -217,6 +217,10 @@ sphinx-build -W --keep-going docs docs/_build/html
 `scripts/prepare_docs.py` copies the tutorial notebooks into `docs/tutorials/` and generates the demo
 report; add `--skip-report` to reuse the report from a previous run.
 
+The build downloads the Python, numpy, pandas, scikit-learn and plotly inventories to link their types.
+Without network access, for example behind a proxy, set the `SHAPASH_DOCS_OFFLINE` environment variable to `1`
+(`SHAPASH_DOCS_OFFLINE=1 make docs`, or `set SHAPASH_DOCS_OFFLINE=1` first on Windows) to skip them.
+
 Like CI, which builds the documentation on every pull request, these commands fail on any Sphinx
 warning (`--keep-going` still lists them all).
 
