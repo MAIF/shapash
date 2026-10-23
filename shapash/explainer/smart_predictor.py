@@ -932,7 +932,7 @@ class SmartPredictor:
         Parameters
         ----------
         postprocessing: Dict
-            Dictionnary of postprocessing modifications to apply in x.
+            Dictionary of postprocessing modifications to apply in x.
 
         Returns
         -------
