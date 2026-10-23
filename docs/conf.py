@@ -73,9 +73,9 @@ copybutton_prompt_is_regexp = True
 
 # Tutorials are rendered with the outputs saved in the notebooks: running them takes too long.
 nb_execution_mode = "off"
-# Notebooks skip heading levels (H2 to H4), and some saved outputs carry an extra VS Code Data Wrangler
-# representation next to the HTML one, which is rendered instead.
-suppress_warnings = ["myst.header", "mystnb.unknown_mime_type"]
+# Some saved notebook outputs carry an extra VS Code Data Wrangler representation next to the HTML one,
+# which is rendered instead.
+suppress_warnings = ["mystnb.unknown_mime_type"]
 
 # -- Options for HTML output -------------------------------------------------
 
