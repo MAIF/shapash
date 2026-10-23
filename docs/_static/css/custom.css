@@ -1,0 +1,9 @@
+/* Let wide code blocks in docstring parameter lists scroll instead of widening the whole list */
+dl.field-list > dd {
+  min-width: 0;
+}
+
+/* Center the links next to the logo in the company table of the home page */
+table.company-table td {
+  vertical-align: middle;
+}
