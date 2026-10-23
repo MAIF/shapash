@@ -84,6 +84,8 @@ html_theme_options = {
     "icon_links": [
         {"name": "PyPI", "url": "https://pypi.org/project/shapash/", "icon": "fa-brands fa-python"},
     ],
+    "logo": {"image_dark": "_static/shapash-resize-dark.png"},
+    "navbar_align": "left",
     "navigation_with_keys": False,
     "show_toc_level": 2,
 }
