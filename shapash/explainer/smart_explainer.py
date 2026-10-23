@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import logging
+from ipaddress import ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -740,8 +741,11 @@ class SmartExplainer:
             Port number for the WebApp server.
             Defaults to `8050` if not specified.
         host : str, optional
-            Host address for the WebApp server.
-            Defaults to local host `"127.0.0.1"`.
+            Address on which the WebApp server listens.
+            Defaults to `"127.0.0.1"` (accessible only from the same machine).
+            Use `"0.0.0.0"` for access through any IPv4 interface, or `"::"`
+            for IPv6. These wildcard addresses are not browser destinations:
+            use a reachable server IP address or hostname instead.
         title_story : str, optional
             Custom title to display in the WebApp interface.
             This title can also be reused in reports or other visualizations.
@@ -770,6 +774,20 @@ class SmartExplainer:
         >>> app = xpl.run_app(port=8050)
         >>> # Stop the app
         >>> app.kill()
+
+        Notes
+        -----
+        If Python and your browser run on the same machine, open the displayed
+        local URL. For access from another machine, listen on a reachable
+        interface (for example, ``host="0.0.0.0"``) and open
+        ``http://<server-ip-or-hostname>:8050/`` in your browser. The hostname
+        must resolve from the browser's machine, and the firewall must allow
+        the port. Only expose this development server on a trusted network.
+
+        If Python runs in a remote notebook, container, or VM, ``localhost``
+        in your browser refers to your own machine, not necessarily the Python
+        host. Use port forwarding, container port publishing, or your notebook
+        platform's proxy URL as appropriate.
         """
 
         if title_story is not None:
@@ -780,7 +798,6 @@ class SmartExplainer:
                 host = DEFAULT_HOST
             if port is None:
                 port = 8050
-            host_name = get_host_name()
             wsgi_server = make_server(host, port, self.smartapp.server)
             server_instance = CustomThread(target=wsgi_server.serve_forever)
 
@@ -789,12 +806,49 @@ class SmartExplainer:
                 server_instance.killed = True
 
             cast(Any, server_instance).kill = _kill
-            if host_name is None:
-                host_name = host
-            elif host != DEFAULT_HOST:
-                host_name = host
             server_instance.start()
-            logging.info(f"Your Shapash application run on http://{host_name}:{port}/")
+            port = wsgi_server.server_port
+            wildcard_hosts = {"0.0.0.0": DEFAULT_HOST, "::": "::1"}  # noqa: S104 - URL mapping, not a bind default.
+            browser_host = wildcard_hosts.get(host, host)
+            try:
+                is_loopback = ip_address(host).is_loopback
+            except ValueError:
+                is_loopback = host.lower().rstrip(".") == "localhost"
+            if ":" in browser_host:
+                browser_host = f"[{browser_host}]"
+            logging.info("To launch Shapash in your browser, open http://%s:%s/", browser_host, port)
+            if host in wildcard_hosts:
+                logging.info(
+                    "From another machine, try http://%s:%s/ "
+                    "(requires the hostname to resolve to a reachable server address). "
+                    "The URL above is for a browser on the machine running Python.",
+                    get_host_name(),
+                    port,
+                )
+            elif is_loopback:
+                logging.info(
+                    "For access from another machine, stop the app with app.kill(), then restart with "
+                    "host='0.0.0.0' (IPv4) or host='::' (IPv6). "
+                    "After restarting, try http://%s:%s/ "
+                    "(requires the hostname to resolve to a reachable server address; "
+                    "use the new port printed at restart if port=0).",
+                    get_host_name(),
+                    port,
+                )
+            else:
+                logging.info(
+                    "From another machine, try http://%s:%s/ "
+                    "(requires this address to be reachable from your browser).",
+                    browser_host,
+                    port,
+                )
+            logging.info(
+                "For network access, allow port %s through the firewall and use a trusted network only. "
+                "For a remote notebook, container, or VM, configure port forwarding, publish the port, "
+                "or use your notebook platform's proxy URL as appropriate. "
+                "The external URL depends on that configuration and cannot be inferred by Shapash.",
+                port,
+            )
             logging.info("Use the method .kill() to down your app.")
             return server_instance
 
