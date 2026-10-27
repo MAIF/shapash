@@ -91,10 +91,15 @@ doc = [
     "sphinx-copybutton>=0.5",
     "ipython>=8.0",  # syntax highlighting of the notebook code cells
 ]
+
+# Jupyter kernel for running the tutorial notebooks: `uv sync --group notebook`
+notebook = ["ipykernel"]
+
 dev-all = [
     {include-group = "dev"},
     {include-group = "test"},
     {include-group = "doc"},
+    {include-group = "notebook"},
     "shapash[nlp]",
 ]
 
@@ -150,7 +155,6 @@ line-length = 120
 exclude = [
     "tests",
     "docs",
-    "tutorial",
 ]
 
 [tool.ruff.lint]
@@ -170,8 +174,11 @@ select = [
     "NPY",  # NumPy-specific rules
 ]
 ignore = ["E501", "D2", "D3", "D4", "D104", "D100", "D105", "D106", "D107", "S311"]
-exclude = ["tests/*", "*.ipynb"]
+exclude = ["tests/*"]
 
 [tool.ruff.lint.per-file-ignores]
 "shapash/__init__.py" = ["F401"]
 "shapash/backend/__init__.py" = ["F401"]
+# Tutorials define small helpers without docstrings, silence warnings before importing, and assert
+# results to show them
+"tutorial/**/*.ipynb" = ["D1", "E402", "S101"]

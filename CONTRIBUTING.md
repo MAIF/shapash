@@ -197,7 +197,8 @@ If your change affects how users work with Shapash, update the documentation alo
 - Docstrings feed the API reference, so keep them in line with the code.
 - The documentation pages are in `docs/` and are built with Sphinx.
 - The tutorial notebooks are in `tutorial/`. If you change a feature a tutorial demonstrates, update
-  and re-run that notebook.
+  and re-run that notebook. With uv, add the Jupyter kernel with `--group notebook` (for example
+  `uv sync --group notebook`); a plain `uv sync` removes it.
 
 To build the documentation locally:
 
