@@ -215,8 +215,12 @@ python scripts/prepare_docs.py
 sphinx-build -W --keep-going docs docs/_build/html
 ```
 
-`scripts/prepare_docs.py` copies the tutorial notebooks into `docs/tutorials/` and generates the demo
-report; add `--skip-report` to reuse the report from a previous run.
+`scripts/prepare_docs.py` copies the tutorial notebooks into `docs/tutorials/`, generates the demo
+report and lists the released versions for the version switcher; add `--skip-report` to reuse the report
+from a previous run.
+
+The version switcher stays empty when the pages are opened as files. To check it, serve the build with
+`python -m http.server -d docs/_build/html` and open http://localhost:8000.
 
 The build downloads the Python, numpy, pandas, scikit-learn and plotly inventories to link their types.
 Without network access, for example behind a proxy, set the `SHAPASH_DOCS_OFFLINE` environment variable to `1`

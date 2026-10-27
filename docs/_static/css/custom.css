@@ -7,3 +7,9 @@ dl.field-list > dd {
 table.company-table td {
   vertical-align: middle;
 }
+
+/* The version switcher of the header replaces the Read the Docs flyout, which old releases built with
+   sphinx_material still show */
+readthedocs-flyout {
+  display: none !important;
+}
