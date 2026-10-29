@@ -82,7 +82,7 @@ suppress_warnings = ["mystnb.unknown_mime_type"]
 html_theme = "pydata_sphinx_theme"
 html_title = f"Shapash {release}"
 html_logo = "_static/shapash-resize.png"
-html_favicon = "assets/images/logos/favicon.png"
+html_favicon = "_static/favicon.png"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 # The reST source of a page is of little use to readers; the API pages link to the Python source.
