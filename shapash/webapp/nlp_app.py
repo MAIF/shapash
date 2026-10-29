@@ -117,6 +117,7 @@ class NlpWebApp:
     The layout follows an "overview → filter → detail" funnel:
 
     Top row — global "where to look" panels that filter the table below:
+
     - **Global word importance** — mean SHAP contribution per unique word for
       the selected class (updates on any control change or scatter selection).
       Its own controls (top-K slider, positive/negative sign filter, corpus
@@ -126,11 +127,13 @@ class NlpWebApp:
       filter the table and word importance to the selected subset.
 
     Hub — full-width:
+
     - **Dataset table** — text samples with predicted (and optional ground-truth)
       labels; click a row to populate the local contribution panel.  Filtered
       to the scatter selection and/or a clicked word importance bar.
 
     Detail-on-demand — full-width:
+
     - **Local contributions** — inline sentence highlight as the primary view.
       An optional waterfall chart (toggle with a radio button) groups tokens
       below a configurable contribution threshold into a single "other" bar.

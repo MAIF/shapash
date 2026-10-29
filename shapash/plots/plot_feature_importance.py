@@ -220,7 +220,7 @@ def _plot_features_import(
     inv_features_dict : dict[str, str]
         Inverse features_dict mapping.
     features_groups_keys : collection of str, optional (default: None)
-        Keys of the dictionnary containing features that should be grouped together.
+        Keys of the dictionary containing features that should be grouped together.
     feature_imp2 : pandas.Series, optional (default: None)
         Feature importance values for a subset of rows.
     title : str
@@ -352,7 +352,7 @@ def _plot_local_features_import(
     title : str
         Title of the plot, default set to 'Features Importance'
     features_groups_keys : collection of str, optional (default: None)
-        Keys of the dictionnary containing features that should be grouped together.
+        Keys of the dictionary containing features that should be grouped together.
     addnote : String (default: None)
         Specify a note to display
     subtitle : String (default: None)
