@@ -22,13 +22,13 @@ from __future__ import annotations
 
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
-from dash import Input, Output, callback_context, dcc, html
+from dash import Dash, Input, Output, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.explainer.nlp_explanation import word_contributions_by_sample
 from shapash.plots.plot_scatter import plot_scatter
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import CAP_PROJECTION, WebappComponent, error_mask
+from shapash.webapp.nlp_components.base import CAP_PROJECTION, AppContext, WebappComponent, error_mask
 
 
 class ScatterComponent(WebappComponent):
@@ -43,7 +43,7 @@ class ScatterComponent(WebappComponent):
         self._offer_word_contribution = offer_word_contribution
         self._theme = theme
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Build the color-by/word-select controls and the scatter graph itself."""
         explanation = ctx.explanation
         word_options: list[dcc.Dropdown.Options] = [{"label": w, "value": w} for w in explanation.vocabulary()]
@@ -109,7 +109,7 @@ class ScatterComponent(WebappComponent):
             style={"display": "flex", "flexDirection": "column", "height": "100%"},
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire coloring, selection, and the bidirectional word-list sync with the shared store."""
         selection_store = stores["selection"]
         selection_clear_btn = stores["selection_clear"]
@@ -126,7 +126,9 @@ class ScatterComponent(WebappComponent):
                 Input(errors_only_switch, "value"),
             ],
         )
-        def update_scatter_color(color_by, words, label_idx, errors_only):
+        def update_scatter_color(
+            color_by: str | None, words: list[str] | None, label_idx: int | None, errors_only: bool | None
+        ) -> go.Figure:
             return self._build_scatter_fig(
                 ctx,
                 color_by or "prediction",
@@ -139,7 +141,7 @@ class ScatterComponent(WebappComponent):
             Output("color-by", "value"),
             Input("scatter-word-select", "value"),
         )
-        def sync_color_by(words):
+        def sync_color_by(words: list[str] | None) -> str:
             if not words:
                 raise PreventUpdate
             return "word_contribution"
@@ -151,7 +153,7 @@ class ScatterComponent(WebappComponent):
             Output("scatter-word-select", "value"),
             Input(word_click_store, "data"),
         )
-        def follow_word_click(word_filter):
+        def follow_word_click(word_filter: str | list[str] | None) -> list[str]:
             words = word_filter if isinstance(word_filter, list) else ([word_filter] if word_filter else [])
             return words
 
@@ -160,14 +162,14 @@ class ScatterComponent(WebappComponent):
             Input("scatter-word-select", "value"),
             prevent_initial_call=True,
         )
-        def word_filter_from_scatter(words):
+        def word_filter_from_scatter(words: list[str] | None) -> list[str] | None:
             return words or None
 
         @app.callback(
             Output("scatter-word-select", "style"),
             Input("color-by", "value"),
         )
-        def toggle_word_select(color_by):
+        def toggle_word_select(color_by: str | None) -> dict[str, str]:
             base = {"minWidth": "180px", "fontSize": "0.9em"}
             return base if color_by == "word_contribution" else {**base, "display": "none"}
 
@@ -177,7 +179,9 @@ class ScatterComponent(WebappComponent):
             Input("scatter-plot", "clickData"),
             Input(selection_clear_btn, "n_clicks"),
         )
-        def update_scatter_selection(selected_data, click_data, _clear_clicks):
+        def update_scatter_selection(
+            selected_data: dict | None, click_data: dict | None, _clear_clicks: int | None
+        ) -> list[int] | None:
             trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
             if selection_clear_btn in trigger:
                 return None
@@ -196,7 +200,7 @@ class ScatterComponent(WebappComponent):
             Output(selection_clear_btn, "style"),
             Input(selection_store, "data"),
         )
-        def toggle_clear_button(selected_indices):
+        def toggle_clear_button(selected_indices: list[int] | None) -> dict[str, str]:
             visible = {"display": "inline", "fontSize": "0.8em"}
             hidden = {"display": "none", "fontSize": "0.8em"}
             return visible if selected_indices else hidden
@@ -207,7 +211,7 @@ class ScatterComponent(WebappComponent):
 
     def _build_scatter_fig(
         self,
-        ctx,
+        ctx: AppContext,
         color_by: str,
         words: list[str] | None = None,
         label_idx: int = 0,
@@ -224,6 +228,8 @@ class ScatterComponent(WebappComponent):
         """
         explanation = ctx.explanation
         coords = ctx.coords
+        if coords is None:  # the app registers this panel only with coordinates (CAP_PROJECTION)
+            raise ValueError(f"The {self.name} panel needs projection coordinates.")
         err_mask = error_mask(explanation) if errors_only else None
 
         if color_by == "word_contribution" and words:
