@@ -182,9 +182,10 @@ use their first buffer or CPU float32. Do not concurrently train or change the m
 of the same model while explaining it.
 
 Both ``backend="shap"`` and ``backend="lime"`` are supported, including prediction
-export and supported preprocessing. SHAP uses model-agnostic explanations here,
-not ``DeepExplainer`` or ``GradientExplainer``; runtime can grow rapidly with feature
-count. LIME is a local approximation, not an exact additive reconstruction.
+export and supported preprocessing. For tabular framework adapters, SHAP defaults
+to DeepExplainer, with automatic compatibility fallbacks described below.
+Model-agnostic explanations remain available explicitly. LIME is a local approximation, not an
+exact additive reconstruction.
 LIME's internal explainer is rebuilt from its reference data after reloading a
 pickled predictor.
 
@@ -193,6 +194,65 @@ Keras models and PyTorch modules are covered by tests. Custom model classes must
 be importable and may need framework-specific serialization; SavedModel signatures
 and local lambdas are not guaranteed pickleable. For those, reload the model in its
 native format and recreate the adapter. Only load pickles from trusted sources.
+
+DeepExplainer and GradientExplainer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With the SHAP backend and a tabular framework adapter,
+``neural_explainer="auto"`` is the default. It tries DeepExplainer first, then
+GradientExplainer if DeepExplainer is incompatible, and finally agnostic SHAP
+if neither neural method is compatible. Each fallback emits a warning containing
+the reason. Compatibility is checked during both initialization and contribution
+computation; the selected method is retained for later calls and predictor reloads.
+Other model families retain their existing explainer selection.
+
+Choose ``"deep"``, ``"gradient"`` or ``"agnostic"`` to force a method without
+automatic fallback. For example, to configure GradientExplainer sampling explicitly:
+
+.. code-block:: python
+
+    xpl = SmartExplainer(
+        model=adapter,
+        backend="shap",
+        neural_explainer="gradient",
+        neural_background=X_encoded.iloc[:100],
+        explainer_compute_args={"nsamples": 1000, "rseed": 42},
+    )
+    xpl.compile(x=X_encoded.iloc[100:110])
+    predictor = xpl.to_smartpredictor()
+
+Use ``neural_explainer="deep"`` to construct a real ``shap.DeepExplainer``.
+For DeepExplainer, omit the GradientExplainer-specific ``nsamples`` and ``rseed``
+arguments. ``explainer_args`` supplies native constructor options and
+``explainer_compute_args`` supplies native ``shap_values`` options.
+Use an explicit method for method-specific options: arguments are not silently
+discarded or translated during fallback. Invalid arguments, invalid inputs and
+resource errors propagate rather than triggering fallback.
+
+The background must be a nonempty DataFrame in encoded feature space, with the
+same columns and order as the data to explain. If omitted, the data passed to
+``compile`` is the background. Choose a representative background: it determines
+the base values and affects runtime. Classification explanations target the
+adapter's probabilities, including sigmoid/softmax for logits. Binary single-output
+contributions are expanded to complementary classes. Regression explains the
+single predicted value.
+
+Supported neural paths are PyTorch modules and TensorFlow-backed Keras models.
+Keras with a non-TensorFlow backend, arbitrary ``tf.Module`` objects and SavedModel
+signatures use agnostic SHAP with warnings in auto mode and are rejected when
+a neural method is explicitly requested.
+Supported layers and differentiable operations depend on SHAP and the framework
+version. Unsupported operations and DeepExplainer additivity failures trigger
+the next method in auto mode, but propagate for explicit selections.
+Shapash never disables additivity checks automatically.
+GradientExplainer is sampled and approximate; increase ``nsamples`` to reduce
+sampling error and use ``rseed`` for reproducible calls. Ranked output selection
+and variance-return tuples are not supported.
+
+These explainers support production export and reload by rebuilding their gradient
+graphs/hooks for the selected method from the saved background. The underlying model must still be
+pickleable. PyTorch gradient calls preserve the model's training flags and existing
+parameter gradients. Do not concurrently train or explain the same model.
 
 Quick start
 -----------

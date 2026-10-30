@@ -87,7 +87,8 @@ def test_tabular_adapter_workflow(framework, backend, with_preprocessing, task, 
         indices = expected.argmax(axis=1) if task == "multiclass" else (expected[:, 1] >= 0.5).astype(int)
         np.testing.assert_array_equal(adapter.predict(sample), adapter.classes_[indices])
 
-    explainer = SmartExplainer(model=adapter, backend=backend, preprocessing=preprocessing)
+    options = {"neural_explainer": "agnostic"} if backend == "shap" else {}
+    explainer = SmartExplainer(model=adapter, backend=backend, preprocessing=preprocessing, **options)
     explainer.compile(x=encoded)
     compiled = explainer.explainer
     frames = compiled.contributions if isinstance(compiled.contributions, list) else [compiled.contributions]
