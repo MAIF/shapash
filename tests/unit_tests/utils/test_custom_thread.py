@@ -52,8 +52,11 @@ class TestCustomThread:
 
     def test_start_and_kill_running_thread(self):
         def loop():
-            while True:
-                time.sleep(0.01)
+            try:
+                while True:
+                    time.sleep(0.01)
+            except SystemExit:
+                return
 
         t = CustomThread(target=loop)
         t.start()

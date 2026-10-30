@@ -58,13 +58,16 @@ from shapash.utils.utils import (
 class SmartPlotter:
     """
     SmartPlotter is a Bridge pattern decoupling plotting functions from SmartExplainer.
-    The smartplotter class includes all the methods used to display graphics
-    Each SmartPlotter method is easy to use from a Smart explainer object,
-    just use the following syntax
-    Attributes :
-    explainer: object
+
+    The SmartPlotter class includes all the methods used to display graphics.
+    Each method is called from a SmartExplainer object with the following syntax.
+
+    Attributes
+    ----------
+    explainer : object
         Explainer compute object (delegating to SmartExplainer state).
-    Example
+
+    Examples
     --------
     >>> xpl.plot.my_plot_method(param=value)
     """
@@ -1465,6 +1468,7 @@ class SmartPlotter:
         Plotly comparison plot of several individuals' contributions. Plots contributions feature by feature.
         Allows to see the differences of contributions between two or more individuals,
         with each individual represented by a unique line.
+
         Parameters
         ----------
         index : list[Any] or None, optional
@@ -1814,7 +1818,9 @@ class SmartPlotter:
         # add break line to X label if necessary
         max_len_by_row = max([round(50 / self._explainer.features_desc[feature_values1.columns.values[0]]), 8])
         args = (max_len_by_row, 120)
-        feature_values_str = feature_values1.iloc[:, 0].apply(add_line_break, args=args)
+        feature_values_str = feature_values1.iloc[:, 0].apply(
+            lambda value: add_line_break(value, *args) if isinstance(value, str) else value
+        )
         feature_values1 = pd.DataFrame({feature_values1.columns[0]: feature_values_str})
 
         # selecting the best plot : Scatter, Violin?
@@ -2194,6 +2200,7 @@ class SmartPlotter:
         Correlations matrix heatmap plot.
         The method can use phik or pearson correlations.
         The correlations computed can be changed using the parameter 'how'.
+
         Parameters
         ----------
         df : pd.DataFrame, optional
@@ -2348,21 +2355,29 @@ class SmartPlotter:
         This plot analyzes the local neighborhood of the instance, \
         and compares its contribution values with those of its neighbors.
         Intuitively, for similar instances, we would expect similar contributions.
-        Those neighbors are selected as follows :
+        Those neighbors are selected as follows:
+
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
         * We discard neighbors whose model output is too **different** (see equations below)
-        from the instance output
+          from the instance output
         * We discard additional neighbors if their distance to the instance \
-        is bigger than a predefined value (to remove outliers)
+          is bigger than a predefined value (to remove outliers)
+
         In this neighborhood, we would expect instances to have similar SHAP values. \
         If not, one might need to be cautious when interpreting SHAP values.
         The **difference** between outputs is measured with the following distance definition :
+
         * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+          .. math::
+
+              distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
         * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+          .. math::
+
+              distance = |output_{allFeatures} - output_{currentFeatures}|
 
         Parameters
         ----------
@@ -2498,18 +2513,27 @@ class SmartPlotter:
         in order terms, how important the feature is on average vs. how the feature impact \
         changes in the instance neighborhood.
         The average importance of the feature is the average SHAP value of the feature acros all considered instances
-        The neighborhood is defined as follows :
+        The neighborhood is defined as follows:
+
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
         * We discard neighbors whose model output is too **different** (see equations below) from the instance output
         * We discard additional neighbors if their distance to the instance \
-        is bigger than a predefined value (to remove outliers)
+          is bigger than a predefined value (to remove outliers)
+
         The **difference** between outputs is measured with the following distance definition:
+
         * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+          .. math::
+
+              distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
         * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+          .. math::
+
+              distance = |output_{allFeatures} - output_{currentFeatures}|
+
         Parameters
         ----------
         selection : list[Any] or None, optional
@@ -2542,9 +2566,9 @@ class SmartPlotter:
         If multiple instances:
             * if distribution == "none": Mean amplitude of each feature contribution vs. mean variability across neighbors
             * if distribution == "boxplot": Distribution of contributions of each feature in instances neighborhoods.
-            Graph type is box plot
+              Graph type is box plot
             * if distribution == "violin": Distribution of contributions of each feature in instances neighborhoods.
-            Graph type is violin plot
+              Graph type is violin plot
         """
         # Sampling
         if selection is None:
@@ -2637,18 +2661,27 @@ class SmartPlotter:
         can be extracted to provide a simpler explanation of the model.
         indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
         The following two plots are proposed:
+
         * We identify the minimum number of required features (based on the top contribution values)
-        that well approximate the model, and thus, provide accurate explanations.
-        In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*)
-        to the one obtained with all features.
+          that well approximate the model, and thus, provide accurate explanations.
+          In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*)
+          to the one obtained with all features.
         * Conversely, we determine how close we get to the output with all features by using only a subset of them.
+
         *Distance definition*
+
         * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+          .. math::
+
+              distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
         * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+          .. math::
+
+              distance = |output_{allFeatures} - output_{currentFeatures}|
+
         Parameters
         ----------
         selection : list[Any] or None, optional

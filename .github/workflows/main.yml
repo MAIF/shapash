@@ -7,11 +7,15 @@ on:
       - develop
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 concurrency:
   # Cancel older runs for the same PR/branch when new commits arrive.
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   code_quality:
@@ -20,28 +24,36 @@ jobs:
     timeout-minutes: 20
     steps:
     - name: Git checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       with:
         fetch-depth: 0  # required for setuptools-scm to read git tags
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v6
+        persist-credentials: false
+    # Oldest supported Python: mypy checks against the installed libraries' stubs, which follow the
+    # interpreter, so code that only works on newer Pythons is caught here.
+    - name: Set up uv and Python 3.11
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
       with:
-        python-version: "3.12"
-        cache: pip
-        cache-dependency-path: pyproject.toml # it would be better on a lock file
+        python-version: "3.11"
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: uv.lock
+    # Locked environment: `dev` + `test` groups (`default-groups`), the latter because mypy needs the
+    # optional dependencies that ship types. `--locked` also fails when uv.lock is out of date.
     - name: Install dev dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[dev]'
+      run: uv sync --locked
     - name: Check linting
       run: make lint
     - name: Check formatting
       run: make format
     - name: Check type annotations
       run: make typecheck
+    - name: Audit workflows
+      env:
+        GH_TOKEN: ${{ github.token }}  # enables zizmor's online audits (e.g. known-vulnerable actions)
+      run: make workflows
 
   test:
-    name: Build & Test
+    name: Test (Python ${{ matrix.python-version }})
     needs: code_quality
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -49,59 +61,111 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
+        include:
+          # One job measures coverage and uploads it: the others run the same suite.
+          - python-version: "3.12"
+            coverage: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       with:
         fetch-depth: 0  # required for setuptools-scm to read git tags
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+        persist-credentials: false
+    - name: Set up uv and Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
       with:
         python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: pyproject.toml
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: uv.lock
+    # Full suite, NLP included, pinned to uv.lock through a constraints file. Not `uv sync`: uv.lock
+    # holds the PyPI torch wheel, which drags in several GB of CUDA libraries the tests never use.
+    # `--torch-backend cpu` installs the same torch version from the CPU-only index instead.
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[all]'
-    - name: Build python package
-      run: |
-        python -m pip install --upgrade build
-        python -m build
+        uv export --locked --no-hashes --no-emit-project --extra nlp --group test -o constraints.txt
+        uv pip install --torch-backend cpu -c constraints.txt '.[nlp]' --group test
+    # NLP test modules skip (not fail) when their imports are missing, so fail loudly here instead.
+    - name: Check NLP stack is importable
+      run: python -c "import torch, transformers, sentence_transformers, captum; print(torch.__version__)"
+    # Models the NLP tests download from the Hugging Face Hub: reuse them instead of hitting the Hub
+    # from every job. The key follows the tests, so a newly referenced model gets saved too.
+    - name: Cache Hugging Face models
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+      with:
+        path: ~/.cache/huggingface
+        key: hf-models-${{ hashFiles('tests/**/*.py') }}
+        restore-keys: hf-models-
+    - name: Test
+      if: ${{ !matrix.coverage }}
+      run: make test
     - name: Test and coverage
+      if: ${{ matrix.coverage }}
       run: make coverage-report
     - name: Upload coverage to Codecov
-      if: matrix.python-version == '3.13'
-      uses: codecov/codecov-action@v6
+      if: ${{ matrix.coverage }}
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v6.0.2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
         fail_ci_if_error: false
         disable_search: true
+    # Pure-Python package: building it once is enough.
+    - name: Build python package
+      if: ${{ matrix.coverage }}
+      run: uv build
 
-  pandas_compat:
-    name: Pandas Compat (${{ matrix.pandas }})
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      with:
+        fetch-depth: 0  # required for setuptools-scm to read git tags
+        persist-credentials: false
+    # Same Python as Read the Docs (.readthedocs.yml)
+    - name: Set up uv and Python 3.11
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+      with:
+        python-version: "3.11"
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: uv.lock
+    # Same install as Read the Docs. Non-editable, so the docs import the built package, not the checkout.
+    - name: Install doc dependencies
+      run: uv sync --locked --no-editable --no-default-groups --group doc --extra report
+    - name: Prepare tutorials and demo report
+      run: python scripts/prepare_docs.py
+    # Any warning fails the build (`--keep-going` still reports them all)
+    - name: Build docs
+      run: sphinx-build -W --keep-going -b html docs docs/_build/html
+
+  lowest_deps:
+    name: Lowest Dependencies
     needs: code_quality
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        pandas: ["2.2.2", "2.3.*", "3.*"]
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       with:
         fetch-depth: 0  # required for setuptools-scm to read git tags
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v6
+        persist-credentials: false
+    # Oldest supported Python: the oldest dependency releases may ship no wheels for newer ones.
+    - name: Set up uv and Python 3.11
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
       with:
-        python-version: "3.12"
-        cache: pip
-        cache-dependency-path: pyproject.toml
+        python-version: "3.11"
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: pyproject.toml
+    # Each direct dependency at the lower bound pyproject.toml declares (transitive ones at their
+    # newest), so a PR relying on a newer API fails here until the bound is raised. Classical install:
+    # the extras the `test` group pulls are listed explicitly so they count as direct too.
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[all]'
-        python -m pip install "pandas==${{ matrix.pandas }}"
-        python -c "import pandas; print(pandas.__version__)"
-    - name: Test and coverage
-      run: make coverage
+        uv pip install --resolution lowest-direct '.[xgboost,catboost,lightgbm,lime,report]' --group test
+        python -c "import pandas, plotly, sklearn; print(pandas.__version__, plotly.__version__, sklearn.__version__)"
+    - name: Check NLP stack is absent
+      run: python -c "import importlib.util as u; assert u.find_spec('torch') is None, 'torch installed'"
+    - name: Test
+      run: make test

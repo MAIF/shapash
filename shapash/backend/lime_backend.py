@@ -27,7 +27,12 @@ def _with_feature_names(
     values : np.ndarray or pd.DataFrame
         Input values to pass to the prediction function.
     predict_fn : Callable[[Any], Any]
-        Prediction function to call.
+        Model batch-prediction function: ``predict_proba`` for classification or
+        ``predict`` for regression. It must accept multiple rows at once and return
+        one prediction row per input row. DataFrame inputs are passed through;
+        NumPy inputs are first wrapped in a DataFrame with ``feature_names`` as
+        columns, then retried as a NumPy array if that call raises ``TypeError`` or
+        ``ValueError``.
     feature_names : list[str]
         Explicit column names — no implicit closure over outer scope.
 
@@ -90,7 +95,7 @@ class LimeBackend(BaseBackend):
         ----------
         model : Any
             Model to explain.
-        preprocessing : Any or None, optional
+        preprocessing : category_encoders, ColumnTransformer, list or dict or None, optional
             Preprocessing applied to the model inputs.
         data : pd.DataFrame or None, optional
             Data used to initialize the LIME explainer. Defaults to the data
@@ -115,14 +120,18 @@ class LimeBackend(BaseBackend):
         -------
         dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]
             A dict with keys:
+
             - 'contributions':
-                - pd.DataFrame of shape (n_samples, n_features)
-                    for binary classification or regression.
-                - List[pd.DataFrame] of length n_classes
-                    for multiclass classification.
+
+              - pd.DataFrame of shape (n_samples, n_features)
+                for binary classification or regression.
+              - List[pd.DataFrame] of length n_classes
+                for multiclass classification.
+
             - 'base_values': local intercepts by individual:
-                - np.ndarray of shape (n_samples, n_classes) for classification.
-                - np.ndarray of shape (n_samples,) for regression.
+
+              - np.ndarray of shape (n_samples, n_classes) for classification.
+              - np.ndarray of shape (n_samples,) for regression.
         """
         feature_names = list(x.columns)
         data = self.data if self.data is not None else x
@@ -195,10 +204,26 @@ class LimeBackend(BaseBackend):
         it returns explanations for every class in a single call, so there is
         no need to loop over classes in the outer dimension.
 
+        Parameters
+        ----------
+        x : pd.DataFrame
+            Input observations to explain. Each row is explained once with
+            :meth:`lime.lime_tabular.LimeTabularExplainer.explain_instance`.
+        feature_names : list[str]
+            Ordered list of feature names used to build each per-class
+            contributions dataframe and preserve the original column order.
+        predict_fn : Callable
+            Batch prediction callable passed to LIME. It must accept multiple
+            perturbed rows at once and return class probabilities, with one output
+            row per input row (shape ``(n_samples, n_classes)``).
+        num_classes : int
+            Number of target classes to explain.
+
         Returns
         -------
-        tuple[pd.DataFrame, np.ndarray]
-            - One DataFrame of shape (n_samples, n_features) per class.
+        tuple[list[pd.DataFrame], np.ndarray]
+            - One DataFrame of shape (n_samples, n_features) per class,
+              ordered by class index.
             - Local intercepts of shape (n_samples, n_classes).
         """
         # One explain_instance call per sample — O(n_samples)
@@ -231,6 +256,15 @@ class LimeBackend(BaseBackend):
     ) -> tuple[pd.DataFrame, np.ndarray]:
         """
         Compute LIME contributions for binary classification or regression.
+
+        Parameters
+        ----------
+        predict_fn : Callable
+            Batch prediction callable passed to LIME. It must accept multiple
+            perturbed rows at once and return one output row per input row. For
+            classification, it returns class probabilities with shape
+            ``(n_samples, n_classes)``; for regression, it returns one prediction
+            per row with shape ``(n_samples,)``.
 
         Returns
         -------

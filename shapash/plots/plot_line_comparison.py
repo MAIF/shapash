@@ -112,10 +112,10 @@ def plot_line_comparison(
             features.append("<b>" + str(feat) + "</b>")
             pred_x_val = x_val[dict_features[feat]]
             x_hover.append(
-                f"Id: <b>{add_line_break(id_i, 40, 160)}</b>"
-                + f"<br /><b>{add_line_break(feat, 40, 160)}</b> <br />"
+                f"Id: <b>{add_line_break(str(id_i), 40, 160)}</b>"
+                + f"<br /><b>{add_line_break(str(feat), 40, 160)}</b> <br />"
                 + f"Contribution: {contrib[i]:.4f} <br />Value: "
-                + str(add_line_break(pred_x_val, 40, 160))
+                + add_line_break(str(pred_x_val), 40, 160)
             )
 
         lines.append(

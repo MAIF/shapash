@@ -1,17 +1,5 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help
+.PHONY: help clean clean-build clean-pyc clean-test lint format typecheck workflows test test-all coverage coverage-report docs dist
 .DEFAULT_GOAL := help
-
-define BROWSER_PYSCRIPT
-import os, webbrowser, sys
-
-try:
-	from urllib import pathname2url
-except:
-	from urllib.request import pathname2url
-
-webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
-endef
-export BROWSER_PYSCRIPT
 
 define PRINT_HELP_PYSCRIPT
 import re, sys
@@ -24,8 +12,6 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
-
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
@@ -35,21 +21,23 @@ clean-build: ## remove build artifacts
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
-	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
+	find . -name '*.egg-info' -not -path './.venv/*' -exec rm -fr {} +
+	find . -name '*.egg' -not -path './.venv/*' -exec rm -f {} +
 
 clean-pyc: ## remove Python file artifacts
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
+	find . -name '*.pyc' -not -path './.venv/*' -exec rm -f {} +
+	find . -name '*.pyo' -not -path './.venv/*' -exec rm -f {} +
+	find . -name '*~' -not -path './.venv/*' -exec rm -f {} +
+	find . -name '__pycache__' -not -path './.venv/*' -exec rm -fr {} +
 
-clean-test: ## remove test and coverage artifacts
+clean-test: ## remove test, coverage and linter cache artifacts
 	rm -fr .tox/
 	rm -f .coverage
 	rm -f coverage.xml
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
+	rm -fr .mypy_cache
+	rm -fr .ruff_cache
 
 lint: ## check style with ruff
 	ruff check
@@ -59,6 +47,9 @@ format: ## check formatting with ruff
 
 typecheck: ## check type annotations with mypy
 	mypy shapash
+
+workflows: ## audit the GitHub Actions workflows with zizmor
+	zizmor .github
 
 test: ## run tests quickly with the default Python
 	pytest
@@ -73,22 +64,11 @@ coverage-report: ## run tests with coverage and generate xml report
 	pytest --cov=shapash --cov-branch --cov-report=xml
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/shapash.rst
-	rm -f docs/modules.rst
+	python scripts/prepare_docs.py
 	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
-
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
-
-release: dist ## package and upload a release
-	twine upload dist/*
+	$(MAKE) -C docs html SPHINXOPTS="-W --keep-going"
+	python -m webbrowser "file://$(CURDIR)/docs/_build/html/index.html"
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
+	uv build
 	ls -l dist
-
-install: clean ## install the package to the active Python's site-packages
-	python setup.py install

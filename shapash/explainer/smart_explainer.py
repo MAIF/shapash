@@ -89,35 +89,30 @@ class SmartExplainer:
         - A dict
         - A list of dict
     postprocessing : dict, optional (default: None)
-        Dictionnary of postprocessing modifications to apply in x_init dataframe.
-        Dictionnary with feature names as keys (or number, or well labels referencing to features names),
+        Dictionary of postprocessing modifications to apply in x_init dataframe.
+        Dictionary with feature names as keys (or number, or well labels referencing to features names),
         which modifies dataset features by features.
-        --> Different types of postprocessing are available, but the syntax is this one:
-        One key by features, 5 different types of modifications:
-            features_groups : dict, optional (default: None)
-        Dictionnary containing features that should be grouped together. This option allows
-        to compute and display the contributions and importance of this group of features.
-        Features that are grouped together will still be displayed in the webapp when clicking
-        on a group.
-        >>> {
-        ‘feature1’ : { ‘type’ : ‘prefix’, ‘rule’ : ‘age: ‘ },
-        ‘feature2’ : { ‘type’ : ‘suffix’, ‘rule’ : ‘$/week ‘ },
-        ‘feature3’ : { ‘type’ : ‘transcoding’, ‘rule‘: { ‘code1’ : ‘single’, ‘code2’ : ‘married’}},
-        ‘feature4’ : { ‘type’ : ‘regex’ , ‘rule‘: { ‘in’ : ‘AND’, ‘out’ : ‘ & ‘ }},
-        ‘feature5’ : { ‘type’ : ‘case’ , ‘rule‘: ‘lower’‘ }
-        }
+        Different types of postprocessing are available, but the syntax is this one:
+        one key by features, 5 different types of modifications::
+
+            {
+                "feature1": {"type": "prefix", "rule": "age: "},
+                "feature2": {"type": "suffix", "rule": "$/week "},
+                "feature3": {"type": "transcoding", "rule": {"code1": "single", "code2": "married"}},
+                "feature4": {"type": "regex", "rule": {"in": "AND", "out": " & "}},
+                "feature5": {"type": "case", "rule": "lower"},
+            }
+
         Only one transformation by features is possible.
     features_groups : dict, optional
         Groups of features to be aggregated together in plots and importance
         computations. Each key defines a group name, and its value is a list of
-        feature names.
+        feature names, for example::
 
-        Examples
-        --------
-        >>> {
-        ...   'feature_group_1': ['feature3', 'feature7', 'feature24'],
-        ...   'feature_group_2': ['feature1', 'feature12']
-        ... }
+            {
+                "feature_group_1": ["feature3", "feature7", "feature24"],
+                "feature_group_2": ["feature1", "feature12"],
+            }
     features_dict : dict, optional
         Mapping from technical feature names to domain-specific (readable) names.
     label_dict : dict, optional
@@ -140,6 +135,7 @@ class SmartExplainer:
         All pd.DataFrame have she same shape (n_samples, n_features).
         For the regression case, data that should be regarded as a single array
         of size (n_samples, n_features, 3).
+
         data['contrib_sorted']: pandas.DataFrame (regression) or list of pandas.DataFrame (classification)
             Contains local contributions of the prediction set, with common line index.
             Columns are 'contrib_1', 'contrib_2', ... and contains the top contributions
@@ -505,7 +501,7 @@ class SmartExplainer:
         -----
         - The filtering configuration is stored in `self.mask_params`.
         - The resulting filtered contributions are available in
-        `self.masked_contributions`.
+          `self.masked_contributions`.
 
         Example
         -------
@@ -651,6 +647,7 @@ class SmartExplainer:
         pandas.DataFrame
             A DataFrame summarizing local explanations for each sample.
             Columns typically include:
+
             - Predicted class or value (`pred`)
             - Probability (`proba`, if `proba=True`)
             - Top N feature names, values, and corresponding contributions
@@ -666,7 +663,6 @@ class SmartExplainer:
         >>> # Export a summary of local explanations with probabilities
         >>> summary_df = xpl.to_pandas(max_contrib=2, proba=True)
         >>> summary_df.head()
-
             pred    proba       feature_1   value_1     contribution_1   feature_2   value_2     contribution_2
         0     0     0.756416    Sex         1.0         0.322308         Pclass      3.0         0.155069
         1     3     0.628911    Sex         2.0         0.585475         Pclass      1.0         0.370504
@@ -891,8 +887,10 @@ class SmartExplainer:
         ValueError
             If no backend is defined in the current `SmartExplainer`.
 
-        Attributes Transferred
-        ----------------------
+        Notes
+        -----
+        The following attributes are transferred:
+
         - **features_dict** : dict
           Mapping from technical feature names to human-readable (domain) names.
         - **label_dict** : dict

@@ -28,20 +28,26 @@ repos:
         exclude: ^(docs/|gdocs/)
     -   id: check-added-large-files
         args: ['--maxkb=3000']
--   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
-    hooks:
-      # Run the linter
-      - id: ruff-check
-        args: [--fix]
-      # Run the formatter
-      - id: ruff-format
+# ruff and mypy run from the dev environment, so they use the versions pinned in uv.lock, the same ones
+# CI runs. The entries look in .venv first (bin/ on Linux and macOS, Scripts/ on Windows, where git runs
+# hooks through its bundled bash), so the hooks work without an activated venv.
 -   repo: local
     hooks:
+    -   id: ruff-check
+        name: ruff check
+        entry: bash -c 'PATH=".venv/bin:.venv/Scripts:$PATH" exec "$@"' -- ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+    -   id: ruff-format
+        name: ruff format
+        entry: bash -c 'PATH=".venv/bin:.venv/Scripts:$PATH" exec "$@"' -- ruff format --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
     -   id: mypy
         name: mypy
-        # Try module invocation first, then PATH command, then local .venv fallback.
-        entry: bash -lc 'python -m mypy shapash; exit_code=$?; if [ "$exit_code" -ne 0 ]; then mypy shapash; exit_code=$?; fi; if [ "$exit_code" -eq 127 ] && [ -x .venv/bin/mypy ]; then .venv/bin/mypy shapash; exit_code=$?; fi; if [ "$exit_code" -eq 127 ]; then echo "mypy not found (python -m mypy, PATH mypy, and .venv/bin/mypy)"; fi; exit "$exit_code"'
+        entry: bash -c 'PATH=".venv/bin:.venv/Scripts:$PATH" exec "$@"' -- mypy shapash
         language: system
         pass_filenames: false
         files: ^shapash/.*\.py$
@@ -49,6 +55,7 @@ repos:
     rev: 1.20.0
     hooks:
     -   id: blacken-docs
+        args: [--line-length=120]
         additional_dependencies: [black==26.5.1]
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.3.0

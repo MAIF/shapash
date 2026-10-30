@@ -27,7 +27,7 @@ def _df_to_array(instances: pd.DataFrame | pd.Series | np.ndarray) -> np.ndarray
         return instances
 
 
-def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, epsilon: float = 0.0000001) -> float:
+def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, epsilon: float = 1e-7) -> float:
     """
     Compute distances between data points by using L1 on normalized data : sum(abs(x1-x2)/(mean_vector+epsilon))
 
@@ -40,7 +40,7 @@ def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, e
     mean_vector : numpy.ndarray
         Each value of this vector is the std.dev for each feature in dataset
     epsilon : float, optional
-        Small value added to the standard deviation to avoid division by zero, by default 0.0000001
+        Small value added to the standard deviation to avoid division by zero, by default 1e-7
 
     Returns
     -------

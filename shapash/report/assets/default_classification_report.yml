@@ -53,6 +53,7 @@ sections:
   - type: model_analysis
     params:
       title: "Model analysis"
+      show_index: false
 
   - type: group
     params:
@@ -73,12 +74,22 @@ sections:
         params:
           title: "Target analysis"
           show_train: true
+          show_index: true
 
       # Correlation matrix; reduce `max_features` for faster/lighter reports.
       - type: correlations_plot
         params:
           title: "Multivariate analysis"
           max_features: 20
+
+  - type: group
+    params:
+      title: "Model explainability"
+    blocks:
+      - type: class_explainability
+        params:
+          title: "Explained classes"
+          label: 1
 
   - type: group
     params:

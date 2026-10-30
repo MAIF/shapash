@@ -1,17 +1,18 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from shapash.backend.backend import Backend
 from shapash.utils.check import check_contribution_object, check_model
 from shapash.utils.transform import adapt_contributions, get_preprocessing_mapping
 from shapash.utils.utils import choose_state
 
 
-class BaseBackend(ABC):
-    """``BaseBackend`` is the base class for all backends.
-    All explainability implementations should extend this abstract class
+class BaseBackend(Backend):
+    """``BaseBackend`` is the base class for all tabular backends.
+    All tabular explainability implementations should extend this abstract class
     and implement the methods marked as abstract.
     """
 
@@ -22,9 +23,8 @@ class BaseBackend(ABC):
     # It allows to compute (column-wise) aggregation of local contributions.
     column_aggregation = "sum"
 
-    # `name` defines the string name of the backend allowing to identify and
-    # construct the backend from it.
-    name = "base"
+    # `name` is inherited from `Backend` (default sentinel "base"); concrete
+    # tabular backends override it with a unique name.
     support_groups = True
     supported_cases = ["classification", "regression"]
 
@@ -35,7 +35,7 @@ class BaseBackend(ABC):
         ----------
         model : Any
             Model used.
-        preprocessing : Any, optional
+        preprocessing : category_encoders, ColumnTransformer, list or dict, optional
             The processing apply to the original data.
         """
         self.model = model
@@ -210,7 +210,7 @@ def _needs_preprocessing(result_cols: list[Any], x: pd.DataFrame, preprocessing:
         Column names present in the contributions.
     x : pd.DataFrame
         The encoded input data.
-    preprocessing : Any or None
+    preprocessing : category_encoders, ColumnTransformer, list or dict or None
         The preprocessing applied to the original data, if any.
 
     Returns

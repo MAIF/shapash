@@ -33,7 +33,7 @@ def keep_right_contributions(
     y_pred: pd.DataFrame,
     contributions: pd.DataFrame | list[pd.DataFrame],
     _case: Literal["classification", "regression"],
-    _classes: list[Any] | None,
+    _classes: list[int | float | str] | None,
     label_dict: dict[Any, Any] | None,
     proba_values: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -49,7 +49,7 @@ def keep_right_contributions(
         and a list of per-class DataFrames for classification.
     _case : {"classification", "regression"}
         String that informs if the model used is for classification or regression problem.
-    _classes : list[Any] or None
+    _classes : list[int or float or str] or None
         Class labels for classification, or None for regression.
     label_dict : dict[Any, Any] or None
         Optional mapping from class labels to domain names.

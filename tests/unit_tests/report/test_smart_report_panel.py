@@ -74,7 +74,7 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_select_allowed(self, title: str = "Selector"):
-        return [pn.widgets.Select(name="Feature", options=["a", "b"], value="a")]
+        return [pn.widgets.Select(label="Feature", options=["a", "b"], value="a")]
 
     @block
     def block_plotly_allowed(self, title: str = "Plotly"):
@@ -83,13 +83,13 @@ class _DummyBlocks(ReportBlockMixin):
 
     @block
     def block_bind_allowed(self, title: str = "Bind"):
-        selector = pn.widgets.Select(name="Feature", options=["a", "b"], value="a")
+        selector = pn.widgets.Select(label="Feature", options=["a", "b"], value="a")
         selected_panel = pn.panel(pn.bind(lambda selected: pn.pane.Markdown(selected), selector))
         return [selector, selected_panel]
 
     @block
-    def block_panel_type_not_allowed(self, title: str = "HTML"):
-        return [pn.pane.HTML("<b>html</b>")]
+    def block_panel_type_not_allowed(self, title: str = "Button"):
+        return [pn.widgets.Button(label="Click")]
 
     @block
     def block_non_panel_type_not_allowed(self, title: str = "Object"):
@@ -179,3 +179,29 @@ class TestBlockDecorator(unittest.TestCase):
             runtime.block_non_panel_type_not_allowed()
 
         self.assertIn("Unsupported block return type", str(context.exception))
+
+
+def _custom_returns_plain_object(runtime):
+    return {"a": 1}
+
+
+def _custom_returns_template(runtime):
+    return pn.template.BootstrapTemplate()
+
+
+class TestRenderCustomBlock(unittest.TestCase):
+    def _render(self, func_name):
+        return _DummyBlocks().render_block({"type": "custom", "function": f"{__name__}.{func_name}", "params": {}})
+
+    def test_custom_block_coerces_plain_object_with_pn_panel(self):
+        result = self._render("_custom_returns_plain_object")
+
+        self.assertIsInstance(result, pn.viewable.Viewable)
+        self.assertNotIsInstance(result, pn.pane.Alert)
+
+    def test_custom_block_returning_non_viewable_renders_error(self):
+        result = self._render("_custom_returns_template")
+
+        self.assertIsInstance(result, pn.pane.Alert)
+        self.assertIn("BootstrapTemplate", result.object)
+        self.assertIn("not embeddable in a report", result.object)

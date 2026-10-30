@@ -45,7 +45,7 @@ def plot_bar_chart(
     style_dict: dict
         the different styles used in the different outputs of Shapash
     features_groups : dict, optional (default: None)
-        Dictionnary containing features that should be grouped together. This option allows
+        Dictionary containing features that should be grouped together. This option allows
         to compute and display the contributions and importance of this group of features.
         Features that are grouped together will still be displayed in the webapp when clicking
         on a group.
@@ -184,12 +184,16 @@ def plot_bar_chart(
                     feat_groups_values = x_init[features_groups[group_name]].loc[index_value[0]]
                     hoverlabel = "<br />".join(
                         [
-                            f"<b>{add_line_break(features_dict.get(f_name, f_name), 40, maxlen=120)} :</b>{add_line_break(f_value, 40, maxlen=160)}"
+                            f"<b>{add_line_break(str(features_dict.get(f_name, f_name)), 40, maxlen=120)} :</b>"
+                            f"{add_line_break(str(f_value), 40, maxlen=160)}"
                             for f_name, f_value in feat_groups_values.to_dict().items()
                         ]
                     )
                 else:
-                    hoverlabel = f"<b>{add_line_break(feat_name, 40, maxlen=120)} :</b><br />{add_line_break(x_val_el, 40, maxlen=160)}"
+                    hoverlabel = (
+                        f"<b>{add_line_break(str(feat_name), 40, maxlen=120)} :</b><br />"
+                        f"{add_line_break(str(x_val_el), 40, maxlen=160)}"
+                    )
                 if len(contrib) <= yaxis_max_label and (
                     features_groups is None
                     # We don't want to display label values for t-sne projected values of groups of features.
