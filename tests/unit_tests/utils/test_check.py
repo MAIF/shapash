@@ -29,6 +29,7 @@ from shapash.utils.check import (
     check_postprocessing,
     check_preprocessing,
     check_preprocessing_options,
+    check_x,
     check_y,
 )
 
@@ -737,6 +738,16 @@ class TestCheck(unittest.TestCase):
         drop_option_2 = check_preprocessing_options(columns_dict, features_dict, encoder_fitted_2, [encoder_fitted_2])
         assert drop_option_1 == expected_dict
         assert drop_option_2 == expected_dict_2
+
+    def test_check_x_unique_columns(self):
+        x = pd.DataFrame(data=np.array([[1, 2], [3, 4]]), columns=["Col1", "Col2"])
+        check_x(x)
+
+    def test_check_x_raises_duplicated_columns(self):
+        x = pd.DataFrame(data=np.array([[1, 2, 3, 4]]), columns=["Col1", "Col2", "Col1", "Col1"])
+        with pytest.raises(ValueError) as exc_info:
+            check_x(x)
+        assert str(exc_info.value) == "x must have unique column names. Duplicated columns: ['Col1']"
 
     def test_check_additional_data_raises_index(self):
         x_init = pd.DataFrame(data=np.array([[1, 2], [3, 4]]), columns=["Col1", "Col2"])

@@ -274,6 +274,7 @@ class SmartExplainer:
             Prediction dataset — the same data seen by the end user.
             It should correspond to the **raw prediction input** (post-preprocessing).
             Shapash will use this dataset to compute and align explanations.
+            Column names must be unique.
         contributions : pandas.DataFrame, numpy.ndarray, list, or dict, optional
             Local feature contributions for each sample.
             - If a `DataFrame`, its index and columns must match those of `x`.

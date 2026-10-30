@@ -302,6 +302,16 @@ class TestSmartExplainer(unittest.TestCase):
         assert xpl.explainer._case == "classification"
         self.assertListEqual(xpl.explainer._classes, [0, 1])
 
+    def test_compile_duplicated_columns(self):
+        """
+        compile raises a clear error when x has duplicated column names
+        """
+        x = pd.DataFrame(np.random.rand(10, 3), columns=["x1", "x2", "x1"])
+        model = DecisionTreeRegressor().fit(x.values, np.random.rand(10))
+        xpl = SmartExplainer(model)
+        with self.assertRaisesRegex(ValueError, r"Duplicated columns: \['x1'\]"):
+            xpl.compile(x=x, y_pred=pd.Series(model.predict(x.values), index=x.index))
+
     def test_compile_2(self):
         """
         Unit test compile 2

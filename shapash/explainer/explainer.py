@@ -18,6 +18,7 @@ from shapash.utils.check import (
     check_label_dict,
     check_model,
     check_postprocessing,
+    check_x,
     check_y,
 )
 from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
@@ -162,6 +163,7 @@ class Explainer:
             Results are stored on the instance (data, contributions, metadata,
             masks/ordering helpers, and related state).
         """
+        check_x(x)
         if isinstance(self.backend_name, str):
             backend_cls = cast(Any, get_backend_cls_from_name(self.backend_name))
             self.backend = backend_cls(
