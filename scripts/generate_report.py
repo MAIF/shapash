@@ -1,6 +1,7 @@
 """Generate Shapash HTML reports for Titanic and house prices examples.
 
-Examples:
+Examples
+--------
     python scripts/generate_report.py --dataset titanic --case classification
     python scripts/generate_report.py --dataset titanic --case multiclass
     python scripts/generate_report.py --dataset house_prices --case regression --report-mode custom
