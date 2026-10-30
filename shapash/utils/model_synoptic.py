@@ -109,8 +109,14 @@ sklearn_model = (
 
 simple_tree_model = simple_tree_model_sklearn + xgboost_model + lightgbm_model
 
+tabular_adapter_model = (
+    "<class 'shapash.model.tabular.KerasModelAdapter'>",
+    "<class 'shapash.model.tabular.TensorFlowModelAdapter'>",
+    "<class 'shapash.model.tabular.PyTorchModelAdapter'>",
+)
+
 dict_model_feature = {
-    **{model: ["length"] for model in sklearn_model},
+    **{model: ["length"] for model in sklearn_model + tabular_adapter_model},
     "<class 'lightgbm.sklearn.LGBMClassifier'>": ["booster_", "feature_name"],
     "<class 'lightgbm.sklearn.LGBMRegressor'>": ["booster_", "feature_name"],
     "<class 'lightgbm.basic.Booster'>": ["feature_names"],

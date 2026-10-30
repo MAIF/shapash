@@ -118,6 +118,14 @@ class LimeBackend(BaseBackend):
         self.explainer: Any = None
         self.data = data
 
+    def __getstate__(self) -> dict[str, Any]:
+        """Rebuild LIME's non-pickleable explainer from its reference data on reload."""
+        state = self.__dict__.copy()
+        state["explainer"] = None
+        if state["data"] is None:
+            state["data"] = state.get("_explainer_data")
+        return state
+
     def run_explainer(self, x: pd.DataFrame) -> dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]:
         """
         Computes local contributions using the Lime explainer.
@@ -150,6 +158,7 @@ class LimeBackend(BaseBackend):
         # added condition to reinitialise the explainer
         # whenever the feature names differ from what it was built with
         if self.explainer is None or self.explainer.feature_names != feature_names:
+            self._explainer_data = data
             self.explainer = lime_tabular.LimeTabularExplainer(
                 data.to_numpy(), feature_names=feature_names, mode=self._case
             )

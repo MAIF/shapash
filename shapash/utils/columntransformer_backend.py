@@ -25,6 +25,7 @@ from shapash.utils.model_synoptic import (
     dict_model_feature,
     lightgbm_model,
     sklearn_model,
+    tabular_adapter_model,
     xgboost_model,
 )
 
@@ -292,7 +293,7 @@ def transform_ct(x_in: pd.DataFrame, model: Any, encoding: Any) -> pd.DataFrame:
     """
     if str(type(encoding)) == columntransformer:
         # We use inverse tranform from the encoding method base on columns position
-        if str(type(model)) in sklearn_model:
+        if str(type(model)) in sklearn_model + tabular_adapter_model:
             rst = pd.DataFrame(encoding.transform(x_in), index=x_in.index)
             rst.columns = ["col_" + str(feature) for feature in rst.columns]
 

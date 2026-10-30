@@ -1,5 +1,9 @@
 """Model capability layer — modality-agnostic adapters for the shapash engine.
 
+Tabular neural networks use ``KerasModelAdapter``, ``TensorFlowModelAdapter`` or
+``PyTorchModelAdapter`` to expose prediction methods and feature metadata without
+importing optional frameworks until an adapter is constructed.
+
 This package introduces a first-class ``Model`` abstraction (a peer to the planned
 ``shapash/data/`` layer). Explanation backends and counterfactual generators depend on
 *declared capabilities* rather than a concrete model type, so a component can call
@@ -32,6 +36,7 @@ from shapash.model.base import (
 )
 from shapash.model.encoder import EncoderClassifierModel
 from shapash.model.hf import HFClassifierModel, HFPipelineModel
+from shapash.model.tabular import KerasModelAdapter, PyTorchModelAdapter, TensorFlowModelAdapter
 
 if TYPE_CHECKING:  # import for type checkers only — the runtime path is the lazy __getattr__ below
     from shapash.model.torch_models import SentenceTransformerModel, TorchClassifierModel
@@ -59,6 +64,9 @@ def __dir__() -> list[str]:
 
 
 __all__ = [
+    "KerasModelAdapter",
+    "TensorFlowModelAdapter",
+    "PyTorchModelAdapter",
     "TextModel",
     "SupportsTokenization",
     "SupportsEmbeddings",

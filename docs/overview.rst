@@ -98,6 +98,102 @@ labels, groups, postprocessing and explanations. DataFrames using those internal
 names remain accepted. Columns explicitly dropped by the transformer are optional
 in raw input; unknown columns are rejected.
 
+Keras, TensorFlow and PyTorch (tabular)
+-------------------------------------
+
+``shapash.model`` provides three inference-only adapters:
+``KerasModelAdapter``, ``TensorFlowModelAdapter`` and ``PyTorchModelAdapter``.
+Install the framework separately. Importing the adapters does not import these
+optional frameworks; the selected framework is loaded when constructing its adapter.
+The adapters do not train models and do not require a scikit-learn training wrapper.
+
+For example, for an already-trained binary Keras network with a sigmoid output:
+
+.. code-block:: python
+
+    from shapash import SmartExplainer
+    from shapash.model import KerasModelAdapter
+
+    adapter = KerasModelAdapter(
+        model,
+        n_features=X_encoded.shape[1],
+        task="classification",
+        classes=[0, 1],
+        output="probabilities",
+    )
+    xpl = SmartExplainer(model=adapter, backend="shap", preprocessing=encoder)
+    xpl.compile(x=X_encoded)
+    predictor = xpl.to_smartpredictor()
+    predictor.add_input(x=X_raw)
+
+Use the same arguments with ``TensorFlowModelAdapter`` or ``PyTorchModelAdapter``:
+
+.. code-block:: python
+
+    from shapash.model import TensorFlowModelAdapter, PyTorchModelAdapter
+
+    tf_adapter = TensorFlowModelAdapter(tf_model, n_features=10, task="regression")
+    torch_adapter = PyTorchModelAdapter(
+        torch_model,
+        n_features=10,
+        task="classification",
+        classes=[3, 8, 42],
+        output="logits",
+    )
+
+``n_features`` is the number of encoded input features, not the number before
+preprocessing. Inputs must be finite numeric two-dimensional tables, in the
+network's feature order; preprocessing missing values is the caller's responsibility.
+Input values are converted to float32 before framework inference.
+
+- Regression accepts output shapes ``(n_samples,)`` and ``(n_samples, 1)``.
+- Binary classification accepts one output for the second class, or two outputs
+  in ``classes`` order. ``threshold`` defaults to 0.5 for the second-class probability.
+- Multiclass classification requires one output per class, in ``classes`` order.
+  Labels need not be consecutive. For user-supplied ``y_target`` or ``y_pred``,
+  existing tabular validation still requires numeric labels.
+- Set ``output="logits"`` for unnormalized scores: the adapter applies sigmoid
+  for one binary output or softmax for multiple outputs. Probability outputs
+  must lie in [0, 1] and sum to one. Multi-target and multilabel outputs are rejected.
+- Use ``output_key`` to select one tensor from a dictionary-valued output.
+  Multiple inputs, images, token sequences and tuples/lists of outputs are not
+  supported by these tabular adapters.
+
+Keras models are called with ``training=False``. The Keras adapter uses Keras 3
+operations to convert outputs to NumPy. The TensorFlow adapter accepts tf.keras
+models, callable ``tf.Module`` objects and explicit SavedModel signatures. Modules
+and signatures must perform deterministic inference themselves. Wrap keyword-only
+signatures explicitly, for example:
+
+.. code-block:: python
+
+    signature = loaded.signatures["serving_default"]
+    adapter = TensorFlowModelAdapter(
+        lambda values: signature(features=values),
+        n_features=10,
+        task="regression",
+        output_key="predictions",
+    )
+
+The PyTorch adapter uses the module's parameter device and floating-point dtype,
+disables gradients and temporarily enters evaluation mode. It restores each
+submodule's training flag, including after a failed inference. Parameterless models
+use their first buffer or CPU float32. Do not concurrently train or change the mode
+of the same model while explaining it.
+
+Both ``backend="shap"`` and ``backend="lime"`` are supported, including prediction
+export and supported preprocessing. SHAP uses model-agnostic explanations here,
+not ``DeepExplainer`` or ``GradientExplainer``; runtime can grow rapidly with feature
+count. LIME is a local approximation, not an exact additive reconstruction.
+LIME's internal explainer is rebuilt from its reference data after reloading a
+pickled predictor.
+
+Saving a predictor also requires its underlying model to be pickleable. Built-in
+Keras models and PyTorch modules are covered by tests. Custom model classes must
+be importable and may need framework-specific serialization; SavedModel signatures
+and local lambdas are not guaranteed pickleable. For those, reload the model in its
+native format and recreate the adapter. Only load pickles from trusted sources.
+
 Quick start
 -----------
 

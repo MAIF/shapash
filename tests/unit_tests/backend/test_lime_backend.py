@@ -3,6 +3,7 @@ Unit tests lime backend.
 """
 
 import unittest
+import pickle
 from types import SimpleNamespace
 
 import category_encoders as ce
@@ -73,6 +74,20 @@ def test_noncallable_predict_proba_is_rejected():
 
     with pytest.raises(ValueError, match="LIME backend requires predict_proba"):
         LimeBackend(InvalidClassifier())
+
+
+@pytest.mark.parametrize("explicit_data", [False, True])
+def test_lime_pickle_rebuilds_explainer_with_original_background(explicit_data):
+    x = pd.DataFrame({"first": np.arange(20, dtype=float), "second": np.arange(20, dtype=float) ** 2})
+    model = LogisticRegression().fit(x, np.arange(20) % 2)
+    backend = LimeBackend(model, data=x if explicit_data else None)
+    backend.run_explainer(x)
+    restored = pickle.loads(pickle.dumps(backend))
+    assert restored.explainer is None
+    pd.testing.assert_frame_equal(restored.data, x)
+    result = restored.run_explainer(x.iloc[:1])
+    assert restored.get_local_contributions(x.iloc[:1], result) is not None
+    assert restored.explainer.discretizer.means == backend.explainer.discretizer.means
 
 
 class TestLimeBackend(unittest.TestCase):
