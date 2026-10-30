@@ -2656,7 +2656,11 @@ class SmartApp:
                         self.explainer.data, index, self.explainer.features_dict, self.explainer.columns_dict, label_num
                     )
                     proba = self.explainer._local_pred(index, label_num)
-                    title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
+                    title_contrib = (
+                        f"Contribution: {label_value}"
+                        if proba is None
+                        else f"Contribution: {label_value} ({proba.round(2):.2f})"
+                    )
                     _, _, predicted_label_value = self.explainer.check_label_name(
                         selected_row.loc["_predict_", "feature_value"]
                     )
@@ -2729,7 +2733,7 @@ class SmartApp:
                     "border": f"1px solid {self.color[0]}",
                 },
             ]
-            style_filter_conditional = []
+            style_filter_conditional: list[dict[str, Any]] = []
             style_header_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols] + [
                 {"if": {"column_id": c}, "font-style": "italic"}
                 for c in self.dataframe
@@ -2891,7 +2895,8 @@ class SmartApp:
             subset = get_indexes_from_datatable(data)
 
             show_points = bool(points_visible)
-            store_update = dash.no_update
+            # The new ON/OFF state, or dash.no_update to leave the store unchanged
+            store_update: bool | object = dash.no_update
 
             if trigger == "toggle_points_on":
                 show_points = True

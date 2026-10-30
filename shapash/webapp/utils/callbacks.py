@@ -789,7 +789,7 @@ def handle_group_display_logic(
     click_data: dict | None,
     click_data_store: dict,
     selected_click_data_store,
-    features_groups: dict,
+    features_groups: dict[str, list[str]] | None,
     features_dict: dict,
 ) -> tuple[str | None, str | None, dict | None, object]:
     """
@@ -811,8 +811,8 @@ def handle_group_display_logic(
         Stored click data.
     selected_click_data_store : object
         Stored selected click data.
-    features_groups : dict
-        Dictionary of feature groups.
+    features_groups : dict[str, list[str]] | None
+        Dictionary of feature groups, or None if no groups are defined.
     features_dict : dict
         Dictionary of features.
 
