@@ -17,7 +17,7 @@ Shapash needs only a model and a dataset. Every other parameter is optional, but
 (feature names, label names, encoders), the more understandable the outputs.
 
 Additional scikit-learn models
------------------------------
+----------------------------------------
 
 The following estimators are registered for feature validation and prediction,
 including preprocessing with a supported ``ColumnTransformer``:
@@ -99,7 +99,7 @@ names remain accepted. Columns explicitly dropped by the transformer are optiona
 in raw input; unknown columns are rejected.
 
 Keras, TensorFlow and PyTorch (tabular)
--------------------------------------
+----------------------------------------
 
 ``shapash.model`` provides three inference-only adapters:
 ``KerasModelAdapter``, ``TensorFlowModelAdapter`` and ``PyTorchModelAdapter``.
@@ -196,7 +196,7 @@ and local lambdas are not guaranteed pickleable. For those, reload the model in 
 native format and recreate the adapter. Only load pickles from trusted sources.
 
 DeepExplainer and GradientExplainer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 With the SHAP backend and a tabular framework adapter,
 ``neural_explainer="auto"`` is the default. It tries DeepExplainer first, then

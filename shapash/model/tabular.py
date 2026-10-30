@@ -128,7 +128,7 @@ class _TabularModelAdapter:
 
     @available_if(lambda self: self.task == "classification")
     def predict_proba(self, x: Any) -> np.ndarray:
-        """Return probabilities ordered like classes_, validating the output contract."""
+        """Return probabilities ordered like ``classes_``, validating the output contract."""
         values = self._values(x)
         n_classes = len(self.classes_)
         if values.shape[1] != n_classes and not (n_classes == 2 and values.shape[1] == 1):
