@@ -1441,6 +1441,7 @@ class TestSmartExplainer(unittest.TestCase):
             ("::1", "::1", "[::1]"),
             ("0:0:0:0:0:0:0:1", "0:0:0:0:0:0:0:1", "[0:0:0:0:0:0:0:1]"),
             ("::", "::", "[::1]"),
+            ("0:0:0:0:0:0:0:0", "0:0:0:0:0:0:0:0", "[::1]"),
             ("2001:db8::10", "2001:db8::10", "[2001:db8::10]"),
         ]
         for host, bind_host, browser_host in cases:
@@ -1452,7 +1453,7 @@ class TestSmartExplainer(unittest.TestCase):
                 self.assertNotIn("http://::", "\n".join(logs.output))
                 self.assertIn("firewall", "\n".join(logs.output))
                 self.assertIn("proxy URL", "\n".join(logs.output))
-                if host in ("0.0.0.0", "::"):
+                if host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0"):
                     self.assertIn("From another machine, try http://PMP01087:8050/", logs.output[1])
                     self.assertIn("requires the hostname to resolve", logs.output[1])
                 elif host in (None, "127.0.0.1", "127.0.0.2", "localhost", "::1", "0:0:0:0:0:0:0:1"):

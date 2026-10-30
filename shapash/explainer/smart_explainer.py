@@ -808,16 +808,19 @@ class SmartExplainer:
             cast(Any, server_instance).kill = _kill
             server_instance.start()
             port = wsgi_server.server_port
-            wildcard_hosts = {"0.0.0.0": DEFAULT_HOST, "::": "::1"}  # noqa: S104 - URL mapping, not a bind default.
-            browser_host = wildcard_hosts.get(host, host)
             try:
-                is_loopback = ip_address(host).is_loopback
+                host_ip = ip_address(host)
+                is_unspecified = host_ip.is_unspecified
+                is_loopback = host_ip.is_loopback
+                browser_host = ("::1" if host_ip.version == 6 else DEFAULT_HOST) if is_unspecified else host
             except ValueError:
+                is_unspecified = False
                 is_loopback = host.lower().rstrip(".") == "localhost"
+                browser_host = host
             if ":" in browser_host:
                 browser_host = f"[{browser_host}]"
             logging.info("To launch Shapash in your browser, open http://%s:%s/", browser_host, port)
-            if host in wildcard_hosts:
+            if is_unspecified:
                 logging.info(
                     "From another machine, try http://%s:%s/ "
                     "(requires the hostname to resolve to a reachable server address). "
