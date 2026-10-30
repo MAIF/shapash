@@ -1446,6 +1446,7 @@ class TestSmartExplainer(unittest.TestCase):
         ]
         for host, bind_host, browser_host in cases:
             with self.subTest(host=host), self.assertLogs(level="INFO") as logs:
+                mock_get_host_name.reset_mock()
                 app = xpl.run_app(host=host)
                 mock_make_server.assert_called_with(bind_host, 8050, mock_smartapp.return_value.server)
                 self.assertIn(f"http://{browser_host}:8050/", logs.output[0])
@@ -1454,13 +1455,16 @@ class TestSmartExplainer(unittest.TestCase):
                 self.assertIn("firewall", "\n".join(logs.output))
                 self.assertIn("proxy URL", "\n".join(logs.output))
                 if host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0"):
+                    mock_get_host_name.assert_called_once_with()
                     self.assertIn("From another machine, try http://PMP01087:8050/", logs.output[1])
                     self.assertIn("requires the hostname to resolve", logs.output[1])
                 elif host in (None, "127.0.0.1", "127.0.0.2", "localhost", "::1", "0:0:0:0:0:0:0:1"):
+                    mock_get_host_name.assert_called_once_with()
                     self.assertIn("restart with host='0.0.0.0'", logs.output[1])
                     self.assertIn("After restarting, try http://PMP01087:8050/", logs.output[1])
                     self.assertNotIn("From another machine, try", "\n".join(logs.output))
                 else:
+                    mock_get_host_name.assert_not_called()
                     self.assertIn(f"From another machine, try http://{browser_host}:8050/", logs.output[1])
                     self.assertNotIn("restart", logs.output[1])
                 self.assertIs(app, mock_custom_thread.return_value)
@@ -1468,7 +1472,6 @@ class TestSmartExplainer(unittest.TestCase):
                 self.assertTrue(app.killed)
         self.assertEqual(mock_custom_thread.return_value.start.call_count, len(cases))
         self.assertEqual(mock_make_server.return_value.shutdown.call_count, len(cases))
-        self.assertEqual(mock_get_host_name.call_count, 8)
 
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
