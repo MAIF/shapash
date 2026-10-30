@@ -69,6 +69,8 @@ class ShapBackend(BaseBackend):
             # otherwise use a model agnostic method
             elif hasattr(model, "predict_proba"):
                 self.explainer = shap.Explainer(model=model.predict_proba, masker=self.masker)
+            elif hasattr(model, "decision_function"):
+                self.explainer = shap.Explainer(model=model.decision_function, masker=self.masker)
             elif hasattr(model, "predict"):
                 self.explainer = shap.Explainer(model=model.predict, masker=self.masker)
             # if we get here then we don't know how to handle what was given to us

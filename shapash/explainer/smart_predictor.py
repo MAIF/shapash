@@ -228,6 +228,8 @@ class SmartPredictor:
                 )
 
         self.model = model
+        self._input_column_mapping: dict[str, str] | None = None
+        self._raw_input_columns: list[str] | None = None
         self._case, self._classes = self.check_model()
         self.backend = backend
         self.preprocessing = preprocessing
@@ -335,7 +337,7 @@ class SmartPredictor:
                 extra={"schema_fingerprint": self._get_schema_fingerprint()},
             )
         if x is not None:
-            x = self.check_dataset_features(self.check_dataset_type(x))
+            x = self.check_dataset_features(self.check_dataset_type(self._normalize_input_columns(x)))
             self._check_schema_drift(x)
             self.data = self.clean_data(x)
             self.data["x_postprocessed"] = self.apply_postprocessing()
@@ -432,6 +434,24 @@ class SmartPredictor:
         else:
             x = self.convert_dict_dataset(x)
         return x
+
+    def _normalize_input_columns(self, x: pd.DataFrame | dict[str, Any]) -> pd.DataFrame | dict[str, Any]:
+        """Map original ColumnTransformer inputs to the exported explanation schema."""
+        mapping = getattr(self, "_input_column_mapping", None)
+        if mapping is None or not isinstance(x, (pd.DataFrame, dict)):
+            return x
+        columns = x.columns if isinstance(x, pd.DataFrame) else x.keys()
+        if set(columns).issubset(self.columns_dict.values()):
+            return x
+        unknown = set(columns) - set(self._raw_input_columns or [])
+        if unknown:
+            raise ValueError(f"x contains columns not declared in the raw input schema: {sorted(unknown)}")
+        missing = set(mapping.values()) - set(columns)
+        if missing:
+            raise ValueError(f"x is missing raw input columns: {sorted(missing)}")
+        if isinstance(x, pd.DataFrame):
+            return pd.DataFrame({display: x[raw] for display, raw in mapping.items()}, index=x.index)
+        return {display: x[raw] for display, raw in mapping.items()}
 
     def convert_dict_dataset(self, x: pd.DataFrame | dict[str, Any]) -> pd.DataFrame:
         """
@@ -644,7 +664,9 @@ class SmartPredictor:
                 x=self.data["x_preprocessed"], contributions=contributions
             )
         self.check_contributions(contributions)
-        proba_values = self.predict_proba() if self._case == "classification" else None
+        proba_values = (
+            self.predict_proba() if self._case == "classification" and hasattr(self.model, "predict_proba") else None
+        )
         y_pred, match_contrib = keep_right_contributions(
             self.data["ypred_init"], contributions, self._case, self._classes, self.label_dict, proba_values
         )
@@ -735,7 +757,12 @@ class SmartPredictor:
         """
         Apply preprocessing on new dataset input specified.
         """
-        return apply_preprocessing(self.data["x"], self.model, self.preprocessing)
+        x = self.data["x"]
+        mapping = getattr(self, "_input_column_mapping", None)
+        if mapping is not None:
+            x = x.rename(columns=mapping)
+            x = x.loc[:, ~x.columns.duplicated()]
+        return apply_preprocessing(x, self.model, self.preprocessing)
 
     def filter(self) -> None:
         """

@@ -16,6 +16,47 @@ data (encoders, feature names, labels) to present those contributions in a reada
 Shapash needs only a model and a dataset. Every other parameter is optional, but the more you provide
 (feature names, label names, encoders), the more understandable the outputs.
 
+Additional scikit-learn models
+-----------------------------
+
+The following estimators are registered for feature validation and prediction,
+including preprocessing with a supported ``ColumnTransformer``:
+
+- Trees: ``DecisionTreeClassifier``, ``DecisionTreeRegressor``,
+  ``ExtraTreeClassifier``, ``ExtraTreeRegressor``,
+  ``HistGradientBoostingClassifier`` and ``HistGradientBoostingRegressor``.
+- Regularized regression: ``Ridge``, ``RidgeCV``, ``Lasso``, ``LassoCV``,
+  ``ElasticNet`` and ``ElasticNetCV``.
+- Bayesian regression: ``BayesianRidge`` and ``ARDRegression``.
+- Robust and quantile regression: ``HuberRegressor``, ``TheilSenRegressor``
+  and ``QuantileRegressor``.
+- Incremental regression: ``SGDRegressor`` and ``PassiveAggressiveRegressor``.
+  The latter is deprecated in scikit-learn 1.8; prefer ``SGDRegressor`` for new models.
+- Other linear regression: ``Lars``, ``LarsCV``, ``LassoLars``, ``LassoLarsCV``,
+  ``LassoLarsIC``, ``OrthogonalMatchingPursuit`` and ``OrthogonalMatchingPursuitCV``.
+- Classification with cross-validation: ``LogisticRegressionCV``.
+- Linear support vector machines: ``LinearSVC`` and ``LinearSVR``.
+
+These additions cover single-output regression and binary or multiclass
+classification. They do not add support for multi-target regression or multilabel
+classification. The SHAP backend chooses a specialized explainer when supported
+by the installed SHAP version, otherwise a model-agnostic explainer, which may be
+slower. In particular, multiclass histogram gradient boosting may use this fallback.
+
+For classifiers without ``predict_proba``, such as ``LinearSVC``, the default SHAP
+fallback explains ``decision_function`` scores rather than predicted labels.
+``SmartPredictor`` can compute predictions and contributions without probabilities;
+calling ``predict_proba()`` explicitly still raises an error. Scores and their
+contributions must not be interpreted as probabilities.
+
+A compiled ``SmartExplainer`` can be exported using ``to_smartpredictor()``,
+including when it uses a ``ColumnTransformer``. The exported predictor accepts
+the original raw input column names in ``add_input()``, as a DataFrame or a
+dictionary. It retains the transformer-prefixed names internally for feature
+labels, groups, postprocessing and explanations. DataFrames using those internal
+names remain accepted. Columns explicitly dropped by the transformer are optional
+in raw input; unknown columns are rejected.
+
 Quick start
 -----------
 

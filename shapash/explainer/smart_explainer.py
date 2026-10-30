@@ -16,10 +16,11 @@ from werkzeug.serving import make_server
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
+from shapash.utils.columntransformer_backend import columntransformer
 from shapash.utils.custom_thread import CustomThread
 from shapash.utils.drift import SchemaDriftConfig, compute_schema_distribution, resolve_schema_drift_config
 from shapash.utils.io import load_pickle, save_pickle
-from shapash.utils.transform import handle_categorical_missing
+from shapash.utils.transform import handle_categorical_missing, preprocessing_tolist
 from shapash.utils.utils import get_host_name
 from shapash.webapp.smart_app import SmartApp
 
@@ -832,6 +833,10 @@ class SmartExplainer:
 
         Notes
         -----
+        With ColumnTransformer preprocessing, the exported predictor accepts
+        original raw input column names in add_input while retaining reconstructed
+        feature names for labels, groups and explanations.
+
         The following attributes are transferred:
 
         - **features_dict** : dict
@@ -910,7 +915,22 @@ class SmartExplainer:
         )
         params_smartpredictor.append(resolved_drift_config)
 
-        return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
+        predictor = shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
+        transformers = [
+            enc for enc in preprocessing_tolist(self.explainer.preprocessing) if str(type(enc)) == columntransformer
+        ]
+        if transformers:
+            encoder = transformers[0]
+            input_columns: list[str] = []
+            for _, transformer, columns in encoder.transformers_:
+                if isinstance(transformer, str) and transformer == "drop":
+                    continue
+                input_columns.extend(
+                    column if isinstance(column, str) else encoder.feature_names_in_[column] for column in columns
+                )
+            predictor._input_column_mapping = dict(zip(self.explainer.x_init.columns, input_columns, strict=True))
+            predictor._raw_input_columns = list(encoder.feature_names_in_)
+        return predictor
 
     def check_x_y_attributes(self, x_str: str, y_str: str) -> list[Any]:
         """
