@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -70,9 +70,16 @@ class SmartExplainer:
 
     Parameters
     ----------
-    model : object
+    model : object or None, optional
         The model to be explained. Used for consistency checks and, in some cases,
         to compute `predict` and `predict_proba` values.
+        Without a model, provide task and, for classification, classes, then pass
+        contributions and y_pred to compile.
+    task : {"regression", "classification"} or None, optional
+        Required without a model. In model-based workflows the task is inferred.
+    classes : list of int, float or str or None, optional
+        Required for model-free classification, in contribution and probability
+        output order. Not accepted for regression or when a model is provided.
     backend : str or shapash.backend.BaseBackend, default='shap'
         Defines the backend used to compute feature contributions and importances.
         Options:
@@ -202,7 +209,7 @@ class SmartExplainer:
 
     def __init__(
         self,
-        model: Any,
+        model: Any = None,
         backend: str | BaseBackend = "shap",
         preprocessing: Any | None = None,
         postprocessing: dict[str, Any] | None = None,
@@ -212,6 +219,8 @@ class SmartExplainer:
         title_story: str | None = None,
         palette_name: str | None = None,
         colors_dict: dict[str, Any] | None = None,
+        task: Literal["regression", "classification"] | None = None,
+        classes: list[int | float | str] | None = None,
         **backend_kwargs: Any,
     ) -> None:
         if features_dict is not None and not isinstance(features_dict, dict):
@@ -243,6 +252,8 @@ class SmartExplainer:
             features_groups=features_groups,
             features_dict=features_dict,
             label_dict=label_dict,
+            task=task,
+            classes=classes,
             **backend_kwargs,
         )
         self.plot = SmartPlotter(self.explainer, self.colors_dict)
@@ -251,7 +262,7 @@ class SmartExplainer:
     def compile(
         self,
         x: pd.DataFrame,
-        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | dict[str, Any] | None = None,
         y_pred: pd.Series | pd.DataFrame | None = None,
         proba_values: pd.Series | pd.DataFrame | None = None,
         y_target: pd.Series | pd.DataFrame | None = None,
@@ -580,7 +591,10 @@ class SmartExplainer:
         """
         xpl = load_pickle(path)
         if isinstance(xpl, SmartExplainer):
-            smart_explainer = cls(model=xpl.model)
+            if xpl.model is None:
+                smart_explainer = cls(task=xpl.explainer._case, classes=xpl.explainer._classes)
+            else:
+                smart_explainer = cls(model=xpl.model)
             smart_explainer.__dict__.update(xpl.__dict__)
             # Rebind plot<->explainer links after unpickling.
             smart_explainer.plot = SmartPlotter(smart_explainer.explainer, smart_explainer.colors_dict)
@@ -876,6 +890,10 @@ class SmartExplainer:
         >>> sp.predict(data_sample)
         >>> sp.explain(data_sample)
         """
+        if self.model is None:
+            raise ValueError(
+                "to_smartpredictor() requires a model; precomputed explanations cannot predict new inputs."
+            )
         if self.explainer.backend is None:
             raise ValueError(
                 """
@@ -1051,6 +1069,10 @@ class SmartExplainer:
         ... )
         """
 
+        if self.model is None:
+            raise ValueError(
+                "generate_report() requires a model; use plots and to_pandas() for precomputed explanations."
+            )
         # input checks
         if not hasattr(self, "model"):
             raise AssertionError(

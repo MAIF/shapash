@@ -1,12 +1,13 @@
 """Compute-focused Explainer class used by SmartExplainer."""
 
 import copy
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 
 from shapash.backend import BaseBackend, get_backend_cls_from_name
+from shapash.backend._precomputed_backend import PrecomputedBackend
 from shapash.backend.shap_backend import get_shap_interaction_values
 from shapash.manipulation.mask import compute_mask
 from shapash.manipulation.select_lines import keep_right_contributions
@@ -36,7 +37,7 @@ class Explainer:
 
     def __init__(
         self,
-        model: Any,
+        model: Any = None,
         backend: str | BaseBackend = "shap",
         preprocessing: Any | None = None,
         postprocessing: dict[str, dict[str, Any]] | None = None,
@@ -44,6 +45,8 @@ class Explainer:
         features_dict: dict[str, str] | None = None,
         label_dict: dict[Any, Any] | None = None,
         title_story: str | None = None,
+        task: Literal["regression", "classification"] | None = None,
+        classes: list[int | float | str] | None = None,
         **backend_kwargs: Any,
     ) -> None:
         if features_dict is not None and not isinstance(features_dict, dict):
@@ -69,7 +72,20 @@ class Explainer:
         self.label_dict: dict[Any, Any] | None = label_dict
         self.title_story = title_story if title_story is not None else ""
 
-        self._case, self._classes = check_model(self.model)
+        if model is None:
+            self._case, self._classes = self._check_precomputed_task(task, classes)
+            if not isinstance(backend, str) or backend != "shap" or backend_kwargs:
+                raise ValueError(
+                    "Without a model, backend configuration is unavailable; supply contributions directly."
+                )
+            self.backend_name = None
+            self.backend = PrecomputedBackend(self._case, self._classes, preprocessing)
+        else:
+            if task is not None or classes is not None:
+                raise ValueError(
+                    "task and classes are only accepted without a model; model metadata is used otherwise."
+                )
+            self._case, self._classes = check_model(self.model)
         self.postprocessing: dict[str, dict[str, Any]] | None = postprocessing
         self.check_label_dict()
         self.inv_label_dict: dict[Any, Any] = {}
@@ -162,6 +178,12 @@ class Explainer:
             Results are stored on the instance (data, contributions, metadata,
             masks/ordering helpers, and related state).
         """
+        if self.model is None and (contributions is None or y_pred is None):
+            raise ValueError("Without a model, compile() requires both contributions and y_pred.")
+        if self.model is None and (
+            not isinstance(x, pd.DataFrame) or x.empty or not x.index.is_unique or not x.columns.is_unique
+        ):
+            raise ValueError("Without a model, x must be a nonempty DataFrame with unique index and columns.")
         if isinstance(self.backend_name, str):
             backend_cls = cast(Any, get_backend_cls_from_name(self.backend_name))
             self.backend = backend_cls(
@@ -171,15 +193,15 @@ class Explainer:
         self.x_encoded = handle_categorical_missing(x)
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)
-        self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
+        self.y_pred = self._check_output(y_pred, "y_pred")
         if (self.y_pred is None) and (hasattr(self.model, "predict")):
             self.predict()
 
-        self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
+        self.proba_values = self._check_output(proba_values, "proba_values")
         if (self._case == "classification") and (self.proba_values is None) and (hasattr(self.model, "predict_proba")):
             self.predict_proba()
 
-        self.y_target = check_y(self.x_init, y_target, y_name="y_target")
+        self.y_target = self._check_output(y_target, "y_target")
         self.prediction_error = predict_error(
             self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
         )
@@ -217,7 +239,7 @@ class Explainer:
             if isinstance(contributions, dict):
                 if "contributions" not in contributions:
                     raise ValueError("contributions dict must contain a 'contributions' key")
-                self.explain_data = contributions
+                self.explain_data = contributions.copy()
                 local_contributions = contributions["contributions"]
             else:
                 self.explain_data = {"contributions": contributions}
@@ -226,7 +248,68 @@ class Explainer:
             self.contributions = self.backend.format_and_aggregate_local_contributions(
                 x=x, contributions=local_contributions
             )
+            if isinstance(self.backend, PrecomputedBackend) and self.explain_data.get("base_values") is not None:
+                self.explain_data["base_values"] = self.backend.validate_base_values(
+                    x, self.explain_data["base_values"]
+                )
         self.state = self.backend.state
+
+    @staticmethod
+    def _check_precomputed_task(
+        task: Literal["regression", "classification"] | None,
+        classes: list[int | float | str] | None,
+    ) -> tuple[Literal["regression", "classification"], list[int | float | str] | None]:
+        if task not in ("regression", "classification"):
+            raise ValueError("Without a model, task must be 'regression' or 'classification'.")
+        if task == "regression":
+            if classes is not None:
+                raise ValueError("Regression does not accept classes.")
+            return task, None
+        if not isinstance(classes, list) or len(classes) < 2:
+            raise ValueError("Classification requires a list of at least two classes in contribution/output order.")
+        labels = [label.item() if isinstance(label, np.generic) else label for label in classes]
+        if not all(isinstance(label, (int, float, str)) for label in labels):
+            raise ValueError("Class labels must be integers, floats or strings.")
+        if any(isinstance(label, str) for label in labels) and not all(isinstance(label, str) for label in labels):
+            raise ValueError("Class labels must not mix numeric and string values.")
+        if any(isinstance(label, float) and not np.isfinite(label) for label in labels):
+            raise ValueError("Class labels must be finite.")
+        if len(set(labels)) != len(labels):
+            raise ValueError("Class labels must be unique.")
+        return task, labels
+
+    def _check_output(self, value: pd.Series | pd.DataFrame | None, name: str) -> pd.DataFrame | None:
+        if self.model is not None:
+            return check_y(self.x_init, value, y_name=name)
+        if value is None:
+            return None
+        if not isinstance(value, (pd.Series, pd.DataFrame)) or not value.index.equals(self.x_init.index):
+            raise ValueError(f"{name} must be a pandas Series or DataFrame with the same index as x.")
+        frame = value.to_frame() if isinstance(value, pd.Series) else value.copy()
+        if name == "proba_values":
+            if self._case != "classification" or self._classes is None:
+                raise ValueError("proba_values is only accepted for classification.")
+            if list(frame.columns) != self._classes:
+                raise ValueError("proba_values columns must match classes in the same order.")
+            values = frame.to_numpy()
+            if (
+                values.dtype.kind not in "iuf"
+                or not np.isfinite(values).all()
+                or np.any((values < 0) | (values > 1))
+                or not np.allclose(values.sum(axis=1), 1)
+            ):
+                raise ValueError("proba_values must contain finite probabilities in [0, 1] with rows summing to one.")
+        else:
+            if frame.shape[1] != 1:
+                raise ValueError(f"{name} must have exactly one column.")
+            if self._case == "classification":
+                if not frame.iloc[:, 0].isin(self._classes).all():
+                    raise ValueError(f"{name} contains labels not present in classes.")
+            elif frame.to_numpy().dtype.kind not in "iuf" or not np.isfinite(frame.to_numpy()).all():
+                raise ValueError(f"{name} must contain finite numeric values.")
+            if isinstance(frame.columns[0], (int, float)) or frame.columns[0] is None:
+                frame.columns = [name]
+        return frame
 
     def _apply_all_postprocessing_modifications(self) -> None:
         postprocessing = self.modify_postprocessing(self.postprocessing)
@@ -453,11 +536,11 @@ class Explainer:
         None
         """
         if y_pred is not None:
-            self.y_pred = check_y(self.x_init, y_pred, y_name="y_pred")
+            self.y_pred = self._check_output(y_pred, "y_pred")
         if proba_values is not None:
-            self.proba_values = check_y(self.x_init, proba_values, y_name="proba_values")
+            self.proba_values = self._check_output(proba_values, "proba_values")
         if y_target is not None:
-            self.y_target = check_y(self.x_init, y_target, y_name="y_target")
+            self.y_target = self._check_output(y_target, "y_target")
         if hasattr(self, "y_target") and self.y_target is not None:
             self.prediction_error = predict_error(
                 self.y_target, self.y_pred, self._case, proba_values=self.proba_values, classes=self._classes
@@ -507,6 +590,8 @@ class Explainer:
         numpy.ndarray
             Interaction tensor with shape (n_samples, n_features, n_features).
         """
+        if self.model is None:
+            raise ValueError("Interaction computation requires a model and a compatible SHAP explainer.")
         x = copy.deepcopy(self.x_encoded)
         label_num = None
 
@@ -601,6 +686,10 @@ class Explainer:
         -------
         None
         """
+        if self.model is None:
+            if self.proba_values is None:
+                raise ValueError("Without a model, supply proba_values through compile() or add().")
+            return
         if self._classes is None:
             raise ValueError("Class probabilities are only available for classification models")
         self.proba_values = predict_proba(self.model, self.x_encoded, self._classes)
@@ -616,6 +705,8 @@ class Explainer:
         -------
         None
         """
+        if self.model is None:
+            raise ValueError("predict() requires a model; supply y_pred through compile() or add().")
         self.y_pred = predict(self.model, self.x_encoded)
         if hasattr(self, "y_target"):
             self.prediction_error = predict_error(
@@ -787,6 +878,8 @@ class Explainer:
         AssertionError
             If problem is multi-class classification.
         """
+        if self.model is None:
+            raise ValueError("Stability analysis requires a model to evaluate neighboring inputs.")
         if self._case == "classification":
             if self._classes is None:
                 raise ValueError("Class labels are unavailable for this model.")

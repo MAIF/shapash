@@ -13,8 +13,90 @@ data (encoders, feature names, labels) to present those contributions in a reada
    :align: center
    :alt: How Shapash works
 
-Shapash needs only a model and a dataset. Every other parameter is optional, but the more you provide
-(feature names, label names, encoders), the more understandable the outputs.
+Shapash can compute explanations from a model and a dataset, or display precomputed
+contributions without access to the model. Feature names, label names and encoders
+help make the outputs more understandable.
+
+Precomputed explanations without a model
+----------------------------------------
+
+Use ``SmartExplainer(task="regression")`` or
+``SmartExplainer(task="classification", classes=[...])`` without passing a model.
+The task is mandatory; it is never inferred from contribution shapes or labels.
+For classification, provide at least two unique class labels in the exact order
+of the contribution and probability outputs. Labels may be numeric or strings,
+but cannot mix the two. ``label_dict`` provides optional display names, not class
+ordering. When a model is provided, its metadata remains authoritative: do not
+pass ``task`` or ``classes``.
+
+.. code-block:: python
+
+    xpl = SmartExplainer(task="regression")
+    xpl.compile(
+        x=X_encoded,
+        contributions={"contributions": feature_contributions, "base_values": baseline},
+        y_pred=predictions,
+        y_target=targets,  # optional
+    )
+    xpl.plot.features_importance()
+    xpl.plot.local_plot(index=X_encoded.index[0])
+    summary = xpl.to_pandas()
+
+Both ``contributions`` and ``y_pred`` are required on every ``compile`` call.
+``x`` must be a nonempty DataFrame with unique row and column labels. Predictions
+and optional targets must be one-column pandas objects with the same index as
+``x``. Classification predictions and targets must contain declared class labels.
+No inference backend is initialized, and no dummy model is needed.
+
+Contribution formats:
+
+- Regression: a DataFrame or numeric array of shape ``(n_samples, n_features)``.
+- Classification: a list of matrices in ``classes`` order, or an array of shape
+  ``(n_samples, n_features, n_classes)``.
+- Binary classification also accepts one matrix for ``classes[1]``; its negative
+  is used for ``classes[0]``. Use a list of two matrices when outputs are not
+  complementary.
+
+DataFrame contributions must have the correct index and feature order. All
+contributions must be finite numeric values. With preprocessing, pass encoded
+data and contributions in the corresponding feature space; supported inverse
+transforms, aggregation, feature groups and postprocessing remain available.
+
+.. code-block:: python
+
+    xpl = SmartExplainer(
+        task="classification",
+        classes=["no", "yes"],
+        label_dict={"no": "Declined", "yes": "Accepted"},
+    )
+    xpl.compile(
+        x=X_encoded,
+        contributions=[contributions_no, contributions_yes],
+        y_pred=predicted_labels,
+        proba_values=probabilities,  # optional DataFrame, columns ["no", "yes"]
+    )
+    summary = xpl.to_pandas(proba=True)
+
+Probabilities are optional, but required for probability-based views. Supply one
+column per class, in exactly ``classes`` order, with finite values in ``[0, 1]``
+and rows summing to one. They can also be supplied later through ``add``.
+Shapash does not derive predictions or probabilities from contributions: their
+output scale may be a raw score rather than a probability.
+
+For waterfall plots, supply ``base_values`` in the contributions dictionary.
+Regression accepts a scalar or one value per row; classification accepts one
+value per class or a matrix of shape ``(n_samples, n_classes)``. Pandas baselines
+must align with ``x``; classification baseline DataFrame columns must match
+``classes``. Baselines must use the same output scale as contributions. Without
+them, ordinary bar plots remain available, but waterfall plots raise an explicit
+error rather than inventing a baseline.
+
+Plots, filtering, grouped summaries, ``to_pandas``, the WebApp, and
+``SmartExplainer.save`` / ``load`` are available for the supplied dataset.
+New predictions, stability analysis, interaction computation, model reports and
+``to_smartpredictor`` require a model and are explicitly unavailable in this mode.
+Omit backend-specific options: contributions are formatted directly, not
+computed by SHAP or LIME. This mode does not change existing model-based workflows.
 
 Additional scikit-learn models
 ----------------------------------------
