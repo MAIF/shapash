@@ -65,6 +65,33 @@ Or launch the web app:
 
     app = xpl.run_app()
 
+Open ``http://127.0.0.1:8050/`` in a browser on the same machine as Python.
+By default, the server only accepts local connections.
+For local-only listening addresses, the startup message provides a network URL
+to try only after restarting the app with network access enabled.
+
+To access the app from another machine on a trusted network:
+
+.. code:: ipython
+
+    app = xpl.run_app(host="0.0.0.0", port=8050)
+
+In that machine's browser, open ``http://<server-ip-or-hostname>:8050/``.
+When listening on all interfaces, Shapash prints both a local browser URL and
+a network URL based on the server's hostname.
+The server hostname must resolve from the browser's machine, and the firewall
+must allow port 8050. ``0.0.0.0`` is an IPv4 listening address, not a browser
+destination. For IPv6, listen with ``host="::"`` and use
+``http://[<server-ipv6-address>]:8050/``.
+
+If Python runs in a remote notebook, container, or VM, ``localhost`` in your
+browser refers to your own machine. Configure port forwarding, publish the
+container port, or use your notebook platform's proxy URL as appropriate;
+listening on ``0.0.0.0`` alone does not make the app reachable.
+Shapash cannot infer the external URL assigned by a proxy or port forwarding.
+Only expose this development server on a trusted network.
+Stop the previous app with ``app.kill()`` before restarting it on the same port.
+
 Step 4: generate the Shapash Report
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
