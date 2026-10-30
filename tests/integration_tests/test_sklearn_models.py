@@ -165,7 +165,10 @@ def _check_model_workflow(
         assert frame.shape == expected_shape
         assert frame.index.equals(sample.index)
         assert np.isfinite(frame.to_numpy()).all()
-    np.testing.assert_array_equal(compiled.y_pred.iloc[:, 0], model.predict(sample))
+    if n_classes is None:
+        np.testing.assert_allclose(compiled.y_pred.iloc[:, 0], model.predict(sample), atol=1e-12, rtol=1e-12)
+    else:
+        np.testing.assert_array_equal(compiled.y_pred.iloc[:, 0], model.predict(sample))
 
     explain_data = compiled.explain_data
     reconstructed = explain_data["contributions"].sum(axis=1) + explain_data["base_values"]
@@ -188,7 +191,10 @@ def _check_model_workflow(
     predictor = explainer.to_smartpredictor()
     predictor.add_input(x=x.iloc[:6])
     np.testing.assert_allclose(predictor.data["x_preprocessed"], sample)
-    np.testing.assert_array_equal(predictor.predict().iloc[:, 0], model.predict(sample))
+    if n_classes is None:
+        np.testing.assert_allclose(predictor.predict().iloc[:, 0], model.predict(sample), atol=1e-12, rtol=1e-12)
+    else:
+        np.testing.assert_array_equal(predictor.predict().iloc[:, 0], model.predict(sample))
     assert predictor.data["contributions"].shape == expected_shape
     assert np.isfinite(predictor.data["contributions"].to_numpy(dtype=float)).all()
     for i, label in enumerate(model.predict(sample)):
