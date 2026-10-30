@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -16,10 +16,11 @@ from werkzeug.serving import make_server
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
+from shapash.utils.columntransformer_backend import columntransformer
 from shapash.utils.custom_thread import CustomThread
 from shapash.utils.drift import SchemaDriftConfig, compute_schema_distribution, resolve_schema_drift_config
 from shapash.utils.io import load_pickle, save_pickle
-from shapash.utils.transform import handle_categorical_missing
+from shapash.utils.transform import handle_categorical_missing, preprocessing_tolist
 from shapash.utils.utils import get_host_name
 from shapash.webapp.smart_app import SmartApp
 
@@ -69,9 +70,16 @@ class SmartExplainer:
 
     Parameters
     ----------
-    model : object
+    model : object or None, optional
         The model to be explained. Used for consistency checks and, in some cases,
         to compute `predict` and `predict_proba` values.
+        Without a model, provide task and, for classification, classes, then pass
+        contributions and y_pred to compile.
+    task : {"regression", "classification"} or None, optional
+        Required without a model. In model-based workflows the task is inferred.
+    classes : list of int, float or str or None, optional
+        Required for model-free classification, in contribution and probability
+        output order. Not accepted for regression or when a model is provided.
     backend : str or shapash.backend.BaseBackend, default='shap'
         Defines the backend used to compute feature contributions and importances.
         Options:
@@ -201,7 +209,7 @@ class SmartExplainer:
 
     def __init__(
         self,
-        model: Any,
+        model: Any = None,
         backend: str | BaseBackend = "shap",
         preprocessing: Any | None = None,
         postprocessing: dict[str, Any] | None = None,
@@ -211,6 +219,8 @@ class SmartExplainer:
         title_story: str | None = None,
         palette_name: str | None = None,
         colors_dict: dict[str, Any] | None = None,
+        task: Literal["regression", "classification"] | None = None,
+        classes: list[int | float | str] | None = None,
         **backend_kwargs: Any,
     ) -> None:
         if features_dict is not None and not isinstance(features_dict, dict):
@@ -242,6 +252,8 @@ class SmartExplainer:
             features_groups=features_groups,
             features_dict=features_dict,
             label_dict=label_dict,
+            task=task,
+            classes=classes,
             **backend_kwargs,
         )
         self.plot = SmartPlotter(self.explainer, self.colors_dict)
@@ -250,7 +262,7 @@ class SmartExplainer:
     def compile(
         self,
         x: pd.DataFrame,
-        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | None = None,
+        contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray] | dict[str, Any] | None = None,
         y_pred: pd.Series | pd.DataFrame | None = None,
         proba_values: pd.Series | pd.DataFrame | None = None,
         y_target: pd.Series | pd.DataFrame | None = None,
@@ -579,7 +591,10 @@ class SmartExplainer:
         """
         xpl = load_pickle(path)
         if isinstance(xpl, SmartExplainer):
-            smart_explainer = cls(model=xpl.model)
+            if xpl.model is None:
+                smart_explainer = cls(task=xpl.explainer._case, classes=xpl.explainer._classes)
+            else:
+                smart_explainer = cls(model=xpl.model)
             smart_explainer.__dict__.update(xpl.__dict__)
             # Rebind plot<->explainer links after unpickling.
             smart_explainer.plot = SmartPlotter(smart_explainer.explainer, smart_explainer.colors_dict)
@@ -832,6 +847,10 @@ class SmartExplainer:
 
         Notes
         -----
+        With ColumnTransformer preprocessing, the exported predictor accepts
+        original raw input column names in add_input while retaining reconstructed
+        feature names for labels, groups and explanations.
+
         The following attributes are transferred:
 
         - **features_dict** : dict
@@ -871,6 +890,10 @@ class SmartExplainer:
         >>> sp.predict(data_sample)
         >>> sp.explain(data_sample)
         """
+        if self.model is None:
+            raise ValueError(
+                "to_smartpredictor() requires a model; precomputed explanations cannot predict new inputs."
+            )
         if self.explainer.backend is None:
             raise ValueError(
                 """
@@ -910,7 +933,22 @@ class SmartExplainer:
         )
         params_smartpredictor.append(resolved_drift_config)
 
-        return shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
+        predictor = shapash.explainer.smart_predictor.SmartPredictor(*params_smartpredictor)
+        transformers = [
+            enc for enc in preprocessing_tolist(self.explainer.preprocessing) if str(type(enc)) == columntransformer
+        ]
+        if transformers:
+            encoder = transformers[0]
+            input_columns: list[str] = []
+            for _, transformer, columns in encoder.transformers_:
+                if isinstance(transformer, str) and transformer == "drop":
+                    continue
+                input_columns.extend(
+                    column if isinstance(column, str) else encoder.feature_names_in_[column] for column in columns
+                )
+            predictor._input_column_mapping = dict(zip(self.explainer.x_init.columns, input_columns, strict=True))
+            predictor._raw_input_columns = list(encoder.feature_names_in_)
+        return predictor
 
     def check_x_y_attributes(self, x_str: str, y_str: str) -> list[Any]:
         """
@@ -1031,6 +1069,10 @@ class SmartExplainer:
         ... )
         """
 
+        if self.model is None:
+            raise ValueError(
+                "generate_report() requires a model; use plots and to_pandas() for precomputed explanations."
+            )
         # input checks
         if not hasattr(self, "model"):
             raise AssertionError(

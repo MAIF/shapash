@@ -101,7 +101,11 @@ class SmartPlotter:
         """
         adapts the display of the number of digit to the distribution of points
         """
-        if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
+        if (
+            hasattr(self._explainer, "y_pred")
+            and self._explainer.y_pred is not None
+            and all(pd.api.types.is_numeric_dtype(dtype) for dtype in self._explainer.y_pred.dtypes)
+        ):
             quantile = [0.25, 0.75]
             self._round_digit = tuning_round_digit(self._explainer.y_pred, quantile)
         else:
@@ -330,6 +334,8 @@ class SmartPlotter:
 
             return float(base_candidate)
 
+        if self._explainer.model is None:
+            raise ValueError("Without a model, waterfall plots require explicit base_values in the contributions dict.")
         expected_value = None
         backend = getattr(self._explainer, "backend", None)
         backend_explainer = getattr(backend, "explainer", None)

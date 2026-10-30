@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,14 @@ class BaseBackend(Backend):
     support_groups = True
     supported_cases = ["classification", "regression"]
 
-    def __init__(self, model: Any, preprocessing: Any | None = None) -> None:
+    def __init__(
+        self,
+        model: Any,
+        preprocessing: Any | None = None,
+        *,
+        task: Literal["regression", "classification"] | None = None,
+        classes: list[int | float | str] | None = None,
+    ) -> None:
         """Create a backend instance using a given implementation.
 
         Parameters
@@ -37,12 +44,21 @@ class BaseBackend(Backend):
             Model used.
         preprocessing : category_encoders, ColumnTransformer, list or dict, optional
             The processing apply to the original data.
+        task : {"regression", "classification"} or None, optional
+            Explicit task used by the precomputed backend when model is None.
+        classes : list or None, optional
+            Ordered class labels used by the precomputed backend.
         """
         self.model = model
         self.preprocessing = preprocessing
         self.explain_data: Any = None
         self.state: Any = None
-        self._case, self._classes = check_model(model)
+        if model is None:
+            if task not in ("regression", "classification"):
+                raise ValueError("Without a model, task must be 'regression' or 'classification'.")
+            self._case, self._classes = task, classes
+        else:
+            self._case, self._classes = check_model(model)
         if self._case not in self.supported_cases:
             raise ValueError(f"Model not supported by the backend as it does not cover {self._case} case")
 

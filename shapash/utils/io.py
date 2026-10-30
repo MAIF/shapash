@@ -135,11 +135,17 @@ def _detect_model_framework(model: Any) -> dict[str, str | None]:
     """
     Inspect ``model`` and return a ``{"name", "version"}`` dict describing its framework.
 
-    Recognised frameworks: scikit-learn, xgboost, lightgbm, catboost. Anything else falls
-    through with the top-level module name as the framework name.
+    Recognised frameworks include the tabular Keras, TensorFlow and PyTorch
+    adapters. Other models fall through with their top-level module name.
     """
     module = type(model).__module__ or ""
     top = module.split(".")[0]
+    if module == "shapash.model.tabular":
+        top = {
+            "KerasModelAdapter": "keras",
+            "TensorFlowModelAdapter": "tensorflow",
+            "PyTorchModelAdapter": "torch",
+        }.get(type(model).__name__, top)
     name = _MODEL_FRAMEWORK_MAP.get(top, top or "unknown")
     version = _try_package_version(top) if top else None
     return {"name": name, "version": version}

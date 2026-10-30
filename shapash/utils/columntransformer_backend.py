@@ -24,9 +24,8 @@ from shapash.utils.model_synoptic import (
     catboost_model,
     dict_model_feature,
     lightgbm_model,
-    linear_model,
-    simple_tree_model_sklearn,
-    svm_model,
+    sklearn_model,
+    tabular_adapter_model,
     xgboost_model,
 )
 
@@ -37,8 +36,6 @@ sklearn_ordinal = "<class 'sklearn.preprocessing._encoders.OrdinalEncoder'>"
 sklearn_standardscaler = "<class 'sklearn.preprocessing._data.StandardScaler'>"
 sklearn_quantiletransformer = "<class 'sklearn.preprocessing._data.QuantileTransformer'>"
 sklearn_powertransformer = "<class 'sklearn.preprocessing._data.PowerTransformer'>"
-
-sklearn_model = linear_model + svm_model + simple_tree_model_sklearn
 
 other_model = xgboost_model + catboost_model + lightgbm_model
 
@@ -296,7 +293,7 @@ def transform_ct(x_in: pd.DataFrame, model: Any, encoding: Any) -> pd.DataFrame:
     """
     if str(type(encoding)) == columntransformer:
         # We use inverse tranform from the encoding method base on columns position
-        if str(type(model)) in sklearn_model:
+        if str(type(model)) in sklearn_model + tabular_adapter_model:
             rst = pd.DataFrame(encoding.transform(x_in), index=x_in.index)
             rst.columns = ["col_" + str(feature) for feature in rst.columns]
 

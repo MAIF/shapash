@@ -102,10 +102,29 @@ class LimeBackend(BaseBackend):
             passed to :meth:`run_explainer`.
         **kwargs : Any
             Additional keyword arguments accepted by the constructor.
+
+        Raises
+        ------
+        ValueError
+            If a classification model does not expose a callable predict_proba.
         """
         super().__init__(model, preprocessing)
+        if self._case == "classification" and not callable(getattr(model, "predict_proba", None)):
+            raise ValueError(
+                f"The LIME backend requires predict_proba for classification, but {type(model).__name__} "
+                "does not provide it. Use backend='shap' if the model is supported by SHAP, "
+                "or a calibrated classifier exposing predict_proba. Shapash does not switch backends automatically."
+            )
         self.explainer: Any = None
         self.data = data
+
+    def __getstate__(self) -> dict[str, Any]:
+        """Rebuild LIME's non-pickleable explainer from its reference data on reload."""
+        state = self.__dict__.copy()
+        state["explainer"] = None
+        if state["data"] is None:
+            state["data"] = state.get("_explainer_data")
+        return state
 
     def run_explainer(self, x: pd.DataFrame) -> dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]:
         """
@@ -139,6 +158,7 @@ class LimeBackend(BaseBackend):
         # added condition to reinitialise the explainer
         # whenever the feature names differ from what it was built with
         if self.explainer is None or self.explainer.feature_names != feature_names:
+            self._explainer_data = data
             self.explainer = lime_tabular.LimeTabularExplainer(
                 data.to_numpy(), feature_names=feature_names, mode=self._case
             )

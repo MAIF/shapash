@@ -3,15 +3,91 @@ Unit tests lime backend.
 """
 
 import unittest
+import pickle
 from types import SimpleNamespace
 
 import category_encoders as ce
 import numpy as np
 import pandas as pd
+import pytest
 import sklearn.ensemble as ske
 import xgboost as xgb
+from sklearn.linear_model import LogisticRegression, Perceptron, RidgeClassifier, SGDClassifier
+from sklearn.svm import LinearSVC, NuSVC
 
+from shapash import SmartExplainer
 from shapash.backend.lime_backend import LimeBackend
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        LinearSVC(),
+        RidgeClassifier(),
+        Perceptron(random_state=0),
+        SGDClassifier(random_state=0),
+        NuSVC(),
+        ske.VotingClassifier(estimators=[("linear", LogisticRegression())]),
+        ske.StackingClassifier(estimators=[("linear", LogisticRegression())], final_estimator=LinearSVC(), cv=2),
+    ],
+    ids=lambda model: type(model).__name__,
+)
+def test_classifiers_without_probabilities_fail_explicitly(model):
+    x = pd.DataFrame({"first": np.arange(20, dtype=float), "second": np.arange(20, dtype=float) ** 2})
+    model.fit(x, np.arange(20) % 2)
+    with pytest.raises(ValueError, match=f"LIME backend requires predict_proba.*{type(model).__name__}") as error:
+        LimeBackend(model)
+    assert "backend='shap'" in str(error.value)
+    assert "calibrated classifier" in str(error.value)
+    assert "does not switch backends automatically" in str(error.value)
+    explainer = SmartExplainer(model=model, backend="lime")
+    with pytest.raises(ValueError, match="LIME backend requires predict_proba"):
+        explainer.compile(x=x)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        LogisticRegression(),
+        SGDClassifier(loss="log_loss", random_state=0),
+        NuSVC(probability=True, random_state=0),
+        ske.VotingClassifier(estimators=[("linear", LogisticRegression())], voting="soft"),
+        ske.RandomForestRegressor(n_estimators=1, random_state=0),
+    ],
+    ids=lambda model: type(model).__name__,
+)
+def test_probability_classifiers_and_regressors_remain_accepted(model):
+    x = pd.DataFrame({"first": np.arange(20, dtype=float), "second": np.arange(20, dtype=float) ** 2})
+    model.fit(x, np.arange(20) % 2)
+    backend = LimeBackend(model, data=x)
+    result = backend.run_explainer(x.iloc[:1])
+    assert backend.get_local_contributions(x.iloc[:1], result) is not None
+
+
+def test_noncallable_predict_proba_is_rejected():
+    class InvalidClassifier:
+        classes_ = [0, 1]
+        predict_proba = None
+
+        def predict(self, x):
+            return np.zeros(len(x), dtype=int)
+
+    with pytest.raises(ValueError, match="LIME backend requires predict_proba"):
+        LimeBackend(InvalidClassifier())
+
+
+@pytest.mark.parametrize("explicit_data", [False, True])
+def test_lime_pickle_rebuilds_explainer_with_original_background(explicit_data):
+    x = pd.DataFrame({"first": np.arange(20, dtype=float), "second": np.arange(20, dtype=float) ** 2})
+    model = LogisticRegression().fit(x, np.arange(20) % 2)
+    backend = LimeBackend(model, data=x if explicit_data else None)
+    backend.run_explainer(x)
+    restored = pickle.loads(pickle.dumps(backend))
+    assert restored.explainer is None
+    pd.testing.assert_frame_equal(restored.data, x)
+    result = restored.run_explainer(x.iloc[:1])
+    assert restored.get_local_contributions(x.iloc[:1], result) is not None
+    assert restored.explainer.discretizer.means == backend.explainer.discretizer.means
 
 
 class TestLimeBackend(unittest.TestCase):
