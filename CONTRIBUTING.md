@@ -123,7 +123,11 @@ Name your branch **feature/...** for a new feature or **fix/...** for a bug fix.
 ## Follow the code conventions
 
 - Code must run on Python 3.11, the oldest supported version.
-- Public functions and classes have [numpy-style docstrings](https://numpydoc.readthedocs.io/en/latest/format.html).
+- Public functions and classes have [numpy-style docstrings](https://numpydoc.readthedocs.io/en/latest/format.html),
+  checked by ruff.
+- Functions in `shapash/` have type hints on every argument and the return value; mypy and ruff
+  reject unannotated functions. Use `Any` only for values without a fixed shape, such as Dash
+  callback payloads or third-party model objects.
 - Every bug fix or new feature comes with tests: a bug fix with a test that fails without it. At least
   90% of the lines you add or change must be covered (see [Run the tests](#run-the-tests)).
 - A new third-party dependency that only some features need goes into an extra in
