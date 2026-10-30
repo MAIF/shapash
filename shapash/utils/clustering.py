@@ -530,6 +530,7 @@ def encode_color_value(
 ) -> tuple[pd.Series, bool, dict[int, str] | None]:
     """
     Encode color_value for plotting.
+
     - Numeric: returned as-is
     - Categorical: label-encoded with mapping
 
@@ -539,7 +540,6 @@ def encode_color_value(
     is_categorical : bool
     label_mapping : dict[int, str] or None
     """
-
     is_categorical = is_text_like(color_value, strict_object=False)
 
     if not is_categorical:

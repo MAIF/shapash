@@ -839,8 +839,8 @@ class NlpWebApp:
             grid_filtered = bool(filter_model)
             shown = len(virtual_row_data) if (grid_filtered and virtual_row_data is not None) else len(recs)
             if grid_filtered:
-                names = ", ".join(column_header_by_field.get(f, f) for f in filter_model)
-                parts.append(f"grid filter: {names}")
+                filtered_columns = ", ".join(column_header_by_field.get(f, f) for f in filter_model)
+                parts.append(f"grid filter: {filtered_columns}")
 
             if parts:
                 summary = " · ".join(parts) + f" ({shown} of {total})"

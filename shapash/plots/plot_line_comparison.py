@@ -24,9 +24,9 @@ def plot_line_comparison(
     auto_open: bool = False,
 ) -> go.Figure:
     """
-    Plotly plot for comparisons. Displays
-    the contributions of several individuals. One line represents
-    the different contributions of a unique individual.
+    Plotly plot comparing the contributions of several individuals.
+
+    Each line represents the contributions of one individual.
 
     Parameters
     ----------
@@ -58,7 +58,6 @@ def plot_line_comparison(
     go.Figure
         Plot of the contributions of individuals, feature by feature.
     """
-
     topmargin = 80.0
     dict_xaxis = style_dict["dict_xaxis"] | {"text": None}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": None}

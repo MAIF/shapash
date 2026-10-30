@@ -252,8 +252,9 @@ def get_feature_from_features_groups(selected_feature: str | None, features_grou
 
 
 def get_indexes_from_datatable(data: list, list_index: list | None = None) -> list | None:
-    """Get the indexes of the data. If list_index is given and is the same length than
-    the indexes, there is no subset selected.
+    """Get the indexes of the data.
+
+    If list_index is given and is the same length as the indexes, there is no subset selected.
 
     Parameters
     ----------
@@ -293,7 +294,7 @@ def update_click_data_on_subset_changes(click_data: dict) -> dict:
 
 
 def get_figure_zoom(click_zoom: int) -> bool:
-    """Get figure zoom from n_clicks
+    """Get figure zoom from n_clicks.
 
     Parameters
     ----------
@@ -481,7 +482,7 @@ def create_id_card_data(
 
 
 def create_id_card_layout(selected_data: pd.DataFrame, additional_features_dict: dict) -> list:
-    """Create the layout of the identity card
+    """Create the layout of the identity card.
 
     Parameters
     ----------
@@ -789,7 +790,7 @@ def handle_group_display_logic(
     click_data: dict | None,
     click_data_store: dict,
     selected_click_data_store,
-    features_groups: dict,
+    features_groups: dict[str, list[str]] | None,
     features_dict: dict,
 ) -> tuple[str | None, str | None, dict | None, object]:
     """
@@ -811,8 +812,8 @@ def handle_group_display_logic(
         Stored click data.
     selected_click_data_store : object
         Stored selected click data.
-    features_groups : dict
-        Dictionary of feature groups.
+    features_groups : dict[str, list[str]] | None
+        Dictionary of feature groups, or None if no groups are defined.
     features_dict : dict
         Dictionary of features.
 

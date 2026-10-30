@@ -78,7 +78,7 @@ def plot_word_importance(
     word_imp: pd.Series,
     title: str | None = "Word importance",
     x_title: str = "Mean SHAP contribution",
-    width: int = 900,
+    width: int | None = 900,
     height: int | None = None,
     show_values: bool = True,
     counts: pd.Series | Mapping[str, int] | None = None,
@@ -105,8 +105,8 @@ def plot_word_importance(
     x_title : str
         X-axis label. Name the statistic actually plotted — a mean and a total are different
         quantities on the same-looking chart, and the axis is where a reader checks which.
-    width : int
-        Figure width in pixels.
+    width : int, optional
+        Figure width in pixels. ``None`` lets plotly size the figure to its container.
     height : int, optional
         Figure height in pixels. Defaults to ``max(400, 30 * n_words + chrome)``, where ``chrome``
         is ``120`` with a title or ``80`` without one — enough room for every word label to

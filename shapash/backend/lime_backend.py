@@ -76,7 +76,7 @@ def _transform_name(var_name: str, x_df: pd.DataFrame) -> str:
 
 
 class LimeBackend(BaseBackend):
-    """The Lime Backend"""
+    """The Lime Backend."""
 
     column_aggregation = "sum"
     name = "lime"

@@ -1,4 +1,4 @@
-"""Serve the NLP explainer **with the What-if Lab** (live model, cached compute).
+r"""Serve the NLP explainer **with the What-if Lab** (live model, cached compute).
 
 The shape of the script follows the ``fit`` / ``explain`` split:
 
@@ -227,20 +227,20 @@ Usage
     python demo/serve_nlp.py --recompute   # ignore the cache and recompute
     python demo/serve_nlp.py --attribution lig   # Captum LayerIntegratedGradients highlights
     python demo/serve_nlp.py --output-space logit   # SHAP on raw logits (same space as LIG)
-    python demo/serve_nlp.py --model-name distilbert-base-uncased-finetuned-sst-2-english \\
+    python demo/serve_nlp.py --model-name distilbert-base-uncased-finetuned-sst-2-english \
         --dataset-name sst2 --dataset-split validation --text-column sentence
     # A registered custom model against a registered dataset loader (bucketed 5-star -> binary
     # sentiment ground truth; --text-column/--label-column don't apply here, see DATASET_LOADERS):
-    python demo/serve_nlp.py --model-name almanach/camembertv2-base-cls \\
+    python demo/serve_nlp.py --model-name almanach/camembertv2-base-cls \
         --dataset-name mteb/amazon_reviews_multi --dataset-config fr --dataset-split test
-    python demo/serve_nlp.py --model-name lvwerra/distilbert-imdb --dataset-name stanfordnlp/imdb \\
+    python demo/serve_nlp.py --model-name lvwerra/distilbert-imdb --dataset-name stanfordnlp/imdb \
         --label-column label --label-map '{"neg": "NEGATIVE", "pos": "POSITIVE"}'
     # A registered custom (external-head) model — served via MODEL_BUILDERS, no other flags needed:
     python demo/serve_nlp.py --model-name shhossain/all-MiniLM-L6-v2-sentiment-classifier
     # A private local checkpoint against local parquet dataframes (tokenizer resolved from the
     # checkpoint's base model; --label-map reconciles the dataframe's labels with the model's):
-    python demo/serve_nlp.py --model-name demo/private_model \\
-        --dataset-path data/nlp_test_parquet --dataset-split test --reference-split train \\
+    python demo/serve_nlp.py --model-name demo/private_model \
+        --dataset-path data/nlp_test_parquet --dataset-split test --reference-split train \
         --label-map '{"negative": "NEGATIVE", "positive": "POSITIVE"}'
 
 First run needs transformers, datasets and pacmap (the ``[nlp]`` extra). A ``SentenceTransformerModel``

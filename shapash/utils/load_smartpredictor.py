@@ -1,6 +1,4 @@
-"""
-load_smartpredictor module
-"""
+"""load_smartpredictor module."""
 
 import warnings
 

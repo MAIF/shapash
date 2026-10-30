@@ -1,6 +1,4 @@
-"""
-Model Synoptic Module
-"""
+"""Model Synoptic Module."""
 
 simple_tree_model_sklearn = (
     "<class 'sklearn.ensemble._forest.ExtraTreesClassifier'>",

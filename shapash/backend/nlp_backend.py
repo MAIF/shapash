@@ -177,6 +177,7 @@ class NlpBackend(Backend):
         self, x, explain_data: NlpContributions, subset: list[int] | None = None
     ) -> NlpContributions:
         """Optionally select a subset of ``run_explainer``'s output.
+
         TODO: dead-code, not used by any current NLP backend.  Keep for now to avoid breaking the interface.
 
         Parameters

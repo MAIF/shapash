@@ -7,7 +7,7 @@ from sklearn.preprocessing import normalize
 
 def _df_to_array(instances: pd.DataFrame | pd.Series | np.ndarray) -> np.ndarray:
     """
-    Transform inputs into arrays
+    Transform inputs into arrays.
 
     Parameters
     ----------
@@ -28,8 +28,8 @@ def _df_to_array(instances: pd.DataFrame | pd.Series | np.ndarray) -> np.ndarray
 
 
 def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, epsilon: float = 1e-7) -> float:
-    """
-    Compute distances between data points by using L1 on normalized data : sum(abs(x1-x2)/(mean_vector+epsilon))
+    r"""
+    Compute distances between data points by using L1 on normalized data : sum(abs(x1-x2)/(mean_vector+epsilon)).
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, e
     Returns
     -------
     diff : float
-        Returns :math:`\\sum(\\frac{|x1-x2|}{mean\\_vector+epsilon})`
+        Returns :math:`\sum(\frac{|x1-x2|}{mean\_vector+epsilon})`
     """
     diff = np.sum(np.abs(x1 - x2) / (mean_vector + epsilon))
     return diff
@@ -53,7 +53,7 @@ def _compute_distance(x1: np.ndarray, x2: np.ndarray, mean_vector: np.ndarray, e
 
 def _compute_similarities(instance: np.ndarray, dataset: np.ndarray) -> np.ndarray:
     """
-    Compute pairwise distances between an instance and all other data points
+    Compute pairwise distances between an instance and all other data points.
 
     Parameters
     ----------
@@ -80,7 +80,7 @@ def _compute_similarities(instance: np.ndarray, dataset: np.ndarray) -> np.ndarr
 
 def _get_radius(dataset: np.ndarray, n_neighbors: int, sample_size: int = 500, percentile: float = 95) -> float:
     """
-    Calculate the maximum allowed distance between points to be considered as neighbors
+    Calculate the maximum allowed distance between points to be considered as neighbors.
 
     Parameters
     ----------
@@ -128,7 +128,7 @@ def find_neighbors(
     return_positions: bool = False,
 ) -> list[np.ndarray] | tuple[list[np.ndarray], list[np.ndarray]]:
     """
-    For each instance, select neighbors based on 3 criteria:
+    For each instance, select neighbors based on 3 criteria.
 
     1. First pick top N closest neighbors (L1 Norm + st. dev normalization)
     2. Filter neighbors whose model output is too different from instance (see condition below)
@@ -225,8 +225,9 @@ def shap_neighbors(
     neighbor_positions: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    For an instance and corresponding neighbors, calculate various
-    metrics (described below) that are useful to evaluate local stability
+    Calculate metrics that evaluate the local stability of an instance and its neighbors.
+
+    The metrics are described below.
 
     Parameters
     ----------
@@ -303,9 +304,10 @@ def get_min_nb_features(
     mode: Literal["classification", "regression"],
     distance: float,
 ) -> list[int]:
-    """
-    Determine the minimum number of features needed for the prediction \
-    of the interpretability method to be *close enough* \
+    r"""
+    Determine the minimum number of features needed to get *close enough* to the full prediction.
+
+    The prediction of the interpretability method with these features must be *close enough*
     to the one obtained with all features.
 
     The closeness is defined via the following distances:
@@ -314,7 +316,7 @@ def get_min_nb_features(
 
         .. math::
 
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+            distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
 
     * For classification:
 
@@ -376,7 +378,7 @@ def get_distance(
     nb_features: int,
 ) -> np.ndarray:
     """
-    Determine how close we get to the output with all features by using only a subset of them
+    Determine how close we get to the output with all features by using only a subset of them.
 
     Parameters
     ----------
