@@ -132,7 +132,6 @@ class ReportBlockMixin:
 
     def render_block(self, block_cfg: ReportBlockConfig) -> pn.viewable.Viewable | None:
         """Dispatch one YAML block entry to the matching block_* method."""
-
         block_type = block_cfg.get("type", "")
         params = block_cfg.get("params", {})
         if block_type == "class_explainability":
@@ -319,6 +318,7 @@ class ReportBlockMixin:
     @block
     def block_global_analysis(self, title: str = "") -> BlockContent:
         """Render global summary statistics for prediction and training datasets.
+
         Requires x_train and explainer.
 
         Parameters
@@ -348,6 +348,7 @@ class ReportBlockMixin:
     @block
     def block_model_analysis(self, title: str = "Model information", show_index: bool = False) -> BlockContent:
         """Render model metadata and parameter tables.
+
         Requires explainer.
 
         Parameters
@@ -499,6 +500,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render feature distribution by dataset split.
+
         Requires x_train and explainer.
 
         Parameters
@@ -548,6 +550,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render a feature correlation matrix.
+
         Requires x_train and explainer.
 
         Parameters
@@ -592,6 +595,7 @@ class ReportBlockMixin:
     @block
     def block_feature_importance(self, title: str = "", label: Any = None) -> BlockContent:
         """Render global feature importance.
+
         Requires explainer.
 
         Parameters
@@ -701,6 +705,7 @@ class ReportBlockMixin:
         include_all_features: bool = False,
     ) -> BlockContent:
         """Render feature contribution plots.
+
         Requires explainer.
 
         Parameters
@@ -799,6 +804,7 @@ class ReportBlockMixin:
         max_points: int | None = None,
     ) -> BlockContent:
         """Render a plot for the top feature interaction pairs.
+
         Requires explainer.
 
         Parameters
@@ -841,6 +847,7 @@ class ReportBlockMixin:
         height: int = 500,
     ) -> BlockContent:
         """Render prediction-versus-true target distribution.
+
         Requires explainer.
 
         Parameters
@@ -994,6 +1001,7 @@ class ReportBlockMixin:
     @block
     def block_confusion_matrix(self, title: str | None = "") -> BlockContent:
         """Render confusion matrix for classification predictions.
+
         Requires explainer.
 
         Parameters
@@ -1033,6 +1041,7 @@ class ReportBlockMixin:
         height: int = 600,
     ) -> BlockContent:
         """Render lift curve for classification probabilities.
+
         Requires explainer.
 
         Parameters
@@ -1103,6 +1112,7 @@ class ReportBlockMixin:
         show_train: bool = True,
     ) -> BlockContent:
         """Render per-feature univariate analysis with interactive selection.
+
         Requires x_train and explainer.
 
         Parameters

@@ -173,8 +173,7 @@ def _update_stability_fig(
     width: int = 900,
 ) -> None:
     """
-    Function used for the `plot_stability_distribution` and `plot_amplitude_vs_stability`
-    to update the layout of the plotly figure.
+    Update the layout of the `plot_stability_distribution` and `plot_amplitude_vs_stability` figures.
 
     Parameters
     ----------

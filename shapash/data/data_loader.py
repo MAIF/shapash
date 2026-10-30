@@ -1,6 +1,4 @@
-"""
-Data loader module
-"""
+"""Data loader module."""
 
 import json
 import os

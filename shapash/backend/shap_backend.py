@@ -9,7 +9,7 @@ from shapash.backend.base_backend import BaseBackend
 
 
 class ShapBackend(BaseBackend):
-    """The Shap Backend"""
+    """The Shap Backend."""
 
     # When grouping features contributions together, Shap uses the sum of the contributions
     # of the features that belong to the group
@@ -77,7 +77,7 @@ class ShapBackend(BaseBackend):
 
     def run_explainer(self, x: pd.DataFrame) -> dict[str, Any]:
         """
-        Computes and returns local contributions using Shap explainer
+        Computes and returns local contributions using Shap explainer.
 
         Parameters
         ----------
@@ -100,6 +100,7 @@ def get_shap_interaction_values(
 ) -> np.ndarray:
     """
     Compute the shap interaction values for a given dataframe.
+
     Also checks if the explainer is a TreeExplainer.
 
     Parameters

@@ -271,7 +271,7 @@ def plot_scatter_prediction(
     auto_open: bool = False,
 ) -> go.Figure:
     """
-    Generate a scatter or violin plot of predictions versus target values to visually compare the model's predictions
+    Generate a scatter or violin plot of predictions versus target values to visually compare the model's predictions.
 
     This plot allows the user to understand the distribution of predictions in comparison to the target variable.
     With the web app, it is possible to select the wrong or correct predictions or a subset of predictions.
@@ -413,6 +413,7 @@ def _prediction_classification_plot(
 ) -> tuple[go.Figure, str]:
     """
     _prediction_classification_plot displays a Plotly violin plot of predictions in comparison to the target variable.
+
     This plot represents Trues Values versus Predicted Values.
 
     This plot allows the user to understand the distribution of predictions in comparison to the target variable.
@@ -573,6 +574,7 @@ def _prediction_regression_plot(
 ) -> tuple[go.Figure, str | None]:
     """
     _prediction_regression_plot displays a Plotly scatter plot of predictions in comparison to the target variable.
+
     This plot represents Trues Values versus Predicted Values.
 
     This plot allows the user to understand the distribution of predictions in comparison to the target variable.
@@ -1003,7 +1005,6 @@ def plot_clustering_by_explainability(
             random_state=79
         )
     """
-
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
 

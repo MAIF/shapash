@@ -28,9 +28,12 @@ def _parse_rgb(color: str) -> tuple[int, int, int]:
 def _shap_style(
     val: float, max_abs: float, pos_rgb: tuple[int, int, int], neg_rgb: tuple[int, int, int]
 ) -> dict[str, str]:
-    """Background interpolated from white toward the sign-appropriate colour, with a text colour
-    picked for contrast against it (the negative blue gets dark enough, at high magnitude, that
-    black text stops being readable — see the module docstring)."""
+    """Return the style of a highlighted word: a background colour and a contrasting text colour.
+
+    The background is interpolated from white toward the sign-appropriate colour, and the text colour
+    is picked for contrast against it (the negative blue gets dark enough, at high magnitude, that
+    black text stops being readable — see the module docstring).
+    """
     if max_abs == 0 or val == 0:
         return {"backgroundColor": "transparent"}
     t = min(abs(val) / max_abs, 1.0)

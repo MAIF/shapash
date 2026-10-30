@@ -49,7 +49,7 @@ def get_index_type(data: pd.DataFrame) -> Literal["number", "text"]:
 
 def check_row(data: list[dict[str, Any]], index: int | str | None) -> int | None:
     """
-    Identify the row number of datatable for a specific index
+    Identify the row number of datatable for a specific index.
 
     Parameters
     ----------
@@ -75,7 +75,7 @@ def split_filter_part(
     filter_part: str,
 ) -> tuple[str | None, str | None, str | float | None] | list[None]:
     """
-    Transform dash.datatable filter part into pandas.DataFrame filter (source code : Dash documentation)
+    Transform dash.datatable filter part into pandas.DataFrame filter (source code : Dash documentation).
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def split_filter_part(
 
 def apply_filter(df: pd.DataFrame, filter_query: str) -> pd.DataFrame:
     """
-    Apply a filter query from dash.datable to a pandas.DataFrame (source code : Dash documentation)
+    Apply a filter query from dash.datable to a pandas.DataFrame (source code : Dash documentation).
 
     Parameters
     ----------

@@ -1,6 +1,4 @@
-"""
-IO module
-"""
+"""IO module."""
 
 import datetime
 import hashlib
@@ -34,7 +32,7 @@ _MODEL_FRAMEWORK_MAP = {
 
 def save_pickle(obj: Any, path: str, protocol: int = pickle.HIGHEST_PROTOCOL) -> None:
     """
-    Save any python Object in pickle file
+    Save any python Object in pickle file.
 
     Parameters
     ----------
@@ -45,7 +43,6 @@ def save_pickle(obj: Any, path: str, protocol: int = pickle.HIGHEST_PROTOCOL) ->
         Int which indicates which protocol should be used by the pickler,
         default HIGHEST_PROTOCOL
     """
-
     if not isinstance(path, str):
         raise ValueError(
             """
@@ -65,7 +62,7 @@ def save_pickle(obj: Any, path: str, protocol: int = pickle.HIGHEST_PROTOCOL) ->
 
 def load_pickle(path: str) -> Any:
     """
-    load any pickle file
+    Load any pickle file.
 
     Parameters
     ----------
@@ -76,7 +73,6 @@ def load_pickle(path: str) -> Any:
     -------
     Any object stored in the pickle file.
     """
-
     if not isinstance(path, str):
         raise ValueError(
             """
@@ -92,7 +88,7 @@ def load_pickle(path: str) -> Any:
 
 def load_yml(path: str) -> Any:
     """
-    Loads a yml file
+    Loads a yml file.
 
     Parameters
     ----------
@@ -147,8 +143,9 @@ def _detect_model_framework(model: Any) -> dict[str, str | None]:
 
 def _compute_schema_fingerprint(predictor: Any) -> str:
     """
-    Return a deterministic SHA-256 fingerprint of the predictor's user-facing schema
-    (``features_dict``, ``features_types``, ``columns_dict``, ``label_dict``).
+    Return a deterministic SHA-256 fingerprint of the predictor's user-facing schema.
+
+    The schema is made of ``features_dict``, ``features_types``, ``columns_dict`` and ``label_dict``.
 
     Used at load time to detect schema tampering or stale manifests independently of
     the pickle contents.
@@ -212,8 +209,9 @@ def _parse_major_minor(version_str: str) -> tuple[int, int] | None:
 
 def _check_predictor_manifest(manifest: dict[str, Any], predictor: Any) -> None:
     """
-    Validate ``manifest`` against the loaded ``predictor``. Raises ``ValueError`` on
-    critical mismatches (schema fingerprint, major shapash version) and emits
+    Validate ``manifest`` against the loaded ``predictor``.
+
+    Raises ``ValueError`` on critical mismatches (schema fingerprint, major shapash version) and emits
     ``UserWarning`` for minor skews (minor shapash version, model framework version).
     """
     expected_fp = manifest.get("schema_fingerprint")

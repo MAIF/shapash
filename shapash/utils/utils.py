@@ -1,6 +1,4 @@
-"""
-Utils is a group of function for the library
-"""
+"""Utils is a group of function for the library."""
 
 import math
 import socket
@@ -17,7 +15,7 @@ from shapash.explainer.smart_state import SmartState
 
 def adjust_title_height(figure_height: int | float = 500) -> float:
     """
-    Adjust the height of the title according to height of the figure
+    Adjust the height of the title according to height of the figure.
 
     Parameters
     ----------
@@ -29,7 +27,6 @@ def adjust_title_height(figure_height: int | float = 500) -> float:
     float
         height of the title
     """
-
     return 1 - 0.1 * 500 / figure_height
 
 
@@ -52,7 +49,6 @@ def suffix_duplicates(lst: list[str]) -> list[str]:
         Input: ["feature1", "feature2", "feature1", "feature2", "feature3"]
         Output: ["feature1", "feature2", "feature1_2", "feature2_2", "feature3"]
     """
-
     seen: dict[str, int] = {}
     result = []
 
@@ -74,6 +70,7 @@ def suffix_duplicates(lst: list[str]) -> list[str]:
 def get_host_name() -> str:
     """
     Get the hostname of the current host.
+
     Returns
     -------
     str
@@ -139,7 +136,7 @@ def is_nested_list(object_param: Iterable[Any]) -> bool:
 
 def add_line_break(value: str, nbchar: int, maxlen: int = 150) -> str:
     """
-    adding line break in string if necessary
+    Adding line break in string if necessary.
 
     Parameters
     ----------
@@ -182,7 +179,7 @@ def add_line_break(value: str, nbchar: int, maxlen: int = 150) -> str:
 
 def truncate_str(text: Any, maxlen: int = 40) -> Any:
     """
-    truncate a string
+    Truncate a string.
 
     Parameters
     ----------
@@ -213,7 +210,7 @@ def truncate_str(text: Any, maxlen: int = 40) -> Any:
 
 def compute_digit_number(value: int | float | np.number | np.ndarray, significant_digits: int = 4) -> int:
     """
-    return int, number of digits to display
+    Return int, number of digits to display.
 
     Parameters
     ----------
@@ -243,7 +240,7 @@ def compute_digit_number(value: int | float | np.number | np.ndarray, significan
 
 def tuning_round_digit(values: pd.DataFrame, quantile: Sequence[float] = (0.25, 0.75)) -> int:
     """
-    return int, number of digits to display
+    Return int, number of digits to display.
 
     Parameters
     ----------
@@ -286,6 +283,7 @@ def add_text(text_list: Iterable[str | None], sep: str) -> str:
 def maximum_difference_sort_value(contributions: Sequence[Sequence[Any]]) -> int | float | np.number:
     """
     Auxiliary function to sort the contributions for the compare_plot.
+
     Returns the value of the maximum difference between values in contributions[0].
 
     Parameters
@@ -315,6 +313,7 @@ def maximum_difference_sort_value(contributions: Sequence[Sequence[Any]]) -> int
 def compute_sorted_variables_interactions_list_indices(interaction_values: np.ndarray) -> np.ndarray:
     """
     Returns the sorted interactions as a list of pairs of indices.
+
     Computes the (absolute) sum of all contributions of each pair of variables in a 2D matrix.
     Then returns the list of all unique pairs of indices of the sorted values in descending order.
 
@@ -340,10 +339,7 @@ def compute_sorted_variables_interactions_list_indices(interaction_values: np.nd
 
 
 def get_project_root() -> Path:
-    """
-    Returns project root absolute path.
-    """
-
+    """Returns project root absolute path."""
     current_path = Path(__file__)
 
     return current_path.parent.parent.parent.resolve()
@@ -378,8 +374,9 @@ def compute_top_correlations_features(corr: pd.DataFrame, max_features: int) -> 
 
 def choose_state(contributions: Any) -> SmartState | MultiDecorator:
     """
-    Select implementation of the smart explainer. Typically check if it is a
-    multi-class problem, in which case the implementation should be adapted
+    Select the implementation of the smart explainer.
+
+    Typically check if it is a multi-class problem, in which case the implementation should be adapted
     to lists of contributions.
 
     Parameters
@@ -400,7 +397,7 @@ def choose_state(contributions: Any) -> SmartState | MultiDecorator:
 
 def convert_string_to_int_keys(input_dict: dict[str, Any]) -> dict[int, Any]:
     """
-    Returns the dict with integer keys instead of string keys
+    Returns the dict with integer keys instead of string keys.
 
     Parameters
     ----------

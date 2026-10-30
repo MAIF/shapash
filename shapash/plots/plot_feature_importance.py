@@ -211,6 +211,7 @@ def _plot_features_import(
 ) -> go.Figure:
     """
     Plot features importance computed with the prediction set.
+
     Parameters
     ----------
     feature_imp1 : pandas.Series
@@ -244,7 +245,6 @@ def _plot_features_import(
     feature_imp2_name: str (default="Subset")
         Name of the second feature importance series
     """
-
     topmargin = 80
     # Add subtitle and / or addnote
     if subtitle or addnote:
@@ -341,6 +341,7 @@ def _plot_local_features_import(
 ) -> go.Figure:
     """
     Plot features importance computed with the prediction set.
+
     Parameters
     ----------
     feat_imp : dict[str, pandas.Series]
@@ -698,7 +699,6 @@ def _apply_bold_formatting(
     inv_features_dict: dict[str, str] | None = None,
 ) -> tuple[pd.Series, pd.Series | None, pd.Series | None, pd.Series | None]:
     """Apply bold formatting to feature names for feature groups."""
-
     if inv_features_dict is None:
         inv_features_dict = {}
     if features_groups_keys is None:
