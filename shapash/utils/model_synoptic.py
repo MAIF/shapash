@@ -54,6 +54,17 @@ linear_model = (
     "<class 'sklearn.linear_model._least_angle.LassoLarsIC'>",
     "<class 'sklearn.linear_model._omp.OrthogonalMatchingPursuit'>",
     "<class 'sklearn.linear_model._omp.OrthogonalMatchingPursuitCV'>",
+    "<class 'sklearn.linear_model._ridge.RidgeClassifier'>",
+    "<class 'sklearn.linear_model._ridge.RidgeClassifierCV'>",
+    "<class 'sklearn.linear_model._stochastic_gradient.SGDClassifier'>",
+    "<class 'sklearn.linear_model._perceptron.Perceptron'>",
+    "<class 'sklearn.linear_model._passive_aggressive.PassiveAggressiveClassifier'>",
+)
+
+generalized_linear_model = (
+    "<class 'sklearn.linear_model._glm.glm.PoissonRegressor'>",
+    "<class 'sklearn.linear_model._glm.glm.GammaRegressor'>",
+    "<class 'sklearn.linear_model._glm.glm.TweedieRegressor'>",
 )
 
 svm_model = (
@@ -61,12 +72,45 @@ svm_model = (
     "<class 'sklearn.svm._classes.SVR'>",
     "<class 'sklearn.svm._classes.LinearSVC'>",
     "<class 'sklearn.svm._classes.LinearSVR'>",
+    "<class 'sklearn.svm._classes.NuSVC'>",
+    "<class 'sklearn.svm._classes.NuSVR'>",
+)
+
+ensemble_model_sklearn = (
+    "<class 'sklearn.ensemble._weight_boosting.AdaBoostClassifier'>",
+    "<class 'sklearn.ensemble._weight_boosting.AdaBoostRegressor'>",
+    "<class 'sklearn.ensemble._bagging.BaggingClassifier'>",
+    "<class 'sklearn.ensemble._bagging.BaggingRegressor'>",
+    "<class 'sklearn.ensemble._voting.VotingClassifier'>",
+    "<class 'sklearn.ensemble._voting.VotingRegressor'>",
+    "<class 'sklearn.ensemble._stacking.StackingClassifier'>",
+    "<class 'sklearn.ensemble._stacking.StackingRegressor'>",
+)
+
+neighbors_model = (
+    "<class 'sklearn.neighbors._classification.KNeighborsClassifier'>",
+    "<class 'sklearn.neighbors._regression.KNeighborsRegressor'>",
+)
+
+neural_network_model = (
+    "<class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>",
+    "<class 'sklearn.neural_network._multilayer_perceptron.MLPRegressor'>",
+)
+
+sklearn_model = (
+    simple_tree_model_sklearn
+    + linear_model
+    + generalized_linear_model
+    + svm_model
+    + ensemble_model_sklearn
+    + neighbors_model
+    + neural_network_model
 )
 
 simple_tree_model = simple_tree_model_sklearn + xgboost_model + lightgbm_model
 
 dict_model_feature = {
-    **{model: ["length"] for model in simple_tree_model_sklearn + linear_model + svm_model},
+    **{model: ["length"] for model in sklearn_model},
     "<class 'lightgbm.sklearn.LGBMClassifier'>": ["booster_", "feature_name"],
     "<class 'lightgbm.sklearn.LGBMRegressor'>": ["booster_", "feature_name"],
     "<class 'lightgbm.basic.Booster'>": ["feature_names"],

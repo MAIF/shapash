@@ -1,17 +1,18 @@
 """Exercise additional sklearn estimators through explanation and production prediction."""
 
+import pickle
+
 import numpy as np
 import pandas as pd
 import pytest
 import shap
-from sklearn import ensemble, linear_model, svm, tree
+from sklearn import ensemble, linear_model, neighbors, neural_network, svm, tree
 from sklearn.compose import ColumnTransformer
 from sklearn.datasets import make_classification, make_regression
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from shapash import SmartExplainer
-from shapash.utils.model_synoptic import linear_model as linear_model_types
-from shapash.utils.model_synoptic import simple_tree_model_sklearn, svm_model
+from shapash.utils.model_synoptic import sklearn_model
 
 
 CLASSIFIERS = [
@@ -20,6 +21,18 @@ CLASSIFIERS = [
     tree.ExtraTreeClassifier,
     linear_model.LogisticRegressionCV,
     svm.LinearSVC,
+    linear_model.RidgeClassifier,
+    linear_model.RidgeClassifierCV,
+    linear_model.SGDClassifier,
+    linear_model.Perceptron,
+    linear_model.PassiveAggressiveClassifier,
+    svm.NuSVC,
+    neighbors.KNeighborsClassifier,
+    neural_network.MLPClassifier,
+    ensemble.AdaBoostClassifier,
+    ensemble.BaggingClassifier,
+    ensemble.VotingClassifier,
+    ensemble.StackingClassifier,
 ]
 REGRESSORS = [
     ensemble.HistGradientBoostingRegressor,
@@ -46,17 +59,54 @@ REGRESSORS = [
     linear_model.OrthogonalMatchingPursuit,
     linear_model.OrthogonalMatchingPursuitCV,
     svm.LinearSVR,
+    linear_model.PoissonRegressor,
+    linear_model.GammaRegressor,
+    linear_model.TweedieRegressor,
+    svm.NuSVR,
+    neighbors.KNeighborsRegressor,
+    neural_network.MLPRegressor,
+    ensemble.AdaBoostRegressor,
+    ensemble.BaggingRegressor,
+    ensemble.VotingRegressor,
+    ensemble.StackingRegressor,
 ]
 
 
-def _check_model_workflow(model_class, with_preprocessing, n_classes=None):
+def _make_model(model_class):
+    if model_class in (ensemble.VotingClassifier, ensemble.StackingClassifier):
+        model = model_class(
+            estimators=[
+                ("linear", linear_model.LogisticRegression()),
+                ("tree", tree.DecisionTreeClassifier(max_depth=3, random_state=0)),
+            ]
+        )
+        if model_class is ensemble.VotingClassifier:
+            model.set_params(voting="soft")
+        return model
+    if model_class in (ensemble.VotingRegressor, ensemble.StackingRegressor):
+        return model_class(
+            estimators=[
+                ("linear", linear_model.Ridge()),
+                ("tree", tree.DecisionTreeRegressor(max_depth=3, random_state=0)),
+            ]
+        )
+    return model_class()
+
+
+def _check_model_workflow(
+    model_class, with_preprocessing, n_classes=None, model_options=None, nonconsecutive_labels=False
+):
     if n_classes is None:
         values, target = make_regression(n_samples=72, n_features=3, noise=1, random_state=0)
         target = target / target.std()
+        if model_class in (linear_model.PoissonRegressor, linear_model.GammaRegressor, linear_model.TweedieRegressor):
+            target = np.exp(target / 2)
     else:
         values, target = make_classification(
             n_samples=72, n_features=3, n_informative=3, n_redundant=0, n_classes=n_classes, random_state=0
         )
+        if nonconsecutive_labels:
+            target = np.array([3, 8, 42])[target]
     x = pd.DataFrame(values, columns=["col_0", "col_1", "col_2"], index=np.arange(100, 172))
     preprocessing = None
     if with_preprocessing:
@@ -72,7 +122,7 @@ def _check_model_workflow(model_class, with_preprocessing, n_classes=None):
     else:
         encoded = x
 
-    model = model_class()
+    model = _make_model(model_class)
     params = model.get_params()
     if "random_state" in params:
         model.set_params(random_state=0)
@@ -82,6 +132,20 @@ def _check_model_workflow(model_class, with_preprocessing, n_classes=None):
         model.set_params(max_iter=5, min_samples_leaf=5)
     if isinstance(model, (linear_model.SGDRegressor, svm.LinearSVR)):
         model.set_params(max_iter=10000)
+    if isinstance(model, (neural_network.MLPClassifier, neural_network.MLPRegressor)):
+        model.set_params(hidden_layer_sizes=(8,), solver="lbfgs", max_iter=5000)
+    if isinstance(
+        model,
+        (
+            ensemble.AdaBoostClassifier,
+            ensemble.AdaBoostRegressor,
+            ensemble.BaggingClassifier,
+            ensemble.BaggingRegressor,
+        ),
+    ):
+        model.set_params(n_estimators=5)
+    if model_options:
+        model.set_params(**model_options)
     model.fit(encoded, target)
 
     explainer = SmartExplainer(model=model, preprocessing=preprocessing)
@@ -143,6 +207,9 @@ def _check_model_workflow(model_class, with_preprocessing, n_classes=None):
         assert "proba" not in predictor.data["ypred"]
         with pytest.raises(ValueError, match="model has no predict_proba method"):
             predictor.predict_proba()
+    restored = pickle.loads(pickle.dumps(predictor))
+    restored.add_input(x=x.iloc[:6])
+    pd.testing.assert_frame_equal(restored.data["contributions"], predictor.data["contributions"])
 
 
 @pytest.mark.parametrize("with_preprocessing", [False, True], ids=["raw", "column_transformer"])
@@ -158,10 +225,65 @@ def test_sklearn_classifier_workflow(model_class, with_preprocessing, n_classes)
     _check_model_workflow(model_class, with_preprocessing, n_classes)
 
 
+@pytest.mark.parametrize("with_preprocessing", [False, True], ids=["raw", "column_transformer"])
+@pytest.mark.parametrize(
+    "model_class",
+    [
+        linear_model.RidgeClassifier,
+        linear_model.RidgeClassifierCV,
+        linear_model.SGDClassifier,
+        linear_model.Perceptron,
+        linear_model.PassiveAggressiveClassifier,
+        svm.NuSVC,
+        neighbors.KNeighborsClassifier,
+        neural_network.MLPClassifier,
+        ensemble.AdaBoostClassifier,
+        ensemble.BaggingClassifier,
+        ensemble.VotingClassifier,
+        ensemble.StackingClassifier,
+    ],
+    ids=lambda cls: cls.__name__,
+)
+def test_additional_classifier_nonconsecutive_labels(model_class, with_preprocessing):
+    _check_model_workflow(model_class, with_preprocessing, n_classes=3, nonconsecutive_labels=True)
+
+
+@pytest.mark.parametrize("with_preprocessing", [False, True], ids=["raw", "column_transformer"])
+@pytest.mark.parametrize("n_classes", [2, 3], ids=["binary", "multiclass"])
+@pytest.mark.parametrize(
+    "model_class, model_options",
+    [
+        pytest.param(svm.NuSVC, {"probability": True}, id="NuSVC-probabilities"),
+        pytest.param(svm.NuSVC, {"probability": True, "decision_function_shape": "ovo"}, id="NuSVC-ovo-probabilities"),
+        pytest.param(linear_model.SGDClassifier, {"loss": "log_loss"}, id="SGDClassifier-log-loss"),
+        pytest.param(ensemble.StackingClassifier, {"final_estimator": svm.LinearSVC()}, id="StackingClassifier-scores"),
+    ],
+)
+def test_additional_classifier_output_variants(model_class, model_options, n_classes, with_preprocessing):
+    _check_model_workflow(model_class, with_preprocessing, n_classes, model_options)
+
+
+@pytest.mark.parametrize("with_preprocessing", [False, True], ids=["raw", "column_transformer"])
+@pytest.mark.parametrize(
+    "model_options",
+    [
+        {"power": 0, "link": "identity"},
+        {"power": 0, "link": "log"},
+        {"power": 1, "link": "auto"},
+        {"power": 1.5, "link": "auto"},
+        {"power": 2, "link": "auto"},
+        {"power": 3, "link": "auto"},
+    ],
+    ids=["normal", "normal-log", "poisson", "compound-poisson", "gamma", "inverse-gaussian"],
+)
+def test_tweedie_link_variants(model_options, with_preprocessing):
+    _check_model_workflow(linear_model.TweedieRegressor, with_preprocessing, model_options=model_options)
+
+
 def test_sklearn_feature_metadata_covers_registered_estimators():
     from shapash.utils.model_synoptic import dict_model_feature
 
-    for model_type in simple_tree_model_sklearn + linear_model_types + svm_model:
+    for model_type in sklearn_model:
         assert dict_model_feature[model_type] == ["length"]
 
 

@@ -102,8 +102,19 @@ class LimeBackend(BaseBackend):
             passed to :meth:`run_explainer`.
         **kwargs : Any
             Additional keyword arguments accepted by the constructor.
+
+        Raises
+        ------
+        ValueError
+            If a classification model does not expose a callable predict_proba.
         """
         super().__init__(model, preprocessing)
+        if self._case == "classification" and not callable(getattr(model, "predict_proba", None)):
+            raise ValueError(
+                f"The LIME backend requires predict_proba for classification, but {type(model).__name__} "
+                "does not provide it. Use backend='shap' if the model is supported by SHAP, "
+                "or a calibrated classifier exposing predict_proba. Shapash does not switch backends automatically."
+            )
         self.explainer: Any = None
         self.data = data
 

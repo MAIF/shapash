@@ -6,6 +6,7 @@ import pandas as pd
 import shap
 
 from shapash.backend.base_backend import BaseBackend
+from shapash.utils.model_synoptic import generalized_linear_model
 
 
 class ShapBackend(BaseBackend):
@@ -49,7 +50,23 @@ class ShapBackend(BaseBackend):
         self.explainer_args = explainer_args if explainer_args else {}
         self.explainer_compute_args = explainer_compute_args if explainer_compute_args else {}
 
-        shap_parameters = {"model": model, "masker": self.masker, **self.explainer_args}
+        if str(type(model)) == "<class 'sklearn.ensemble._voting.VotingClassifier'>" and model.voting != "soft":
+            raise ValueError(
+                "VotingClassifier requires voting='soft' for SHAP explanations; "
+                "hard voting does not expose per-class probabilities or decision scores."
+            )
+        if (
+            str(type(model)) in ("<class 'sklearn.svm._classes.NuSVC'>", "<class 'sklearn.svm._classes.SVC'>")
+            and not hasattr(model, "predict_proba")
+            and model.decision_function_shape == "ovo"
+            and len(self._classes or []) > 2
+        ):
+            raise ValueError(
+                "SVM classification requires decision_function_shape='ovr' or probability=True "
+                "for per-class SHAP explanations."
+            )
+        is_glm = str(type(model)) in generalized_linear_model
+        shap_parameters = {"model": model.predict if is_glm else model, "masker": self.masker, **self.explainer_args}
 
         if self.explainer_args:
             if "explainer" in self.explainer_args.keys():
@@ -60,7 +77,10 @@ class ShapBackend(BaseBackend):
             else:
                 self.explainer = shap.Explainer(**shap_parameters)
         else:
-            if shap.explainers.Linear.supports_model_with_masker(model, self.masker):
+            if is_glm:
+                # Explain predictions after the inverse link, not the linear predictor.
+                self.explainer = shap.Explainer(model=model.predict, masker=self.masker)
+            elif shap.explainers.Linear.supports_model_with_masker(model, self.masker):
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
             elif shap.explainers.Tree.supports_model_with_masker(model, None):
                 self.explainer = shap.Explainer(model=model)

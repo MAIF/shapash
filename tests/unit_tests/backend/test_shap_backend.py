@@ -9,8 +9,16 @@ import pytest
 import shap
 import sklearn.ensemble as ske
 import xgboost as xgb
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import VotingClassifier
+from sklearn.linear_model import (
+    GammaRegressor,
+    LinearRegression,
+    LogisticRegression,
+    PoissonRegressor,
+    TweedieRegressor,
+)
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.svm import NuSVC, SVC
 
 from shapash.backend.shap_backend import ShapBackend, get_shap_interaction_values
 
@@ -168,9 +176,7 @@ class TestShapBackend(unittest.TestCase):
 
 class TestShapBackendExplainerSelection(unittest.TestCase):
     def setUp(self):
-        self.x_df = pd.DataFrame(
-            {"x1": np.arange(20).astype(float), "x2": np.arange(20)[::-1].astype(float)}
-        )
+        self.x_df = pd.DataFrame({"x1": np.arange(20).astype(float), "x2": np.arange(20)[::-1].astype(float)})
         self.y = (self.x_df["x1"] > 10).astype(int)
 
     def test_explainer_args_without_explicit_explainer_class(self):
@@ -204,3 +210,37 @@ class TestGetShapInteractionValues(unittest.TestCase):
 
         with pytest.raises(ValueError, match="not a TreeExplainer"):
             get_shap_interaction_values(x_df, FakeExplainer())
+
+
+@pytest.mark.parametrize("model_class", [PoissonRegressor, GammaRegressor, TweedieRegressor])
+@pytest.mark.parametrize("explainer_args", [None, {"algorithm": "auto"}], ids=["default", "explicit-auto"])
+@pytest.mark.parametrize("as_masker", [False, True], ids=["dataframe", "independent-masker"])
+def test_glm_explanations_reconstruct_predictions(model_class, explainer_args, as_masker):
+    x = pd.DataFrame({"first": np.linspace(-2, 2, 20), "second": np.linspace(0, 1, 20) ** 2})
+    model = model_class(link="log") if model_class is TweedieRegressor else model_class()
+    model.fit(x, np.exp(x["first"]))
+    masker = shap.maskers.Independent(x) if as_masker else x
+    backend = ShapBackend(model, masker=masker, explainer_args=explainer_args)
+    assert not isinstance(backend.explainer, shap.explainers.Linear)
+    data = backend.run_explainer(x.iloc[:4])
+    np.testing.assert_allclose(
+        data["base_values"] + data["contributions"].sum(axis=1), model.predict(x.iloc[:4]), atol=1e-6
+    )
+
+
+@pytest.mark.parametrize("n_classes", [2, 3])
+def test_hard_voting_classifier_requires_soft_voting(n_classes):
+    x = pd.DataFrame({"first": np.arange(30, dtype=float), "second": np.arange(30, dtype=float) ** 2})
+    model = VotingClassifier(estimators=[("linear", LogisticRegression(max_iter=1000))]).fit(
+        x, np.arange(30) % n_classes
+    )
+    with pytest.raises(ValueError, match="VotingClassifier requires voting='soft'"):
+        ShapBackend(model, masker=x)
+
+
+@pytest.mark.parametrize("model_class", [SVC, NuSVC])
+def test_pairwise_svm_scores_require_per_class_outputs(model_class):
+    x = pd.DataFrame({"first": np.arange(30, dtype=float), "second": np.arange(30, dtype=float) ** 2})
+    model = model_class(decision_function_shape="ovo").fit(x, np.arange(30) % 3)
+    with pytest.raises(ValueError, match="decision_function_shape='ovr' or probability=True"):
+        ShapBackend(model, masker=x)

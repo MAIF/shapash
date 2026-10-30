@@ -36,6 +36,17 @@ including preprocessing with a supported ``ColumnTransformer``:
   ``LassoLarsIC``, ``OrthogonalMatchingPursuit`` and ``OrthogonalMatchingPursuitCV``.
 - Classification with cross-validation: ``LogisticRegressionCV``.
 - Linear support vector machines: ``LinearSVC`` and ``LinearSVR``.
+- Linear classifiers: ``RidgeClassifier``, ``RidgeClassifierCV``, ``SGDClassifier``,
+  ``Perceptron`` and ``PassiveAggressiveClassifier``. The latter is deprecated in
+  scikit-learn 1.8; prefer ``SGDClassifier`` for new models.
+- Generalized linear regression: ``PoissonRegressor``, ``GammaRegressor`` and
+  ``TweedieRegressor``.
+- Other support vector machines: ``NuSVC`` and ``NuSVR``.
+- Nearest neighbors: ``KNeighborsClassifier`` and ``KNeighborsRegressor``.
+- Neural networks: ``MLPClassifier`` and ``MLPRegressor``.
+- Ensembles: ``AdaBoostClassifier``, ``AdaBoostRegressor``, ``BaggingClassifier``,
+  ``BaggingRegressor``, ``VotingClassifier``, ``VotingRegressor``,
+  ``StackingClassifier`` and ``StackingRegressor``.
 
 These additions cover single-output regression and binary or multiclass
 classification. They do not add support for multi-target regression or multilabel
@@ -48,6 +59,36 @@ fallback explains ``decision_function`` scores rather than predicted labels.
 ``SmartPredictor`` can compute predictions and contributions without probabilities;
 calling ``predict_proba()`` explicitly still raises an error. Scores and their
 contributions must not be interpreted as probabilities.
+
+The LIME backend requires ``predict_proba`` for classification and ``predict``
+for regression. It rejects classifiers without probabilities with an explicit
+error when the backend is initialized (during ``compile()`` when using
+``backend="lime"``), without switching automatically to SHAP. Use the SHAP backend
+when supported, or fit a calibrated classifier exposing probabilities.
+For example, LIME requires ``probability=True`` for ``NuSVC``,
+``loss="log_loss"`` for ``SGDClassifier``, and ``voting="soft"`` for
+``VotingClassifier``. LIME explanations are local approximations, not exact
+additive reconstructions of the model output.
+
+For generalized linear regression, the default SHAP backend explains ``predict``:
+the contributions plus the base value reconstruct the prediction after the
+inverse link function, not the linear predictor. This also applies when supplying
+a SHAP background masker or selecting ``algorithm="auto"``. It uses a model-agnostic
+explainer even though these estimators expose coefficients.
+
+``VotingClassifier`` requires ``voting="soft"`` and base estimators that support
+probabilities. The SHAP backend explicitly rejects hard voting rather than
+explaining numerically encoded class labels. For multiclass ``NuSVC`` or ``SVC``
+without probabilities, keep ``decision_function_shape="ovr"`` (the default);
+pairwise ``"ovo"`` scores are not per-class explanations and are rejected.
+Alternatively, fit with ``probability=True`` to explain probabilities.
+``StackingClassifier`` can use a final estimator without probabilities when it
+provides a per-class ``decision_function``.
+
+Nearest neighbors, neural networks and the additional ensembles generally use
+model-agnostic SHAP explanations. Cost grows with the number of input features,
+background samples and observations to explain; registration does not imply
+TreeExplainer support or the same performance as native tree explanations.
 
 A compiled ``SmartExplainer`` can be exported using ``to_smartpredictor()``,
 including when it uses a ``ColumnTransformer``. The exported predictor accepts

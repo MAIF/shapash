@@ -24,9 +24,7 @@ from shapash.utils.model_synoptic import (
     catboost_model,
     dict_model_feature,
     lightgbm_model,
-    linear_model,
-    simple_tree_model_sklearn,
-    svm_model,
+    sklearn_model,
     xgboost_model,
 )
 
@@ -37,8 +35,6 @@ sklearn_ordinal = "<class 'sklearn.preprocessing._encoders.OrdinalEncoder'>"
 sklearn_standardscaler = "<class 'sklearn.preprocessing._data.StandardScaler'>"
 sklearn_quantiletransformer = "<class 'sklearn.preprocessing._data.QuantileTransformer'>"
 sklearn_powertransformer = "<class 'sklearn.preprocessing._data.PowerTransformer'>"
-
-sklearn_model = linear_model + svm_model + simple_tree_model_sklearn
 
 other_model = xgboost_model + catboost_model + lightgbm_model
 
