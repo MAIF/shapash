@@ -13,7 +13,13 @@ rejects the head of a multi-piece word — a question no per-token predicate can
 
 from __future__ import annotations
 
+from typing import Protocol
+
 import numpy as np
+
+
+class _Detokenizer(Protocol):
+    def detokenize(self, tokens: list[str]) -> str: ...
 
 
 def is_prediction_flip(orig_probs: np.ndarray, cf_probs: np.ndarray, target_class: int | None = None) -> bool:
@@ -56,7 +62,7 @@ def format_edit(old_token: str, new_token: str) -> str:
     return f"{old_token}→{new_token}" if new_token else f"−{old_token}"
 
 
-def display_form(model, token: str) -> str:
+def display_form(model: _Detokenizer, token: str) -> str:
     """Return the user-facing spelling of ``token`` — markers stripped, lowercased.
 
     Generators match tokens against user-typed word lists (``tokens_to_ignore``, typed into the
