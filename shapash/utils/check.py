@@ -515,6 +515,19 @@ def check_features_name(
     return features_ids
 
 
+def check_x(x: pd.DataFrame) -> None:
+    """Validate that x has unique column names.
+
+    Parameters
+    ----------
+    x: pandas.DataFrame
+        Prediction dataset.
+    """
+    if isinstance(x, pd.DataFrame) and x.columns.has_duplicates:
+        duplicated = x.columns[x.columns.duplicated()].unique().tolist()
+        raise ValueError(f"x must have unique column names. Duplicated columns: {duplicated}")
+
+
 def check_additional_data(x: pd.DataFrame, additional_data: pd.DataFrame) -> None:
     """Validate that additional_data is a DataFrame with the same index as x.
 
