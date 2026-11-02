@@ -1,6 +1,4 @@
-"""
-Model Module
-"""
+"""Model Module."""
 
 from inspect import ismethod
 from typing import Any, Literal
@@ -52,6 +50,7 @@ def predict_proba(model: Any, x_encoded: pd.DataFrame, classes: list[int | float
         Prediction set.
     classes : list[Any]
         Ordered class labels used to name the probability columns.
+
     Returns
     -------
     pandas.DataFrame
@@ -152,7 +151,6 @@ def predict_error(
         If class probabilities are provided without classes, or a target label is not
         present in the supplied classes.
     """
-
     if y_target is None or y_pred is None:
         return None
 

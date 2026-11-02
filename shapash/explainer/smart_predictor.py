@@ -1,6 +1,4 @@
-"""
-Smart predictor module
-"""
+"""Smart predictor module."""
 
 from __future__ import annotations
 
@@ -55,8 +53,7 @@ _logger = logging.getLogger("shapash.smartpredictor")
 
 def _instrument(operation: str) -> Callable[..., Any]:
     """
-    Wrap a ``SmartPredictor`` method with enter / exit / error logging on the
-    ``shapash.smartpredictor`` logger.
+    Wrap a ``SmartPredictor`` method with enter / exit / error logging on the ``shapash.smartpredictor`` logger.
 
     Emits three log records per call:
       - ``DEBUG`` on enter,
@@ -103,8 +100,7 @@ def _instrument(operation: str) -> Callable[..., Any]:
 
 def _dtypes_compatible(actual_dtype: Any, expected_str: str) -> bool:
     """
-    Return True if a column's actual dtype is compatible with the expected dtype string
-    declared in ``features_types``.
+    Return True if a column's actual dtype is compatible with the expected dtype string declared in ``features_types``.
 
     Compatibility is checked in order:
 
@@ -131,8 +127,7 @@ def _dtypes_compatible(actual_dtype: Any, expected_str: str) -> bool:
 
 class SmartPredictor:
     """
-    The SmartPredictor class is an object lighter than SmartExplainer Object with
-    additionnal consistency checks.
+    The SmartPredictor class is an object lighter than SmartExplainer Object with additionnal consistency checks.
 
     The SmartPredictor object is provided to deploy the summary of local explanation
     for the operational needs.
@@ -264,8 +259,7 @@ class SmartPredictor:
 
     def check_model(self) -> tuple[Literal["classification", "regression"], list[int | float | str] | None]:
         """
-        Check if model has a predict_proba method is a one column dataframe of integer or float
-        and if y_pred index matches x_init index
+        Check that y_pred is a one-column dataframe of integers or floats indexed like x_init.
 
         Returns
         -------
@@ -276,22 +270,16 @@ class SmartPredictor:
         return _case, _classes
 
     def check_preprocessing(self) -> Any:
-        """
-        Check that all transformation of the preprocessing are supported.
-        """
+        """Check that all transformation of the preprocessing are supported."""
         return check_preprocessing(self.preprocessing)
 
     def check_label_dict(self) -> Any:
-        """
-        Check if label_dict and model _classes match
-        """
+        """Check if label_dict and model _classes match."""
         if self._case != "regression":
             return check_label_dict(self.label_dict, self._case, self._classes)
 
     def check_mask_params(self) -> None:
-        """
-        Check if mask_params given respect the expected format.
-        """
+        """Check if mask_params given respect the expected format."""
         return check_mask_params(self.mask_params)
 
     @_instrument("add_input")
@@ -389,8 +377,9 @@ class SmartPredictor:
 
     def _add_groups_input(self) -> None:
         """
-        Compute groups of features values, contributions the same way as add_input method
-        and stores it in data_groups attribute
+        Compute grouped features values and contributions, and store them in data_groups.
+
+        It works the same way as the add_input method.
         """
         if self.features_groups is None:
             raise ValueError("features_groups must be specified to compute grouped input.")
@@ -521,9 +510,10 @@ class SmartPredictor:
         self, contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray]
     ) -> pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray]:
         """
-        If _case is "classification" and contributions a np.array or pd.DataFrame
-        this function transform contributions matrix in a list of 2 contributions
-        matrices: Opposite contributions and contributions matrices.
+        Turn a binary classification contributions matrix into a list of 2 matrices.
+
+        If _case is "classification" and contributions is a np.array or pd.DataFrame,
+        the result holds the opposite contributions and the contributions matrices.
 
         Parameters
         ----------
@@ -537,9 +527,7 @@ class SmartPredictor:
         return adapt_contributions(self._case, contributions)
 
     def check_contributions(self, contributions: pd.DataFrame | list[pd.DataFrame]) -> None:
-        """
-        Check if contributions and prediction set match in terms of shape and index.
-        """
+        """Check if contributions and prediction set match in terms of shape and index."""
         if self._drop_option is not None:
             x = self.data["x"][self.data["x"].columns.difference(self._drop_option["features_to_drop"])]
         else:
@@ -604,10 +592,11 @@ class SmartPredictor:
     ) -> tuple[pd.DataFrame, pd.DataFrame | list[pd.DataFrame]]:
         """
         The compute_contributions compute the contributions associated to data ypred specified.
+
         Need a data ypred specified in an add_input to display detail_contributions.
 
         Parameters
-        -------
+        ----------
         contributions : pandas.DataFrame, numpy.ndarray, or list (optional)
             Local contributions, or list of local contributions.
         use_groups : bool (optional)
@@ -662,10 +651,11 @@ class SmartPredictor:
     ) -> pd.DataFrame:
         """
         The detail_contributions method associates the right contributions with the right data predicted.
+
         (with ypred specified in add_input or computed automatically)
 
         Parameters
-        -------
+        ----------
         contributions : pandas.DataFrame, numpy.ndarray, or list (optional)
             Local contributions, or list of local contributions.
         use_groups : bool (optional)
@@ -705,6 +695,7 @@ class SmartPredictor:
     def save(self, path: str) -> None:
         """
         Save method allows users to save SmartPredictor object on disk using a pickle file.
+
         Save method can be useful: you don't have to recompile to display results later.
 
         Load_smartpredictor method allow to load your SmartPredictor object saved. (See example below)
@@ -732,16 +723,11 @@ class SmartPredictor:
         _save_manifest(_build_predictor_manifest(self), path)
 
     def apply_preprocessing(self) -> pd.DataFrame:
-        """
-        Apply preprocessing on new dataset input specified.
-        """
+        """Apply preprocessing on new dataset input specified."""
         return apply_preprocessing(self.data["x"], self.model, self.preprocessing)
 
     def filter(self) -> None:
-        """
-        The filter method is an important method which allows to summarize the local explainability
-        by using the user defined mask_params parameters which correspond to its use case.
-        """
+        """Summarize the local explainability with the mask_params defined by the user."""
         mask = [init_mask(self.summary["contrib_sorted"], True)]
         if self.mask_params["features_to_hide"] is not None:
             mask.append(
@@ -763,6 +749,7 @@ class SmartPredictor:
     def summarize(self, use_groups: bool | None = None) -> pd.DataFrame:
         """
         The summarize method allows to display the summary of local explainability.
+
         This method can be configured with modify_mask method to summarize the explainability to suit needs.
 
         If the user doesn't use modify_mask, the summarize method uses the mask_params parameters specified during
@@ -851,7 +838,8 @@ class SmartPredictor:
         max_contrib: int | None = None,
     ) -> None:
         """
-        This method allows the users to modify the mask_params values.
+        Modify the mask_params values.
+
         Each parameter is optional, modify_mask method modifies only the values specified in parameters.
 
         This method has to be used to configure the summary displayed with summarize method.
@@ -947,6 +935,7 @@ class SmartPredictor:
     def check_features_name(self, features: list[Any]) -> list[int]:
         """
         Convert a list of feature names (string) or features ids into features ids.
+
         Features names can be part of columns_dict or features_dict.
 
         Parameters
@@ -962,10 +951,7 @@ class SmartPredictor:
         return check_features_name(self.columns_dict, self.features_dict, features)
 
     def to_smartexplainer(self) -> shapash.explainer.smart_explainer.SmartExplainer:
-        """
-        Create a SmartExplainer object compiled with the data specified in add_input method with
-        SmartPredictor attributes
-        """
+        """Create a SmartExplainer compiled with the add_input data and the SmartPredictor attributes."""
         if not hasattr(self, "data"):
             raise ValueError("add_input method must be called at least once.")
 

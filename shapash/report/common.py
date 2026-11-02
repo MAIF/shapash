@@ -14,7 +14,7 @@ from shapash.utils.dtypes import is_text_like
 
 
 class ReportTemplate(Enum):
-    """Report templates list"""
+    """Report templates list."""
 
     DEFAULT_REGRESSION = "default_regression_report.yml"
     DEFAULT_CLASSIFICATION = "default_classification_report.yml"
@@ -48,9 +48,7 @@ def export_report_yml(template_id: ReportTemplate | str, output_path: str = ".")
 
 
 class VarType(Enum):
-    """
-    Helper class to indicate the type of a variable.
-    """
+    """Helper class to indicate the type of a variable."""
 
     TYPE_CAT = "Categorical"
     TYPE_NUM = "Numeric"
@@ -92,8 +90,7 @@ def series_dtype(s: pd.Series, cat_num_threshold: int = 15) -> VarType:
 
 def numeric_is_continuous(s: pd.Series, threshold: int = 15) -> bool:
     """
-    Function that returns True if a numeric pandas series is continuous
-    and False if it is categorical.
+    Function that returns True if a numeric pandas series is continuous and False if it is categorical.
 
     Parameters
     ----------
@@ -132,8 +129,9 @@ def compute_col_types(df_all: pd.DataFrame | None) -> dict[Hashable, VarType]:
 
 def get_callable(path: str) -> type | Callable[..., Any]:
     """
-    This function is similar to the _locate function in Hydra library
     Locate an object by name or dotted path, importing as necessary.
+
+    This function is similar to the _locate function in the Hydra library.
 
     Parameters
     ----------
@@ -236,7 +234,7 @@ def display_value(value: int | float, thousands_separator: str = ",", decimal_se
 
 def replace_dict_values(obj: dict[Any, Any], replace_fn: Callable[..., Any], *args: Any) -> dict[Any, Any]:
     """
-    Recursively iterates over all values of obj and changes its values using the replace_fn
+    Recursively iterates over all values of obj and changes its values using the replace_fn.
 
     Parameters
     ----------

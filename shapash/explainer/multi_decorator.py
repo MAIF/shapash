@@ -1,6 +1,4 @@
-"""
-Multi Decorator module
-"""
+"""Multi Decorator module."""
 
 from typing import Any
 
@@ -12,6 +10,7 @@ from shapash.explainer.smart_state import SmartState
 class MultiDecorator:
     """
     Decorator pattern. It simply iterates the method of its member as many times as needed.
+
     It thus extends any class to apply its methods to a list of arguments.
     """
 
@@ -31,6 +30,7 @@ class MultiDecorator:
     def delegate(self, func: str, *args: Any, **kwargs: Any) -> list[Any]:
         """
         Delegate the call to a function with arguments to its member.
+
         The function is executed as many times as there are elements in the first argument,
         which should be a list.
 
@@ -151,6 +151,7 @@ class MultiDecorator:
     ) -> bool:
         """
         Override check_contributions from SmartState.
+
         Return True if all conditions computed are True.
 
         Parameters
@@ -189,8 +190,10 @@ class MultiDecorator:
 
     def compute_masked_contributions(self, s_contrib: list[pd.DataFrame], masks: list[pd.DataFrame]) -> list[pd.Series]:
         """
-        Override compute_masked_contributions. Apply a list of masks to a list of
-        contribution matrix and compute for each pair the total masked contributions.
+        Override compute_masked_contributions.
+
+        Apply a list of masks to a list of contribution matrices and compute for each pair the total
+        masked contributions.
 
         Parameters
         ----------
@@ -244,9 +247,9 @@ class MultiDecorator:
 
     def compute_features_import(self, contributions: list[pd.DataFrame], norm: int | float = 1) -> list[pd.Series]:
         """
-        Compute a relative features importance, sum of absolute values
-        of the contributions for each
-        features importance compute in base 100
+        Compute the relative features importance, in base 100.
+
+        The importance of a feature is the sum of the absolute values of its contributions.
 
         Parameters
         ----------

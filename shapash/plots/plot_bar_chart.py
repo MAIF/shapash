@@ -31,7 +31,8 @@ def plot_bar_chart(
     waterfall_tooltips: list[str] | None = None,
 ) -> go.Figure:
     """
-    Plotly bar plot of local explainers
+    Plotly bar plot of local explainers.
+
     Parameters
     ----------
     index_value:
@@ -90,6 +91,7 @@ def plot_bar_chart(
         - numeric value: force a manual x-axis start
     waterfall_tooltips: list (default: None)
         Optional per-bar tooltip suffixes for waterfall mode.
+
     Returns
     -------
     plotly bar plot

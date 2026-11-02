@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import dash_bootstrap_components as dbc
 from dash import ALL, Input, Output, State, callback_context, dcc, html
+from dash.development.base_component import Component
 from dash.exceptions import PreventUpdate
 
 from shapash.webapp.nlp_components.base import CAP_PREDICT, CAP_SIMILAR, WebappComponent
@@ -192,7 +193,7 @@ def _render_results(neighbors, predicted_label, component_id, shown_of=None):
     capping to the displayed ``neighbors`` (``None`` in top-k mode, where the count is fixed by
     construction).
     """
-    children = []
+    children: list[Component] = []
     if shown_of is not None:
         children.append(
             html.Small(

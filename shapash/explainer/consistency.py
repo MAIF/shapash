@@ -18,14 +18,15 @@ from shapash.utils.utils import adjust_title_height
 
 
 class Consistency:
-    """Consistency class"""
+    """Consistency class."""
 
     def __init__(self, palette_name: str = "default") -> None:
         self._palette_name = palette_name
         self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
 
     def tuning_colorscale(self, values: pd.Series | pd.DataFrame) -> list[list[Any]]:
-        """Adapts the color scale to the distribution of points
+        """Adapts the color scale to the distribution of points.
+
         Parameters
         ----------
         values : pd.Series or one-column pd.DataFrame
@@ -50,9 +51,10 @@ class Consistency:
         x: pd.DataFrame | None = None,
         preprocessing: Any | None = None,
     ) -> None:
-        """Check whether the contributions respect the correct format:
-        contributions = {"method_name_1": contrib_1, "method_name_2": contrib_2, ...}
-        where each contrib_i is a pandas DataFrame
+        """Check that the contributions are a dict of pandas DataFrames, one per method.
+
+        The expected format is ``{"method_name_1": contrib_1, "method_name_2": contrib_2, ...}``,
+        where each ``contrib_i`` is a pandas DataFrame.
 
         Parameters
         ----------
@@ -84,8 +86,7 @@ class Consistency:
 
     def check_consistency_contributions(self, weights: list[pd.DataFrame]) -> None:
         """
-        Assert contributions calculated from different methods are dataframes
-        of same shape with same column names and index names
+        Assert that contributions from different methods have the same shape, columns and index.
 
         Parameters
         ----------
@@ -147,6 +148,7 @@ class Consistency:
     def calculate_all_distances(self, methods: list[str], weights: list[np.ndarray]) -> tuple[np.ndarray, pd.DataFrame]:
         """
         For each instance, measure a distance between contributions from different methods.
+
         In addition, calculate the mean distance between each pair of method
 
         Parameters
@@ -223,7 +225,7 @@ class Consistency:
         l2_dist: np.ndarray,
     ) -> None:
         """
-        Given the contributions of all instances for two selected instances, calculate the distance between them
+        Given the contributions of all instances for two selected instances, calculate the distance between them.
 
         Parameters
         ----------
@@ -246,7 +248,7 @@ class Consistency:
         self, mean_distances: pd.DataFrame, all_comparisons: np.ndarray, weights: list[np.ndarray]
     ) -> tuple[list[np.ndarray], list[np.ndarray], list[Any], list[Any], list[str], list[str]]:
         """
-        To illustrate the meaning of distances between methods, extract 5 real examples from the dataset
+        To illustrate the meaning of distances between methods, extract 5 real examples from the dataset.
 
         Parameters
         ----------
@@ -309,7 +311,7 @@ class Consistency:
 
     def calculate_coords(self, mean_distances: pd.DataFrame) -> np.ndarray:
         """
-        Calculate 2D coords to position the different methods in the main graph
+        Calculate 2D coords to position the different methods in the main graph.
 
         Parameters
         ----------
@@ -327,7 +329,7 @@ class Consistency:
 
     def plot_comparison(self, mean_distances: pd.DataFrame) -> Figure:
         """
-        Plot the main graph displaying distances between methods
+        Plot the main graph displaying distances between methods.
 
         Parameters
         ----------
@@ -396,7 +398,7 @@ class Consistency:
 
     def draw_arrow(self, ax: Axes, a: np.ndarray, b: np.ndarray, dst: float) -> None:
         """
-        Add an arrow in the main graph between the methods
+        Add an arrow in the main graph between the methods.
 
         Parameters
         ----------
@@ -516,8 +518,7 @@ class Consistency:
         width: int = 1000,
         height: int | Literal["auto"] = "auto",
     ) -> go.Figure:
-        """The Pairwise_Consistency_plot compares the difference of 2 explainability methods across each feature and each data point,
-        and plots the distribution of those differences.
+        """Plot the distribution of differences between 2 explainability methods, per feature and data point.
 
         This plot goes one step deeper than the consistency_plot which compares methods on a global level
         by expressing differences in terms of mean across the entire dataset.
@@ -602,7 +603,7 @@ class Consistency:
         width: int = 1000,
         height: int | Literal["auto"] = "auto",
     ) -> go.Figure:
-        """Plot the main graph displaying distances between methods across each feature and data point
+        """Plot the main graph displaying distances between methods across each feature and data point.
 
         Parameters
         ----------
