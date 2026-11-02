@@ -5,20 +5,16 @@ SmartExplainer declaration and data preparation
 -----------------------------------------------
 
 .. autoclass:: shapash.explainer.smart_explainer.SmartExplainer
-   :members: compile, add, save, load, filter, to_pandas, run_app, generate_report
-   :undoc-members:
-   :show-inheritance:
+   :exclude-members: check_attributes, check_x_y_attributes
 
 
 The Plot Methods
 ----------------
 
+The plots are methods of the ``plot`` attribute of a compiled ``SmartExplainer``, for example
+``xpl.plot.features_importance()``.
+
 .. autoclass:: shapash.explainer.smart_plotter.SmartPlotter
-   :members: features_importance, contribution_plot, local_plot, compare_plot, top_interactions_plot, local_neighbors_plot, stability_plot, compacity_plot
-   :undoc-members:
-   :show-inheritance:
+   :exclude-members: define_style_attributes
 
 .. autoclass:: shapash.explainer.consistency.Consistency
-   :members: consistency_plot
-   :undoc-members:
-   :show-inheritance:

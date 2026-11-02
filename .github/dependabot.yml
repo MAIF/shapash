@@ -1,14 +1,14 @@
 version: 2
 
 updates:
-  # Refresh the versions pinned in uv.lock, which CI tests against. `widen` edits pyproject.toml only
-  # when a release falls above an upper cap: it raises the cap and leaves the lower bound untouched.
+  # Refresh the versions pinned in uv.lock, which CI tests against. `auto` raises upper caps and keeps
+  # lower bounds (uv rejects `widen`), as long as `description` in pyproject.toml matches PyPI.
   - package-ecosystem: "uv"
     directory: "/"
     target-branch: "develop"
     schedule:
       interval: "weekly"
-    versioning-strategy: "widen"
+    versioning-strategy: "auto"
     groups:
       uv-dependencies:
         # Minor and patch releases of everything, in one weekly PR. Major releases get a PR each:

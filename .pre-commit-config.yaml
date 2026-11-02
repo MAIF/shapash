@@ -37,13 +37,13 @@ repos:
         name: ruff check
         entry: bash -c 'PATH=".venv/bin:.venv/Scripts:$PATH" exec "$@"' -- ruff check --fix --force-exclude
         language: system
-        types_or: [python, pyi]
+        types_or: [python, pyi, jupyter]
         require_serial: true
     -   id: ruff-format
         name: ruff format
         entry: bash -c 'PATH=".venv/bin:.venv/Scripts:$PATH" exec "$@"' -- ruff format --force-exclude
         language: system
-        types_or: [python, pyi]
+        types_or: [python, pyi, jupyter]
         require_serial: true
     -   id: mypy
         name: mypy

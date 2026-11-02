@@ -45,7 +45,7 @@ def plot_bar_chart(
     style_dict: dict
         the different styles used in the different outputs of Shapash
     features_groups : dict, optional (default: None)
-        Dictionnary containing features that should be grouped together. This option allows
+        Dictionary containing features that should be grouped together. This option allows
         to compute and display the contributions and importance of this group of features.
         Features that are grouped together will still be displayed in the webapp when clicking
         on a group.

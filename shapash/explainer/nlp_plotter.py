@@ -638,8 +638,8 @@ class NlpPlotter:
 
         Parameters
         ----------
-        projection : Embedding or np.ndarray, shape (n_samples, 2)
-            2-D coordinates aligned with the explanation's samples, checked by
+        projection : Embedding or np.ndarray
+            2-D coordinates of shape ``(n_samples, 2)``, aligned with the explanation's samples, checked by
             :func:`~shapash.compute.embeddings.projection_coords`: an ``Embedding`` of different texts
             is refused, a bare array is accepted on its shape alone.
         color_by : {"prediction", "ground_truth", "word_contribution"}
