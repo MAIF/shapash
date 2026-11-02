@@ -19,6 +19,7 @@ from shapash.utils.check import (
     check_label_dict,
     check_model,
     check_postprocessing,
+    check_x,
     check_y,
 )
 from shapash.utils.explanation_metrics import find_neighbors, get_distance, get_min_nb_features, shap_neighbors
@@ -178,18 +179,19 @@ class Explainer:
             Results are stored on the instance (data, contributions, metadata,
             masks/ordering helpers, and related state).
         """
+        check_x(x)
         if self.model is None and (contributions is None or y_pred is None):
             raise ValueError("Without a model, compile() requires both contributions and y_pred.")
         if self.model is None and (
             not isinstance(x, pd.DataFrame) or x.empty or not x.index.is_unique or not x.columns.is_unique
         ):
             raise ValueError("Without a model, x must be a nonempty DataFrame with unique index and columns.")
+
         if isinstance(self.backend_name, str):
             backend_cls = cast(Any, get_backend_cls_from_name(self.backend_name))
             self.backend = backend_cls(
                 model=self.model, preprocessing=self.preprocessing, masker=x, **self.backend_kwargs
             )
-
         self.x_encoded = handle_categorical_missing(x)
         x_init = inverse_transform(self.x_encoded, self.preprocessing)
         self.x_init = handle_categorical_missing(x_init)
