@@ -1,7 +1,7 @@
 """Compute-focused Explainer class used by SmartExplainer."""
 
 import copy
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,7 @@ class Explainer:
     def __init__(
         self,
         model: Any,
-        backend: str | BaseBackend = "shap",
+        backend: BaseBackend | Literal["shap", "tabicl", "lime", "auto"] = "auto",
         preprocessing: Any | None = None,
         postprocessing: dict[str, dict[str, Any]] | None = None,
         features_groups: dict[str, list[str]] | None = None,
@@ -55,12 +55,16 @@ class Explainer:
         self.preprocessing = preprocessing
         self.backend_name: str | None = None
         self.backend: BaseBackend | None = None
-        if isinstance(backend, str):
+        if isinstance(backend, str) and backend != "auto":
             self.backend_name = backend
-        elif isinstance(backend, BaseBackend):
+        if isinstance(backend, BaseBackend):
             self.backend = backend
             if backend.preprocessing is None and self.preprocessing is not None:
                 self.backend.preprocessing = self.preprocessing
+        elif backend == "auto":
+            is_tabicl_model = any(base.__module__.partition(".")[0] == "tabicl" for base in type(model).__mro__)
+            # self.backend = "tabicl" if is_tabicl_model else "shap"
+            self.backend_name = "tabicl" if is_tabicl_model else "shap"
         else:
             raise NotImplementedError(f"Unknown backend : {backend}")
 
