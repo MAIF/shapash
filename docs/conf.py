@@ -13,8 +13,8 @@ import shapash
 # -- Project information -----------------------------------------------------
 
 project = "Shapash"
-copyright = f"2020-{date.today().year}, Maif"
-author = "Maif"
+copyright = f"2020-{date.today().year}, MAIF"
+author = "MAIF"
 version = shapash.__version__
 release = shapash.__version__
 
