@@ -5,6 +5,13 @@ Welcome to the Shapash documentation!
    :width: 300px
    :align: center
    :alt: Shapash logo
+   :class: only-light
+
+.. image:: ./_static/shapash-resize-dark.png
+   :width: 300px
+   :align: center
+   :alt: Shapash logo
+   :class: only-dark
 
 **Shapash** is a Python library that makes machine learning models interpretable and understandable
 by everyone. Its plots and outputs use explicit labels for features and their values, so data scientists
