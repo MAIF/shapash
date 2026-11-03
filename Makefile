@@ -64,8 +64,9 @@ coverage-report: ## run tests with coverage and generate xml report
 	pytest --cov=shapash --cov-branch --cov-report=xml
 
 docs: ## generate Sphinx HTML documentation, including API docs
+	python scripts/prepare_docs.py
 	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
+	$(MAKE) -C docs html SPHINXOPTS="-W --keep-going"
 	python -m webbrowser "file://$(CURDIR)/docs/_build/html/index.html"
 
 dist: clean ## builds source and wheel package

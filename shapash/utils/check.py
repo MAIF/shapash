@@ -87,7 +87,7 @@ def check_label_dict(
     classes: list[int | float | str] | None = None,
 ) -> None:
     """
-    Check if label_dict and model _classes match
+    Check if label_dict and model _classes match.
 
     Parameters
     ----------
@@ -114,7 +114,7 @@ def check_mask_params(mask_params: dict[str, Any]) -> None:
     Parameters
     ----------
     mask_params: dict[str, Any]
-        Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+        Dictionary allowing the user to define a apply a filter to summarize the local explainability.
     """
     if not isinstance(mask_params, dict):
         raise ValueError(
@@ -234,7 +234,7 @@ def check_consistency_model_features(
     features_groups: dict[str, list[str]] | None = None,
 ) -> None:
     """
-    Check the matching between attributes, features names are same, or include
+    Check the matching between attributes, features names are same, or include.
 
     Parameters
     ----------
@@ -245,13 +245,13 @@ def check_consistency_model_features(
     columns_dict: dict[int, str]
         Dictionary mapping integer column number (in the same order of the trained dataset) to technical feature names.
     features_types: dict[str, str]
-        Dictionnary mapping features with the right types needed.
+        Dictionary mapping features with the right types needed.
     preprocessing: Any, optional
             The processing apply to the original data
     mask_params: dict[str, Any] or None, optional
-        Dictionnary allowing the user to define a apply a filter to summarize the local explainability.
+        Dictionary allowing the user to define a apply a filter to summarize the local explainability.
     postprocessing: dict[str, Any] or None, optional
-        Dictionnary of postprocessing that need to be checked.
+        Dictionary of postprocessing that need to be checked.
     list_preprocessing: list[Any] or None, optional
         List containing all preprocessing steps; used when preprocessing is provided.
     features_groups: dict[str, list[str]] or None, optional
@@ -321,7 +321,7 @@ def check_consistency_model_features(
 
     if postprocessing:
         if not isinstance(postprocessing, dict):
-            raise ValueError("Postprocessing parameter must be a dictionnary")
+            raise ValueError("Postprocessing parameter must be a dictionary")
         for feature in postprocessing.keys():
             if feature not in features_types.keys():
                 raise ValueError("Postprocessing and features_types must have the same features names.")
@@ -337,8 +337,9 @@ def check_preprocessing_options(
     list_preprocessing: list[Any] | None = None,
 ) -> dict[str, Any] | None:
     """
-    Check if preprocessing for ColumnTransformer doesn't have "drop" option otherwise compute several
-    informations to adapt the SmartPredictor's actions
+    Check that a ColumnTransformer preprocessing has no "drop" option.
+
+    Otherwise, compute the information needed to adapt the SmartPredictor's actions.
 
     Parameters
     ----------
@@ -350,6 +351,7 @@ def check_preprocessing_options(
         Dictionary mapping technical feature names to domain names.
     list_preprocessing: list[Any] or None, optional
         list containing all preprocessing.
+
     Returns
     -------
     dict[str, Any] or None
@@ -394,7 +396,6 @@ def check_consistency_model_label(columns_dict: dict[Any, Any], label_dict: dict
     label_dict: dict[Any, Any] or None, optional
         Mapping of model label values to domain names.
     """
-
     if label_dict is not None:
         if not all(feat in columns_dict for feat in label_dict):
             raise ValueError("All features of label_dict must be in model")
@@ -404,19 +405,18 @@ def check_postprocessing(
     x: pd.DataFrame | dict[str, str], postprocessing: dict[str, dict[str, Any]] | None = None
 ) -> None:
     """
-    Check that postprocessing parameter has good attributes matching with x dataset or with dict of types of
-    the expected data set x
+    Check that the postprocessing attributes match the x dataset or the dict of its expected types.
 
     Parameters
     ----------
     x: pandas.DataFrame or dict[str, str]
-        Dataset x without preprocessing or dictionnary mapping features with the right types needed.
+        Dataset x without preprocessing or dictionary mapping features with the right types needed.
     postprocessing: dict[str, dict[str, Any]] or None, optional
-        Dictionnary of postprocessing that need to be checked.
+        Dictionary of postprocessing that need to be checked.
     """
     if postprocessing:
         if not isinstance(postprocessing, dict):
-            raise ValueError("Postprocessing parameter must be a dictionnary")
+            raise ValueError("Postprocessing parameter must be a dictionary")
 
         for key in postprocessing.keys():
             dict_post = postprocessing[key]
@@ -473,6 +473,7 @@ def check_features_name(
 ) -> list[int]:
     """
     Convert a list of feature names (string) or features ids into features ids.
+
     Features names can be part of columns_dict or features_dict.
 
     Parameters
@@ -513,6 +514,19 @@ def check_features_name(
             """
         )
     return features_ids
+
+
+def check_x(x: pd.DataFrame) -> None:
+    """Validate that x has unique column names.
+
+    Parameters
+    ----------
+    x: pandas.DataFrame
+        Prediction dataset.
+    """
+    if isinstance(x, pd.DataFrame) and x.columns.has_duplicates:
+        duplicated = x.columns[x.columns.duplicated()].unique().tolist()
+        raise ValueError(f"x must have unique column names. Duplicated columns: {duplicated}")
 
 
 def check_additional_data(x: pd.DataFrame, additional_data: pd.DataFrame) -> None:

@@ -1,6 +1,4 @@
-"""
-Mask module
-"""
+"""Mask module."""
 
 from typing import TYPE_CHECKING, Any
 
@@ -69,8 +67,9 @@ def compute_mask(
     max_contrib: int | None = None,
 ) -> tuple[pd.DataFrame | list[pd.DataFrame], pd.DataFrame | list[pd.DataFrame], dict[str, Any]]:
     """
-    Apply filtering rules to a contributions matrix and return the result, without storing
-    anything. This is the pure computation behind `SmartExplainer.filter()`: it derives the
+    Apply filtering rules to a contributions matrix and return the result, without storing anything.
+
+    This is the pure computation behind `SmartExplainer.filter()`: it derives the
     mask, the masked contributions and the parameters used from `data` alone, so callers that
     only need a one-off mask (e.g. drawing a plot) don't have to mutate an explainer to get it.
 

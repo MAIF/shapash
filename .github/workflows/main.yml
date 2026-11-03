@@ -114,6 +114,32 @@ jobs:
       if: ${{ matrix.coverage }}
       run: uv build
 
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      with:
+        fetch-depth: 0  # required for setuptools-scm to read git tags
+        persist-credentials: false
+    # Same Python as Read the Docs (.readthedocs.yml)
+    - name: Set up uv and Python 3.11
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+      with:
+        python-version: "3.11"
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: uv.lock
+    # Same install as Read the Docs. Non-editable, so the docs import the built package, not the checkout.
+    - name: Install doc dependencies
+      run: uv sync --locked --no-editable --no-default-groups --group doc --extra report
+    - name: Prepare tutorials and demo report
+      run: python scripts/prepare_docs.py
+    # Any warning fails the build (`--keep-going` still reports them all)
+    - name: Build docs
+      run: sphinx-build -W --keep-going -b html docs docs/_build/html
+
   lowest_deps:
     name: Lowest Dependencies
     needs: code_quality

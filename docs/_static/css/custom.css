@@ -1,0 +1,15 @@
+/* Let wide code blocks in docstring parameter lists scroll instead of widening the whole list */
+dl.field-list > dd {
+  min-width: 0;
+}
+
+/* Center the links next to the logo in the company table of the home page */
+table.company-table td {
+  vertical-align: middle;
+}
+
+/* The version switcher of the header replaces the Read the Docs flyout, which old releases built with
+   sphinx_material still show */
+readthedocs-flyout {
+  display: none !important;
+}

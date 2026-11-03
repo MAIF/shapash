@@ -200,15 +200,37 @@ If your change affects how users work with Shapash, update the documentation alo
   and re-run that notebook. With uv, add the Jupyter kernel with `--group notebook` (for example
   `uv sync --group notebook`); a plain `uv sync` removes it.
 
-To build the documentation locally (the notebook pages need [pandoc](https://pandoc.org/installing.html)
-installed):
+To build the documentation locally:
 
 ```
 uv sync --group doc
 make docs
 ```
 
-This builds the HTML pages in `docs/_build/html/` and opens them in your browser.
+This builds the HTML pages in `docs/_build/html/` and opens them in your browser. Without `make`
+(on Windows, for example), run the two steps yourself:
+
+```
+python scripts/prepare_docs.py
+sphinx-build -W --keep-going docs docs/_build/html
+```
+
+`scripts/prepare_docs.py` copies the tutorial notebooks into `docs/tutorials/`, generates the demo
+report and lists the released versions for the version switcher; add `--skip-report` to reuse the report
+from a previous run.
+
+The version switcher stays empty when the pages are opened as files. To check it, serve the build with
+`python -m http.server -d docs/_build/html` and open http://localhost:8000.
+
+The build downloads the Python, numpy, pandas, scikit-learn and plotly inventories to link their types.
+Without network access, for example behind a proxy, set the `SHAPASH_DOCS_OFFLINE` environment variable to `1`
+(`SHAPASH_DOCS_OFFLINE=1 make docs`, or `set SHAPASH_DOCS_OFFLINE=1` first on Windows) to skip them.
+
+Like CI, which builds the documentation on every pull request, these commands fail on any Sphinx
+warning (`--keep-going` still lists them all).
+
+To check the external links, for example before a release, run `make -C docs linkcheck` after a
+documentation build.
 
 ## Change dependencies
 

@@ -31,7 +31,8 @@ def plot_bar_chart(
     waterfall_tooltips: list[str] | None = None,
 ) -> go.Figure:
     """
-    Plotly bar plot of local explainers
+    Plotly bar plot of local explainers.
+
     Parameters
     ----------
     index_value:
@@ -45,7 +46,7 @@ def plot_bar_chart(
     style_dict: dict
         the different styles used in the different outputs of Shapash
     features_groups : dict, optional (default: None)
-        Dictionnary containing features that should be grouped together. This option allows
+        Dictionary containing features that should be grouped together. This option allows
         to compute and display the contributions and importance of this group of features.
         Features that are grouped together will still be displayed in the webapp when clicking
         on a group.
@@ -90,6 +91,7 @@ def plot_bar_chart(
         - numeric value: force a manual x-axis start
     waterfall_tooltips: list (default: None)
         Optional per-bar tooltip suffixes for waterfall mode.
+
     Returns
     -------
     plotly bar plot

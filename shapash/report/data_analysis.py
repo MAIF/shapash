@@ -6,8 +6,9 @@ from shapash.webapp.utils.utils import round_to_k
 
 def perform_global_dataframe_analysis(df: pd.DataFrame | None) -> dict:
     """
-    Returns a python dict containing global information about a pandas DataFrame :
-    Number of features, Number of observations, missing values...
+    Return a dict with global information about a pandas DataFrame.
+
+    The information includes the number of features, the number of observations and missing values.
 
     Parameters
     ----------
@@ -37,6 +38,7 @@ def perform_global_dataframe_analysis(df: pd.DataFrame | None) -> dict:
 def perform_univariate_dataframe_analysis(df: pd.DataFrame | None, col_types: dict) -> dict:
     """
     Returns a python dict containing information about each column of a pandas DataFrame.
+
     The computed information depends on the type of the column.
 
     Parameters

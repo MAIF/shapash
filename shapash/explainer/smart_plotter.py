@@ -1,6 +1,4 @@
-"""
-Smart plotter module
-"""
+"""Smart plotter module."""
 
 import math
 import random
@@ -58,13 +56,16 @@ from shapash.utils.utils import (
 class SmartPlotter:
     """
     SmartPlotter is a Bridge pattern decoupling plotting functions from SmartExplainer.
-    The smartplotter class includes all the methods used to display graphics
-    Each SmartPlotter method is easy to use from a Smart explainer object,
-    just use the following syntax
-    Attributes :
-    explainer: object
+
+    The SmartPlotter class includes all the methods used to display graphics.
+    Each method is called from a SmartExplainer object with the following syntax.
+
+    Attributes
+    ----------
+    explainer : object
         Explainer compute object (delegating to SmartExplainer state).
-    Example
+
+    Examples
     --------
     >>> xpl.plot.my_plot_method(param=value)
     """
@@ -82,7 +83,8 @@ class SmartPlotter:
 
     def define_style_attributes(self, colors_dict: dict[str, Any]) -> None:
         """
-        define_style_attributes allows shapash user to change the color of plot
+        define_style_attributes allows shapash user to change the color of plot.
+
         Parameters
         ----------
         colors_dict : dict[str, Any]
@@ -95,9 +97,7 @@ class SmartPlotter:
         self._style_dict = define_style(colors_dict)
 
     def _tuning_round_digit(self) -> None:
-        """
-        adapts the display of the number of digit to the distribution of points
-        """
+        """Adapts the display of the number of digit to the distribution of points."""
         if hasattr(self._explainer, "y_pred") and self._explainer.y_pred is not None:
             quantile = [0.25, 0.75]
             self._round_digit = tuning_round_digit(self._explainer.y_pred, quantile)
@@ -109,6 +109,7 @@ class SmartPlotter:
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         An auxiliary function to select the row of interest.
+
         Parameters
         ----------
         line : list[Any]
@@ -121,6 +122,7 @@ class SmartPlotter:
             A dataframe with sorted features for each observation.
         contrib : pd.DataFrame
             A dataframe with sorted contributions for each observation.
+
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -142,8 +144,8 @@ class SmartPlotter:
         mask_state: dict[str, Any] | None = None,
     ) -> tuple[list[Any], list[Any], list[Any]]:
         """
-        An auxiliary function to select the mask to apply before plotting local
-        explanation.
+        An auxiliary function to select the mask to apply before plotting local explanation.
+
         Parameters
         ----------
         line: list
@@ -161,6 +163,7 @@ class SmartPlotter:
             `{"mask": ..., "masked_contributions": ..., "mask_params": ...}` computed locally
             (e.g. via `compute_mask`). When given, it is used instead of reading `mask` off the
             explainer, so a one-off mask never has to be stored there.
+
         Returns
         -------
         var_dict: list
@@ -196,8 +199,7 @@ class SmartPlotter:
         mask_state: dict[str, Any] | None = None,
     ) -> tuple[list[Any], list[Any], list[Any]]:
         """
-        Check for masked contributions and update features_values and contrib
-        to take the sum of masked contributions into account.
+        Add the sum of masked contributions to features_values and contrib, if there are any.
 
         Parameters
         ----------
@@ -290,7 +292,6 @@ class SmartPlotter:
             Baseline value associated with the selected observation and
             target label.
         """
-
         explain_data = self._explainer.explain_data
         if isinstance(explain_data, dict) and explain_data.get("base_values") is not None:
             base_values = explain_data["base_values"]
@@ -567,8 +568,8 @@ class SmartPlotter:
         mask_state: dict[str, Any] | None = None,
     ) -> go.Figure:
         """
-        The local_plot method is used to display the local contributions of
-        an individual in the dataset.
+        The local_plot method is used to display the local contributions of an individual in the dataset.
+
         The plot returned is a summary of local explainability.
         you could use the method filter beforehand to modify the parameters of this summary.
         preprocessing is used here to make this graph more intelligible
@@ -1463,8 +1464,10 @@ class SmartPlotter:
     ) -> go.Figure:
         """
         Plotly comparison plot of several individuals' contributions. Plots contributions feature by feature.
+
         Allows to see the differences of contributions between two or more individuals,
         with each individual represented by a unique line.
+
         Parameters
         ----------
         index : list[Any] or None, optional
@@ -1489,6 +1492,7 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: boolean (optional)
             Indicates whether to open the bar plot or not.
+
         Returns
         -------
         Plotly Figure Object
@@ -1749,7 +1753,6 @@ class SmartPlotter:
         --------
         >>> xpl.plot.interactions_plot(0, 1)
         """
-
         if not (isinstance(col1, str | int) and isinstance(col2, str | int)):
             raise ValueError("parameters col1 and col2 must be string or int.")
 
@@ -1916,7 +1919,6 @@ class SmartPlotter:
         --------
         >>> xpl.plot.top_interactions_plot()
         """
-
         list_ind, addnote = self._select_indices_interactions_plot(selection=selection, max_points=max_points)
 
         subtitle = None
@@ -2194,8 +2196,10 @@ class SmartPlotter:
     ) -> go.Figure:
         """
         Correlations matrix heatmap plot.
+
         The method can use phik or pearson correlations.
         The correlations computed can be changed using the parameter 'how'.
+
         Parameters
         ----------
         df : pd.DataFrame, optional
@@ -2225,6 +2229,7 @@ class SmartPlotter:
             File name to use to save the plotly bar chart. If None the bar chart will not be saved.
         auto_open: Boolean (optional)
             Indicate whether to open the bar plot or not.
+
         Returns
         -------
         go.Figure
@@ -2344,27 +2349,37 @@ class SmartPlotter:
         height: int | Literal["auto"] = "auto",
         width: int = 900,
     ) -> go.Figure:
-        """
-        The Local_neighbors_plot has the main objective of increasing confidence \
+        r"""
+        Plot the contributions of an instance and of its neighbors.
+
+        The Local_neighbors_plot has the main objective of increasing confidence
         in interpreting the contribution values of a selected instance.
-        This plot analyzes the local neighborhood of the instance, \
+        This plot analyzes the local neighborhood of the instance,
         and compares its contribution values with those of its neighbors.
         Intuitively, for similar instances, we would expect similar contributions.
-        Those neighbors are selected as follows :
+        Those neighbors are selected as follows:
+
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
         * We discard neighbors whose model output is too **different** (see equations below)
-        from the instance output
-        * We discard additional neighbors if their distance to the instance \
-        is bigger than a predefined value (to remove outliers)
-        In this neighborhood, we would expect instances to have similar SHAP values. \
+          from the instance output
+        * We discard additional neighbors if their distance to the instance
+          is bigger than a predefined value (to remove outliers)
+
+        In this neighborhood, we would expect instances to have similar SHAP values.
         If not, one might need to be cautious when interpreting SHAP values.
         The **difference** between outputs is measured with the following distance definition :
+
         * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+          .. math::
+
+              distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
         * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+          .. math::
+
+              distance = |output_{allFeatures} - output_{currentFeatures}|
 
         Parameters
         ----------
@@ -2488,30 +2503,41 @@ class SmartPlotter:
         height: int | Literal["auto"] = "auto",
         width: int = 900,
     ) -> go.Figure:
-        """
-        The Stability_plot has the main objective of increasing confidence in contribution values, \
+        r"""
+        Plot the amplitude and variability of contributions across instance neighborhoods.
+
+        The Stability_plot has the main objective of increasing confidence in contribution values,
         and helping determine if we can trust an explanation.
-        The idea behind local stability is the following : if instances are very similar, \
+        The idea behind local stability is the following : if instances are very similar,
         then one would expect the explanations to be similar as well.
-        Therefore, locally stable explanations are an important factor that help \
+        Therefore, locally stable explanations are an important factor that help
         build trust around a particular explanation method.
-        The generated graphs can take multiple forms, but they all analyze \
-        the same two aspects: for each feature we look at Amplitude vs. Variability. \
-        in order terms, how important the feature is on average vs. how the feature impact \
+        The generated graphs can take multiple forms, but they all analyze
+        the same two aspects: for each feature we look at Amplitude vs. Variability.
+        in order terms, how important the feature is on average vs. how the feature impact
         changes in the instance neighborhood.
         The average importance of the feature is the average SHAP value of the feature acros all considered instances
-        The neighborhood is defined as follows :
+        The neighborhood is defined as follows:
+
         * We select top N neighbors for each instance (using L1 norm + variance normalization)
         * We discard neighbors whose model output is too **different** (see equations below) from the instance output
-        * We discard additional neighbors if their distance to the instance \
-        is bigger than a predefined value (to remove outliers)
+        * We discard additional neighbors if their distance to the instance
+          is bigger than a predefined value (to remove outliers)
+
         The **difference** between outputs is measured with the following distance definition:
+
         * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+          .. math::
+
+              distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
         * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+          .. math::
+
+              distance = |output_{allFeatures} - output_{currentFeatures}|
+
         Parameters
         ----------
         selection : list[Any] or None, optional
@@ -2544,9 +2570,9 @@ class SmartPlotter:
         If multiple instances:
             * if distribution == "none": Mean amplitude of each feature contribution vs. mean variability across neighbors
             * if distribution == "boxplot": Distribution of contributions of each feature in instances neighborhoods.
-            Graph type is box plot
+              Graph type is box plot
             * if distribution == "violin": Distribution of contributions of each feature in instances neighborhoods.
-            Graph type is violin plot
+              Graph type is violin plot
         """
         # Sampling
         if selection is None:
@@ -2634,23 +2660,34 @@ class SmartPlotter:
         height: int = 600,
         width: int = 900,
     ) -> go.Figure:
-        """
+        r"""
+        Plot how many features are needed to approximate the model output.
+
         The Compacity_plot has the main objective of determining if a small subset of features
         can be extracted to provide a simpler explanation of the model.
-        indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
+        Indeed, having too many features might negatively affect the model explainability and make it harder to understand.
         The following two plots are proposed:
+
         * We identify the minimum number of required features (based on the top contribution values)
-        that well approximate the model, and thus, provide accurate explanations.
-        In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*)
-        to the one obtained with all features.
+          that well approximate the model, and thus, provide accurate explanations.
+          In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*)
+          to the one obtained with all features.
         * Conversely, we determine how close we get to the output with all features by using only a subset of them.
+
         *Distance definition*
+
         * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+          .. math::
+
+              distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
         * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
+
+          .. math::
+
+              distance = |output_{allFeatures} - output_{currentFeatures}|
+
         Parameters
         ----------
         selection : list[Any] or None, optional
@@ -2730,8 +2767,9 @@ class SmartPlotter:
         auto_open: bool = False,
     ) -> go.Figure:
         """
-        scatter_plot_prediction displays a Plotly scatter or violin plot of predictions in comparison to the target variable.
-        This plot represents Trues Values versus Predicted Values.
+        Plot predictions against the target variable, as a Plotly scatter or violin plot.
+
+        This plot represents True Values versus Predicted Values.
 
         This plot allows the user to understand the distribution of predictions in comparison to the target variable.
         With the web app, it is possible to select the wrong or correct predictions or a subset of predictions.
@@ -2761,7 +2799,6 @@ class SmartPlotter:
         go.Figure
             Scatter or violin plot comparing predictions with target values.
         """
-
         # Classification Case
         if self._explainer._case == "classification":
             label_num, _, label_value = self._explainer.check_label_name(label)
@@ -2804,8 +2841,7 @@ class SmartPlotter:
         auto_open: bool = False,
     ) -> Figure:
         """
-        Return a Matplotlib confusion matrix computed from the explainer's
-        ``y_target`` and ``y_pred`` attributes.
+        Return a Matplotlib confusion matrix computed from the explainer's ``y_target`` and ``y_pred`` attributes.
 
         On imbalanced datasets, the dominant class can crush the color scale and
         make the other cells look identical. Set the optional `color_quantile_cap` parameter
@@ -2831,7 +2867,6 @@ class SmartPlotter:
         matplotlib.figure.Figure
             Confusion matrix figure.
         """
-
         # Classification Case
         if self._explainer._case == "classification":
             y_true = self._explainer.y_target.iloc[:, 0]
@@ -2897,7 +2932,6 @@ class SmartPlotter:
         plotly.graph_objects.Figure
             Lift curve figure.
         """
-
         if self._explainer._case != "classification":
             raise ValueError("Lift curve is only available for classification case")
 
@@ -2937,8 +2971,7 @@ class SmartPlotter:
         auto_open: bool = False,
     ) -> go.Figure:
         """
-        Generate a Plotly figure displaying the univariate distribution of a feature
-        (continuous or categorical) in the dataset.
+        Plot the univariate distribution of a continuous or categorical feature in the dataset.
 
         For categorical features with too many unique categories, the least frequent
         categories are grouped into a new 'Other' category to ensure the plot remains
@@ -3105,7 +3138,6 @@ class SmartPlotter:
         >>> # Compare multiple color schemes side-by-side
         >>> xpl.clustering_by_explainability_plot(color_value=["predictions", "errors"], keep_quantile=(0.05, 0.95))
         """
-
         if not hasattr(self._explainer, "model"):
             raise AssertionError(
                 "Explainer object was not compiled. Please compile the explainer object using .compile(...) method."

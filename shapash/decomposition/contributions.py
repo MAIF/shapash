@@ -1,6 +1,4 @@
-"""
-Contributions
-"""
+"""Contributions."""
 
 from typing import Any, Literal
 
@@ -43,7 +41,6 @@ def inverse_transform_contributions(
         Return the aggregate contributions.
 
     """
-
     if not isinstance(contributions, pd.DataFrame):
         raise Exception("Shap values must be a pandas dataframe.")
 
@@ -69,8 +66,7 @@ def inverse_transform_contributions(
 
 def rank_contributions(s_df: pd.DataFrame, x_df: pd.DataFrame) -> list[pd.DataFrame]:
     """
-    Function to sort contributions and input features
-    by decreasing contribution absolute values
+    Function to sort contributions and input features by decreasing contribution absolute values.
 
     Parameters
     ----------

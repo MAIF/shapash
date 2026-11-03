@@ -76,7 +76,7 @@ def _transform_name(var_name: str, x_df: pd.DataFrame) -> str:
 
 
 class LimeBackend(BaseBackend):
-    """The Lime Backend"""
+    """The Lime Backend."""
 
     column_aggregation = "sum"
     name = "lime"
@@ -120,14 +120,18 @@ class LimeBackend(BaseBackend):
         -------
         dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]
             A dict with keys:
+
             - 'contributions':
-                - pd.DataFrame of shape (n_samples, n_features)
-                    for binary classification or regression.
-                - List[pd.DataFrame] of length n_classes
-                    for multiclass classification.
+
+              - pd.DataFrame of shape (n_samples, n_features)
+                for binary classification or regression.
+              - List[pd.DataFrame] of length n_classes
+                for multiclass classification.
+
             - 'base_values': local intercepts by individual:
-                - np.ndarray of shape (n_samples, n_classes) for classification.
-                - np.ndarray of shape (n_samples,) for regression.
+
+              - np.ndarray of shape (n_samples, n_classes) for classification.
+              - np.ndarray of shape (n_samples,) for regression.
         """
         feature_names = list(x.columns)
         data = self.data if self.data is not None else x

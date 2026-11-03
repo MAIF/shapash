@@ -1,6 +1,4 @@
-"""
-Summarize Module
-"""
+"""Summarize Module."""
 
 import warnings
 from typing import Any, Literal
@@ -131,7 +129,7 @@ def summarize(
 
 def group_contributions(contributions: pd.DataFrame, features_groups: dict[str, list[str]]) -> pd.DataFrame:
     """
-    Regroup contributions according to features_groups parameter
+    Regroup contributions according to features_groups parameter.
 
     Parameters
     ----------
@@ -168,6 +166,7 @@ def project_feature_values_1d(
 ) -> pd.Series:
     """
     Project feature values of a group of features in 1 dimension.
+
     If feature_values contains categorical features, use preprocessing to get
     the corresponding encoded variables.
 

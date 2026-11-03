@@ -56,18 +56,20 @@ class MyGraph(dcc.Graph):
     @staticmethod
     def adjust_graph_static(figure: Figure, x_ax: str = "", y_ax: str = "") -> None:
         """
-        Override graph layout for app use
-        ----------------------------------------
+        Override graph layout for app use.
+
+        Parameters
+        ----------
         figure : Figure
             Plotly figure whose layout is updated.
         x_ax : str
             Title of the x-axis.
         y_ax : str
             Title of the y-axis.
+
         Returns
         -------
         None
-        ---------------------------------------
         """
         main_title, subtitle = split_title_and_subtitle(figure.layout.title.text)
         title_html = f'<span style="font-size: calc(1.5vh + 0.5vw);">{main_title}</span>'

@@ -21,8 +21,7 @@ def _cluster_corr(
     inplace: bool = False,
 ) -> pd.DataFrame | np.ndarray:
     """
-    Rearrange a correlation matrix so that highly correlated variables are
-    grouped together.
+    Rearrange a correlation matrix so that highly correlated variables are grouped together.
 
     Parameters
     ----------
@@ -195,7 +194,6 @@ def plot_correlations(
     --------
     >>> xpl.plot.correlations()
     """
-
     style_dict_default = _resolve_style_dict(style_dict=style_dict, palette_name=palette_name)
 
     if features_dict is None:
@@ -378,7 +376,6 @@ def plot_contributions_correlations(
     go.Figure
         Plotly heatmap figure.
     """
-
     style_dict_default = _resolve_style_dict(style_dict=style_dict, palette_name=palette_name)
 
     if features_dict is None:
