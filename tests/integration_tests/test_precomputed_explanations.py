@@ -210,15 +210,15 @@ def test_model_free_rejects_misaligned_contributions(kind):
 
 
 @pytest.mark.parametrize(
-    "x",
+    "x, message",
     [
-        pd.DataFrame(),
-        pd.DataFrame({"a": [1.0, 2.0]}, index=[0, 0]),
-        pd.DataFrame([[1.0, 2.0]], columns=["a", "a"]),
+        (pd.DataFrame(), "nonempty DataFrame"),
+        (pd.DataFrame({"a": [1.0, 2.0]}, index=[0, 0]), "nonempty DataFrame"),
+        (pd.DataFrame([[1.0, 2.0]], columns=["a", "a"]), r"unique column names\. Duplicated columns: \['a'\]"),
     ],
 )
-def test_model_free_requires_nonempty_unambiguous_input(x):
-    with pytest.raises(ValueError, match="nonempty DataFrame"):
+def test_model_free_requires_nonempty_unambiguous_input(x, message):
+    with pytest.raises(ValueError, match=message):
         SmartExplainer(task="regression").compile(x=x, contributions=x, y_pred=pd.Series(np.zeros(len(x))))
 
 
