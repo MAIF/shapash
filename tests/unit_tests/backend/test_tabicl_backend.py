@@ -33,7 +33,7 @@ class TestTabiclBackend(unittest.TestCase):
         get_shap_values.assert_called_once_with(
             estimator=self.model,
             X_test=self.x,
-            feature_names=["feature_a", "feature_b"],
+            attribute_names=["feature_a", "feature_b"],
         )
         self.assertIs(explain_data["contributions"], values)
         self.assertIs(explain_data["base_values"], base_values)
@@ -50,7 +50,7 @@ class TestTabiclBackend(unittest.TestCase):
         get_shap_values.assert_called_once_with(
             estimator=self.model,
             X_test=masker,
-            feature_names=["feature_a", "feature_b"],
+            attribute_names=["feature_a", "feature_b"],
             random_state=42,
         )
         self.assertIs(explain_data["contributions"], values)

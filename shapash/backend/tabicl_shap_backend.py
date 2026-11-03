@@ -8,6 +8,7 @@ try:
     is_tabicl_shap_available = True
 except ImportError:
     is_tabicl_shap_available = False
+    get_shap_values = None
 from shapash.backend import BaseBackend
 
 
@@ -23,8 +24,6 @@ class TabiclBackend(BaseBackend):
         masker: pd.DataFrame | None = None,
         **kwargs: Any,
     ):
-        if not is_tabicl_shap_available:
-            raise ImportError("tabicl.shap is not installed. Install it with: pip install tabicl[shap]")
         super().__init__(model, preprocessing)
         self.masker = masker
         self.additional_params = kwargs

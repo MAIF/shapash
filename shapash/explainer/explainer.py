@@ -58,7 +58,7 @@ class Explainer:
         self.backend: BaseBackend | None = None
         if isinstance(backend, str) and backend != "auto":
             self.backend_name = backend
-        if isinstance(backend, BaseBackend):
+        elif isinstance(backend, BaseBackend):
             self.backend = backend
             if backend.preprocessing is None and self.preprocessing is not None:
                 self.backend.preprocessing = self.preprocessing
