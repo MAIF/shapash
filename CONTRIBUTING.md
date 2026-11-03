@@ -232,6 +232,10 @@ warning (`--keep-going` still lists them all).
 To check the external links, for example before a release, run `make -C docs linkcheck` after a
 documentation build.
 
+The showcase at https://maif.github.io/shapash/ is not built by Sphinx: GitHub Pages serves
+`docs/index.html` and `docs/assets/` from `master`. Before a release, check that its pitch, features
+and links still match the documentation home page.
+
 ## Change dependencies
 
 Dependencies are declared in `pyproject.toml`.

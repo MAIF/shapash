@@ -1,10 +1,37 @@
+@font-face {
+  font-family: 'Arvo';
+  src: url('../fonts/Arvo-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('../fonts/roboto-latin-400-normal.woff2') format('woff2');
+  font-display: swap;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
   font-family: 'Arvo', serif;
+  font-size: 14px;
+  line-height: 1.43;
   background-color: #2E3031;
 }
 
-.otoColor {
-  background-color: #f4c000;
+img {
+  vertical-align: middle;
+}
+
+p {
+  margin: 0 0 10px;
+}
+
+ul {
+  margin: 0 0 10px;
 }
 
 a {
@@ -31,22 +58,41 @@ a:hover {
   color: #af8900;
 }
 
+.home-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
 .tagN2 {
   width: 20%;
   display: block;
   margin: 20px auto;
 }
 
+.page {
+  max-width: 1170px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.content {
+  margin-left: 33.3333%;
+}
+
 .contentN2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   padding-top: 30px;
 }
 
-.contentN2 .col-md-6 {
+.contentN2 > div {
   padding-top: 70px;
 }
 
 .colDashRight {
   border-right: 1px dashed #F2F2F2;
+  padding-left: 15px;
   padding-right: 60px;
 }
 
@@ -59,10 +105,17 @@ a:hover {
 
 .titleOnLine li {
   list-style-type: none;
+  white-space: nowrap;
 }
 
 .titleOnLine li:nth-child(even) {
   color: #f4c000;
+}
+
+h1, h2 {
+  margin: 20px 0 10px;
+  font-weight: 500;
+  line-height: 1.1;
 }
 
 h1 {
@@ -75,22 +128,14 @@ h2 {
   text-transform: uppercase;
 }
 
-.manifesto {
-  border: 0;
-  position: fixed;
-  right: 0;
-  top: 0;
-  z-index: 9000;
-}
-
 .intro {
-  font-family: 'Roboto', serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 18px;
   color: #fff;
 }
 
 .details {
-  font-family: 'Roboto', serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   font-weight: 300;
   color: #fff;
@@ -105,39 +150,29 @@ h2 {
   text-align: center;
   color: #fff;
   padding-left: 60px;
+  padding-right: 15px;
 }
 
 .more-details .pictoPortrait {
   height: 50px;
 }
 
-.youtube_player{
-  margin-bottom: 20px;
-}
-
-.youtube_player {
-	position:relative;
-	padding-bottom:56.25%;
-	padding-top:30px;
-	height:0;
-	overflow:hidden;
-}
-
-.youtube_player iframe, .youtube_player object, .youtube_player embed {
-	position:absolute;
-	top:0;
-	left:0;
-	width:100%;
-	height:100%;
-}
-
-.youtube_player .tac_activate {
-    background: #2E3031;
-}
-
 .more-details .pictoPaysage {
   margin-top: 20px;
   width: 70px
+}
+
+.contentCircle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 24px;
+  max-width: 224px;
+  margin: 0 auto;
+}
+
+.contentCircle a {
+  display: block;
 }
 
 .outer-circle {
@@ -166,16 +201,14 @@ h2 {
   margin-top: 40%;
 }
 
-.inner-circle--lowerText {
-  font-size: 13px;
-}
-
 .sidebar {
   background: linear-gradient(90deg, #f4c000 50%, #2E3031 50%);
   position: fixed;
   top: 0;
   bottom: 0;
   left: 0;
+  width: 33.3333%;
+  padding: 0 15px;
   z-index: 1000;
   display: block;
   overflow-x: hidden;
@@ -195,13 +228,6 @@ h2 {
   padding-top: 20px;
 }
 
-.footer-content {
-  width: 300%;
-  margin-left: -100%;
-  overflow: hidden;
-  bottom: 0;
-}
-
 .footer-contentN2 {
   position: relative;
   width: 50%;
@@ -210,6 +236,9 @@ h2 {
 }
 
 @media screen and (max-width: 991px) {
+  .contentN2 {
+    grid-template-columns: 1fr;
+  }
   .intro {
     font-size: 16px;
   }
@@ -236,12 +265,16 @@ h2 {
   .home {
     position: absolute;
   }
-  .home .fa-home {
-    font-size: 1.5em;
+  .home-icon {
+    width: 21px;
+    height: 21px;
   }
   .sidebar-content {
     width: 200px;
     padding-left: 30px;
+  }
+  .content {
+    margin-left: 0;
   }
   .contentN2 {
     padding-left: 30px;
@@ -251,7 +284,8 @@ h2 {
   }
   .sidebar {
     background: linear-gradient(180deg, #f4c000 50%, #2E3031 50%);
-    position: inherit;
+    position: static;
+    width: 100%;
   }
   .footer-contentN2 {
     margin-left: 0px;
@@ -272,7 +306,8 @@ h2 {
     text-align: left;
   }
   .contentCircle {
-    margin-right: 20px;
+    justify-content: flex-start;
+    margin: 0;
   }
   .tagN2 {
     margin-top: 10px;
@@ -290,9 +325,6 @@ h2 {
     margin-left: 0px;
     text-align: center;
   }
-  .linkN2 {
-    padding-left: 20px;
-  }
 }
 
 @media screen and (max-width: 400px) {
@@ -307,8 +339,5 @@ h2 {
   }
   .inner-circle p {
     font-size: 12px;
-  }
-  .inner-circle p.inner-circle--lowerText {
-    font-size: 10px;
   }
 }
