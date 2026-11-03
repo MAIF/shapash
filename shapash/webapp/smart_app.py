@@ -339,7 +339,10 @@ class SmartApp:
                 ),
                 dbc.ModalFooter(
                     [
-                        dbc.FormText(f"shapash version : {'.'.join(str(p) for p in VERSION)}"),
+                        dbc.FormText(
+                            f"shapash version : {'.'.join(str(p) for p in VERSION)}",
+                            className="me-auto",
+                        ),
                         dbc.Button("Apply", id="apply", className="ml-auto"),
                     ]
                 ),

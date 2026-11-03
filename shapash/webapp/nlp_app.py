@@ -17,6 +17,7 @@ import pandas as pd
 from dash import MATCH, Input, Output, dcc, html, jupyter_dash
 from dash.exceptions import PreventUpdate
 
+from shapash.__version__ import VERSION
 from shapash.compute.embeddings import Embedding, projection_coords
 from shapash.explainer.interactive import InteractiveEngine
 from shapash.explainer.nlp_explanation import NlpExplanation
@@ -229,6 +230,7 @@ class NlpWebApp:
         self._info["Number of classes"] = str(explanation.n_classes)
         self._info["Explainer backend"] = explanation.backend_name
         self._info["Explanation space"] = "logit" if explanation.output_space == "logit" else "probability"
+        self._info["shapash version"] = ".".join(str(p) for p in VERSION)
         self._info.update(info or {})
 
         self.app = dash.Dash(
