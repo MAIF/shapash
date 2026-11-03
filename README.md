@@ -41,6 +41,7 @@ Shapash is suitable for Regression, Binary Classification and Multiclass problem
 ## 🌱 Documentation and resources
 
 - Readthedocs: [![documentation badge](https://readthedocs.org/projects/shapash/badge/?version=stable)](https://shapash.readthedocs.io/en/stable/)
+- [Project showcase](https://maif.github.io/shapash/)
 - [Video presentation for french speakers](https://www.youtube.com/watch?v=r1R_A9B9apk)
 - Articles:
   - [Understand your model with Shapash - Towards AI](https://pub.towardsai.net/shapash-making-ml-models-understandable-by-everyone-8f96ad469eb3)
