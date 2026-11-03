@@ -1,6 +1,4 @@
-"""
-sklearn columntransformer
-"""
+"""sklearn columntransformer."""
 
 from collections.abc import Iterable
 from typing import Any, Literal
@@ -212,7 +210,6 @@ def calc_inv_contrib_ct(x_contrib: pd.DataFrame, encoding: Any, agg_columns: Lit
     pd.DataFrame
         The aggregate contributions depending on which processing is apply.
     """
-
     if str(type(encoding)) == columntransformer:
         # We use inverse tranform from the encoding method base on columns position
         init = 0
@@ -321,6 +318,7 @@ def transform_ct(x_in: pd.DataFrame, model: Any, encoding: Any) -> pd.DataFrame:
 def get_names(name: str, trans: Any, column: Any, column_transformer: ColumnTransformer) -> Iterable[str]:
     """
     Allow to extract features names from one encoder of the ColumnTransformer.
+
     If the right names aren't available, It creates a list with customized names.
 
     Parameters
@@ -362,6 +360,7 @@ def get_names(name: str, trans: Any, column: Any, column_transformer: ColumnTran
 def get_feature_names(column_transformer: ColumnTransformer) -> list[str]:
     """
     Allow to extract all features names from encoders of the ColumnTransformer once it has been applied.
+
     If the right names aren't available, It creates a list with customized names.
 
     Parameters
@@ -388,6 +387,7 @@ def get_feature_names(column_transformer: ColumnTransformer) -> list[str]:
 def get_list_features_names(list_preprocessing: list[Any], columns_dict: dict[Any, str]) -> Iterable[str]:
     """
     Allow to extract all features names from encoders when a list of preprocessing is uesd once it has been applied.
+
     If the right names aren't available, It creates a list with customized names.
 
     Parameters

@@ -11,11 +11,11 @@ from collections.abc import Sequence
 
 
 def hash_corpus(texts: Sequence[str], key: str = "") -> str:
-    """Stable digest over an identity ``key`` plus the corpus texts (order-sensitive).
+    r"""Stable digest over an identity ``key`` plus the corpus texts (order-sensitive).
 
     Each string is framed with its own byte length before hashing, so no separator choice can
-    let two different inputs collide — a literal ``"\\0"`` inside a text can no longer make
-    ``["a\\0b"]`` and ``["a", "b"]`` hash identically. ``key`` carries whatever else changes the
+    let two different inputs collide — a literal ``"\0"`` inside a text can no longer make
+    ``["a\0b"]`` and ``["a", "b"]`` hash identically. ``key`` carries whatever else changes the
     cached artifact (model identity, representation space, explanation backend).
 
     With the default empty ``key`` the digest depends on the texts alone: that is

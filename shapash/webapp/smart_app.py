@@ -1,6 +1,4 @@
-"""
-Main class of Web application Shapash
-"""
+"""Main class of Web application Shapash."""
 
 from __future__ import annotations
 
@@ -71,6 +69,7 @@ def _create_input_modal(component_id: str, label: str, tooltip: str) -> Componen
 class SmartApp:
     """
     Bridge pattern decoupling the application part from SmartExplainer and SmartPlotter.
+
     Attributes
     ----------
     explainer : Explainer
@@ -89,6 +88,7 @@ class SmartApp:
     ) -> None:
         """
         Init on class instantiation, everything to be able to run the app on server.
+
         Parameters
         ----------
         explainer : Explainer
@@ -184,9 +184,7 @@ class SmartApp:
         self.callback_generator()
 
     def init_data(self, rows: int | None = None) -> None:
-        """
-        Method which initializes data from explainer object
-        """
+        """Method which initializes data from explainer object."""
         if hasattr(self.explainer, "y_pred"):
             self.dataframe = self.explainer.x_init.copy()
             if isinstance(self.explainer.y_pred, pd.Series):
@@ -266,10 +264,10 @@ class SmartApp:
 
     def init_components(self) -> None:
         """
-        Initialize components (graph, table, filter, settings, ...) and insert it inside
-        components containers which are created by init_skeleton
-        """
+        Initialize the components (graph, table, filter, settings, ...).
 
+        They are inserted inside the components containers created by init_skeleton.
+        """
         self.components["settings"]["input_rows"] = _create_input_modal(
             component_id="rows",
             label="Number of rows for subset",
@@ -830,9 +828,7 @@ class SmartApp:
         )
 
     def make_skeleton(self) -> None:
-        """
-        Describe the app skeleton (bootstrap grid) and initialize components containers
-        """
+        """Describe the app skeleton (bootstrap grid) and initialize components containers."""
         self.skeleton["navbar"] = dbc.Container(
             [
                 dbc.Row(
@@ -1702,10 +1698,7 @@ class SmartApp:
         )
 
     def adjust_menu(self) -> None:
-        """
-        Override menu from explainer object depending on
-        classification or regression case.
-        """
+        """Override menu from explainer object depending on classification or regression case."""
         on_style = {
             "backgroundColor": self.color[0],
             "color": self.bkg_color,
@@ -1739,7 +1732,9 @@ class SmartApp:
     ) -> list[Component]:
         """
         Method which return a component from a type and id.
+
         It's the method to insert component inside component container.
+
         Parameters
         ----------
         component_type : str
@@ -1750,6 +1745,7 @@ class SmartApp:
             by default None
         is_draw_fullscreen : bool, optional
             Whether to add a fullscreen control to the component.
+
         Returns
         -------
         list[Component]
@@ -1764,13 +1760,16 @@ class SmartApp:
     def draw_fullscreen(self, component_type: str, component_id: str) -> Component:
         """
         Method which return a component from a type and id.
+
         It's the method to insert component inside component container.
+
         Parameters
         ----------
         component_type : str
             Type of the component. Can be table, graph, ...
         component_id : str
             Id of the component. It must be unique.
+
         Returns
         -------
         Component
@@ -1788,6 +1787,7 @@ class SmartApp:
     def draw_filter_table(self) -> Component:
         """
         Method which returns the filter dataset components block.
+
         Returns
         -------
             component
@@ -1796,8 +1796,8 @@ class SmartApp:
 
     def draw_filter(self) -> list[Component]:
         """
-        Method which returns filter components block for local
-        contributions plot.
+        Method which returns filter components block for local contributions plot.
+
         Returns
         -------
         list
@@ -1814,10 +1814,7 @@ class SmartApp:
 
     @staticmethod
     def select_point(figure: dict[str, Any], click_data: dict[str, Any] | None) -> None:
-        """
-        Method which set the selected point in graph component
-        corresponding to click_data.
-        """
+        """Method which set the selected point in graph component corresponding to click_data."""
         if click_data:
             curve_id = click_data["points"][0]["curveNumber"]
             point_id = click_data["points"][0]["pointIndex"]
@@ -1826,8 +1823,8 @@ class SmartApp:
 
     def callback_fullscreen_buttons(self) -> None:
         """
-        Initialize callbacks for each fullscreen button
-        the callback alter style of the component (height, ...)
+        Initialize callbacks for each fullscreen button the callback alter style of the component (height, ...).
+
         Returns
         -------
         dict
@@ -1860,14 +1857,22 @@ class SmartApp:
             ):
                 """
                 Function used to set style of cards and components.
+
                 Prediction picking graph style is different than the other
                 graph because it is placed in a tab.
-                ---------------------------------------------------------------
-                click: click on zoom button
-                data_component_type: component type
-                data_component_id: component id
-                --------------------------------------------------------------
-                return style of cards and style of components
+
+                Parameters
+                ----------
+                click
+                    click on zoom button
+                data_component_type
+                    component type
+                data_component_id
+                    component id
+
+                Returns
+                -------
+                style of cards and style of components
                 """
                 click = 2 if click is None else click
                 toggle_on = True if click % 2 == 0 else False
@@ -1913,7 +1918,7 @@ class SmartApp:
                     return this_style_card, style_component
 
     def init_callback_settings(self) -> None:
-        """Callback settings initialization"""
+        """Callback settings initialization."""
         app = self.app
         self.components["settings"]["input_rows"]["rows"].value = self.settings["rows"]
         self.components["settings"]["input_points"]["points"].value = self.settings["points"]
@@ -1930,11 +1935,13 @@ class SmartApp:
             )
             def update_valid(value):
                 """
-                actualise valid and invalid icon in input component
+                Actualise valid and invalid icon in input component.
+
                 Parameters
                 ----------
                 value : int
                     value of input component
+
                 Returns
                 -------
                     tuple of boolean
@@ -1956,9 +1963,7 @@ class SmartApp:
             ],
         )
         def toggle_modal(n1, n2, rows, points, features, violin):
-            """
-            open modal /close modal (only if all input are valid)
-            """
+            """Open modal /close modal (only if all input are valid)."""
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "settings.n_clicks":
                 if n1 is not None:
@@ -1972,7 +1977,7 @@ class SmartApp:
             return False
 
     def callback_generator(self) -> None:
-        """Generates all the app callbacks"""
+        """Generates all the app callbacks."""
         app = self.app
 
         @app.callback(
@@ -2031,34 +2036,59 @@ class SmartApp:
             val_upper_modality,
         ):
             """
-            This function is used to update the datatable according to sorting,
-            filtering and settings modifications.
-            ------------------------------------------------------------------
-            selected_data: selected data in prediction picking graph
-            nclicks_apply: click on Apply Filter button
-            nclicks_reset: click on Reset All Filter button
-            nclicks_del: click on delete button
-            rows: number of rows for subset
-            name: name for features name
-            val_feature: feature selected to filter
-            id_feature: id of feature selected to filter
-            val_str_modality: string modalities selected
-            id_str_modality: id of string modalities selected
-            val_bool_modality: boolean modalities selected
-            id_bool_modality: id of boolean modalities selected
-            start_date: start dates selected
-            end_date: end dates selected
-            id_date: id of dates selected
-            val_lower_modality: lower values of numeric filter
-            id_lower_modality: id of lower modalities of numeric filter
-            val_upper_modality: upper values of numeric filter
-            ------------------------------------------------------------------
-            return
-            data: available dataset
-            tooltip_data: tooltip of the dataset
-            columns: columns of the dataset
-            filtered_subset_info: subset size
-            filtered_subset_color: subset warning color
+            Update the datatable according to sorting, filtering and settings modifications.
+
+            Parameters
+            ----------
+            selected_data
+                selected data in prediction picking graph
+            nclicks_apply
+                click on Apply Filter button
+            nclicks_reset
+                click on Reset All Filter button
+            nclicks_del
+                click on delete button
+            rows
+                number of rows for subset
+            name
+                name for features name
+            val_feature
+                feature selected to filter
+            id_feature
+                id of feature selected to filter
+            val_str_modality
+                string modalities selected
+            id_str_modality
+                id of string modalities selected
+            val_bool_modality
+                boolean modalities selected
+            id_bool_modality
+                id of boolean modalities selected
+            start_date
+                start dates selected
+            end_date
+                end dates selected
+            id_date
+                id of dates selected
+            val_lower_modality
+                lower values of numeric filter
+            id_lower_modality
+                id of lower modalities of numeric filter
+            val_upper_modality
+                upper values of numeric filter
+
+            Returns
+            -------
+            data
+                available dataset
+            tooltip_data
+                tooltip of the dataset
+            columns
+                columns of the dataset
+            filtered_subset_info
+                subset size
+            filtered_subset_color
+                subset warning color
             """
             ctx = dash.callback_context
             df = self.round_dataframe
@@ -2216,23 +2246,40 @@ class SmartApp:
             page,
         ):
             """
-            update feature importance plot according label, click on graph,
-            filters applied and subset selected in prediction picking graph.
-            ------------------------------------------------------------
-            label: label of data
-            data: dataset
-            selected_data : data selected on prediction picking graph
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click on del button
-            n_clicks: click on features importance card
-            bool_group: display groups
-            click_zoom: click on zoom button
-            clickData: click on features importance graph
-            features: features value
-            clickData_store: previous click on features importance graph
-            -------------------------------------------------------------
-            return
+            Update the feature importance plot.
+
+            It depends on the label, clicks on the graph, the filters applied and the subset selected in the
+            prediction picking graph.
+
+            Parameters
+            ----------
+            label
+                label of data
+            data
+                dataset
+            selected_data
+                data selected on prediction picking graph
+            apply_filters
+                click on apply filter button
+            reset_filter
+                click on reset filter button
+            nclicks_del
+                click on del button
+            n_clicks
+                click on features importance card
+            bool_group
+                display groups
+            click_zoom
+                click on zoom button
+            clickData
+                click on features importance graph
+            features
+                features value
+            clickData_store
+                previous click on features importance graph
+
+            Returns
+            -------
             figure of Features Importance graph
             click on Features Importance graph
             previous click on Features Importance graph
@@ -2339,20 +2386,32 @@ class SmartApp:
         )
         def update_feature_selector(feature, data, label, click_zoom, points, violin, gfi_figure):
             """
-            Update feature plot according to label, data,
-            selected feature on features importance graph,
-            filters and settings modifications
-            --------------------------------------------
-            feature: click on feature importance graph
-            data: dataset
-            label: selected label
-            click_zoom: click on zoom button
-            points: points value in setting
-            violin: violin value in setting
-            gfi_figure: figure of Features Importance graph
-            ---------------------------------------------
-            return
-            fs_figure: feature selector graph
+            Update the feature plot.
+
+            It depends on the label, the data, the feature selected on the features importance graph, the
+            filters and the settings.
+
+            Parameters
+            ----------
+            feature
+                click on feature importance graph
+            data
+                dataset
+            label
+                selected label
+            click_zoom
+                click on zoom button
+            points
+                points value in setting
+            violin
+                violin value in setting
+            gfi_figure
+                figure of Features Importance graph
+
+            Returns
+            -------
+            fs_figure
+                feature selector graph
             """
             # Zoom is False by Default. It becomes True if we click on it
             zoom_active = get_figure_zoom(click_zoom)
@@ -2419,21 +2478,34 @@ class SmartApp:
             current_n_submit,
         ):
             """
-            This function is used to update index value according to
-            active cell, filters and click data on feature plot or on
-            prediction picking graph.
-            ----------------------------------------------------------------
-            click_data: click on feature selector
-            prediction_picking: click on prediction picking graph
-            cell: selected sell on dataset
-            apply_filters: click on Apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click on del button
-            data: dataset (original order)
-            viewport_data: dataset as currently displayed (after sorting/filtering)
-            current_index_id: the current value of the index
-            ----------------------------------------------------------------
-            return
+            Update the index value.
+
+            It depends on the active cell, the filters and clicks on the feature plot or on the prediction
+            picking graph.
+
+            Parameters
+            ----------
+            click_data
+                click on feature selector
+            prediction_picking
+                click on prediction picking graph
+            cell
+                selected sell on dataset
+            apply_filters
+                click on Apply filter button
+            reset_filter
+                click on reset filter button
+            nclicks_del
+                click on del button
+            data
+                dataset (original order)
+            viewport_data
+                dataset as currently displayed (after sorting/filtering)
+            current_index_id
+                the current value of the index
+
+            Returns
+            -------
             selected index id
             n_submit counter, incremented on every trigger so the downstream
             validation/refresh chain fires on every trigger, not just the first
@@ -2468,16 +2540,12 @@ class SmartApp:
 
         @app.callback(Output("threshold_label", "children"), [Input("threshold_id", "value")])
         def update_threshold_label(value):
-            """
-            update threshold label
-            """
+            """Update threshold label."""
             return f"Threshold: {value}"
 
         @app.callback(Output("max_contrib_label", "children"), [Input("max_contrib_id", "value")])
         def update_max_contrib_label(value):
-            """
-            update max_contrib label
-            """
+            """Update max_contrib label."""
             return f"Features to display: {value}"
 
         @app.callback(
@@ -2486,9 +2554,7 @@ class SmartApp:
             [State("features", "value"), State("max_contrib_id", "value")],
         )
         def update_max_contrib_id(is_open, features, value):
-            """
-            update max contrib component layout after settings modifications
-            """
+            """Update max contrib component layout after settings modifications."""
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "modal.is_open":
                 if is_open:
@@ -2528,24 +2594,41 @@ class SmartApp:
             data,
         ):
             """
-            update local explanation plot according to app changes.
-            -------------------------------------------------------
-            threshold: threshold
-            max_contrib: max contribution
-            positive: boolean
-            negative: boolean
-            masked: feature(s) to mask
-            label: label
-            cell: selected cell
-            click_data: click on feature selector graph
-            prediction_picking: click on prediction picking graph
-            validation_click: click on validation
-            bool_group: boolean
-            click_zoom: click on zoom button
-            index: selected index
-            data: the dataset
-            --------------------------------------------------------
-            return
+            Update local explanation plot according to app changes.
+
+            Parameters
+            ----------
+            threshold
+                threshold
+            max_contrib
+                max contribution
+            positive
+                boolean
+            negative
+                boolean
+            masked
+                feature(s) to mask
+            label
+                label
+            cell
+                selected cell
+            click_data
+                click on feature selector graph
+            prediction_picking
+                click on prediction picking graph
+            validation_click
+                click on validation
+            bool_group
+                boolean
+            click_zoom
+                click on zoom button
+            index
+                selected index
+            data
+                the dataset
+
+            Returns
+            -------
             detail feature graph
             """
             # Zoom is False by Default. It becomes True if we click on it
@@ -2606,9 +2689,7 @@ class SmartApp:
             [State("validation", "n_clicks")],
         )
         def click_validation(n_submit, n_clicks):
-            """
-            submit index selection
-            """
+            """Submit index selection."""
             if n_submit:
                 return (n_clicks or 0) + 1
             else:
@@ -2632,6 +2713,7 @@ class SmartApp:
         def update_id_card(n_submit, label, sort_by, order, data, index):
             """
             Update identity card and display button.
+
             Parameters
             ----------
             n_submit : boolean
@@ -2640,6 +2722,7 @@ class SmartApp:
             sort_by : identity card column to sort by, data column labels or contribution
             order : order to sort by, ascending or descending
             index : selected index
+
             Returns
             -------
             style to display button and children body for modal.
@@ -2656,7 +2739,11 @@ class SmartApp:
                         self.explainer.data, index, self.explainer.features_dict, self.explainer.columns_dict, label_num
                     )
                     proba = self.explainer._local_pred(index, label_num)
-                    title_contrib = f"Contribution: {label_value} ({proba.round(2):.2f})"
+                    title_contrib = (
+                        f"Contribution: {label_value}"
+                        if proba is None
+                        else f"Contribution: {label_value} ({proba.round(2):.2f})"
+                    )
                     _, _, predicted_label_value = self.explainer.check_label_name(
                         selected_row.loc["_predict_", "feature_value"]
                     )
@@ -2692,11 +2779,13 @@ class SmartApp:
         def toggle_modal_id_card(n1, n2, is_open):
             """
             Open and close identity card modal.
+
             Parameters
             ----------
             n1 : click on button to open
             n2 : click on button to close
             is_open : True if open else False
+
             Returns
             -------
             boolean True if open else False
@@ -2729,7 +2818,7 @@ class SmartApp:
                     "border": f"1px solid {self.color[0]}",
                 },
             ]
-            style_filter_conditional = []
+            style_filter_conditional: list[dict[str, Any]] = []
             style_header_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols] + [
                 {"if": {"column_id": c}, "font-style": "italic"}
                 for c in self.dataframe
@@ -2762,20 +2851,31 @@ class SmartApp:
             data, apply_filters, reset_filter, nclicks_del, label, is_open, click_zoom, points, violin, selectedData
         ):
             """
-            Update feature plot according to label, data,
-            selected feature and settings modifications
-            ------------------------------------------------
-            data: the dataset
-            apply_filters: click on apply filter button
-            reset_filter: click on reset filter button
-            nclicks_del: click on del button
-            label: selected label
-            is_open: modal
-            click_zoom: click on zoom button
-            points: number of points
-            violin: number of violin plot
-            -------------------------------------------------
-            return
+            Update the prediction picking plot according to the label, data, filters and settings.
+
+            Parameters
+            ----------
+            data
+                the dataset
+            apply_filters
+                click on apply filter button
+            reset_filter
+                click on reset filter button
+            nclicks_del
+                click on del button
+            label
+                selected label
+            is_open
+                modal
+            click_zoom
+                click on zoom button
+            points
+                number of points
+            violin
+                number of violin plot
+
+            Returns
+            -------
             prediction picking graph
             """
             ctx = dash.callback_context
@@ -2808,6 +2908,7 @@ class SmartApp:
         def sync_points_toggle(points_visible: bool):
             """
             Synchronize ON/OFF button styles with stored state.
+
             - If points_visible is True: ON is filled, OFF is outline.
             - If points_visible is False: ON is outline, OFF is filled.
             """
@@ -2857,9 +2958,9 @@ class SmartApp:
         ):
             """
             Update clustering plot according to label, data, filters and settings.
+
             Also stores ON/OFF state in points_visible_store.
             """
-
             ctx = dash.callback_context
             if not ctx.triggered:
                 raise PreventUpdate
@@ -2891,7 +2992,8 @@ class SmartApp:
             subset = get_indexes_from_datatable(data)
 
             show_points = bool(points_visible)
-            store_update = dash.no_update
+            # The new ON/OFF state, or dash.no_update to leave the store unchanged
+            store_update: bool | object = dash.no_update
 
             if trigger == "toggle_points_on":
                 show_points = True
@@ -2921,13 +3023,18 @@ class SmartApp:
         )
         def toggle_modal_feature_importancet(n1, n2, is_open):
             """
-            Function used to open and close modal explication when we click
-            on "?" button on feature_importance graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
+            Open and close the explanation modal of the "?" button on feature_importance graph.
+
+            Parameters
+            ----------
+            n1
+                click on "?" button
+            n2
+                click on close button in modal
+
+            Returns
+            -------
+            modal
             """
             if n1 or n2:
                 return not is_open
@@ -2940,13 +3047,18 @@ class SmartApp:
         )
         def toggle_modal_feature_selector(n1, n2, is_open):
             """
-            Function used to open and close modal explication when we click
-            on "?" button on feature_selector graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
+            Open and close the explanation modal of the "?" button on feature_selector graph.
+
+            Parameters
+            ----------
+            n1
+                click on "?" button
+            n2
+                click on close button in modal
+
+            Returns
+            -------
+            modal
             """
             if n1 or n2:
                 return not is_open
@@ -2959,13 +3071,18 @@ class SmartApp:
         )
         def toggle_modal_detail_feature(n1, n2, is_open):
             """
-            Function used to open and close modal explication when we click
-            on "?" button on detail_feature graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
+            Open and close the explanation modal of the "?" button on detail_feature graph.
+
+            Parameters
+            ----------
+            n1
+                click on "?" button
+            n2
+                click on close button in modal
+
+            Returns
+            -------
+            modal
             """
             if n1 or n2:
                 return not is_open
@@ -2978,13 +3095,18 @@ class SmartApp:
         )
         def toggle_modal_prediction_picking(n1, n2, is_open):
             """
-            Function used to open and close modal explication when we click
-            on "?" button on prediction_picking graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
+            Open and close the explanation modal of the "?" button on prediction_picking graph.
+
+            Parameters
+            ----------
+            n1
+                click on "?" button
+            n2
+                click on close button in modal
+
+            Returns
+            -------
+            modal
             """
             if n1 or n2:
                 return not is_open
@@ -2997,13 +3119,18 @@ class SmartApp:
         )
         def toggle_modal_clusters(n1, n2, is_open):
             """
-            Function used to open and close modal explication when we click
-            on "?" button on clusters graph
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
+            Open and close the explanation modal of the "?" button on clusters graph.
+
+            Parameters
+            ----------
+            n1
+                click on "?" button
+            n2
+                click on close button in modal
+
+            Returns
+            -------
+            modal
             """
             if n1 or n2:
                 return not is_open
@@ -3016,13 +3143,18 @@ class SmartApp:
         )
         def toggle_modal_filters(n1, n2, is_open):
             """
-            Function used to open and close modal explication when we click
-            on "?" button on Dataset Filters Tab
-            ---------------------------------------------------------------
-            n1: click on "?" button
-            n2: click on close button in modal
-            ---------------------------------------------------------------
-            return modal
+            Open and close the explanation modal of the "?" button on Dataset Filters Tab.
+
+            Parameters
+            ----------
+            n1
+                click on "?" button
+            n2
+                click on close button in modal
+
+            Returns
+            -------
+            modal
             """
             if n1 or n2:
                 return not is_open
@@ -3040,21 +3172,31 @@ class SmartApp:
         )
         def layout_filter(n_clicks_add, n_clicks_rm, n_clicks_reset, currents_filters, name):
             """
-            Function used to create filter blocs in the dropdowns_container.
-            Each bloc will contains:
-                -label
-                -dropdown button to select feature to filter
-                -div which will contains modalities
-                -delete button
-            ---------------------------------------------------------------
-            n_clicks_add: click on add filter
-            n_clicks_reset: click on reset filter button
-            n_click_del: click on delete button
-            children: information on dropdown container
-            name: name for feature name
-            ---------------------------------------------------------------
-            return
-                filter blocs
+            Create filter blocks in the dropdowns_container.
+
+            Each block contains:
+
+            - a label
+            - a dropdown button to select the feature to filter
+            - a div which will contain the modalities
+            - a delete button
+
+            Parameters
+            ----------
+            n_clicks_add
+                click on add filter
+            n_clicks_reset
+                click on reset filter button
+            n_click_del
+                click on delete button
+            children
+                information on dropdown container
+            name
+                name for feature name
+
+            Returns
+            -------
+            filter blocs
             """
             # Context and init handling (no action)
             ctx = dash.callback_context
@@ -3087,13 +3229,21 @@ class SmartApp:
         def update_disabled_reset_button(n_click_add, n_click_reset, n_click_del):
             """
             Function used to disabled or not the reset filter button.
+
             This button is disabled if there is no filter added.
-            ---------------------------------------------------------------
-            n_click_add: click on add filter button
-            n_click_reset: click on reset filter button
-            n_click_del: click on delete button
-            ---------------------------------------------------------------
-            return disabled style
+
+            Parameters
+            ----------
+            n_click_add
+                click on add filter button
+            n_click_reset
+                click on reset filter button
+            n_click_del
+                click on delete button
+
+            Returns
+            -------
+            disabled style
             """
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "add_dropdown_button.n_clicks":
@@ -3118,13 +3268,21 @@ class SmartApp:
         def update_style_apply_filter_button(n_click_add, n_click_reset, n_click_del):
             """
             Function used to display or not the apply filter button.
+
             This button is only display if almost one filter was added.
-            ---------------------------------------------------------------
-            n_click_add: click on add filter button
-            n_click_reset: click on reset filter button
-            n_click_del: click on delete button
-            ---------------------------------------------------------------
-            return style of apply filter button
+
+            Parameters
+            ----------
+            n_click_add
+                click on add filter button
+            n_click_reset
+                click on reset filter button
+            n_click_del
+                click on delete button
+
+            Returns
+            -------
+            style of apply filter button
             """
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "add_dropdown_button.n_clicks":
@@ -3142,12 +3300,18 @@ class SmartApp:
         )
         def update_label_filter(value):
             """
-            Function used to add label to the filters. Label is updated
-            when value is not None
-            ---------------------------------------------------------------
-            value: value selected on the var dropdown button
-            ---------------------------------------------------------------
-            return label
+            Add a label to the filters.
+
+            The label is updated when value is not None.
+
+            Parameters
+            ----------
+            value
+                value selected on the var dropdown button
+
+            Returns
+            -------
+            label
             """
             if value is not None:
                 return html.Label(f"Variable {value} is filtered")
@@ -3164,20 +3328,28 @@ class SmartApp:
         )
         def display_output(value, component_id, add_click):
             """
-            Function used to create modalities choices. Componenents are different
-            according to the type of the selected variable.
-            For string variable: component is a dropdown button
-            For boolean variable: component is a RadioItems button
-            For Integer variable that have less than 20 modalities: component
-            is a dropdown button.
-            For date variable: component is a DatePickerRange
-            Else: components are lower and upper values
-            ---------------------------------------------------------------
-            value: value selected on the var dropdown button
-            component_id: id of the var dropdown button
-            add_click: click on add_dropdown_button
-            ---------------------------------------------------------------
-            return modalities components. If the component is new, value
+            Create the modalities choices.
+
+            Components are different according to the type of the selected variable:
+
+            - string variable: a dropdown button
+            - boolean variable: a RadioItems button
+            - integer variable with less than 20 modalities: a dropdown button
+            - date variable: a DatePickerRange
+            - otherwise: lower and upper values
+
+            Parameters
+            ----------
+            value
+                value selected on the var dropdown button
+            component_id
+                id of the var dropdown button
+            add_click
+                click on add_dropdown_button
+
+            Returns
+            -------
+            modalities components. If the component is new, value
             is empty by default.
             """
             # Context and init handling (no action)

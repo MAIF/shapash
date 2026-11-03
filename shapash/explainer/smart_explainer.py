@@ -1,6 +1,4 @@
-"""
-Smart explainer module
-"""
+"""Smart explainer module."""
 
 from __future__ import annotations
 
@@ -61,8 +59,7 @@ DEFAULT_HOST = "127.0.0.1"
 
 class SmartExplainer:
     """
-    The main class of the Shapash library, designed to make machine learning model
-    results more interpretable and understandable.
+    The main class of the Shapash library, to make machine learning model results understandable.
 
     `SmartExplainer` links together the model, encoders, datasets, predictions,
     and label dictionaries. It provides a variety of methods to visualize and
@@ -275,6 +272,7 @@ class SmartExplainer:
             Prediction dataset — the same data seen by the end user.
             It should correspond to the **raw prediction input** (post-preprocessing).
             Shapash will use this dataset to compute and align explanations.
+            Column names must be unique.
         contributions : pandas.DataFrame, numpy.ndarray, list, or dict, optional
             Local feature contributions for each sample.
             - If a `DataFrame`, its index and columns must match those of `x`.
@@ -329,9 +327,7 @@ class SmartExplainer:
         )
 
     def define_style(self, palette_name: str | None = None, colors_dict: dict[str, Any] | None = None) -> None:
-        """
-        Set the color set to use in plots.
-        """
+        """Set the color set to use in plots."""
         if palette_name is None and colors_dict is None:
             raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
         new_palette_name = palette_name or self.palette_name
@@ -785,7 +781,6 @@ class SmartExplainer:
         host. Use port forwarding, container port publishing, or your notebook
         platform's proxy URL as appropriate.
         """
-
         if title_story is not None:
             self.title_story = title_story
         if hasattr(self.explainer, "_case"):
@@ -1087,7 +1082,6 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-
         # input checks
         if not hasattr(self, "model"):
             raise AssertionError(

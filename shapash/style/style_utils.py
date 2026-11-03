@@ -1,6 +1,4 @@
-"""
-functions for loading and manipulating colors
-"""
+"""functions for loading and manipulating colors."""
 
 import json
 import os
@@ -73,7 +71,7 @@ def select_palette(colors_dic: dict[str, Any], palette_name: str) -> dict[str, A
 
 def convert_str_color_to_plt_format(txt: str) -> list[float]:
     """
-    Converts an rgb string format to a tuple of float (used by matplotlib format)
+    Converts an rgb string format to a tuple of float (used by matplotlib format).
 
     Parameters
     ----------
@@ -100,9 +98,7 @@ def convert_str_color_to_plt_format(txt: str) -> list[float]:
 
 def define_style(palette: dict[str, Any]) -> dict[str, Any]:
     """
-    the define_style function is a function that uses a palette
-    to define the different styles used in the different outputs
-    of Shapash
+    Define the styles used in the different outputs of Shapash from a palette.
 
     Parameters
     ----------
@@ -182,7 +178,7 @@ def define_style(palette: dict[str, Any]) -> dict[str, Any]:
 
 def get_palette(palette_name: str | None) -> dict[str, Any]:
     """
-    Returns a specific palette linked to the input palette_name
+    Returns a specific palette linked to the input palette_name.
 
     Parameters
     ----------

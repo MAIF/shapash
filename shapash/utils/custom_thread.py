@@ -1,6 +1,4 @@
-"""
-Override threading custom module
-"""
+"""Override threading custom module."""
 
 import sys
 import threading
@@ -41,7 +39,7 @@ class CustomThread(threading.Thread):
         self.on_kill = on_kill
 
     def start(self) -> None:
-        """Starts the thread"""
+        """Starts the thread."""
         self.__run_backup = self.run
         object.__setattr__(self, "run", self.__run)
         threading.Thread.start(self)
@@ -52,27 +50,21 @@ class CustomThread(threading.Thread):
         object.__setattr__(self, "run", self.__run_backup)
 
     def globaltrace(self, frame: FrameType, event: str, arg: Any) -> TraceCallback | None:
-        """
-        Track the global trace
-        """
+        """Track the global trace."""
         if event == "call":
             return self.localtrace
         else:
             return None
 
     def localtrace(self, frame: FrameType, event: str, arg: Any) -> TraceCallback:
-        """
-        Track the local trace
-        """
+        """Track the local trace."""
         if self.killed:
             if event == "line":
                 raise SystemExit()
         return self.localtrace
 
     def kill(self) -> None:
-        """
-        Kill the current Thread
-        """
+        """Kill the current Thread."""
         if self.on_kill is not None:
             self.on_kill()
         self.killed = True

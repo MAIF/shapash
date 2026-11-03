@@ -68,8 +68,9 @@ class WordImportanceComponent(WebappComponent):
         self._theme = theme
 
     def layout(self, ctx) -> html.Div:
-        """Build the controls + graph. DOM ids are the pre-extraction literals (no ``self.id`` prefix)
-        so existing layout tests keep matching — these ids were never shared with any other panel.
+        """Build the controls + graph.
+
+        DOM ids are the pre-extraction literals (no ``self.id`` prefix) so existing layout tests keep matching — these ids were never shared with any other panel.
         """
         explanation = ctx.explanation
         label_names = explanation.label_names or [str(i) for i in range(explanation.n_classes)]

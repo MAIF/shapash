@@ -1,5 +1,6 @@
 """
-Webapp launch script
+Webapp launch script.
+
 Example of how to launch the webapp from an explainer, on the house prices dataset.
 
 Usage:

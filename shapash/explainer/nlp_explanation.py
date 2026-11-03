@@ -442,7 +442,7 @@ class NlpExplanation:
     )
 
     def relabelled(self, texts: pd.Series, y_true: pd.Series | None = None) -> NlpExplanation:
-        """This artifact's computed payload, carried onto another caller's index and ground truth.
+        """Return this artifact's computed payload, carried onto another caller's index and ground truth.
 
         Contributions are positional, so an artifact computed for one caller is valid for any other
         caller passing the same texts in the same order, whatever index they carry. That is what
