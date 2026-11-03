@@ -1,8 +1,13 @@
 from typing import Any
 
 import pandas as pd
-from tabicl.shap import get_shap_values
 
+try:
+    from tabicl.shap import get_shap_values
+except ImportError:
+    raise ImportError(
+        "tabicl.shap is not installed. Please install it to use the Tabicl backend. In your terminal, run 'pip install tabicl[shap]'"
+    ) from None
 from shapash.backend import BaseBackend
 
 
@@ -28,7 +33,7 @@ class TabiclBackend(BaseBackend):
         Args:
             x: Input data to explain.
 
-        Returns:
+        Return:
             A dictionary containing the computed contributions.
         """
         feature_names = list(x.columns)
