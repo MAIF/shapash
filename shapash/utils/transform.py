@@ -1,6 +1,4 @@
-"""
-Transform Module
-"""
+"""Transform Module."""
 
 import re
 from typing import Any, Literal, TypeAlias
@@ -64,7 +62,6 @@ def inverse_transform(x_init: pd.DataFrame, preprocessing: Preprocessing = None)
     pandas.DataFrame
         The dataframe before preprocessing.
     """
-
     if preprocessing is None:
         return x_init
     else:
@@ -117,7 +114,6 @@ def apply_preprocessing(x_init: pd.DataFrame, model: Any, preprocessing: Preproc
     pandas.DataFrame
         The dataframe after preprocessing.
     """
-
     if preprocessing is None:
         return x_init
     else:
@@ -156,12 +152,13 @@ def preprocessing_tolist(preprocess: Preprocessing) -> list[Any]:
 def check_transformers(list_encoding: list[Any]) -> tuple[bool, bool]:
     """
     Check that all transformation are supported.
-        - a single category encoders transformer
-        - a single columns transformers
-        - list of multiple category encoder with optional (dict, list of dict)
-        - list with a single transformer with optional (dict, list of dict)
-        - dict
-        - list of dict
+
+    - a single category encoders transformer
+    - a single columns transformers
+    - list of multiple category encoder with optional (dict, list of dict)
+    - list with a single transformer with optional (dict, list of dict)
+    - dict
+    - list of dict
 
     If a dict is used, the dict must contain, a col, a mapping and a data_type.
     Example :
@@ -181,7 +178,6 @@ def check_transformers(list_encoding: list[Any]) -> tuple[bool, bool]:
             are used, respectively.
 
     """
-
     use_ct = False
     use_ce = False
 
@@ -286,9 +282,10 @@ def adapt_contributions(
     case: Literal["classification", "regression"], contributions: ContributionData
 ) -> ContributionData | list[ContributionData]:
     """
-    If _case is "classification" and contributions a np.array or pd.DataFrame
-    this function transform contributions matrix in a list of 2 contributions
-    matrices: Opposite contributions and contributions matrices.
+    Turn a binary classification contributions matrix into a list of 2 matrices.
+
+    If _case is "classification" and contributions is a np.array or pd.DataFrame,
+    the result holds the opposite contributions and the contributions matrices.
 
     Parameters
     ----------
@@ -393,7 +390,7 @@ def get_features_transform_mapping(
 
 def handle_categorical_missing(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Replace missing values for categorical columns
+    Replace missing values for categorical columns.
 
     Parameters
     ----------

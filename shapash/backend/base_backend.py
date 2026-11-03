@@ -12,6 +12,7 @@ from shapash.utils.utils import choose_state
 
 class BaseBackend(Backend):
     """``BaseBackend`` is the base class for all tabular backends.
+
     All tabular explainability implementations should extend this abstract class
     and implement the methods marked as abstract.
     """
@@ -66,6 +67,7 @@ class BaseBackend(Backend):
     def run_explainer(self, x: pd.DataFrame) -> dict:
         """
         Computes local contributions.
+
         Must be implemented by a child class
 
         Parameters
@@ -85,8 +87,7 @@ class BaseBackend(Backend):
     def get_local_contributions(
         self, x: pd.DataFrame, explain_data: Any, subset: list[int] | None = None
     ) -> pd.DataFrame | list[pd.DataFrame]:
-        """Get local contributions using the explainer data computed in the `run_explainer`
-        method.
+        """Get local contributions using the explainer data computed in the `run_explainer` method.
 
         It applies some aggregations and transformations to the result of the `run_explainer` method
         if needed. For example, if there are some one-hot-encoded columns, it automatically checks
@@ -132,8 +133,7 @@ class BaseBackend(Backend):
         subset: list[int] | None = None,
         norm: int = 1,
     ) -> pd.Series | list[pd.Series]:
-        """Get global contributions using the explainer data computed in the `run_explainer`
-        method.
+        """Get global contributions using the explainer data computed in the `run_explainer` method.
 
         Parameters
         ----------
@@ -163,8 +163,7 @@ class BaseBackend(Backend):
         contributions: pd.DataFrame | np.ndarray | list[pd.DataFrame] | list[np.ndarray],
     ) -> pd.DataFrame | list[pd.DataFrame]:
         """
-        This function allows to format and aggregate contributions in the right format
-        (pd.DataFrame or list of pd.DataFrame).
+        Format and aggregate contributions as a pd.DataFrame or a list of pd.DataFrame.
 
         If a preprocessing exists, it also uses it to change the contributions if needed.
 

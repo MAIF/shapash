@@ -1,6 +1,4 @@
-"""
-Smart State Module
-"""
+"""Smart State Module."""
 
 from typing import Any, Literal
 
@@ -25,13 +23,15 @@ from shapash.manipulation.summarize import compute_features_import, group_contri
 
 class SmartState:
     """
-    State pattern attached to SmartExplainer. This is the base class that only handles matrices
-    of local contributions. The multi-class case is tackled in SmartMultiState.
+    State pattern attached to SmartExplainer.
+
+    This is the base class that only handles matrices of local contributions. The multi-class case
+    is tackled in SmartMultiState.
     """
 
     def validate_contributions(self, contributions: np.ndarray | pd.DataFrame, x_init: pd.DataFrame) -> pd.DataFrame:
         """
-        Check type of contributions and transform into pd.Dataframe if necessary
+        Check type of contributions and transform into pd.Dataframe if necessary.
 
         Parameters
         ----------
@@ -91,6 +91,7 @@ class SmartState:
             Prediction set.
         features_names : bool, optional (default: True)
             Whether to check that contributions and x_init have the same feature names.
+
         Returns
         -------
         bool
@@ -154,9 +155,7 @@ class SmartState:
 
     def hide_contributions(self, var_dict: pd.DataFrame, features_list: list[int]) -> pd.DataFrame:
         """
-        Returns Boolean dataframe with True/False depending if the
-        feature is present or not in the list of
-        feature to hide.
+        Return a boolean dataframe that is True where the feature is not in the features to hide.
 
         Parameters
         ----------
@@ -175,8 +174,7 @@ class SmartState:
 
     def cap_contributions(self, s_contrib: pd.DataFrame, threshold: float = 0.1) -> pd.DataFrame:
         """
-        Compute a mask indicating where the input matrix
-        has values above a given threshold in absolute value.
+        Compute a mask indicating where the input matrix has values above a given threshold in absolute value.
 
         Parameters
         ----------
@@ -194,9 +192,7 @@ class SmartState:
 
     def sign_contributions(self, dataframe: pd.DataFrame, positive: bool = True) -> pd.DataFrame:
         """
-        Returns Boolean values depending on
-        the signs of local contributions
-        stored in dataframe and on the positive parameter.
+        Return a boolean mask of the local contributions that have the sign given by positive.
 
         Parameters
         ----------
@@ -216,6 +212,7 @@ class SmartState:
     def cutoff_contributions(self, dataframe: pd.DataFrame, max_contrib: int) -> pd.DataFrame:
         """
         The function cutoff_contributions computes a mask on a sorted contribution matrix.
+
         It outputs True everywhere the contribution is in the top-k,
         k being defined as an option by the user.
 
@@ -321,9 +318,10 @@ class SmartState:
 
     def compute_features_import(self, contributions: pd.DataFrame, norm: int | float = 1) -> pd.Series:
         """
-        Compute a relative features importance, sum of absolute values
-        of the contributions for each
-        features importance compute in base 100
+        Compute the relative features importance, in base 100.
+
+        The importance of a feature is the sum of the absolute values of its contributions.
+
         Parameters
         ----------
         contributions : pd.DataFrame
