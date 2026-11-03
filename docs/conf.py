@@ -13,8 +13,8 @@ import shapash
 # -- Project information -----------------------------------------------------
 
 project = "Shapash"
-copyright = f"2020-{date.today().year}, Maif"
-author = "Maif"
+copyright = f"2020-{date.today().year}, MAIF"
+author = "MAIF"
 version = shapash.__version__
 release = shapash.__version__
 
@@ -81,7 +81,7 @@ suppress_warnings = ["mystnb.unknown_mime_type"]
 html_theme = "pydata_sphinx_theme"
 html_title = f"Shapash {release}"
 html_logo = "_static/shapash-resize.png"
-html_favicon = "assets/images/logos/favicon.png"
+html_favicon = "../shapash/webapp/assets/favicon.ico"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 # The reST source of a page is of little use to readers; the API pages link to the Python source.
