@@ -19,49 +19,60 @@ def plot_compacity(
     height: int = 600,
     width: int = 900,
 ) -> go.Figure:
-    """
-        The Compacity_plot has the main objective of determining if a small subset of features \
-        can be extracted to provide a simpler explanation of the model. \
-        indeed, having too many features might negatively affect the model explainability and make it harder to undersand.
-        The following two plots are proposed:
-        * We identify the minimum number of required features (based on the top contribution values) \
-        that well approximate the model, and thus, provide accurate explanations.
-        In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*) \
-        to the one obtained with all features.
-        * Conversely, we determine how close we get to the output with all features by using only a subset of them.
-        *Distance definition*
-        * For regression:
-        .. math::
-            distance = \\frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
-        * For classification:
-        .. math::
-            distance = |output_{allFeatures} - output_{currentFeatures}|
-        Parameters
-        ----------
-        features_needed: list[int]
-            Minimum number of features needed to approximate the model output for each instance.
-        distance_reached: numpy.ndarray
-            Distance between the full model output and the output from the selected features for each instance.
-        style_dict: dict[str, Any]
-            the different styles used in the different outputs of Shapash
-        approx: float, optional
-            How close we want to be from model with all features, by default 0.9 (=90%)
-        nb_features: int, optional
-            Number of features used, by default 5
-        file_name: str | None, optional
-            Specify the save path of html files. If it is not provided, no file will be saved, by default None
-        auto_open: bool, optional
-            open automatically the plot, by default False
-        height: int, optional
-            height of the plot, by default 600
-        width:  int, optional
-            width of the plot, by default 900
-        Returns
-        -------
-        go.Figure
-            Compacity plot.
-        """
+    r"""
+    Plot how many features are needed to approximate the model output.
 
+    The Compacity_plot has the main objective of determining if a small subset of features
+    can be extracted to provide a simpler explanation of the model.
+    Indeed, having too many features might negatively affect the model explainability and make it harder to understand.
+    The following two plots are proposed:
+
+    * We identify the minimum number of required features (based on the top contribution values)
+      that well approximate the model, and thus, provide accurate explanations.
+      In particular, the prediction with the chosen subset needs to be close enough (*see distance definition below*)
+      to the one obtained with all features.
+    * Conversely, we determine how close we get to the output with all features by using only a subset of them.
+
+    *Distance definition*
+
+    * For regression:
+
+      .. math::
+
+          distance = \frac{|output_{allFeatures} - output_{currentFeatures}|}{|output_{allFeatures}|}
+
+    * For classification:
+
+      .. math::
+
+          distance = |output_{allFeatures} - output_{currentFeatures}|
+
+    Parameters
+    ----------
+    features_needed: list[int]
+        Minimum number of features needed to approximate the model output for each instance.
+    distance_reached: numpy.ndarray
+        Distance between the full model output and the output from the selected features for each instance.
+    style_dict: dict[str, Any]
+        the different styles used in the different outputs of Shapash
+    approx: float, optional
+        How close we want to be from model with all features, by default 0.9 (=90%)
+    nb_features: int, optional
+        Number of features used, by default 5
+    file_name: str | None, optional
+        Specify the save path of html files. If it is not provided, no file will be saved, by default None
+    auto_open: bool, optional
+        open automatically the plot, by default False
+    height: int, optional
+        height of the plot, by default 600
+    width:  int, optional
+        width of the plot, by default 900
+
+    Returns
+    -------
+    go.Figure
+        Compacity plot.
+    """
     # Make plots
     fig = make_subplots(
         rows=1,

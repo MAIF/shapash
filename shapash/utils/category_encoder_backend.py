@@ -1,6 +1,4 @@
-"""
-Category_encoder
-"""
+"""Category_encoder."""
 
 from typing import Any, Literal, TypeAlias
 
@@ -201,6 +199,7 @@ def calc_inv_contrib_ce(
 ) -> pd.DataFrame:
     """
     Reversed contribution when category encoder and/or a dict is used.
+
     If category encoder create multiple columns, we use the mapping to find which contribution columns to sum.
     Else we return the contribution without aggregate.
 

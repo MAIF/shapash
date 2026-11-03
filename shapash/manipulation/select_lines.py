@@ -1,6 +1,4 @@
-"""
-Select Lines Module
-"""
+"""Select Lines Module."""
 
 from typing import Any, Literal
 
@@ -10,14 +8,15 @@ from pandas.core.common import flatten
 
 def select_lines(dataframe: pd.DataFrame, condition: str | None = None) -> list[Any]:
     """
-    Select lines of a pandas.DataFrame based
-    on a boolean condition.
+    Select lines of a pandas.DataFrame based on a boolean condition.
+
     Parameters
     ----------
     dataframe : pandas.DataFrame
         Input dataframe used for the query.
     condition : str, optional
         A boolean condition expressed as a string. If None or empty, no lines are selected.
+
     Returns
     -------
     list[Any]

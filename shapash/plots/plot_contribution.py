@@ -26,7 +26,6 @@ def _compute_density_polygon(
     Returns ``None`` when there is not enough information to compute a
     meaningful density shape.
     """
-
     if len(x_values) <= 2:
         return None
 
@@ -72,10 +71,7 @@ def _add_density_trace(
     style_dict: dict[str, Any],
     include_na_for_categories: bool = False,
 ) -> None:
-    """
-    Add a density/volumetry background trace to an existing figure.
-    """
-
+    """Add a density/volumetry background trace to an existing figure."""
     density_polygon = _compute_density_polygon(
         x_values=x_values,
         y_values=y_values,
@@ -104,7 +100,6 @@ def _build_secondary_y_scatter_figure(scatter_fig: go.Figure, y_values: pd.Serie
     Filled density traces are attached to the primary axis, while marker traces
     are attached to the overlaid secondary axis.
     """
-
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     for trace in scatter_fig.data:
         if trace.fill == "toself":
@@ -146,10 +141,7 @@ def plot_interactions_scatter(
     cmax: float | None = None,
     x_values_hover: pd.DataFrame | None = None,
 ) -> go.Figure:
-    """
-    Generate a scatter-plot figure for interactions.
-    """
-
+    """Generate a scatter-plot figure for interactions."""
     if x_values_hover is None:
         x_values_hover = x_values
 
@@ -212,10 +204,7 @@ def plot_interactions_violin(
     cmin: float | None = None,
     cmax: float | None = None,
 ) -> go.Figure:
-    """
-    Generate a violin-plot figure for interactions with point dispersion.
-    """
-
+    """Generate a violin-plot figure for interactions with point dispersion."""
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     uniq_l = list(pd.unique(x_values.values.flatten()))
@@ -345,10 +334,7 @@ def update_interactions_fig(
     cmin: float | None = None,
     cmax: float | None = None,
 ) -> go.Figure:
-    """
-    Update the final layout for interactions figures.
-    """
-
+    """Update the final layout for interactions figures."""
     if fig.data[-1]["showlegend"] is False:
         fig.layout.coloraxis.colorscale = col_scale if col_scale is not None else style_dict["interactions_col_scale"]
         if cmin is not None and cmax is not None:
@@ -420,6 +406,7 @@ def plot_scatter(
 ) -> go.Figure:
     """
     Scatter plot of one feature contribution across the prediction set.
+
     Parameters
     ----------
     feature_values : pd.DataFrame
@@ -618,6 +605,7 @@ def plot_violin(
 ) -> go.Figure:
     """
     Violin plot of one feature contribution across the prediction set.
+
     Parameters
     ----------
     feature_values : pd.DataFrame
@@ -872,8 +860,8 @@ def _update_contributions_fig(
     style_dict: dict[str, Any],
 ) -> None:
     """
-    Function used by both violin and scatter methods for contributions plots in order to
-    update the layout of the (already) created plotly figure.
+    Update the layout of an already created contributions plot, violin or scatter.
+
     Parameters
     ----------
     fig : go.Figure
@@ -975,6 +963,7 @@ def _update_contributions_fig(
 def _update_xaxis_labels(fig: go.Figure, xs: list[Any], zoom: bool = False) -> None:
     """
     Updates the x-axis labels of a Plotly figure based on label length and zoom status.
+
     Shortens labels if they are longer than a specified threshold.
 
     Parameters
@@ -986,7 +975,6 @@ def _update_xaxis_labels(fig: go.Figure, xs: list[Any], zoom: bool = False) -> N
     zoom : bool, default=False
         Whether zoom is enabled.
     """
-
     # Define common x-axis parameters
     params = {"tickvals": list(range(len(xs))), "tickmode": "array", "dtick": 1, "range": [-0.6, len(xs) - 0.4]}
 

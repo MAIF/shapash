@@ -87,7 +87,7 @@ def check_label_dict(
     classes: list[int | float | str] | None = None,
 ) -> None:
     """
-    Check if label_dict and model _classes match
+    Check if label_dict and model _classes match.
 
     Parameters
     ----------
@@ -234,7 +234,7 @@ def check_consistency_model_features(
     features_groups: dict[str, list[str]] | None = None,
 ) -> None:
     """
-    Check the matching between attributes, features names are same, or include
+    Check the matching between attributes, features names are same, or include.
 
     Parameters
     ----------
@@ -337,8 +337,9 @@ def check_preprocessing_options(
     list_preprocessing: list[Any] | None = None,
 ) -> dict[str, Any] | None:
     """
-    Check if preprocessing for ColumnTransformer doesn't have "drop" option otherwise compute several
-    informations to adapt the SmartPredictor's actions
+    Check that a ColumnTransformer preprocessing has no "drop" option.
+
+    Otherwise, compute the information needed to adapt the SmartPredictor's actions.
 
     Parameters
     ----------
@@ -350,6 +351,7 @@ def check_preprocessing_options(
         Dictionary mapping technical feature names to domain names.
     list_preprocessing: list[Any] or None, optional
         list containing all preprocessing.
+
     Returns
     -------
     dict[str, Any] or None
@@ -394,7 +396,6 @@ def check_consistency_model_label(columns_dict: dict[Any, Any], label_dict: dict
     label_dict: dict[Any, Any] or None, optional
         Mapping of model label values to domain names.
     """
-
     if label_dict is not None:
         if not all(feat in columns_dict for feat in label_dict):
             raise ValueError("All features of label_dict must be in model")
@@ -404,8 +405,7 @@ def check_postprocessing(
     x: pd.DataFrame | dict[str, str], postprocessing: dict[str, dict[str, Any]] | None = None
 ) -> None:
     """
-    Check that postprocessing parameter has good attributes matching with x dataset or with dict of types of
-    the expected data set x
+    Check that the postprocessing attributes match the x dataset or the dict of its expected types.
 
     Parameters
     ----------
@@ -473,6 +473,7 @@ def check_features_name(
 ) -> list[int]:
     """
     Convert a list of feature names (string) or features ids into features ids.
+
     Features names can be part of columns_dict or features_dict.
 
     Parameters

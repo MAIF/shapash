@@ -27,8 +27,7 @@ def plot_distribution(
     auto_open: bool = False,
 ) -> go.Figure | None:
     """
-    Generate a Plotly figure displaying the univariate distribution of a feature
-    (continuous or categorical) in the dataset.
+    Plot the univariate distribution of a continuous or categorical feature in the dataset.
 
     For categorical features with too many unique categories, the least frequent
     categories are grouped into a new 'Other' category to ensure the plot remains
@@ -74,7 +73,6 @@ def plot_distribution(
         A Plotly figure object representing the distribution, or None when a
         continuous feature has fewer than five data points.
     """
-
     if col not in df_all.columns:
         raise ValueError(f"Column '{col}' not found in the input DataFrame.")
 

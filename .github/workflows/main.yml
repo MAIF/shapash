@@ -47,6 +47,27 @@ jobs:
       run: make format
     - name: Check type annotations
       run: make typecheck
+
+  # Not a dependency of the test jobs: run zizmor online audits on the workflows.
+  workflow_audit:
+    name: Workflow Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - name: Git checkout
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      with:
+        persist-credentials: false
+    - name: Set up uv and Python 3.11
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+      with:
+        python-version: "3.11"
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: uv.lock
+    # Only the `dev` group, without the project: zizmor stays pinned by uv.lock.
+    - name: Install zizmor
+      run: uv sync --locked --only-group dev
     - name: Audit workflows
       env:
         GH_TOKEN: ${{ github.token }}  # enables zizmor's online audits (e.g. known-vulnerable actions)
