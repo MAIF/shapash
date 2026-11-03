@@ -23,6 +23,7 @@ from dash.exceptions import PreventUpdate
 from flask import Flask
 
 from shapash.manipulation.mask import compute_mask
+from shapash.plots.plot_contribution import CLASS_MARKER_SYMBOLS
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.callbacks import (
     adjust_figure_layout,
@@ -833,6 +834,25 @@ class SmartApp:
         """
         Describe the app skeleton (bootstrap grid) and initialize components containers
         """
+        # The markers shape ON/OFF is only useful when class markers can be drawn
+        markers_available = (
+            self.explainer._case == "classification"
+            and self.explainer.y_target is not None
+            and len(cast(list[Any], self.explainer._classes)) <= len(CLASS_MARKER_SYMBOLS)
+        )
+        markers_shape_style = {
+            "padding": "10px 0 0 8px",
+            "borderLeft": "1px solid rgba(0,0,0,.12)",
+            "backgroundColor": "white",
+        }
+        if not markers_available:
+            markers_shape_style["display"] = "none"
+        markers_button_style = {
+            "font-size": "calc(0.3rem + 0.5vw)",
+            "line-height": "1.0",
+            "padding": "0.1vw 0.4vw",
+        }
+
         self.skeleton["navbar"] = dbc.Container(
             [
                 dbc.Row(
@@ -1487,8 +1507,55 @@ class SmartApp:
                                     [
                                         html.Div(
                                             [
-                                                # --- GRAPH + bouton fullscreen Shapash ---
-                                                *self.draw_component("graph", "feature_selector"),
+                                                # Main layout: graph left, controls right (as in the clusters card)
+                                                dbc.Row(
+                                                    [
+                                                        dbc.Col(
+                                                            # --- GRAPH + bouton fullscreen Shapash ---
+                                                            self.draw_component("graph", "feature_selector"),
+                                                            width=10 if markers_available else 12,
+                                                        ),
+                                                        # --- MARKERS SHAPE ON/OFF ---
+                                                        dbc.Col(
+                                                            html.Div(
+                                                                [
+                                                                    html.Div(
+                                                                        "Markers shape",
+                                                                        className="text-muted",
+                                                                        style={
+                                                                            "fontSize": "calc(0.3rem + 0.5vw)",
+                                                                            "marginBottom": "4px",
+                                                                        },
+                                                                    ),
+                                                                    dbc.ButtonGroup(
+                                                                        [
+                                                                            dbc.Button(
+                                                                                "ON",
+                                                                                id="toggle_markers_on",
+                                                                                size="sm",
+                                                                                outline=True,
+                                                                                color="warning",
+                                                                                style=markers_button_style,
+                                                                            ),
+                                                                            dbc.Button(
+                                                                                "OFF",
+                                                                                id="toggle_markers_off",
+                                                                                size="sm",
+                                                                                color="warning",
+                                                                                style=markers_button_style,
+                                                                            ),
+                                                                        ],
+                                                                        size="sm",
+                                                                    ),
+                                                                    dcc.Store(id="markers_shape_store", data=False),
+                                                                ],
+                                                            ),
+                                                            width=2,
+                                                            style=markers_shape_style,
+                                                        ),
+                                                    ],
+                                                    className="g-0",
+                                                ),
                                                 # --- BOUTON EXPLICATION EN OVERLAY ---
                                                 html.Div(
                                                     [
@@ -2330,6 +2397,7 @@ class SmartApp:
                 Input("dataset", "data"),
                 Input("select_label", "value"),
                 Input("ember_feature_selector", "n_clicks"),
+                Input("markers_shape_store", "data"),
             ],
             [
                 State("points", "value"),
@@ -2337,7 +2405,7 @@ class SmartApp:
                 State("global_feature_importance", "figure"),
             ],
         )
-        def update_feature_selector(feature, data, label, click_zoom, points, violin, gfi_figure):
+        def update_feature_selector(feature, data, label, click_zoom, markers_shape, points, violin, gfi_figure):
             """
             Update feature plot according to label, data,
             selected feature on features importance graph,
@@ -2347,6 +2415,7 @@ class SmartApp:
             data: dataset
             label: selected label
             click_zoom: click on zoom button
+            markers_shape: state of the markers shape ON/OFF
             points: points value in setting
             violin: violin value in setting
             gfi_figure: figure of Features Importance graph
@@ -2375,6 +2444,7 @@ class SmartApp:
                 violin_maxf=violin,
                 max_points=points,
                 zoom=zoom_active,
+                class_markers=bool(markers_shape),
             )
 
             fs_figure["layout"].clickmode = "event+select"
@@ -2813,6 +2883,26 @@ class SmartApp:
             """
             points_visible = bool(points_visible)
             return (not points_visible, points_visible)
+
+        @app.callback(
+            Output("markers_shape_store", "data"),
+            Input("toggle_markers_on", "n_clicks"),
+            Input("toggle_markers_off", "n_clicks"),
+            prevent_initial_call=True,
+        )
+        def update_markers_shape_store(_on_clicks: int | None, _off_clicks: int | None):
+            """Store the state of the markers shape ON/OFF: True when ON was clicked last."""
+            return dash.callback_context.triggered[0]["prop_id"] == "toggle_markers_on.n_clicks"
+
+        @app.callback(
+            Output("toggle_markers_on", "outline"),
+            Output("toggle_markers_off", "outline"),
+            Input("markers_shape_store", "data"),
+        )
+        def sync_markers_toggle(markers_shape: bool):
+            """Fill the active ON/OFF button and outline the other one."""
+            markers_shape = bool(markers_shape)
+            return (not markers_shape, markers_shape)
 
         @app.callback(
             Output("clusters", "figure"),

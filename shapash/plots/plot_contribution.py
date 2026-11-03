@@ -14,6 +14,31 @@ from shapash.webapp.utils.utils import round_to_k
 
 NAN_PLACEHOLDER_K = 0.2
 
+# classification only: One marker symbol per class
+CLASS_MARKER_SYMBOLS = ["circle", "square", "triangle-up", "diamond", "cross", "star"]
+
+def get_class_marker_symbols(y_target: pd.Series, classes: list[Any] | None) -> pd.Series | None:
+    """Map each point's true class (y_target) to a marker symbol.
+
+    Parameters
+    ----------
+    y_target : pd.Series
+        True class of each point.
+    classes : list or None
+        Ordered list of the model classes.
+
+    Returns
+    -------
+    pd.Series or None
+        Marker symbol of each point, or None when markers should not be used
+        (no classes, or more classes than available symbols).
+        Note that missing or unknown classes fall back to the default "circle" symbol.
+    """
+    if not classes or len(classes) > len(CLASS_MARKER_SYMBOLS):
+        return None
+    mapping = dict(zip(classes, CLASS_MARKER_SYMBOLS, strict=False))
+    return y_target.map(lambda value: mapping.get(value, CLASS_MARKER_SYMBOLS[0]))
+
 
 def _compute_density_polygon(
     x_values: pd.Series,
@@ -417,6 +442,7 @@ def plot_scatter(
     file_name: str | None = None,
     auto_open: bool = False,
     zoom: bool = False,
+    marker_symbols: pd.Series | None = None,
 ) -> go.Figure:
     """
     Scatter plot of one feature contribution across the prediction set.
@@ -463,6 +489,9 @@ def plot_scatter(
         open automatically the plot
     zoom: bool, default=False
         graph is currently zoomed
+    marker_symbols: pd.Series or None, optional
+        Marker symbol of each point (one symbol per y_target class, classification only).
+        If None, the default markers are used.
 
     Returns
     -------
@@ -478,6 +507,8 @@ def plot_scatter(
         pred = pred.loc[feature_values.index]
     if proba_values is not None:
         proba_values = proba_values.loc[feature_values.index]
+    if marker_symbols is not None:
+        marker_symbols = marker_symbols.loc[feature_values.index]
 
     # add break line to X label if necessary
     args = (max_len_by_row, 120)
@@ -534,7 +565,7 @@ def plot_scatter(
 
     nan_mask_arr = pd.isna(feature_values.iloc[:, 0]).to_numpy()
     has_nan_numeric = bool(nan_mask_arr.any()) and feature_values.iloc[:, 0].dtype.kind in "biufc"
-    marker = None
+    marker = None if marker_symbols is None else {"symbol": marker_symbols.tolist()}
     if has_nan_numeric:
         non_nan_arr = feature_values_array[~nan_mask_arr].astype(float)
         if non_nan_arr.size > 0:
@@ -544,7 +575,8 @@ def plot_scatter(
         else:
             nan_x = 0.0
         feature_values_array = np.where(nan_mask_arr, nan_x, feature_values_array)
-        marker = {"symbol": np.where(nan_mask_arr, "x", "circle").tolist()}
+        default_symbols = "circle" if marker_symbols is None else marker_symbols
+        marker = {"symbol": np.where(nan_mask_arr, "x", default_symbols).tolist()}
 
     fig.add_scatter(
         x=feature_values_array,
@@ -615,6 +647,7 @@ def plot_violin(
     file_name: str | None = None,
     auto_open: bool = False,
     zoom: bool = False,
+    marker_symbols: pd.Series | None = None,
 ) -> go.Figure:
     """
     Violin plot of one feature contribution across the prediction set.
@@ -659,6 +692,9 @@ def plot_violin(
         open automatically the plot
     zoom: bool, default=False
         graph is currently zoomed
+    marker_symbols: pd.Series or None, optional
+        Marker symbol of each point (one symbol per y_target class, classification only).
+        If None, the default markers are used.
 
     Returns
     -------
@@ -742,6 +778,7 @@ def plot_violin(
                 line_color=style_dict["violin_area_classif"][0],
                 secondary_y=True,
                 side="negative",
+                marker_symbols=marker_symbols,
             )
 
             # Positive case
@@ -762,6 +799,7 @@ def plot_violin(
                 line_color=style_dict["violin_area_classif"][1],
                 secondary_y=True,
                 side="positive",
+                marker_symbols=marker_symbols,
             )
         else:
             # General case
@@ -782,6 +820,7 @@ def plot_violin(
                 line_color=style_dict["violin_default"],
                 secondary_y=True,
                 side="both",
+                marker_symbols=marker_symbols,
             )
 
     if colorpoints is not None:
@@ -1166,6 +1205,7 @@ def _add_violin_and_scatter(
     line_color: str,
     secondary_y: bool = True,
     side: Literal["both", "negative", "positive"] = "both",
+    marker_symbols: pd.Series | None = None,
 ) -> None:
     """Adds a Violin trace and a Scatter trace based on specified conditions."""
     y = contributions.loc[feature_cond].iloc[:, 0].values
@@ -1192,6 +1232,9 @@ def _add_violin_and_scatter(
                 "cmin": cmin,
                 "cmax": cmax,
             }
+        if marker_symbols is not None:
+            marker = marker or {}
+            marker["symbol"] = marker_symbols.loc[contributions.loc[feature_cond].index].tolist()
 
         _add_scatter_trace(fig, x_jittered, y, c, marker, hovertext, hovertemplate, customdata, secondary_y)
 
