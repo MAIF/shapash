@@ -1063,7 +1063,6 @@ class SmartExplainer:
         ...     nb_top_interactions=5,
         ... )
         """
-
         if self.model is None:
             raise ValueError(
                 "generate_report() requires a model; use plots and to_pandas() for precomputed explanations."

@@ -113,7 +113,7 @@ class NeuralShap:
                 raise NeuralShapUnsupportedError(str(error)) from error
             finally:
                 # Deep SHAP restores this global callback only on successful calls.
-                execute.record_gradient = record_gradient
+                execute.record_gradient = record_gradient  # type: ignore[attr-defined]
             return
         torch = import_optional_module("torch")
         states = [(module, module.training) for module in self.model.modules()]
