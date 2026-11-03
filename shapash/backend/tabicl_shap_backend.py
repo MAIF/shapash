@@ -4,10 +4,10 @@ import pandas as pd
 
 try:
     from tabicl.shap import get_shap_values
+
+    is_tabicl_shap_available = True
 except ImportError:
-    raise ImportError(
-        "tabicl.shap is not installed. Please install it to use the Tabicl backend. In your terminal, run 'pip install tabicl[shap]'"
-    ) from None
+    is_tabicl_shap_available = False
 from shapash.backend import BaseBackend
 
 
@@ -23,6 +23,8 @@ class TabiclBackend(BaseBackend):
         masker: pd.DataFrame | None = None,
         **kwargs: Any,
     ):
+        if not is_tabicl_shap_available:
+            raise ImportError("tabicl.shap is not installed. Install it with: pip install tabicl[shap]")
         super().__init__(model, preprocessing)
         self.masker = masker
         self.additional_params = kwargs
