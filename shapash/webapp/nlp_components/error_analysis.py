@@ -19,13 +19,14 @@ from __future__ import annotations
 
 import dash_bootstrap_components as dbc
 import numpy as np
-from dash import Input, Output, callback_context, dcc, html
+import plotly.graph_objs as go
+from dash import Dash, Input, Output, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_confusion_matrix import plot_confusion_matrix
 from shapash.plots.plot_word_importance import empty_word_figure, plot_word_importance
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import CAP_GROUND_TRUTH, WebappComponent
+from shapash.webapp.nlp_components.base import CAP_GROUND_TRUTH, AppContext, WebappComponent
 
 _NORMALIZE_OPTIONS: list[dcc.RadioItems.Options] = [
     {"label": " Counts", "value": "count"},
@@ -67,7 +68,7 @@ class ErrorAnalysisComponent(WebappComponent):
         self._cm_true_idx: np.ndarray | None = None
         self._cm_pred_idx: np.ndarray | None = None
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Build the matrix + per-cell word-importance panel, caching the matrix for callbacks."""
         explanation = ctx.explanation
         label_names = explanation.label_names or [str(i) for i in range(explanation.n_classes)]
@@ -154,7 +155,7 @@ class ErrorAnalysisComponent(WebappComponent):
             style={"height": "100%", "display": "flex", "flexDirection": "column", "overflowY": "auto"},
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire the normalize toggle, cell click/clear, and the two per-cell word charts."""
         explanation = ctx.explanation
         error_cell_store = stores["error_cell"]
@@ -172,7 +173,7 @@ class ErrorAnalysisComponent(WebappComponent):
             Output("confusion-matrix-graph", "figure"),
             Input("cm-normalize", "value"),
         )
-        def update_confusion_matrix(normalize):
+        def update_confusion_matrix(normalize: str | None) -> go.Figure:
             fig = plot_confusion_matrix(
                 cm,
                 label_names,
@@ -194,7 +195,7 @@ class ErrorAnalysisComponent(WebappComponent):
             Input(clear_btn_id, "n_clicks"),
             prevent_initial_call=True,
         )
-        def set_error_cell(click_data, _clear_clicks):
+        def set_error_cell(click_data: dict | None, _clear_clicks: int | None) -> tuple[dict | None, None]:
             trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
             if clear_btn_id in trigger:
                 return None, None
@@ -210,7 +211,7 @@ class ErrorAnalysisComponent(WebappComponent):
             Output(clear_btn_id, "style"),
             Input(error_cell_store, "data"),
         )
-        def toggle_error_cell_clear_button(error_cell):
+        def toggle_error_cell_clear_button(error_cell: dict | None) -> dict[str, str]:
             visible = {"display": "inline", "fontSize": "0.8em"}
             hidden = {"display": "none", "fontSize": "0.8em"}
             return visible if error_cell else hidden
@@ -222,7 +223,7 @@ class ErrorAnalysisComponent(WebappComponent):
             Output("error-cell-caption", "children"),
             Input(error_cell_store, "data"),
         )
-        def update_error_word_charts(error_cell):
+        def update_error_word_charts(error_cell: dict | None) -> tuple[go.Figure, go.Figure, str]:
             if not error_cell:
                 empty = empty_word_figure("Click a confusion-matrix cell to see the words behind those errors.")
                 return empty, empty, "Click a cell to see the words behind those errors."

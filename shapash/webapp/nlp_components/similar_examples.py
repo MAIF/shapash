@@ -23,13 +23,19 @@ prediction-only pipeline).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import dash_bootstrap_components as dbc
-from dash import ALL, Input, Output, State, callback_context, dcc, html
+from dash import ALL, Dash, Input, Output, State, callback_context, dcc, html
 from dash.development.base_component import Component
 from dash.exceptions import PreventUpdate
 
-from shapash.webapp.nlp_components.base import CAP_PREDICT, CAP_SIMILAR, WebappComponent
+from shapash.webapp.nlp_components.base import CAP_PREDICT, CAP_SIMILAR, AppContext, WebappComponent
 from shapash.webapp.nlp_components.datapoint import datapoint_from_contributions
+
+if TYPE_CHECKING:
+    from shapash.compute.retrieval.similar_examples import Neighbor
+    from shapash.explainer.interactive import InteractiveEngine
 
 _CARD_STYLE = {"border": "1px solid #dee2e6", "borderRadius": "4px", "padding": "12px", "height": "100%"}
 _DEFAULT_TOP_K = 5
@@ -47,12 +53,12 @@ class SimilarExamplesComponent(WebappComponent):
     # Needs predict too: the Inspect button re-explains a chosen example via engine.explain_text.
     requires = frozenset({CAP_SIMILAR, CAP_PREDICT})
 
-    def _layer_name(self, engine) -> str | None:
+    def _layer_name(self, engine: InteractiveEngine | None) -> str | None:
         """The similarity layer the retriever compares in, for a transparency caption (or ``None``)."""
         retriever = getattr(engine, "_retriever", None)
         return getattr(retriever, "layer", None) if retriever is not None else None
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Return the panel: a top-k control plus a results area fed by the current datapoint."""
         engine = ctx.engine
         layer = self._layer_name(engine)
@@ -121,9 +127,9 @@ class SimilarExamplesComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Recompute neighbours on selection/mode/filter change; wire per-row Inspect into the current store."""
-        engine = ctx.engine
+        engine = self._engine(ctx)
         current_store = stores["current"]
 
         @app.callback(
@@ -134,7 +140,9 @@ class SimilarExamplesComponent(WebappComponent):
             Input(f"{self.id}-topk", "value"),
             Input(f"{self.id}-threshold", "value"),
         )
-        def update_similar(datapoint, mode, top_k, threshold):
+        def update_similar(
+            datapoint: dict | None, mode: str | None, top_k: int | None, threshold: float | None
+        ) -> tuple[html.Div, list[str]]:
             text = (datapoint or {}).get("text", "")
             if not text or not text.strip():
                 raise PreventUpdate
@@ -158,7 +166,7 @@ class SimilarExamplesComponent(WebappComponent):
             Output(f"{self.id}-threshold", "disabled"),
             Input(f"{self.id}-mode", "value"),
         )
-        def toggle_mode_inputs(mode):
+        def toggle_mode_inputs(mode: str | None) -> tuple[bool, bool]:
             is_threshold = mode == "threshold"
             return is_threshold, not is_threshold
 
@@ -171,7 +179,7 @@ class SimilarExamplesComponent(WebappComponent):
             State(f"{self.id}-store", "data"),
             prevent_initial_call=True,
         )
-        def inspect(n_clicks_list, neighbor_texts):
+        def inspect(n_clicks_list: list[int | None], neighbor_texts: list[str] | None) -> dict:
             if not any(n_clicks_list or []):
                 raise PreventUpdate
             triggered = callback_context.triggered_id
@@ -185,7 +193,9 @@ class SimilarExamplesComponent(WebappComponent):
             return datapoint_from_contributions(text, contributions, label)
 
 
-def _render_results(neighbors, predicted_label, component_id, shown_of=None):
+def _render_results(
+    neighbors: list[Neighbor], predicted_label: str | None, component_id: str, shown_of: int | None = None
+) -> html.Div:
     """Precede the neighbours table with an optional cap note and a same-label match-rate summary.
 
     Both sit between the filter controls and the table, since they summarize *what was filtered*
@@ -208,7 +218,7 @@ def _render_results(neighbors, predicted_label, component_id, shown_of=None):
     return html.Div(children)
 
 
-def _match_rate_caption(neighbors, predicted_label) -> str | None:
+def _match_rate_caption(neighbors: list[Neighbor], predicted_label: str | None) -> str | None:
     """``m/n (p%) share the predicted label`` over the labelled, currently displayed neighbours."""
     if predicted_label is None:
         return None
@@ -220,7 +230,7 @@ def _match_rate_caption(neighbors, predicted_label) -> str | None:
     return f'{matches}/{len(labelled)} ({pct:.0f}%) share the predicted label "{predicted_label}".'
 
 
-def _neighbors_table(neighbors, predicted_label, component_id):
+def _neighbors_table(neighbors: list[Neighbor], predicted_label: str | None, component_id: str) -> dbc.Table:
     """Render neighbours as a table with a match flag and a per-row Inspect button."""
     show_label = any(n.label is not None for n in neighbors)
     head_cells = [html.Th("Cosine")]

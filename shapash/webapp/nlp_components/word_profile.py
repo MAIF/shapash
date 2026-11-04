@@ -32,18 +32,21 @@ button costs no re-explanation — every listed sample is already in the compile
 from __future__ import annotations
 
 import dash_bootstrap_components as dbc
-from dash import ALL, Input, Output, State, callback_context, dcc, html
+import pandas as pd
+import plotly.graph_objs as go
+from dash import ALL, Dash, Input, Output, State, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.explainer.nlp_explanation import (
     WORD_AGGREGATIONS,
+    NlpExplanation,
     aggregate_word_contributions,
     rank_word_samples,
 )
 from shapash.plots.plot_word_importance import empty_word_figure
 from shapash.plots.plot_word_profile import plot_word_profile
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import WebappComponent, compose_selection, error_positions
+from shapash.webapp.nlp_components.base import AppContext, WebappComponent, compose_selection, error_positions
 from shapash.webapp.nlp_components.datapoint import pack_datapoint
 
 _CARD_STYLE = {"height": "100%", "display": "flex", "flexDirection": "column", "overflowY": "auto"}
@@ -75,7 +78,9 @@ def _truncate(text: str) -> str:
     return text if len(text) <= _TEXT_PREVIEW_CHARS else text[: _TEXT_PREVIEW_CHARS - 1] + "…"
 
 
-def _samples_table(ranked, explanation, component_id: str, show_truth: bool, theme: NlpTheme):
+def _samples_table(
+    ranked: pd.DataFrame, explanation: NlpExplanation, component_id: str, show_truth: bool, theme: NlpTheme
+) -> dbc.Table:
     """Ranked samples with their contribution, occurrence count, prediction and an Inspect button."""
     head_cells = [html.Th("Contribution"), html.Th("×", title="Occurrences of the word in this sample")]
     head_cells.append(html.Th("Predicted"))
@@ -97,7 +102,7 @@ def _samples_table(ranked, explanation, component_id: str, show_truth: bool, the
             html.Td(str(int(record.n_occurrences)), className="text-muted"),
             html.Td(str(y_pred.iloc[pos]) if y_pred is not None else "—", style={"fontSize": "0.85em"}),
         ]
-        if show_truth:
+        if show_truth and y_true is not None:
             cells.append(html.Td(str(y_true.iloc[pos]), style={"fontSize": "0.85em"}))
         cells.append(html.Td(_truncate(str(explanation.texts.iloc[pos])), style={"fontSize": "0.85em"}))
         cells.append(
@@ -138,7 +143,7 @@ class WordProfileComponent(WebappComponent):
         # a full pass over the corpus, and the sort toggle must not pay it on every click.
         self._options: dict[str, list] = {"alpha": [], "frequency": []}
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Build the panel, seeded with the corpus's single most important word so it opens full."""
         explanation = ctx.explanation
         counts = explanation.word_counts()
@@ -274,7 +279,7 @@ class WordProfileComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire the profile (word × aggregation × global selection) and each row's Inspect."""
         explanation = ctx.explanation
         current_store = stores["current"]
@@ -299,7 +304,16 @@ class WordProfileComponent(WebappComponent):
             Input(error_cell_store, "data"),
             Input(errors_only_switch, "value"),
         )
-        def update_profile(word, agg, class_idx, order, limit, selected_indices, error_cell, errors_only):
+        def update_profile(
+            word: str | None,
+            agg: str | None,
+            class_idx: int | None,
+            order: str | None,
+            limit: int | None,
+            selected_indices: list[int] | None,
+            error_cell: dict | None,
+            errors_only: bool | None,
+        ) -> tuple[go.Figure, str, dbc.Table | None, list[int]]:
             if not word:
                 return empty_word_figure("Pick a word to profile."), "", None, []
 
@@ -373,7 +387,7 @@ class WordProfileComponent(WebappComponent):
             Output(f"{self.id}-select", "options"),
             Input(f"{self.id}-sort", "value"),
         )
-        def reorder_word_list(sort):
+        def reorder_word_list(sort: str | None) -> list:
             # Options only — the selected value is untouched, so reordering never moves the chart.
             return self._options.get(sort or "alpha", self._options["alpha"])
 
@@ -386,7 +400,7 @@ class WordProfileComponent(WebappComponent):
             Input(f"{self.id}-graph", "clickData"),
             prevent_initial_call=True,
         )
-        def rank_by_clicked_class(click_data):
+        def rank_by_clicked_class(click_data: dict | None) -> tuple[int, None]:
             if not click_data or not click_data.get("points"):
                 raise PreventUpdate
             custom = click_data["points"][0].get("customdata")
@@ -405,7 +419,7 @@ class WordProfileComponent(WebappComponent):
             Input(word_click_store, "data"),
             prevent_initial_call=True,
         )
-        def follow_clicked_word(word_filter):
+        def follow_clicked_word(word_filter: str | list[str] | None) -> str:
             # The store holds a bare string without a scatter and a list of words with one (the
             # scatter's multi-select is the source of truth there); take the last word either way.
             words = word_filter if isinstance(word_filter, list) else ([word_filter] if word_filter else [])
@@ -421,7 +435,7 @@ class WordProfileComponent(WebappComponent):
             State(f"{self.id}-store", "data"),
             prevent_initial_call=True,
         )
-        def inspect(n_clicks_list, sample_indices):
+        def inspect(n_clicks_list: list[int | None], sample_indices: list[int] | None) -> dict:
             if not any(n_clicks_list or []):
                 raise PreventUpdate
             triggered = callback_context.triggered_id
