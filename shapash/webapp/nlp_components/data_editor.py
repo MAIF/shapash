@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
-from dash import Input, Output, State, callback_context, dcc, html
+from dash import Dash, Input, Output, State, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
-from shapash.webapp.nlp_components.base import CAP_PREDICT, WebappComponent
+from shapash.webapp.nlp_components.base import CAP_PREDICT, AppContext, WebappComponent
 from shapash.webapp.nlp_components.datapoint import datapoint_from_contributions
 
 _CARD_STYLE = {"border": "1px solid #dee2e6", "borderRadius": "4px", "padding": "12px", "height": "100%"}
@@ -51,7 +51,7 @@ class DataEditorComponent(WebappComponent):
     scope = "local"
     requires = frozenset({CAP_PREDICT})
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Return the editor card: textarea, Predict button, class-probability bar.
 
         Token contributions for the edited text are shown by the shared lower-right panel (it reads the
@@ -82,9 +82,9 @@ class DataEditorComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire prefill (row/apply → textarea) and Predict (textarea → prediction + current datapoint)."""
-        engine = ctx.engine
+        engine = self._engine(ctx)
         apply_store = stores["apply"]
         current_store = stores["current"]
 
@@ -93,7 +93,7 @@ class DataEditorComponent(WebappComponent):
             Input("dataset-table", "selectedRows"),
             Input(apply_store, "data"),
         )
-        def prefill(selected_rows, applied_text):
+        def prefill(selected_rows: list[dict] | None, applied_text: str | None) -> str:
             trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
             if apply_store in trigger and applied_text:
                 return applied_text
@@ -112,7 +112,7 @@ class DataEditorComponent(WebappComponent):
             State(f"{self.id}-input", "value"),
             prevent_initial_call=True,
         )
-        def predict(n_clicks, text):
+        def predict(n_clicks: int | None, text: str | None) -> tuple[go.Figure, dict[str, str], dict]:
             if not n_clicks or not text or not text.strip():
                 raise PreventUpdate
             contributions, label, probs = engine.explain_text(text)

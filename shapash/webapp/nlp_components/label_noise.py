@@ -44,11 +44,12 @@ The Corpus check column self-disables when no labelled reference corpus is bound
 from __future__ import annotations
 
 import dash_bootstrap_components as dbc
-from dash import ALL, Input, Output, State, callback_context, dcc, html
+from dash import ALL, Dash, Input, Output, State, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
+from shapash.compute.diagnostics.label_noise import LabelIssue, LabelNoiseReport
 from shapash.plots.plot_noise_matrix import plot_noise_matrix
-from shapash.webapp.nlp_components.base import CAP_LABELS, WebappComponent
+from shapash.webapp.nlp_components.base import CAP_LABELS, AppContext, WebappComponent
 from shapash.webapp.nlp_components.datapoint import pack_datapoint
 
 _CARD_STYLE = {"border": "1px solid #dee2e6", "borderRadius": "4px", "padding": "12px", "height": "100%"}
@@ -71,7 +72,7 @@ class LabelNoiseComponent(WebappComponent):
     # Data-only: no engine capability, so this also mounts on a snapshot explainer.
     requires = frozenset({CAP_LABELS})
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Return the panel: detection controls over an initially empty results area."""
         engine = ctx.engine
         can_probe = engine is not None and engine.can_probe_labels()
@@ -133,7 +134,7 @@ class LabelNoiseComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Run detection on demand; wire each row's Inspect into the shared current datapoint."""
         explanation, engine = ctx.explanation, ctx.engine
         current_store = stores["current"]
@@ -145,7 +146,7 @@ class LabelNoiseComponent(WebappComponent):
             State(f"{self.id}-top-n", "value"),
             State(f"{self.id}-score", "value"),
         )
-        def detect(n_clicks, top_n, score):
+        def detect(n_clicks: int | None, top_n: int | None, score: str | None) -> tuple[html.Div, list[int]]:
             if not n_clicks:
                 raise PreventUpdate
             if engine is None:
@@ -176,7 +177,7 @@ class LabelNoiseComponent(WebappComponent):
             State(f"{self.id}-store", "data"),
             prevent_initial_call=True,
         )
-        def inspect(n_clicks_list, sample_indices):
+        def inspect(n_clicks_list: list[int | None], sample_indices: list[int] | None) -> dict:
             if not any(n_clicks_list or []):
                 raise PreventUpdate
             triggered = callback_context.triggered_id
@@ -201,7 +202,7 @@ class LabelNoiseComponent(WebappComponent):
             )
 
 
-def _report_view(report, component_id):
+def _report_view(report: LabelNoiseReport, component_id: str) -> html.Div:
     """Assemble the summary line, the noise-matrix heatmap and the ranked issue table."""
     rate = report.noise_rate
     summary = (
@@ -228,7 +229,7 @@ def _report_view(report, component_id):
     )
 
 
-def _issues_table(issues, component_id):
+def _issues_table(issues: list[LabelIssue], component_id: str) -> dbc.Table:
     """Render the ranked issues, with the Corpus column only when the probe produced verdicts."""
     show_probe = any(issue.probe is not None for issue in issues)
     head_cells = [html.Th("Score"), html.Th("Given"), html.Th("Probably")]
@@ -264,7 +265,7 @@ def _issues_table(issues, component_id):
     return dbc.Table([header, html.Tbody(rows)], bordered=False, hover=True, size="sm", className="mb-0")
 
 
-def _probe_summary(issue):
+def _probe_summary(issue: LabelIssue) -> str | html.Span:
     """The independent probe's probability for the *given* label, flagged when it backs it.
 
     ``⚠ 0.83`` means a classifier that never saw the audited model puts 0.83 on the label already

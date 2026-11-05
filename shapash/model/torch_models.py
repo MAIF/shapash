@@ -51,7 +51,7 @@ class _EncoderHeadBackbone(torch.nn.Module):
     Built by :func:`build_encoder_head_backbone`; see that function for the contract it honours.
     """
 
-    def __init__(self, body, head, pool, normalize):
+    def __init__(self, body: Any, head: torch.nn.Module, pool: Any, normalize: bool) -> None:
         super().__init__()
         self.body = body
         self.head = head
@@ -60,12 +60,12 @@ class _EncoderHeadBackbone(torch.nn.Module):
 
     def forward(
         self,
-        input_ids=None,
-        inputs_embeds=None,
-        attention_mask=None,
-        output_hidden_states=False,
-        **_kwargs,
-    ):
+        input_ids: torch.Tensor | None = None,
+        inputs_embeds: torch.Tensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        output_hidden_states: bool = False,
+        **_kwargs: Any,
+    ) -> SimpleNamespace:
         # Only pass the id/embed argument the caller actually supplied; some bodies reject a None
         # inputs_embeds alongside input_ids. token_type_ids etc. are intentionally not threaded
         # through — the historical HF gradient/logits paths did not either.
@@ -85,12 +85,12 @@ class _EncoderHeadBackbone(torch.nn.Module):
             out.hidden_states = (hidden,)
         return out
 
-    def get_input_embeddings(self):
+    def get_input_embeddings(self) -> torch.nn.Module:
         """Return the body's word-embedding module (what LIG attributes through)."""
         return self.body.get_input_embeddings()
 
     @property
-    def config(self):
+    def config(self) -> Any:
         """Expose the body's HF config, so backbone-contract consumers see the real checkpoint.
 
         Without this the fused backbone looks anonymous and everything that identifies a model by
@@ -100,12 +100,14 @@ class _EncoderHeadBackbone(torch.nn.Module):
         return getattr(self.body, "config", None)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Device the fused module's parameters live on."""
         return next(self.parameters()).device
 
 
-def build_encoder_head_backbone(body, head, pool: Any, normalize: bool = False):
+def build_encoder_head_backbone(
+    body: torch.nn.Module, head: torch.nn.Module, pool: Any, normalize: bool = False
+) -> torch.nn.Module:
     """Fuse an encoder ``body``, a ``pool`` strategy, and a classification ``head`` into one backbone.
 
     The returned ``nn.Module`` honours the backbone contract
@@ -201,9 +203,9 @@ class TorchClassifierModel(EncoderClassifierModel):
 
     def __init__(
         self,
-        body,
-        head,
-        tokenizer,
+        body: torch.nn.Module,
+        head: torch.nn.Module,
+        tokenizer: Any,
         label_names: list[str] | None = None,
         *,
         pool: Any = "mean",
@@ -259,7 +261,7 @@ class TorchClassifierModel(EncoderClassifierModel):
         return digest.hexdigest()[:16]
 
     @property
-    def shap_callable(self):
+    def shap_callable(self) -> Any:
         """The plain scoring callable SHAP's text explainer wraps (``predict``).
 
         Unlike :class:`~shapash.model.hf.HFClassifierModel` (whose backbone is a ``PreTrainedModel`` that
@@ -270,7 +272,7 @@ class TorchClassifierModel(EncoderClassifierModel):
         return self.predict
 
     @property
-    def shap_masker(self):
+    def shap_masker(self) -> Any:
         """A ``shap.maskers.Text`` over the tokenizer, so SHAP can segment/mask a plain callable.
 
         Overrides :attr:`~shapash.model.base.TextModel.shap_masker` (which returns ``None``, letting
@@ -292,7 +294,7 @@ _ST_POOLING_FLAGS = (
 )
 
 
-def _sentence_transformer_pool(st_model) -> str:
+def _sentence_transformer_pool(st_model: Any) -> str:
     """Read the pooling mode from a ``sentence_transformers`` model's ``Pooling`` module.
 
     Returns one of ``"cls"``/``"max"``/``"mean"``. Raises when the model uses an exotic ST pooling mode
@@ -316,7 +318,7 @@ def _sentence_transformer_pool(st_model) -> str:
     return "mean"
 
 
-def _sentence_transformer_max_length(st_model) -> int | None:
+def _sentence_transformer_max_length(st_model: Any) -> int | None:
     """Return the sentence-transformers model's ``max_seq_length``, or ``None`` when unset.
 
     Loading *through* ``SentenceTransformer`` already syncs this onto the tokenizer's
@@ -335,7 +337,7 @@ def _sentence_transformer_max_length(st_model) -> int | None:
     return int(max_length) if max_length else None
 
 
-def _sentence_transformer_normalize(st_model) -> bool:
+def _sentence_transformer_normalize(st_model: Any) -> bool:
     """Return whether the sentence-transformers model ends its forward in an L2 ``Normalize`` module.
 
     Many ST embedding models (e.g. ``all-MiniLM-L6-v2``) append a ``Normalize`` module after pooling, so
@@ -402,8 +404,8 @@ class SentenceTransformerModel(TorchClassifierModel):
 
     def __init__(
         self,
-        st_model,
-        head,
+        st_model: Any,
+        head: torch.nn.Module,
         label_names: list[str] | None = None,
         *,
         pool: Any = None,
@@ -438,7 +440,7 @@ class SentenceTransformerModel(TorchClassifierModel):
         self.st_model = st_model
 
     @staticmethod
-    def _extract_body(st_model):
+    def _extract_body(st_model: Any) -> torch.nn.Module:
         """Return the underlying HF transformer module (``auto_model``) from a ST model's first module."""
         try:
             first = st_model[0]

@@ -10,14 +10,20 @@ subscribes to.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import dash_bootstrap_components as dbc
-from dash import ALL, Input, Output, State, callback_context, dcc, html
+from dash import ALL, Dash, Input, Output, State, callback_context, dcc, html
+from dash.development.base_component import Component
 from dash.exceptions import PreventUpdate
 
-from shapash.compute.generators.base import Field, IntField, TokenListField
+from shapash.compute.generators.base import Counterfactual, Field, IntField, TokenListField
 from shapash.compute.generators.cf_utils import format_edit
-from shapash.webapp.nlp_components.base import CAP_COUNTERFACTUAL, CAP_PREDICT, WebappComponent
+from shapash.webapp.nlp_components.base import CAP_COUNTERFACTUAL, CAP_PREDICT, AppContext, WebappComponent
 from shapash.webapp.nlp_components.datapoint import datapoint_from_contributions
+
+if TYPE_CHECKING:
+    from shapash.explainer.interactive import InteractiveEngine
 
 _CARD_STYLE = {"border": "1px solid #dee2e6", "borderRadius": "4px", "padding": "12px", "height": "100%"}
 
@@ -37,15 +43,15 @@ class CounterfactualComponent(WebappComponent):
     # Requires the editor too (it reads the editor's text and applies flips back into it).
     requires = frozenset({CAP_COUNTERFACTUAL, CAP_PREDICT})
 
-    def _generators(self, engine) -> list[tuple[str, str]]:
+    def _generators(self, engine: InteractiveEngine | None) -> list[tuple[str, str]]:
         """Ordered ``(name, display_name)`` pairs the engine offers (empty when none)."""
         return engine.available_cf_generators() if engine is not None else []
 
-    def _fields(self, engine, generator: str) -> list[tuple[str, Field]]:
+    def _fields(self, engine: InteractiveEngine, generator: str) -> list[tuple[str, Field]]:
         """Ordered ``(name, field)`` pairs from one generator's config spec."""
         return list(engine.cf_config_spec(generator).items())
 
-    def _config_controls(self, engine, generator: str) -> list:
+    def _config_controls(self, engine: InteractiveEngine, generator: str) -> list[html.Div]:
         """Render each config field of ``generator`` as an inline label+control (IntField → number)."""
         items = []
         for name, fld in self._fields(engine, generator):
@@ -78,7 +84,7 @@ class CounterfactualComponent(WebappComponent):
             )
         return items
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Return the counterfactual card with a method selector and per-generator config controls.
 
         The selector and *every* generator's controls are built here (not injected by a callback) so
@@ -86,7 +92,7 @@ class CounterfactualComponent(WebappComponent):
         reference not-yet-created objects. Only the active generator's control group is visible; the
         selector callback toggles the rest. The selector is hidden when a single generator is bound.
         """
-        engine = ctx.engine
+        engine = self._engine(ctx)
         generators = self._generators(engine)
         default_gen = generators[0][0] if generators else None
 
@@ -134,9 +140,9 @@ class CounterfactualComponent(WebappComponent):
             style=_CARD_STYLE,
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire the method selector, Generate, and per-row Apply (→ shared editor store)."""
-        engine = ctx.engine
+        engine = self._engine(ctx)
         apply_store = stores["apply"]
         current_store = stores["current"]
 
@@ -154,7 +160,7 @@ class CounterfactualComponent(WebappComponent):
                 [Output(f"{self.id}-cfg-group-{gen}", "style") for gen in gen_names],
                 Input(f"{self.id}-generator", "value"),
             )
-            def toggle_controls(selected):
+            def toggle_controls(selected: str | None) -> list[dict[str, str]]:
                 return [_GROUP_STYLE if gen == selected else _HIDDEN for gen in gen_names]
 
         # Reads the current datapoint (a selected dataset row *or* an edited/predicted text) so
@@ -167,12 +173,14 @@ class CounterfactualComponent(WebappComponent):
             State(f"{self.id}-generator", "value"),
             *config_states,
         )
-        def generate(n_clicks, datapoint, selected_gen, *config_values):
+        def generate(
+            n_clicks: int | None, datapoint: dict | None, selected_gen: str | None, *config_values: Any
+        ) -> tuple[Component, list[str]]:
             text = (datapoint or {}).get("text", "")
             if not n_clicks or not text or not text.strip():
                 raise PreventUpdate
             gen_name = selected_gen or (gen_names[0] if gen_names else None)
-            config = {}
+            config: dict[str, Any] = {}
             for (gen, name, fld), value in zip(all_fields, config_values, strict=True):
                 if gen != gen_name:
                     continue  # only the active generator's controls feed its config
@@ -197,7 +205,7 @@ class CounterfactualComponent(WebappComponent):
             State(f"{self.id}-store", "data"),
             prevent_initial_call=True,
         )
-        def apply(n_clicks_list, cf_texts):
+        def apply(n_clicks_list: list[int | None], cf_texts: list[str] | None) -> tuple[str, dict]:
             if not any(n_clicks_list or []):
                 raise PreventUpdate
             triggered = callback_context.triggered_id
@@ -211,7 +219,7 @@ class CounterfactualComponent(WebappComponent):
             return text, datapoint_from_contributions(text, contributions, label)
 
 
-def _results_table(cfs, component_id: str):
+def _results_table(cfs: list[Counterfactual], component_id: str) -> dbc.Table:
     """Render counterfactuals as a table with per-row Apply buttons."""
     header = html.Thead(
         html.Tr([html.Th("→ Label"), html.Th("Δ prob"), html.Th("Substitutions"), html.Th("Text"), html.Th("")])

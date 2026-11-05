@@ -19,6 +19,9 @@ stands for, which is what lets it be compared with a backend that attributes eac
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 
 try:
@@ -30,6 +33,9 @@ except ImportError:
 
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.model.base import TextModel
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class NlpLimeBackend(NlpBackend):
@@ -140,8 +146,8 @@ class NlpLimeBackend(NlpBackend):
 
     def __init__(
         self,
-        model,
-        preprocessing=None,
+        model: TextModel | Callable[[list[str]], np.ndarray],
+        preprocessing: Any | None = None,
         label_names: list[str] | None = None,
         mask_string: str | None = None,
         explainer_args: dict | None = None,
@@ -227,7 +233,7 @@ class NlpLimeBackend(NlpBackend):
             indexed = IndexedString(text, bow=bow, split_expression=split_expression, mask_string=mask_string)
         return max(1, indexed.num_words())
 
-    def run_explainer(self, x) -> NlpContributions:
+    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
         """Run LimeTextExplainer on each sample and normalise output.
 
         Converts LIME's sparse per-label ``{label_id: [(word_id, weight)]}``
@@ -292,7 +298,7 @@ class NlpLimeBackend(NlpBackend):
         )
 
 
-def _word_spans(indexed_string, vocab: list[str]) -> list[tuple[tuple[int, int], ...]]:
+def _word_spans(indexed_string: IndexedString, vocab: list[str]) -> list[tuple[tuple[int, int], ...]]:
     """Every occurrence's ``(start, end)`` for each of LIME's features, from its ``IndexedString``.
 
     ``string_position`` gives a word's start offsets — all occurrences under ``bow=True``, its one

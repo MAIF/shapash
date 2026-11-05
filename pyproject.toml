@@ -150,6 +150,8 @@ commands = pytest {posargs}
 exclude = ["tests", "tutorial"]
 ignore_missing_imports = true
 check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
 
 [tool.ruff]
 line-length = 120
@@ -173,8 +175,10 @@ select = [
     "I",    # isort
     "D",    # pydocstyle
     "NPY",  # NumPy-specific rules
+    "ANN",  # flake8-annotations
 ]
-ignore = ["E501", "D100", "D104", "D105", "D107", "D401", "S311"]
+# ANN401: `Any` is legitimate for payloads without a fixed shape (Dash callback data, third-party models)
+ignore = ["E501", "D100", "D104", "D105", "D107", "D401", "S311", "ANN401"]
 exclude = ["tests/*"]
 
 [tool.ruff.lint.pydocstyle]
@@ -183,6 +187,8 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 "shapash/__init__.py" = ["F401"]
 "shapash/backend/__init__.py" = ["F401"]
+# Type hints are enforced on the library only, not on tutorials, scripts and demos
+"!shapash/**" = ["ANN"]
 # Tutorials define small helpers without docstrings, silence warnings before importing, and assert
 # results to show them
 "tutorial/**/*.ipynb" = ["D1", "E402", "S101"]
