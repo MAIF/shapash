@@ -6,15 +6,22 @@ import numpy as np
 import pandas as pd
 import pytest
 import shap
-from sklearn import ensemble, linear_model, neighbors, neural_network, svm, tree
+from sklearn import ensemble, linear_model, naive_bayes, neighbors, neural_network, svm, tree
 from sklearn.compose import ColumnTransformer
 from sklearn.datasets import make_classification, make_regression
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, QuantileTransformer, StandardScaler
 
 from shapash import SmartExplainer
 from shapash.utils.model_synoptic import sklearn_model
 
 
+NAIVE_BAYES_CLASSIFIERS = [
+    naive_bayes.GaussianNB,
+    naive_bayes.BernoulliNB,
+    naive_bayes.MultinomialNB,
+    naive_bayes.ComplementNB,
+    naive_bayes.CategoricalNB,
+]
 CLASSIFIERS = [
     ensemble.HistGradientBoostingClassifier,
     tree.DecisionTreeClassifier,
@@ -33,7 +40,7 @@ CLASSIFIERS = [
     ensemble.BaggingClassifier,
     ensemble.VotingClassifier,
     ensemble.StackingClassifier,
-]
+] + NAIVE_BAYES_CLASSIFIERS
 REGRESSORS = [
     ensemble.HistGradientBoostingRegressor,
     tree.DecisionTreeRegressor,
@@ -94,7 +101,12 @@ def _make_model(model_class):
 
 
 def _check_model_workflow(
-    model_class, with_preprocessing, n_classes=None, model_options=None, nonconsecutive_labels=False
+    model_class,
+    with_preprocessing,
+    n_classes=None,
+    model_options=None,
+    nonconsecutive_labels=False,
+    backend_options=None,
 ):
     if n_classes is None:
         values, target = make_regression(n_samples=72, n_features=3, noise=1, random_state=0)
@@ -105,15 +117,25 @@ def _check_model_workflow(
         values, target = make_classification(
             n_samples=72, n_features=3, n_informative=3, n_redundant=0, n_classes=n_classes, random_state=0
         )
+        if model_class is naive_bayes.CategoricalNB:
+            values = np.digitize(values, bins=[-0.5, 0.5])
+        elif model_class in (naive_bayes.MultinomialNB, naive_bayes.ComplementNB):
+            values = values - values.min(axis=0)
         if nonconsecutive_labels:
             target = np.array([3, 8, 42])[target]
     x = pd.DataFrame(values, columns=["col_0", "col_1", "col_2"], index=np.arange(100, 172))
     preprocessing = None
     if with_preprocessing:
         x["col_2"] = np.where(x["col_2"] > 0, "positive", "negative")
+        if model_class is naive_bayes.CategoricalNB:
+            numeric_transformer = OrdinalEncoder()
+        elif model_class in (naive_bayes.MultinomialNB, naive_bayes.ComplementNB):
+            numeric_transformer = QuantileTransformer(n_quantiles=20, random_state=0)
+        else:
+            numeric_transformer = StandardScaler()
         preprocessing = ColumnTransformer(
             [
-                ("scale", StandardScaler(), ["col_0", "col_1"]),
+                ("scale", numeric_transformer, ["col_0", "col_1"]),
                 ("category", OneHotEncoder(sparse_output=False), ["col_2"]),
             ]
         ).fit(x)
@@ -148,7 +170,7 @@ def _check_model_workflow(
         model.set_params(**model_options)
     model.fit(encoded, target)
 
-    explainer = SmartExplainer(model=model, preprocessing=preprocessing)
+    explainer = SmartExplainer(model=model, preprocessing=preprocessing, **(backend_options or {}))
     sample = encoded.iloc[:6]
     explainer.compile(x=sample, y_target=pd.Series(target[:6], index=sample.index))
     compiled = explainer.explainer
@@ -247,11 +269,133 @@ def test_sklearn_classifier_workflow(model_class, with_preprocessing, n_classes)
         ensemble.BaggingClassifier,
         ensemble.VotingClassifier,
         ensemble.StackingClassifier,
-    ],
+    ]
+    + NAIVE_BAYES_CLASSIFIERS,
     ids=lambda cls: cls.__name__,
 )
 def test_additional_classifier_nonconsecutive_labels(model_class, with_preprocessing):
     _check_model_workflow(model_class, with_preprocessing, n_classes=3, nonconsecutive_labels=True)
+
+
+@pytest.mark.parametrize("model_class", NAIVE_BAYES_CLASSIFIERS, ids=lambda cls: cls.__name__)
+@pytest.mark.parametrize("n_classes", [2, 3], ids=["binary", "multiclass"])
+def test_naive_bayes_with_explicit_auto_explainer(model_class, n_classes):
+    _check_model_workflow(
+        model_class,
+        with_preprocessing=True,
+        n_classes=n_classes,
+        backend_options={"explainer_args": {"algorithm": "auto"}},
+    )
+
+
+@pytest.mark.parametrize("model_class", NAIVE_BAYES_CLASSIFIERS, ids=lambda cls: cls.__name__)
+def test_naive_bayes_with_explicit_permutation_explainer(model_class):
+    rng = np.random.default_rng(42)
+    x = pd.DataFrame(rng.integers(0, 4, size=(24, 3)), columns=["col_0", "col_1", "col_2"])
+    model = model_class().fit(x, np.arange(len(x)) % 3)
+    sample = x.iloc[:3]
+    explainer = SmartExplainer(
+        model=model,
+        explainer_args={"algorithm": "permutation"},
+        explainer_compute_args={"max_evals": 7, "silent": True},
+    )
+    explainer.compile(x=sample)
+    assert isinstance(explainer.explainer.backend.explainer, shap.explainers.Permutation)
+    explain_data = explainer.explainer.explain_data
+    reconstructed = explain_data["contributions"].sum(axis=1) + explain_data["base_values"]
+    np.testing.assert_allclose(reconstructed, model.predict_proba(sample), atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.parametrize("model_class", NAIVE_BAYES_CLASSIFIERS, ids=lambda cls: cls.__name__)
+@pytest.mark.parametrize("n_classes", [2, 3], ids=["binary", "multiclass"])
+def test_naive_bayes_lime_workflow(model_class, n_classes):
+    pytest.importorskip("lime")
+    rng = np.random.default_rng(42)
+    x = pd.DataFrame(rng.integers(0, 10, size=(60, 3)), columns=["col_0", "col_1", "col_2"])
+    target = np.array([3, 8, 42])[np.arange(len(x)) % n_classes]
+    model = model_class().fit(x, target)
+    sample = x.iloc[:4]
+
+    explainer = SmartExplainer(model=model, backend="lime")
+    explainer.compile(x=sample, y_target=pd.Series(target[:4], index=sample.index))
+    contributions = explainer.explainer.contributions
+    assert len(contributions) == n_classes
+    for frame in contributions:
+        assert frame.shape == sample.shape
+        assert np.isfinite(frame.to_numpy()).all()
+
+    predictor = explainer.to_smartpredictor()
+    predictor.add_input(x=sample)
+    np.testing.assert_array_equal(predictor.predict().iloc[:, 0], model.predict(sample))
+    np.testing.assert_allclose(predictor.predict_proba(), model.predict_proba(sample))
+    assert predictor.data["contributions"].shape == sample.shape
+    assert np.isfinite(predictor.data["contributions"].to_numpy(dtype=float)).all()
+
+    restored = pickle.loads(pickle.dumps(predictor))
+    restored.add_input(x=sample)
+    np.testing.assert_array_equal(restored.predict().iloc[:, 0], model.predict(sample))
+    assert np.isfinite(restored.data["contributions"].to_numpy(dtype=float)).all()
+
+
+@pytest.mark.parametrize("n_classes", [2, 3], ids=["binary", "multiclass"])
+def test_categorical_naive_bayes_lime_samples_observed_categories(monkeypatch, n_classes):
+    pytest.importorskip("lime")
+    x = pd.DataFrame({"feature": [0, 4, 9] * 4, "feature=type": [9, 0, 4] * 4, "feature name": [4, 9, 0] * 4})
+    model = naive_bayes.CategoricalNB().fit(x, np.arange(len(x)) % n_classes)
+    sample = x.iloc[:3]
+    predict_proba = model.predict_proba
+    evaluated = []
+
+    def record_predictions(values):
+        evaluated.append(np.asarray(values).copy())
+        return predict_proba(values)
+
+    monkeypatch.setattr(model, "predict_proba", record_predictions)
+    explainer = SmartExplainer(model=model, backend="lime")
+    explainer.compile(x=sample)
+    for frame in explainer.explainer.contributions:
+        assert frame.columns.equals(sample.columns)
+    assert any(len(values) > len(sample) for values in evaluated)
+    for values in evaluated:
+        for i in range(sample.shape[1]):
+            assert np.isin(values[:, i], sample.iloc[:, i]).all()
+
+
+@pytest.mark.parametrize("n_classes", [2, 3], ids=["binary", "multiclass"])
+def test_categorical_naive_bayes_lime_with_column_transformer(n_classes):
+    pytest.importorskip("lime")
+    x = pd.DataFrame(
+        {"first": ["blue", "red", "green"] * 8, "second": ["low", "high"] * 12},
+        index=np.arange(100, 124),
+    )
+    preprocessing = ColumnTransformer(
+        [
+            ("ordinal", OrdinalEncoder(), ["first"]),
+            ("onehot", OneHotEncoder(sparse_output=False), ["second"]),
+        ]
+    ).fit(x)
+    encoded = pd.DataFrame(preprocessing.transform(x), index=x.index)
+    encoded.columns = [f"col_{i}" for i in range(encoded.shape[1])]
+    model = naive_bayes.CategoricalNB().fit(encoded, np.arange(len(x)) % n_classes)
+    sample = encoded.iloc[:4]
+
+    explainer = SmartExplainer(model=model, preprocessing=preprocessing, backend="lime")
+    explainer.compile(x=sample)
+    for frame in explainer.explainer.contributions:
+        assert frame.shape == x.iloc[:4].shape
+        assert frame.index.equals(sample.index)
+        assert np.isfinite(frame.to_numpy()).all()
+
+    predictor = explainer.to_smartpredictor()
+    predictor.add_input(x=x.iloc[:4])
+    pd.testing.assert_frame_equal(predictor.data["x_preprocessed"], sample)
+    np.testing.assert_array_equal(predictor.predict().iloc[:, 0], model.predict(sample))
+    np.testing.assert_allclose(predictor.predict_proba(), model.predict_proba(sample))
+    assert predictor.data["contributions"].shape == x.iloc[:4].shape
+    restored = pickle.loads(pickle.dumps(predictor))
+    restored.add_input(x=x.iloc[:4])
+    np.testing.assert_array_equal(restored.predict().iloc[:, 0], model.predict(sample))
+    assert np.isfinite(restored.data["contributions"].to_numpy(dtype=float)).all()
 
 
 @pytest.mark.parametrize("with_preprocessing", [False, True], ids=["raw", "column_transformer"])

@@ -125,6 +125,8 @@ including preprocessing with a supported ``ColumnTransformer``:
   ``TweedieRegressor``.
 - Other support vector machines: ``NuSVC`` and ``NuSVR``.
 - Nearest neighbors: ``KNeighborsClassifier`` and ``KNeighborsRegressor``.
+- Naive Bayes classifiers: ``GaussianNB``, ``BernoulliNB``, ``MultinomialNB``,
+  ``ComplementNB`` and ``CategoricalNB``.
 - Neural networks: ``MLPClassifier`` and ``MLPRegressor``.
 - Ensembles: ``AdaBoostClassifier``, ``AdaBoostRegressor``, ``BaggingClassifier``,
   ``BaggingRegressor``, ``VotingClassifier``, ``VotingRegressor``,
@@ -152,6 +154,63 @@ For example, LIME requires ``probability=True`` for ``NuSVC``,
 ``VotingClassifier``. LIME explanations are local approximations, not exact
 additive reconstructions of the model output.
 
+LIME categorical features and encoded groups
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The LIME backend can infer categorical features from fitted scikit-learn
+``OrdinalEncoder`` / ``OneHotEncoder`` inside a ``ColumnTransformer``, and from
+supported ``category_encoders`` transformers used directly, in a sequence or
+inside a ``ColumnTransformer``. Ordinal mapping dictionaries are also recognized.
+Without preprocessing it recognizes nonnumeric input columns. ``CategoricalNB``
+implies that all its model inputs are categorical.
+
+To supply the complete list yourself:
+
+.. code-block:: python
+
+    xpl = SmartExplainer(
+        model=model,
+        preprocessing=encoder,
+        backend="lime",
+        categorical_features=["city", "segment"],
+    )
+    xpl.compile(x=x_encoded)
+
+Use the original feature names before encoding, not dummy-column names or
+``ColumnTransformer``-prefixed display names. Without preprocessing, use column
+names from ``x``. ``None`` (the default) enables inference; an explicit list
+replaces it, and ``[]`` disables optional categorical inference. Unknown,
+duplicate and non-string names raise errors. For ``CategoricalNB``, an explicit
+list must still cover every input not already protected by an encoded group.
+
+One-hot blocks are always sampled as a single categorical feature, even if they
+are omitted from an explicit list. LIME chooses an observed complete block, then
+Shapash restores its encoded columns before prediction. This preserves valid
+one-hot patterns, including the all-zero states allowed by dropped or ignored
+categories. Fitted dropped and infrequent-category metadata determines block
+widths. Binary and BaseN encodings are likewise sampled as complete blocks.
+Other categorical values, including noninteger target-encoded values, are
+represented by internal category indices and restored exactly before prediction.
+New observed states can be explained after export without changing the reference
+background distribution.
+
+Contributions are returned once per original feature, with the usual
+transformer-prefixed display names; they are not dummy-level weights to aggregate
+again. The backend's explanation dictionary marks this with
+``contributions_space="original"``. ``SmartPredictor`` export and pickle reload
+retain the categorical configuration and reference background.
+
+This changes LIME's sampling for encoded categorical inputs; explanations can
+therefore differ from older versions that perturbed dummy columns independently.
+Different source features are still sampled independently: this does not enforce
+cross-feature constraints or correlations. Reusing the same categorical source
+in multiple ``ColumnTransformer`` branches is rejected rather than sampling
+inconsistent representations. Unsupported preprocessing metadata and ambiguous
+feature mappings also raise errors rather than guessing.
+
+Model outputs and production export
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 For generalized linear regression, the default SHAP backend explains ``predict``:
 the contributions plus the base value reconstruct the prediction after the
 inverse link function, not the linear predictor. This also applies when supplying
@@ -167,10 +226,19 @@ Alternatively, fit with ``probability=True`` to explain probabilities.
 ``StackingClassifier`` can use a final estimator without probabilities when it
 provides a per-class ``decision_function``.
 
-Nearest neighbors, neural networks and the additional ensembles generally use
-model-agnostic SHAP explanations. Cost grows with the number of input features,
-background samples and observations to explain; registration does not imply
-TreeExplainer support or the same performance as native tree explanations.
+Naive Bayes classifiers use model-agnostic SHAP explanations of class
+probabilities by default, including when selecting ``algorithm="auto"``. Their
+inputs must satisfy scikit-learn's requirements after preprocessing:
+``MultinomialNB`` and ``ComplementNB`` require nonnegative features, while
+``CategoricalNB`` requires nonnegative integer category codes. For
+``CategoricalNB``, LIME samples the observed category codes rather than
+perturbing them as continuous values.
+
+Nearest neighbors, naive Bayes classifiers, neural networks and the additional
+ensembles generally use model-agnostic SHAP explanations. Cost grows with the
+number of input features, background samples and observations to explain;
+registration does not imply TreeExplainer support or the same performance as
+native tree explanations.
 
 A compiled ``SmartExplainer`` can be exported using ``to_smartpredictor()``,
 including when it uses a ``ColumnTransformer``. The exported predictor accepts

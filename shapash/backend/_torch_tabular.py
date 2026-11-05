@@ -1,12 +1,19 @@
 """Torch-only differentiable output adapter, imported only for neural SHAP."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import torch
+
+if TYPE_CHECKING:
+    from shapash.model.tabular import PyTorchModelAdapter
 
 
 class TorchExplanationModel(torch.nn.Module):
     """Expose the adapter's selected probabilities or regression output to SHAP."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter: PyTorchModelAdapter) -> None:
         super().__init__()
         self.model = adapter.model
         self.output_key = adapter.output_key
@@ -15,7 +22,7 @@ class TorchExplanationModel(torch.nn.Module):
         self.sigmoid = torch.nn.Sigmoid()
         self.softmax = torch.nn.Softmax(dim=-1)
 
-    def forward(self, values):
+    def forward(self, values: torch.Tensor) -> torch.Tensor:
         """Return a two-dimensional, differentiable tensor in prediction space."""
         result = self.model(values)
         if self.output_key is not None:

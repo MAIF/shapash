@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Any
 
 import numpy as np
+from sklearn.naive_bayes import CategoricalNB
 
 try:
     from lime import lime_tabular
@@ -12,7 +13,11 @@ except ImportError:
 
 import pandas as pd
 
+from shapash.backend._lime_input import LimeInput
 from shapash.backend.base_backend import BaseBackend
+from shapash.utils.check import check_contribution_object
+from shapash.utils.transform import adapt_contributions
+from shapash.utils.utils import choose_state
 
 
 def _with_feature_names(
@@ -49,32 +54,6 @@ def _with_feature_names(
         return predict_fn(values)
 
 
-def _transform_name(var_name: str, x_df: pd.DataFrame) -> str:
-    """Transform a LIME contribution feature string to a comprehensive column name.
-
-    Parameters
-    ----------
-    var_name : str
-        Feature name returned by LIME, often containing additional formatting.
-    x_df : pd.DataFrame
-        DataFrame used to match the LIME feature string against actual columns.
-
-    Returns
-    -------
-    str
-        The matching column name from ``x_df``.
-
-    Raises
-    ------
-    ValueError
-        If no matching column name can be found.
-    """
-    for colname in x_df.columns:
-        if f" {colname} " in f" {var_name} ":
-            return colname
-    raise ValueError(f"Could not match LIME feature string {var_name!r} to any column in {list(x_df.columns)}")
-
-
 class LimeBackend(BaseBackend):
     """The Lime Backend."""
 
@@ -87,6 +66,7 @@ class LimeBackend(BaseBackend):
         model: Any,
         preprocessing: Any | None = None,
         data: pd.DataFrame | None = None,
+        categorical_features: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize the LIME backend.
@@ -100,6 +80,12 @@ class LimeBackend(BaseBackend):
         data : pd.DataFrame or None, optional
             Data used to initialize the LIME explainer. Defaults to the data
             passed to :meth:`run_explainer`.
+        categorical_features : list of str or None, optional
+            Complete list of categorical feature names before preprocessing.
+            None infers categories from fitted encoders, nonnumeric input columns
+            and CategoricalNB. An explicit list, including [], replaces inference.
+            Encoded categorical blocks such as one-hot groups always remain
+            grouped, regardless of this list.
         **kwargs : Any
             Additional keyword arguments accepted by the constructor.
 
@@ -116,17 +102,28 @@ class LimeBackend(BaseBackend):
                 "or a calibrated classifier exposing predict_proba. Shapash does not switch backends automatically."
             )
         self.explainer: Any = None
+        if data is not None and not isinstance(data, pd.DataFrame):
+            raise ValueError("LIME data must be an encoded background DataFrame.")
         self.data = data
+        if categorical_features is not None and (
+            not isinstance(categorical_features, list)
+            or not all(isinstance(name, str) for name in categorical_features)
+            or len(categorical_features) != len(set(categorical_features))
+        ):
+            raise ValueError("categorical_features must be None or a list of unique feature names.")
+        self.categorical_features = None if categorical_features is None else categorical_features.copy()
+        self._lime_input: LimeInput | None = None
 
     def __getstate__(self) -> dict[str, Any]:
         """Rebuild LIME's non-pickleable explainer from its reference data on reload."""
         state = self.__dict__.copy()
         state["explainer"] = None
+        state["_lime_input"] = None
         if state["data"] is None:
             state["data"] = state.get("_explainer_data")
         return state
 
-    def run_explainer(self, x: pd.DataFrame) -> dict[str, pd.DataFrame | list[pd.DataFrame] | np.ndarray]:
+    def run_explainer(self, x: pd.DataFrame) -> dict[str, Any]:
         """
         Computes local contributions using the Lime explainer.
 
@@ -151,37 +148,76 @@ class LimeBackend(BaseBackend):
 
               - np.ndarray of shape (n_samples, n_classes) for classification.
               - np.ndarray of shape (n_samples,) for regression.
+            - 'contributions_space': 'original', because encoded categorical
+              blocks have already been represented by their original feature.
         """
         feature_names = list(x.columns)
         data = self.data if self.data is not None else x
 
-        # added condition to reinitialise the explainer
-        # whenever the feature names differ from what it was built with
-        if self.explainer is None or self.explainer.feature_names != feature_names:
-            self._explainer_data = data
+        if self.explainer is None or self._lime_input is None or not self._lime_input.columns.equals(x.columns):
+            self._explainer_data = data.copy()
+            self._lime_input = LimeInput(
+                data, self.preprocessing, self.categorical_features, isinstance(self.model, CategoricalNB)
+            )
             self.explainer = lime_tabular.LimeTabularExplainer(
-                data.to_numpy(), feature_names=feature_names, mode=self._case
+                self._lime_input.background.to_numpy(),
+                feature_names=list(self._lime_input.background.columns),
+                mode=self._case,
+                categorical_features=self._lime_input.categorical_indices,
             )
 
+        lime_input = self._lime_input
+        lime_x = lime_input.encode(x)
+        lime_feature_names = list(lime_x.columns)
         model_predict = self.model.predict_proba if self._case == "classification" else self.model.predict
 
         def predict_fn(values: np.ndarray | pd.DataFrame) -> Any:
-            return _with_feature_names(values, model_predict, feature_names)
+            return _with_feature_names(lime_input.decode(values), model_predict, feature_names)
 
         if self._case == "classification":
             if self._classes is None:
                 raise ValueError("Classification models must expose their classes.")
             num_classes = len(self._classes)
             if num_classes > 2:
-                contributions, base_values = self._explain_multiclass(x, feature_names, predict_fn, num_classes)
+                contributions, base_values = self._explain_multiclass(
+                    lime_x, lime_feature_names, predict_fn, num_classes
+                )
             else:
                 contributions, base_values = self._explain_binary_or_regression(
-                    x, feature_names, predict_fn, num_classes=2
+                    lime_x, lime_feature_names, predict_fn, num_classes=2
                 )
         else:
-            contributions, base_values = self._explain_binary_or_regression(x, feature_names, predict_fn)
+            contributions, base_values = self._explain_binary_or_regression(lime_x, lime_feature_names, predict_fn)
 
-        return dict(contributions=contributions, base_values=base_values)
+        return dict(contributions=contributions, base_values=base_values, contributions_space="original")
+
+    def get_local_contributions(
+        self, x: pd.DataFrame, explain_data: Any, subset: list[int] | None = None
+    ) -> pd.DataFrame | list[pd.DataFrame]:
+        """Validate original-space LIME contributions without aggregating encoded blocks a second time."""
+        if not isinstance(explain_data, dict) or explain_data.get("contributions_space") != "original":
+            return super().get_local_contributions(x, explain_data, subset)
+        if "contributions" not in explain_data:
+            raise ValueError("The LIME explanation must contain contributions.")
+        if self._lime_input is None:
+            data = self.data if self.data is not None else x
+            self._lime_input = LimeInput(
+                data, self.preprocessing, self.categorical_features, isinstance(self.model, CategoricalNB)
+            )
+        original = self._lime_input.encode(x)
+        contributions = adapt_contributions(self._case, explain_data["contributions"])
+        self.state = choose_state(contributions)
+        check_contribution_object(self._case, self._classes, contributions)
+        local = self.state.validate_contributions(contributions, original)
+        if subset is not None:
+            original = original.loc[subset]
+            local = [frame.loc[subset] for frame in local] if isinstance(local, list) else local.loc[subset]
+        self.state.check_contributions(local, original)
+        return local
+
+    @staticmethod
+    def _contributions_for_label(explanation: Any, feature_names: list[str], label: int) -> dict[str, float]:
+        return {feature_names[i]: float(value) for i, value in explanation.as_map()[label]}
 
     @staticmethod
     def _extract_intercept(exp: Any, class_idx: int | None = None) -> float:
@@ -216,7 +252,7 @@ class LimeBackend(BaseBackend):
         feature_names: list[str],
         predict_fn: Callable[[Any], Any],
         num_classes: int,
-    ) -> tuple[pd.DataFrame, np.ndarray]:
+    ) -> tuple[list[pd.DataFrame], np.ndarray]:
         """
         Compute LIME contributions for multiclass classification.
 
@@ -260,7 +296,7 @@ class LimeBackend(BaseBackend):
         contribution = []
         base_values = pd.DataFrame(index=x.index, columns=list(range(num_classes)), dtype=float)
         for j in range(num_classes):
-            class_contrib = [{_transform_name(feat, x): val for feat, val in exp.as_list(j)} for exp in explanations]
+            class_contrib = [self._contributions_for_label(exp, feature_names, j) for exp in explanations]
             contribution.append(pd.DataFrame(class_contrib, index=x.index)[feature_names])
             for idx, exp in zip(x.index, explanations, strict=False):
                 base_values.at[idx, j] = self._extract_intercept(exp, class_idx=j)
@@ -303,7 +339,7 @@ class LimeBackend(BaseBackend):
                 predict_fn,
                 num_features=x.shape[1],
             )
-            lime_contrib.append({_transform_name(feat, x): val for feat, val in exp.as_list()})
+            lime_contrib.append(self._contributions_for_label(exp, feature_names, 1))
             if self._case == "classification":
                 # Binary classification contributions are expanded later as [-contrib, +contrib].
                 # Keep base values coherent with this convention.

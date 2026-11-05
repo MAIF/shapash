@@ -1,4 +1,6 @@
+import sys
 from contextlib import nullcontext
+from types import ModuleType
 from unittest.mock import Mock
 
 import numpy as np
@@ -122,6 +124,30 @@ def test_explain_rejects_multitarget_regression():
     neural = _neural_shap(np.zeros((1, 2, 2)))
     with pytest.raises(ValueError, match="single output"):
         neural.explain(x, {})
+
+
+def test_torch_neural_shap_constructor_selects_torch_bridge(monkeypatch):
+    class Adapter:
+        task = "regression"
+
+        def predict(self, x):
+            return np.zeros(len(x))
+
+    bridge = ModuleType("shapash.backend._torch_tabular")
+    bridge.TorchExplanationModel = Mock(return_value=object())
+    monkeypatch.setitem(sys.modules, bridge.__name__, bridge)
+    monkeypatch.setattr("shapash.backend._neural_shap.PyTorchModelAdapter", Adapter)
+    monkeypatch.setattr(NeuralShap, "inference_context", lambda self: nullcontext())
+    monkeypatch.setattr(NeuralShap, "tensor", lambda self, x: x.to_numpy())
+    explainer = object()
+    monkeypatch.setattr("shapash.backend._neural_shap.shap.DeepExplainer", lambda *args, **kwargs: explainer)
+
+    adapter = Adapter()
+    neural = NeuralShap(adapter, pd.DataFrame({"a": [1.0, 2.0]}), "deep", {})
+
+    bridge.TorchExplanationModel.assert_called_once_with(adapter)
+    assert neural.model is bridge.TorchExplanationModel.return_value
+    assert neural.explainer is explainer
 
 
 def test_torch_neural_shap_constructor_uses_model_dtype_and_restores_state():

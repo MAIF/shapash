@@ -1,5 +1,6 @@
 """Framework bridges for explicit tabular DeepExplainer and GradientExplainer."""
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any, Literal
 
@@ -53,7 +54,7 @@ class NeuralShap:
             adapter.predict_proba(background) if adapter.task == "classification" else adapter.predict(background)
         )
         self.base = np.asarray(prediction).mean(axis=0)
-        if self.is_torch:
+        if isinstance(adapter, PyTorchModelAdapter):
             from shapash.backend._torch_tabular import TorchExplanationModel  # noqa: PLC0415
 
             self.model = TorchExplanationModel(adapter)
@@ -98,7 +99,7 @@ class NeuralShap:
         return torch.as_tensor(values, device=device, dtype=dtype)
 
     @contextmanager
-    def inference_context(self):
+    def inference_context(self) -> Iterator[None]:
         """Allow gradients but preserve the user's torch training flags and gradients."""
         if not self.is_torch:
             # AutoGraph wraps missing-gradient LookupErrors in its own exception.

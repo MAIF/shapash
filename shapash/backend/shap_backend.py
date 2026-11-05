@@ -9,7 +9,7 @@ import shap
 from shapash.backend._neural_shap import NeuralShap, NeuralShapUnsupportedError, is_neural_compatibility_error
 from shapash.backend.base_backend import BaseBackend
 from shapash.model.tabular import KerasModelAdapter, PyTorchModelAdapter, TensorFlowModelAdapter
-from shapash.utils.model_synoptic import generalized_linear_model
+from shapash.utils.model_synoptic import generalized_linear_model, naive_bayes_model
 
 
 class ShapBackend(BaseBackend):
@@ -106,7 +106,14 @@ class ShapBackend(BaseBackend):
                 "for per-class SHAP explanations."
             )
         is_glm = str(type(model)) in generalized_linear_model
-        shap_parameters = {"model": model.predict if is_glm else model, "masker": self.masker, **self.explainer_args}
+        is_naive_bayes = str(type(model)) in naive_bayes_model
+        if is_glm:
+            shap_model = model.predict
+        elif is_naive_bayes:
+            shap_model = model.predict_proba
+        else:
+            shap_model = model
+        shap_parameters = {"model": shap_model, "masker": self.masker, **self.explainer_args}
 
         if self.explainer_args:
             if "explainer" in self.explainer_args.keys():
@@ -117,9 +124,8 @@ class ShapBackend(BaseBackend):
             else:
                 self.explainer = shap.Explainer(**shap_parameters)
         else:
-            if is_glm:
-                # Explain predictions after the inverse link, not the linear predictor.
-                self.explainer = shap.Explainer(model=model.predict, masker=self.masker)
+            if is_glm or is_naive_bayes:
+                self.explainer = shap.Explainer(model=shap_model, masker=self.masker)
             elif shap.explainers.Linear.supports_model_with_masker(model, self.masker):
                 self.explainer = shap.Explainer(model=model, masker=self.masker)
             elif shap.explainers.Tree.supports_model_with_masker(model, None):

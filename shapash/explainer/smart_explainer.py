@@ -129,7 +129,11 @@ class SmartExplainer:
         Dictionary containing the full color palette configuration.
         Can be used to override default plot colors.
     **backend_kwargs : dict
-        Additional keyword arguments passed to the backend.
+        Additional keyword arguments passed to the backend. For LIME,
+        ``categorical_features`` is a complete list of feature names before
+        preprocessing; None infers them from encoders and input metadata.
+        An explicit list replaces inference, but encoded categorical blocks
+        are always sampled together to preserve valid model inputs.
 
     Attributes
     ----------

@@ -90,6 +90,14 @@ neighbors_model = (
     "<class 'sklearn.neighbors._regression.KNeighborsRegressor'>",
 )
 
+naive_bayes_model = (
+    "<class 'sklearn.naive_bayes.GaussianNB'>",
+    "<class 'sklearn.naive_bayes.BernoulliNB'>",
+    "<class 'sklearn.naive_bayes.MultinomialNB'>",
+    "<class 'sklearn.naive_bayes.ComplementNB'>",
+    "<class 'sklearn.naive_bayes.CategoricalNB'>",
+)
+
 neural_network_model = (
     "<class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>",
     "<class 'sklearn.neural_network._multilayer_perceptron.MLPRegressor'>",
@@ -102,6 +110,7 @@ sklearn_model = (
     + svm_model
     + ensemble_model_sklearn
     + neighbors_model
+    + naive_bayes_model
     + neural_network_model
 )
 

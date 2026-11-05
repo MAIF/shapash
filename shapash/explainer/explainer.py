@@ -247,9 +247,12 @@ class Explainer:
                 self.explain_data = {"contributions": contributions}
                 local_contributions = contributions
 
-            self.contributions = self.backend.format_and_aggregate_local_contributions(
-                x=x, contributions=local_contributions
-            )
+            if self.explain_data.get("contributions_space") == "original":
+                self.contributions = self.backend.get_local_contributions(x=x, explain_data=self.explain_data)
+            else:
+                self.contributions = self.backend.format_and_aggregate_local_contributions(
+                    x=x, contributions=local_contributions
+                )
             if isinstance(self.backend, PrecomputedBackend) and self.explain_data.get("base_values") is not None:
                 self.explain_data["base_values"] = self.backend.validate_base_values(
                     x, self.explain_data["base_values"]
