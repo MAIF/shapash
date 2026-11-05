@@ -140,7 +140,7 @@ class NlpExplainer:
 
     def __init__(
         self,
-        model,
+        model: Any,
         label_names: list[str] | None = None,
         backend: NlpBackend | None = None,
         cf_generator: CounterfactualGenerator | None = None,
@@ -521,7 +521,7 @@ class NlpExplainer:
     def compute_projection(
         self,
         explanation: NlpExplanation,
-        reducer=None,
+        reducer: Any = None,
         cache_dir: str | Path | None = None,
         recompute: bool = False,
         **fit_transform_kwargs: Any,

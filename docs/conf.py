@@ -34,9 +34,8 @@ extensions = [
 root_doc = "index"
 templates_path = ["_templates"]
 language = "en"
-# Markdown files are not documentation pages (GitHub wiki sources, landing page assets).
-# `assets/` belongs to the GitHub Pages landing page served from this folder.
-exclude_patterns = ["_build", "_generated", "assets", "**.md", "Thumbs.db", ".DS_Store"]
+# Markdown files are not documentation pages (GitHub wiki sources).
+exclude_patterns = ["_build", "_generated", "**.md", "Thumbs.db", ".DS_Store"]
 
 # -- API reference -----------------------------------------------------------
 

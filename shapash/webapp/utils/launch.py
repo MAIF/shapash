@@ -15,7 +15,7 @@ from dash import jupyter_dash
 class RunningApp:
     """A Dash app Dash is serving in the background of a notebook; call ``.kill()`` to stop it."""
 
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int) -> None:
         self.url = f"http://{host}:{port}/"
         self._key = (host, port)
         self._server = jupyter_dash._servers[self._key]
@@ -34,7 +34,7 @@ class RunningApp:
     def __enter__(self) -> RunningApp:
         return self
 
-    def __exit__(self, *exc_info) -> None:
+    def __exit__(self, *exc_info: object) -> None:
         self.kill()
 
     def __repr__(self) -> str:

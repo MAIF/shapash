@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import logging
 import warnings
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
@@ -198,8 +199,8 @@ class EncoderClassifierModel(
 
     def __init__(
         self,
-        backbone,
-        tokenizer,
+        backbone: Any,
+        tokenizer: Any,
         label_names: list[str] | None = None,
         batch_size: int = 32,
         device: int | str | object | None = None,
@@ -313,7 +314,7 @@ class EncoderClassifierModel(
     # Batched forward (shared by predict / embed)
     # ------------------------------------------------------------------
 
-    def _tokenize(self, texts: str | list[str], **overrides: Any):
+    def _tokenize(self, texts: str | list[str], **overrides: Any) -> Any:
         """Tokenize with this model's truncation settings — the single place they are applied.
 
         Every tokenizer call in this class goes through here so they truncate *identically*. That is not
@@ -374,13 +375,13 @@ class EncoderClassifierModel(
             "truncation=True a no-op."
         )
 
-    def _encode_one(self, text: str):
+    def _encode_one(self, text: str) -> tuple[Any, Any]:
         """Return ``(input_ids, attention_mask)`` batch-size-1 tensors on the backbone device."""
         enc = self._tokenize(text, return_tensors="pt")
         device = self.backbone.device
         return enc["input_ids"].to(device), enc["attention_mask"].to(device)
 
-    def _batches(self, texts: list[str], **forward_kwargs: Any):
+    def _batches(self, texts: list[str], **forward_kwargs: Any) -> Iterator[tuple[dict[str, Any], Any]]:
         """Yield ``(batch, output)`` per chunk of ``texts``, tokenized, on-device and under ``no_grad``.
 
         The single place the tokenize -> to(device) -> forward loop lives; ``predict`` and every
@@ -417,7 +418,7 @@ class EncoderClassifierModel(
         out = [output.logits.float().cpu().numpy() for _, output in self._batches(list(texts))]
         return np.vstack(out)
 
-    def _resolve_pipeline_device(self):
+    def _resolve_pipeline_device(self) -> Any:
         """Pick the pipeline device, degrading an unavailable-GPU request to CPU with a warning."""
         torch = import_optional_module("torch", extra=_NLP_EXTRA)
         if self.device is None:
@@ -436,7 +437,7 @@ class EncoderClassifierModel(
         return self.device
 
     @property
-    def shap_callable(self):
+    def shap_callable(self) -> Any:
         """A ``text-classification`` pipeline built from the backbone, for SHAP's TextMasker.
 
         Requires the backbone to be a ``transformers`` model ``pipeline`` accepts. Presets whose
@@ -574,7 +575,7 @@ class EncoderClassifierModel(
             handle.remove()
         return np.vstack(out)
 
-    def _head_module(self):
+    def _head_module(self) -> Any:
         """Return the classification head module, or ``None`` when it cannot be located.
 
         The head is found by attribute name (:data:`_HEAD_ATTRS`), which covers every preset without any
@@ -589,7 +590,7 @@ class EncoderClassifierModel(
                 return module
         return None
 
-    def _resolve_decision_linear(self):
+    def _resolve_decision_linear(self) -> Any:
         """Return the final classification ``nn.Linear`` (its input is the decision space), or ``None``.
 
         Located structurally: find the classification head (:meth:`_head_module`), then take the last
@@ -684,11 +685,11 @@ class EncoderClassifierModel(
     # ------------------------------------------------------------------
 
     @property
-    def embedding_layer(self):
+    def embedding_layer(self) -> Any:
         """Return the word-embedding ``nn.Module`` (what ``LayerIntegratedGradients`` attributes through)."""
         return self.backbone.get_input_embeddings()
 
-    def encode(self, text: str):
+    def encode(self, text: str) -> tuple[Any, Any, list[str]]:
         """Return ``(input_ids, attention_mask, tokens)`` — batch-size-1 tensors + aligned token strings."""
         input_ids, attention_mask = self._encode_one(text)
         tokens = self.tokenizer.convert_ids_to_tokens(input_ids[0].tolist())
@@ -718,7 +719,7 @@ class EncoderClassifierModel(
         """The token string :meth:`reference_ids` substitutes (e.g. ``"[MASK]"``)."""
         return self.tokenizer.convert_ids_to_tokens(self._baseline_token_id())
 
-    def reference_ids(self, input_ids):
+    def reference_ids(self, input_ids: Any) -> Any:
         """Return baseline ids: content tokens replaced by :attr:`baseline_token`, special tokens kept."""
         torch = import_optional_module("torch", extra=_NLP_EXTRA)
         ids = input_ids[0].tolist()
@@ -727,7 +728,7 @@ class EncoderClassifierModel(
         ref = [tid if is_special else ref_id for tid, is_special in zip(ids, special_mask, strict=True)]
         return torch.tensor([ref], device=input_ids.device)
 
-    def logits(self, input_ids, attention_mask):
+    def logits(self, input_ids: Any, attention_mask: Any) -> Any:
         """Return raw classification logits ``(batch, n_classes)`` (the Captum forward func)."""
         return self.backbone(input_ids=input_ids, attention_mask=attention_mask).logits
 

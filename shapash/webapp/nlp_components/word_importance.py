@@ -19,13 +19,16 @@ Data-only: ``requires`` is empty, so it mounts on a loaded snapshot with no live
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
 import dash
-from dash import Input, Output, callback_context, dcc, html
+import plotly.graph_objs as go
+from dash import Dash, Input, Output, callback_context, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_word_importance import empty_word_figure, plot_word_importance, word_importance_axis_title
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import WebappComponent, compose_selection, error_positions
+from shapash.webapp.nlp_components.base import AppContext, WebappComponent, compose_selection, error_positions
 
 # The frequency floor the global word ranking starts at. 1 (no filter) is the status quo and is
 # actively misleading: on the emotion demo 58% of the vocabulary occurs exactly once, so an
@@ -67,7 +70,7 @@ class WordImportanceComponent(WebappComponent):
     def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._theme = theme
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Build the controls + graph.
 
         DOM ids are the pre-extraction literals (no ``self.id`` prefix) so existing layout tests keep matching — these ids were never shared with any other panel.
@@ -245,7 +248,7 @@ class WordImportanceComponent(WebappComponent):
             style={"height": "100%", "display": "flex", "flexDirection": "column"},
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire the ranking, the sign-filter gate, and the bar-click → shared word/class stores."""
         explanation = ctx.explanation
         selection_store = stores["selection"]
@@ -308,17 +311,17 @@ class WordImportanceComponent(WebappComponent):
             ],
         )
         def update_global_importance(
-            label_idx,
-            topk,
-            sign_filter,
-            exclude_words_list,
-            rank_by,
-            min_occurrences,
-            selected_indices,
-            error_cell,
-            errors_only,
-            highlighted_words,
-        ):
+            label_idx: int | str | None,
+            topk: int | None,
+            sign_filter: str | None,
+            exclude_words_list: list[str] | None,
+            rank_by: str | None,
+            min_occurrences: int | None,
+            selected_indices: list[int] | None,
+            error_cell: dict | None,
+            errors_only: bool | None,
+            highlighted_words: list[str] | None,
+        ) -> go.Figure:
             if label_idx is None:
                 raise PreventUpdate
             across_classes = label_idx == _ALL_CLASSES
@@ -396,7 +399,7 @@ class WordImportanceComponent(WebappComponent):
             Output("sign-filter", "value"),
             Input("global-class-selector", "value"),
         )
-        def gate_sign_filter(label_idx):
+        def gate_sign_filter(label_idx: int | str | None) -> tuple[Sequence[Mapping[str, object]], object]:
             if label_idx != _ALL_CLASSES:
                 return _SIGN_FILTER_OPTIONS, dash.no_update
             greyed = [{**opt, "disabled": opt["value"] != "all"} for opt in _SIGN_FILTER_OPTIONS]
@@ -414,7 +417,9 @@ class WordImportanceComponent(WebappComponent):
             Input(word_click_clear_btn, "n_clicks"),
             prevent_initial_call=True,
         )
-        def update_word_click_filter(click_data, _clear_clicks):
+        def update_word_click_filter(
+            click_data: dict | None, _clear_clicks: int | None
+        ) -> tuple[list[str] | None, None]:
             trigger = callback_context.triggered[0]["prop_id"] if callback_context.triggered else ""
             if word_click_clear_btn in trigger:
                 return None, None
@@ -426,7 +431,7 @@ class WordImportanceComponent(WebappComponent):
             Output(word_click_clear_btn, "style"),
             Input(word_click_store, "data"),
         )
-        def toggle_word_clear_button(word_filter):
+        def toggle_word_clear_button(word_filter: str | list[str] | None) -> dict[str, str]:
             if word_filter:
                 return {"display": "inline", "fontSize": "0.8em"}
             return {"display": "none", "fontSize": "0.8em"}
@@ -438,5 +443,5 @@ class WordImportanceComponent(WebappComponent):
             Output(active_class_store, "data"),
             Input("global-class-selector", "value"),
         )
-        def publish_active_class(label_idx):
+        def publish_active_class(label_idx: int | str | None) -> int:
             return label_idx if isinstance(label_idx, int) else 0

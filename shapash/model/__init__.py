@@ -23,7 +23,7 @@ All full-capability adapters share one spine, :class:`~shapash.model.encoder.Enc
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from shapash.model.base import (
     SupportsCaptumIG,
@@ -49,7 +49,7 @@ if TYPE_CHECKING:  # import for type checkers only — the runtime path is the l
 _LAZY_ADAPTERS = {"SentenceTransformerModel", "TorchClassifierModel"}
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Resolve the torch-only adapters on first access (see :data:`_LAZY_ADAPTERS`)."""
     if name in _LAZY_ADAPTERS:
         from shapash.model import torch_models  # noqa: PLC0415

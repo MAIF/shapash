@@ -213,14 +213,14 @@ class HFPipelineModel(TextModel, SupportsTokenization):
         prediction — a mismatched set raises ``ValueError`` rather than silently misaligning columns.
     """
 
-    def __init__(self, pipeline, label_names: list[str] | None = None) -> None:
+    def __init__(self, pipeline: Any, label_names: list[str] | None = None) -> None:
         super().__init__(label_names=label_names)
         self.pipeline = pipeline
         self.tokenizer = getattr(pipeline, "tokenizer", None)
         self._order: list[str] | None = None
 
     @property
-    def shap_callable(self):
+    def shap_callable(self) -> Any:
         """Callable SHAP's text explainer can wrap directly (the pipeline itself)."""
         return self.pipeline
 
@@ -307,8 +307,8 @@ class HFClassifierModel(EncoderClassifierModel):
 
     def __init__(
         self,
-        classifier,
-        tokenizer,
+        classifier: Any,
+        tokenizer: Any,
         label_names: list[str] | None = None,
         batch_size: int = 32,
         device: int | str | object | None = None,

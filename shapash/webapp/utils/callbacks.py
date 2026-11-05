@@ -1,5 +1,5 @@
 import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from shapash.explainer.explainer import Explainer
@@ -293,12 +293,12 @@ def update_click_data_on_subset_changes(click_data: dict) -> dict:
     return click_data
 
 
-def get_figure_zoom(click_zoom: int) -> bool:
+def get_figure_zoom(click_zoom: int | None) -> bool:
     """Get figure zoom from n_clicks.
 
     Parameters
     ----------
-    click_zoom : int
+    click_zoom : int or None
         Number of clicks on zoom button
 
     Returns
@@ -314,14 +314,14 @@ def get_figure_zoom(click_zoom: int) -> bool:
     return zoom_active
 
 
-def get_feature_contributions_sign_to_show(positive: list, negative: list) -> bool | None:
+def get_feature_contributions_sign_to_show(positive: list | None, negative: list | None) -> bool | None:
     """Get the feature contributions sign to show on plot.
 
     Parameters
     ----------
-    positive : list
+    positive : list or None
         Click on positive contributions
-    negative : list
+    negative : list or None
         Click on negative contributions
 
     Returns
@@ -400,7 +400,7 @@ def get_id_card_features(data: list, selected: int, special_cols: list, features
 
 
 def get_id_card_contrib(
-    data: dict, index: int, features_dict: dict, columns_dict: dict, label_num: int | None = None
+    data: dict, index: Any, features_dict: dict, columns_dict: dict, label_num: int | None = None
 ) -> pd.DataFrame:
     """Get the contributions of the selected index for the identity card.
 
@@ -408,8 +408,8 @@ def get_id_card_contrib(
     ----------
     data : dict
         Data from the smart explainer
-    index : int
-        Index selected
+    index : Any
+        Index label selected
     features_dict : dict
         Dictionary mapping technical feature names to domain names
     columns_dict : dict
@@ -737,13 +737,15 @@ def handle_page_navigation(
     return page, selected_feature
 
 
-def update_click_data_on_subset_changes_if_needed(click_data: dict, triggered_input: str, nclicks_del: list) -> dict:
+def update_click_data_on_subset_changes_if_needed(
+    click_data: dict | None, triggered_input: str, nclicks_del: list
+) -> dict | None:
     """
     Update the click data when there are changes in the subset of data.
 
     Parameters
     ----------
-    click_data : dict
+    click_data : dict or None
         The current click data.
     triggered_input : str
         The input that triggered the update.
@@ -752,7 +754,7 @@ def update_click_data_on_subset_changes_if_needed(click_data: dict, triggered_in
 
     Returns
     -------
-    dict
+    dict or None
         Updated click data.
     """
     if click_data and (
@@ -763,13 +765,13 @@ def update_click_data_on_subset_changes_if_needed(click_data: dict, triggered_in
     return click_data
 
 
-def get_selected_feature(click_data: dict, inv_features_dict: dict) -> str | None:
+def get_selected_feature(click_data: dict | None, inv_features_dict: dict) -> str | None:
     """
     Retrieve the selected feature from the click data.
 
     Parameters
     ----------
-    click_data : dict
+    click_data : dict or None
         The click data.
     inv_features_dict : dict
         Dictionary mapping feature IDs to feature names.
@@ -786,13 +788,13 @@ def handle_group_display_logic(
     bool_group: bool,
     triggered_input: str,
     selected_feature: str | None,
-    selected_click_data,
+    selected_click_data: dict | None,
     click_data: dict | None,
-    click_data_store: dict,
-    selected_click_data_store,
+    click_data_store: dict | None,
+    selected_click_data_store: dict | None,
     features_groups: dict[str, list[str]] | None,
     features_dict: dict,
-) -> tuple[str | None, str | None, dict | None, object]:
+) -> tuple[str | None, str | None, dict | None, dict | None]:
     """
     Handle the display logic for feature groups.
 
@@ -804,13 +806,13 @@ def handle_group_display_logic(
         The input that triggered the update.
     selected_feature : str | None
         The currently selected feature.
-    selected_click_data : object
+    selected_click_data : dict | None
         The currently selected click data.
     click_data : dict | None
         The current click data.
-    click_data_store : dict
+    click_data_store : dict | None
         Stored click data.
-    selected_click_data_store : object
+    selected_click_data_store : dict | None
         Stored selected click data.
     features_groups : dict[str, list[str]] | None
         Dictionary of feature groups, or None if no groups are defined.
@@ -819,7 +821,7 @@ def handle_group_display_logic(
 
     Returns
     -------
-    tuple[str | None, str | None, dict | None, object]
+    tuple[str | None, str | None, dict | None, dict | None]
         Updated selected feature, group name, click data, and selected click data.
     """
     group_name = None
@@ -842,7 +844,7 @@ def handle_group_display_logic(
             raise PreventUpdate
 
         if (triggered_input == "card_global_feature_importance.n_clicks") and (click_data_store == click_data):
-            if group_name and selected_feature and selected_feature != group_name:
+            if click_data is not None and group_name and selected_feature and selected_feature != group_name:
                 click_data["points"][0]["label"] = features_dict.get(group_name, group_name)
             else:
                 click_data = None
