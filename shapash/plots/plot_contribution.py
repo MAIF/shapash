@@ -17,6 +17,7 @@ NAN_PLACEHOLDER_K = 0.2
 # classification only: One marker symbol per class
 CLASS_MARKER_SYMBOLS = ["circle", "square", "triangle-up", "diamond", "cross", "star"]
 
+
 def get_class_marker_symbols(y_target: pd.Series, classes: list[Any] | None) -> pd.Series | None:
     """Map each point's true class (y_target) to a marker symbol.
 
@@ -443,6 +444,8 @@ def plot_scatter(
     auto_open: bool = False,
     zoom: bool = False,
     marker_symbols: pd.Series | None = None,
+    color_values: pd.DataFrame | None = None,
+    color_title: str | None = None,
 ) -> go.Figure:
     """
     Scatter plot of one feature contribution across the prediction set.
@@ -492,6 +495,10 @@ def plot_scatter(
     marker_symbols: pd.Series or None, optional
         Marker symbol of each point (one symbol per y_target class, classification only).
         If None, the default markers are used.
+    color_values: pd.DataFrame or None, optional
+        values used to colors points instead of prediction (ex: targets or errors).
+    color_title: str or None, optional
+        colorbar title used with color_values.
 
     Returns
     -------
@@ -509,6 +516,8 @@ def plot_scatter(
         proba_values = proba_values.loc[feature_values.index]
     if marker_symbols is not None:
         marker_symbols = marker_symbols.loc[feature_values.index]
+    if color_values is not None:
+        color_values = color_values.loc[feature_values.index]
 
     # add break line to X label if necessary
     args = (max_len_by_row, 120)
@@ -622,6 +631,8 @@ def plot_scatter(
         auto_open=auto_open,
         case=case,
         style_dict=style_dict,
+        color_values=color_values,
+        color_title=color_title,
     )
 
     return fig
@@ -648,6 +659,8 @@ def plot_violin(
     auto_open: bool = False,
     zoom: bool = False,
     marker_symbols: pd.Series | None = None,
+    color_values: pd.DataFrame | None = None,
+    color_title: str | None = None,
 ) -> go.Figure:
     """
     Violin plot of one feature contribution across the prediction set.
@@ -695,6 +708,10 @@ def plot_violin(
     marker_symbols: pd.Series or None, optional
         Marker symbol of each point (one symbol per y_target class, classification only).
         If None, the default markers are used.
+    color_values: pd.DataFrame or None, optional
+        values used to colors points instead of prediction (ex: targets or errors).
+    color_title: str or None, optional
+        colorbar title used with color_values.
 
     Returns
     -------
@@ -719,6 +736,9 @@ def plot_violin(
     if proba_values is not None:
         proba_values = proba_values.loc[feature_values.index]
 
+    if color_values is not None:
+        color_values = color_values.loc[feature_values.index]
+
     hv_text_df, hovertemplate = _prepare_hover_text(feature_values, pred, feature_name)
 
     feature_values_counts = feature_values.value_counts(dropna=False)
@@ -727,7 +747,9 @@ def plot_violin(
     y_upper = (feature_values_counts.sort_index() / feature_values_counts.sum()).values.flatten()
     y_upper_max = y_upper.max()
 
-    if case == "classification":
+    if color_values is not None:
+        colorpoints = color_values
+    elif case == "classification":
         colorpoints = proba_values
     elif case == "regression":
         colorpoints = pred
@@ -882,6 +904,8 @@ def plot_violin(
         auto_open=auto_open,
         case=case,
         style_dict=style_dict,
+        color_values=color_values,
+        color_title=color_title,
     )
     # _update_contributions_fig sets a "Contribution" title on this axis (shared
     # with plot_scatter, where it belongs); here it's the hidden helper axis, so
@@ -909,6 +933,8 @@ def _update_contributions_fig(
     auto_open: bool,
     case: Literal["classification", "regression"],
     style_dict: dict[str, Any],
+    color_values: pd.DataFrame | None = None,
+    color_title: str | None = None,
 ) -> None:
     """
     Function used by both violin and scatter methods for contributions plots in order to
@@ -948,6 +974,10 @@ def _update_contributions_fig(
         Type of the model, either 'classification' or 'regression'
     style_dict: dict[str, Any]
         the different styles used in the different outputs of Shapash
+    color_values: pd.DataFrame or None, optional
+        values used to colors points instead of prediction (ex: targets or errors).
+    color_title: str or None, optional
+        colorbar title used with color_values.
     """
     title = f"<b>{truncate_str(feature_name)}</b> - Feature Contribution"
     # Add subtitle and / or addnote
@@ -962,7 +992,10 @@ def _update_contributions_fig(
     dict_xaxis = style_dict["dict_xaxis"] | {"text": truncate_str(feature_name, 110)}
     dict_yaxis = style_dict["dict_yaxis"] | {"text": "Contribution"}
 
-    if case == "regression":
+    if color_values is not None:
+        colorpoints = color_values
+        colorbar_title = color_title
+    elif case == "regression":
         colorpoints = pred
         colorbar_title = "Predicted"
     elif case == "classification":
