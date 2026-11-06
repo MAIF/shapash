@@ -3,14 +3,22 @@ Unit test of style_utils
 """
 import re
 import unittest
+import warnings
+
+import pytest
 
 from shapash.style.style_utils import (
     colors_loading,
     convert_str_color_to_plt_format,
     define_style,
     get_pyplot_color,
+    merge_palette,
+    normalize_colors,
+    parse_rgb,
+    resolve_colors,
     resolve_nlp_theme,
     select_palette,
+    to_rgb_string,
 )
 
 
@@ -119,3 +127,133 @@ class TestStyle_utils(unittest.TestCase):
         overridden = resolve_nlp_theme(colors_dict={"nlp_xpl_positive": "rgb(1, 2, 3)"})
         assert overridden.xpl_positive == "rgb(1, 2, 3)"
         assert overridden.xpl_negative == default_palette["nlp_xpl_negative"]
+
+    def test_merge_palette_nested_partial_override(self):
+        """A partial nested override keeps the other colors and leaves the palette untouched."""
+        palette = {"bar": {"1": "a", "2": "b"}, "scale": ["x", "y"], "title": "t"}
+        merged = merge_palette(palette, {"bar": {"1": "red"}, "scale": ["z"], "title": "u"})
+        assert merged == {"bar": {"1": "red", "2": "b"}, "scale": ["z"], "title": "u"}
+        assert palette == {"bar": {"1": "a", "2": "b"}, "scale": ["x", "y"], "title": "t"}
+
+    def test_merge_palette_int_keys_match_string_keys(self):
+        """An int key overrides the palette's string key instead of adding a second entry."""
+        merged = merge_palette({"bar": {"1": "a", "2": "b"}}, {"bar": {1: "red"}})
+        assert merged == {"bar": {"1": "red", "2": "b"}}
+
+    def test_merge_palette_without_overrides_returns_a_copy(self):
+        """No override returns an independent copy of the palette."""
+        palette = {"bar": {"1": "a"}}
+        merged = merge_palette(palette, None)
+        merged["bar"]["1"] = "red"
+        assert palette == {"bar": {"1": "a"}}
+
+    def test_define_style_accepts_partial_nested_override(self):
+        """define_style no longer fails on a palette with a partially overridden nested mapping."""
+        palette = merge_palette(select_palette(colors_loading(), "default"), {"featureimp_bar": {"1": "rgb(1, 2, 3)"}})
+        style = define_style(palette)
+        assert style["dict_featimp_colors"][1]["color"] == "rgb(1, 2, 3)"
+        assert style["dict_featimp_colors"][2]["color"] == colors_loading()["default"]["featureimp_bar"]["2"]
+
+    def test_to_rgb_string_accepts_every_supported_format(self):
+        """rgb/rgba strings, hex codes and color names all come out in the rgb(...) format."""
+        assert to_rgb_string("rgb(1,2,3)") == "rgb(1, 2, 3)"
+        assert to_rgb_string("rgba(1, 2, 3, 0.80)") == "rgba(1, 2, 3, 0.8)"
+        assert to_rgb_string("rgb(68.2, 1.0, 84.4)") == "rgb(68, 1, 84)"
+        assert to_rgb_string("#123456") == "rgb(18, 52, 86)"
+        assert to_rgb_string("#12345680") == "rgba(18, 52, 86, 0.501961)"
+        assert to_rgb_string("red") == "rgb(255, 0, 0)"
+
+    def test_to_rgb_string_rejects_invalid_colors(self):
+        """Unknown names, out-of-range components and non-strings raise a ValueError."""
+        for color in ("notacolor", "rgb(256, 0, 0)", "rgba(0, 0, 0, 2)", 12):
+            with pytest.raises(ValueError, match="is not a valid color"):
+                to_rgb_string(color)
+
+    def test_parse_rgb_ignores_opacity(self):
+        """parse_rgb returns the components of any supported color, without its opacity."""
+        assert parse_rgb("rgba(244, 192, 0, 0.5)") == (244, 192, 0)
+        assert parse_rgb("#123456") == (18, 52, 86)
+
+    def test_normalize_colors_named_continuous_scale(self):
+        """A scale name is sampled to as many colors as the palette's scale holds."""
+        palette = select_palette(colors_loading(), "default")
+        normalized = normalize_colors({"confusion_matrix_colorscale": "viridis_r"}, palette)
+        colors = normalized["confusion_matrix_colorscale"]
+        assert len(colors) == len(palette["confusion_matrix_colorscale"])
+        assert colors[0] == "rgb(253, 231, 37)"
+        assert colors[-1] == "rgb(68, 1, 84)"
+
+    def test_normalize_colors_warns_on_non_diverging_contribution_scale(self):
+        """A sequential scale for signed contributions warns; a diverging one does not."""
+        palette = select_palette(colors_loading(), "default")
+        with pytest.warns(UserWarning, match="'viridis' is not a diverging scale"):
+            normalize_colors({"contrib_colorscale": "viridis"}, palette)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            normalized = normalize_colors({"contrib_colorscale": "rdbu_r"}, palette)
+        assert len(normalized["contrib_colorscale"]) == len(palette["contrib_colorscale"])
+
+    def test_normalize_colors_named_qualitative_palette(self):
+        """A qualitative palette name is replaced by its colors, hex codes included."""
+        palette = select_palette(colors_loading(), "default")
+        normalized = normalize_colors({"interaction_discrete": "plotly", "compare_plot": "Set2"}, palette)
+        assert normalized["interaction_discrete"][0] == "rgb(99, 110, 250)"
+        assert normalized["compare_plot"][0] == "rgb(102, 194, 165)"
+
+    def test_normalize_colors_rejects_invalid_names(self):
+        """An unknown scale or palette name, or a color where a scale is expected, raises a ValueError."""
+        palette = select_palette(colors_loading(), "default")
+        with pytest.raises(ValueError, match="'contrib_colorscale': 'red' is not a plotly color scale name"):
+            normalize_colors({"contrib_colorscale": "red"}, palette)
+        with pytest.raises(ValueError, match="'compare_plot': 'nope' is not a plotly qualitative palette name"):
+            normalize_colors({"compare_plot": "nope"}, palette)
+
+    def test_normalize_colors_names_the_key_of_an_invalid_color(self):
+        """An invalid color nested in a list, a dict or a single value names its key."""
+        palette = select_palette(colors_loading(), "default")
+        for overrides in ({"title_color": "nope"}, {"featureimp_bar": {"1": "nope"}}, {"compare_plot": ["nope"]}):
+            key = next(iter(overrides))
+            with pytest.raises(ValueError, match=f"Invalid value for '{key}'"):
+                normalize_colors(overrides, palette)
+        with pytest.raises(ValueError, match="expected a color, a list or a dict of colors"):
+            normalize_colors({"title_color": 3}, palette)
+
+    def test_normalize_colors_converts_nested_and_list_colors(self):
+        """Colors inside nested mappings and lists are converted too."""
+        palette = select_palette(colors_loading(), "default")
+        normalized = normalize_colors({"featureimp_bar": {"1": "#000000"}, "compare_plot": ("red", "blue")}, palette)
+        assert normalized == {"featureimp_bar": {"1": "rgb(0, 0, 0)"}, "compare_plot": ["rgb(255, 0, 0)", "rgb(0, 0, 255)"]}
+
+    def test_normalize_colors_warns_on_unknown_key(self):
+        """An unknown key warns with the closest valid key and is still converted."""
+        palette = select_palette(colors_loading(), "default")
+        with pytest.warns(UserWarning, match="Unknown color key 'titel_color'.*Did you mean 'title_color'"):
+            normalized = normalize_colors({"titel_color": "red"}, palette)
+        assert normalized == {"titel_color": "rgb(255, 0, 0)"}
+
+    def test_normalize_colors_warns_on_unused_key(self):
+        """Setting a key no plot reads warns with the key to set instead."""
+        palette = select_palette(colors_loading(), "default")
+        with pytest.warns(UserWarning, match="'report_confusion_matrix' has no effect: set 'confusion_matrix_colorscale'"):
+            normalize_colors({"report_confusion_matrix": ["red", "blue"]}, palette)
+
+    def test_every_palette_has_clustering_colors(self):
+        """Each palette gives the clustering plot its four colors, kept by define_style."""
+        for name, palette in colors_loading().items():
+            assert set(palette["clustering"]) == {"active_fill", "active_line", "inactive_fill", "inactive_line"}, name
+            assert define_style(palette)["clustering"] == palette["clustering"]
+
+    def test_resolve_colors(self):
+        """resolve_colors returns the whole palette with the normalized overrides merged."""
+        resolved = resolve_colors("blues", {"title_color": "#000000"})
+        blues = select_palette(colors_loading(), "blues")
+        assert resolved["title_color"] == "rgb(0, 0, 0)"
+        assert resolved["webapp_title"] == blues["webapp_title"]
+        assert resolved.keys() == blues.keys()
+
+    def test_resolve_nlp_theme_named_scale_and_hex(self):
+        """The NLP theme samples a scale name instead of splitting it, and converts hex colors."""
+        theme = resolve_nlp_theme(colors_dict={"confusion_matrix_colorscale": "viridis", "nlp_xpl_positive": "#123456"})
+        assert theme.confusion_scale[0] == "rgb(68, 1, 84)"
+        assert all(color.startswith("rgb(") for color in theme.confusion_scale)
+        assert theme.xpl_positive == "rgb(18, 52, 86)"

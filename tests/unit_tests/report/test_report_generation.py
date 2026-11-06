@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 
 from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
-from shapash.report.blocks import ReportBlockMixin, block
+from shapash.report.blocks import CAPTION_MARGIN_BOTTOM, CAPTION_MARGIN_TOP, ReportBlockMixin, _title_below, block
 from shapash.report.core import (
     _apply_html_head_metadata,
     _inject_favicon_links,
@@ -96,7 +96,7 @@ class _TestSmartExplainer(SmartExplainer):
         super().__init__(
             model=model, backend=_DummyBackend(model),
             features_dict={"age": "Age", "income": "Income"},
-            colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}, "default": "#2255aa"},
+            colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}},
         )
         self.plot = _DummyPlot()
         self.explainer.plot = self.plot
@@ -656,6 +656,44 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsNotNone(runtime.explainer.proba_values)
         self.assertIsInstance(univariate_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(univariate_result.objects[2]).__name__, "ParamFunction")
+
+    def test_block_confusion_matrix_uses_explainer_style(self):
+        """The report's confusion matrix gets the plotter's resolved style, like xpl.plot does."""
+        runtime = _build_runtime()
+        smart_explainer = runtime._require_smart_explainer("confusion_matrix")
+        fake_fig = go.Figure(go.Scatter(x=[0, 1], y=[1, 0]))
+
+        with patch("shapash.report.blocks.plot_confusion_matrix", return_value=fake_fig) as mock_cm:
+            runtime.block_confusion_matrix(title="CM")
+
+        assert mock_cm.call_args.kwargs["colors_dict"] is smart_explainer.plot._style_dict
+
+    def test_distribution_blocks_use_explainer_style_and_dataset_colors(self):
+        """Distribution plots get the plotter's style and the palette's colors for each dataset."""
+        runtime = _build_runtime()
+        style_dict = runtime._require_smart_explainer("distribution").plot._style_dict
+        fake_fig = go.Figure(go.Scatter(x=[1], y=[1]))
+
+        with patch("shapash.report.blocks.plot_distribution", return_value=fake_fig) as mock_dist:
+            runtime.block_feature_distribution(feature="age")
+            runtime.block_target_distribution()
+
+        assert len(mock_dist.call_args_list) == 2
+        for call in mock_dist.call_args_list:
+            assert call.kwargs["colors_dict"] is style_dict
+            assert call.kwargs["hue_colors"] is style_dict["report_feature_distribution"]
+
+    def test_title_below_keeps_title_and_legend_inside_the_figure(self):
+        """The caption title sits above the bottom edge, with room for the axis below and the legend above."""
+        fig = go.Figure(go.Scatter(x=[1], y=[1]))
+        fig.update_layout(title={"text": "Distribution of age", "font": {"size": 24}}, margin={"l": 90, "t": 100, "b": 70})
+
+        _title_below(fig)
+
+        assert fig.layout.title.text == "Distribution of age"
+        assert fig.layout.title.font.size == 24
+        assert (fig.layout.title.y, fig.layout.title.yanchor, fig.layout.title.pad.b) == (0.0, "bottom", 15)
+        assert (fig.layout.margin.t, fig.layout.margin.b, fig.layout.margin.l) == (CAPTION_MARGIN_TOP, CAPTION_MARGIN_BOTTOM, 90)
 
     def test_smart_explainer_required(self):
         rbm = ReportBlockMixin()
