@@ -96,7 +96,7 @@ class _TestSmartExplainer(SmartExplainer):
         super().__init__(
             model=model, backend=_DummyBackend(model),
             features_dict={"age": "Age", "income": "Income"},
-            colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}, "default": "#2255aa"},
+            colors_dict={"report_feature_distribution": {"train": "#f4c000", "test": "#2255aa"}},
         )
         self.plot = _DummyPlot()
         self.explainer.plot = self.plot

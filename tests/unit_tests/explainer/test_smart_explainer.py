@@ -14,6 +14,7 @@ import catboost as cb
 import category_encoders as ce
 import numpy as np
 import pandas as pd
+import pytest
 import shap
 from catboost import CatBoostClassifier, CatBoostRegressor
 from pandas.testing import assert_frame_equal
@@ -963,11 +964,12 @@ class TestSmartExplainer(unittest.TestCase):
         with patch("shapash.explainer.smart_explainer.colors_loading", return_value={"dummy": {}}), patch(
             "shapash.explainer.smart_explainer.select_palette", return_value={"color_1": "blue", "color_2": "red"}
         ):
-            xpl.define_style(palette_name="custom", colors_dict={"color_2": "green", "color_3": "black"})
+            with pytest.warns(UserWarning, match="Unknown color key 'color_3'"):
+                xpl.define_style(palette_name="custom", colors_dict={"color_2": "green", "color_3": "black"})
 
         assert xpl.colors_dict["color_1"] == "blue"
-        assert xpl.colors_dict["color_2"] == "green"
-        assert xpl.colors_dict["color_3"] == "black"
+        assert xpl.colors_dict["color_2"] == "rgb(0, 128, 0)"
+        assert xpl.colors_dict["color_3"] == "rgb(0, 0, 0)"
         xpl.plot.define_style_attributes.assert_called_once_with(colors_dict=xpl.colors_dict)
 
     def test_define_style_2(self):
