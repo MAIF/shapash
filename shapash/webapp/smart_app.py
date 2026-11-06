@@ -54,6 +54,8 @@ from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
 if TYPE_CHECKING:
     from shapash.explainer.explainer import Explainer
 
+from shapash.__version__ import VERSION
+
 
 def _create_input_modal(component_id: str, label: str, tooltip: str) -> Component:
     return dbc.Row(
@@ -335,7 +337,15 @@ class SmartApp:
                         ]
                     )
                 ),
-                dbc.ModalFooter(dbc.Button("Apply", id="apply", className="ml-auto")),
+                dbc.ModalFooter(
+                    [
+                        dbc.FormText(
+                            f"shapash version : {'.'.join(str(p) for p in VERSION)}",
+                            className="me-auto",
+                        ),
+                        dbc.Button("Apply", id="apply", className="ml-auto"),
+                    ]
+                ),
             ],
             id="modal",
         )
