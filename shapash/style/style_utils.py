@@ -120,7 +120,7 @@ CONTINUOUS_SCALE_KEYS = frozenset(
 )
 # Palette keys holding a list of distinct colors: they also accept a plotly qualitative palette name.
 DISCRETE_COLOR_KEYS = frozenset({"interaction_discrete", "compare_plot"})
-# Scales drawing signed values: a non-diverging scale hides the sign, so it draws a warning.
+# Scales also drawing signed values (correlations): a non-diverging scale hides the sign, so it draws a warning.
 SIGNED_SCALE_KEYS = frozenset({"contrib_colorscale"})
 
 _RGB_PATTERN = re.compile(r"^\s*rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)\s*$")
@@ -209,8 +209,9 @@ def _sample_named_scale(key: str, name: str, n_colors: int) -> list[str]:
         raise ValueError(f"Invalid value for {key!r}: {name!r} is not a plotly color scale name.") from exc
     if key in SIGNED_SCALE_KEYS and name.lower().removesuffix("_r") not in _named_lists(plotly_colors.diverging):
         warnings.warn(
-            f"{name!r} is not a diverging scale: with it, {key!r} no longer shows whether a contribution "
-            "is positive or negative. A diverging scale such as 'RdBu' keeps the sign visible.",
+            f"{name!r} is not a diverging scale: the correlation plots, which also use {key!r}, will no "
+            "longer show whether a correlation is positive or negative. A diverging scale such as 'RdBu' "
+            "keeps the sign visible.",
             UserWarning,
             stacklevel=6,
         )
