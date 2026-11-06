@@ -1858,13 +1858,13 @@ class SmartApp:
                 ],
             )
             def ember(
-                click,
-                data_component_type,
-                data_component_id,
-                _component_id=component_id,
-                _component_type=component_type,
-                _component_property=component_property,
-            ):
+                click: int | None,
+                data_component_type: str | None,
+                data_component_id: str | dict,
+                _component_id: str = component_id,
+                _component_type: str = component_type,
+                _component_property: str = component_property,
+            ) -> tuple[dict[str, Any], dict[str, Any]]:
                 """
                 Function used to set style of cards and components.
 
@@ -1943,7 +1943,7 @@ class SmartApp:
                 [Output(f"{component_id}", "valid"), Output(f"{component_id}", "invalid")],
                 [Input(f"{component_id}", "value")],
             )
-            def update_valid(value):
+            def update_valid(value: int | None) -> tuple[bool, bool]:
                 """
                 Actualise valid and invalid icon in input component.
 
@@ -1972,7 +1972,14 @@ class SmartApp:
                 State("violin", "valid"),
             ],
         )
-        def toggle_modal(n1, n2, rows, points, features, violin):
+        def toggle_modal(
+            n1: int | None,
+            n2: int | None,
+            rows: bool | None,
+            points: bool | None,
+            features: bool | None,
+            violin: bool | None,
+        ) -> bool:
             """Open modal /close modal (only if all input are valid)."""
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "settings.n_clicks":
@@ -2024,27 +2031,27 @@ class SmartApp:
             ],
         )
         def update_datatable(
-            selected_data_prediction_picking,
-            selected_data_clusters,
-            is_open,
-            nclicks_apply,
-            nclicks_reset,
-            nclicks_del,
-            rows,
-            name,
-            val_feature,
-            id_feature,
-            val_str_modality,
-            id_str_modality,
-            val_bool_modality,
-            id_bool_modality,
-            start_date,
-            end_date,
-            id_date,
-            val_lower_modality,
-            id_lower_modality,
-            val_upper_modality,
-        ):
+            selected_data_prediction_picking: dict | None,
+            selected_data_clusters: dict | None,
+            is_open: bool | None,
+            nclicks_apply: int | None,
+            nclicks_reset: int | None,
+            nclicks_del: list[int | None],
+            rows: int | None,
+            name: list[int] | None,
+            val_feature: list[str | None],
+            id_feature: list[dict],
+            val_str_modality: list[list[str] | None],
+            id_str_modality: list[dict],
+            val_bool_modality: list[Any],
+            id_bool_modality: list[dict],
+            start_date: list[str | None],
+            end_date: list[str | None],
+            id_date: list[dict],
+            val_lower_modality: list[float | None],
+            id_lower_modality: list[dict],
+            val_upper_modality: list[float | None],
+        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, str]], str | None, str | None]:
             """
             Update the datatable according to sorting, filtering and settings modifications.
 
@@ -2235,26 +2242,26 @@ class SmartApp:
             ],
         )
         def update_feature_importance(
-            label,
-            data,
-            selected_data_prediction_picking,
-            selected_data_clusters,
-            apply_filters,
-            reset_filter,
-            nclicks_del,
-            n_clicks,
-            bool_group,
-            click_zoom,
-            click_page_left,
-            click_page_right,
-            click_goback,
-            click_data,
-            selected_click_data,
-            features,
-            click_data_store,
-            selected_click_data_store,
-            page,
-        ):
+            label: int | str | None,
+            data: list[dict[str, Any]],
+            selected_data_prediction_picking: dict | None,
+            selected_data_clusters: dict | None,
+            apply_filters: int | None,
+            reset_filter: int | None,
+            nclicks_del: list[int | None],
+            n_clicks: int | None,
+            bool_group: bool,
+            click_zoom: int | None,
+            click_page_left: int | None,
+            click_page_right: int | None,
+            click_goback: int | None,
+            click_data: dict | None,
+            selected_click_data: dict | None,
+            features: int,
+            click_data_store: dict | None,
+            selected_click_data_store: dict | None,
+            page: int | str,
+        ) -> tuple[go.Figure, dict | None, dict | None, dict | None, int, str, dict[str, str], dict[str, str]]:
             """
             Update the feature importance plot.
 
@@ -2394,7 +2401,15 @@ class SmartApp:
                 State("global_feature_importance", "figure"),
             ],
         )
-        def update_feature_selector(feature, data, label, click_zoom, points, violin, gfi_figure):
+        def update_feature_selector(
+            feature: dict | None,
+            data: list[dict[str, Any]],
+            label: int | str | None,
+            click_zoom: int | None,
+            points: int | None,
+            violin: int | None,
+            gfi_figure: dict,
+        ) -> go.Figure:
             """
             Update the feature plot.
 
@@ -2475,18 +2490,18 @@ class SmartApp:
             ],
         )
         def update_index_id(
-            click_data,
-            prediction_picking,
-            clusters,
-            cell,
-            apply_filters,
-            reset_filter,
-            nclicks_del,
-            data,
-            viewport_data,
-            current_index_id,
-            current_n_submit,
-        ):
+            click_data: dict | None,
+            prediction_picking: dict | None,
+            clusters: dict | None,
+            cell: dict | None,
+            apply_filters: int | None,
+            reset_filter: int | None,
+            nclicks_del: list[int | None],
+            data: list[dict[str, Any]],
+            viewport_data: list[dict[str, Any]] | None,
+            current_index_id: int | str | None,
+            current_n_submit: int | None,
+        ) -> tuple[int | str | None, int]:
             """
             Update the index value.
 
@@ -2523,11 +2538,11 @@ class SmartApp:
             ctx = dash.callback_context
             selected = None
             try:
-                if ctx.triggered[0]["prop_id"] == "feature_selector.clickData":
+                if ctx.triggered[0]["prop_id"] == "feature_selector.clickData" and click_data is not None:
                     selected = click_data["points"][0]["customdata"][1]
-                elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData":
+                elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData" and prediction_picking is not None:
                     selected = prediction_picking["points"][0]["customdata"]
-                elif ctx.triggered[0]["prop_id"] == "clusters.clickData":
+                elif ctx.triggered[0]["prop_id"] == "clusters.clickData" and clusters is not None:
                     selected = clusters["points"][0]["customdata"]
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
                     displayed_data = viewport_data if viewport_data is not None else data
@@ -2549,12 +2564,12 @@ class SmartApp:
             return selected, (current_n_submit or 0) + 1
 
         @app.callback(Output("threshold_label", "children"), [Input("threshold_id", "value")])
-        def update_threshold_label(value):
+        def update_threshold_label(value: float | None) -> str:
             """Update threshold label."""
             return f"Threshold: {value}"
 
         @app.callback(Output("max_contrib_label", "children"), [Input("max_contrib_id", "value")])
-        def update_max_contrib_label(value):
+        def update_max_contrib_label(value: int | None) -> str:
             """Update max_contrib label."""
             return f"Features to display: {value}"
 
@@ -2563,7 +2578,7 @@ class SmartApp:
             [Input("modal", "is_open")],
             [State("features", "value"), State("max_contrib_id", "value")],
         )
-        def update_max_contrib_id(is_open, features, value):
+        def update_max_contrib_id(is_open: bool | None, features: int, value: int) -> tuple[int, int, dict] | None:
             """Update max contrib component layout after settings modifications."""
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "modal.is_open":
@@ -2574,6 +2589,7 @@ class SmartApp:
                         features, len(self.explainer.x_init.columns), value
                     )
                     return value, nb_max_col, marks
+            return None
 
         @app.callback(
             Output(component_id="detail_feature", component_property="figure"),
@@ -2591,18 +2607,18 @@ class SmartApp:
             [State("index_id", "value"), State("dataset", "data")],
         )
         def update_detail_feature(
-            threshold,
-            max_contrib,
-            positive,
-            negative,
-            masked,
-            label,
-            validation_click,
-            bool_group,
-            click_zoom,
-            index,
-            data,
-        ):
+            threshold: float | None,
+            max_contrib: int | None,
+            positive: list[int] | None,
+            negative: list[int] | None,
+            masked: list[str] | None,
+            label: int | str | None,
+            validation_click: int | None,
+            bool_group: bool,
+            click_zoom: int | None,
+            index: int | str | None,
+            data: list[dict[str, Any]],
+        ) -> go.Figure:
             """
             Update local explanation plot according to app changes.
 
@@ -2698,7 +2714,7 @@ class SmartApp:
             [Input("index_id", "n_submit")],
             [State("validation", "n_clicks")],
         )
-        def click_validation(n_submit, n_clicks):
+        def click_validation(n_submit: int | None, n_clicks: int | None) -> int:
             """Submit index selection."""
             if n_submit:
                 return (n_clicks or 0) + 1
@@ -2720,7 +2736,14 @@ class SmartApp:
                 State("index_id", "value"),
             ],
         )
-        def update_id_card(n_submit, label, sort_by, order, data, index):
+        def update_id_card(
+            n_submit: int | None,
+            label: int | str | None,
+            sort_by: str,
+            order: bool,
+            data: list[dict[str, Any]],
+            index: int | str | None,
+        ) -> tuple[dict[str, Any], list, str]:
             """
             Update identity card and display button.
 
@@ -2786,7 +2809,7 @@ class SmartApp:
             [Input("id_card", "n_clicks"), Input("close_id_card", "n_clicks")],
             [State("modal_id_card", "is_open")],
         )
-        def toggle_modal_id_card(n1, n2, is_open):
+        def toggle_modal_id_card(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close identity card modal.
 
@@ -2814,7 +2837,12 @@ class SmartApp:
             [Input("validation", "n_clicks")],
             [State("dataset", "data"), State("dataset", "derived_viewport_data"), State("index_id", "value")],
         )
-        def datatable_layout(validation, data, viewport_data, index):
+        def datatable_layout(
+            validation: int | None,
+            data: list[dict[str, Any]],
+            viewport_data: list[dict[str, Any]] | None,
+            index: int | str | None,
+        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
             ctx = dash.callback_context
             if ctx.triggered[0]["prop_id"] == "validation.n_clicks" and validation is not None:
                 pass
@@ -2858,8 +2886,17 @@ class SmartApp:
             [State("points", "value"), State("violin", "value"), State("prediction_picking", "selectedData")],
         )
         def update_prediction_picking(
-            data, apply_filters, reset_filter, nclicks_del, label, is_open, click_zoom, points, violin, selectedData
-        ):
+            data: list[dict[str, Any]],
+            apply_filters: int | None,
+            reset_filter: int | None,
+            nclicks_del: list[int | None],
+            label: int | str | None,
+            is_open: bool | None,
+            click_zoom: int | None,
+            points: int | None,
+            violin: int | None,
+            selectedData: dict | None,
+        ) -> tuple[go.Figure, dict | None]:
             """
             Update the prediction picking plot according to the label, data, filters and settings.
 
@@ -2915,7 +2952,7 @@ class SmartApp:
             Output("toggle_points_off", "outline"),
             Input("points_visible_store", "data"),
         )
-        def sync_points_toggle(points_visible: bool):
+        def sync_points_toggle(points_visible: bool) -> tuple[bool, bool]:
             """
             Synchronize ON/OFF button styles with stored state.
 
@@ -2950,22 +2987,22 @@ class SmartApp:
             ],
         )
         def update_clusters(
-            data,
-            apply_filters,
-            reset_filter,
-            nclicks_del,
-            label,
-            is_open,
-            click_zoom,
-            n_clusters,
-            n_on,
-            n_off,
-            color_value,
-            points,
-            violin,
-            selectedData,
-            points_visible,
-        ):
+            data: list[dict[str, Any]],
+            apply_filters: int | None,
+            reset_filter: int | None,
+            nclicks_del: list[int | None],
+            label: int | str | None,
+            is_open: bool | None,
+            click_zoom: int | None,
+            n_clusters: int | None,
+            n_on: int | None,
+            n_off: int | None,
+            color_value: str | None,
+            points: int | None,
+            violin: int | None,
+            selectedData: dict | None,
+            points_visible: bool | None,
+        ) -> tuple[go.Figure, dict | None, object]:
             """
             Update clustering plot according to label, data, filters and settings.
 
@@ -3031,7 +3068,7 @@ class SmartApp:
             [Input("open_feature_importance", "n_clicks"), Input("close_feature_importance", "n_clicks")],
             [State("modal_feature_importance", "is_open")],
         )
-        def toggle_modal_feature_importancet(n1, n2, is_open):
+        def toggle_modal_feature_importancet(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close the explanation modal of the "?" button on feature_importance graph.
 
@@ -3055,7 +3092,7 @@ class SmartApp:
             [Input("open_feature_selector", "n_clicks"), Input("close_feature_selector", "n_clicks")],
             [State("modal_feature_selector", "is_open")],
         )
-        def toggle_modal_feature_selector(n1, n2, is_open):
+        def toggle_modal_feature_selector(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close the explanation modal of the "?" button on feature_selector graph.
 
@@ -3079,7 +3116,7 @@ class SmartApp:
             [Input("open_detail_feature", "n_clicks"), Input("close_detail_feature", "n_clicks")],
             [State("modal_detail_feature", "is_open")],
         )
-        def toggle_modal_detail_feature(n1, n2, is_open):
+        def toggle_modal_detail_feature(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close the explanation modal of the "?" button on detail_feature graph.
 
@@ -3103,7 +3140,7 @@ class SmartApp:
             [Input("open_prediction_picking", "n_clicks"), Input("close_prediction_picking", "n_clicks")],
             [State("modal_prediction_picking", "is_open")],
         )
-        def toggle_modal_prediction_picking(n1, n2, is_open):
+        def toggle_modal_prediction_picking(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close the explanation modal of the "?" button on prediction_picking graph.
 
@@ -3127,7 +3164,7 @@ class SmartApp:
             [Input("open_clusters", "n_clicks"), Input("close_clusters", "n_clicks")],
             [State("modal_clusters", "is_open")],
         )
-        def toggle_modal_clusters(n1, n2, is_open):
+        def toggle_modal_clusters(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close the explanation modal of the "?" button on clusters graph.
 
@@ -3151,7 +3188,7 @@ class SmartApp:
             [Input("open_filter", "n_clicks"), Input("close_filter", "n_clicks")],
             [State("modal_filter", "is_open")],
         )
-        def toggle_modal_filters(n1, n2, is_open):
+        def toggle_modal_filters(n1: int | None, n2: int | None, is_open: bool | None) -> bool | None:
             """
             Open and close the explanation modal of the "?" button on Dataset Filters Tab.
 
@@ -3180,7 +3217,13 @@ class SmartApp:
             ],
             [State("dropdowns_container", "children"), State("name", "value")],
         )
-        def layout_filter(n_clicks_add, n_clicks_rm, n_clicks_reset, currents_filters, name):
+        def layout_filter(
+            n_clicks_add: int | None,
+            n_clicks_rm: int | None,
+            n_clicks_reset: list[int | None],
+            currents_filters: list[dict[str, Any]],
+            name: list[int] | None,
+        ) -> list:
             """
             Create filter blocks in the dropdowns_container.
 
@@ -3236,7 +3279,9 @@ class SmartApp:
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
         )
-        def update_disabled_reset_button(n_click_add, n_click_reset, n_click_del):
+        def update_disabled_reset_button(
+            n_click_add: int | None, n_click_reset: int | None, n_click_del: list[int | None]
+        ) -> bool:
             """
             Function used to disabled or not the reset filter button.
 
@@ -3275,7 +3320,9 @@ class SmartApp:
                 Input({"type": "del_dropdown_button", "index": ALL}, "n_clicks"),
             ],
         )
-        def update_style_apply_filter_button(n_click_add, n_click_reset, n_click_del):
+        def update_style_apply_filter_button(
+            n_click_add: int | None, n_click_reset: int | None, n_click_del: list[int | None]
+        ) -> tuple[dict[str, str], dict[str, str]]:
             """
             Function used to display or not the apply filter button.
 
@@ -3308,7 +3355,7 @@ class SmartApp:
             Output({"type": "dynamic-output-label", "index": MATCH}, "children"),
             Input({"type": "var_dropdown", "index": MATCH}, "value"),
         )
-        def update_label_filter(value):
+        def update_label_filter(value: str | None) -> html.Label:
             """
             Add a label to the filters.
 
@@ -3336,7 +3383,7 @@ class SmartApp:
                 Input("add_dropdown_button", "n_clicks"),
             ],
         )
-        def display_output(value, component_id, add_click):
+        def display_output(value: str | None, component_id: dict, add_click: int | None) -> html.Div:
             """
             Create the modalities choices.
 
@@ -3391,5 +3438,5 @@ class SmartApp:
             Input("url", "pathname"),
             prevent_initial_call=False,
         )
-        def reset_bool_groups_on_load(_):
-            return self.settings.get("toggle_group", True)
+        def reset_bool_groups_on_load(_: str | None) -> bool:
+            return bool(self.settings.get("toggle_group", True))

@@ -31,6 +31,7 @@ implements :class:`~shapash.model.base.SupportsCaptumIG` (e.g. ``HFClassifierMod
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -39,6 +40,9 @@ from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.compute.spans import Span, locate_spans
 from shapash.compute.word_layout import word_layout
 from shapash.model.base import SupportsCaptumIG
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 _NLP_EXTRA = 'Install the NLP extra: pip install "shapash[nlp]".'
 
@@ -240,8 +244,8 @@ class NlpCaptumLigBackend(NlpBackend):
 
     def __init__(
         self,
-        model,
-        preprocessing=None,
+        model: SupportsCaptumIG,
+        preprocessing: Any | None = None,
         label_names: list[str] | None = None,
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
@@ -254,7 +258,7 @@ class NlpCaptumLigBackend(NlpBackend):
         captum_attr = import_optional_module("captum.attr", extra=_NLP_EXTRA)
         self.explainer = captum_attr.LayerIntegratedGradients(model.logits, model.embedding_layer)
 
-    def run_explainer(self, x) -> NlpContributions:
+    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
         """Attribute each text with LIG, one pass per class, and return per-token contributions.
 
         Parameters

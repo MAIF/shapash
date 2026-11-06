@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -21,6 +22,10 @@ from shapash.compute.diagnostics.label_noise import has_usable_probabilities
 from shapash.explainer.interactive import InteractiveEngine
 from shapash.explainer.nlp_explanation import NlpExplanation
 from shapash.model.base import SupportsGradients, has_capabilities
+
+if TYPE_CHECKING:
+    from dash import Dash
+    from dash.development.base_component import Component
 
 # Capability tokens components may require.
 CAP_PREDICT = "engine:predict"
@@ -165,8 +170,17 @@ class WebappComponent(ABC):
         """Whether the component's ``requires`` are satisfied by *ctx*."""
         return cls.requires <= available_capabilities(ctx)
 
+    def _engine(self, ctx: AppContext) -> InteractiveEngine:
+        """Return the live engine of a component whose ``requires`` include an ``engine:*`` capability.
+
+        The app registers such a component only when *ctx* has an engine, so this never raises there.
+        """
+        if ctx.engine is None:
+            raise ValueError(f"The {self.name} panel needs a live InteractiveEngine.")
+        return ctx.engine
+
     @abstractmethod
-    def layout(self, ctx: AppContext):
+    def layout(self, ctx: AppContext) -> Component:
         """Return the Dash layout for this component.
 
         The whole context is passed because a component's initial UI may depend on more than the
@@ -175,7 +189,7 @@ class WebappComponent(ABC):
         """
 
     @abstractmethod
-    def register_callbacks(self, app, ctx: AppContext, stores: dict) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Register this component's Dash callbacks.
 
         Parameters
@@ -185,7 +199,7 @@ class WebappComponent(ABC):
         ctx : AppContext
             The explanation, engine and coordinates to read (never written to). Display state lives
             in the ``dcc.Store``s.
-        stores : dict
+        stores : dict[str, str]
             Shared ``dcc.Store`` ids the What-if Lab wires between components
             (e.g. ``{"apply": "whatif-apply-store"}``).
         """

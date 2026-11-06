@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from dash import Input, Output, dcc, html
+import plotly.graph_objs as go
+from dash import Dash, Input, Output, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_waterfall import plot_waterfall
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import CAP_ADDITIVE, WebappComponent
+from shapash.webapp.nlp_components.base import CAP_ADDITIVE, AppContext, WebappComponent
 from shapash.webapp.nlp_components.datapoint import unpack_datapoint
 
 
@@ -28,7 +29,7 @@ class WaterfallComponent(WebappComponent):
     def __init__(self, theme: NlpTheme = DEFAULT_NLP_THEME) -> None:
         self._theme = theme
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Return the grouping-threshold slider + waterfall graph."""
         return html.Div(
             [
@@ -55,7 +56,7 @@ class WaterfallComponent(WebappComponent):
             style={"height": "100%"},
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire the waterfall figure to the current datapoint, class picker, and threshold."""
         explanation = ctx.explanation
         current_store = stores["current"]
@@ -68,7 +69,7 @@ class WaterfallComponent(WebappComponent):
                 Input("waterfall-threshold", "value"),
             ],
         )
-        def update_waterfall(datapoint, label_idx, threshold_pct):
+        def update_waterfall(datapoint: dict | None, label_idx: int | None, threshold_pct: float | None) -> go.Figure:
             if not datapoint or label_idx is None:
                 raise PreventUpdate
             label_idx = int(label_idx)

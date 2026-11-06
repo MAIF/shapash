@@ -20,13 +20,16 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import numpy as np
 
 from shapash._optional import import_optional_module
 from shapash.backend.backend import Backend
 from shapash.model.base import has_capabilities
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 # A unit made entirely of punctuation/symbol characters — no letters, digits or underscore. Word
 # segmentation deliberately emits these as their own units (the model reads them, and "!!!" or "?"
@@ -155,8 +158,8 @@ class NlpBackend(Backend):
 
     def __init__(
         self,
-        model,
-        preprocessing=None,
+        model: Any,
+        preprocessing: Any | None = None,
         label_names: list[str] | None = None,
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
@@ -174,7 +177,7 @@ class NlpBackend(Backend):
         self.explainer_compute_args = explainer_compute_args or {}
 
     def get_local_contributions(
-        self, x, explain_data: NlpContributions, subset: list[int] | None = None
+        self, x: list[str] | pd.Series, explain_data: NlpContributions, subset: list[int] | None = None
     ) -> NlpContributions:
         """Optionally select a subset of ``run_explainer``'s output.
 

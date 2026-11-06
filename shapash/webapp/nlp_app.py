@@ -732,7 +732,9 @@ class NlpWebApp:
         has_gt = self._has_gt
         column_header_by_field = self._column_header_by_field
 
-        def _compose_indices(selected_indices, error_cell, errors_only=False):
+        def _compose_indices(
+            selected_indices: list[int] | None, error_cell: dict | None, errors_only: bool = False
+        ) -> list[int] | None:
             """Combine the scatter selection, the confusion-cell selection, and the errors toggle.
 
             All three are optional filters that intersect: the embedding selection *within* the
@@ -750,7 +752,7 @@ class NlpWebApp:
             Output(_CURRENT_STORE, "data"),
             Input("dataset-table", "selectedRows"),
         )
-        def set_current_from_row(selected_rows):
+        def set_current_from_row(selected_rows: list[dict] | None) -> dict:
             if not selected_rows:
                 raise PreventUpdate
             pos = int(selected_rows[0]["_orig_idx"])
@@ -793,7 +795,14 @@ class NlpWebApp:
                 Input("dataset-table", "virtualRowData"),
             ],
         )
-        def filter_table(selected_indices, word_filter, errors_only, error_cell, filter_model, virtual_row_data):
+        def filter_table(
+            selected_indices: list[int] | None,
+            word_filter: str | list[str] | None,
+            errors_only: bool | None,
+            error_cell: dict | None,
+            filter_model: dict | None,
+            virtual_row_data: list[dict] | None,
+        ) -> tuple[list[dict], list[dict], str, str]:
             # word_filter may be a list of words (multi-select in the scatter) or None.
             words = word_filter if isinstance(word_filter, list) else ([word_filter] if word_filter else [])
             effective_indices = _compose_indices(selected_indices, error_cell)
@@ -840,7 +849,7 @@ class NlpWebApp:
             # those inline filters are applied, so its length is that final on-screen count.
             grid_filtered = bool(filter_model)
             shown = len(virtual_row_data) if (grid_filtered and virtual_row_data is not None) else len(recs)
-            if grid_filtered:
+            if filter_model:
                 filtered_columns = ", ".join(column_header_by_field.get(f, f) for f in filter_model)
                 parts.append(f"grid filter: {filtered_columns}")
 
@@ -856,7 +865,7 @@ class NlpWebApp:
             Output("grid-filter-clear-btn", "style"),
             Input("dataset-table", "filterModel"),
         )
-        def toggle_grid_filter_clear_btn(filter_model):
+        def toggle_grid_filter_clear_btn(filter_model: dict | None) -> dict[str, str]:
             return {"fontSize": "0.8em"} if filter_model else {"display": "none"}
 
         @self.app.callback(
@@ -864,7 +873,7 @@ class NlpWebApp:
             Input("grid-filter-clear-btn", "n_clicks"),
             prevent_initial_call=True,
         )
-        def clear_grid_filter(_n_clicks):
+        def clear_grid_filter(_n_clicks: int | None) -> dict:
             return {}
 
         # ── Tab visibility: toggle display of always-mounted bodies ──────
@@ -876,7 +885,7 @@ class NlpWebApp:
                 [Output(f"{tabs_id}-body-{tid}", "style") for tid in tab_ids],
                 Input(tabs_id, "active_tab"),
             )
-            def _toggle_tab_bodies(active, _tab_ids=tab_ids):
+            def _toggle_tab_bodies(active: str | None, _tab_ids: list[str] = tab_ids) -> list[dict[str, str]]:
                 return [(_VISIBLE if tid == active else _HIDDEN) for tid in _tab_ids]
 
         # (The selection-summary readout is written by filter_table, which knows the row count.)

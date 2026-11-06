@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dash import Input, Output, dcc, html
+from dash import Dash, Input, Output, dcc, html
 from dash.exceptions import PreventUpdate
 
 from shapash.plots.plot_sentence_highlight import plot_sentence_highlight
 from shapash.style.style_utils import DEFAULT_NLP_THEME, NlpTheme
-from shapash.webapp.nlp_components.base import WebappComponent
+from shapash.webapp.nlp_components.base import AppContext, WebappComponent
 from shapash.webapp.nlp_components.datapoint import unpack_datapoint
 
 
@@ -26,7 +26,7 @@ class SentenceHighlightComponent(WebappComponent):
         self._default_class_idx = default_class_idx
         self._theme = theme
 
-    def layout(self, ctx) -> html.Div:
+    def layout(self, ctx: AppContext) -> html.Div:
         """Return the class picker + sentence-highlight placeholder div."""
         explanation = ctx.explanation
         label_names = explanation.label_names or [str(i) for i in range(explanation.n_classes)]
@@ -63,7 +63,7 @@ class SentenceHighlightComponent(WebappComponent):
             style={"height": "100%"},
         )
 
-    def register_callbacks(self, app, ctx, stores) -> None:
+    def register_callbacks(self, app: Dash, ctx: AppContext, stores: dict[str, str]) -> None:
         """Wire the predicted-class sync and the sentence-highlight render."""
         explanation = ctx.explanation
         current_store = stores["current"]
@@ -75,7 +75,7 @@ class SentenceHighlightComponent(WebappComponent):
             Output("local-class-selector", "value"),
             Input(current_store, "data"),
         )
-        def sync_local_class_to_prediction(datapoint):
+        def sync_local_class_to_prediction(datapoint: dict | None) -> int:
             if not datapoint or datapoint.get("label") is None:
                 raise PreventUpdate
             label_idx = explanation.label_to_idx.get(str(datapoint["label"]))
@@ -90,7 +90,7 @@ class SentenceHighlightComponent(WebappComponent):
                 Input("local-class-selector", "value"),
             ],
         )
-        def update_sentence_highlight(datapoint, label_idx):
+        def update_sentence_highlight(datapoint: dict | None, label_idx: int | None) -> html.Div:
             if not datapoint or label_idx is None:
                 raise PreventUpdate
             tokens, vals, base_value, _ = unpack_datapoint(datapoint, int(label_idx))

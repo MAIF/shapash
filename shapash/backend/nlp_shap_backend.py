@@ -70,9 +70,9 @@ spans overlap are one word, and the word's text comes from the source, never fro
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import shap
@@ -82,6 +82,9 @@ from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.compute.spans import Span, is_unsegmented_script, locate_spans, span_from_offsets, trim_span
 from shapash.compute.word_layout import WordLayout, word_layout
 from shapash.model.base import SupportsCaptumIG, SupportsLogits, TextModel, has_capabilities
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 _NLP_EXTRA = 'Install the NLP extra: pip install "shapash[nlp]".'
 
@@ -128,14 +131,14 @@ def _merges(buffer: str, following: str) -> bool:
     return not (is_unsegmented_script(last) or is_unsegmented_script(first))
 
 
-def _masker_special_tokens(explainer) -> frozenset[str] | None:
+def _masker_special_tokens(explainer: Any) -> frozenset[str] | None:
     """The masker tokenizer's ``all_special_tokens``, or ``None`` when no tokenizer is reachable."""
     tokenizer = getattr(getattr(explainer, "masker", None), "tokenizer", None)
     specials = getattr(tokenizer, "all_special_tokens", None)
     return frozenset(specials) if specials else None
 
 
-def _segment_offsets(explainer, text: str, n_segments: int) -> list[Span] | None:
+def _segment_offsets(explainer: Any, text: str, n_segments: int) -> list[Span] | None:
     """Character offsets of the tokens behind ``text``'s SHAP segments, or ``None`` when unavailable.
 
     Repeats the call ``shap.maskers.Text.token_segments`` makes on its offset-mapping path, whose
@@ -155,7 +158,7 @@ def _segment_offsets(explainer, text: str, n_segments: int) -> list[Span] | None
 
 
 def _resolve_text_model(
-    model: TextModel, masker, output_space: Literal["probability", "logit"]
+    model: TextModel, masker: Any, output_space: Literal["probability", "logit"]
 ) -> tuple[object, object]:
     """Pick the scoring callable and masker a ``TextModel`` offers for ``output_space``.
 
@@ -554,10 +557,10 @@ class NlpShapBackend(NlpBackend):
 
     def __init__(
         self,
-        model,
-        preprocessing=None,
+        model: TextModel | Callable[[list[str]], np.ndarray],
+        preprocessing: Any | None = None,
         label_names: list[str] | None = None,
-        masker=None,
+        masker: Any = None,
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
         batch_size: int | None = 64,
@@ -573,18 +576,20 @@ class NlpShapBackend(NlpBackend):
         # How the text is masked: in the model's own encoding whenever it allows it and the caller
         # brought no masker or explainer of their own (see the module docstring).
         self.masking: Literal["token_ids", "text"] = "text"
+        # The callable SHAP explains: the model itself, or a scorer built from a TextModel below
+        scorer: Any = model
         if isinstance(model, TextModel) and masker is None and not explainer_args and _supports_token_ids(model):
             masker = _TokenIdMasker(model)  # type: ignore[arg-type]
-            model = _TokenIdScorer(model, output_space)  # type: ignore[arg-type]
+            scorer = _TokenIdScorer(model, output_space)  # type: ignore[arg-type]
             self.masking = "token_ids"
         elif isinstance(model, TextModel):
-            model, masker = _resolve_text_model(model, masker, output_space)
+            scorer, masker = _resolve_text_model(model, masker, output_space)
         elif output_space == "logit":
             raise TypeError(
                 "output_space='logit' needs a TextModel implementing SupportsLogits; a bare callable's "
                 "output space cannot be checked."
             )
-        super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
+        super().__init__(scorer, preprocessing, label_names, explainer_args, explainer_compute_args)
         self.masker = masker
         self.output_space = output_space
 
@@ -597,8 +602,8 @@ class NlpShapBackend(NlpBackend):
         # device == cuda`` and never inspects the input. We already pass lists, which transformers
         # wraps in a ``PipelineDataset`` and feeds to the same ``DataLoader`` a real Dataset would
         # get (measured: 1.009x, i.e. noise), and SHAP would flatten any dataset back to a list anyway.
-        if batch_size is not None and getattr(model, "_batch_size", "absent") in (None, 1):
-            model._batch_size = batch_size
+        if batch_size is not None and getattr(scorer, "_batch_size", "absent") in (None, 1):
+            scorer._batch_size = batch_size
 
         if "explainer" in self.explainer_args:
             shap_params = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
@@ -606,12 +611,12 @@ class NlpShapBackend(NlpBackend):
         elif self.explainer_args:
             self.explainer = shap.Explainer(**self.explainer_args)
         elif self.masking == "token_ids":
-            self.explainer = shap.Explainer(model, masker=self.masker, algorithm="partition")
+            self.explainer = shap.Explainer(scorer, masker=self.masker, algorithm="partition")
         else:
             # ``masker=None`` lets SHAP auto-infer a Text masker from a transformers pipeline (the
             # HFClassifierModel/pipeline path); an explicit masker is required when ``model`` is a plain
             # scoring callable (external-head models expose one via ``TextModel.shap_masker``).
-            self.explainer = shap.Explainer(model, masker=self.masker)
+            self.explainer = shap.Explainer(scorer, masker=self.masker)
 
         # Resolved once: the masker's tokenizer is what decides which segments are special. ``None``
         # when no tokenizer is reachable (bare callable / ``SimpleTokenizer``) — see ``_is_special``.
@@ -620,7 +625,7 @@ class NlpShapBackend(NlpBackend):
         # it has none (SHAP's own fallback). ``None`` for a custom masker exposing no such attribute.
         self.baseline_token = getattr(getattr(self.explainer, "masker", None), "mask_token", None)
 
-    def run_explainer(self, x) -> NlpContributions:
+    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
         """Run the SHAP text explainer and return all explanation components.
 
         Subword tokens are merged into whole words via ``_aggregate_subwords`` before being
