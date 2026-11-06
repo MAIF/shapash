@@ -12,14 +12,17 @@ from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.utils import adjust_title_height, compute_digit_number
 
 
-def _series_color(style_dict: dict[str, Any], key: Any, index: int) -> str:
+def _series_color(style_dict: dict[str, Any], hue_colors: dict[Any, str] | None, key: Any, index: int) -> str:
     """
     Color of one curve or bar group of a distribution plot.
 
     Parameters
     ----------
     style_dict : dict[str, Any]
-        Resolved style, possibly extended with explicit colors keyed by level or column name.
+        Resolved style. Explicit colors keyed by level or column name are still read from it,
+        for callers passing them through ``colors_dict``.
+    hue_colors : dict[Any, str] or None
+        Explicit colors keyed by level of the hue column, or by column name when there is no hue.
     key : Any
         Level of the hue column, or the column name when there is no hue.
     index : int
@@ -30,6 +33,8 @@ def _series_color(style_dict: dict[str, Any], key: Any, index: int) -> str:
     str
         The explicit color given for ``key``, else the palette's discrete colors in turn.
     """
+    if hue_colors and key in hue_colors:
+        return hue_colors[key]
     color = style_dict.get(key)
     if isinstance(color, str):
         return color
@@ -37,11 +42,34 @@ def _series_color(style_dict: dict[str, Any], key: Any, index: int) -> str:
     return discrete_colors[index % len(discrete_colors)]
 
 
+def _distribution_style(colors_dict: dict[str, Any] | None, palette_name: str) -> dict[str, Any]:
+    """
+    Style of a distribution plot: the palette's style, updated with ``colors_dict``.
+
+    Parameters
+    ----------
+    colors_dict : dict[str, Any] or None
+        Resolved style, or a partial one, such as explicit colors keyed by hue level.
+    palette_name : str
+        Palette completing ``colors_dict`` when it lacks a key the plot needs.
+
+    Returns
+    -------
+    dict[str, Any]
+        The style used by the plot.
+    """
+    keys = ["dict_title", "dict_xaxis", "dict_yaxis", "interactions_discrete_colors"]
+    if colors_dict and all(key in colors_dict for key in keys):
+        return dict(colors_dict)
+    return define_style(get_palette(palette_name)) | (colors_dict or {})
+
+
 def plot_distribution(
     df_all: pd.DataFrame,
     col: str,
     hue: str | None = None,
     colors_dict: dict[str, Any] | None = None,
+    hue_colors: dict[Any, str] | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -70,14 +98,17 @@ def plot_distribution(
     hue : Optional[str], optional
         The name of the column used to differentiate between groups (e.g., 'train' and 'test').
     colors_dict : dict[str, Any] or None, optional
-        A dictionary specifying the colors to be used for each group. If not provided,
-        a default color palette will be used.
+        Resolved style of the plot, such as ``SmartExplainer.plot._style_dict``. Missing keys
+        are taken from ``palette_name``.
+    hue_colors : dict[Any, str] or None, optional
+        Color of each group, keyed by level of ``hue`` (or by ``col`` without hue). Groups
+        not listed take the palette's discrete colors in turn.
     width : int, optional, default=700
         The width of the generated figure, in pixels.
     height : int, optional, default=500
         The height of the generated figure, in pixels.
     palette_name : str, optional, default="default"
-        The name of the color palette to be used if `colors_dict` is not provided.
+        Palette used for the keys missing from `colors_dict`.
     nb_cat_max : int, optional, default=7
         Maximum number of categories to display. Categories beyond this limit
         are grouped into a new 'Other' category (only for categorical features).
@@ -113,6 +144,7 @@ def plot_distribution(
             col,
             hue=hue,
             colors_dict=colors_dict,
+            hue_colors=hue_colors,
             width=width,
             height=height,
             palette_name=palette_name,
@@ -127,6 +159,7 @@ def plot_distribution(
             col,
             hue=hue,
             colors_dict=colors_dict,
+            hue_colors=hue_colors,
             width=width,
             height=height,
             palette_name=palette_name,
@@ -145,6 +178,7 @@ def plot_continuous_distribution(
     col: str,
     hue: str | None = None,
     colors_dict: dict[str, Any] | None = None,
+    hue_colors: dict[Any, str] | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -164,13 +198,16 @@ def plot_continuous_distribution(
     hue : Optional[str]
         The column used to distinguish the values (e.g., 'train' and 'test').
     colors_dict : dict[str, Any] or None
-        Dictionary of colors for hue levels.
+        Resolved style of the plot. Missing keys are taken from ``palette_name``.
+    hue_colors : dict[Any, str] or None
+        Color of each group, keyed by level of ``hue`` (or by ``col`` without hue). Groups
+        not listed take the palette's discrete colors in turn.
     width : int, optional, default=700
         The width of the generated figure, in pixels.
     height : int, optional, default=500
         The height of the generated figure, in pixels.
     palette_name : str, optional, default="default"
-        The name of the color palette to use if `colors_dict` is not provided.
+        Palette used for the keys missing from `colors_dict`.
     nb_hue_max : int, optional, default=7
         Maximum number of hue categories to display. Categories beyond this limit
         are grouped into a new 'Other' category.
@@ -185,14 +222,7 @@ def plot_continuous_distribution(
         Plotly figure object representing the KDE plot, or None when there are
         fewer than five data points and no hue is specified.
     """
-    if colors_dict:
-        style_dict = {}
-        keys = ["dict_title", "dict_xaxis", "dict_yaxis", "interactions_discrete_colors"]
-        if any(key not in colors_dict for key in keys):
-            style_dict = define_style(get_palette(palette_name))
-        style_dict.update(colors_dict)
-    else:
-        style_dict = define_style(get_palette(palette_name))
+    style_dict = _distribution_style(colors_dict, palette_name)
 
     filtered_data = df_all.copy()
     if filtered_data[col].unique().shape[0] > 200:
@@ -240,7 +270,7 @@ def plot_continuous_distribution(
                 for x, y in zip(x_values, y_values, strict=False)
             ]
 
-            color = _series_color(style_dict, level, i)
+            color = _series_color(style_dict, hue_colors, level, i)
 
             fig.add_trace(
                 go.Scatter(
@@ -271,7 +301,7 @@ def plot_continuous_distribution(
             for x, y in zip(x_values, y_values, strict=False)
         ]
 
-        color = _series_color(style_dict, col, 0)
+        color = _series_color(style_dict, hue_colors, col, 0)
 
         fig.add_trace(
             go.Scatter(
@@ -323,6 +353,7 @@ def plot_categorical_distribution(
     nb_cat_max: int = 7,
     nb_hue_max: int = 7,
     colors_dict: dict[str, Any] | None = None,
+    hue_colors: dict[Any, str] | None = None,
     width: int = 700,
     height: int = 500,
     palette_name: str = "default",
@@ -350,13 +381,16 @@ def plot_categorical_distribution(
         Maximum number of hue categories to display. Categories beyond this limit
         are grouped into a new 'Other' category.
     colors_dict : dict[str, Any] or None
-        Dictionary of colors for categories.
+        Resolved style of the plot. Missing keys are taken from ``palette_name``.
+    hue_colors : dict[Any, str] or None
+        Color of each group, keyed by level of ``hue`` (or by ``col`` without hue). Groups
+        not listed take the palette's discrete colors in turn.
     width : int, optional, default=700
         The width of the generated figure, in pixels.
     height : int, optional, default=500
         The height of the generated figure, in pixels.
     palette_name : str, optional, default="default"
-        The name of the color palette to use if `colors_dict` is not provided.
+        Palette used for the keys missing from `colors_dict`.
     file_name : str or None, optional
         Path to save the plot as an HTML file. If None, the plot will not be saved, by default None.
     auto_open : bool, optional
@@ -368,14 +402,7 @@ def plot_categorical_distribution(
         Plotly figure object representing the bar plot.
     """
     df_all = df_all.copy()
-    if colors_dict:
-        style_dict = {}
-        keys = ["dict_title", "dict_xaxis", "dict_yaxis", "interactions_discrete_colors"]
-        if any(key not in colors_dict for key in keys):
-            style_dict = define_style(get_palette(palette_name))
-        style_dict.update(colors_dict)
-    else:
-        style_dict = define_style(get_palette(palette_name))
+    style_dict = _distribution_style(colors_dict, palette_name)
 
     if hue:
         unique_hues = df_all[hue].unique()
@@ -413,7 +440,7 @@ def plot_categorical_distribution(
     if hue:
         for i, hue_val in enumerate(hue_order):
             subset = df_cat[df_cat[hue] == hue_val]
-            color = _series_color(style_dict, hue_val, i)
+            color = _series_color(style_dict, hue_colors, hue_val, i)
 
             customdata = subset.apply(
                 lambda row, hue_val=hue_val: (
@@ -435,7 +462,7 @@ def plot_categorical_distribution(
             )
             data.append(bar)
     else:
-        color = _series_color(style_dict, col, 0)
+        color = _series_color(style_dict, hue_colors, col, 0)
 
         customdata = df_cat.apply(
             lambda row: (

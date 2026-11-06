@@ -35,7 +35,6 @@ PALETTE = {
     "orange": {"bg": "#fff9e6", "border": "#f4c000", "title": "#cc8833", "text": "#444444"},
 }
 
-TARGET_DISTRIBUTION_COLORS = {"pred": "#2255aa", "true": "#f4c000"}
 BlockContent: TypeAlias = tuple[str, list[Any]]
 TargetValues: TypeAlias = np.ndarray[Any, Any] | list[Any]
 ReportBlockConfig: TypeAlias = dict[str, Any]
@@ -533,7 +532,8 @@ class ReportBlockMixin:
             df_all=df_train_test,
             col=feature,
             hue=dataset_split,
-            colors_dict=self._feature_distribution_colors(),
+            colors_dict=self._plot_style(),
+            hue_colors=self._dataset_colors(),
             width=width,
             height=height,
         )
@@ -886,7 +886,8 @@ class ReportBlockMixin:
             df_all=df_target,
             col=target_name,
             hue="_dataset",
-            colors_dict=TARGET_DISTRIBUTION_COLORS,
+            colors_dict=self._plot_style(),
+            hue_colors=self._dataset_colors(),
             width=width,
             height=height,
         )
@@ -975,7 +976,8 @@ class ReportBlockMixin:
             df_all=distribution_df,
             col=target_name,
             hue="data_train_test",
-            colors_dict=self._feature_distribution_colors(),
+            colors_dict=self._plot_style(),
+            hue_colors=self._dataset_colors(),
             width=width,
             height=height,
         )
@@ -1162,7 +1164,8 @@ class ReportBlockMixin:
                 df_all=df,
                 col=col,
                 hue=col_splitter,
-                colors_dict=self._feature_distribution_colors(),
+                colors_dict=self._plot_style(),
+                hue_colors=self._dataset_colors(),
             )
             if fig is not None:
                 fig.update_layout(
@@ -1272,6 +1275,10 @@ class ReportBlockMixin:
             return feature
         return self.explainer.features_dict.get(feature, feature)
 
-    def _feature_distribution_colors(self) -> dict[str, Any]:
-        smart_explainer = self._require_smart_explainer("feature_distribution")
-        return smart_explainer.colors_dict["report_feature_distribution"]
+    def _plot_style(self) -> dict[str, Any]:
+        """Resolved plot style of the explainer, with its palette and custom colors."""
+        return self._require_smart_explainer("distribution").plot._style_dict
+
+    def _dataset_colors(self) -> dict[str, str]:
+        """Colors of the train, test, pred and true series in the distribution plots."""
+        return self._plot_style()["report_feature_distribution"]

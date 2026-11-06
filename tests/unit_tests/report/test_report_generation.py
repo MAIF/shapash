@@ -668,6 +668,21 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
 
         assert mock_cm.call_args.kwargs["colors_dict"] is smart_explainer.plot._style_dict
 
+    def test_distribution_blocks_use_explainer_style_and_dataset_colors(self):
+        """Distribution plots get the plotter's style and the palette's colors for each dataset."""
+        runtime = _build_runtime()
+        style_dict = runtime._require_smart_explainer("distribution").plot._style_dict
+        fake_fig = go.Figure(go.Scatter(x=[1], y=[1]))
+
+        with patch("shapash.report.blocks.plot_distribution", return_value=fake_fig) as mock_dist:
+            runtime.block_feature_distribution(feature="age")
+            runtime.block_target_distribution()
+
+        assert len(mock_dist.call_args_list) == 2
+        for call in mock_dist.call_args_list:
+            assert call.kwargs["colors_dict"] is style_dict
+            assert call.kwargs["hue_colors"] is style_dict["report_feature_distribution"]
+
     def test_smart_explainer_required(self):
         rbm = ReportBlockMixin()
         with pytest.raises(ValueError):

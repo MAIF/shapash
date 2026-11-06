@@ -12,7 +12,7 @@ from shapash.plots.plot_univariate import (
 
 from plotly import graph_objects as go
 
-from shapash.style.style_utils import colors_loading
+from shapash.style.style_utils import colors_loading, define_style, get_palette
 
 class TestPlots(unittest.TestCase):
     @patch("shapash.plots.plot_univariate.plot_continuous_distribution")
@@ -119,6 +119,33 @@ class TestPlots(unittest.TestCase):
 
         assert [trace.marker.color for trace in fig.data] == discrete[:2]
         assert no_hue.data[0].marker.color == discrete[0]
+
+    def test_plot_distribution_hue_colors(self):
+        """hue_colors sets the color of each level, for continuous and categorical features alike."""
+        hue_colors = {"train": "rgb(1, 2, 3)", "test": "rgb(4, 5, 6)"}
+        continuous = pd.DataFrame({"x": np.arange(40), "split": ["train", "test"] * 20})
+        categorical = pd.DataFrame({"x": [0, 1] * 4, "split": ["train"] * 4 + ["test"] * 4})
+
+        fig_cont = plot_distribution(continuous, "x", hue="split", hue_colors=hue_colors)
+        fig_cat = plot_distribution(categorical, "x", hue="split", hue_colors=hue_colors)
+
+        assert {trace.name: trace.line.color for trace in fig_cont.data} == hue_colors
+        assert {trace.name: trace.marker.color for trace in fig_cat.data} == hue_colors
+
+    def test_plot_distribution_style_from_colors_dict(self):
+        """A full style passed as colors_dict sets the title, and hue_colors wins over a level color in it."""
+        style = define_style(get_palette("blues"))
+        style["dict_title"]["font"]["color"] = "rgb(7, 8, 9)"
+        style["train"] = "rgb(0, 0, 0)"
+        df = pd.DataFrame({"x": np.arange(40), "split": ["train", "test"] * 20})
+
+        fig = plot_distribution(df, "x", hue="split", colors_dict=style, hue_colors={"train": "rgb(1, 2, 3)"})
+
+        assert fig.layout.title.font.color == "rgb(7, 8, 9)"
+        colors = {trace.name: trace.line.color for trace in fig.data}
+        assert colors["train"] == "rgb(1, 2, 3)"
+        assert colors["test"] in style["interactions_discrete_colors"]
+        assert "train" not in define_style(get_palette("blues"))
 
     def test_plot_distribution_cycles_palette_colors(self):
         """More levels than discrete colors reuse the colors in turn."""
