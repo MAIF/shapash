@@ -1,6 +1,12 @@
 {
   "blues": {
     "axis_color": "rgb(50, 50, 50)",
+    "clustering": {
+      "active_fill": "rgba(255, 0, 0, 0.3)",
+      "active_line": "rgba(200, 0, 0, 1)",
+      "inactive_fill": "rgba(150, 150, 150, 0.15)",
+      "inactive_line": "rgba(200, 200, 200, 0.8)"
+    },
     "compacity_bar": {
       "0": "rgba(230, 111, 0, 0.9)",
       "1": "rgba(0, 154, 203, 0.9)"
@@ -121,6 +127,12 @@
   },
   "default": {
     "axis_color": "rgb(50, 50, 50)",
+    "clustering": {
+      "active_fill": "rgba(255, 0, 0, 0.3)",
+      "active_line": "rgba(200, 0, 0, 1)",
+      "inactive_fill": "rgba(150, 150, 150, 0.15)",
+      "inactive_line": "rgba(200, 200, 200, 0.8)"
+    },
     "compacity_bar": {
       "0": "rgba(117, 152, 189, 0.9)",
       "1": "rgba(255, 166, 17, 0.9)"

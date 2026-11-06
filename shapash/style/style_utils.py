@@ -411,6 +411,7 @@ def define_style(palette: dict[str, Any]) -> dict[str, Any]:
     style_dict["webapp_button"] = convert_string_to_int_keys(palette["webapp_button"])
     style_dict["webapp_bkg"] = palette["webapp_bkg"]
     style_dict["webapp_title"] = palette["webapp_title"]
+    style_dict["clustering"] = palette["clustering"]
 
     return style_dict
 
