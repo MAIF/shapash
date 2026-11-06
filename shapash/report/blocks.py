@@ -24,6 +24,8 @@ from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
 if TYPE_CHECKING:
+    from plotly import graph_objects as go
+
     from shapash.explainer import SmartExplainer
     from shapash.explainer.explainer import Explainer
 logger = logging.getLogger(__name__)
@@ -38,6 +40,27 @@ PALETTE = {
 BlockContent: TypeAlias = tuple[str, list[Any]]
 TargetValues: TypeAlias = np.ndarray[Any, Any] | list[Any]
 ReportBlockConfig: TypeAlias = dict[str, Any]
+
+
+# Room below a distribution plot for its tick labels, axis title and the title shown as a caption.
+CAPTION_MARGIN_BOTTOM = 130
+# Room above it for the legend title.
+CAPTION_MARGIN_TOP = 40
+
+
+def _title_below(fig: go.Figure) -> None:
+    """Show the title of a distribution plot as a caption below it, without clipping it or the legend."""
+    fig.update_layout(
+        title={
+            **fig.layout.title.to_plotly_json(),
+            "x": 0.5,
+            "xanchor": "center",
+            "y": 0.0,
+            "yanchor": "bottom",
+            "pad": {"b": 15},
+        },
+        margin={**fig.layout.margin.to_plotly_json(), "t": CAPTION_MARGIN_TOP, "b": CAPTION_MARGIN_BOTTOM},
+    )
 
 
 def block(method: Callable[..., Any]) -> Callable[..., pn.Column]:
@@ -982,16 +1005,7 @@ class ReportBlockMixin:
             height=height,
         )
         if fig is not None:
-            fig.update_layout(
-                title={
-                    **fig.layout.title.to_plotly_json(),
-                    "x": 0.5,
-                    "xanchor": "center",
-                    "y": 0.0,
-                    "yanchor": "bottom",
-                },
-                margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
-            )
+            _title_below(fig)
 
         dtype_label = str(series_dtype(y_test_series))
         content = [
@@ -1168,16 +1182,7 @@ class ReportBlockMixin:
                 hue_colors=self._dataset_colors(),
             )
             if fig is not None:
-                fig.update_layout(
-                    title={
-                        **fig.layout.title.to_plotly_json(),
-                        "x": 0.5,
-                        "xanchor": "center",
-                        "y": 0.0,
-                        "yanchor": "bottom",
-                    },
-                    margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
-                )
+                _title_below(fig)
             col_stats = stats_to_table(
                 test_stats=test_stats[col],
                 train_stats=train_stats[col] if train_stats is not None else None,

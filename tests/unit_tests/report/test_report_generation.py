@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 
 from shapash.backend import BaseBackend
 from shapash.explainer import SmartExplainer
-from shapash.report.blocks import ReportBlockMixin, block
+from shapash.report.blocks import CAPTION_MARGIN_BOTTOM, CAPTION_MARGIN_TOP, ReportBlockMixin, _title_below, block
 from shapash.report.core import (
     _apply_html_head_metadata,
     _inject_favicon_links,
@@ -682,6 +682,18 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         for call in mock_dist.call_args_list:
             assert call.kwargs["colors_dict"] is style_dict
             assert call.kwargs["hue_colors"] is style_dict["report_feature_distribution"]
+
+    def test_title_below_keeps_title_and_legend_inside_the_figure(self):
+        """The caption title sits above the bottom edge, with room for the axis below and the legend above."""
+        fig = go.Figure(go.Scatter(x=[1], y=[1]))
+        fig.update_layout(title={"text": "Distribution of age", "font": {"size": 24}}, margin={"l": 90, "t": 100, "b": 70})
+
+        _title_below(fig)
+
+        assert fig.layout.title.text == "Distribution of age"
+        assert fig.layout.title.font.size == 24
+        assert (fig.layout.title.y, fig.layout.title.yanchor, fig.layout.title.pad.b) == (0.0, "bottom", 15)
+        assert (fig.layout.margin.t, fig.layout.margin.b, fig.layout.margin.l) == (CAPTION_MARGIN_TOP, CAPTION_MARGIN_BOTTOM, 90)
 
     def test_smart_explainer_required(self):
         rbm = ReportBlockMixin()
