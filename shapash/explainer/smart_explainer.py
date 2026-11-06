@@ -5,14 +5,14 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 from werkzeug.serving import make_server
 
 import shapash.explainer.smart_predictor
-from shapash.backend import BaseBackend
+from shapash.backend.base_backend import BaseBackend
 from shapash.style.style_utils import colors_loading, select_palette
 from shapash.utils.custom_thread import CustomThread
 from shapash.utils.drift import SchemaDriftConfig, compute_schema_distribution, resolve_schema_drift_config
@@ -199,7 +199,7 @@ class SmartExplainer:
     def __init__(
         self,
         model: Any,
-        backend: str | BaseBackend = "shap",
+        backend: BaseBackend | Literal["shap", "tabicl", "lime", "auto"] = "auto",
         preprocessing: Any | None = None,
         postprocessing: dict[str, Any] | None = None,
         features_groups: dict[str, list[str]] | None = None,
