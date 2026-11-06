@@ -123,6 +123,9 @@ DISCRETE_COLOR_KEYS = frozenset({"interaction_discrete", "compare_plot"})
 # Scales also drawing signed values (correlations): a non-diverging scale hides the sign, so it draws a warning.
 SIGNED_SCALE_KEYS = frozenset({"contrib_colorscale"})
 
+# Palette keys no plot reads, with the key to set instead.
+UNUSED_COLOR_KEYS = {"report_confusion_matrix": "confusion_matrix_colorscale"}
+
 _RGB_PATTERN = re.compile(r"^\s*rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)\s*$")
 
 
@@ -275,8 +278,8 @@ def normalize_colors(colors_dict: dict[str, Any] | None, palette: dict[str, Any]
     Warns
     -----
     UserWarning
-        For a key the palette does not have, and for a non-diverging scale name given for
-        ``contrib_colorscale``.
+        For a key the palette does not have or no plot reads, and for a non-diverging scale
+        name given for ``contrib_colorscale``.
     """
     normalized = {}
     for key, value in (colors_dict or {}).items():
@@ -284,6 +287,12 @@ def normalize_colors(colors_dict: dict[str, Any] | None, palette: dict[str, Any]
             close = difflib.get_close_matches(key, palette, n=1)
             hint = f" Did you mean {close[0]!r}?" if close else ""
             warnings.warn(f"Unknown color key {key!r}: no plot uses it.{hint}", UserWarning, stacklevel=4)
+        elif key in UNUSED_COLOR_KEYS:
+            warnings.warn(
+                f"Color key {key!r} has no effect: set {UNUSED_COLOR_KEYS[key]!r} instead.",
+                UserWarning,
+                stacklevel=4,
+            )
         normalized[key] = _normalize_entry(key, value, palette.get(key))
     return normalized
 

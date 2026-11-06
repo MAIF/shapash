@@ -231,6 +231,12 @@ class TestStyle_utils(unittest.TestCase):
             normalized = normalize_colors({"titel_color": "red"}, palette)
         assert normalized == {"titel_color": "rgb(255, 0, 0)"}
 
+    def test_normalize_colors_warns_on_unused_key(self):
+        """Setting a key no plot reads warns with the key to set instead."""
+        palette = select_palette(colors_loading(), "default")
+        with pytest.warns(UserWarning, match="'report_confusion_matrix' has no effect: set 'confusion_matrix_colorscale'"):
+            normalize_colors({"report_confusion_matrix": ["red", "blue"]}, palette)
+
     def test_every_palette_has_clustering_colors(self):
         """Each palette gives the clustering plot its four colors, kept by define_style."""
         for name, palette in colors_loading().items():
