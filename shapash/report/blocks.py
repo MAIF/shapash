@@ -1023,7 +1023,7 @@ class ReportBlockMixin:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         y_test = cast(TargetValues, self.y_test)
         y_pred = cast(TargetValues, self.y_pred)
-        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.colors_dict)
+        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.plot._style_dict)
         if title is None:
             return "Confusion matrix", [fig]
         return title, [fig]

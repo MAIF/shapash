@@ -657,6 +657,17 @@ class TestReportBlockMixinBuiltins(unittest.TestCase):
         self.assertIsInstance(univariate_result.objects[1], pn.widgets.Select)
         self.assertEqual(type(univariate_result.objects[2]).__name__, "ParamFunction")
 
+    def test_block_confusion_matrix_uses_explainer_style(self):
+        """The report's confusion matrix gets the plotter's resolved style, like xpl.plot does."""
+        runtime = _build_runtime()
+        smart_explainer = runtime._require_smart_explainer("confusion_matrix")
+        fake_fig = go.Figure(go.Scatter(x=[0, 1], y=[1, 0]))
+
+        with patch("shapash.report.blocks.plot_confusion_matrix", return_value=fake_fig) as mock_cm:
+            runtime.block_confusion_matrix(title="CM")
+
+        assert mock_cm.call_args.kwargs["colors_dict"] is smart_explainer.plot._style_dict
+
     def test_smart_explainer_required(self):
         rbm = ReportBlockMixin()
         with pytest.raises(ValueError):
