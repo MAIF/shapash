@@ -9,6 +9,7 @@ from shapash.style.style_utils import (
     convert_str_color_to_plt_format,
     define_style,
     get_pyplot_color,
+    merge_palette,
     resolve_nlp_theme,
     select_palette,
 )
@@ -119,3 +120,29 @@ class TestStyle_utils(unittest.TestCase):
         overridden = resolve_nlp_theme(colors_dict={"nlp_xpl_positive": "rgb(1, 2, 3)"})
         assert overridden.xpl_positive == "rgb(1, 2, 3)"
         assert overridden.xpl_negative == default_palette["nlp_xpl_negative"]
+
+    def test_merge_palette_nested_partial_override(self):
+        """A partial nested override keeps the other colors and leaves the palette untouched."""
+        palette = {"bar": {"1": "a", "2": "b"}, "scale": ["x", "y"], "title": "t"}
+        merged = merge_palette(palette, {"bar": {"1": "red"}, "scale": ["z"], "title": "u"})
+        assert merged == {"bar": {"1": "red", "2": "b"}, "scale": ["z"], "title": "u"}
+        assert palette == {"bar": {"1": "a", "2": "b"}, "scale": ["x", "y"], "title": "t"}
+
+    def test_merge_palette_int_keys_match_string_keys(self):
+        """An int key overrides the palette's string key instead of adding a second entry."""
+        merged = merge_palette({"bar": {"1": "a", "2": "b"}}, {"bar": {1: "red"}})
+        assert merged == {"bar": {"1": "red", "2": "b"}}
+
+    def test_merge_palette_without_overrides_returns_a_copy(self):
+        """No override returns an independent copy of the palette."""
+        palette = {"bar": {"1": "a"}}
+        merged = merge_palette(palette, None)
+        merged["bar"]["1"] = "red"
+        assert palette == {"bar": {"1": "a"}}
+
+    def test_define_style_accepts_partial_nested_override(self):
+        """define_style no longer fails on a palette with a partially overridden nested mapping."""
+        palette = merge_palette(select_palette(colors_loading(), "default"), {"featureimp_bar": {"1": "rgb(1, 2, 3)"}})
+        style = define_style(palette)
+        assert style["dict_featimp_colors"][1]["color"] == "rgb(1, 2, 3)"
+        assert style["dict_featimp_colors"][2]["color"] == colors_loading()["default"]["featureimp_bar"]["2"]

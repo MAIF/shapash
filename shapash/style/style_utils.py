@@ -1,5 +1,6 @@
 """functions for loading and manipulating colors."""
 
+import copy
 import json
 import os
 from dataclasses import dataclass
@@ -67,6 +68,38 @@ def select_palette(colors_dic: dict[str, Any], palette_name: str) -> dict[str, A
     if palette_name not in colors_dic.keys():
         raise ValueError(f"Palette {palette_name} not found.")
     return colors_dic[palette_name]
+
+
+def merge_palette(palette: dict[str, Any], overrides: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Return a copy of a palette with color overrides merged on top.
+
+    A nested mapping such as ``featureimp_bar`` is merged key by key, so overriding one of its
+    colors keeps the others. Any other value, a list of colors included, is replaced whole.
+    Inside a nested mapping whose keys are strings, an override key is matched as a string,
+    so ``{1: "red"}`` and ``{"1": "red"}`` override the same color.
+
+    Parameters
+    ----------
+    palette : dict[str, Any]
+        Colors of one palette. It is not modified.
+    overrides : dict[str, Any] or None
+        Colors to set, with the same keys as the palette.
+
+    Returns
+    -------
+    dict[str, Any]
+        A new palette with the overrides applied.
+    """
+    merged = copy.deepcopy(palette)
+    for key, value in (overrides or {}).items():
+        base = merged.get(key)
+        if isinstance(base, dict) and isinstance(value, dict):
+            str_keys = all(isinstance(k, str) for k in base)
+            base.update({(str(k) if str_keys else k): copy.deepcopy(v) for k, v in value.items()})
+        else:
+            merged[key] = copy.deepcopy(value)
+    return merged
 
 
 def convert_str_color_to_plt_format(txt: str) -> list[float]:

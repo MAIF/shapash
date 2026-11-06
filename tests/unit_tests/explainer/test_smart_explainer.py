@@ -26,6 +26,7 @@ from shapash.explainer.multi_decorator import MultiDecorator
 from shapash.explainer.smart_state import SmartState
 from shapash.utils.check import check_model
 from shapash.report.blocks import ReportBlockMixin
+from shapash.style.style_utils import colors_loading
 
 
 def init_sme_to_pickle_test():
@@ -974,6 +975,51 @@ class TestSmartExplainer(unittest.TestCase):
         xpl = SmartExplainer(self.model)
         with self.assertRaisesRegex(ValueError, "At least one of palette_name or colors_dict parameters must be defined"):
             xpl.define_style()
+
+    def test_define_style_override_keeps_palette(self):
+        """An override-only call keeps the palette chosen earlier."""
+        palettes = colors_loading()
+        xpl = SmartExplainer(self.model)
+        xpl.define_style(palette_name="blues")
+        xpl.define_style(colors_dict={"title_color": "rgb(1, 2, 3)"})
+
+        assert xpl.palette_name == "blues"
+        assert xpl.colors_dict["webapp_title"] == palettes["blues"]["webapp_title"]
+        assert xpl.colors_dict["title_color"] == "rgb(1, 2, 3)"
+        assert xpl.plot._style_dict["dict_title"]["font"]["color"] == "rgb(1, 2, 3)"
+
+    def test_define_style_overrides_accumulate(self):
+        """Successive override-only calls keep the earlier overrides, constructor ones included."""
+        xpl = SmartExplainer(self.model, colors_dict={"title_color": "rgb(1, 2, 3)"})
+        xpl.define_style(colors_dict={"axis_color": "rgb(4, 5, 6)"})
+
+        assert xpl.colors_dict["title_color"] == "rgb(1, 2, 3)"
+        assert xpl.colors_dict["axis_color"] == "rgb(4, 5, 6)"
+
+    def test_define_style_palette_switch_resets_overrides(self):
+        """Switching palette discards earlier overrides and applies the ones given with it."""
+        palettes = colors_loading()
+        xpl = SmartExplainer(self.model, colors_dict={"title_color": "rgb(1, 2, 3)"})
+        xpl.define_style(palette_name="blues", colors_dict={"axis_color": "rgb(4, 5, 6)"})
+
+        assert xpl.colors_dict["title_color"] == palettes["blues"]["title_color"]
+        assert xpl.colors_dict["axis_color"] == "rgb(4, 5, 6)"
+        assert xpl.colors_dict["webapp_title"] == palettes["blues"]["webapp_title"]
+
+    def test_define_style_unknown_palette_keeps_state(self):
+        """An unknown palette raises and leaves the current palette in place."""
+        xpl = SmartExplainer(self.model)
+        with self.assertRaisesRegex(ValueError, "Palette unknown not found"):
+            xpl.define_style(palette_name="unknown")
+        assert xpl.palette_name == "default"
+
+    def test_partial_nested_colors_dict(self):
+        """A partial nested override in the constructor keeps the palette's other colors."""
+        default = colors_loading()["default"]
+        xpl = SmartExplainer(self.model, colors_dict={"featureimp_bar": {"1": "rgb(1, 2, 3)"}})
+
+        assert xpl.colors_dict["featureimp_bar"] == {**default["featureimp_bar"], "1": "rgb(1, 2, 3)"}
+        assert xpl.plot._style_dict["dict_featimp_colors"][1]["color"] == "rgb(1, 2, 3)"
 
     def test_check_x_y_attributes_1(self):
         """Unit test check_x_y_attributes with existing and missing attributes."""
