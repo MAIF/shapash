@@ -12,6 +12,8 @@ from shapash.plots.plot_univariate import (
 
 from plotly import graph_objects as go
 
+from shapash.style.style_utils import colors_loading
+
 class TestPlots(unittest.TestCase):
     @patch("shapash.plots.plot_univariate.plot_continuous_distribution")
     @patch("shapash.plots.plot_univariate.plot_categorical_distribution")
@@ -95,6 +97,38 @@ class TestPlots(unittest.TestCase):
         assert {trace.name: trace.line.color for trace in fig.data} == {"train": "red", "test": "blue"}
         assert min(trace.x[0] for trace in fig.data) == 2
         assert max(trace.x[-1] for trace in fig.data) == 198
+
+    def test_plot_continuous_distribution_uses_palette_colors(self):
+        """Without explicit colors, levels take the palette's discrete colors, the same on every call."""
+        discrete = colors_loading()["default"]["interaction_discrete"]
+        df = pd.DataFrame({"int_data": np.arange(40), "data_train_test": ["train", "test"] * 20})
+
+        fig = plot_continuous_distribution(df, "int_data", hue="data_train_test")
+        again = plot_continuous_distribution(df, "int_data", hue="data_train_test")
+
+        assert [trace.line.color for trace in fig.data] == discrete[:2]
+        assert [trace.line.color for trace in again.data] == discrete[:2]
+
+    def test_plot_categorical_distribution_uses_palette_colors(self):
+        """Without explicit colors, bars take the palette's discrete colors, with or without hue."""
+        discrete = colors_loading()["blues"]["interaction_discrete"]
+        df = pd.DataFrame({"int_data": [0, 0, 0, 1, 1, 0], "data_train_test": ["train"] * 4 + ["test"] * 2})
+
+        fig = plot_categorical_distribution(df, "int_data", "data_train_test", palette_name="blues")
+        no_hue = plot_categorical_distribution(df, "int_data", palette_name="blues")
+
+        assert [trace.marker.color for trace in fig.data] == discrete[:2]
+        assert no_hue.data[0].marker.color == discrete[0]
+
+    def test_plot_distribution_cycles_palette_colors(self):
+        """More levels than discrete colors reuse the colors in turn."""
+        discrete = colors_loading()["default"]["interaction_discrete"]
+        levels = [f"l{i}" for i in range(len(discrete) + 1)]
+        df = pd.DataFrame({"int_data": [0, 1] * len(levels), "level": levels * 2})
+
+        fig = plot_categorical_distribution(df, "int_data", "level", nb_hue_max=len(levels))
+
+        assert fig.data[-1].marker.color == discrete[0]
 
     def test_plot_categorical_distribution_1(self):
         df = pd.DataFrame(

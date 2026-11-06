@@ -8,8 +8,33 @@ from plotly.offline import plot
 from scipy.stats import gaussian_kde
 
 from shapash.report.common import VarType, series_dtype
-from shapash.style.style_utils import define_style, get_palette, random_color
+from shapash.style.style_utils import define_style, get_palette
 from shapash.utils.utils import adjust_title_height, compute_digit_number
+
+
+def _series_color(style_dict: dict[str, Any], key: Any, index: int) -> str:
+    """
+    Color of one curve or bar group of a distribution plot.
+
+    Parameters
+    ----------
+    style_dict : dict[str, Any]
+        Resolved style, possibly extended with explicit colors keyed by level or column name.
+    key : Any
+        Level of the hue column, or the column name when there is no hue.
+    index : int
+        Position of the series, used to pick a color from the palette's discrete colors.
+
+    Returns
+    -------
+    str
+        The explicit color given for ``key``, else the palette's discrete colors in turn.
+    """
+    color = style_dict.get(key)
+    if isinstance(color, str):
+        return color
+    discrete_colors = style_dict["interactions_discrete_colors"]
+    return discrete_colors[index % len(discrete_colors)]
 
 
 def plot_distribution(
@@ -162,7 +187,7 @@ def plot_continuous_distribution(
     """
     if colors_dict:
         style_dict = {}
-        keys = ["dict_title", "init_confusion_matrix_colorscale", "dict_xaxis", "dict_yaxis"]
+        keys = ["dict_title", "dict_xaxis", "dict_yaxis", "interactions_discrete_colors"]
         if any(key not in colors_dict for key in keys):
             style_dict = define_style(get_palette(palette_name))
         style_dict.update(colors_dict)
@@ -197,7 +222,7 @@ def plot_continuous_distribution(
             filtered_data[hue] = filtered_data[hue].where(filtered_data[hue].isin(top_categories), other="Other")
             unique_hues = filtered_data[hue].unique()
 
-        for level in unique_hues:
+        for i, level in enumerate(unique_hues):
             subset = filtered_data[filtered_data[hue] == level]
             if len(subset) < 5:
                 warnings.warn(  # noqa: B028
@@ -215,7 +240,7 @@ def plot_continuous_distribution(
                 for x, y in zip(x_values, y_values, strict=False)
             ]
 
-            color = style_dict.get(level, random_color())
+            color = _series_color(style_dict, level, i)
 
             fig.add_trace(
                 go.Scatter(
@@ -246,7 +271,7 @@ def plot_continuous_distribution(
             for x, y in zip(x_values, y_values, strict=False)
         ]
 
-        color = style_dict.get(col, random_color())
+        color = _series_color(style_dict, col, 0)
 
         fig.add_trace(
             go.Scatter(
@@ -345,7 +370,7 @@ def plot_categorical_distribution(
     df_all = df_all.copy()
     if colors_dict:
         style_dict = {}
-        keys = ["dict_title", "init_confusion_matrix_colorscale", "dict_xaxis", "dict_yaxis"]
+        keys = ["dict_title", "dict_xaxis", "dict_yaxis", "interactions_discrete_colors"]
         if any(key not in colors_dict for key in keys):
             style_dict = define_style(get_palette(palette_name))
         style_dict.update(colors_dict)
@@ -386,9 +411,9 @@ def plot_categorical_distribution(
 
     data = []
     if hue:
-        for hue_val in hue_order:
+        for i, hue_val in enumerate(hue_order):
             subset = df_cat[df_cat[hue] == hue_val]
-            color = style_dict.get(hue_val, random_color())
+            color = _series_color(style_dict, hue_val, i)
 
             customdata = subset.apply(
                 lambda row, hue_val=hue_val: (
@@ -410,7 +435,7 @@ def plot_categorical_distribution(
             )
             data.append(bar)
     else:
-        color = style_dict.get(col, random_color())
+        color = _series_color(style_dict, col, 0)
 
         customdata = df_cat.apply(
             lambda row: (
