@@ -27,6 +27,115 @@ def round_to_k(x: float | int, k: int) -> float | int:
     return int(new_x) if new_x % 1 == 0 else new_x
 
 
+class IndexLabels:
+    """
+    Translate between the explainer's index values and the row keys the webapp sends to the browser.
+
+    A flat index is passed through unchanged. Each entry of a MultiIndex gets a readable string
+    label such as ``"FR | Paris | 0"``: Dash serializes a tuple as a JSON list, which pandas cannot
+    use to look a row up, and a string also survives the datatable, the index input and plot
+    ``customdata`` unchanged.
+
+    Parameters
+    ----------
+    index : pandas.Index
+        Index of the explainer's ``x_init``.
+    """
+
+    SEPARATOR = " | "
+
+    def __init__(self, index: pd.Index) -> None:
+        self.is_multi = isinstance(index, pd.MultiIndex)
+        self._key_by_label: dict[str, tuple[Any, ...]] = {}
+        self._label_by_key: dict[tuple[Any, ...], str] = {}
+        if self.is_multi:
+            keys = list(index.unique())
+            labels = [self.SEPARATOR.join(str(level) for level in key) for key in keys]
+            if len(set(labels)) != len(labels):
+                # A level value contains the separator, or two values print the same:
+                # suffix the position so every row keeps a distinct key.
+                labels = [f"{label} [{position}]" for position, label in enumerate(labels)]
+            self._key_by_label = dict(zip(labels, keys, strict=True))
+            self._label_by_key = dict(zip(keys, labels, strict=True))
+
+    def labels(self, index: pd.Index) -> pd.Index | list[str]:
+        """
+        Return the row keys of ``index`` as shown in the webapp's ``_index_`` column.
+
+        Parameters
+        ----------
+        index : pandas.Index
+            Index values to label, all of them part of the index given at construction.
+
+        Returns
+        -------
+        pandas.Index or list[str]
+            ``index`` itself for a flat index, the string labels for a MultiIndex.
+        """
+        if not self.is_multi:
+            return index
+        return [self._label_by_key[key] for key in index]
+
+    def to_label(self, value: Any) -> Any:
+        """
+        Convert an index value coming from the browser into the webapp row key.
+
+        Parameters
+        ----------
+        value : Any
+            A row key, or a raw index value as found in plot ``customdata`` (a JSON list for a
+            MultiIndex entry).
+
+        Returns
+        -------
+        Any
+            The row key, ``None`` if a list matches no MultiIndex entry, or ``value`` unchanged
+            for a flat index.
+        """
+        if self.is_multi and isinstance(value, list | tuple):
+            return self._label_by_key.get(tuple(value))
+        return value
+
+    def to_index(self, value: Any) -> Any:
+        """
+        Convert a webapp row key into the explainer's index value.
+
+        Parameters
+        ----------
+        value : Any
+            A row key from the ``_index_`` column or the index input.
+
+        Returns
+        -------
+        Any
+            The MultiIndex tuple for a known label, or ``value`` unchanged otherwise.
+        """
+        if self.is_multi:
+            if isinstance(value, str) and value in self._key_by_label:
+                return self._key_by_label[value]
+            if isinstance(value, list):
+                return tuple(value)
+        return value
+
+    def to_index_list(self, values: list | None) -> list | None:
+        """
+        Convert a list of webapp row keys into explainer index values.
+
+        Parameters
+        ----------
+        values : list or None
+            Row keys, typically from ``get_indexes_from_datatable``.
+
+        Returns
+        -------
+        list or None
+            The converted values, or ``None`` when ``values`` is ``None``.
+        """
+        if values is None or not self.is_multi:
+            return values
+        return [self.to_index(value) for value in values]
+
+
 def get_index_type(data: pd.DataFrame) -> Literal["number", "text"]:
     """
     Identify the type of the dataframe index.

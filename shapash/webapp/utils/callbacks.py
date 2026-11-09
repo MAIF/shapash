@@ -31,7 +31,9 @@ def select_data_from_prediction_picking(round_dataframe: pd.DataFrame, selected_
     """
     row_ids = []
     for p in selected_data["points"]:
-        row_ids.append(p["customdata"])
+        # A MultiIndex entry reaches the browser as a tuple and comes back as a JSON list.
+        row_id = p["customdata"]
+        row_ids.append(tuple(row_id) if isinstance(row_id, list) else row_id)
     df = round_dataframe.loc[row_ids]
 
     return df
