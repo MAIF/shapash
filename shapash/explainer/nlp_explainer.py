@@ -19,7 +19,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from shapash.__version__ import __version__
+from shapash.__version__ import VERSION, __version__
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_shap_backend import NlpShapBackend
 from shapash.compute.diagnostics.label_noise import (
@@ -58,12 +58,23 @@ def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
 
 
+def _cache_release() -> str:
+    """The shapash release line (``major.minor``) that scopes explanation cache entries.
+
+    Patch releases, release candidates and development builds of one line share their entries: the
+    full version string would carry a commit hash and, on a dirty tree, a date, so a development
+    install would miss on every commit and every day. A source tree that was never installed has no
+    parsable version and falls back to the raw string.
+    """
+    return ".".join(map(str, VERSION[:2])) or __version__
+
+
 def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
     """Read a cached explanation, or return ``None`` when the entry cannot be read.
 
     An unreadable entry is a **miss, not a failure**: a damaged file, or one written by a shapash
-    build whose layout this reader cannot parse (the key changes with every release, not with every
-    commit), and a cache exists so the caller need not care whether the answer was on disk.
+    build whose layout this reader cannot parse (the key changes with every minor release, not with
+    every patch or commit), and a cache exists so the caller need not care whether the answer was on disk.
     :meth:`NlpExplanation.load` called directly still raises.
 
     Scoped to the errors a stale or damaged entry produces (a missing meta key or parquet member,
@@ -934,8 +945,10 @@ class NlpExplainer:
         weights), the backend's registered ``name``, its explainer settings, the explanation space,
         baseline token and masking it reports (constructor choices, not class constants — a
         probability-space and a logit-space ``nlp_shap`` share every other part of the key), and
-        ``label_names`` (which fixes the column order of ``y_prob``). The shapash version is in it too: a
-        release may change how backends compute or cut units, and must not read an older one's entries.
+        ``label_names`` (which fixes the column order of ``y_prob``). The shapash release line
+        (``major.minor``, see :func:`_cache_release`) is in it too: a minor release may change how
+        backends compute or cut units, and must not read an older one's entries. Patch releases share
+        entries, so a fix that changes backend output ships in a minor release.
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
         the model, or the label order and pointing at the same ``cache_dir`` silently reloads the
@@ -958,7 +971,7 @@ class NlpExplainer:
             # selects the string path without touching any other part of the key.
             masking = getattr(backend, "masking", None)
             backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}:{masking}"
-        return hash_corpus(text_list, f"{__version__}|{model_id}|{backend_id}|{self.label_names!r}")
+        return hash_corpus(text_list, f"{_cache_release()}|{model_id}|{backend_id}|{self.label_names!r}")
 
     def _require_text_model(self) -> TextModel:
         text_model = getattr(self, "_text_model", None)
