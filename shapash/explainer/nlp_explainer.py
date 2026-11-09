@@ -10,6 +10,7 @@ itself keeps no compiled batch.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import zipfile
 from dataclasses import replace
@@ -19,7 +20,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from shapash.__version__ import VERSION, __version__
+from shapash.__version__ import __version__
 from shapash.backend.nlp_backend import NlpBackend, NlpContributions
 from shapash.backend.nlp_shap_backend import NlpShapBackend
 from shapash.compute.diagnostics.label_noise import (
@@ -58,23 +59,29 @@ def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
 
 
-def _cache_release() -> str:
-    """The shapash release line (``major.minor``) that scopes explanation cache entries.
+_RELEASE_RE = re.compile(r"\d+\.\d+\.\d+")
 
-    Patch releases, release candidates and development builds of one line share their entries: the
-    full version string would carry a commit hash and, on a dirty tree, a date, so a development
-    install would miss on every commit and every day. A source tree that was never installed has no
-    parsable version and falls back to the raw string.
+
+def _cache_release() -> str:
+    """The shapash release (``major.minor.patch``) that scopes explanation cache entries.
+
+    Every release, patch releases included, gets its own entries: a patch may fix how a backend
+    computes, and a stale entry looks exactly like a correct one. Anything after the patch number is
+    dropped, so a release candidate shares the final release's entries, and a development build
+    (``2.10.1.dev13+g<hash>.d<date>``) keeps one key across commits and days instead of missing on
+    each. A source tree that was never installed has no parsable version and falls back to the raw
+    string.
     """
-    return ".".join(map(str, VERSION[:2])) or __version__
+    match = _RELEASE_RE.match(__version__)
+    return match.group() if match else __version__
 
 
 def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
     """Read a cached explanation, or return ``None`` when the entry cannot be read.
 
     An unreadable entry is a **miss, not a failure**: a damaged file, or one written by a shapash
-    build whose layout this reader cannot parse (the key changes with every minor release, not with
-    every patch or commit), and a cache exists so the caller need not care whether the answer was on disk.
+    build whose layout this reader cannot parse (the key changes with every release, not with every
+    commit), and a cache exists so the caller need not care whether the answer was on disk.
     :meth:`NlpExplanation.load` called directly still raises.
 
     Scoped to the errors a stale or damaged entry produces (a missing meta key or parquet member,
@@ -364,8 +371,9 @@ class NlpExplainer:
             Skip both the in-memory and the disk cache and run the backend again, then store the
             fresh result in their place. The previous entry is only overwritten once the new one is
             computed, so a failed recompute leaves it in place. Use it when a cached result may be
-            stale, for example after a patch release that changed how a backend computes. Default
-            ``False``.
+            stale, for example after changing backend code on a development build, whose version
+            does not change between commits, or to draw again from a sampling backend such as LIME.
+            Default ``False``.
 
         Returns
         -------
@@ -952,11 +960,9 @@ class NlpExplainer:
         weights), the backend's registered ``name``, its explainer settings, the explanation space,
         baseline token and masking it reports (constructor choices, not class constants — a
         probability-space and a logit-space ``nlp_shap`` share every other part of the key), and
-        ``label_names`` (which fixes the column order of ``y_prob``). The shapash release line
-        (``major.minor``, see :func:`_cache_release`) is in it too: a minor release may change how
-        backends compute or cut units, and must not read an older one's entries. Patch releases share
-        entries, so a fix that changes backend output ships in a minor release; until then
-        ``explain(recompute=True)`` refreshes an entry by hand.
+        ``label_names`` (which fixes the column order of ``y_prob``). The shapash release
+        (``major.minor.patch``, see :func:`_cache_release`) is in it too: any release may change how
+        backends compute or cut units, and must not read an older one's entries.
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
         the model, or the label order and pointing at the same ``cache_dir`` silently reloads the

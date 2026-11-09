@@ -546,24 +546,26 @@ class TestExplainCacheKey(unittest.TestCase):
         xpl = _explainer()
         self.assertNotEqual(xpl._compute_key(["a", "b"]), xpl._compute_key(["b", "a"]))
 
-    def _key_under(self, version, version_tuple):
-        with (
-            patch("shapash.explainer.nlp_explainer.__version__", version),
-            patch("shapash.explainer.nlp_explainer.VERSION", version_tuple),
-        ):
+    def _key_under(self, version):
+        with patch("shapash.explainer.nlp_explainer.__version__", version):
             return _explainer()._compute_key(_SAMPLE_TEXTS)
 
-    def test_patch_and_dev_builds_of_one_release_line_share_the_key(self):
-        # A full version string would change the key on every commit (and daily on a dirty tree).
-        release = self._key_under("2.10.0", (2, 10, 0))
-        self.assertEqual(release, self._key_under("2.10.3", (2, 10, 3)))
-        self.assertEqual(release, self._key_under("2.10.1.dev13+gabc1234.d20261103", (2, 10, 1)))
+    def test_every_release_changes_the_key(self):
+        # A patch may fix how a backend computes, so it must not read the previous release's entries.
+        self.assertNotEqual(self._key_under("2.10.0"), self._key_under("2.10.1"))
+        self.assertNotEqual(self._key_under("2.10.1"), self._key_under("2.11.0"))
 
-    def test_a_minor_release_changes_the_key(self):
-        self.assertNotEqual(self._key_under("2.10.3", (2, 10, 3)), self._key_under("2.11.0", (2, 11, 0)))
+    def test_a_dev_build_keeps_one_key_across_commits_and_days(self):
+        # The full version string carries the commit hash and, on a dirty tree, a date.
+        clean = self._key_under("2.10.1.dev13+gabc1234")
+        self.assertEqual(clean, self._key_under("2.10.1.dev14+gdef5678.d20261103"))
+        self.assertEqual(clean, self._key_under("2.10.1"), "a dev build shares its target release's key")
+
+    def test_a_release_candidate_shares_the_final_release_key(self):
+        self.assertEqual(self._key_under("2.11.0rc1"), self._key_under("2.11.0"))
 
     def test_an_uninstalled_source_tree_falls_back_to_the_raw_version(self):
-        self.assertNotEqual(self._key_under("0+unknown", ()), self._key_under("2.10.0", (2, 10, 0)))
+        self.assertNotEqual(self._key_under("0+unknown"), self._key_under("2.10.0"))
 
 
 def _read_meta(path) -> dict:
@@ -635,8 +637,8 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             self.assertTrue(path.exists(), "cache_path disagrees with where explain() wrote")
 
     def test_stale_layout_is_a_miss_not_a_crash(self):
-        # The cache key covers texts/model/backend and the release line, not the patch version, so a
-        # layout change can leave entries the new reader cannot parse. The entry must be recomputed and overwritten.
+        # The cache key covers texts/model/backend and the release, not the commit, so a layout change
+        # on a development build can leave entries the new reader cannot parse. The entry must be recomputed and overwritten.
         with tempfile.TemporaryDirectory() as cache_dir:
             _explainer(backend=_MarkerBackend(marker=4.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
             path = _explainer().cache_path(_SAMPLE_TEXTS, cache_dir)
