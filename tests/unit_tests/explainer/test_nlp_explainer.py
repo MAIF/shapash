@@ -681,6 +681,46 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
             self.assertEqual(backend.calls, 2, "clear_cache must defeat the in-memory guard too")
 
+    def test_recompute_bypasses_the_in_memory_guard(self):
+        backend = _MarkerBackend()
+        xpl = _explainer(backend=backend)
+        xpl.explain(_SAMPLE_TEXTS)
+        xpl.explain(_SAMPLE_TEXTS, recompute=True)
+        self.assertEqual(backend.calls, 2)
+
+    def test_recompute_bypasses_the_disk_cache_and_overwrites_it(self):
+        with tempfile.TemporaryDirectory() as cache_dir:
+            _explainer(backend=_MarkerBackend(marker=1.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+
+            # Same key (marker is not part of it), different output: stands in for a stale entry.
+            backend = _MarkerBackend(marker=2.0)
+            explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS, cache_dir=cache_dir, recompute=True)
+            self.assertEqual(backend.calls, 1, "recompute must not read the disk entry")
+            np.testing.assert_allclose(explanation.values[0], 2.0)
+
+            reloaded_backend = _MarkerBackend(marker=3.0)
+            reloaded = _explainer(backend=reloaded_backend).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            self.assertEqual(reloaded_backend.calls, 0)
+            np.testing.assert_allclose(reloaded.values[0], 2.0, err_msg="the recomputed result was not written")
+
+    def test_a_failed_recompute_keeps_the_previous_entry(self):
+        with tempfile.TemporaryDirectory() as cache_dir:
+            backend = _MarkerBackend(marker=1.0)
+            xpl = _explainer(backend=backend)
+            xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            path = xpl.cache_path(_SAMPLE_TEXTS, cache_dir)
+
+            with (
+                patch.object(backend, "run_explainer", side_effect=MemoryError("boom")),
+                self.assertRaises(MemoryError),
+            ):
+                xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir, recompute=True)
+
+            self.assertTrue(path.exists(), "a failed recompute dropped the cached entry")
+            np.testing.assert_allclose(NlpExplanation.load(path).values[0], 1.0)
+            np.testing.assert_allclose(xpl.explain(_SAMPLE_TEXTS).values[0], 1.0)
+            self.assertEqual(backend.calls, 1, "the in-memory entry survives a failed recompute too")
+
     def test_clear_cache_leaves_other_backends_entries_intact(self):
         with tempfile.TemporaryDirectory() as cache_dir:
             keeper = _MarkerBackend(marker=1.0)

@@ -1019,18 +1019,14 @@ def main() -> None:
     reference_texts, reference_labels = reference_corpus if reference_corpus is not None else (None, None)
     xpl.fit(reference_texts, y=reference_labels, cache_dir=similar_cache_dir)
 
-    if config.recompute:
-        # Drop this text set's cached contributions so the steps below recompute + overwrite. The
-        # explainer owns the key (it covers the model and backend), so it also owns the deletion —
-        # only *this* model+backend's entry goes, other backends' caches are left intact. The
-        # embeddings are dropped by compute_embeddings(recompute=True) below, the projection is re-fitted.
-        logger.info("--recompute: dropping cached %s contributions + projection for these texts", config.attribution)
-        xpl.clear_cache(sentences, explain_dir)
-
     # Both steps load from cache if one exists for these exact texts, otherwise they compute and write
-    # it. So the first run is slow; later runs only pay the model load.
+    # it. So the first run is slow; later runs only pay the model load. --recompute skips the lookup
+    # and overwrites only *this* model+backend's entry (other backends' caches are left intact); the
+    # embeddings are refreshed by compute_embeddings(recompute=True) below, the projection is re-fitted.
     explain_cache = xpl.cache_path(sentences, explain_dir)
-    if explain_cache.exists():
+    if config.recompute:
+        logger.info("--recompute: recomputing %s contributions + projection for these texts", config.attribution)
+    elif explain_cache.exists():
         logger.info("Contributions cache hit (%s) — loading %s", config.attribution, explain_cache)
     else:
         logger.info(
@@ -1042,7 +1038,7 @@ def main() -> None:
     # immutable and holds no model, no backend and no explainer handle; ground truth rides on it
     # (never on xpl), which is why a cache hit still gets *this* run's y_true attached.
     dataset_label = str(config.dataset_path) if config.is_local_dataset else config.dataset_name
-    explanation = xpl.explain(sentences, y=y_true, cache_dir=explain_dir)
+    explanation = xpl.explain(sentences, y=y_true, cache_dir=explain_dir, recompute=config.recompute)
 
     # Step 4 — everything downstream reads the artifact as an argument.
     # Saved per space, so switching --embedding-space never reloads a layout drawn in another one, and

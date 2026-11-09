@@ -322,6 +322,7 @@ class NlpExplainer:
         X: list[str] | pd.Series,
         y: list | pd.Series | None = None,
         cache_dir: str | Path | None = None,
+        recompute: bool = False,
     ) -> NlpExplanation:
         """Compute token-level contributions and model predictions, and return them as an artifact.
 
@@ -359,6 +360,12 @@ class NlpExplainer:
             default. One directory can be shared across models and backends: the hash identifies
             them, so entries cannot collide. Needs a model with an identity — a ``TextModel`` or a
             pipeline; a bare scoring callable raises ``ValueError``.
+        recompute : bool, optional
+            Skip both the in-memory and the disk cache and run the backend again, then store the
+            fresh result in their place. The previous entry is only overwritten once the new one is
+            computed, so a failed recompute leaves it in place. Use it when a cached result may be
+            stale, for example after a patch release that changed how a backend computes. Default
+            ``False``.
 
         Returns
         -------
@@ -381,11 +388,11 @@ class NlpExplainer:
         # ``_COMPUTED_FIELDS`` half is meaningful here — its own texts/index/y_true belong to
         # whoever computed it first. See ``relabelled`` at the return below.
         cached = getattr(self, "_computed_cache", None)
-        if cached is not None and cached[0] == new_hash:
+        if not recompute and cached is not None and cached[0] == new_hash:
             computed = cached[1]
         else:
             cache_path = _cache_file(new_hash, Path(cache_dir)) if cache_dir is not None else None
-            computed = _load_cached(cache_path)
+            computed = None if recompute else _load_cached(cache_path)
 
             if computed is None:
                 contributions = self.backend.run_explainer(text_list)
@@ -948,7 +955,8 @@ class NlpExplainer:
         ``label_names`` (which fixes the column order of ``y_prob``). The shapash release line
         (``major.minor``, see :func:`_cache_release`) is in it too: a minor release may change how
         backends compute or cut units, and must not read an older one's entries. Patch releases share
-        entries, so a fix that changes backend output ships in a minor release.
+        entries, so a fix that changes backend output ships in a minor release; until then
+        ``explain(recompute=True)`` refreshes an entry by hand.
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
         the model, or the label order and pointing at the same ``cache_dir`` silently reloads the
