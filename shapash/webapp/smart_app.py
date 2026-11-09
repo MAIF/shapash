@@ -49,7 +49,7 @@ from shapash.webapp.utils.callbacks import (
 )
 from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.MyGraph import MyGraph
-from shapash.webapp.utils.utils import IndexLabels, check_row, get_index_type, round_to_k
+from shapash.webapp.utils.utils import IndexLabels, check_row, get_index_level_columns, get_index_type, round_to_k
 
 if TYPE_CHECKING:
     from shapash.explainer.explainer import Explainer
@@ -214,6 +214,13 @@ class SmartApp:
 
         self.index_labels = IndexLabels(self.explainer.x_init.index)
         self.dataframe["_index_"] = self.index_labels.labels(self.explainer.x_init.index)
+        # Each MultiIndex level also gets its own column, so rows can be filtered level by level.
+        self.index_level_columns = get_index_level_columns(
+            self.explainer.x_init.index, [*self.dataframe.columns, *self.special_cols]
+        )
+        for position, column in enumerate(self.index_level_columns):
+            self.dataframe[column] = self.explainer.x_init.index.get_level_values(position)
+            self.features_dict[column] = column
         self.dataframe.rename(columns={f"{self.predict_col}": "_predict_"}, inplace=True)
         if self.explainer.y_target is not None:
             self.dataframe = self.dataframe.join(
@@ -237,6 +244,11 @@ class SmartApp:
 
         else:
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
+
+        if self.index_level_columns:
+            columns_order = [col for col in columns_order if col not in self.index_level_columns]
+            after_index = columns_order.index("_index_") + 1
+            columns_order[after_index:after_index] = self.index_level_columns
 
         random.seed(79)
         if rows is None:
@@ -2796,7 +2808,8 @@ class SmartApp:
                     selected_contrib,
                     sort_by,
                     order,
-                    self.special_cols,
+                    # Index levels are listed with the index, above the sorted features.
+                    [self.special_cols[0], *self.index_level_columns, *self.special_cols[1:]],
                     self.explainer.additional_features_dict,
                 )
 
@@ -2862,7 +2875,7 @@ class SmartApp:
             style_header_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols] + [
                 {"if": {"column_id": c}, "font-style": "italic"}
                 for c in self.dataframe
-                if c in self.explainer.additional_features_dict
+                if c in self.explainer.additional_features_dict or c in self.index_level_columns
             ]
             style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 

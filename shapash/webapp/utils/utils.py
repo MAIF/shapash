@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from typing import Any, Literal
 
 import pandas as pd
@@ -134,6 +135,39 @@ class IndexLabels:
         if values is None or not self.is_multi:
             return values
         return [self.to_index(value) for value in values]
+
+
+def get_index_level_columns(index: pd.Index, taken: Collection[str]) -> list[str]:
+    """
+    Name one webapp column per MultiIndex level, so each level can be shown and filtered on its own.
+
+    A level is named ``index_<name>``, or ``index_<position>`` when it has no name, so the column
+    name depends only on the level and all level columns sort together. In the unlikely case that
+    this name is already a column of the table, the level position is appended until it is unique.
+
+    Parameters
+    ----------
+    index : pandas.Index
+        Index of the explainer's ``x_init``.
+    taken : Collection[str]
+        Column names already used by the table.
+
+    Returns
+    -------
+    list[str]
+        One column name per level, in level order; empty for a flat index.
+    """
+    if not isinstance(index, pd.MultiIndex):
+        return []
+    used = set(taken)
+    columns = []
+    for position, name in enumerate(index.names):
+        column = f"index_{position if name is None else name}"
+        while column in used:
+            column = f"{column}_{position}"
+        used.add(column)
+        columns.append(column)
+    return columns
 
 
 def get_index_type(data: pd.DataFrame) -> Literal["number", "text"]:

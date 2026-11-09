@@ -5,6 +5,8 @@ Dash serializes a tuple as a JSON list, and pandas cannot look a row up from a l
 string row keys were introduced, clicking a row of the datatable made the local explanation, the
 identity card and the datatable highlight fail with ``InvalidIndexError``. The data sent to these
 callbacks goes through a JSON round trip first, as it does in the browser.
+
+Each index level also gets its own column, so rows can be filtered level by level.
 """
 
 import json
@@ -17,6 +19,7 @@ from sklearn.ensemble import RandomForestRegressor
 
 from shapash import SmartExplainer
 from shapash.webapp.smart_app import SmartApp
+from shapash.webapp.utils.callbacks import create_filter_modalities_selection
 
 
 def _through_browser(value):
@@ -124,7 +127,7 @@ class TestSmartAppMultiIndex(unittest.TestCase):
         self.assertEqual(style["display"], "flex")
         self.assertTrue(children)
 
-    def test_datatable_highlights_the_selected_row(self):
+    def _datatable_styles(self, index_value):
         properties = ["style_data_conditional", "style_filter_conditional", "style_header_conditional"]
         properties.append("style_cell_conditional")
         outputs = [{"id": "dataset", "property": prop} for prop in properties]
@@ -132,14 +135,88 @@ class TestSmartAppMultiIndex(unittest.TestCase):
         state = [
             {"id": "dataset", "property": "data", "value": self.data},
             {"id": "dataset", "property": "derived_viewport_data", "value": None},
-            {"id": "index_id", "property": "value", "value": self.data[2]["_index_"]},
+            {"id": "index_id", "property": "value", "value": index_value},
         ]
         output = ".." + "...".join(f"dataset.{prop}" for prop in properties) + ".."
+        return self._post(output, outputs, inputs, state, ["validation.n_clicks"])["dataset"]
 
-        resp = self._post(output, outputs, inputs, state, ["validation.n_clicks"])
+    def test_datatable_highlights_the_selected_row(self):
+        highlighted = self._datatable_styles(self.data[2]["_index_"])["style_data_conditional"]
 
-        highlighted = resp["dataset"]["style_data_conditional"]
         self.assertIn({"if": {"row_index": 2}, "backgroundColor": self.smart_app.color[0]}, highlighted)
+
+    def test_index_level_headers_are_styled_like_additional_data(self):
+        headers = self._datatable_styles(None)["style_header_conditional"]
+
+        for column in ["index_country", "index_city", "index_n"]:
+            self.assertIn({"if": {"column_id": column}, "font-style": "italic"}, headers)
+
+    def test_index_levels_have_their_own_columns_after_the_index(self):
+        frame = self.smart_app.round_dataframe
+
+        self.assertEqual(list(frame.columns[:4]), ["_index_", "index_country", "index_city", "index_n"])
+        for level in ["country", "city", "n"]:
+            pd.testing.assert_index_equal(
+                pd.Index(frame[f"index_{level}"], name=level), frame.index.get_level_values(level), check_exact=True
+            )
+
+    def test_identity_card_lists_index_levels_after_the_index(self):
+        update_id_card = self._callback("id_card_title_contrib.children")
+
+        _, children, _ = update_id_card(1, None, "feature_name", True, self.data, self.data[2]["_index_"])
+        names = [row.children[0].children.children for row in children]
+
+        self.assertEqual(names[:5], ["_index_", "index_country", "index_city", "index_n", "_predict_"])
+
+    def test_index_levels_get_a_filter_widget(self):
+        for column in ["index_country", "index_n"]:
+            with self.subTest(column):
+                widget = create_filter_modalities_selection(column, {"index": 1}, self.smart_app.round_dataframe)
+
+                self.assertEqual(widget.children.id, {"type": "dynamic-str", "index": 1})
+
+    def test_filtering_on_an_index_level(self):
+        outputs = [
+            {"id": "dataset", "property": "data"},
+            {"id": "dataset", "property": "tooltip_data"},
+            {"id": "dataset", "property": "columns"},
+            {"id": "filtered_subset_info", "property": "children"},
+            {"id": "filtered_subset_info", "property": "color"},
+        ]
+        inputs = [
+            {"id": "prediction_picking", "property": "selectedData", "value": None},
+            {"id": "clusters", "property": "selectedData", "value": None},
+            {"id": "modal", "property": "is_open", "value": False},
+            {"id": "apply_filter", "property": "n_clicks", "value": 1},
+            {"id": "reset_dropdown_button", "property": "n_clicks", "value": None},
+            {"id": {"type": "del_dropdown_button", "index": ["ALL"]}, "property": "n_clicks", "value": [None]},
+        ]
+        state = [
+            {"id": "rows", "property": "value", "value": 20},
+            {"id": "name", "property": "value", "value": None},
+            {"id": {"type": "var_dropdown", "index": ["ALL"]}, "property": "value", "value": ["index_country"]},
+            {"id": {"type": "var_dropdown", "index": ["ALL"]}, "property": "id", "value": [{"index": 1}]},
+            {"id": {"type": "dynamic-str", "index": ["ALL"]}, "property": "value", "value": [["FR"]]},
+            {"id": {"type": "dynamic-str", "index": ["ALL"]}, "property": "id", "value": [{"index": 1}]},
+            {"id": {"type": "dynamic-bool", "index": ["ALL"]}, "property": "value", "value": []},
+            {"id": {"type": "dynamic-bool", "index": ["ALL"]}, "property": "id", "value": []},
+            {"id": {"type": "dynamic-date", "index": ["ALL"]}, "property": "start_date", "value": []},
+            {"id": {"type": "dynamic-date", "index": ["ALL"]}, "property": "end_date", "value": []},
+            {"id": {"type": "dynamic-date", "index": ["ALL"]}, "property": "id", "value": []},
+            {"id": {"type": "lower", "index": ["ALL"]}, "property": "value", "value": []},
+            {"id": {"type": "lower", "index": ["ALL"]}, "property": "id", "value": []},
+            {"id": {"type": "upper", "index": ["ALL"]}, "property": "value", "value": []},
+        ]
+        output = (
+            "..dataset.data...dataset.tooltip_data...dataset.columns"
+            "...filtered_subset_info.children...filtered_subset_info.color.."
+        )
+
+        rows = self._post(output, outputs, inputs, state, ["apply_filter.n_clicks"])["dataset"]["data"]
+
+        self.assertEqual(len(rows), 10)
+        self.assertEqual({row["index_country"] for row in rows}, {"FR"})
+        self.assertTrue(all(row["_index_"].startswith("FR | ") for row in rows))
 
     def test_feature_importance_for_a_datatable_subset(self):
         outputs = [

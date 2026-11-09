@@ -6,6 +6,7 @@ from shapash.webapp.utils.utils import (
     IndexLabels,
     apply_filter,
     check_row,
+    get_index_level_columns,
     get_index_type,
     round_to_k,
     split_filter_part,
@@ -99,6 +100,22 @@ class TestUtils(unittest.TestCase):
         index = pd.MultiIndex.from_tuples([("FR", 0), ("DE", 1)])
         data = [{"_index_": label, "a": 1} for label in IndexLabels(index).labels(index)]
         assert check_row(data, "DE | 1") == 1
+
+    def test_index_level_columns_for_a_flat_index(self):
+        assert get_index_level_columns(pd.Index([1, 2], name="id"), []) == []
+
+    def test_index_level_columns_prefix_every_level(self):
+        index = pd.MultiIndex.from_tuples([("FR", 0)], names=["country", None])
+        assert get_index_level_columns(index, ["a", "b"]) == ["index_country", "index_1"]
+
+    def test_index_level_columns_do_not_depend_on_feature_names(self):
+        index = pd.MultiIndex.from_tuples([("FR", 0)], names=["a", "b"])
+        assert get_index_level_columns(index, ["a", "b"]) == ["index_a", "index_b"]
+
+    def test_index_level_columns_avoid_existing_columns(self):
+        index = pd.MultiIndex.from_tuples([("FR", 0, 1)], names=["a", None, 1])
+        # The unnamed level 1 and the level named 1 would both be "index_1".
+        assert get_index_level_columns(index, ["index_a"]) == ["index_a_0", "index_1", "index_1_2"]
 
     def test_split_filter_part_eq_quoted(self):
         assert split_filter_part('{col} eq "abc"') == ("col", "eq", "abc")
