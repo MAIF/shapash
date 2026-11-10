@@ -40,6 +40,15 @@ class TestConsistency(unittest.TestCase):
         self.cns = Consistency()
         self.cns.compile(contributions=self.contributions, x=self.X)
 
+    def test_colors_dict(self):
+        """colors_dict overrides the palette's colors, in the formats SmartExplainer accepts."""
+        cns = Consistency(palette_name="blues", colors_dict={"title_color": "#000000", "contrib_colorscale": "RdBu"})
+        default = Consistency(palette_name="blues")
+
+        assert cns._style_dict["dict_title_stability"]["font"]["color"] == "rgb(0, 0, 0)"
+        assert cns._style_dict["init_contrib_colorscale"][0] == "rgb(103, 0, 31)"
+        assert cns._style_dict["dict_xaxis"] == default._style_dict["dict_xaxis"]
+
     def test_compile(self):
         assert isinstance(self.cns.methods, list)
         assert len(self.cns.methods) == len(self.contributions)

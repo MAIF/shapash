@@ -31,6 +31,12 @@ def _texts(component) -> list[str]:
 
 
 class TestHeatmap:
+    def test_accepts_hex_colors(self):
+        fig = plot_backend_heatmap(TOKENS, VALUES, color_positive="#123456", color_negative="rgba(0, 0, 255, 0.5)")
+        scale = fig.data[0].colorscale
+        assert scale[0][1] == "rgb(0,0,255)"
+        assert scale[-1][1] == "rgb(18,52,86)"
+
     def test_one_row_per_backend_one_column_per_token(self):
         fig = plot_backend_heatmap(TOKENS, VALUES)
         heat = fig.data[0]

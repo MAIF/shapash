@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -13,7 +12,7 @@ from werkzeug.serving import make_server
 
 import shapash.explainer.smart_predictor
 from shapash.backend import BaseBackend
-from shapash.style.style_utils import colors_loading, select_palette
+from shapash.style.style_utils import colors_loading, merge_palette, normalize_colors, select_palette
 from shapash.utils.custom_thread import CustomThread
 from shapash.utils.drift import SchemaDriftConfig, compute_schema_distribution, resolve_schema_drift_config
 from shapash.utils.io import load_pickle, save_pickle
@@ -118,8 +117,13 @@ class SmartExplainer:
     palette_name : str, optional
         Name of the color palette used for visualizations (see the `style` folder for options).
     colors_dict : dict, optional
-        Dictionary containing the full color palette configuration.
-        Can be used to override default plot colors.
+        Colors overriding those of ``palette_name``, with the same keys as the palette.
+        A nested mapping such as ``featureimp_bar`` can be given partially. Colors can be
+        ``rgb(...)``/``rgba(...)`` strings, hex codes or color names. A continuous scale
+        (``contrib_colorscale``, ``confusion_matrix_colorscale``, ``interaction_scale``,
+        ``feature_contributions_cumulative``) also accepts a plotly scale name such as
+        ``"RdBu"`` or ``"viridis_r"``, and a list of distinct colors (``interaction_discrete``,
+        ``compare_plot``) a plotly qualitative palette name such as ``"Set2"``.
     **backend_kwargs : dict
         Additional keyword arguments passed to the backend.
 
@@ -227,9 +231,7 @@ class SmartExplainer:
         title_story = title_story if title_story is not None else ""
         self.title_story = title_story
         self.palette_name = palette_name if palette_name else "default"
-        self.colors_dict = copy.deepcopy(select_palette(colors_loading(), self.palette_name))
-        if colors_dict is not None:
-            self.colors_dict.update(colors_dict)
+        self.colors_dict = self._resolve_colors(select_palette(colors_loading(), self.palette_name), colors_dict)
 
         self.explainer = Explainer(
             model=model,
@@ -326,15 +328,52 @@ class SmartExplainer:
         )
 
     def define_style(self, palette_name: str | None = None, colors_dict: dict[str, Any] | None = None) -> None:
-        """Set the color set to use in plots."""
+        """
+        Change the colors used in plots.
+
+        Parameters
+        ----------
+        palette_name : str, optional
+            Name of the palette to switch to. Switching palette discards the colors
+            overridden earlier, in the constructor or in a previous call.
+        colors_dict : dict[str, Any], optional
+            Colors to override, merged on top of the palette and of the overrides already
+            in place. Accepts the same values as the constructor's ``colors_dict``.
+
+        Raises
+        ------
+        ValueError
+            If neither ``palette_name`` nor ``colors_dict`` is given, if the palette does
+            not exist, or if a color in ``colors_dict`` is not valid.
+        """
         if palette_name is None and colors_dict is None:
             raise ValueError("At least one of palette_name or colors_dict parameters must be defined")
-        new_palette_name = palette_name or self.palette_name
-        new_colors_dict = copy.deepcopy(select_palette(colors_loading(), new_palette_name))
-        if colors_dict is not None:
-            new_colors_dict.update(colors_dict)
-        self.colors_dict.update(new_colors_dict)
+        if palette_name is not None:
+            base = select_palette(colors_loading(), palette_name)
+            self.palette_name = palette_name
+        else:
+            base = self.colors_dict
+        self.colors_dict = self._resolve_colors(base, colors_dict)
         self.plot.define_style_attributes(colors_dict=self.colors_dict)
+
+    @staticmethod
+    def _resolve_colors(base: dict[str, Any], colors_dict: dict[str, Any] | None) -> dict[str, Any]:
+        """
+        Return ``base`` with the validated ``colors_dict`` overrides merged on top.
+
+        Parameters
+        ----------
+        base : dict[str, Any]
+            Colors the overrides apply to.
+        colors_dict : dict[str, Any] or None
+            Color overrides.
+
+        Returns
+        -------
+        dict[str, Any]
+            The resolved colors.
+        """
+        return merge_palette(base, normalize_colors(colors_dict, base))
 
     def add(
         self,

@@ -971,7 +971,8 @@ def plot_clustering_by_explainability(
     marker_size : int, optional, default=10
         Size of the data point markers in the plot.
     style_dict : dict[str, Any] or None, optional, default=None
-        Custom styling options (e.g., fonts, layout settings).
+        Resolved style, such as ``SmartExplainer.plot._style_dict``. Its ``clustering`` entry
+        colors the selected cluster and the other ones. The default palette is used when None.
     opacity : float, optional, default=0.8
         Opacity of the data point markers (between 0 and 1).
     width : int, optional, default=900
@@ -1007,6 +1008,7 @@ def plot_clustering_by_explainability(
     """
     if style_dict is None:
         style_dict = define_style(get_palette("default"))
+    cluster_colors = style_dict["clustering"]
 
     dict_title = build_tsne_title(title, subtitle, addnote, style_dict=style_dict, height=height)
 
@@ -1092,12 +1094,12 @@ def plot_clustering_by_explainability(
                 # Couleurs dynamiques pour le hover
                 c_n = c  # curve number
                 if c_n == active_cluster:
-                    fill = "rgba(255,0,0,0.30)"
-                    line_color = "rgba(200,0,0,1)"
+                    fill = cluster_colors["active_fill"]
+                    line_color = cluster_colors["active_line"]
                 else:
                     if show_points:
-                        fill = "rgba(150,150,150,0.15)"
-                        line_color = "rgba(200,200,200,0.8)"
+                        fill = cluster_colors["inactive_fill"]
+                        line_color = cluster_colors["inactive_line"]
                     else:
                         fill = value_to_rgba(float(cluster_color[c]), colorscale, float(cmin), float(cmax), alpha=0.99)
                         line_color = value_to_rgba(
