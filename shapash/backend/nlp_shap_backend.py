@@ -1,9 +1,8 @@
 """NLP SHAP backend — token-level SHAP contributions for text classification models.
 
-``NlpShapBackend`` wraps ``shap.Explainer`` for text inputs and implements
-``run_explainer``, returning an ``NlpContributions``.  All shared infrastructure
-(``get_local_contributions``, common ``__init__`` skeleton) lives in
-``NlpBackend`` (see ``nlp_backend.py``).
+``NlpShapBackend`` wraps ``shap.Explainer`` for text inputs: ``fit`` builds it around the model and
+``run_explainer`` returns an ``NlpContributions``. The shared lifecycle lives in ``NlpBackend`` (see
+``nlp_backend.py``).
 
 It masks text one of two ways: in the model's token ids when the model exposes them, as a string
 otherwise.
@@ -72,7 +71,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
 import shap
@@ -473,22 +472,19 @@ class _TokenIdScorer:
 class NlpShapBackend(NlpBackend):
     """SHAP backend for text classification models (HuggingFace pipelines, etc.).
 
-    Wraps ``shap.Explainer`` for text inputs and returns ``NlpContributions``
-    via the shared ``get_local_contributions`` in ``NlpBackend``.
+    Holds settings only; :meth:`fit` binds the model (``NlpExplainer`` does it for you)::
+
+        NlpExplainer(model, backend=NlpShapBackend(output_space="logit"))
+
+    The model it accepts is a :class:`~shapash.model.base.TextModel`, whose scoring surface is chosen
+    by ``output_space``; or a text callable accepted by ``shap.Explainer`` (e.g. a
+    ``transformers.pipeline`` with ``return_all_scores=True``), which is taken to return
+    probabilities. A ``TextModel`` exposing token ids (``SupportsCaptumIG`` with a fast tokenizer) is
+    masked in its own encoding (see the module docstring) unless ``masker`` or ``explainer_args`` is
+    given.
 
     Parameters
     ----------
-    model : TextModel or callable
-        A :class:`~shapash.model.base.TextModel`, whose scoring surface is chosen by
-        ``output_space``; or a text callable accepted by ``shap.Explainer`` (e.g. a
-        ``transformers.pipeline`` with ``return_all_scores=True``), which is taken to return
-        probabilities. A ``TextModel`` exposing token ids (``SupportsCaptumIG`` with a fast tokenizer)
-        is masked in its own encoding (see the module docstring) unless ``masker`` or
-        ``explainer_args`` is given.
-    preprocessing : None
-        Unused; accepted for interface compatibility with ``BaseBackend``.
-    label_names : list[str] or None
-        Class names in the same order as the model output columns.
     masker : any, optional
         Forwarded to ``shap.Explainer`` when ``explainer_args`` is not given. Typically ``None``: a
         model exposing token ids is then masked in its encoding, and SHAP infers a ``Text`` masker
@@ -532,12 +528,12 @@ class NlpShapBackend(NlpBackend):
         contributions stop cancelling across classes and stop saturating near 0/1, sum exactly to
         ``logits(x) - base``, and share their scale with ``nlp_captum_lig``.
 
-    Raises
-    ------
-    TypeError
-        If ``output_space="logit"`` and ``model`` cannot return logits.
-    ValueError
-        If ``output_space`` is not a known space, or ``"logit"`` is combined with ``explainer_args``.
+    Attributes
+    ----------
+    masking_ : {"token_ids", "text"}
+        Set by ``fit``: whether the text is masked in the model's token ids or as a string.
+    explainer_ : shap.Explainer
+        Set by ``fit``: the SHAP explainer built around the model.
     """
 
     name = "nlp_shap"
@@ -557,15 +553,43 @@ class NlpShapBackend(NlpBackend):
 
     def __init__(
         self,
-        model: TextModel | Callable[[list[str]], np.ndarray],
-        preprocessing: Any | None = None,
-        label_names: list[str] | None = None,
         masker: Any = None,
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
         batch_size: int | None = 64,
         output_space: Literal["probability", "logit"] = "probability",
     ) -> None:
+        self.masker = masker
+        self.explainer_args = explainer_args
+        self.explainer_compute_args = explainer_compute_args
+        self.batch_size = batch_size
+        self.output_space = output_space
+
+    def fit(self, model: TextModel | Callable[[list[str]], np.ndarray], label_names: list[str] | None = None) -> Self:
+        """Build the SHAP explainer around ``model``.
+
+        Parameters
+        ----------
+        model : TextModel or callable
+            The model to explain (see the class docstring).
+        label_names : list[str] or None
+            Unused: SHAP reads the model's output columns as they are.
+
+        Returns
+        -------
+        NlpShapBackend
+            ``self``, fitted.
+
+        Raises
+        ------
+        TypeError
+            If ``output_space="logit"`` and ``model`` cannot return logits.
+        ValueError
+            If ``output_space`` is not a known space, or ``"logit"`` is combined with ``explainer_args``.
+        """
+        output_space = self.output_space
+        explainer_args = self.explainer_args or {}
+        masker = self.masker
         if output_space not in ("probability", "logit"):
             raise ValueError(f"output_space must be 'probability' or 'logit', got {output_space!r}.")
         if output_space == "logit" and explainer_args:
@@ -573,15 +597,16 @@ class NlpShapBackend(NlpBackend):
                 "output_space='logit' cannot be combined with explainer_args: those build the explainer "
                 "around their own model, whose output space this backend cannot check."
             )
+        super().fit(model, label_names)
         # How the text is masked: in the model's own encoding whenever it allows it and the caller
         # brought no masker or explainer of their own (see the module docstring).
-        self.masking: Literal["token_ids", "text"] = "text"
+        self.masking_: Literal["token_ids", "text"] = "text"
         # The callable SHAP explains: the model itself, or a scorer built from a TextModel below
         scorer: Any = model
         if isinstance(model, TextModel) and masker is None and not explainer_args and _supports_token_ids(model):
             masker = _TokenIdMasker(model)  # type: ignore[arg-type]
             scorer = _TokenIdScorer(model, output_space)  # type: ignore[arg-type]
-            self.masking = "token_ids"
+            self.masking_ = "token_ids"
         elif isinstance(model, TextModel):
             scorer, masker = _resolve_text_model(model, masker, output_space)
         elif output_space == "logit":
@@ -589,9 +614,8 @@ class NlpShapBackend(NlpBackend):
                 "output_space='logit' needs a TextModel implementing SupportsLogits; a bare callable's "
                 "output space cannot be checked."
             )
-        super().__init__(scorer, preprocessing, label_names, explainer_args, explainer_compute_args)
-        self.masker = masker
-        self.output_space = output_space
+        self.scorer_ = scorer
+        self.masker_ = masker
 
         # ``_batch_size`` is what ``transformers.Pipeline.__call__`` reads (``None`` means 1) and
         # there is no public setter, so a release that renames it makes this a silent no-op rather
@@ -602,30 +626,31 @@ class NlpShapBackend(NlpBackend):
         # device == cuda`` and never inspects the input. We already pass lists, which transformers
         # wraps in a ``PipelineDataset`` and feeds to the same ``DataLoader`` a real Dataset would
         # get (measured: 1.009x, i.e. noise), and SHAP would flatten any dataset back to a list anyway.
-        if batch_size is not None and getattr(scorer, "_batch_size", "absent") in (None, 1):
-            scorer._batch_size = batch_size
+        if self.batch_size is not None and getattr(scorer, "_batch_size", "absent") in (None, 1):
+            scorer._batch_size = self.batch_size
 
-        if "explainer" in self.explainer_args:
-            shap_params = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
-            self.explainer = self.explainer_args["explainer"](**shap_params)
-        elif self.explainer_args:
-            self.explainer = shap.Explainer(**self.explainer_args)
-        elif self.masking == "token_ids":
-            self.explainer = shap.Explainer(scorer, masker=self.masker, algorithm="partition")
+        if "explainer" in explainer_args:
+            shap_params = {k: v for k, v in explainer_args.items() if k != "explainer"}
+            self.explainer_ = explainer_args["explainer"](**shap_params)
+        elif explainer_args:
+            self.explainer_ = shap.Explainer(**explainer_args)
+        elif self.masking_ == "token_ids":
+            self.explainer_ = shap.Explainer(scorer, masker=masker, algorithm="partition")
         else:
             # ``masker=None`` lets SHAP auto-infer a Text masker from a transformers pipeline (the
             # HFClassifierModel/pipeline path); an explicit masker is required when ``model`` is a plain
             # scoring callable (external-head models expose one via ``TextModel.shap_masker``).
-            self.explainer = shap.Explainer(scorer, masker=self.masker)
+            self.explainer_ = shap.Explainer(scorer, masker=masker)
 
         # Resolved once: the masker's tokenizer is what decides which segments are special. ``None``
         # when no tokenizer is reachable (bare callable / ``SimpleTokenizer``) — see ``_is_special``.
-        self._special_tokens = _masker_special_tokens(self.explainer)
+        self._special_tokens = _masker_special_tokens(self.explainer_)
         # What the masker substitutes for a hidden token: the tokenizer's mask token, or "..." when
         # it has none (SHAP's own fallback). ``None`` for a custom masker exposing no such attribute.
-        self.baseline_token = getattr(getattr(self.explainer, "masker", None), "mask_token", None)
+        self.baseline_token_ = getattr(getattr(self.explainer_, "masker", None), "mask_token", None)
+        return self
 
-    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
+    def _run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
         """Run the SHAP text explainer and return all explanation components.
 
         Subword tokens are merged into whole words via ``_aggregate_subwords`` before being
@@ -643,9 +668,9 @@ class NlpShapBackend(NlpBackend):
             Ragged list of value arrays, baseline predictions, and token
             strings per sample.
         """
-        if getattr(self, "masking", "text") == "token_ids":
+        if self.masking_ == "token_ids":
             return self._run_token_ids(list(x))
-        shap_explanation = self.explainer(x, **self.explainer_compute_args)
+        shap_explanation = self.explainer_(x, **(self.explainer_compute_args or {}))
 
         contributions: list[np.ndarray] = []
         base_values: list[np.ndarray] = []
@@ -660,7 +685,7 @@ class NlpShapBackend(NlpBackend):
                 np.asarray(base),
                 special_tokens=getattr(self, "_special_tokens", None),
                 text=str(text),
-                offsets=_segment_offsets(self.explainer, str(text), len(tokens)),
+                offsets=_segment_offsets(self.explainer_, str(text), len(tokens)),
             )
             data.append(words)
             contributions.append(word_contribs)
@@ -676,22 +701,23 @@ class NlpShapBackend(NlpBackend):
 
     def _run_token_ids(self, texts: list[str]) -> NlpContributions:
         """Explain each text on its token-id features, then report its words (see the module docstring)."""
-        masker: _TokenIdMasker = self.masker
+        masker: _TokenIdMasker = self.masker_
+        settings = self.explainer_compute_args or {}
         contributions: list[np.ndarray] = []
         base_values: list[np.ndarray] = []
         data: list[list[str]] = []
         spans: list[list[tuple[Span, ...]]] = []
         # One explainer call per text, so SHAP's own progress bar (on by default, off with
         # ``silent=True``) would never show: draw it over the texts instead, and keep each call quiet.
-        compute_args = {**self.explainer_compute_args, "silent": True}
-        show_progress = not self.explainer_compute_args.get("silent", False)
+        compute_args = {**settings, "silent": True}
+        show_progress = not settings.get("silent", False)
         for text in self._progress_iter(list(map(str, texts)), enabled=show_progress):
             encoding = masker.encoding(text)
             if encoding.layout.n_pieces == 0:  # nothing to hide: the text's own score is the baseline
                 values = np.zeros((0, 0))
-                base = self.model(encoding.input_ids[None, :])[0]
+                base = self.scorer_(encoding.input_ids[None, :])[0]
             else:
-                explanation = self.explainer([text], **compute_args)
+                explanation = self.explainer_([text], **compute_args)
                 values, base = explanation.values[0], explanation.base_values[0]
             words, word_values, word_base, word_spans = encoding.layout.aggregate(values, base)
             data.append(words)

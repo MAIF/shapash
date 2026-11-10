@@ -9,20 +9,25 @@ wraps this data together with everything else ``NlpExplainer.explain()`` knows.
 The same slim type is also what :meth:`~shapash.explainer.nlp_explainer.NlpExplainer.explain_text`
 returns for a single live (uncommitted) text — a one-sample batch.
 
-``NlpBackend`` is the abstract base class that owns the common ``__init__``
-skeleton and the ``get_local_contributions`` implementation.  Concrete
-subclasses (``NlpShapBackend``, ``NlpLimeBackend``) only need to implement
+``NlpBackend`` is the abstract base class of the text backends. A backend holds settings only: its
+constructor stores them exactly as given (a scikit-learn ``BaseEstimator``, so ``get_params`` and
+``repr`` come for free), and :meth:`NlpBackend.fit` binds the model to explain. ``NlpExplainer`` owns
+the model and does the binding, on a fresh copy of the backend it was given. Concrete subclasses
+(``NlpShapBackend``, ``NlpLimeBackend``, ``NlpCaptumLigBackend``) extend ``fit`` and implement
 ``run_explainer``.
 """
 
 from __future__ import annotations
 
 import re
+from abc import abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import numpy as np
+from sklearn.base import BaseEstimator
+from sklearn.utils.validation import check_is_fitted
 
 from shapash._optional import import_optional_module
 from shapash.backend.backend import Backend
@@ -74,14 +79,23 @@ class NlpContributions:
     token_spans: list[list[tuple[tuple[int, int], ...]]] | None = None
 
 
-class NlpBackend(Backend):
+class NlpBackend(BaseEstimator, Backend):
     """Abstract base class for NLP explainability backends.
 
-    Owns the ``__init__`` skeleton shared by all text backends (including the
-    ``requires_model_capabilities`` check) and the ``get_local_contributions``
-    implementation.  Concrete subclasses must implement ``run_explainer`` and
-    return an ``NlpContributions``, and must declare ``reference_kind``,
-    ``is_additive`` and ``output_space`` below.
+    A backend is settings plus, once :meth:`fit` has run, the model it explains. Settings and class
+    constants keep plain names (``output_space``, ``is_additive``); every public attribute ``fit``
+    derives from the model ends with ``_`` (``model_``, ``explainer_``, ``baseline_token_``), so a
+    fresh copy built from ``get_params`` never carries an earlier fit, and reading one on an
+    unfitted backend raises instead of answering a default.
+
+    Constructors follow scikit-learn's rules, because ``NlpExplainer`` copies a backend with
+    ``type(backend)(**backend.get_params(deep=False))``: every parameter is named in the signature
+    (no ``*args`` / ``**kwargs``) and stored unchanged under its own name, with no validation and no
+    work — both belong in ``fit``.
+
+    Concrete subclasses extend :meth:`fit`, implement ``_run_explainer`` (:meth:`run_explainer`
+    checks the backend is fitted first, then hands over) returning an ``NlpContributions``, and
+    declare ``reference_kind``, ``is_additive`` and ``output_space`` below.
 
     Class Attributes
     -----------------
@@ -116,36 +130,20 @@ class NlpBackend(Backend):
         for every attribution method so far; ``False`` for a magnitude-only method such as unsigned
         saliency, whose values the diverging colour scales and "pushes toward" wording would misread.
         Defaults to ``True``.
-    baseline_token : str or None
-        Instance attribute: the token string a perturbation/path method substitutes for "word absent"
+    baseline_token_ : str or None
+        Set by ``fit``: the token string a perturbation/path method substitutes for "word absent"
         (``"[MASK]"``, ``"[PAD]"``, ``"..."``), or ``None`` when the method has no single one (LIME
         removes words) or it is unknown. The baseline input — every content token replaced by it — is
         what ``base_values`` is the model's output on, for SHAP (the fully masked text) and LIG (the
         integration start) alike. Two backends measured against different baselines answer different
-        questions even in the same ``output_space``, so it is recorded and keyed too.
+        questions even in the same ``output_space``, so it is recorded on the explanation.
     requires_model_capabilities : tuple[type, ...]
         Capability ABCs (from :mod:`shapash.model.base`) the bound model must satisfy,
-        checked once here so a new backend declares its needs instead of failing at
-        first call. Empty when the backend only needs a plain scoring callable.
-
-    Parameters
-    ----------
-    model : callable
-        Text model or pipeline accepted by the concrete backend.
-    preprocessing : None
-        Unused; accepted only for signature compatibility with the concrete
-        subclasses' ``super().__init__`` calls.
-    label_names : list[str] or None
-        Class names in the same order as the model output columns.
-    explainer_args : dict, optional
-        Keyword arguments forwarded to the underlying explainer constructor.
-    explainer_compute_args : dict, optional
-        Keyword arguments forwarded to the explainer call / ``explain_instance``.
-
-    Raises
-    ------
-    TypeError
-        If ``model`` does not satisfy every capability in ``requires_model_capabilities``.
+        checked once in :meth:`fit` so a new backend declares its needs instead of failing
+        at first call. Empty when the backend only needs a plain scoring callable.
+    display_params : frozenset[str]
+        Settings that change how a run is shown, never its numbers (a progress bar). Left out of
+        ``NlpExplainer``'s cache key, so switching one on does not recompute a cached result.
     """
 
     reference_kind: ClassVar[Literal["distribution", "statistics", "point", "none"]]
@@ -153,17 +151,32 @@ class NlpBackend(Backend):
     # Not a ClassVar: the class value is the default, an instance may override it (see above).
     output_space: Literal["probability", "logit"]
     is_signed: ClassVar[bool] = True
-    baseline_token: str | None = None
     requires_model_capabilities: ClassVar[tuple[type, ...]] = ()
+    display_params: ClassVar[frozenset[str]] = frozenset({"show_progress"})
 
-    def __init__(
-        self,
-        model: Any,
-        preprocessing: Any | None = None,
-        label_names: list[str] | None = None,
-        explainer_args: dict | None = None,
-        explainer_compute_args: dict | None = None,
-    ) -> None:
+    def fit(self, model: Any, label_names: list[str] | None = None) -> Self:
+        """Bind the model to explain. Text backends learn nothing from data, so there is no ``X``.
+
+        Subclasses extend it (``super().fit(...)`` first) to build their explainer around ``model``.
+
+        Parameters
+        ----------
+        model : TextModel or callable
+            The model to explain, as the concrete backend accepts it.
+        label_names : list[str] or None
+            Class names in the same order as the model output columns. Only a backend that reads
+            the model's output by label (``NlpLimeBackend``) uses them.
+
+        Returns
+        -------
+        NlpBackend
+            ``self``, fitted.
+
+        Raises
+        ------
+        TypeError
+            If ``model`` does not satisfy every capability in ``requires_model_capabilities``.
+        """
         required = type(self).requires_model_capabilities
         if required and not has_capabilities(model, *required):
             names = ", ".join(c.__name__ for c in required)
@@ -171,43 +184,36 @@ class NlpBackend(Backend):
                 f"{type(self).__name__} requires a model implementing {names}; "
                 "got a model without the required attribution surface."
             )
-        self.model = model
-        self._classes = label_names or []
-        self.explainer_args = explainer_args or {}
-        self.explainer_compute_args = explainer_compute_args or {}
+        self.model_ = model
+        self.label_names_ = list(label_names or [])
+        # No single substitute token unless the subclass's fit finds one.
+        self.baseline_token_: str | None = None
+        return self
 
-    def get_local_contributions(
-        self, x: list[str] | pd.Series, explain_data: NlpContributions, subset: list[int] | None = None
-    ) -> NlpContributions:
-        """Optionally select a subset of ``run_explainer``'s output.
-
-        TODO: dead-code, not used by any current NLP backend.  Keep for now to avoid breaking the interface.
+    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
+        """Explain ``x`` with the bound model.
 
         Parameters
         ----------
         x : list[str] or pd.Series
-            Text samples (not used here; kept for interface compatibility).
-        explain_data : NlpContributions
-            The output of ``run_explainer``.
-        subset : list[int], optional
-            Positional indices to select a subset of samples. Returns ``explain_data`` unchanged
-            when ``None`` (the default).
+            Text samples to explain.
 
         Returns
         -------
         NlpContributions
-            Token strings, contribution values, and baseline predictions for
-            each sample.
+            Per-sample units, contribution values, baseline values and spans.
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If :meth:`fit` has not been called.
         """
-        if subset is None:
-            return explain_data
-        base_values = explain_data.base_values
-        return NlpContributions(
-            token_strings=[explain_data.token_strings[i] for i in subset],
-            values=[explain_data.values[i] for i in subset],
-            base_values=None if base_values is None else base_values[subset],
-            token_spans=None if explain_data.token_spans is None else [explain_data.token_spans[i] for i in subset],
-        )
+        check_is_fitted(self, "model_")
+        return self._run_explainer(x)
+
+    @abstractmethod
+    def _run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
+        """Explain ``x``; called by :meth:`run_explainer` once the backend is known to be fitted."""
 
     def _progress_iter(self, items: list[str], enabled: bool | None = None) -> Iterable[str]:
         """Wrap ``items`` in a ``tqdm`` bar when progress is on, else return it unchanged.

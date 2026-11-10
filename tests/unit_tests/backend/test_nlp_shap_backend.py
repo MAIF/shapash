@@ -288,10 +288,8 @@ class FakeShapExplainer:
 
 class TestRunExplainer(unittest.TestCase):
     def test_aggregates_subwords_end_to_end(self):
-        backend = NlpShapBackend(
-            model=lambda texts: np.zeros((len(texts), 2)),
-            label_names=["neg", "pos"],
-            explainer_args={"explainer": FakeShapExplainer},
+        backend = NlpShapBackend(explainer_args={"explainer": FakeShapExplainer}).fit(
+            lambda texts: np.zeros((len(texts), 2))
         )
 
         raw = backend.run_explainer(["updating"])
@@ -315,10 +313,10 @@ class FakePipeline:
 
 
 class TestPipelineBatchSize(unittest.TestCase):
-    """A pipeline arriving with no batch size scores masked variants one at a time — see __init__."""
+    """A pipeline arriving with no batch size scores masked variants one at a time — see fit."""
 
     def _backend(self, model, **kwargs):
-        return NlpShapBackend(model=model, explainer_args={"explainer": FakeShapExplainer}, **kwargs)
+        return NlpShapBackend(explainer_args={"explainer": FakeShapExplainer}, **kwargs).fit(model)
 
     def test_sets_batch_size_on_unconfigured_pipeline(self):
         pipe = FakePipeline()
@@ -376,35 +374,36 @@ class _LogitModel(_ProbabilityOnlyModel, SupportsLogits):
 
 
 class TestOutputSpace(unittest.TestCase):
-    """``output_space`` is a constructor choice, read back off the instance."""
+    """``output_space`` is a constructor choice, checked at fit, read back off the instance."""
 
     def test_unknown_space_is_refused(self):
+        backend = NlpShapBackend(output_space="log-odds")  # stored as given, checked at fit
         with self.assertRaises(ValueError):
-            NlpShapBackend(_LogitModel(), output_space="log-odds")
+            backend.fit(_LogitModel())
 
     def test_logit_with_explainer_args_is_refused(self):
         # explainer_args bring their own model, whose output space cannot be checked.
         with self.assertRaises(ValueError):
-            NlpShapBackend(_LogitModel(), output_space="logit", explainer_args={"explainer": FakeShapExplainer})
+            NlpShapBackend(output_space="logit", explainer_args={"explainer": FakeShapExplainer}).fit(_LogitModel())
 
     def test_logit_with_a_bare_callable_is_refused(self):
         with self.assertRaises(TypeError):
-            NlpShapBackend(lambda texts: np.zeros((len(texts), 2)), output_space="logit")
+            NlpShapBackend(output_space="logit").fit(lambda texts: np.zeros((len(texts), 2)))
 
     def test_logit_with_a_probability_only_model_is_refused(self):
         with self.assertRaises(TypeError) as ctx:
-            NlpShapBackend(_ProbabilityOnlyModel(), output_space="logit")
+            NlpShapBackend(output_space="logit").fit(_ProbabilityOnlyModel())
         self.assertIn("SupportsLogits", str(ctx.exception))
 
     def test_logit_without_tokenizer_or_masker_is_refused(self):
         with self.assertRaises(TypeError) as ctx:
-            NlpShapBackend(_LogitModel(tokenizer=None), output_space="logit")
+            NlpShapBackend(output_space="logit").fit(_LogitModel(tokenizer=None))
         self.assertIn("masker=", str(ctx.exception))
 
     @patch("shapash.backend.nlp_shap_backend.shap.Explainer")
     def test_logit_wraps_predict_logits_with_an_explicit_masker(self, explainer_cls):
         model, masker = _LogitModel(), object()
-        backend = NlpShapBackend(model, output_space="logit", masker=masker)
+        backend = NlpShapBackend(output_space="logit", masker=masker).fit(model)
         explainer_cls.assert_called_once_with(model.predict_logits, masker=masker)
         self.assertEqual(backend.output_space, "logit")
         # The class default is untouched — another instance still explains probabilities.
@@ -415,26 +414,25 @@ class TestOutputSpace(unittest.TestCase):
     def test_logit_builds_a_text_masker_over_the_model_tokenizer(self, explainer_cls, text_masker_cls):
         tokenizer = object()
         model = _LogitModel(tokenizer=tokenizer)
-        NlpShapBackend(model, output_space="logit")
+        NlpShapBackend(output_space="logit").fit(model)
         text_masker_cls.assert_called_once_with(tokenizer)
         explainer_cls.assert_called_once_with(model.predict_logits, masker=text_masker_cls.return_value)
 
     @patch("shapash.backend.nlp_shap_backend.shap.Explainer")
     def test_probability_with_a_text_model_uses_its_shap_surface(self, explainer_cls):
         model = _LogitModel()
-        backend = NlpShapBackend(model)
+        backend = NlpShapBackend().fit(model)
         explainer_cls.assert_called_once_with(model.shap_callable, masker=model.shap_masker)
         self.assertEqual(backend.output_space, "probability")
 
     @patch("shapash.backend.nlp_shap_backend.shap.Explainer")
     def test_baseline_token_is_the_masker_mask_token(self, explainer_cls):
         explainer_cls.return_value.masker.mask_token = "[MASK]"
-        backend = NlpShapBackend(_LogitModel(), output_space="logit", masker=object())
-        self.assertEqual(backend.baseline_token, "[MASK]")
+        backend = NlpShapBackend(output_space="logit", masker=object()).fit(_LogitModel())
+        self.assertEqual(backend.baseline_token_, "[MASK]")
 
     def test_baseline_token_is_none_without_a_masker(self):
-        backend = NlpShapBackend(
-            model=lambda texts: np.zeros((len(texts), 2)),
-            explainer_args={"explainer": FakeShapExplainer},
+        backend = NlpShapBackend(explainer_args={"explainer": FakeShapExplainer}).fit(
+            lambda texts: np.zeros((len(texts), 2))
         )
-        self.assertIsNone(backend.baseline_token)
+        self.assertIsNone(backend.baseline_token_)

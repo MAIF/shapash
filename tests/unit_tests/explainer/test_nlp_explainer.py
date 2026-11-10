@@ -212,7 +212,7 @@ class TestNlpExplainerGenerators(unittest.TestCase):
     """Generator auto-discovery drives the webapp's method selector (no captum needed here)."""
 
     def test_full_capability_model_offers_both_methods(self):
-        xpl = NlpExplainer(_FullCapModel(), backend=object())
+        xpl = NlpExplainer(_FullCapModel(), backend=_MarkerBackend())
         self.assertEqual(
             xpl.available_cf_generators(),
             [("hotflip", "HotFlip"), ("ablation_flip", "Ablation")],
@@ -222,27 +222,27 @@ class TestNlpExplainerGenerators(unittest.TestCase):
         self.assertEqual(set(xpl.cf_generators), {"hotflip", "ablation_flip"})
 
     def test_tokenize_only_model_offers_ablation_only(self):
-        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object())
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=_MarkerBackend())
         self.assertEqual(xpl.available_cf_generators(), [("ablation_flip", "Ablation")])
         self.assertIsInstance(xpl.cf_generator, AblationFlipGenerator)
 
     def test_explicit_generator_used_verbatim_no_extras(self):
         model = _FullCapModel()
         gen = AblationFlipGenerator(model)
-        xpl = NlpExplainer(model, backend=object(), cf_generator=gen)
+        xpl = NlpExplainer(model, backend=_MarkerBackend(), cf_generator=gen)
         # An explicit choice is not augmented with the other compatible built-ins.
         self.assertEqual(xpl.available_cf_generators(), [("ablation_flip", "Ablation")])
         self.assertIs(xpl.cf_generator, gen)
 
     def test_cf_config_spec_selected_by_generator(self):
-        xpl = NlpExplainer(_FullCapModel(), backend=object())
+        xpl = NlpExplainer(_FullCapModel(), backend=_MarkerBackend())
         self.assertIn("max_flips", xpl.cf_config_spec("hotflip"))
         self.assertIn("max_ablations", xpl.cf_config_spec("ablation_flip"))
         # No argument → the active generator's spec.
         self.assertIn("max_flips", xpl.cf_config_spec())
 
     def test_unknown_generator_raises(self):
-        xpl = NlpExplainer(_FullCapModel(), backend=object())
+        xpl = NlpExplainer(_FullCapModel(), backend=_MarkerBackend())
         with self.assertRaises(KeyError):
             xpl.cf_config_spec("does_not_exist")
         with self.assertRaises(KeyError):
@@ -251,7 +251,7 @@ class TestNlpExplainerGenerators(unittest.TestCase):
     def test_no_generators_without_text_model(self):
         # A plain callable is neither a TextModel nor a pipeline → no generators, empty selector.
         xpl = NlpExplainer(
-            lambda texts: np.tile([0.5, 0.5], (len(texts), 1)), label_names=["neg", "pos"], backend=object()
+            lambda texts: np.tile([0.5, 0.5], (len(texts), 1)), label_names=["neg", "pos"], backend=_MarkerBackend()
         )
         self.assertEqual(xpl.available_cf_generators(), [])
         self.assertEqual(xpl.cf_config_spec(), {})
@@ -276,23 +276,19 @@ def _fake_classifier(texts: list[str]) -> np.ndarray:
 
 
 def _make_lime_backend() -> NlpLimeBackend:
-    return NlpLimeBackend(
-        _fake_classifier,
-        label_names=LABEL_NAMES,
-        explainer_compute_args=_LIME_COMPUTE_ARGS,
-    )
+    return NlpLimeBackend(explainer_compute_args=_LIME_COMPUTE_ARGS)
 
 
 class TestNlpExplainerWithLimeBackend(unittest.TestCase):
-    def _make_explainer_lime(self) -> NlpExplainer:
-        """NlpExplainer backed by NlpLimeBackend."""
-        xpl = _make_explainer()
-        xpl.backend = _make_lime_backend()
-        return xpl
-
-    def test_backend_is_lime_instance(self):
-        xpl = self._make_explainer_lime()
+    def test_backend_is_a_fitted_copy_of_the_lime_instance(self):
+        backend = _make_lime_backend()
+        xpl = NlpExplainer(_fake_classifier, label_names=LABEL_NAMES, backend=backend)
         self.assertIsInstance(xpl.backend, NlpLimeBackend)
+        self.assertIsNot(xpl.backend, backend)
+        # The explainer hands its own model and label names over: nothing is passed twice.
+        self.assertIs(xpl.backend.model_, _fake_classifier)
+        self.assertEqual(xpl.backend.label_names_, LABEL_NAMES)
+        self.assertEqual(xpl.backend.get_params(), backend.get_params())
 
     def test_plot_tokens_works_for_a_lime_explanation(self):
         # LIME is non-additive, so .plot.waterfall refuses; .plot.tokens stays available.
@@ -385,12 +381,19 @@ class _MarkerBackend(NlpBackend):
     is_additive = True
     output_space = "probability"
 
-    def __init__(self, marker=1.0, **kwargs):
-        super().__init__(model=None, label_names=LABEL_NAMES, **kwargs)
+    def __init__(self, marker=1.0, explainer_compute_args=None, output_space="probability", baseline_token=None):
         self.marker = marker
-        self.calls = 0
+        self.explainer_compute_args = explainer_compute_args
+        self.output_space = output_space
+        self.baseline_token = baseline_token
+        self.calls = 0  # a test probe, not a setting: a fresh copy starts at 0
 
-    def run_explainer(self, x):
+    def fit(self, model, label_names=None):
+        super().fit(model, label_names)
+        self.baseline_token_ = self.baseline_token  # a setting here, so tests can choose it
+        return self
+
+    def _run_explainer(self, x):
         self.calls += 1
         texts = list(x)
         return NlpContributions(
@@ -423,11 +426,10 @@ class TestExplainCacheKey(unittest.TestCase):
     """
 
     def test_identical_inputs_still_hit_the_in_memory_cache(self):
-        backend = _MarkerBackend()
-        xpl = _explainer(backend=backend)
+        xpl = _explainer(backend=_MarkerBackend())
         xpl.explain(_SAMPLE_TEXTS)
         xpl.explain(_SAMPLE_TEXTS)
-        self.assertEqual(backend.calls, 1, "memoization must survive the richer key")
+        self.assertEqual(xpl.backend.calls, 1, "memoization must survive the richer key")
 
     def test_the_memo_cannot_be_poisoned_through_a_returned_artifact(self):
         """``explain`` returns a ``replace()`` of the memoized artifact — a *shallow* copy.
@@ -437,15 +439,14 @@ class TestExplainCacheKey(unittest.TestCase):
         later ``explain`` of the same texts served the corrupted numbers as a fresh result. The
         seal turns that into an error at the point of the edit.
         """
-        backend = _MarkerBackend(marker=1.0)
-        xpl = _explainer(backend=backend)
+        xpl = _explainer(backend=_MarkerBackend(marker=1.0))
         first = xpl.explain(_SAMPLE_TEXTS)
 
         with self.assertRaises(ValueError):
             first.values[0][0] = -42.0
 
         second = xpl.explain(_SAMPLE_TEXTS)
-        self.assertEqual(backend.calls, 1, "still a memo hit — the seal must not defeat caching")
+        self.assertEqual(xpl.backend.calls, 1, "still a memo hit — the seal must not defeat caching")
         np.testing.assert_allclose(second.values[0], 1.0)
 
     def test_a_memo_hit_is_relabelled_onto_the_caller_index(self):
@@ -454,14 +455,13 @@ class TestExplainCacheKey(unittest.TestCase):
         ``replace`` says nothing about the fields it is not handed, so every index-bearing field
         has to be re-labelled, not just ``texts``.
         """
-        backend = _MarkerBackend()
-        xpl = _explainer(backend=backend)
+        xpl = _explainer(backend=_MarkerBackend())
         xpl.explain(pd.Series(_SAMPLE_TEXTS))  # first call: default RangeIndex
 
         index = pd.Index([77 + i for i in range(len(_SAMPLE_TEXTS))])
         second = xpl.explain(pd.Series(_SAMPLE_TEXTS, index=index))
 
-        self.assertEqual(backend.calls, 1, "re-labelling must not cost a recompute")
+        self.assertEqual(xpl.backend.calls, 1, "re-labelling must not cost a recompute")
         for field_name in ("texts", "y_pred", "y_prob"):
             with self.subTest(field=field_name):
                 self.assertTrue(getattr(second, field_name).index.equals(index))
@@ -484,10 +484,19 @@ class TestExplainCacheKey(unittest.TestCase):
             with self.subTest(y=tag):
                 self.assertTrue(xpl.explain(texts, y=y).y_true.index.equals(index))
 
+    def test_the_caller_backend_is_never_bound_and_can_be_reused(self):
+        backend = _MarkerBackend(marker=1.0)
+        a = _explainer(model=_KeyModel("model-a"), backend=backend)
+        b = _explainer(model=_KeyModel("model-b"), backend=backend)
+        self.assertFalse(hasattr(backend, "model_"))
+        self.assertIsNot(a.backend, b.backend)
+        self.assertIs(a.backend.model_, a._text_model)
+        self.assertIs(b.backend.model_, b._text_model)
+
     def test_swapping_the_backend_recomputes(self):
         xpl = _explainer(backend=_MarkerBackend(marker=1.0))
         xpl.explain(_SAMPLE_TEXTS)
-        replacement = _OtherMarkerBackend(marker=2.0)
+        replacement = _OtherMarkerBackend(marker=2.0).fit(xpl._text_model, LABEL_NAMES)
         xpl.backend = replacement
         explanation = xpl.explain(_SAMPLE_TEXTS)
         self.assertEqual(replacement.calls, 1, "in-memory guard served a stale, other-backend result")
@@ -496,14 +505,29 @@ class TestExplainCacheKey(unittest.TestCase):
     def test_backend_compute_args_are_part_of_the_key(self):
         xpl = _explainer(backend=_MarkerBackend(explainer_compute_args={"n_steps": 50}))
         first = xpl._compute_key(_SAMPLE_TEXTS)
-        xpl.backend = _MarkerBackend(explainer_compute_args={"n_steps": 200})
+        xpl.backend = _MarkerBackend(explainer_compute_args={"n_steps": 200}).fit(xpl._text_model, LABEL_NAMES)
         self.assertNotEqual(first, xpl._compute_key(_SAMPLE_TEXTS))
+
+    def test_display_settings_stay_out_of_the_key(self):
+        # A progress bar never changes the numbers: turning it on must not recompute a cached result.
+        quiet = _explainer(backend=NlpLimeBackend(show_progress=False))
+        loud = _explainer(backend=NlpLimeBackend(show_progress=True))
+        self.assertEqual(quiet._compute_key(_SAMPLE_TEXTS), loud._compute_key(_SAMPLE_TEXTS))
+        other = _explainer(backend=NlpLimeBackend(mask_string="[MASK]"))
+        self.assertNotEqual(quiet._compute_key(_SAMPLE_TEXTS), other._compute_key(_SAMPLE_TEXTS))
 
     def test_compute_args_key_is_order_insensitive(self):
         # Same settings written in a different order are the same configuration.
         a = _explainer(backend=_MarkerBackend(explainer_compute_args={"x": 1, "y": 2}))
         b = _explainer(backend=_MarkerBackend(explainer_compute_args={"y": 2, "x": 1}))
         self.assertEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
+
+    def test_dicts_nested_in_a_list_setting_are_order_insensitive_too(self):
+        a = _explainer(backend=_MarkerBackend(explainer_compute_args={"labels": [{"x": 1, "y": 2}]}))
+        b = _explainer(backend=_MarkerBackend(explainer_compute_args={"labels": [{"y": 2, "x": 1}]}))
+        c = _explainer(backend=_MarkerBackend(explainer_compute_args={"labels": [{"x": 1, "y": 3}]}))
+        self.assertEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
+        self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), c._compute_key(_SAMPLE_TEXTS))
 
     def test_model_identity_is_part_of_the_key(self):
         a = _explainer(model=_KeyModel("model-a"))
@@ -516,22 +540,17 @@ class TestExplainCacheKey(unittest.TestCase):
         b = _explainer(label_names=list(reversed(LABEL_NAMES)))
         self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
 
-    def test_output_space_is_part_of_the_key(self):
-        # A per-instance choice (NlpShapBackend(output_space=...)), not visible in name or args.
-        probability, logit = _MarkerBackend(), _MarkerBackend()
-        logit.output_space = "logit"
-        a, b = _explainer(backend=probability), _explainer(backend=logit)
-        self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
-
-    def test_baseline_token_is_part_of_the_key(self):
-        mask, pad = _MarkerBackend(), _MarkerBackend()
-        mask.baseline_token, pad.baseline_token = "[MASK]", "[PAD]"
-        a, b = _explainer(backend=mask), _explainer(backend=pad)
-        self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
+    def test_every_setting_is_part_of_the_key(self):
+        # The key reads get_params(), so a setting no one listed by hand (here output_space, as in
+        # NlpShapBackend(output_space=...)) still separates two configurations.
+        for name, a_value, b_value in (("output_space", "probability", "logit"), ("marker", 1.0, 2.0)):
+            with self.subTest(setting=name):
+                a = _explainer(backend=_MarkerBackend(**{name: a_value}))
+                b = _explainer(backend=_MarkerBackend(**{name: b_value}))
+                self.assertNotEqual(a._compute_key(_SAMPLE_TEXTS), b._compute_key(_SAMPLE_TEXTS))
 
     def test_explain_records_the_backend_instance_semantics(self):
-        backend = _MarkerBackend()
-        backend.output_space, backend.baseline_token = "logit", "[MASK]"
+        backend = _MarkerBackend(output_space="logit", baseline_token="[MASK]")
         explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS)
         self.assertEqual(explanation.output_space, "logit")
         self.assertEqual(explanation.baseline_token, "[MASK]")
@@ -572,11 +591,10 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             first = _MarkerBackend(marker=1.0)
             _explainer(backend=first).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
 
-            second = _OtherMarkerBackend(marker=2.0)
-            xpl = _explainer(backend=second)
+            xpl = _explainer(backend=_OtherMarkerBackend(marker=2.0))
             explanation = xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
 
-            self.assertEqual(second.calls, 1, "loaded the other backend's cached contributions")
+            self.assertEqual(xpl.backend.calls, 1, "loaded the other backend's cached contributions")
             np.testing.assert_allclose(explanation.values[0], 2.0)
 
     def test_two_models_share_a_cache_dir_without_collision(self):
@@ -584,11 +602,10 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             _explainer(model=_KeyModel("model-a"), backend=_MarkerBackend(marker=1.0)).explain(
                 _SAMPLE_TEXTS, cache_dir=cache_dir
             )
-            backend_b = _MarkerBackend(marker=2.0)
-            xpl = _explainer(model=_KeyModel("model-b"), backend=backend_b)
+            xpl = _explainer(model=_KeyModel("model-b"), backend=_MarkerBackend(marker=2.0))
             explanation = xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
 
-            self.assertEqual(backend_b.calls, 1, "loaded the other model's cached contributions")
+            self.assertEqual(xpl.backend.calls, 1, "loaded the other model's cached contributions")
             np.testing.assert_allclose(explanation.values[0], 2.0)
 
     def test_a_bare_callable_refuses_a_cache_dir(self):
@@ -601,10 +618,9 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
         # The cache must still *work* — a fresh instance skips the expensive run.
         with tempfile.TemporaryDirectory() as cache_dir:
             _explainer(backend=_MarkerBackend(marker=3.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
-            reloaded_backend = _MarkerBackend(marker=3.0)
-            xpl = _explainer(backend=reloaded_backend)
+            xpl = _explainer(backend=_MarkerBackend(marker=3.0))
             explanation = xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
-            self.assertEqual(reloaded_backend.calls, 0, "disk cache did not hit for identical inputs")
+            self.assertEqual(xpl.backend.calls, 0, "disk cache did not hit for identical inputs")
             np.testing.assert_allclose(explanation.values[0], 3.0)
 
     def test_cache_path_points_at_the_file_explain_writes(self):
@@ -620,26 +636,26 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
         # leaves entries the new reader cannot parse. The entry must be recomputed and overwritten.
         with tempfile.TemporaryDirectory() as cache_dir:
             _explainer(backend=_MarkerBackend(marker=4.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
-            path = _explainer().cache_path(_SAMPLE_TEXTS, cache_dir)
+            path = _explainer(backend=_MarkerBackend(marker=4.0)).cache_path(_SAMPLE_TEXTS, cache_dir)
             _drop_meta_key(path, "values_ndim")
 
-            backend = _MarkerBackend(marker=4.0)
-            explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            xpl = _explainer(backend=_MarkerBackend(marker=4.0))
+            explanation = xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
 
-            self.assertEqual(backend.calls, 1, "a rejected cache entry must fall through to a recompute")
+            self.assertEqual(xpl.backend.calls, 1, "a rejected cache entry must fall through to a recompute")
             np.testing.assert_allclose(explanation.values[0], 4.0)
             self.assertIn("values_ndim", _read_meta(path), "stale entry was not replaced")
 
     def test_corrupt_cache_entry_is_a_miss_not_a_crash(self):
         with tempfile.TemporaryDirectory() as cache_dir:
             _explainer(backend=_MarkerBackend(marker=5.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
-            path = _explainer().cache_path(_SAMPLE_TEXTS, cache_dir)
+            path = _explainer(backend=_MarkerBackend(marker=5.0)).cache_path(_SAMPLE_TEXTS, cache_dir)
             path.write_bytes(b"not a zip file")
 
-            backend = _MarkerBackend(marker=5.0)
-            explanation = _explainer(backend=backend).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            xpl = _explainer(backend=_MarkerBackend(marker=5.0))
+            explanation = xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
 
-            self.assertEqual(backend.calls, 1)
+            self.assertEqual(xpl.backend.calls, 1)
             np.testing.assert_allclose(explanation.values[0], 5.0)
 
     def test_explicit_load_still_raises_on_a_stale_file(self):
@@ -654,13 +670,12 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
 
     def test_clear_cache_forces_a_recompute(self):
         with tempfile.TemporaryDirectory() as cache_dir:
-            backend = _MarkerBackend()
-            xpl = _explainer(backend=backend)
+            xpl = _explainer(backend=_MarkerBackend())
             xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
             xpl.clear_cache(_SAMPLE_TEXTS, cache_dir)
             self.assertFalse(xpl.cache_path(_SAMPLE_TEXTS, cache_dir).exists())
             xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
-            self.assertEqual(backend.calls, 2, "clear_cache must defeat the in-memory guard too")
+            self.assertEqual(xpl.backend.calls, 2, "clear_cache must defeat the in-memory guard too")
 
     def test_clear_cache_leaves_other_backends_entries_intact(self):
         with tempfile.TemporaryDirectory() as cache_dir:

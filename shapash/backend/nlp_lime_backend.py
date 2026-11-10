@@ -1,9 +1,8 @@
 """NLP LIME backend — word-level LIME contributions for text classification models.
 
-``NlpLimeBackend`` wraps ``LimeTextExplainer`` and implements ``run_explainer``,
-returning an ``NlpContributions``. All shared infrastructure
-(``get_local_contributions``, common ``__init__`` skeleton) lives in
-``NlpBackend`` (see ``nlp_backend.py``).
+``NlpLimeBackend`` wraps ``LimeTextExplainer``: ``fit`` builds it around the model and
+``run_explainer`` returns an ``NlpContributions``. The shared lifecycle lives in ``NlpBackend`` (see
+``nlp_backend.py``).
 
 LIME works at word level (bag-of-words by default) rather than at the subword
 or token level used by SHAP.  Each sample's ``token_strings`` is therefore the
@@ -20,7 +19,7 @@ stands for, which is what lets it be compared with a backend that attributes eac
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 
@@ -41,26 +40,18 @@ if TYPE_CHECKING:
 class NlpLimeBackend(NlpBackend):
     """LIME backend for text classification models.
 
-    Wraps ``LimeTextExplainer`` and returns ``NlpContributions`` via the shared
-    ``get_local_contributions`` in ``NlpBackend``.
+    Holds settings only; :meth:`fit` binds the model and its label names (``NlpExplainer`` does it
+    for you, passing its own ``label_names``).
+
+    The model it accepts is a ``TextModel`` adapter (scored through its ``predict``, like the other
+    NLP backends), or a scoring function ``f(texts: list[str]) -> np.ndarray`` of shape
+    ``(n_texts, n_classes)`` returning class probabilities, columns in the order of ``label_names``
+    (e.g. an sklearn pipeline's ``predict_proba``). A HuggingFace pipeline built with ``top_k=None``
+    (or ``return_all_scores=True``) is also accepted as-is, but then ``label_names`` is required so
+    the scores can be matched to columns by label.
 
     Parameters
     ----------
-    model : TextModel or callable
-        A ``TextModel`` adapter (scored through its ``predict``, like the other NLP
-        backends), or a scoring function ``f(texts: list[str]) -> np.ndarray`` of shape
-        ``(n_texts, n_classes)`` returning class probabilities, columns in the order of
-        ``label_names`` (e.g. an sklearn pipeline's ``predict_proba``). A HuggingFace
-        pipeline built with ``top_k=None`` (or ``return_all_scores=True``) is also
-        accepted as-is, but then ``label_names`` is required so the scores can be
-        matched to columns by label.
-    preprocessing : None
-        Unused; accepted for interface compatibility with ``BaseBackend``.
-    label_names : list[str] or None
-        Class names in the same order as the model output columns. Defaults to
-        ``model.label_names`` for a ``TextModel``. Forwarded to ``LimeTextExplainer``
-        as ``class_names``. When unknown, every output column is still explained,
-        named by position.
     mask_string : str or None
         Token used to replace masked words when ``bow=False``.  Mirrors the
         ``masker`` parameter of ``NlpShapBackend``.  Defaults to
@@ -79,7 +70,7 @@ class NlpLimeBackend(NlpBackend):
         rest, which then reads as "no effect"), ``num_samples`` (default 5000), ``distance_metric`` (default
         ``'cosine'``), ``model_regressor``, ``labels``, ``top_labels``.
         If neither ``labels`` nor ``top_labels`` is provided, ``labels`` is
-        automatically set to ``range(len(label_names))``.
+        automatically set to every output column.
     show_progress : bool, default False
         When True, show a ``tqdm`` progress bar over the texts (LIME scores
         ``num_samples`` perturbations per text, so a batch is slow). Best-effort:
@@ -93,9 +84,11 @@ class NlpLimeBackend(NlpBackend):
     With a ``TextModel`` adapter — the same object ``NlpShapBackend`` and
     ``NlpCaptumLigBackend`` take; ``label_names`` comes from the model:
 
+    >>> from shapash.explainer.nlp_explainer import NlpExplainer
     >>> from shapash.model.hf import HFClassifierModel
     >>> model = HFClassifierModel.from_pretrained("bhadresh-savani/distilbert-base-uncased-emotion")
-    >>> backend = NlpLimeBackend(model, explainer_args={"random_state": 0})
+    >>> xpl = NlpExplainer(model, backend=NlpLimeBackend(explainer_args={"random_state": 0}))
+    >>> explanation = xpl.explain(texts)
 
     With a scikit-learn text classifier, whose ``predict_proba`` already maps a list of
     strings to an ``(n_texts, n_classes)`` array:
@@ -104,31 +97,25 @@ class NlpLimeBackend(NlpBackend):
     >>> from sklearn.linear_model import LogisticRegression
     >>> from sklearn.pipeline import make_pipeline
     >>> clf = make_pipeline(TfidfVectorizer(), LogisticRegression()).fit(train_texts, train_labels)
-    >>> backend = NlpLimeBackend(
-    ...     clf.predict_proba,
-    ...     label_names=list(clf.classes_),
-    ...     explainer_args={"random_state": 0},
-    ...     explainer_compute_args={"num_samples": 3000},
-    ... )
+    >>> backend = NlpLimeBackend(explainer_args={"random_state": 0}, explainer_compute_args={"num_samples": 3000})
+    >>> xpl = NlpExplainer(clf.predict_proba, label_names=list(clf.classes_), backend=backend)
 
     With a HuggingFace pipeline, which must return every class score:
 
     >>> from transformers import pipeline
     >>> pipe = pipeline("text-classification", model="...", top_k=None)
-    >>> backend = NlpLimeBackend(pipe, label_names=["NEGATIVE", "POSITIVE"], explainer_args={"random_state": 0})
+    >>> xpl = NlpExplainer(pipe, label_names=["NEGATIVE", "POSITIVE"], backend=NlpLimeBackend())
 
-    Then hand the backend to ``NlpExplainer`` along with the same model (the ``TextModel`` itself
-    when you have one — that keeps the What-if Lab available):
-
-    >>> from shapash.explainer.nlp_explainer import NlpExplainer
-    >>> xpl = NlpExplainer(model, backend=backend)
-    >>> explanation = xpl.explain(texts)
+    Attributes
+    ----------
+    explainer_ : lime.lime_text.LimeTextExplainer
+        Set by ``fit``: the LIME explainer.
     """
 
     name = "nlp_lime"
     # Unlike tabular LIME (``LimeTabularExplainer(training_data=...)``, which needs a
     # background corpus to build its discretizer/feature statistics), LimeTextExplainer
-    # takes no training-data-like constructor argument at all (see __init__ below) —
+    # takes no training-data-like constructor argument at all (see fit below) —
     # explain_instance perturbs the instance text itself (word removal / mask_string
     # substitution). There is nothing backend-specific for ``fit`` to learn here.
     reference_kind = "none"
@@ -146,9 +133,6 @@ class NlpLimeBackend(NlpBackend):
 
     def __init__(
         self,
-        model: TextModel | Callable[[list[str]], np.ndarray],
-        preprocessing: Any | None = None,
-        label_names: list[str] | None = None,
         mask_string: str | None = None,
         explainer_args: dict | None = None,
         explainer_compute_args: dict | None = None,
@@ -156,57 +140,75 @@ class NlpLimeBackend(NlpBackend):
     ) -> None:
         if not _lime_available:
             raise ImportError("lime is required for NlpLimeBackend — pip install lime")
+        self.mask_string = mask_string
+        self.explainer_args = explainer_args
+        self.explainer_compute_args = explainer_compute_args
+        self.show_progress = show_progress
 
+    def fit(self, model: TextModel | Callable[[list[str]], np.ndarray], label_names: list[str] | None = None) -> Self:
+        """Build the LIME explainer for ``model``.
+
+        Parameters
+        ----------
+        model : TextModel or callable
+            The model to explain (see the class docstring).
+        label_names : list[str] or None
+            Class names in the same order as the model output columns. Defaults to
+            ``model.label_names`` for a ``TextModel``. Forwarded to ``LimeTextExplainer`` as
+            ``class_names``. When unknown, every output column is still explained, named by position.
+
+        Returns
+        -------
+        NlpLimeBackend
+            ``self``, fitted.
+        """
+        if isinstance(model, TextModel) and label_names is None:
+            label_names = model.label_names
+        super().fit(model, label_names)
         # LIME only needs probabilities, so a TextModel is scored through ``predict`` — no capability
         # beyond the base contract, which is why ``requires_model_capabilities`` stays empty.
-        if isinstance(model, TextModel):
-            if label_names is None:
-                label_names = model.label_names
-            model = model.predict
-        super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
-        self.mask_string = mask_string
-        self.show_progress = show_progress
-        # Written into the settings rather than applied silently, so the choice is visible on the
-        # backend and part of NlpExplainer's cache key — a result computed under LIME's own default
-        # (10) is never served for "every word".
-        # A new dict, not ``setdefault``: the caller's own dict must not be modified.
-        self.explainer_compute_args = {"num_features": "all", **self.explainer_compute_args}
+        self.scorer_ = model.predict if isinstance(model, TextModel) else model
+        # Every word by default, not LIME's own top 10: a zero weight then means "no effect", never
+        # "outside the top-k".
+        self.compute_args_ = {"num_features": "all", **(self.explainer_compute_args or {})}
 
-        if "explainer" in self.explainer_args:
-            lime_params = {k: v for k, v in self.explainer_args.items() if k != "explainer"}
-            self.explainer = self.explainer_args["explainer"](**lime_params)
+        explainer_args = self.explainer_args or {}
+        if "explainer" in explainer_args:
+            lime_params = {k: v for k, v in explainer_args.items() if k != "explainer"}
+            self.explainer_ = explainer_args["explainer"](**lime_params)
         else:
-            self.explainer = LimeTextExplainer(
-                class_names=label_names or None,
+            self.explainer_ = LimeTextExplainer(
+                class_names=self.label_names_ or None,
                 mask_string=self.mask_string,
-                **self.explainer_args,
+                **explainer_args,
             )
         # ``bow=True`` (LIME's default) removes words outright — no substitute token at all.
-        if not getattr(self.explainer, "bow", True):
+        if not getattr(self.explainer_, "bow", True):
             # ``mask_string=None`` makes LIME fall back to its own "UNKWORDZ".
-            self.baseline_token = getattr(self.explainer, "mask_string", None) or "UNKWORDZ"
+            self.baseline_token_ = getattr(self.explainer_, "mask_string", None) or "UNKWORDZ"
+        return self
 
     def _classifier_fn(self, texts: list[str]) -> np.ndarray:
-        """Wrap self.model to guarantee a float numpy array of shape (n, n_classes).
+        """Wrap the bound model to guarantee a float numpy array of shape (n, n_classes).
 
         Handles three output formats:
 
         * ``np.ndarray`` — returned as-is.
         * ``list[list[dict]]`` — HuggingFace pipeline with ``return_all_scores=True``.
-          Scores are extracted by label name using ``self._classes`` as the column
+          Scores are extracted by label name using ``label_names_`` as the column
           order, so ``label_names`` must be provided when the model uses this format.
         * Anything else — coerced with ``np.array(..., dtype=float)``.
 
         LIME's internals index the result with ``[:, label_idx]``, so the array
         must be 2-D and numeric.
         """
-        result = self.model(texts)
+        result = self.scorer_(texts)
         if isinstance(result, np.ndarray):
             return result
         # HuggingFace pipeline with return_all_scores=True → list[list[dict]]
         if result and isinstance(result[0], list) and isinstance(result[0][0], dict):
-            label_to_idx = {name: i for i, name in enumerate(self._classes)}
-            matrix = np.zeros((len(result), len(self._classes)), dtype=np.float64)
+            label_to_idx = {name: i for i, name in enumerate(self.label_names_)}
+            matrix = np.zeros((len(result), len(self.label_names_)), dtype=np.float64)
             for i, preds in enumerate(result):
                 for pred in preds:
                     idx = label_to_idx.get(pred["label"])
@@ -223,7 +225,7 @@ class NlpLimeBackend(NlpBackend):
         bound would not do: LIME's sparse ``highest_weights`` path pads the selection up to
         ``num_features`` instead of capping it.
         """
-        explainer = self.explainer
+        explainer = self.explainer_
         bow = getattr(explainer, "bow", True)
         mask_string = getattr(explainer, "mask_string", None)
         if getattr(explainer, "char_level", False):
@@ -233,7 +235,7 @@ class NlpLimeBackend(NlpBackend):
             indexed = IndexedString(text, bow=bow, split_expression=split_expression, mask_string=mask_string)
         return max(1, indexed.num_words())
 
-    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
+    def _run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
         """Run LimeTextExplainer on each sample and normalise output.
 
         Converts LIME's sparse per-label ``{label_id: [(word_id, weight)]}``
@@ -255,9 +257,9 @@ class NlpLimeBackend(NlpBackend):
         texts = list(x)
         # Without label names, ask the model for its output width: LIME's own default (``labels=(1,)``)
         # would explain class 1 only and leave every other column silently zero.
-        n_classes = len(self._classes) or (self._classifier_fn(texts[:1]).shape[1] if texts else 0)
+        n_classes = len(self.label_names_) or (self._classifier_fn(texts[:1]).shape[1] if texts else 0)
 
-        compute_args = dict(self.explainer_compute_args)
+        compute_args = dict(self.compute_args_)
         if "labels" not in compute_args and "top_labels" not in compute_args:
             compute_args["labels"] = list(range(n_classes))
 
@@ -270,7 +272,7 @@ class NlpLimeBackend(NlpBackend):
             text_args = compute_args
             if compute_args.get("num_features") == "all":
                 text_args = {**compute_args, "num_features": self._count_features(text)}
-            exp = self.explainer.explain_instance(text, self._classifier_fn, **text_args)
+            exp = self.explainer_.explain_instance(text, self._classifier_fn, **text_args)
 
             indexed_string = exp.domain_mapper.indexed_string
             # Plain ``str``: LIME hands back ``np.str_``, which leaks into reprs and serialisation.

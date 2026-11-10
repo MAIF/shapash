@@ -170,14 +170,15 @@ NlpExplainer(
     label_names=None,
     backend=None,
     cf_generator=None,
-    explainer_args=None,
-    explainer_compute_args=None,
 )
 ```
 
 - `model` — a HF `pipeline`, a `TextModel` instance, or any callable. A HF pipeline is auto-wrapped as
   `HFPipelineModel`; anything else that isn't a `TextModel` disables the model-layer-dependent features.
-- `backend` — defaults to `NlpShapBackend` built from the model's `shap_callable`/`shap_masker`.
+- `backend` — the explanation method and its settings, e.g. `NlpShapBackend(output_space="logit")` or
+  `NlpLimeBackend(explainer_compute_args={"num_samples": 3000})`; defaults to `NlpShapBackend()`. A
+  backend holds settings only: the explainer binds a fresh copy of it to `model` and `label_names`
+  (`backend.fit(model, label_names)`), so the instance passed in stays unbound and reusable.
 - `cf_generator` — explicit generator, or every built-in generator compatible with the model
   (`HotFlipGenerator` preferred over `AblationFlipGenerator`) is auto-registered.
 
