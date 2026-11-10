@@ -130,7 +130,7 @@ class NlpBackend(BaseEstimator, Backend):
         for every attribution method so far; ``False`` for a magnitude-only method such as unsigned
         saliency, whose values the diverging colour scales and "pushes toward" wording would misread.
         Defaults to ``True``.
-    baseline_token_ : str or None
+    ``baseline_token_`` : str or None
         Set by ``fit``: the token string a perturbation/path method substitutes for "word absent"
         (``"[MASK]"``, ``"[PAD]"``, ``"..."``), or ``None`` when the method has no single one (LIME
         removes words) or it is unknown. The baseline input — every content token replaced by it — is
