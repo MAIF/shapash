@@ -565,6 +565,27 @@ class TestExplainCacheKey(unittest.TestCase):
         xpl = _explainer()
         self.assertNotEqual(xpl._compute_key(["a", "b"]), xpl._compute_key(["b", "a"]))
 
+    def _key_under(self, version):
+        with patch("shapash.explainer.nlp_explainer.__version__", version):
+            return _explainer()._compute_key(_SAMPLE_TEXTS)
+
+    def test_every_release_changes_the_key(self):
+        # A patch may fix how a backend computes, so it must not read the previous release's entries.
+        self.assertNotEqual(self._key_under("2.10.0"), self._key_under("2.10.1"))
+        self.assertNotEqual(self._key_under("2.10.1"), self._key_under("2.11.0"))
+
+    def test_a_dev_build_keeps_one_key_across_commits_and_days(self):
+        # The full version string carries the commit hash and, on a dirty tree, a date.
+        clean = self._key_under("2.10.1.dev13+gabc1234")
+        self.assertEqual(clean, self._key_under("2.10.1.dev14+gdef5678.d20261103"))
+        self.assertEqual(clean, self._key_under("2.10.1"), "a dev build shares its target release's key")
+
+    def test_a_release_candidate_shares_the_final_release_key(self):
+        self.assertEqual(self._key_under("2.11.0rc1"), self._key_under("2.11.0"))
+
+    def test_an_uninstalled_source_tree_falls_back_to_the_raw_version(self):
+        self.assertNotEqual(self._key_under("0+unknown"), self._key_under("2.10.0"))
+
 
 def _read_meta(path) -> dict:
     with zipfile.ZipFile(path) as zf:
@@ -632,8 +653,8 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             self.assertTrue(path.exists(), "cache_path disagrees with where explain() wrote")
 
     def test_stale_layout_is_a_miss_not_a_crash(self):
-        # The cache key covers texts/model/backend but not the shapash version, so a layout change
-        # leaves entries the new reader cannot parse. The entry must be recomputed and overwritten.
+        # The cache key covers texts/model/backend and the release, not the commit, so a layout change
+        # on a development build can leave entries the new reader cannot parse. The entry must be recomputed and overwritten.
         with tempfile.TemporaryDirectory() as cache_dir:
             _explainer(backend=_MarkerBackend(marker=4.0)).explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
             path = _explainer(backend=_MarkerBackend(marker=4.0)).cache_path(_SAMPLE_TEXTS, cache_dir)
@@ -676,6 +697,45 @@ class TestExplainDiskCacheIsolation(unittest.TestCase):
             self.assertFalse(xpl.cache_path(_SAMPLE_TEXTS, cache_dir).exists())
             xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
             self.assertEqual(xpl.backend.calls, 2, "clear_cache must defeat the in-memory guard too")
+
+    def test_recompute_bypasses_the_in_memory_guard(self):
+        xpl = _explainer(backend=_MarkerBackend())
+        xpl.explain(_SAMPLE_TEXTS)
+        xpl.explain(_SAMPLE_TEXTS, recompute=True)
+        self.assertEqual(xpl.backend.calls, 2)
+
+    def test_recompute_bypasses_the_disk_cache_and_overwrites_it(self):
+        with tempfile.TemporaryDirectory() as cache_dir:
+            xpl = _explainer(backend=_MarkerBackend(marker=1.0))
+            path = xpl.cache_path(_SAMPLE_TEXTS, cache_dir)
+            # A stale entry: a different result stored under this explainer's key.
+            _explainer(backend=_MarkerBackend(marker=2.0)).explain(_SAMPLE_TEXTS).save(path)
+
+            explanation = xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir, recompute=True)
+            self.assertEqual(xpl.backend.calls, 1, "recompute must not read the disk entry")
+            np.testing.assert_allclose(explanation.values[0], 1.0)
+
+            reloaded_xpl = _explainer(backend=_MarkerBackend(marker=1.0))
+            reloaded = reloaded_xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            self.assertEqual(reloaded_xpl.backend.calls, 0)
+            np.testing.assert_allclose(reloaded.values[0], 1.0, err_msg="the recomputed result was not written")
+
+    def test_a_failed_recompute_keeps_the_previous_entry(self):
+        with tempfile.TemporaryDirectory() as cache_dir:
+            xpl = _explainer(backend=_MarkerBackend(marker=1.0))
+            xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir)
+            path = xpl.cache_path(_SAMPLE_TEXTS, cache_dir)
+
+            with (
+                patch.object(xpl.backend, "run_explainer", side_effect=MemoryError("boom")),
+                self.assertRaises(MemoryError),
+            ):
+                xpl.explain(_SAMPLE_TEXTS, cache_dir=cache_dir, recompute=True)
+
+            self.assertTrue(path.exists(), "a failed recompute dropped the cached entry")
+            np.testing.assert_allclose(NlpExplanation.load(path).values[0], 1.0)
+            np.testing.assert_allclose(xpl.explain(_SAMPLE_TEXTS).values[0], 1.0)
+            self.assertEqual(xpl.backend.calls, 1, "the in-memory entry survives a failed recompute too")
 
     def test_clear_cache_leaves_other_backends_entries_intact(self):
         with tempfile.TemporaryDirectory() as cache_dir:
