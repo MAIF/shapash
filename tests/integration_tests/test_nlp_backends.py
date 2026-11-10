@@ -49,7 +49,7 @@ _SHAP_FAST = {"max_evals": 60}
 
 
 def test_shap_logit_space_is_exactly_additive_against_predict_logits(model):
-    backend = NlpShapBackend(model, label_names=LABELS, output_space="logit", explainer_compute_args=_SHAP_FAST)
+    backend = NlpShapBackend(output_space="logit", explainer_compute_args=_SHAP_FAST).fit(model, LABELS)
     raw = backend.run_explainer(_SPACE_TEXTS)
     logits = model.predict_logits(_SPACE_TEXTS)
     for i in range(len(_SPACE_TEXTS)):
@@ -59,8 +59,8 @@ def test_shap_logit_space_is_exactly_additive_against_predict_logits(model):
 def test_shap_logit_space_does_not_cancel_across_classes(model):
     # Probability-space contributions sum to ~0 over classes for every word (the payoff sums to 1 for
     # every coalition); logit-space ones do not — the reason the space exists.
-    probability = NlpShapBackend(model, label_names=LABELS, explainer_compute_args=_SHAP_FAST)
-    logit = NlpShapBackend(model, label_names=LABELS, output_space="logit", explainer_compute_args=_SHAP_FAST)
+    probability = NlpShapBackend(explainer_compute_args=_SHAP_FAST).fit(model, LABELS)
+    logit = NlpShapBackend(output_space="logit", explainer_compute_args=_SHAP_FAST).fit(model, LABELS)
     prob_sum = np.abs(probability.run_explainer(_SPACE_TEXTS[:1]).values[0].sum(axis=1)).max()
     logit_sum = np.abs(logit.run_explainer(_SPACE_TEXTS[:1]).values[0].sum(axis=1)).max()
     assert prob_sum < 1e-5
@@ -68,13 +68,11 @@ def test_shap_logit_space_does_not_cancel_across_classes(model):
 
 
 def test_explainer_records_logit_space_and_keys_it_apart(model, tmp_path):
-    probability = NlpExplainer(
-        model, label_names=LABELS, backend=NlpShapBackend(model, label_names=LABELS, explainer_compute_args=_SHAP_FAST)
-    )
+    probability = NlpExplainer(model, label_names=LABELS, backend=NlpShapBackend(explainer_compute_args=_SHAP_FAST))
     logit = NlpExplainer(
         model,
         label_names=LABELS,
-        backend=NlpShapBackend(model, label_names=LABELS, output_space="logit", explainer_compute_args=_SHAP_FAST),
+        backend=NlpShapBackend(output_space="logit", explainer_compute_args=_SHAP_FAST),
     )
     assert probability._compute_key(_SPACE_TEXTS) != logit._compute_key(_SPACE_TEXTS)
     explanation = logit.explain(_SPACE_TEXTS, cache_dir=tmp_path)
@@ -103,7 +101,7 @@ def test_captum_ig_surface(model):
 
 def test_lig_backend_contributions(model):
     """LIG produces per-token, per-class contributions that satisfy the completeness relation."""
-    backend = NlpCaptumLigBackend(model, label_names=LABELS)
+    backend = NlpCaptumLigBackend().fit(model, LABELS)
     raw = backend.run_explainer(["i am so happy today", "i feel terrified"])
 
     assert len(raw.values) == 2
@@ -123,7 +121,7 @@ def test_lig_backend_contributions(model):
 
 def test_lig_backend_through_explainer_and_word_importance(model):
     """The LIG backend drives NlpExplainer.explain and the shared word-importance aggregation."""
-    xpl = NlpExplainer(model, label_names=LABELS, backend=NlpCaptumLigBackend(model, label_names=LABELS))
+    xpl = NlpExplainer(model, label_names=LABELS, backend=NlpCaptumLigBackend())
     explanation = xpl.explain(["i am so happy today", "i feel terrified and alone"])
     assert len(explanation) == 2
     joy_idx = LABELS.index("joy")
@@ -141,14 +139,18 @@ _LIME_ARGS = {"random_state": 0}
 _LIME_COMPUTE = {"num_samples": 300}
 
 
-def _lime_backend(scorer, **kwargs):
-    return NlpLimeBackend(scorer, explainer_args=_LIME_ARGS, explainer_compute_args=_LIME_COMPUTE, **kwargs)
+def _lime_settings():
+    return NlpLimeBackend(explainer_args=_LIME_ARGS, explainer_compute_args=_LIME_COMPUTE)
+
+
+def _lime_backend(scorer, label_names=None):
+    return _lime_settings().fit(scorer, label_names)
 
 
 @requires_lime
 def test_lime_text_model_input_explains_every_class_with_the_model_s_labels(model):
     backend = _lime_backend(model)  # a TextModel, no label_names: both come from the model
-    assert backend._classes == LABELS
+    assert backend.label_names_ == LABELS
 
     raw = backend.run_explainer(_LIME_TEXTS)
 
@@ -189,7 +191,7 @@ def test_lime_pipeline_input_matches_the_text_model_input(model):
 
 @requires_lime
 def test_lime_explainer_artifact_and_round_trip(model, tmp_path):
-    xpl = NlpExplainer(model, backend=_lime_backend(model))
+    xpl = NlpExplainer(model, backend=_lime_settings())
     explanation = xpl.explain(_LIME_TEXTS, y=["joy", "sadness"])
 
     assert explanation.backend_name == "nlp_lime"
@@ -208,7 +210,7 @@ def test_lime_explainer_artifact_and_round_trip(model, tmp_path):
 
 @requires_lime
 def test_lime_live_explain_text(model):
-    xpl = NlpExplainer(model, backend=_lime_backend(model))
+    xpl = NlpExplainer(model, backend=_lime_settings())
     contributions, label, probabilities = xpl.explain_text("i am thrilled about this")
     assert label in LABELS
     assert set(probabilities) == set(LABELS)
@@ -217,7 +219,7 @@ def test_lime_live_explain_text(model):
 
 @requires_lime
 def test_webapp_hides_the_waterfall_for_lime(model):
-    xpl = NlpExplainer(model, backend=_lime_backend(model))
+    xpl = NlpExplainer(model, backend=_lime_settings())
     app = NlpWebApp(xpl.explain(_LIME_TEXTS), engine=xpl)
     assert app._tab_groups["lower-right-tabs"] == ["highlight"]
     assert "editor" in app._tab_groups["left-tabs"]  # the What-if Lab still mounts with a live TextModel
@@ -229,9 +231,9 @@ def test_webapp_hides_the_waterfall_for_lime(model):
 
 
 def test_shap_and_lig_share_the_mask_reference(model):
-    shap_backend = NlpShapBackend(model, label_names=LABELS, output_space="logit")
-    lig_backend = NlpCaptumLigBackend(model, label_names=LABELS)
-    assert shap_backend.baseline_token == lig_backend.baseline_token == model.tokenizer.mask_token
+    shap_backend = NlpShapBackend(output_space="logit").fit(model, LABELS)
+    lig_backend = NlpCaptumLigBackend().fit(model, LABELS)
+    assert shap_backend.baseline_token_ == lig_backend.baseline_token_ == model.tokenizer.mask_token
     input_ids, _, _ = model.encode("i am so happy today")
     ref = model.reference_ids(input_ids)[0, 1:-1]
     assert (ref == model.tokenizer.mask_token_id).all()

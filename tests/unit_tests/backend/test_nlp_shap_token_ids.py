@@ -186,9 +186,9 @@ class TestSupportsTokenIds:
 class TestShapBackendOnTokenIds:
     def test_values_are_the_exact_additive_contributions(self):
         model = AdditiveModel()
-        backend = NlpShapBackend(model, label_names=model.label_names, output_space="logit")
-        assert backend.masking == "token_ids"
-        assert backend.baseline_token == "[MASK]"
+        backend = NlpShapBackend(output_space="logit").fit(model)
+        assert backend.masking_ == "token_ids"
+        assert backend.baseline_token_ == "[MASK]"
         out = backend.run_explainer([TEXT])
         assert out.token_strings == [["un", "café", "😍", "ok"]]
         assert out.token_spans == [[((0, 2),), ((3, 7),), ((8, 9),), ((11, 13),)]]
@@ -206,12 +206,12 @@ class TestShapBackendOnTokenIds:
 
     def test_probability_space_is_additive_against_predict(self):
         model = AdditiveModel()
-        out = NlpShapBackend(model, label_names=model.label_names).run_explainer([TEXT])
+        out = NlpShapBackend().fit(model).run_explainer([TEXT])
         np.testing.assert_allclose(out.base_values[0] + out.values[0].sum(axis=0), model.predict([TEXT])[0], atol=1e-5)
 
     def test_a_text_with_nothing_to_hide_has_no_words(self):
         model = AdditiveModel()
-        out = NlpShapBackend(model, label_names=model.label_names, output_space="logit").run_explainer([ONLY_SPECIALS])
+        out = NlpShapBackend(output_space="logit").fit(model).run_explainer([ONLY_SPECIALS])
         assert out.token_strings == [[]] and out.values[0].shape == (0, 2)
         np.testing.assert_allclose(out.base_values[0], model.predict_logits([ONLY_SPECIALS])[0], atol=1e-5)
 
@@ -225,15 +225,13 @@ class TestShapBackendOnTokenIds:
                 return {"input_ids": [0], "offset_mapping": [(0, 0)]}
 
         model = AdditiveModel()
-        explicit = NlpShapBackend(
-            model, label_names=model.label_names, output_space="logit", masker=shap.maskers.Text()
-        )
-        assert explicit.masking == "text"
+        explicit = NlpShapBackend(output_space="logit", masker=shap.maskers.Text()).fit(model)
+        assert explicit.masking_ == "text"
         slow = AdditiveModel(fast=False)
         slow.tokenizer = None
         with pytest.raises(TypeError, match="tokenizer to mask text with"):
             # The string path needs a real tokenizer; reaching that error proves the fallback.
-            NlpShapBackend(slow, label_names=slow.label_names, output_space="logit")
+            NlpShapBackend(output_space="logit").fit(slow)
 
 
 class TestNlpExplainerDefault:
@@ -244,12 +242,12 @@ class TestNlpExplainerDefault:
 
         model = AdditiveModel()
         default = NlpExplainer(model)
-        assert default.backend.masking == "token_ids"
+        assert default.backend.masking_ == "token_ids"
         strings = NlpExplainer(
             model,
-            backend=NlpShapBackend(model, label_names=model.label_names, masker=shap.maskers.Text()),
+            backend=NlpShapBackend(masker=shap.maskers.Text()),
         )
-        assert strings.backend.masking == "text"
+        assert strings.backend.masking_ == "text"
         assert default._compute_key([TEXT]) != strings._compute_key([TEXT])
 
 
@@ -257,8 +255,8 @@ class TestProgress:
     def test_a_bar_over_the_texts_unless_silent(self, capsys):
         pytest.importorskip("tqdm")
         model = AdditiveModel()
-        NlpShapBackend(model, label_names=model.label_names).run_explainer([TEXT, TEXT])
+        NlpShapBackend().fit(model).run_explainer([TEXT, TEXT])
         assert "nlp_shap attribution" in capsys.readouterr().err
-        silent = NlpShapBackend(model, label_names=model.label_names, explainer_compute_args={"silent": True})
+        silent = NlpShapBackend(explainer_compute_args={"silent": True}).fit(model)
         silent.run_explainer([TEXT])
         assert capsys.readouterr().err == ""

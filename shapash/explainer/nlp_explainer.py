@@ -96,11 +96,26 @@ def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
         return None
 
 
+def _canonical(value: Any) -> Any:
+    """``value`` with every dict replaced by its sorted items, recursively — for a stable cache key.
+
+    Two logically identical settings written in a different order (``{"x": 1, "y": 2}`` and
+    ``{"y": 2, "x": 1}``) then have the same ``repr``.
+    """
+    if isinstance(value, dict):
+        return tuple(sorted(((str(k), _canonical(v)) for k, v in value.items()), key=lambda kv: kv[0]))
+    if isinstance(value, list | tuple):
+        return tuple(_canonical(v) for v in value)
+    return value
+
+
 class NlpExplainer:
     """Minimal explainer for text classification — token-level contributions.
 
-    Uses ``NlpShapBackend`` by default.  Pass a pre-built backend instance to
-    switch to a different explainer (e.g. ``NlpLimeBackend``).
+    Uses ``NlpShapBackend`` by default.  Pass a backend instance to switch to a different
+    explanation method (e.g. ``NlpLimeBackend``) or to change its settings. A backend holds settings
+    only: the explainer binds a fresh copy of it to ``model`` (and ``label_names``), so the instance
+    passed in is never modified and can be reused across explainers.
 
     Parameters
     ----------
@@ -113,9 +128,9 @@ class NlpExplainer:
         Class names in the same order as the model output columns.
         Used in plot titles and the webapp class selector.
     backend : NlpBackend, optional
-        Pre-built backend instance.  When provided, ``explainer_args`` and
-        ``explainer_compute_args`` are ignored — configure the backend directly
-        before passing it in.  Defaults to ``NlpShapBackend``.
+        The explanation method and its settings, e.g. ``NlpShapBackend(output_space="logit")`` or
+        ``NlpLimeBackend(explainer_compute_args={"num_samples": 3000})``. Defaults to
+        ``NlpShapBackend()``.
     cf_generator : CounterfactualGenerator, optional
         Counterfactual generator driving the webapp's "What-if Lab" panel and
         :meth:`generate_counterfactuals` — finds the smallest text edit that flips the model's
@@ -125,10 +140,17 @@ class NlpExplainer:
         forward-pass-only ``AblationFlipGenerator`` works even on a prediction-only pipeline — is
         auto-registered (see :meth:`available_cf_generators`), so the webapp can switch between
         them live; the first one becomes the default/active generator (:attr:`cf_generator`).
-    explainer_args : dict, optional
-        Forwarded to ``NlpShapBackend.__init__`` when no ``backend`` is given.
-    explainer_compute_args : dict, optional
-        Forwarded to ``NlpShapBackend.__init__`` when no ``backend`` is given.
+
+    Attributes
+    ----------
+    backend : NlpBackend
+        The backend bound to ``model``: a fitted copy of the one passed in.
+
+    Raises
+    ------
+    TypeError
+        If the backend cannot explain ``model`` (a missing capability, or a logit space the model
+        cannot return).
 
     Examples
     --------
@@ -141,8 +163,7 @@ class NlpExplainer:
 
     A bare scoring function works too — any callable mapping ``list[str]`` to an
     ``(n_texts, n_classes)`` probability array — here an sklearn text classifier explained with LIME.
-    The same callable goes to both the backend and the explainer, and ``label_names`` must follow the
-    array's column order:
+    ``label_names`` must follow the array's column order:
 
     >>> from sklearn.feature_extraction.text import TfidfVectorizer
     >>> from sklearn.linear_model import LogisticRegression
@@ -151,8 +172,7 @@ class NlpExplainer:
     >>> clf = make_pipeline(TfidfVectorizer(), LogisticRegression()).fit(train_texts, train_labels)
     >>> classifier_fn = clf.predict_proba
     >>> label_names = list(clf.classes_)
-    >>> lime_backend = NlpLimeBackend(classifier_fn, label_names=label_names)
-    >>> xpl = NlpExplainer(classifier_fn, label_names=label_names, backend=lime_backend)
+    >>> xpl = NlpExplainer(classifier_fn, label_names=label_names, backend=NlpLimeBackend())
     >>> explanation = xpl.explain(texts)
     """
 
@@ -162,8 +182,6 @@ class NlpExplainer:
         label_names: list[str] | None = None,
         backend: NlpBackend | None = None,
         cf_generator: CounterfactualGenerator | None = None,
-        explainer_args: dict | None = None,
-        explainer_compute_args: dict | None = None,
     ) -> None:
         self.model = model
         self.label_names = label_names
@@ -180,20 +198,13 @@ class NlpExplainer:
         else:
             self._text_model = None
 
-        # Default backend only when the caller brought none. Building it reads the model's SHAP surface
-        # (its token ids when it exposes them; otherwise ``shap_callable`` + its companion
-        # ``shap_masker``, see ``NlpShapBackend``) — which must not happen when an explicit backend
-        # makes that surface unused, or an adapter that never intends to be explained by SHAP could not
-        # be used at all.
-        if backend is not None:
-            self.backend: NlpBackend = backend
-        else:
-            self.backend = NlpShapBackend(
-                model=self._text_model if self._text_model is not None else model,
-                label_names=self.label_names,
-                explainer_args=explainer_args or {},
-                explainer_compute_args=explainer_compute_args or {},
-            )
+        # The explainer owns the model: the backend is bound here, once, on a fresh copy built from
+        # its settings — never the caller's instance, which stays unbound and reusable. A copy from
+        # get_params, not sklearn's clone: clone deep-copies every setting, and a masker (holding a
+        # tokenizer) or an explainer_args model would be duplicated in memory for nothing.
+        settings = backend if backend is not None else NlpShapBackend()
+        target = self._text_model if self._text_model is not None else model
+        self.backend: NlpBackend = type(settings)(**settings.get_params(deep=False)).fit(target, self.label_names)
 
         # Counterfactual generators: explicit > auto-discovered > none. An explicit ``cf_generator``
         # is used verbatim (no surprise additions). Otherwise every built-in compatible with the model
@@ -424,7 +435,7 @@ class NlpExplainer:
                     # Off the instance, not the class: a backend may choose its space per instance.
                     output_space=self.backend.output_space,
                     is_signed=backend_cls.is_signed,
-                    baseline_token=getattr(self.backend, "baseline_token", None),
+                    baseline_token=self.backend.baseline_token_,
                     model_id=getattr(self._text_model, "checkpoint", None),
                     architecture=getattr(self._text_model, "architecture", None),
                 )
@@ -957,12 +968,13 @@ class NlpExplainer:
         The cached explanation is a function of the texts **and** of everything that scores them,
         so all of it belongs in the key: the model's own identity declaration
         (:attr:`~shapash.model.base.TextModel.model_id` — checkpoint, pooling, normalization, head
-        weights), the backend's registered ``name``, its explainer settings, the explanation space,
-        baseline token and masking it reports (constructor choices, not class constants — a
-        probability-space and a logit-space ``nlp_shap`` share every other part of the key), and
-        ``label_names`` (which fixes the column order of ``y_prob``). The shapash release
-        (``major.minor.patch``, see :func:`_cache_release`) is in it too: any release may change how
-        backends compute or cut units, and must not read an older one's entries.
+        weights), the backend's registered ``name`` and its settings (``get_params``: everything
+        else the backend does follows from them and the model), and ``label_names`` (which fixes the
+        column order of ``y_prob``). A setting that is an object without a stable ``repr`` (a custom
+        ``masker=``) changes the key from one session to the next: such an entry is recomputed, never
+        mixed up with another. The shapash release (``major.minor.patch``, see :func:`_cache_release`)
+        is in it too: any release may change how backends compute or cut units, and must not read an
+        older one's entries.
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
         the model, or the label order and pointing at the same ``cache_dir`` silently reloads the
@@ -976,15 +988,9 @@ class NlpExplainer:
         backend = getattr(self, "backend", None)
         backend_id = "none"
         if backend is not None:
-            # Sorted repr, so two logically identical configs written in a different order agree.
-            args = sorted(getattr(backend, "explainer_args", {}).items())
-            compute_args = sorted(getattr(backend, "explainer_compute_args", {}).items())
-            space = getattr(backend, "output_space", None)
-            baseline = getattr(backend, "baseline_token", None)
-            # How SHAP masks (token ids or strings) changes its values, and an explicit ``masker=``
-            # selects the string path without touching any other part of the key.
-            masking = getattr(backend, "masking", None)
-            backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}:{masking}"
+            # Display-only settings (a progress bar) never change the numbers, so they stay out.
+            params = {k: v for k, v in backend.get_params(deep=False).items() if k not in type(backend).display_params}
+            backend_id = f"{type(backend).name}:{_canonical(params)!r}"
         return hash_corpus(text_list, f"{_cache_release()}|{model_id}|{backend_id}|{self.label_names!r}")
 
     def _require_text_model(self) -> TextModel:

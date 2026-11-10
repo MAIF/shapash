@@ -143,7 +143,7 @@ def test_st_shap_backend_runs(st_model):
 
 
 def test_st_lig_backend_runs(st_model):
-    backend = NlpCaptumLigBackend(st_model, label_names=LABELS)
+    backend = NlpCaptumLigBackend().fit(st_model, LABELS)
     raw = backend.run_explainer(TEXTS[:2])
     assert len(raw.values) == 2
     for contrib in raw.values:
@@ -211,7 +211,7 @@ def test_torch_shap_and_lig_backends_run(torch_model):
     explanation = xpl.explain(TEXTS[:2])
     assert len(explanation.token_strings[0]) > 0
 
-    backend = NlpCaptumLigBackend(torch_model, label_names=LABELS)
+    backend = NlpCaptumLigBackend().fit(torch_model, LABELS)
     raw = backend.run_explainer(TEXTS[:2])
     assert len(raw.values) == 2
 
