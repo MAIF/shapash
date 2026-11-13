@@ -17,6 +17,21 @@ Tabular data
    utils.load_smartpredictor.load_smartpredictor
    data.data_loader.data_loading
 
+Tabular deep-learning adapters
+------------------------------
+
+.. autoclass:: shapash.model.KerasModelAdapter
+   :members:
+   :inherited-members:
+
+.. autoclass:: shapash.model.TensorFlowModelAdapter
+   :members:
+   :inherited-members:
+
+.. autoclass:: shapash.model.PyTorchModelAdapter
+   :members:
+   :inherited-members:
+
 Report and standalone plots
 ---------------------------
 

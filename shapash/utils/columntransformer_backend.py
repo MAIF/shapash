@@ -22,9 +22,8 @@ from shapash.utils.model_synoptic import (
     catboost_model,
     dict_model_feature,
     lightgbm_model,
-    linear_model,
-    simple_tree_model_sklearn,
-    svm_model,
+    sklearn_model,
+    tabular_adapter_model,
     xgboost_model,
 )
 
@@ -35,8 +34,6 @@ sklearn_ordinal = "<class 'sklearn.preprocessing._encoders.OrdinalEncoder'>"
 sklearn_standardscaler = "<class 'sklearn.preprocessing._data.StandardScaler'>"
 sklearn_quantiletransformer = "<class 'sklearn.preprocessing._data.QuantileTransformer'>"
 sklearn_powertransformer = "<class 'sklearn.preprocessing._data.PowerTransformer'>"
-
-sklearn_model = linear_model + svm_model + simple_tree_model_sklearn
 
 other_model = xgboost_model + catboost_model + lightgbm_model
 
@@ -51,6 +48,35 @@ supported_sklearn = (
     sklearn_quantiletransformer,
     sklearn_powertransformer,
 )
+
+
+def get_onehot_feature_counts(encoder: Any) -> list[int]:
+    """Return each input feature's fitted output width, including dropped and infrequent categories."""
+    counts = [len(categories) for categories in encoder.categories_]
+    if encoder.min_frequency is not None or encoder.max_categories is not None:
+        counts = [
+            count - len(infrequent) + 1 if infrequent is not None else count
+            for count, infrequent in zip(counts, encoder.infrequent_categories_, strict=True)
+        ]
+    if encoder.drop_idx_ is not None:
+        counts = [count - int(dropped is not None) for count, dropped in zip(counts, encoder.drop_idx_, strict=True)]
+    return counts
+
+
+def get_column_transformer_columns(encoder: ColumnTransformer, selector: Any) -> list[Any]:
+    """Resolve a fitted selector to input feature names without interpreting encoded column names."""
+    if isinstance(selector, str):
+        return [selector]
+    if not isinstance(selector, slice):
+        selected = list(selector)
+        if all(isinstance(value, str) for value in selected):
+            return selected
+    if not hasattr(encoder, "feature_names_in_"):
+        raise ValueError("ColumnTransformer positional selectors require fitted DataFrame feature names.")
+    names = pd.Index(encoder.feature_names_in_)
+    if isinstance(selector, slice) and (isinstance(selector.start, str) or isinstance(selector.stop, str)):
+        selector = names.slice_indexer(selector.start, selector.stop, selector.step)
+    return names[selector if isinstance(selector, slice) else selected].tolist()
 
 
 def inv_transform_ct(x_in: pd.DataFrame, encoding: Any) -> pd.DataFrame:
@@ -83,7 +109,9 @@ def inv_transform_ct(x_in: pd.DataFrame, encoding: Any) -> pd.DataFrame:
         for enc in encoding.transformers_:
             name_encoding = enc[0]
             ct_encoding = enc[1]
-            col_encoding = enc[2]
+            col_encoding = get_column_transformer_columns(encoding, enc[2])
+            if not col_encoding or (isinstance(ct_encoding, str) and ct_encoding == "drop"):
+                continue
             # For Scikit encoding we use the associated inverse transform method
             if str(type(ct_encoding)) in supported_sklearn:
                 frame, init = inv_transform_sklearn_in_ct(x_in, init, name_encoding, col_encoding, ct_encoding)
@@ -183,6 +211,15 @@ def inv_transform_sklearn_in_ct(
         nb_col = len(colname_input)
     else:
         nb_col = len(colname_output)
+    if str(type(ct_encoding)) == sklearn_onehot and nb_col == 0:
+        frame = pd.DataFrame(
+            {
+                name: np.repeat(categories[0], len(x_in))
+                for name, categories in zip(colname_output, ct_encoding.categories_, strict=True)
+            },
+            index=x_in.index,
+        )
+        return frame, init
     x_inverse = ct_encoding.inverse_transform(x_in.iloc[:, init : init + nb_col])
     frame = pd.DataFrame(x_inverse, columns=colname_output, index=x_in.index)
     init += nb_col
@@ -218,7 +255,9 @@ def calc_inv_contrib_ct(x_contrib: pd.DataFrame, encoding: Any, agg_columns: Lit
         for enc in encoding.transformers_:
             name_encoding = enc[0]
             ct_encoding = enc[1]
-            col_encoding = enc[2]
+            col_encoding = get_column_transformer_columns(encoding, enc[2])
+            if not col_encoding or (isinstance(ct_encoding, str) and ct_encoding == "drop"):
+                continue
 
             if str(type(ct_encoding)) in supported_category_encoder + supported_sklearn:
                 # We create new columns names depending on the name of the transformers and the name of the column.
@@ -229,17 +268,20 @@ def calc_inv_contrib_ct(x_contrib: pd.DataFrame, encoding: Any, agg_columns: Lit
                 if str(type(ct_encoding)) in dummies_sklearn or str(type(ct_encoding)) in dummies_category_encoder:
                     for i_enc in range(len(colname_output)):
                         if str(type(ct_encoding)) == sklearn_onehot:
-                            col_origin = ct_encoding.categories_[i_enc]
+                            nb_col = get_onehot_feature_counts(ct_encoding)[i_enc]
                         elif str(type(ct_encoding)) == category_encoder_binary:
                             try:
                                 col_origin = ct_encoding.base_n_encoder.mapping[i_enc].get("mapping").columns.tolist()
                             except Exception:
                                 col_origin = ct_encoding.mapping[i_enc].get("mapping").columns.tolist()
+                            nb_col = len(col_origin)
                         else:
                             col_origin = ct_encoding.mapping[i_enc].get("mapping").columns.tolist()
-                        nb_col = len(col_origin)
+                            nb_col = len(col_origin)
                         if agg_columns == "first":
-                            contrib_inverse = x_contrib.iloc[:, init]
+                            contrib_inverse = (
+                                x_contrib.iloc[:, init] if nb_col else pd.Series(0.0, index=x_contrib.index)
+                            )
                         else:
                             contrib_inverse = x_contrib.iloc[:, init : init + nb_col].sum(axis=1)
                         frame = pd.DataFrame(
@@ -293,7 +335,7 @@ def transform_ct(x_in: pd.DataFrame, model: Any, encoding: Any) -> pd.DataFrame:
     """
     if str(type(encoding)) == columntransformer:
         # We use inverse tranform from the encoding method base on columns position
-        if str(type(model)) in sklearn_model:
+        if str(type(model)) in sklearn_model + tabular_adapter_model:
             rst = pd.DataFrame(encoding.transform(x_in), index=x_in.index)
             rst.columns = ["col_" + str(feature) for feature in rst.columns]
 
@@ -457,13 +499,16 @@ def get_col_mapping_ct(encoder: ColumnTransformer, x_encoded: pd.DataFrame) -> d
     """
     dict_col_mapping: dict[str, list[Any]] = {}
     idx_encoded = 0
-    for name, estimator, features in encoder.transformers_:
+    for name, estimator, selector in encoder.transformers_:
+        features = get_column_transformer_columns(encoder, selector)
+        if not features or (isinstance(estimator, str) and estimator == "drop"):
+            continue
         if name != "remainder":
             if str(type(estimator)) in dummies_sklearn:
-                features_out, categories_out = get_feature_out(estimator, features)
+                counts = get_onehot_feature_counts(estimator)
                 for i, f_name in enumerate(features):
                     dict_col_mapping[name + "_" + f_name] = list()
-                    for _ in categories_out[i]:
+                    for _ in range(counts[i]):
                         dict_col_mapping[name + "_" + f_name].append(x_encoded.columns.to_list()[idx_encoded])
                         idx_encoded += 1
 
@@ -475,9 +520,11 @@ def get_col_mapping_ct(encoder: ColumnTransformer, x_encoded: pd.DataFrame) -> d
 
             elif str(type(estimator)) in supported_category_encoder:
                 dict_mapping_ce = get_col_mapping_ce(estimator)
-                for f_name in dict_mapping_ce.keys():
+                outputs = list(estimator.get_feature_names_out())
+                for f_name in features:
                     dict_col_mapping[name + "_" + f_name] = list()
-                    for _ in dict_mapping_ce[f_name]:
+                    mapped = [column for column in dict_mapping_ce.get(f_name, [f_name]) if column in outputs]
+                    for _ in mapped:
                         dict_col_mapping[name + "_" + f_name].append(x_encoded.columns.to_list()[idx_encoded])
                         idx_encoded += 1
 
