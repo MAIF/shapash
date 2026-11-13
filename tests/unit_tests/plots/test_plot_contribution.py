@@ -18,7 +18,9 @@ import unittest
 import numpy as np
 import pandas as pd
 import plotly.io as pio
+from sklearn.tree import DecisionTreeRegressor
 
+from shapash import SmartExplainer
 from shapash.plots.plot_contribution import (
     plot_interactions_scatter,
     plot_interactions_violin,
@@ -193,6 +195,57 @@ class TestPlotViolinGrid(unittest.TestCase):
         self.assertTrue(fig.layout.yaxis.visible)
         self.assertFalse(fig.layout.yaxis.showticklabels)
         self.assertIsNone(fig.layout.yaxis.title.text)
+
+
+class TestSameFeatureInteraction(unittest.TestCase):
+    def test_violin_scatter_positions_and_rows_with_same_feature(self):
+        style = define_style(get_palette("default"))
+        for values in ([10, 30] * 10, ["low", "high"] * 10):
+            with self.subTest(values=values[:2]):
+                index = [f"row_{i}" for i in range(len(values))]
+                x_values = pd.DataFrame({"feature": list(map(str, values))}, index=index)
+                col_values = pd.DataFrame({"feature": values}, index=index)
+                y_values = pd.DataFrame({"interaction": np.arange(len(values))}, index=index)
+
+                fig = plot_interactions_violin(
+                    x_name="feature",
+                    y_name="interaction",
+                    col_name="feature",
+                    x_values=x_values,
+                    y_values=y_values,
+                    col_values=col_values,
+                    col_scale=style["interactions_col_scale"],
+                    style_dict=style,
+                )
+
+                scatter = [trace for trace in fig.data if trace.type == "scatter"]
+                self.assertEqual(sum(len(trace.x) for trace in scatter), len(values))
+                for trace in scatter:
+                    self.assertTrue(np.all(np.asarray(trace.x, dtype=float) >= -0.6))
+                    self.assertTrue(np.all(np.asarray(trace.x, dtype=float) <= 1.6))
+                    for x, y, customdata in zip(trace.x, trace.y, trace.customdata):
+                        row = int(y)
+                        modality = sorted(set(map(str, values))).index(str(values[row]))
+                        self.assertLessEqual(abs(float(x) - modality), 0.5)
+                        self.assertEqual(customdata[0], str(values[row]))
+                        self.assertEqual(customdata[1], index[row])
+                        self.assertEqual(customdata[2], str(values[row]))
+                self.assertGreater(len(set(float(x) for trace in scatter for x in trace.x)), 2)
+
+    def test_interactions_plot_same_numeric_feature_shows_dispersed_points(self):
+        x = pd.DataFrame({"feature": [10, 30] * 30})
+        model = DecisionTreeRegressor(random_state=0).fit(x, x["feature"] * 3)
+        explainer = SmartExplainer(model=model)
+        explainer.compile(x=x)
+
+        fig = explainer.plot.interactions_plot("feature", "feature")
+
+        scatter = [trace for trace in fig.data if trace.type == "scatter"]
+        self.assertEqual(sum(len(trace.x) for trace in scatter), len(x))
+        self.assertTrue(all(-0.6 <= point <= 1.6 for trace in scatter for point in trace.x))
+        self.assertGreater(len(set(float(point) for trace in scatter for point in trace.x)), 2)
+        np.testing.assert_array_equal(scatter[0].marker.color, x["feature"])
+        np.testing.assert_allclose(scatter[0].y, np.where(x["feature"] == 10, -30, 30))
 
 
 if __name__ == "__main__":
