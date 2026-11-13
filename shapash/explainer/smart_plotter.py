@@ -1599,7 +1599,7 @@ class SmartPlotter:
         max_points: int,
         sampling_col: str | tuple[str, str] | None = None,
         col_value_count: int | tuple[int, int] = 0,
-    ) -> tuple[list[Any] | np.ndarray, str | None]:
+    ) -> tuple[list[Any], str | None]:
         """
         Select row indices for interaction plots.
 
@@ -1623,7 +1623,7 @@ class SmartPlotter:
 
         Returns
         -------
-        list_ind : list or numpy.ndarray
+        list_ind : list
             Row indices selected for the plot.
         addnote : str or None
             Optional note describing the applied sampling strategy.
