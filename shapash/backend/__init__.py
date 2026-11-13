@@ -9,6 +9,7 @@ from .nlp_captum_lig_backend import NlpCaptumLigBackend
 from .nlp_lime_backend import NlpLimeBackend
 from .nlp_shap_backend import NlpShapBackend
 from .shap_backend import ShapBackend
+from .tabicl_shap_backend import TabiclBackend
 
 
 def get_backend_cls_from_name(name: str) -> type[Backend]:
