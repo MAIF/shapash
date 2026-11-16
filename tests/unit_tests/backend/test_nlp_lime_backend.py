@@ -33,11 +33,7 @@ class _FakeTextModel(TextModel):
 
 
 def _make_lime_backend() -> NlpLimeBackend:
-    return NlpLimeBackend(
-        _fake_classifier,
-        label_names=LABEL_NAMES,
-        explainer_compute_args=_LIME_COMPUTE_ARGS,
-    )
+    return NlpLimeBackend(explainer_compute_args=_LIME_COMPUTE_ARGS).fit(_fake_classifier, LABEL_NAMES)
 
 
 class TestNlpLimeBackend(unittest.TestCase):
@@ -53,41 +49,31 @@ class TestNlpLimeBackend(unittest.TestCase):
         self.assertIsInstance(self.backend, NlpBackend)
 
     def test_label_names_stored(self):
-        self.assertEqual(self.backend._classes, LABEL_NAMES)
+        self.assertEqual(self.backend.label_names_, LABEL_NAMES)
 
     def test_mask_string_stored(self):
-        backend = NlpLimeBackend(
-            _fake_classifier,
-            label_names=LABEL_NAMES,
-            mask_string="[MASK]",
-            explainer_compute_args=_LIME_COMPUTE_ARGS,
+        backend = NlpLimeBackend(mask_string="[MASK]", explainer_compute_args=_LIME_COMPUTE_ARGS).fit(
+            _fake_classifier, LABEL_NAMES
         )
         self.assertEqual(backend.mask_string, "[MASK]")
 
     def test_explainer_args_forwarded(self):
-        backend = NlpLimeBackend(
-            _fake_classifier,
-            label_names=LABEL_NAMES,
-            explainer_args={"bow": False},
-            explainer_compute_args=_LIME_COMPUTE_ARGS,
+        backend = NlpLimeBackend(explainer_args={"bow": False}, explainer_compute_args=_LIME_COMPUTE_ARGS).fit(
+            _fake_classifier, LABEL_NAMES
         )
-        self.assertFalse(backend.explainer.bow)
+        self.assertFalse(backend.explainer_.bow)
 
     def test_baseline_token_is_none_when_words_are_removed(self):
         # bow=True (LIME's default) drops words outright: there is no substitute token.
-        self.assertIsNone(self.backend.baseline_token)
+        self.assertIsNone(self.backend.baseline_token_)
 
     def test_baseline_token_is_the_mask_string_when_words_are_replaced(self):
         for mask_string, expected in ((None, "UNKWORDZ"), ("[MASK]", "[MASK]")):
             with self.subTest(mask_string=mask_string):
                 backend = NlpLimeBackend(
-                    _fake_classifier,
-                    label_names=LABEL_NAMES,
-                    mask_string=mask_string,
-                    explainer_args={"bow": False},
-                    explainer_compute_args=_LIME_COMPUTE_ARGS,
-                )
-                self.assertEqual(backend.baseline_token, expected)
+                    mask_string=mask_string, explainer_args={"bow": False}, explainer_compute_args=_LIME_COMPUTE_ARGS
+                ).fit(_fake_classifier, LABEL_NAMES)
+                self.assertEqual(backend.baseline_token_, expected)
 
     # --- _classifier_fn ---
 
@@ -95,7 +81,7 @@ class TestNlpLimeBackend(unittest.TestCase):
         def list_model(texts):
             return [[0.5] * N_CLASSES for _ in texts]
 
-        backend = NlpLimeBackend(list_model, label_names=LABEL_NAMES)
+        backend = NlpLimeBackend().fit(list_model, LABEL_NAMES)
         result = backend._classifier_fn(["hello"])
         self.assertIsInstance(result, np.ndarray)
         self.assertEqual(result.shape, (1, N_CLASSES))
@@ -106,7 +92,7 @@ class TestNlpLimeBackend(unittest.TestCase):
         def array_model(texts):
             return arr
 
-        backend = NlpLimeBackend(array_model, label_names=LABEL_NAMES)
+        backend = NlpLimeBackend().fit(array_model, LABEL_NAMES)
         result = backend._classifier_fn(["a", "b"])
         self.assertIs(result, arr)
 
@@ -115,7 +101,7 @@ class TestNlpLimeBackend(unittest.TestCase):
         def hf_model(texts):
             return [[{"label": name, "score": 1.0 / N_CLASSES} for name in LABEL_NAMES] for _ in texts]
 
-        backend = NlpLimeBackend(hf_model, label_names=LABEL_NAMES)
+        backend = NlpLimeBackend().fit(hf_model, LABEL_NAMES)
         result = backend._classifier_fn(["hello", "world"])
         self.assertIsInstance(result, np.ndarray)
         self.assertEqual(result.shape, (2, N_CLASSES))
@@ -172,48 +158,48 @@ class TestNlpLimeBackend(unittest.TestCase):
     def test_num_features_defaults_to_the_distinct_word_count(self):
         # LIME's own default (10) zero-fills every word past the top 10 — indistinguishable from "no effect".
         text = "one two three four five six seven eight nine ten eleven twelve one"
-        backend = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_compute_args={"num_samples": 50})
-        with patch.object(backend.explainer, "explain_instance", wraps=backend.explainer.explain_instance) as spy:
+        backend = NlpLimeBackend(explainer_compute_args={"num_samples": 50}).fit(_fake_classifier, LABEL_NAMES)
+        with patch.object(backend.explainer_, "explain_instance", wraps=backend.explainer_.explain_instance) as spy:
             raw = backend.run_explainer([text])
         self.assertEqual(spy.call_args.kwargs["num_features"], 12)
         self.assertEqual(len(raw.token_strings[0]), 12)
 
     def test_every_word_gets_a_weight_by_default(self):
         text = "one two three four five six seven eight nine ten eleven twelve"
-        backend = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_compute_args={"num_samples": 50})
+        backend = NlpLimeBackend(explainer_compute_args={"num_samples": 50}).fit(_fake_classifier, LABEL_NAMES)
         captured = {}
-        original = backend.explainer.explain_instance
+        original = backend.explainer_.explain_instance
 
         def _capture(*args, **kwargs):
             captured["exp"] = original(*args, **kwargs)
             return captured["exp"]
 
-        with patch.object(backend.explainer, "explain_instance", side_effect=_capture):
+        with patch.object(backend.explainer_, "explain_instance", side_effect=_capture):
             backend.run_explainer([text])
         for label_idx in range(N_CLASSES):
             self.assertEqual(len(captured["exp"].local_exp[label_idx]), 12)
 
     def test_feature_count_follows_the_explainer_settings(self):
-        char = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_args={"char_level": True})
+        char = NlpLimeBackend(explainer_args={"char_level": True}).fit(_fake_classifier, LABEL_NAMES)
         self.assertEqual(char._count_features("abca"), 3)
-        positional = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_args={"bow": False})
+        positional = NlpLimeBackend(explainer_args={"bow": False}).fit(_fake_classifier, LABEL_NAMES)
         self.assertEqual(positional._count_features("a b a"), 3)
         self.assertEqual(self.backend._count_features("a b a"), 2)
         self.assertEqual(self.backend._count_features(""), 1)
 
     def test_explicit_num_features_is_respected(self):
         with patch.object(
-            self.backend.explainer, "explain_instance", wraps=self.backend.explainer.explain_instance
+            self.backend.explainer_, "explain_instance", wraps=self.backend.explainer_.explain_instance
         ) as spy:
             self.backend.run_explainer(_SAMPLE_TEXTS[:1])
         self.assertEqual(spy.call_args.kwargs["num_features"], _LIME_COMPUTE_ARGS["num_features"])
 
-    def test_default_is_written_into_the_settings(self):
-        # Visible on the backend and part of NlpExplainer's cache key, so a result computed under
-        # LIME's own top-10 default is never reused for "every word".
-        backend = NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES)
-        self.assertEqual(backend.explainer_compute_args["num_features"], "all")
-        self.assertEqual(self.backend.explainer_compute_args["num_features"], _LIME_COMPUTE_ARGS["num_features"])
+    def test_default_is_applied_at_fit_not_written_into_the_settings(self):
+        # Settings stay as given (get_params); the "every word" default is what fit computes.
+        backend = NlpLimeBackend().fit(_fake_classifier, LABEL_NAMES)
+        self.assertIsNone(backend.explainer_compute_args)
+        self.assertEqual(backend.compute_args_["num_features"], "all")
+        self.assertEqual(self.backend.compute_args_["num_features"], _LIME_COMPUTE_ARGS["num_features"])
 
     def test_token_strings_are_plain_str(self):
         # LIME's own vocabulary is np.str_ (a str subclass, so isinstance alone would not catch it).
@@ -222,20 +208,21 @@ class TestNlpLimeBackend(unittest.TestCase):
 
     def test_show_progress(self):
         self.assertFalse(self.backend.show_progress)
-        backend = NlpLimeBackend(
-            _fake_classifier, label_names=LABEL_NAMES, explainer_compute_args=_LIME_COMPUTE_ARGS, show_progress=True
+        backend = NlpLimeBackend(explainer_compute_args=_LIME_COMPUTE_ARGS, show_progress=True).fit(
+            _fake_classifier, LABEL_NAMES
         )
         self.assertTrue(backend.show_progress)
         self.assertEqual(len(backend.run_explainer(_SAMPLE_TEXTS).values), len(_SAMPLE_TEXTS))
 
     def test_caller_settings_dict_is_not_modified(self):
         settings = {"num_samples": 50}
-        NlpLimeBackend(_fake_classifier, label_names=LABEL_NAMES, explainer_compute_args=settings)
+        backend = NlpLimeBackend(explainer_compute_args=settings).fit(_fake_classifier, LABEL_NAMES)
         self.assertEqual(settings, {"num_samples": 50})
+        self.assertIs(backend.get_params()["explainer_compute_args"], settings)
 
     def test_run_explainer_without_label_names_explains_every_column(self):
         # LIME's own default would explain class 1 only, leaving every other column silently zero.
-        backend = NlpLimeBackend(_fake_classifier, explainer_compute_args=_LIME_COMPUTE_ARGS)
+        backend = NlpLimeBackend(explainer_compute_args=_LIME_COMPUTE_ARGS).fit(_fake_classifier)
         raw = backend.run_explainer(_SAMPLE_TEXTS[:1])
         self.assertEqual(raw.values[0].shape[1], N_CLASSES)
         self.assertEqual(raw.base_values.shape, (1, N_CLASSES))
@@ -245,45 +232,21 @@ class TestNlpLimeBackend(unittest.TestCase):
 
     def test_accepts_a_text_model_scored_through_predict(self):
         model = _FakeTextModel(LABEL_NAMES)
-        backend = NlpLimeBackend(model, explainer_compute_args=_LIME_COMPUTE_ARGS)
-        self.assertEqual(backend.model, model.predict)
+        backend = NlpLimeBackend(explainer_compute_args=_LIME_COMPUTE_ARGS).fit(model)
+        self.assertEqual(backend.scorer_, model.predict)
+        self.assertIs(backend.model_, model)
         raw = backend.run_explainer(_SAMPLE_TEXTS[:1])
         self.assertEqual(raw.values[0].shape[1], N_CLASSES)
 
     def test_label_names_default_to_the_text_model_s(self):
-        backend = NlpLimeBackend(_FakeTextModel(LABEL_NAMES))
-        self.assertEqual(backend._classes, LABEL_NAMES)
-        self.assertEqual(backend.explainer.class_names, LABEL_NAMES)
+        backend = NlpLimeBackend().fit(_FakeTextModel(LABEL_NAMES))
+        self.assertEqual(backend.label_names_, LABEL_NAMES)
+        self.assertEqual(backend.explainer_.class_names, LABEL_NAMES)
 
     def test_explicit_label_names_override_the_text_model_s(self):
         renamed = [name.upper() for name in LABEL_NAMES]
-        backend = NlpLimeBackend(_FakeTextModel(LABEL_NAMES), label_names=renamed)
-        self.assertEqual(backend._classes, renamed)
-
-    # --- get_local_contributions ---
-
-    def test_get_local_contributions_returns_nlp_contributions(self):
-        raw = self.backend.run_explainer(_SAMPLE_TEXTS)
-        contrib = self.backend.get_local_contributions(_SAMPLE_TEXTS, raw)
-        self.assertIsInstance(contrib, NlpContributions)
-
-    def test_get_local_contributions_token_strings_match_data(self):
-        raw = self.backend.run_explainer(_SAMPLE_TEXTS)
-        contrib = self.backend.get_local_contributions(_SAMPLE_TEXTS, raw)
-        self.assertEqual(contrib.token_strings, raw.token_strings)
-
-    def test_get_local_contributions_values_match_contributions(self):
-        raw = self.backend.run_explainer(_SAMPLE_TEXTS)
-        contrib = self.backend.get_local_contributions(_SAMPLE_TEXTS, raw)
-        for got, expected in zip(contrib.values, raw.values):
-            np.testing.assert_array_equal(got, expected)
-
-    def test_get_local_contributions_subset(self):
-        raw = self.backend.run_explainer(_SAMPLE_TEXTS)
-        contrib = self.backend.get_local_contributions(_SAMPLE_TEXTS, raw, subset=[0])
-        self.assertEqual(len(contrib.token_strings), 1)
-        self.assertEqual(len(contrib.values), 1)
-        self.assertEqual(contrib.base_values.shape[0], 1)
+        backend = NlpLimeBackend().fit(_FakeTextModel(LABEL_NAMES), renamed)
+        self.assertEqual(backend.label_names_, renamed)
 
 
 if __name__ == "__main__":

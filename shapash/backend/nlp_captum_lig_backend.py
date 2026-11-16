@@ -31,7 +31,7 @@ implements :class:`~shapash.model.base.SupportsCaptumIG` (e.g. ``HFClassifierMod
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 
@@ -199,21 +199,20 @@ def _model_special_tokens(model: SupportsCaptumIG) -> set[str] | None:
 class NlpCaptumLigBackend(NlpBackend):
     """Layer Integrated Gradients backend for text classification models.
 
+    Holds settings only; :meth:`fit` binds the model (``NlpExplainer`` does it for you)::
+
+        NlpExplainer(model, backend=NlpCaptumLigBackend(explainer_compute_args={"n_steps": 50}))
+
+    The model must expose the Captum attribution surface (embedding module, ``encode``,
+    ``reference_ids``, ``logits``): a :class:`~shapash.model.base.SupportsCaptumIG`, typically an
+    ``HFClassifierModel``.
+
     Parameters
     ----------
-    model : SupportsCaptumIG
-        A text model exposing the Captum attribution surface (embedding module, ``encode``,
-        ``reference_ids``, ``logits``) — typically an ``HFClassifierModel``.
-    preprocessing : None
-        Unused; accepted for interface compatibility with ``BaseBackend``.
-    label_names : list[str] or None
-        Class names in the same order as the model output columns.
-    explainer_args : dict, optional
-        Unused; accepted for interface parity with the other NLP backends.
     explainer_compute_args : dict, optional
         Keyword arguments forwarded to ``LayerIntegratedGradients.attribute`` for every sample and
         class (e.g. ``{"n_steps": 50, "internal_batch_size": 16}``). ``n_steps`` defaults to 100: the
-        ``[MASK]`` reference (see :attr:`baseline_token`) makes the integrand less smooth than ``[PAD]``
+        ``[MASK]`` reference (see :attr:`baseline_token_`) makes the integrand less smooth than ``[PAD]``
         did: on 100 DistilBERT-emotion texts (predicted class) the worst completeness error was 0.84
         logits at 50 steps and 0.31 at 100 (``[PAD]``: 0.11 / 0.06). The step count barely moves the
         word *ranking* — only how exactly the values sum to the logit gap.
@@ -222,10 +221,10 @@ class NlpCaptumLigBackend(NlpBackend):
         integration per class per sample, so a batch is slow). Best-effort: if ``tqdm`` is not
         installed the loop runs silently. Left off by default so the library emits no stdout.
 
-    Raises
-    ------
-    TypeError
-        If ``model`` does not implement :class:`~shapash.model.base.SupportsCaptumIG`.
+    Attributes
+    ----------
+    explainer_ : captum.attr.LayerIntegratedGradients
+        Set by ``fit``: the attribution method built around the model's logits and embedding layer.
     """
 
     name = "nlp_captum_lig"
@@ -239,26 +238,41 @@ class NlpCaptumLigBackend(NlpBackend):
     # Attributes model.logits directly (see module docstring) — raw pre-softmax output, not the
     # probability nlp_shap explains.
     output_space = "logit"
-    # Checked once by NlpBackend.__init__ instead of here — see its docstring.
+    # Checked once by NlpBackend.fit instead of here — see its docstring.
     requires_model_capabilities = (SupportsCaptumIG,)
 
-    def __init__(
-        self,
-        model: SupportsCaptumIG,
-        preprocessing: Any | None = None,
-        label_names: list[str] | None = None,
-        explainer_args: dict | None = None,
-        explainer_compute_args: dict | None = None,
-        show_progress: bool = False,
-    ) -> None:
-        super().__init__(model, preprocessing, label_names, explainer_args, explainer_compute_args)
+    def __init__(self, explainer_compute_args: dict | None = None, show_progress: bool = False) -> None:
+        self.explainer_compute_args = explainer_compute_args
         self.show_progress = show_progress
-        # The token SHAP substitutes too (the tokenizer's mask token) whenever one exists.
-        self.baseline_token = model.baseline_token
-        captum_attr = import_optional_module("captum.attr", extra=_NLP_EXTRA)
-        self.explainer = captum_attr.LayerIntegratedGradients(model.logits, model.embedding_layer)
 
-    def run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
+    def fit(self, model: SupportsCaptumIG, label_names: list[str] | None = None) -> Self:
+        """Build Layer Integrated Gradients around ``model``'s logits and embedding layer.
+
+        Parameters
+        ----------
+        model : SupportsCaptumIG
+            The model to explain (see the class docstring).
+        label_names : list[str] or None
+            Unused: every logit column is attributed.
+
+        Returns
+        -------
+        NlpCaptumLigBackend
+            ``self``, fitted.
+
+        Raises
+        ------
+        TypeError
+            If ``model`` does not implement :class:`~shapash.model.base.SupportsCaptumIG`.
+        """
+        super().fit(model, label_names)
+        # The token SHAP substitutes too (the tokenizer's mask token) whenever one exists.
+        self.baseline_token_ = model.baseline_token
+        captum_attr = import_optional_module("captum.attr", extra=_NLP_EXTRA)
+        self.explainer_ = captum_attr.LayerIntegratedGradients(model.logits, model.embedding_layer)
+        return self
+
+    def _run_explainer(self, x: list[str] | pd.Series) -> NlpContributions:
         """Attribute each text with LIG, one pass per class, and return per-token contributions.
 
         Parameters
@@ -272,8 +286,8 @@ class NlpCaptumLigBackend(NlpBackend):
             Ragged list of ``(n_tokens_i, n_classes)`` value arrays, per-sample baseline logits, and
             token strings per sample.
         """
-        model: SupportsCaptumIG = self.model
-        attribute_args = {"n_steps": 100, **self.explainer_compute_args}
+        model: SupportsCaptumIG = self.model_
+        attribute_args = {"n_steps": 100, **(self.explainer_compute_args or {})}
 
         contributions: list[np.ndarray] = []
         base_values: list[np.ndarray] = []
@@ -288,7 +302,7 @@ class NlpCaptumLigBackend(NlpBackend):
 
             per_class = []
             for target in range(n_classes):
-                attributions = self.explainer.attribute(
+                attributions = self.explainer_.attribute(
                     input_ids,
                     baselines=ref_ids,
                     target=target,
