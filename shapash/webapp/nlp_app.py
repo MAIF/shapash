@@ -168,8 +168,9 @@ class NlpWebApp:
         both become ``"/shapash-nlp-explainer/"`` — since that is the only spelling Dash accepts
         and a prefix copied from an nginx ``location`` easily arrives without one.
     palette_name : str, optional
-        Name of a palette in ``shapash/style/colors.json`` (the same file the tabular
-        ``SmartExplainer`` webapp draws its theme from — see ``smart_app.py``). Selects the
+        Name of a palette in ``shapash/style/colors.json`` (``"default"`` or ``"blues"``; the
+        same file the tabular ``SmartExplainer`` webapp draws its theme from — see
+        ``smart_app.py``). Selects the
         header's band color (``webapp_bkg``) and accent color (``webapp_title``). Defaults to
         ``"default"``, the same palette ``SmartExplainer`` falls back to.
     colors_dict : dict[str, str], optional

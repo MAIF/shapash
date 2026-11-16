@@ -115,10 +115,13 @@ class SmartExplainer:
     title_story : str, optional
         Custom title used in visualizations and reports. Default is empty.
     palette_name : str, optional
-        Name of the color palette used for visualizations (see the `style` folder for options).
+        Name of the color palette used for visualizations: ``"default"`` or ``"blues"``, the
+        palettes defined in ``shapash/style/colors.json``. Defaults to ``"default"``.
     colors_dict : dict, optional
-        Colors overriding those of ``palette_name``, with the same keys as the palette.
-        A nested mapping such as ``featureimp_bar`` can be given partially. Colors can be
+        Colors overriding those of ``palette_name``, with the same keys as the palette (the
+        keys of the chosen palette in ``shapash/style/colors.json``, e.g. ``title_color``,
+        ``featureimp_bar``, ``contrib_colorscale``, ``webapp_bkg``). A nested mapping such as
+        ``featureimp_bar`` can be given partially. Colors can be
         ``rgb(...)``/``rgba(...)`` strings, hex codes or color names. A continuous scale
         (``contrib_colorscale``, ``confusion_matrix_colorscale``, ``interaction_scale``,
         ``feature_contributions_cumulative``) also accepts a plotly scale name such as
@@ -334,11 +337,13 @@ class SmartExplainer:
         Parameters
         ----------
         palette_name : str, optional
-            Name of the palette to switch to. Switching palette discards the colors
+            Name of the palette to switch to: ``"default"`` or ``"blues"`` (see
+            ``shapash/style/colors.json``). Switching palette discards the colors
             overridden earlier, in the constructor or in a previous call.
         colors_dict : dict[str, Any], optional
             Colors to override, merged on top of the palette and of the overrides already
-            in place. Accepts the same values as the constructor's ``colors_dict``.
+            in place. Keys are those of ``shapash/style/colors.json``; accepts the same
+            values as the constructor's ``colors_dict``.
 
         Raises
         ------
