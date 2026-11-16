@@ -49,7 +49,7 @@ from shapash.webapp.utils.callbacks import (
 )
 from shapash.webapp.utils.explanations import Explanations
 from shapash.webapp.utils.MyGraph import MyGraph
-from shapash.webapp.utils.utils import check_row, get_index_type, round_to_k
+from shapash.webapp.utils.utils import IndexLabels, check_row, get_index_level_columns, get_index_type, round_to_k
 
 if TYPE_CHECKING:
     from shapash.explainer.explainer import Explainer
@@ -212,7 +212,15 @@ class SmartApp:
             self.dataframe = self.dataframe.join(self.explainer.additional_data)
             self.features_dict.update(self.explainer.additional_features_dict)
 
-        self.dataframe["_index_"] = self.explainer.x_init.index
+        self.index_labels = IndexLabels(self.explainer.x_init.index)
+        self.dataframe["_index_"] = self.index_labels.labels(self.explainer.x_init.index)
+        # Each MultiIndex level also gets its own column, so rows can be filtered level by level.
+        self.index_level_columns = get_index_level_columns(
+            self.explainer.x_init.index, [*self.dataframe.columns, *self.special_cols]
+        )
+        for position, column in enumerate(self.index_level_columns):
+            self.dataframe[column] = self.explainer.x_init.index.get_level_values(position)
+            self.features_dict[column] = column
         self.dataframe.rename(columns={f"{self.predict_col}": "_predict_"}, inplace=True)
         if self.explainer.y_target is not None:
             self.dataframe = self.dataframe.join(
@@ -236,6 +244,11 @@ class SmartApp:
 
         else:
             columns_order = self.special_cols + self.dataframe.columns.drop(self.special_cols).tolist()
+
+        if self.index_level_columns:
+            columns_order = [col for col in columns_order if col not in self.index_level_columns]
+            after_index = columns_order.index("_index_") + 1
+            columns_order[after_index:after_index] = self.index_level_columns
 
         random.seed(79)
         if rows is None:
@@ -2332,7 +2345,7 @@ class SmartApp:
             )
 
             # Get selection indexes from datatable
-            selection = get_indexes_from_datatable(data, self.list_index)
+            selection = self.index_labels.to_index_list(get_indexes_from_datatable(data, self.list_index))
 
             # Plot features importance
             page_to_plot = 1 if group_name else page
@@ -2448,7 +2461,7 @@ class SmartApp:
                 selected_feature = self.selected_feature
 
             if feature is not None and feature["points"][0]["curveNumber"] == 0 and len(gfi_figure["data"]) == 2:
-                subset = get_indexes_from_datatable(data, list_index)
+                subset = self.index_labels.to_index_list(get_indexes_from_datatable(data, list_index))
             else:
                 subset = self.list_index
 
@@ -2539,11 +2552,11 @@ class SmartApp:
             selected = None
             try:
                 if ctx.triggered[0]["prop_id"] == "feature_selector.clickData" and click_data is not None:
-                    selected = click_data["points"][0]["customdata"][1]
+                    selected = self.index_labels.to_label(click_data["points"][0]["customdata"][1])
                 elif ctx.triggered[0]["prop_id"] == "prediction_picking.clickData" and prediction_picking is not None:
-                    selected = prediction_picking["points"][0]["customdata"]
+                    selected = self.index_labels.to_label(prediction_picking["points"][0]["customdata"])
                 elif ctx.triggered[0]["prop_id"] == "clusters.clickData" and clusters is not None:
-                    selected = clusters["points"][0]["customdata"]
+                    selected = self.index_labels.to_label(clusters["points"][0]["customdata"])
                 elif ctx.triggered[0]["prop_id"] == "dataset.active_cell":
                     displayed_data = viewport_data if viewport_data is not None else data
                     row = cell.get("row") if isinstance(cell, dict) else None
@@ -2689,7 +2702,7 @@ class SmartApp:
                 "mask_params": mask_params,
             }
             figure = self.explainer.plot.local_plot(
-                index=selected,
+                index=self.index_labels.to_index(selected),
                 label=label,
                 show_masked=True,
                 yaxis_max_label=8,
@@ -2763,6 +2776,7 @@ class SmartApp:
             selected = check_row(data, index)
             title_contrib = "Contribution"
             if n_submit and selected is not None:
+                index = self.index_labels.to_index(index)
                 selected_row = get_id_card_features(data, selected, self.special_cols, self.features_dict)
                 if self.explainer._case == "classification":
                     if label is None:
@@ -2794,7 +2808,8 @@ class SmartApp:
                     selected_contrib,
                     sort_by,
                     order,
-                    self.special_cols,
+                    # Index levels are listed with the index, above the sorted features.
+                    [self.special_cols[0], *self.index_level_columns, *self.special_cols[1:]],
                     self.explainer.additional_features_dict,
                 )
 
@@ -2860,7 +2875,7 @@ class SmartApp:
             style_header_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols] + [
                 {"if": {"column_id": c}, "font-style": "italic"}
                 for c in self.dataframe
-                if c in self.explainer.additional_features_dict
+                if c in self.explainer.additional_features_dict or c in self.index_level_columns
             ]
             style_cell_conditional = [{"if": {"column_id": c}, "fontWeight": "bold"} for c in self.special_cols]
 
@@ -2937,7 +2952,7 @@ class SmartApp:
             if selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
                 raise PreventUpdate
             else:
-                subset = get_indexes_from_datatable(data)
+                subset = self.index_labels.to_index_list(get_indexes_from_datatable(data))
 
             figure = self.explainer.plot.scatter_plot_prediction(selection=subset, max_points=points, label=label)
             if self.explainer.y_target is not None:
@@ -3036,7 +3051,7 @@ class SmartApp:
                     raise PreventUpdate
                 selectedData = None
 
-            subset = get_indexes_from_datatable(data)
+            subset = self.index_labels.to_index_list(get_indexes_from_datatable(data))
 
             show_points = bool(points_visible)
             # The new ON/OFF state, or dash.no_update to leave the store unchanged
