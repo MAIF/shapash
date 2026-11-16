@@ -23,6 +23,19 @@ class TestPlotSentenceHighlight(unittest.TestCase):
         # legend + spans div + summary
         self.assertGreaterEqual(len(result.children), 3)
 
+    def test_accepts_hex_and_named_colors(self):
+        """Hex codes and color names are accepted; the strongest contribution takes the full color."""
+        result = plot_sentence_highlight(self.tokens, self.values, color_positive="#123456", color_negative="blue")
+
+        def backgrounds(component):
+            style = getattr(component, "style", None) or {}
+            children = getattr(component, "children", None)
+            children = children if isinstance(children, list) else [children] if children is not None else []
+            own = [style["backgroundColor"]] if "backgroundColor" in style else []
+            return own + [bg for child in children for bg in backgrounds(child)]
+
+        self.assertIn("rgb(18,52,86)", backgrounds(result))
+
     def test_raises_on_2d_values(self):
         with self.assertRaises(ValueError):
             plot_sentence_highlight(self.tokens, np.zeros((5, 3)))

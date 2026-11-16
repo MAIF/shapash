@@ -24,6 +24,8 @@ from shapash.report.validation import render_block_error, stats_to_table
 from shapash.utils.transform import apply_postprocessing, handle_categorical_missing, inverse_transform
 
 if TYPE_CHECKING:
+    from plotly import graph_objects as go
+
     from shapash.explainer import SmartExplainer
     from shapash.explainer.explainer import Explainer
 logger = logging.getLogger(__name__)
@@ -35,10 +37,30 @@ PALETTE = {
     "orange": {"bg": "#fff9e6", "border": "#f4c000", "title": "#cc8833", "text": "#444444"},
 }
 
-TARGET_DISTRIBUTION_COLORS = {"pred": "#2255aa", "true": "#f4c000"}
 BlockContent: TypeAlias = tuple[str, list[Any]]
 TargetValues: TypeAlias = np.ndarray[Any, Any] | list[Any]
 ReportBlockConfig: TypeAlias = dict[str, Any]
+
+
+# Room below a distribution plot for its tick labels, axis title and the title shown as a caption.
+CAPTION_MARGIN_BOTTOM = 130
+# Room above it for the legend title.
+CAPTION_MARGIN_TOP = 40
+
+
+def _title_below(fig: go.Figure) -> None:
+    """Show the title of a distribution plot as a caption below it, without clipping it or the legend."""
+    fig.update_layout(
+        title={
+            **fig.layout.title.to_plotly_json(),
+            "x": 0.5,
+            "xanchor": "center",
+            "y": 0.0,
+            "yanchor": "bottom",
+            "pad": {"b": 15},
+        },
+        margin={**fig.layout.margin.to_plotly_json(), "t": CAPTION_MARGIN_TOP, "b": CAPTION_MARGIN_BOTTOM},
+    )
 
 
 def block(method: Callable[..., Any]) -> Callable[..., pn.Column]:
@@ -533,7 +555,8 @@ class ReportBlockMixin:
             df_all=df_train_test,
             col=feature,
             hue=dataset_split,
-            colors_dict=self._feature_distribution_colors(),
+            colors_dict=self._plot_style(),
+            hue_colors=self._dataset_colors(),
             width=width,
             height=height,
         )
@@ -886,7 +909,8 @@ class ReportBlockMixin:
             df_all=df_target,
             col=target_name,
             hue="_dataset",
-            colors_dict=TARGET_DISTRIBUTION_COLORS,
+            colors_dict=self._plot_style(),
+            hue_colors=self._dataset_colors(),
             width=width,
             height=height,
         )
@@ -975,21 +999,13 @@ class ReportBlockMixin:
             df_all=distribution_df,
             col=target_name,
             hue="data_train_test",
-            colors_dict=self._feature_distribution_colors(),
+            colors_dict=self._plot_style(),
+            hue_colors=self._dataset_colors(),
             width=width,
             height=height,
         )
         if fig is not None:
-            fig.update_layout(
-                title={
-                    **fig.layout.title.to_plotly_json(),
-                    "x": 0.5,
-                    "xanchor": "center",
-                    "y": 0.0,
-                    "yanchor": "bottom",
-                },
-                margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
-            )
+            _title_below(fig)
 
         dtype_label = str(series_dtype(y_test_series))
         content = [
@@ -1023,7 +1039,7 @@ class ReportBlockMixin:
             raise ValueError("confusion_matrix block requires y_test and predicted values from the explainer.")
         y_test = cast(TargetValues, self.y_test)
         y_pred = cast(TargetValues, self.y_pred)
-        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.colors_dict)
+        fig = plot_confusion_matrix(y_true=y_test, y_pred=y_pred, colors_dict=smart_explainer.plot._style_dict)
         if title is None:
             return "Confusion matrix", [fig]
         return title, [fig]
@@ -1162,19 +1178,11 @@ class ReportBlockMixin:
                 df_all=df,
                 col=col,
                 hue=col_splitter,
-                colors_dict=self._feature_distribution_colors(),
+                colors_dict=self._plot_style(),
+                hue_colors=self._dataset_colors(),
             )
             if fig is not None:
-                fig.update_layout(
-                    title={
-                        **fig.layout.title.to_plotly_json(),
-                        "x": 0.5,
-                        "xanchor": "center",
-                        "y": 0.0,
-                        "yanchor": "bottom",
-                    },
-                    margin={**fig.layout.margin.to_plotly_json(), "t": 10, "b": 100},
-                )
+                _title_below(fig)
             col_stats = stats_to_table(
                 test_stats=test_stats[col],
                 train_stats=train_stats[col] if train_stats is not None else None,
@@ -1272,6 +1280,10 @@ class ReportBlockMixin:
             return feature
         return self.explainer.features_dict.get(feature, feature)
 
-    def _feature_distribution_colors(self) -> dict[str, Any]:
-        smart_explainer = self._require_smart_explainer("feature_distribution")
-        return smart_explainer.colors_dict["report_feature_distribution"]
+    def _plot_style(self) -> dict[str, Any]:
+        """Resolved plot style of the explainer, with its palette and custom colors."""
+        return self._require_smart_explainer("distribution").plot._style_dict
+
+    def _dataset_colors(self) -> dict[str, str]:
+        """Colors of the train, test, pred and true series in the distribution plots."""
+        return self._plot_style()["report_feature_distribution"]
