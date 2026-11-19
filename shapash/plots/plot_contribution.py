@@ -148,21 +148,16 @@ def plot_interactions_scatter(
     x_series = pd.Series(x_values.values.flatten())
     y_series = pd.Series(y_values.values.flatten())
 
-    color_column = col_name
-    if color_column == x_name:
-        color_column = f"{col_name}__color"
-        while color_column in (x_name, y_name, "__x_hover__"):
-            color_column += "_"
 
     data_df = pd.DataFrame(
         {
             x_name: x_series.values,
             y_name: y_series.values,
-            color_column: col_values.values.flatten(),
+            "__color__": col_values.values.flatten(),
             "__x_hover__": x_values_hover.values.flatten(),
         }
     )
-    labels = {"__x_hover__": x_name, color_column: col_name}
+    labels = {"__x_hover__": x_name, "__color__": col_name}
     custom_data = [x_values_hover.values.flatten(), x_values.index.to_numpy()]
 
     if isinstance(col_values.values.flatten()[0], str):
@@ -170,7 +165,7 @@ def plot_interactions_scatter(
             data_df,
             x=x_name,
             y=y_name,
-            color=color_column,
+            color="__color__",
             color_discrete_sequence=style_dict["interactions_discrete_colors"],
             hover_data={x_name: False, "__x_hover__": True},
             labels=labels,
@@ -181,7 +176,7 @@ def plot_interactions_scatter(
             "data_frame": data_df,
             "x": x_name,
             "y": y_name,
-            "color": color_column,
+            "color": "__color__",
             "color_continuous_scale": col_scale,
             "hover_data": {x_name: False, "__x_hover__": True},
             "labels": labels,
@@ -196,8 +191,9 @@ def plot_interactions_scatter(
 
     for trace in fig.data:
         if trace.fill != "toself":
+            # Keep customdata as JSON lists; Plotly 6 binary-encodes NumPy arrays,
+            # which prevents Plotly.js from returning per-point data on click.
             trace_customdata = trace.customdata.tolist()
-            # Plotly may keep the array when assigned an equal list.
             trace.customdata = None
             trace.customdata = trace_customdata
 
