@@ -15,6 +15,12 @@ def load_smartpredictor(path: str) -> SmartPredictor:
     path : str
         File path of the pickle file.
 
+    Warnings
+    --------
+    Unpickling can execute arbitrary code: only load files you created or fully
+    trust. The type and manifest checks run after unpickling, so they offer no
+    protection.
+
     Example
     --------
     >>> predictor = load_smartpredictor('path_to_pkl/predictor.pkl')

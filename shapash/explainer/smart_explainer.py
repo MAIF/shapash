@@ -612,6 +612,11 @@ class SmartExplainer:
         ValueError
             If the provided file does not contain a valid `SmartExplainer` object.
 
+        Warnings
+        --------
+        Unpickling can execute arbitrary code: only load files you created or fully
+        trust. The type check above runs after unpickling, so it offers no protection.
+
         Example
         -------
         >>> xpl = SmartExplainer.load("path_to_file/xpl.pkl")
