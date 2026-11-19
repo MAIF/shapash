@@ -148,7 +148,6 @@ def plot_interactions_scatter(
     x_series = pd.Series(x_values.values.flatten())
     y_series = pd.Series(y_values.values.flatten())
 
-
     data_df = pd.DataFrame(
         {
             x_name: x_series.values,
