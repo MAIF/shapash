@@ -794,6 +794,7 @@ class SmartExplainer:
 
             def _kill() -> None:
                 wsgi_server.shutdown()
+                wsgi_server.server_close()
                 server_instance.killed = True
 
             cast(Any, server_instance).kill = _kill

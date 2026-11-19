@@ -1482,6 +1482,7 @@ class TestSmartExplainer(unittest.TestCase):
                 self.assertTrue(app.killed)
         self.assertEqual(mock_custom_thread.return_value.start.call_count, len(cases))
         self.assertEqual(mock_make_server.return_value.shutdown.call_count, len(cases))
+        self.assertEqual(mock_make_server.return_value.server_close.call_count, len(cases))
 
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
