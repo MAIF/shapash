@@ -499,7 +499,8 @@ class Explainer:
         n_samples_max : int, optional
             Maximum number of rows to use.
         selection : list, optional
-            Explicit row indices to keep before applying n_samples_max.
+            Explicit row indices to keep before applying n_samples_max. If provided,
+            the list must not be empty.
         label : int or str, optional
             Class label to select in classification settings.
             If None, interaction values are aggregated across classes/outputs.
@@ -509,13 +510,16 @@ class Explainer:
         numpy.ndarray
             Interaction tensor with shape (n_samples, n_features, n_features).
         """
+        if selection is not None and len(selection) == 0:
+            raise ValueError("Parameter selection must not be empty")
+
         x = copy.deepcopy(self.x_encoded)
         label_num = None
 
         if self._case == "classification" and label is not None:
             label_num = self.check_label_name(label)[0]
 
-        if selection:
+        if selection is not None:
             x = x.loc[selection]
 
         if self.x_interaction is not None:

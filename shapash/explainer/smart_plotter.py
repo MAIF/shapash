@@ -1610,8 +1610,8 @@ class SmartPlotter:
         Parameters
         ----------
         selection : list or numpy.ndarray, optional
-            Explicit row indices to keep. If None, sampling is performed over
-            the full compiled dataset.
+            Explicit row indices to keep. If provided, the selection must not
+            be empty. If None, sampling is performed over the full compiled dataset.
         max_points : int
             Maximum number of rows to keep for plotting.
         sampling_col : str or tuple(str, str), optional
@@ -1628,6 +1628,9 @@ class SmartPlotter:
         addnote : str or None
             Optional note describing the applied sampling strategy.
         """
+        if selection is not None and len(selection) == 0:
+            raise ValueError("Parameter selection must not be empty")
+
         selection_list = selection.tolist() if isinstance(selection, np.ndarray) else selection
 
         # Sampling
@@ -1638,6 +1641,8 @@ class SmartPlotter:
             sampling_col,
             col_value_count,
         )
+        if not list_ind:
+            raise ValueError("No rows selected for interaction plotting")
 
         return list_ind, addnote
 
@@ -1721,7 +1726,8 @@ class SmartPlotter:
         col2 : str or int
             Name, display label, or column index of the second feature.
         selection : list[Any] or np.ndarray or None, optional
-            Explicit row indices to plot.
+            Explicit row indices to plot. If provided, the selection must not
+            be empty.
         label : int or str, default=-1
             Class label used in classification settings. It follows the same
             behavior as contribution_plot: select one class to display interactions.
@@ -1755,6 +1761,8 @@ class SmartPlotter:
         """
         if not (isinstance(col1, str | int) and isinstance(col2, str | int)):
             raise ValueError("parameters col1 and col2 must be string or int.")
+        if selection is not None and len(selection) == 0:
+            raise ValueError("Parameter selection must not be empty")
 
         col_id1 = self._explainer.check_features_name([col1])[0]
         col_id2 = self._explainer.check_features_name([col2])[0]
@@ -1893,7 +1901,8 @@ class SmartPlotter:
         nb_top_interactions : int
             Number of top interactions to display.
         selection : list[Any] or np.ndarray or None, optional
-            Explicit row indices to plot.
+            Explicit row indices to plot. If provided, the selection must not
+            be empty.
         label : int or str, default=-1
             Class label used in classification settings. It follows the same
             behavior as contribution_plot: select one class to display interactions.
