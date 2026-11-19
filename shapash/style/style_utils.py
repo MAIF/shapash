@@ -1,11 +1,18 @@
 """functions for loading and manipulating colors."""
 
+import copy
+import difflib
 import json
 import os
+import re
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+import plotly.colors as plotly_colors
+from matplotlib.colors import to_rgba
+from plotly.exceptions import PlotlyError
 
 from shapash.utils.utils import convert_string_to_int_keys
 
@@ -67,6 +74,247 @@ def select_palette(colors_dic: dict[str, Any], palette_name: str) -> dict[str, A
     if palette_name not in colors_dic.keys():
         raise ValueError(f"Palette {palette_name} not found.")
     return colors_dic[palette_name]
+
+
+def merge_palette(palette: dict[str, Any], overrides: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Return a copy of a palette with color overrides merged on top.
+
+    A nested mapping such as ``featureimp_bar`` is merged key by key, so overriding one of its
+    colors keeps the others. Any other value, a list of colors included, is replaced whole.
+    Inside a nested mapping whose keys are strings, an override key is matched as a string,
+    so ``{1: "red"}`` and ``{"1": "red"}`` override the same color.
+
+    Parameters
+    ----------
+    palette : dict[str, Any]
+        Colors of one palette. It is not modified.
+    overrides : dict[str, Any] or None
+        Colors to set, with the same keys as the palette.
+
+    Returns
+    -------
+    dict[str, Any]
+        A new palette with the overrides applied.
+    """
+    merged = copy.deepcopy(palette)
+    for key, value in (overrides or {}).items():
+        base = merged.get(key)
+        if isinstance(base, dict) and isinstance(value, dict):
+            str_keys = all(isinstance(k, str) for k in base)
+            base.update({(str(k) if str_keys else k): copy.deepcopy(v) for k, v in value.items()})
+        else:
+            merged[key] = copy.deepcopy(value)
+    return merged
+
+
+# Palette keys holding a continuous color scale: they also accept a plotly scale name.
+CONTINUOUS_SCALE_KEYS = frozenset(
+    {
+        "contrib_colorscale",
+        "confusion_matrix_colorscale",
+        "interaction_scale",
+        "feature_contributions_cumulative",
+        "report_confusion_matrix",
+    }
+)
+# Palette keys holding a list of distinct colors: they also accept a plotly qualitative palette name.
+DISCRETE_COLOR_KEYS = frozenset({"interaction_discrete", "compare_plot"})
+# Scales also drawing signed values (correlations): a non-diverging scale hides the sign, so it draws a warning.
+SIGNED_SCALE_KEYS = frozenset({"contrib_colorscale"})
+
+# Palette keys no plot reads, with the key to set instead.
+UNUSED_COLOR_KEYS = {"report_confusion_matrix": "confusion_matrix_colorscale"}
+
+_RGB_PATTERN = re.compile(r"^\s*rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)\s*$")
+
+
+def _rgba_components(color: str) -> tuple[int, int, int, float | None]:
+    """Return the 0-255 components of a color and its opacity, ``None`` when opaque."""
+    if not isinstance(color, str):
+        raise ValueError(f"{color!r} is not a valid color: expected a string.")
+    match = _RGB_PATTERN.match(color)
+    if match:
+        r, g, b = (round(float(component)) for component in match.groups()[:3])
+        alpha = None if match.group(4) is None else float(match.group(4))
+        if max(r, g, b) > 255 or (alpha is not None and alpha > 1):
+            raise ValueError(f"{color!r} is not a valid color: components must be in 0-255 and alpha in 0-1.")
+        return r, g, b, alpha
+    try:
+        red, green, blue, opacity = to_rgba(color)
+    except ValueError as exc:
+        raise ValueError(
+            f"{color!r} is not a valid color: use rgb(...), rgba(...), a hex code or a color name."
+        ) from exc
+    r, g, b = (round(component * 255) for component in (red, green, blue))
+    return r, g, b, (None if opacity == 1 else opacity)
+
+
+def to_rgb_string(color: str) -> str:
+    """
+    Convert a color to the ``rgb(r, g, b)`` / ``rgba(r, g, b, a)`` format used by Shapash.
+
+    Parameters
+    ----------
+    color : str
+        An ``rgb(...)`` or ``rgba(...)`` string, a hex code (``#1f77b4``, ``#1f77b480``) or a
+        color name (``red``).
+
+    Returns
+    -------
+    str
+        ``rgb(r, g, b)`` for an opaque color, ``rgba(r, g, b, a)`` otherwise.
+
+    Raises
+    ------
+    ValueError
+        If ``color`` is not a valid color.
+    """
+    r, g, b, alpha = _rgba_components(color)
+    if alpha is None:
+        return f"rgb({r}, {g}, {b})"
+    return f"rgba({r}, {g}, {b}, {alpha:g})"
+
+
+def parse_rgb(color: str) -> tuple[int, int, int]:
+    """
+    Return the red, green and blue components of a color, ignoring its opacity.
+
+    Parameters
+    ----------
+    color : str
+        Any color accepted by :func:`to_rgb_string`.
+
+    Returns
+    -------
+    tuple[int, int, int]
+        Components in 0-255.
+
+    Raises
+    ------
+    ValueError
+        If ``color`` is not a valid color.
+    """
+    r, g, b, _ = _rgba_components(color)
+    return r, g, b
+
+
+def _named_lists(module: Any) -> dict[str, list[str]]:
+    """Map the lowercased names of a plotly color module to their lists of colors."""
+    return {name.lower(): value for name, value in vars(module).items() if isinstance(value, list)}
+
+
+def _sample_named_scale(key: str, name: str, n_colors: int) -> list[str]:
+    """Sample the plotly scale *name* to *n_colors* colors for the palette entry *key*."""
+    try:
+        colors = plotly_colors.sample_colorscale(name, n_colors)
+    except PlotlyError as exc:
+        raise ValueError(f"Invalid value for {key!r}: {name!r} is not a plotly color scale name.") from exc
+    if key in SIGNED_SCALE_KEYS and name.lower().removesuffix("_r") not in _named_lists(plotly_colors.diverging):
+        warnings.warn(
+            f"{name!r} is not a diverging scale: the correlation plots, which also use {key!r}, will no "
+            "longer show whether a correlation is positive or negative. A diverging scale such as 'RdBu' "
+            "keeps the sign visible.",
+            UserWarning,
+            stacklevel=6,
+        )
+    return [to_rgb_string(color) for color in colors]
+
+
+def _named_discrete_colors(key: str, name: str) -> list[str]:
+    """Return the colors of the plotly qualitative palette *name* for the palette entry *key*."""
+    colors = _named_lists(plotly_colors.qualitative).get(name.lower())
+    if colors is None:
+        raise ValueError(f"Invalid value for {key!r}: {name!r} is not a plotly qualitative palette name.")
+    return [to_rgb_string(color) for color in colors]
+
+
+def _normalize_entry(key: str, value: Any, default: Any) -> Any:
+    """Normalize the override *value* of the palette entry *key*, whose palette value is *default*."""
+    try:
+        if isinstance(value, str):
+            if key in CONTINUOUS_SCALE_KEYS and isinstance(default, list):
+                return _sample_named_scale(key, value, len(default))
+            if key in DISCRETE_COLOR_KEYS:
+                return _named_discrete_colors(key, value)
+            return to_rgb_string(value)
+        if isinstance(value, dict):
+            return {sub_key: to_rgb_string(color) for sub_key, color in value.items()}
+        if isinstance(value, list | tuple):
+            return [to_rgb_string(color) for color in value]
+    except ValueError as exc:
+        if str(exc).startswith("Invalid value for"):
+            raise
+        raise ValueError(f"Invalid value for {key!r}: {exc}") from exc
+    raise ValueError(f"Invalid value for {key!r}: expected a color, a list or a dict of colors, got {value!r}.")
+
+
+def normalize_colors(colors_dict: dict[str, Any] | None, palette: dict[str, Any]) -> dict[str, Any]:
+    """
+    Validate color overrides and convert them to the format the plots expect.
+
+    Every color becomes an ``rgb(...)`` / ``rgba(...)`` string. A plotly scale name given for a
+    continuous scale (``contrib_colorscale``, ...) is sampled to as many colors as the palette
+    holds, and a plotly qualitative palette name given for a list of distinct colors
+    (``interaction_discrete``, ``compare_plot``) is replaced by its colors.
+
+    Parameters
+    ----------
+    colors_dict : dict[str, Any] or None
+        Color overrides, with the same keys as the palette.
+    palette : dict[str, Any]
+        The palette the overrides apply to.
+
+    Returns
+    -------
+    dict[str, Any]
+        The normalized overrides.
+
+    Raises
+    ------
+    ValueError
+        If a color, scale name or qualitative palette name is not valid.
+
+    Warns
+    -----
+    UserWarning
+        For a key the palette does not have or no plot reads, and for a non-diverging scale
+        name given for ``contrib_colorscale``.
+    """
+    normalized = {}
+    for key, value in (colors_dict or {}).items():
+        if key not in palette:
+            close = difflib.get_close_matches(key, palette, n=1)
+            hint = f" Did you mean {close[0]!r}?" if close else ""
+            warnings.warn(f"Unknown color key {key!r}: no plot uses it.{hint}", UserWarning, stacklevel=4)
+        elif key in UNUSED_COLOR_KEYS:
+            warnings.warn(
+                f"Color key {key!r} has no effect: set {UNUSED_COLOR_KEYS[key]!r} instead.",
+                UserWarning,
+                stacklevel=4,
+            )
+        normalized[key] = _normalize_entry(key, value, palette.get(key))
+    return normalized
+
+
+def resolve_colors(palette_name: str, colors_dict: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Return the colors of a palette with validated overrides merged on top.
+
+    Parameters
+    ----------
+    palette_name : str
+        Name of a palette in ``colors.json``.
+    colors_dict : dict[str, Any], optional
+        Color overrides, see :func:`normalize_colors` for what each key accepts.
+
+    Returns
+    -------
+    dict[str, Any]
+        The resolved colors, every key of the palette included.
+    """
+    palette = select_palette(colors_loading(), palette_name)
+    return merge_palette(palette, normalize_colors(colors_dict, palette))
 
 
 def convert_str_color_to_plt_format(txt: str) -> list[float]:
@@ -172,6 +420,7 @@ def define_style(palette: dict[str, Any]) -> dict[str, Any]:
     style_dict["webapp_button"] = convert_string_to_int_keys(palette["webapp_button"])
     style_dict["webapp_bkg"] = palette["webapp_bkg"]
     style_dict["webapp_title"] = palette["webapp_title"]
+    style_dict["clustering"] = palette["clustering"]
 
     return style_dict
 
@@ -232,7 +481,7 @@ def resolve_nlp_theme(palette_name: str = "default", colors_dict: dict[str, str]
     -------
     NlpTheme
     """
-    palette = {**select_palette(colors_loading(), palette_name), **(colors_dict or {})}
+    palette = resolve_colors(palette_name, colors_dict)
     return NlpTheme(
         header_bkg=palette["webapp_bkg"],
         header_accent=palette["webapp_title"],

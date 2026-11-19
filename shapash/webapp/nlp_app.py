@@ -168,15 +168,18 @@ class NlpWebApp:
         both become ``"/shapash-nlp-explainer/"`` — since that is the only spelling Dash accepts
         and a prefix copied from an nginx ``location`` easily arrives without one.
     palette_name : str, optional
-        Name of a palette in ``shapash/style/colors.json`` (the same file the tabular
-        ``SmartExplainer`` webapp draws its theme from — see ``smart_app.py``). Selects the
+        Name of a palette in ``shapash/style/colors.json`` (``"default"`` or ``"blues"``; the
+        same file the tabular ``SmartExplainer`` webapp draws its theme from — see
+        ``smart_app.py``). Selects the
         header's band color (``webapp_bkg``) and accent color (``webapp_title``). Defaults to
         ``"default"``, the same palette ``SmartExplainer`` falls back to.
     colors_dict : dict[str, str], optional
         Per-key overrides merged on top of *palette_name*, same shape and key names as
         ``colors.json`` and as ``SmartExplainer``'s own ``colors_dict`` (see
-        ``smart_explainer.py``'s ``define_style``). Only ``webapp_bkg`` (header band) and
-        ``webapp_title`` (accent color) are read today; other keys are accepted but unused.
+        ``smart_explainer.py``'s ``define_style``), validated the same way. The NLP webapp
+        reads ``webapp_bkg`` (header band), ``webapp_title`` (accent color),
+        ``nlp_xpl_positive``/``nlp_xpl_negative`` (signed contributions) and
+        ``confusion_matrix_colorscale`` (error analysis); other keys are accepted but unused.
     info : dict[str, str], optional
         Extra ``label -> value`` facts shown in the header's "ⓘ" popover, layered on top of what
         ``explanation`` already carries (``model_id``, ``architecture`` — each omitted when the
