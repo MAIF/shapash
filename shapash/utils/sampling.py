@@ -12,7 +12,7 @@ def subset_sampling(
     max_points: int = 2000,
     col: str | tuple[str, str] | list[str] | None = None,
     col_value_count: int | tuple[int, int] = 0,
-) -> tuple[list[Any] | np.ndarray, str | None]:
+) -> tuple[list[Any], str | None]:
     """
     Samples a subset of indices for plotting, optionally creating a note for the plot subtitle.
 
@@ -33,7 +33,7 @@ def subset_sampling(
     Returns
     -------
     tuple
-        A tuple containing the selected indices and an optional note.
+        A tuple containing the selected indices as a list and an optional note.
     """
     random_seed = 79
     random.seed(random_seed)
@@ -57,7 +57,7 @@ def _determine_sampling_strategy(
     col: str | tuple[str, str] | list[str] | None,
     col_value_count: int | tuple[int, int],
     random_seed: int,
-) -> tuple[list[Any] | np.ndarray, str | None]:
+) -> tuple[list[Any], str | None]:
     """
     Determine the sampling strategy based on the input parameters.
 
@@ -80,7 +80,7 @@ def _determine_sampling_strategy(
     Returns
     -------
     tuple
-        Selected indices and an optional note describing the strategy.
+        Selected indices as a list and an optional note describing the strategy.
     """
     if selection is None:
         return _no_selection_sampling(df, max_points, col, col_value_count, random_seed)
@@ -96,7 +96,7 @@ def _no_selection_sampling(
     col: str | tuple[str, str] | list[str] | None,
     col_value_count: int | tuple[int, int],
     random_seed: int,
-) -> tuple[list[Any] | np.ndarray, str | None]:
+) -> tuple[list[Any], str | None]:
     """
     Handle sampling when no explicit selection is provided.
 
@@ -116,7 +116,7 @@ def _no_selection_sampling(
     Returns
     -------
     tuple
-        Selected indices and an optional note describing the strategy.
+        Selected indices as a list and an optional note describing the strategy.
     """
     if df.shape[0] <= max_points:
         return df.index.tolist(), None
@@ -134,7 +134,7 @@ def _list_selection_sampling(
     col: str | tuple[str, str] | list[str] | None,
     col_value_count: int | tuple[int, int],
     random_seed: int,
-) -> tuple[list[Any] | np.ndarray, str | None]:
+) -> tuple[list[Any], str | None]:
     """
     Handle sampling when explicit indices are provided.
 
@@ -156,7 +156,7 @@ def _list_selection_sampling(
     Returns
     -------
     tuple
-        Selected indices and an optional note describing the strategy.
+        Selected indices as a list and an optional note describing the strategy.
     """
     if len(selection) <= max_points:
         return selection, "Length of user-defined Subset: "
@@ -177,7 +177,7 @@ def _intelligent_sampling(
     col: str | tuple[str, str] | list[str] | None,
     col_value_count: int | tuple[int, int],
     random_seed: int,
-) -> list[Any] | np.ndarray:
+) -> list[Any]:
     """
     Perform intelligent sampling based on the distribution of values in the specified column.
 
@@ -196,7 +196,7 @@ def _intelligent_sampling(
 
     Returns
     -------
-    list or numpy.ndarray
+    list
         Selected row indices.
     """
     rng = np.random.default_rng(seed=random_seed)
@@ -229,7 +229,7 @@ def _intelligent_sampling(
     weights = cluster_counts.apply(lambda x: (x**0.5) / x).to_dict()
     selection_weights = cluster_labels.apply(lambda x: weights[x])
     selection_weights /= selection_weights.sum()
-    selected_indices = rng.choice(data.index.tolist(), max_points, p=selection_weights, replace=False)
+    selected_indices = rng.choice(data.index.tolist(), max_points, p=selection_weights, replace=False).tolist()
     return selected_indices
 
 
@@ -239,7 +239,7 @@ def _intelligent_sampling_pair(
     col: tuple[str, str] | list[str],
     random_seed: int,
     rng: np.random.Generator,
-) -> list[Any] | np.ndarray:
+) -> list[Any]:
     """
     Perform intelligent sampling on a crossed pair of variables.
 
@@ -261,7 +261,7 @@ def _intelligent_sampling_pair(
 
     Returns
     -------
-    list or numpy.ndarray
+    list
         Selected row indices.
     """
     col1, col2 = col
@@ -275,7 +275,7 @@ def _intelligent_sampling_pair(
     if both_numeric and not low_joint_cardinality:
         n_clusters = min(100, len(data) // 20)
         if n_clusters < 2:
-            return rng.choice(data.index.tolist(), max_points, replace=False)
+            return rng.choice(data.index.tolist(), max_points, replace=False).tolist()
 
         numeric_df = data[[col1, col2]].apply(pd.to_numeric, errors="coerce")
         numeric_df = numeric_df.fillna(numeric_df.median()).fillna(0)
@@ -289,7 +289,7 @@ def _intelligent_sampling_pair(
     weights = cluster_counts.apply(lambda x: (x**0.5) / x).to_dict()
     selection_weights = cluster_labels.apply(lambda x: weights[x])
     selection_weights /= selection_weights.sum()
-    selected_indices = rng.choice(data.index.tolist(), max_points, p=selection_weights, replace=False)
+    selected_indices = rng.choice(data.index.tolist(), max_points, p=selection_weights, replace=False).tolist()
     return selected_indices
 
 
@@ -338,7 +338,7 @@ def _is_numeric_like(series: pd.Series) -> bool:
     return coerced.notna().all()
 
 
-def _format_additional_note(df: pd.DataFrame, selected_indices: list[Any] | np.ndarray, additional_note: str) -> str:
+def _format_additional_note(df: pd.DataFrame, selected_indices: list[Any], additional_note: str) -> str:
     """
     Format the additional note with the length and percentage of the selected subset.
 
@@ -346,7 +346,7 @@ def _format_additional_note(df: pd.DataFrame, selected_indices: list[Any] | np.n
     ----------
     df : pd.DataFrame
         Original dataframe before sampling.
-    selected_indices : list or numpy.ndarray
+    selected_indices : list
         Selected row indices.
     additional_note : str
         Sampling note prefix.

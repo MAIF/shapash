@@ -2585,6 +2585,26 @@ class TestSmartPlotter(unittest.TestCase):
         assert output.data[0].showlegend is True
         assert len(output.data) == 2
 
+    def test_interaction_plots_reject_empty_selections(self):
+        calls = (
+            lambda: self.smart_explainer.plot.interactions_plot("X1", "X2", selection=[]),
+            lambda: self.smart_explainer.plot.top_interactions_plot(selection=[]),
+        )
+        for call in calls:
+            with self.subTest(call=call):
+                with self.assertRaisesRegex(ValueError, "selection must not be empty"):
+                    call()
+
+    def test_interaction_plots_reject_empty_sampled_indices(self):
+        calls = (
+            lambda: self.smart_explainer.plot.interactions_plot("X1", "X2", max_points=0),
+            lambda: self.smart_explainer.plot.top_interactions_plot(max_points=0),
+        )
+        for call in calls:
+            with self.subTest(call=call):
+                with self.assertRaisesRegex(ValueError, "No rows selected for interaction plotting"):
+                    call()
+
     def test_interactions_plot_2(self):
         """
         Unit test 1 for test interaction plot : scatter plot for categorical x numeric features
