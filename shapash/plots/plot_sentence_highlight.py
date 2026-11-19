@@ -13,16 +13,9 @@ import re
 import numpy as np
 from dash import html
 
-from shapash.style.style_utils import DEFAULT_NLP_THEME
+from shapash.style.style_utils import DEFAULT_NLP_THEME, parse_rgb
 
 _SPECIAL_RE = re.compile(r"^\[.*\]$|^##|^\s*$")
-
-
-def _parse_rgb(color: str) -> tuple[int, int, int]:
-    """Parse a ``rgb(r, g, b)``/``rgba(r, g, b, a)`` string (the ``colors.json`` format) to ints."""
-    nums = color.replace("rgba", "").replace("rgb", "").replace("(", "").replace(")", "").split(",")
-    r, g, b = (int(float(n)) for n in nums[:3])
-    return r, g, b
 
 
 def _shap_style(
@@ -74,8 +67,8 @@ def plot_sentence_highlight(
         symmetry with the other plot functions.
     color_positive, color_negative : str
         Span background for a non-negative / negative contribution, interpolated from white by
-        magnitude. Must be a ``rgb(r, g, b)``/``rgba(r, g, b, a)`` string (the ``colors.json``
-        format). Default to the ``"default"`` palette's ``nlp_xpl_positive``/``nlp_xpl_negative``
+        magnitude. Any ``rgb(...)``/``rgba(...)`` string, hex code or color name; the
+        opacity is ignored. Default to the ``"default"`` palette's ``nlp_xpl_positive``/``nlp_xpl_negative``
         — see :class:`~shapash.webapp.nlp_app.NlpWebApp`'s ``palette_name``/``colors_dict`` to
         theme every NLP chart at once instead of overriding this one call.
 
@@ -92,7 +85,7 @@ def plot_sentence_highlight(
     if max_abs == 0:
         max_abs = 1.0
 
-    pos_rgb, neg_rgb = _parse_rgb(color_positive), _parse_rgb(color_negative)
+    pos_rgb, neg_rgb = parse_rgb(color_positive), parse_rgb(color_negative)
 
     _span_base = {
         "padding": "3px 5px",

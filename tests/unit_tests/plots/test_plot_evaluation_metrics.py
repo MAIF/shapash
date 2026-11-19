@@ -1,17 +1,13 @@
 import numpy as np
 import pandas as pd
+import pytest
 from shapely.geometry import Polygon
 
 import shapash.plots.plot_evaluation_metrics as evaluation_metrics
-from shapash.style.style_utils import define_style, get_palette
+from shapash.style.style_utils import define_style, get_palette, resolve_colors
 
 
-def test_plot_clustering_by_explainability_draws_clusters_when_enabled(monkeypatch):
-    projections = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
-    polygon = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    values_to_project = pd.DataFrame(index=range(len(projections)))
-    color_value = [pd.DataFrame({"color": [0.0, 0.25, 0.75, 1.0]})]
-
+def _patch_cluster_geometry(monkeypatch, polygon):
     monkeypatch.setattr(evaluation_metrics, "move_points_towards_centroid", lambda points, *_args, **_kwargs: points)
     monkeypatch.setattr(evaluation_metrics, "compute_concave_hull", lambda *_args, **_kwargs: polygon)
     monkeypatch.setattr(evaluation_metrics, "smooth_polygon_contour", lambda shape: shape)
@@ -22,21 +18,41 @@ def test_plot_clustering_by_explainability_draws_clusters_when_enabled(monkeypat
     )
     monkeypatch.setattr(evaluation_metrics, "scale_points_within_cluster", lambda points, *_args: points)
 
-    fig = evaluation_metrics.plot_clustering_by_explainability(
-        values_to_project=values_to_project,
+
+def _plot_one_cluster(monkeypatch, style_dict, active_cluster=None):
+    projections = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    _patch_cluster_geometry(monkeypatch, Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]))
+    return evaluation_metrics.plot_clustering_by_explainability(
+        values_to_project=pd.DataFrame(index=range(len(projections))),
         hv_text={"clusters": ["cluster detail"], "points": [["point"] * len(projections)]},
-        color_value=color_value,
+        color_value=[pd.DataFrame({"color": [0.0, 0.25, 0.75, 1.0]})],
         projections=projections,
         labels=np.zeros(len(projections), dtype=int),
         centers=np.array([[0.5, 0.5]]),
-        style_dict=define_style(get_palette("default")),
+        style_dict=style_dict,
         show_clusters=True,
+        active_cluster=active_cluster,
     )
+
+
+def test_plot_clustering_by_explainability_draws_clusters_when_enabled(monkeypatch):
+    fig = _plot_one_cluster(monkeypatch, define_style(get_palette("default")))
 
     assert len(fig.data) == 2
     assert fig.data[0].fill == "toself"
     assert fig.data[0].name == "Cluster 0"
     assert fig.data[1].mode == "markers"
+
+
+@pytest.mark.parametrize(("active_cluster", "state"), [(0, "active"), (None, "inactive")])
+def test_plot_clustering_by_explainability_uses_palette_cluster_colors(monkeypatch, active_cluster, state):
+    """The selected cluster and the other ones take the palette's clustering colors, overrides included."""
+    style_dict = define_style(resolve_colors("default", {"clustering": {f"{state}_fill": "#00ff00"}}))
+
+    fig = _plot_one_cluster(monkeypatch, style_dict, active_cluster=active_cluster)
+
+    assert fig.data[0].fillcolor == "rgb(0, 255, 0)"
+    assert fig.data[0].line.color == get_palette("default")["clustering"][f"{state}_line"]
 
 
 def test_prediction_regression_plot_trims_outliers_above_500_rows():

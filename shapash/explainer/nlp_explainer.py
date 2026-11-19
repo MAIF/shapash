@@ -10,6 +10,7 @@ itself keeps no compiled batch.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import zipfile
 from dataclasses import replace
@@ -56,6 +57,23 @@ def _looks_like_pipeline(model: object) -> bool:
 
 def _cache_file(data_hash: str, cache_dir: Path) -> Path:
     return cache_dir / f"{data_hash}.xpl"
+
+
+_RELEASE_RE = re.compile(r"\d+\.\d+\.\d+")
+
+
+def _cache_release() -> str:
+    """The shapash release (``major.minor.patch``) that scopes explanation cache entries.
+
+    Every release, patch releases included, gets its own entries: a patch may fix how a backend
+    computes, and a stale entry looks exactly like a correct one. Anything after the patch number is
+    dropped, so a release candidate shares the final release's entries, and a development build
+    (``2.10.1.dev13+g<hash>.d<date>``) keeps one key across commits and days instead of missing on
+    each. A source tree that was never installed has no parsable version and falls back to the raw
+    string.
+    """
+    match = _RELEASE_RE.match(__version__)
+    return match.group() if match else __version__
 
 
 def _load_cached(cache_path: Path | None) -> NlpExplanation | None:
@@ -311,6 +329,7 @@ class NlpExplainer:
         X: list[str] | pd.Series,
         y: list | pd.Series | None = None,
         cache_dir: str | Path | None = None,
+        recompute: bool = False,
     ) -> NlpExplanation:
         """Compute token-level contributions and model predictions, and return them as an artifact.
 
@@ -348,6 +367,13 @@ class NlpExplainer:
             default. One directory can be shared across models and backends: the hash identifies
             them, so entries cannot collide. Needs a model with an identity — a ``TextModel`` or a
             pipeline; a bare scoring callable raises ``ValueError``.
+        recompute : bool, optional
+            Skip both the in-memory and the disk cache and run the backend again, then store the
+            fresh result in their place. The previous entry is only overwritten once the new one is
+            computed, so a failed recompute leaves it in place. Use it when a cached result may be
+            stale, for example after changing backend code on a development build, whose version
+            does not change between commits, or to draw again from a sampling backend such as LIME.
+            Default ``False``.
 
         Returns
         -------
@@ -370,11 +396,11 @@ class NlpExplainer:
         # ``_COMPUTED_FIELDS`` half is meaningful here — its own texts/index/y_true belong to
         # whoever computed it first. See ``relabelled`` at the return below.
         cached = getattr(self, "_computed_cache", None)
-        if cached is not None and cached[0] == new_hash:
+        if not recompute and cached is not None and cached[0] == new_hash:
             computed = cached[1]
         else:
             cache_path = _cache_file(new_hash, Path(cache_dir)) if cache_dir is not None else None
-            computed = _load_cached(cache_path)
+            computed = None if recompute else _load_cached(cache_path)
 
             if computed is None:
                 contributions = self.backend.run_explainer(text_list)
@@ -934,8 +960,9 @@ class NlpExplainer:
         weights), the backend's registered ``name``, its explainer settings, the explanation space,
         baseline token and masking it reports (constructor choices, not class constants — a
         probability-space and a logit-space ``nlp_shap`` share every other part of the key), and
-        ``label_names`` (which fixes the column order of ``y_prob``). The shapash version is in it too: a
-        release may change how backends compute or cut units, and must not read an older one's entries.
+        ``label_names`` (which fixes the column order of ``y_prob``). The shapash release
+        (``major.minor.patch``, see :func:`_cache_release`) is in it too: any release may change how
+        backends compute or cut units, and must not read an older one's entries.
 
         Keying on the texts alone — as this once did — means swapping the backend (SHAP -> LIG),
         the model, or the label order and pointing at the same ``cache_dir`` silently reloads the
@@ -958,7 +985,7 @@ class NlpExplainer:
             # selects the string path without touching any other part of the key.
             masking = getattr(backend, "masking", None)
             backend_id = f"{type(backend).name}:{args!r}:{compute_args!r}:{space}:{baseline!r}:{masking}"
-        return hash_corpus(text_list, f"{__version__}|{model_id}|{backend_id}|{self.label_names!r}")
+        return hash_corpus(text_list, f"{_cache_release()}|{model_id}|{backend_id}|{self.label_names!r}")
 
     def _require_text_model(self) -> TextModel:
         text_model = getattr(self, "_text_model", None)
