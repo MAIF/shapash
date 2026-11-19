@@ -12,17 +12,26 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 from sklearn.manifold import MDS
 
-from shapash.style.style_utils import colors_loading, define_style, select_palette
+from shapash.style.style_utils import define_style, resolve_colors
 from shapash.utils.dtypes import text_like_columns
 from shapash.utils.utils import adjust_title_height
 
 
 class Consistency:
-    """Consistency class."""
+    """
+    Compare the contributions computed by several explainability methods.
 
-    def __init__(self, palette_name: str = "default") -> None:
+    Parameters
+    ----------
+    palette_name : str, default="default"
+        Name of the color palette, as for ``SmartExplainer``.
+    colors_dict : dict[str, Any] or None, default=None
+        Colors overriding the palette's, in the formats ``SmartExplainer`` accepts.
+    """
+
+    def __init__(self, palette_name: str = "default", colors_dict: dict[str, Any] | None = None) -> None:
         self._palette_name = palette_name
-        self._style_dict = define_style(select_palette(colors_loading(), self._palette_name))
+        self._style_dict = define_style(resolve_colors(palette_name, colors_dict))
 
     def tuning_colorscale(self, values: pd.Series | pd.DataFrame) -> list[list[Any]]:
         """Adapts the color scale to the distribution of points.

@@ -26,8 +26,8 @@ import pandas as pd
 from dash import html
 from plotly import graph_objs as go
 
-from shapash.plots.plot_sentence_highlight import _parse_rgb, _shap_style
-from shapash.style.style_utils import DEFAULT_NLP_THEME
+from shapash.plots.plot_sentence_highlight import _shap_style
+from shapash.style.style_utils import DEFAULT_NLP_THEME, parse_rgb
 
 # Backend identity colors, assigned in this fixed order (never cycled) — the reference categorical
 # palette's first slots, validated for colour-vision-deficiency separation. Only the grouped bar
@@ -52,7 +52,7 @@ def _check(tokens: Sequence[str], values_by_backend: Mapping[str, np.ndarray]) -
 
 
 def _opaque(color: str) -> str:
-    r, g, b = _parse_rgb(color)
+    r, g, b = parse_rgb(color)
     return f"rgb({r},{g},{b})"
 
 
@@ -247,7 +247,7 @@ def plot_backend_highlight(
     subtitle : str, optional
         A line shown under the legend (e.g. agreement scores).
     color_positive, color_negative : str
-        ``rgb(...)``/``rgba(...)`` strings, as for
+        Colors, as for
         :func:`~shapash.plots.plot_sentence_highlight.plot_sentence_highlight`.
 
     Returns
@@ -255,7 +255,7 @@ def plot_backend_highlight(
     html.Div
     """
     values_by_backend = _check(tokens, values_by_backend)
-    pos_rgb, neg_rgb = _parse_rgb(color_positive), _parse_rgb(color_negative)
+    pos_rgb, neg_rgb = parse_rgb(color_positive), parse_rgb(color_negative)
     span_base = {"padding": "3px 5px", "borderRadius": "3px", "margin": "2px 1px", "display": "inline-block"}
     unattributed = {**span_base, "color": "#aaaaaa", "textDecoration": "line-through"}
 
