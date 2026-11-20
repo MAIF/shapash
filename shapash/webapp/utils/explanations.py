@@ -44,7 +44,12 @@ class Explanations:
                         """
         self.feature_selector: str = """
                                 **How does a feature affect the prediction?**
-                                The point's colour indicates the value of the prediction. \n
+                                The point's colour depends on the **Colorscale** option: the predicted value, true target or the prediction error.\n
+                                The target and error options are only available when **y_target** is provided in `compile()`.\n
+                                With **Markers shape** ON, the point's shape indicate its true class.
+                                This option is only available for classification with 6 classes or fewer, when y_target is provided in `compile()`.\n
+                                Use **Settings** to show or hide the Markers shape and Colorscale
+                                controls. Hiding them keeps your selected settings and their effects.\n
                                 The position on x-axis and y-axis respectively represents the
                                 modality and the contribution of the variable. \n
                                 If the point is located in the inferior plot area,

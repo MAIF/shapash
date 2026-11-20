@@ -859,7 +859,7 @@ class SmartPlotter:
         file_name: str | None = None,
         auto_open: bool = False,
         zoom: bool = False,
-        class_markers: bool = True,
+        class_markers: bool = False,
         color_value: Literal["predictions", "targets", "errors"] = "predictions",
     ) -> go.Figure:
         """
@@ -902,7 +902,7 @@ class SmartPlotter:
             Whether to automatically open the saved plot in a web browser.
         zoom : bool, default=False
             Indicates whether the plot should start in a zoomed-in state.
-        class_markers : bool, default=True
+        class_markers : bool, default=False
             Whether to use one marker symbol per y_target class (classification only,
             when y_target was given to compile() and the model has 6 classes or fewer).
         color_value : "predictions", "targets", "errors", default = "predictions"
@@ -1014,7 +1014,7 @@ class SmartPlotter:
                     keep_quantile=(0.05, 0.95),
                 )
         # Targets or errors - color scale
-        if color_value == "targets" and self._explainer.y_target is not None:
+        if color_value == "targets":
             color_values = self._explainer.y_target.loc[list_ind]
             if self._explainer._case == "classification":
                 color_values = (color_values == self._explainer._classes[label_num]).astype(int)

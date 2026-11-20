@@ -265,6 +265,10 @@ class SmartApp:
             {"label": el, "value": label_map.get(el, el)} for el in cluster_colorscale_columns
         ]
 
+        self.contrib_colorscale_columns_options = [
+            {"label": el, "value": label_map[el]} for el in auto_columns if el != "_index_"
+        ]
+
     def init_components(self) -> None:
         """
         Initialize components (graph, table, filter, settings, ...) and insert it inside
@@ -1508,13 +1512,26 @@ class SmartApp:
                                     [
                                         html.Div(
                                             [
-                                                # Main layout: graph left, controls right (as in the clusters card)
+                                                html.Div(
+                                                    dbc.Button(
+                                                        "Settings",
+                                                        id="toggle_contribution_options",
+                                                        n_clicks=0,
+                                                        size="sm",
+                                                        color="warning",
+                                                        active=False,
+                                                        title="Show or hide display options",
+                                                    ),
+                                                    className="d-flex justify-content-end",
+                                                    style={"padding": "4px 10px"},
+                                                ),
                                                 dbc.Row(
                                                     [
                                                         dbc.Col(
                                                             # --- GRAPH + bouton fullscreen Shapash ---
                                                             self.draw_component("graph", "feature_selector"),
-                                                            width=10,
+                                                            id="contribution_graph_column",
+                                                            width=12,
                                                         ),
                                                         # --- MARKERS SHAPE ON/OFF ---
                                                         dbc.Col(
@@ -1568,20 +1585,7 @@ class SmartApp:
                                                                             id="select_contrib_color",
                                                                             options=cast(
                                                                                 Any,
-                                                                                [
-                                                                                    {
-                                                                                        "label": "_predict_",
-                                                                                        "value": "predictions",
-                                                                                    },
-                                                                                    {
-                                                                                        "label": "_target_",
-                                                                                        "value": "targets",
-                                                                                    },
-                                                                                    {
-                                                                                        "label": "_error_",
-                                                                                        "value": "errors",
-                                                                                    },
-                                                                                ],
+                                                                                self.contrib_colorscale_columns_options,
                                                                             ),
                                                                             value="predictions",
                                                                             clearable=False,
@@ -1599,8 +1603,9 @@ class SmartApp:
                                                                     ]
                                                                 ),
                                                             ],
+                                                            id="contribution_options",
                                                             width=2,
-                                                            style=markers_shape_style,
+                                                            style={**markers_shape_style, "display": "none"},
                                                         ),
                                                     ],
                                                     className="g-0",
@@ -2940,6 +2945,24 @@ class SmartApp:
             """
             points_visible = bool(points_visible)
             return (not points_visible, points_visible)
+
+        @app.callback(
+            Output("contribution_options", "style"),
+            Output("contribution_graph_column", "width"),
+            Output("toggle_contribution_options", "active"),
+            Input("toggle_contribution_options", "n_clicks"),
+            State("contribution_options", "style"),
+        )
+        def toggle_contribution_options(
+            n_clicks: int | None, style: dict[str, str]
+        ) -> tuple[dict[str, str], int, bool]:
+            """Show or hide display controls without changing their values."""
+            is_open = bool((n_clicks or 0) % 2)
+            return (
+                {**style, "display": "block" if is_open else "none"},
+                10 if is_open else 12,
+                is_open,
+            )
 
         @app.callback(
             Output("markers_shape_store", "data"),
