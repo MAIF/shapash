@@ -45,6 +45,8 @@ class Explanations:
         self.feature_selector: str = """
                                 **How does a feature affect the prediction?**
                                 The point's colour indicates the value of the prediction. \n
+                                Use **Settings** to show or hide the Markers shape and Colorscale
+                                controls. Hiding them keeps your selected settings and their effects.\n
                                 The position on x-axis and y-axis respectively represents the
                                 modality and the contribution of the variable. \n
                                 If the point is located in the inferior plot area,
