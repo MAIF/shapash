@@ -859,35 +859,12 @@ class SmartExplainer:
             if is_unspecified:
                 logging.info(
                     "From another machine, try http://%s:%s/ "
-                    "(requires the hostname to resolve to a reachable server address). "
-                    "The URL above is for a browser on the machine running Python.",
+                    "(hostname must resolve and the port must be open in the firewall).",
                     get_host_name(),
                     port,
                 )
             elif is_loopback:
-                logging.info(
-                    "For access from another machine, stop the app with app.kill(), then restart with "
-                    "host='0.0.0.0' (IPv4) or host='::' (IPv6). "
-                    "After restarting, try http://%s:%s/ "
-                    "(requires the hostname to resolve to a reachable server address; "
-                    "use the new port printed at restart if port=0).",
-                    get_host_name(),
-                    port,
-                )
-            else:
-                logging.info(
-                    "From another machine, try http://%s:%s/ "
-                    "(requires this address to be reachable from your browser).",
-                    browser_host,
-                    port,
-                )
-            logging.info(
-                "For network access, allow port %s through the firewall and use a trusted network only. "
-                "For a remote notebook, container, or VM, configure port forwarding, publish the port, "
-                "or use your notebook platform's proxy URL as appropriate. "
-                "The external URL depends on that configuration and cannot be inferred by Shapash.",
-                port,
-            )
+                logging.info("Only reachable from this machine. For network access, restart with host='0.0.0.0'.")
             logging.info("Use the method .kill() to down your app.")
             return server_instance
 
