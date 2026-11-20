@@ -152,7 +152,6 @@ class TestWebappClickUpdatesLocalExplanation(unittest.TestCase):
         state = [
             {"id": "points", "property": "value", "value": self.points_setting},
             {"id": "violin", "property": "value", "value": self.violin_setting},
-            {"id": "global_feature_importance", "property": "figure", "value": {"data": []}},
         ]
         resp = self._post(
             "feature_selector.figure", outputs, inputs, state, ["global_feature_importance.clickData"]
@@ -208,10 +207,7 @@ class TestWebappClickUpdatesLocalExplanation(unittest.TestCase):
             {"id": "bool_groups", "property": "on", "value": False},
             {"id": "ember_detail_feature", "property": "n_clicks", "value": None},
         ]
-        state = [
-            {"id": "index_id", "property": "value", "value": index_value},
-            {"id": "dataset", "property": "data", "value": self.dataset_data},
-        ]
+        state = [{"id": "index_id", "property": "value", "value": index_value}]
         resp = self._post("detail_feature.figure", outputs, inputs, state, ["validation.n_clicks"])
         return resp["detail_feature"]["figure"]
 
