@@ -585,7 +585,9 @@ def plot_scatter(
             nan_x = 0.0
         feature_values_array = np.where(nan_mask_arr, nan_x, feature_values_array)
         default_symbols = "circle" if marker_symbols is None else marker_symbols
-        marker = {"symbol": np.where(nan_mask_arr, "x", default_symbols).tolist()}
+        # marker = {"symbol": np.where(nan_mask_arr, "x", default_symbols).tolist()}
+        nan_symbols = "x" if marker_symbols is None else marker_symbols + "-open"
+        marker = {"symbol": np.where(nan_mask_arr, nan_symbols, default_symbols).tolist()}
 
     fig.add_scatter(
         x=feature_values_array,

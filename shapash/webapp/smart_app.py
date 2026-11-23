@@ -2516,7 +2516,7 @@ class SmartApp:
                 y_ax="Contribution",
             )
             if "yaxis2" in fs_figure.layout:
-                fs_figure.update_layout(yaxis_title="None")
+                fs_figure.update_layout(yaxis_title=None)
             return fs_figure
 
         @app.callback(
