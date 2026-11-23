@@ -148,6 +148,8 @@ class TestWebappClickUpdatesLocalExplanation(unittest.TestCase):
             {"id": "dataset", "property": "data", "value": self.dataset_data},
             {"id": "select_label", "property": "value", "value": None},
             {"id": "ember_feature_selector", "property": "n_clicks", "value": None},
+            {"id": "markers_shape_store", "property": "data", "value": False},
+            {"id": "select_contrib_color", "property": "value", "value": "predictions"},
         ]
         state = [
             {"id": "points", "property": "value", "value": self.points_setting},

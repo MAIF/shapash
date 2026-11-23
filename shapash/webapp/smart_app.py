@@ -23,6 +23,7 @@ from dash.exceptions import PreventUpdate
 from flask import Flask
 
 from shapash.manipulation.mask import compute_mask
+from shapash.plots.plot_contribution import CLASS_MARKER_SYMBOLS
 from shapash.utils.utils import truncate_str
 from shapash.webapp.utils.callbacks import (
     adjust_figure_layout,
@@ -262,6 +263,10 @@ class SmartApp:
 
         self.cluster_colorscale_columns_options = [
             {"label": el, "value": label_map.get(el, el)} for el in cluster_colorscale_columns
+        ]
+
+        self.contrib_colorscale_columns_options = [
+            {"label": el, "value": label_map[el]} for el in auto_columns if el != "_index_"
         ]
 
     def init_components(self) -> None:
@@ -833,6 +838,26 @@ class SmartApp:
         """
         Describe the app skeleton (bootstrap grid) and initialize components containers
         """
+        # The markers shape ON/OFF is only useful when class markers can be drawn
+        markers_available = (
+            self.explainer._case == "classification"
+            and self.explainer.y_target is not None
+            and len(cast(list[Any], self.explainer._classes)) <= len(CLASS_MARKER_SYMBOLS)
+        )
+        markers_shape_style = {
+            "padding": "10px 0 0 8px",
+            "borderLeft": "1px solid rgba(0,0,0,.12)",
+            "backgroundColor": "white",
+        }
+        markers_block_style = {"marginBottom": "14px"}
+        if not markers_available:
+            markers_block_style["display"] = "none"
+        markers_button_style = {
+            "font-size": "calc(0.3rem + 0.5vw)",
+            "line-height": "1.0",
+            "padding": "0.1vw 0.4vw",
+        }
+
         self.skeleton["navbar"] = dbc.Container(
             [
                 dbc.Row(
@@ -1487,8 +1512,104 @@ class SmartApp:
                                     [
                                         html.Div(
                                             [
-                                                # --- GRAPH + bouton fullscreen Shapash ---
-                                                *self.draw_component("graph", "feature_selector"),
+                                                html.Div(
+                                                    dbc.Button(
+                                                        "Settings",
+                                                        id="toggle_contribution_options",
+                                                        n_clicks=0,
+                                                        size="sm",
+                                                        color="warning",
+                                                        active=False,
+                                                        title="Show or hide display options",
+                                                    ),
+                                                    className="d-flex justify-content-end",
+                                                    style={"padding": "4px 10px"},
+                                                ),
+                                                dbc.Row(
+                                                    [
+                                                        dbc.Col(
+                                                            # --- GRAPH + bouton fullscreen Shapash ---
+                                                            self.draw_component("graph", "feature_selector"),
+                                                            id="contribution_graph_column",
+                                                            width=12,
+                                                        ),
+                                                        # --- MARKERS SHAPE ON/OFF ---
+                                                        dbc.Col(
+                                                            [
+                                                                html.Div(
+                                                                    [
+                                                                        html.Div(
+                                                                            "Markers shape",
+                                                                            className="text-muted",
+                                                                            style={
+                                                                                "fontSize": "calc(0.3rem + 0.5vw)",
+                                                                                "marginBottom": "4px",
+                                                                            },
+                                                                        ),
+                                                                        dbc.ButtonGroup(
+                                                                            [
+                                                                                dbc.Button(
+                                                                                    "ON",
+                                                                                    id="toggle_markers_on",
+                                                                                    size="sm",
+                                                                                    outline=True,
+                                                                                    color="warning",
+                                                                                    style=markers_button_style,
+                                                                                ),
+                                                                                dbc.Button(
+                                                                                    "OFF",
+                                                                                    id="toggle_markers_off",
+                                                                                    size="sm",
+                                                                                    color="warning",
+                                                                                    style=markers_button_style,
+                                                                                ),
+                                                                            ],
+                                                                            size="sm",
+                                                                        ),
+                                                                        dcc.Store(id="markers_shape_store", data=False),
+                                                                    ],
+                                                                    style=markers_block_style,
+                                                                ),
+                                                                # --- COLORSCALE ---
+                                                                html.Div(
+                                                                    [
+                                                                        html.Div(
+                                                                            "Colorscale",
+                                                                            className="text-muted",
+                                                                            style={
+                                                                                "fontSize": "calc(0.3rem + 0.5vw)",
+                                                                                "marginBottom": "4px",
+                                                                            },
+                                                                        ),
+                                                                        dcc.Dropdown(
+                                                                            id="select_contrib_color",
+                                                                            options=cast(
+                                                                                Any,
+                                                                                self.contrib_colorscale_columns_options,
+                                                                            ),
+                                                                            value="predictions",
+                                                                            clearable=False,
+                                                                            searchable=False,
+                                                                            style={
+                                                                                "width": "100%",
+                                                                                "fontSize": "calc(0.3rem + 0.5vw)",
+                                                                                "height": "1.4vw",
+                                                                                "lineHeight": "1.4vw",
+                                                                                "minHeight": "1.4vw",
+                                                                                "paddingTop": "0",
+                                                                                "paddingBottom": "0",
+                                                                            },
+                                                                        ),
+                                                                    ]
+                                                                ),
+                                                            ],
+                                                            id="contribution_options",
+                                                            width=2,
+                                                            style={**markers_shape_style, "display": "none"},
+                                                        ),
+                                                    ],
+                                                    className="g-0",
+                                                ),
                                                 # --- BOUTON EXPLICATION EN OVERLAY ---
                                                 html.Div(
                                                     [
@@ -2330,6 +2451,8 @@ class SmartApp:
                 Input("dataset", "data"),
                 Input("select_label", "value"),
                 Input("ember_feature_selector", "n_clicks"),
+                Input("markers_shape_store", "data"),
+                Input("select_contrib_color", "value"),
             ],
             [
                 State("points", "value"),
@@ -2337,7 +2460,9 @@ class SmartApp:
                 State("global_feature_importance", "figure"),
             ],
         )
-        def update_feature_selector(feature, data, label, click_zoom, points, violin, gfi_figure):
+        def update_feature_selector(
+            feature, data, label, click_zoom, markers_shape, color_value, points, violin, gfi_figure
+        ):
             """
             Update feature plot according to label, data,
             selected feature on features importance graph,
@@ -2347,6 +2472,8 @@ class SmartApp:
             data: dataset
             label: selected label
             click_zoom: click on zoom button
+            markers_shape: state of the markers shape ON/OFF
+            color_value: values used to color points (predictions, targets, errors)
             points: points value in setting
             violin: violin value in setting
             gfi_figure: figure of Features Importance graph
@@ -2375,8 +2502,11 @@ class SmartApp:
                 violin_maxf=violin,
                 max_points=points,
                 zoom=zoom_active,
+                class_markers=bool(markers_shape),
+                color_value=color_value,
             )
-
+            if color_value != "predictions" and self.explainer.y_target is None:
+                return fs_figure
             fs_figure["layout"].clickmode = "event+select"
             # Adjust graph with adding x and y axis titles
             MyGraph.adjust_graph_static(
@@ -2385,6 +2515,8 @@ class SmartApp:
                 x_ax=truncate_str(selected_feature, 110),
                 y_ax="Contribution",
             )
+            if "yaxis2" in fs_figure.layout:
+                fs_figure.update_layout(yaxis_title=None)
             return fs_figure
 
         @app.callback(
@@ -2813,6 +2945,44 @@ class SmartApp:
             """
             points_visible = bool(points_visible)
             return (not points_visible, points_visible)
+
+        @app.callback(
+            Output("contribution_options", "style"),
+            Output("contribution_graph_column", "width"),
+            Output("toggle_contribution_options", "active"),
+            Input("toggle_contribution_options", "n_clicks"),
+            State("contribution_options", "style"),
+        )
+        def toggle_contribution_options(
+            n_clicks: int | None, style: dict[str, str]
+        ) -> tuple[dict[str, str], int, bool]:
+            """Show or hide display controls without changing their values."""
+            is_open = bool((n_clicks or 0) % 2)
+            return (
+                {**style, "display": "block" if is_open else "none"},
+                10 if is_open else 12,
+                is_open,
+            )
+
+        @app.callback(
+            Output("markers_shape_store", "data"),
+            Input("toggle_markers_on", "n_clicks"),
+            Input("toggle_markers_off", "n_clicks"),
+            prevent_initial_call=True,
+        )
+        def update_markers_shape_store(_on_clicks: int | None, _off_clicks: int | None):
+            """Store the state of the markers shape ON/OFF: True when ON was clicked last."""
+            return dash.callback_context.triggered[0]["prop_id"] == "toggle_markers_on.n_clicks"
+
+        @app.callback(
+            Output("toggle_markers_on", "outline"),
+            Output("toggle_markers_off", "outline"),
+            Input("markers_shape_store", "data"),
+        )
+        def sync_markers_toggle(markers_shape: bool):
+            """Fill the active ON/OFF button and outline the other one."""
+            markers_shape = bool(markers_shape)
+            return (not markers_shape, markers_shape)
 
         @app.callback(
             Output("clusters", "figure"),

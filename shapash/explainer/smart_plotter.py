@@ -19,6 +19,7 @@ from shapash.manipulation.summarize import project_feature_values_1d
 from shapash.plots import plot_compacity
 from shapash.plots.plot_bar_chart import plot_bar_chart
 from shapash.plots.plot_contribution import (
+    get_class_marker_symbols,
     plot_interactions_scatter,
     plot_interactions_violin,
     plot_scatter,
@@ -858,6 +859,8 @@ class SmartPlotter:
         file_name: str | None = None,
         auto_open: bool = False,
         zoom: bool = False,
+        class_markers: bool = False,
+        color_value: Literal["predictions", "targets", "errors"] = "predictions",
     ) -> go.Figure:
         """
         Display a contribution plot using Plotly for a selected feature.
@@ -899,7 +902,12 @@ class SmartPlotter:
             Whether to automatically open the saved plot in a web browser.
         zoom : bool, default=False
             Indicates whether the plot should start in a zoomed-in state.
-
+        class_markers : bool, default=False
+            Whether to use one marker symbol per y_target class (classification only,
+            when y_target was given to compile() and the model has 6 classes or fewer).
+        color_value : "predictions", "targets", "errors", default = "predictions"
+            Values used to color points, "targets", "errors" require `y_target` in `compile()`
+            , otherwise a warning message is displayed instead of the plot.
         Returns
         -------
         plotly.graph_objects.Figure
@@ -919,6 +927,27 @@ class SmartPlotter:
 
         if not isinstance(col, str | int):
             raise ValueError("parameter col must be string or int.")
+
+        if color_value not in ("predictions", "targets", "errors"):
+            raise ValueError("parameter color_value must be 'predictions', 'targets' or 'errors'.")
+        if color_value != "predictions" and self._explainer.y_target is None:
+            fig = go.Figure()
+            fig.update_layout(
+                margin={"l": 20, "r": 20},
+                xaxis={"visible": False},
+                yaxis={"visible": False},
+                annotations=[
+                    {
+                        "text": "Provide the y_target argument in the compile()<br />method to display this plot.",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {"size": 11},
+                    }
+                ],
+            )
+            return fig
+
         if hasattr(self._explainer, "inv_features_dict"):
             col = self._explainer.inv_features_dict.get(col, col)
         col_is_group = self._explainer.features_groups and col in self._explainer.features_groups.keys()
@@ -946,6 +975,8 @@ class SmartPlotter:
 
         col_value = None
         proba_values = None
+        color_values = None
+        color_title = None
         subtitle = None
         col_scale = None
         cmin = None
@@ -982,6 +1013,19 @@ class SmartPlotter:
                     self._explainer.y_pred.loc[list_ind],
                     keep_quantile=(0.05, 0.95),
                 )
+        # Targets or errors - color scale
+        if color_value == "targets":
+            color_values = self._explainer.y_target.loc[list_ind]
+            if self._explainer._case == "classification":
+                color_values = (color_values == self._explainer._classes[label_num]).astype(int)
+            color_title = "Targets"
+        elif color_value == "errors" and self._explainer.prediction_error is not None:
+            color_values = self._explainer.prediction_error.loc[list_ind]
+            color_title = "Errors"
+        if color_values is not None:
+            col_scale, cmin, cmax = tuning_colorscale(
+                self._style_dict["init_contrib_colorscale"], color_values, keep_quantile=(0.05, 0.95)
+            )
 
         # Subset
         if self._explainer.postprocessing_modifications:
@@ -1044,6 +1088,13 @@ class SmartPlotter:
         else:
             y_pred = None
 
+        # Classification only, when y_target was given to compile(): one marker symbol per true class.
+        # Raw class values are used (before label_dict) so that they match the model classes.
+        marker_symbols = None
+        y_target = self._explainer.y_target
+        if class_markers and self._explainer._case == "classification" and y_target is not None:
+            marker_symbols = get_class_marker_symbols(y_target.loc[list_ind].iloc[:, 0], self._explainer._classes)
+
         max_len_by_row = max([round(50 / self._explainer.features_desc[feature_values.columns.values[0]]), 8])
 
         # selecting the best plot : Scatter, Violin?
@@ -1069,6 +1120,9 @@ class SmartPlotter:
                 file_name,
                 auto_open,
                 zoom,
+                marker_symbols=marker_symbols,
+                color_values=color_values,
+                color_title=color_title,
             )
         else:
             fig = plot_violin(
@@ -1091,6 +1145,9 @@ class SmartPlotter:
                 file_name,
                 auto_open,
                 zoom,
+                marker_symbols=marker_symbols,
+                color_values=color_values,
+                color_title=color_title,
             )
 
         return fig
