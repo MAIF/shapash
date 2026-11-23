@@ -907,7 +907,7 @@ class SmartPlotter:
             when y_target was given to compile() and the model has 6 classes or fewer).
         color_value : "predictions", "targets", "errors", default = "predictions"
             Values used to color points, "targets", "errors" require `y_target` in `compile()`
-            , otherwise a messege ks displayed instead of the plot.
+            , otherwise a warning message is displayed instead of the plot.
         Returns
         -------
         plotly.graph_objects.Figure
