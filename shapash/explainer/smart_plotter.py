@@ -1018,10 +1018,10 @@ class SmartPlotter:
             color_values = self._explainer.y_target.loc[list_ind]
             if self._explainer._case == "classification":
                 color_values = (color_values == self._explainer._classes[label_num]).astype(int)
-            color_title = "Target"
+            color_title = "Targets"
         elif color_value == "errors" and self._explainer.prediction_error is not None:
             color_values = self._explainer.prediction_error.loc[list_ind]
-            color_title = "Error"
+            color_title = "Errors"
         if color_values is not None:
             col_scale, cmin, cmax = tuning_colorscale(
                 self._style_dict["init_contrib_colorscale"], color_values, keep_quantile=(0.05, 0.95)
