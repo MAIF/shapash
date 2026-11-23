@@ -20,6 +20,7 @@ import pandas as pd
 import plotly.io as pio
 
 from shapash.plots.plot_contribution import (
+    get_class_marker_symbols,
     plot_interactions_scatter,
     plot_interactions_violin,
     plot_scatter,
@@ -193,6 +194,88 @@ class TestPlotViolinGrid(unittest.TestCase):
         self.assertTrue(fig.layout.yaxis.visible)
         self.assertFalse(fig.layout.yaxis.showticklabels)
         self.assertIsNone(fig.layout.yaxis.title.text)
+
+
+class TestPlotContributionMarkersAndColors(unittest.TestCase):
+    """
+    Coverage for the contribution plot display options: one marker symbol per
+    true class (marker_symbols, classification with y_target) and custom point
+    colors (color_values, e.g. targets or errors) used instead of the prediction,
+    with their own colorbar title (color_title). With class markers, missing
+    values of a numeric feature keep the hollow version of their class symbol
+    instead of the default "x".
+    """
+
+    def setUp(self):
+        self.style_dict = define_style(get_palette("default"))
+        # 4 points, true classes 0, 1, 0, 1
+        self.marker_symbols = pd.Series(["circle", "square", "circle", "square"])
+        self.color_values = pd.DataFrame({"_error_": [0.1, 0.9, 0.2, 0.8]})
+        self.contributions = pd.DataFrame({"contribution": [0.1, -0.2, 0.3, -0.4]})
+
+    def test_get_class_marker_symbols(self):
+        """Each class gets the symbol at its position, unknown classes fall back to circle."""
+        symbols = get_class_marker_symbols(pd.Series([0, 1, 2, 9]), [0, 1, 2])
+        self.assertEqual(symbols.tolist(), ["circle", "square", "triangle-up", "circle"])
+        self.assertIsNone(get_class_marker_symbols(pd.Series([0]), None))
+        self.assertIsNone(get_class_marker_symbols(pd.Series([0]), list(range(7))))
+
+    def test_plot_scatter_uses_marker_symbols_and_color_values(self):
+        """Numeric feature contribution plot (plot_scatter) must use the class symbols and the custom colors."""
+        fig = plot_scatter(
+            feature_values=pd.DataFrame({"num_feat": [1.0, 2.0, 3.0, 4.0]}),
+            contributions=self.contributions,
+            feature_name="num_feat",
+            case="regression",
+            style_dict=self.style_dict,
+            marker_symbols=self.marker_symbols,
+            color_values=self.color_values,
+            color_title="Errors",
+        )
+        self.assertEqual(list(fig.data[-1].marker.symbol), ["circle", "square", "circle", "square"])
+        self.assertEqual(list(fig.data[-1].marker.color), [0.1, 0.9, 0.2, 0.8])
+        self.assertEqual(fig.layout.coloraxis.colorbar.title.text, "Errors")
+
+    def test_plot_scatter_missing_values_keep_hollow_class_symbol(self):
+        """Missing values keep the hollow class symbol with class markers, and the "x" symbol without."""
+        feature_values = pd.DataFrame({"num_feat": [1.0, 2.0, np.nan, np.nan]})
+
+        with_markers = plot_scatter(
+            feature_values=feature_values,
+            contributions=self.contributions,
+            feature_name="num_feat",
+            case="regression",
+            style_dict=self.style_dict,
+            marker_symbols=self.marker_symbols,
+        )
+        self.assertEqual(list(with_markers.data[-1].marker.symbol), ["circle", "square", "circle-open", "square-open"])
+
+        without_markers = plot_scatter(
+            feature_values=feature_values,
+            contributions=self.contributions,
+            feature_name="num_feat",
+            case="regression",
+            style_dict=self.style_dict,
+        )
+        self.assertEqual(list(without_markers.data[-1].marker.symbol), ["circle", "circle", "x", "x"])
+
+    def test_plot_violin_uses_marker_symbols_and_color_values(self):
+        """Categorical feature contribution plot (plot_violin) must use the class symbols and the custom colors."""
+        fig = plot_violin(
+            feature_values=pd.DataFrame({"cat_feat": [0, 0, 1, 1]}),
+            contributions=self.contributions,
+            feature_name="cat_feat",
+            case="regression",
+            style_dict=self.style_dict,
+            marker_symbols=self.marker_symbols,
+            color_values=self.color_values,
+            color_title="Errors",
+        )
+        points = [trace for trace in fig.data if trace.type == "scatter"]
+        # one group of points per modality: cat_feat = 0, then cat_feat = 1
+        self.assertEqual(list(points[0].marker.symbol), ["circle", "square"])
+        self.assertEqual(list(points[1].marker.symbol), ["circle", "square"])
+        self.assertEqual(fig.layout.coloraxis.colorbar.title.text, "Errors")
 
 
 if __name__ == "__main__":

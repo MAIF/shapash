@@ -1,6 +1,6 @@
 """
-Dash callback tests for click relay, filtering, and feature-importance navigation
-in shapash.webapp.smart_app.
+Dash callback tests for click relay, filtering, feature-importance navigation and
+contribution plot display settings in shapash.webapp.smart_app.
 
 Regression coverage for the second half of the incident where clicking a point
 on the Feature Contribution plot did not update the Local Explanation panel:
@@ -82,6 +82,28 @@ class TestSmartAppCallbacks(unittest.TestCase):
         state = [{"id": "validation", "property": "n_clicks", "value": current_n_clicks}]
         resp = self._post("validation.n_clicks", outputs, inputs, state, ["index_id.n_submit"])
         return resp["validation"]["n_clicks"]
+
+    def _contribution_plot_figure(self, feature, color_value, violin):
+        outputs = {"id": "feature_selector", "property": "figure"}
+        inputs = [
+            {
+                "id": "global_feature_importance",
+                "property": "clickData",
+                "value": {"points": [{"label": feature, "curveNumber": 1}]},
+            },
+            {"id": "dataset", "property": "data", "value": []},
+            {"id": "select_label", "property": "value", "value": None},
+            {"id": "ember_feature_selector", "property": "n_clicks", "value": None},
+            {"id": "markers_shape_store", "property": "data", "value": False},
+            {"id": "select_contrib_color", "property": "value", "value": color_value},
+        ]
+        state = [
+            {"id": "points", "property": "value", "value": 200},
+            {"id": "violin", "property": "value", "value": violin},
+            {"id": "global_feature_importance", "property": "figure", "value": {"data": []}},
+        ]
+        resp = self._post("feature_selector.figure", outputs, inputs, state, ["global_feature_importance.clickData"])
+        return resp["feature_selector"]["figure"]
 
     def test_update_index_id_n_submit_increments_on_every_click(self):
         _, n_submit_1 = self._click_feature_point(row_index=3, current_n_submit=None)
@@ -238,6 +260,58 @@ class TestSmartAppCallbacks(unittest.TestCase):
         next(item for item in inputs if item["id"] == "page_right")["value"] = 1
         next_page = self._post(output, outputs, inputs, state, ["page_right.n_clicks"])
         self.assertEqual(next_page["page_feature_importance"]["children"], 2)
+
+    def test_contribution_colorscale_options_follow_cluster_plot(self):
+        # no y_target in compile(): the Colorscale menu only offers predictions, as in the cluster plot
+        self.assertEqual(
+            self.smart_app.contrib_colorscale_columns_options, [{"label": "_predict_", "value": "predictions"}]
+        )
+
+    def test_contribution_plot_targets_without_y_target_shows_message(self):
+        # Colorscale = targets without y_target: the plot is replaced by a message
+        figure = self._contribution_plot_figure("feat", "targets", violin=10)
+        self.assertIn("Provide the y_target", figure["layout"]["annotations"][0]["text"])
+
+    def test_contribution_plot_violin_hides_helper_axis_title(self):
+        # violin=30 > 20 distinct values of feat, so feat is drawn as a violin: the right axis must have no title
+        figure = self._contribution_plot_figure("feat", "predictions", violin=30)
+        self.assertIn("yaxis2", figure["layout"])
+        self.assertIsNone(figure["layout"]["yaxis"].get("title", {}).get("text"))
+
+    def test_toggle_contribution_options_opens_settings_panel(self):
+        # first click on Settings: the options panel is shown and the graph shrinks to 10 columns
+        outputs = [
+            {"id": "contribution_options", "property": "style"},
+            {"id": "contribution_graph_column", "property": "width"},
+            {"id": "toggle_contribution_options", "property": "active"},
+        ]
+        inputs = [{"id": "toggle_contribution_options", "property": "n_clicks", "value": 1}]
+        state = [{"id": "contribution_options", "property": "style", "value": {"display": "none"}}]
+        output = "..contribution_options.style...contribution_graph_column.width...toggle_contribution_options.active.."
+        result = self._post(output, outputs, inputs, state, ["toggle_contribution_options.n_clicks"])
+        self.assertEqual(result["contribution_options"]["style"]["display"], "block")
+        self.assertEqual(result["contribution_graph_column"]["width"], 10)
+        self.assertIs(result["toggle_contribution_options"]["active"], True)
+
+    def test_markers_shape_on_off_updates_store_and_buttons(self):
+        # click on ON: the state is stored, then the ON button is filled and OFF is outlined
+        outputs = {"id": "markers_shape_store", "property": "data"}
+        inputs = [
+            {"id": "toggle_markers_on", "property": "n_clicks", "value": 1},
+            {"id": "toggle_markers_off", "property": "n_clicks", "value": None},
+        ]
+        stored = self._post("markers_shape_store.data", outputs, inputs, [], ["toggle_markers_on.n_clicks"])
+        self.assertIs(stored["markers_shape_store"]["data"], True)
+
+        outputs = [
+            {"id": "toggle_markers_on", "property": "outline"},
+            {"id": "toggle_markers_off", "property": "outline"},
+        ]
+        inputs = [{"id": "markers_shape_store", "property": "data", "value": True}]
+        output = "..toggle_markers_on.outline...toggle_markers_off.outline.."
+        buttons = self._post(output, outputs, inputs, [], ["markers_shape_store.data"])
+        self.assertIs(buttons["toggle_markers_on"]["outline"], False)
+        self.assertIs(buttons["toggle_markers_off"]["outline"], True)
 
 
 if __name__ == "__main__":

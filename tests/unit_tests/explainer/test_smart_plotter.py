@@ -1859,6 +1859,67 @@ class TestSmartPlotter(unittest.TestCase):
         ticktext = list(output.layout.xaxis.ticktext) if output.layout.xaxis.ticktext else []
         assert "missing" in ticktext
 
+    def test_contribution_plot_16(self):
+        """
+        Classification with invalid color_value
+        """
+        xpl = self.smart_explainer.explainer
+        with self.assertRaises(ValueError):
+            xpl.plot.contribution_plot("X2", violin_maxf=0, color_value="unknown")
+
+    def test_contribution_plot_17(self):
+        """
+        Classification color plot with targets without y_target
+        """
+        xpl = self.smart_explainer.explainer
+        xpl.y_target = None
+        output = xpl.plot.contribution_plot("X2", violin_maxf=0, color_value="targets")
+        assert len(output.data) == 0
+        assert "Provide the y_target" in output.layout.annotations[0].text
+
+    def test_contribution_plot_18(self):
+        """
+        Classification color plot with targets
+        """
+        xpl = self.smart_explainer.explainer
+        # person_A (X2 = 34) is class 0, person_B (X2 = 27) is class 1
+        xpl.y_target = pd.DataFrame([0, 1], columns=["target"], index=["person_A", "person_B"])
+        output = xpl.plot.contribution_plot("X2", violin_maxf=0, color_value="targets")
+
+        # points sorted by X2: person_B then person_A; color = 1 when the true class is the explained class 1
+        assert list(output.data[-1].marker.color) == [1, 0]
+        assert output.layout.coloraxis.colorbar.title.text == "Targets"
+
+    def test_contribution_plot_19(self):
+        """
+        Classification color plot with errors
+        """
+        xpl = self.smart_explainer.explainer
+        xpl.y_target = pd.DataFrame([0, 1], columns=["target"], index=["person_A", "person_B"])
+        # error of person_A = 0.2, error of person_B = 0.7
+        xpl.prediction_error = pd.DataFrame([0.2, 0.7], columns=["_error_"], index=["person_A", "person_B"])
+        output = xpl.plot.contribution_plot("X2", violin_maxf=0, color_value="errors")
+
+        # points sorted by X2: person_B then person_A
+        assert list(output.data[-1].marker.color) == [0.7, 0.2]
+        assert output.layout.coloraxis.colorbar.title.text == "Errors"
+
+    def test_contribution_plot_20(self):
+        """
+        Classification with class markers
+        """
+        xpl = self.smart_explainer.explainer
+        # person_A (X2 = 34) is class 0, person_B (X2 = 27) is class 1
+        xpl.y_target = pd.DataFrame([0, 1], columns=["target"], index=["person_A", "person_B"])
+
+        # default: no class markers
+        output = xpl.plot.contribution_plot("X2", violin_maxf=0)
+        assert output.data[-1].marker.symbol is None
+
+        # class 0 = circle, class 1 = square; points sorted by X2: person_B then person_A
+        output = xpl.plot.contribution_plot("X2", violin_maxf=0, class_markers=True)
+        assert list(output.data[-1].marker.symbol) == ["square", "circle"]
+
     def test_plot_features_import_1(self):
         """
         Unit test plot features import 1
