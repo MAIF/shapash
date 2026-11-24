@@ -152,30 +152,34 @@ def plot_interactions_scatter(
         {
             x_name: x_series.values,
             y_name: y_series.values,
-            col_name: col_values.values.flatten(),
+            "__color__": col_values.values.flatten(),
             "__x_hover__": x_values_hover.values.flatten(),
         }
     )
+    labels = {"__x_hover__": x_name, "__color__": col_name}
+    custom_data = [x_values_hover.values.flatten(), x_values.index.to_numpy()]
 
     if isinstance(col_values.values.flatten()[0], str):
         fig = px.scatter(
             data_df,
             x=x_name,
             y=y_name,
-            color=col_name,
+            color="__color__",
             color_discrete_sequence=style_dict["interactions_discrete_colors"],
             hover_data={x_name: False, "__x_hover__": True},
-            labels={"__x_hover__": x_name},
+            labels=labels,
+            custom_data=custom_data,
         )
     else:
         scatter_args = {
             "data_frame": data_df,
             "x": x_name,
             "y": y_name,
-            "color": col_name,
+            "color": "__color__",
             "color_continuous_scale": col_scale,
             "hover_data": {x_name: False, "__x_hover__": True},
-            "labels": {"__x_hover__": x_name},
+            "labels": labels,
+            "custom_data": custom_data,
         }
         if cmin is not None and cmax is not None:
             scatter_args["range_color"] = [cmin, cmax]
@@ -184,10 +188,13 @@ def plot_interactions_scatter(
     if x_values_hover.equals(x_values):
         _add_density_trace(fig, x_series, y_series, style_dict, include_na_for_categories=True)
 
-    interaction_customdata = np.stack((x_values_hover.values.flatten(), x_values.index.values), axis=-1).tolist()
     for trace in fig.data:
         if trace.fill != "toself":
-            trace.customdata = interaction_customdata
+            # Keep customdata as JSON lists; Plotly 6 binary-encodes NumPy arrays,
+            # which prevents Plotly.js from returning per-point data on click.
+            trace_customdata = trace.customdata.tolist()
+            trace.customdata = None
+            trace.customdata = trace_customdata
 
     return _build_secondary_y_scatter_figure(fig, y_series)
 
