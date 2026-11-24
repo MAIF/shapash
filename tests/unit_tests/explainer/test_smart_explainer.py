@@ -1447,6 +1447,12 @@ class TestSmartExplainer(unittest.TestCase):
         shap_interaction_values = xpl.explainer.get_interaction_values()
         assert shap_interaction_values.shape[0] == df.shape[0]
 
+    def test_get_interaction_values_rejects_empty_selection(self):
+        xpl = SmartExplainer(self.model)
+
+        with self.assertRaisesRegex(ValueError, "Parameter selection must not be empty"):
+            xpl.explainer.get_interaction_values(selection=[])
+
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
     @patch("shapash.explainer.smart_explainer.make_server")
