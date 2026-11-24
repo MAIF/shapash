@@ -1456,8 +1456,7 @@ class TestSmartExplainer(unittest.TestCase):
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
     @patch("shapash.explainer.smart_explainer.make_server")
-    @patch("shapash.explainer.smart_explainer.get_host_name")
-    def test_run_app_1(self, mock_get_host_name, mock_make_server, mock_custom_thread, mock_smartapp):
+    def test_run_app_1(self, mock_make_server, mock_custom_thread, mock_smartapp):
         """
         Test that when y_pred is not given, y_pred is automatically computed.
         """
@@ -1474,8 +1473,7 @@ class TestSmartExplainer(unittest.TestCase):
     @patch("shapash.explainer.smart_explainer.SmartApp")
     @patch("shapash.explainer.smart_explainer.CustomThread")
     @patch("shapash.explainer.smart_explainer.make_server")
-    @patch("shapash.explainer.smart_explainer.get_host_name")
-    def test_run_app_2(self, mock_get_host_name, mock_make_server, mock_custom_thread, mock_smartapp):
+    def test_run_app_2(self, mock_make_server, mock_custom_thread, mock_smartapp):
         """
         Test that when y_target is given
         """
@@ -1487,6 +1485,84 @@ class TestSmartExplainer(unittest.TestCase):
         xpl.compile(contributions=contributions, x=X, y_target=y_true)
         xpl.run_app()
         assert xpl.explainer.y_target is not None
+
+    @patch("shapash.explainer.smart_explainer.SmartApp")
+    @patch("shapash.explainer.smart_explainer.CustomThread")
+    @patch("shapash.explainer.smart_explainer.make_server")
+    @patch("shapash.explainer.smart_explainer.get_host_name", return_value="myhost")
+    def test_run_app_browser_urls(self, mock_get_host_name, mock_make_server, mock_custom_thread, mock_smartapp):
+        xpl = SmartExplainer(self.model)
+        xpl.explainer._case = "regression"
+        mock_make_server.return_value.server_port = 8050
+        cases = [
+            (None, "127.0.0.1", "127.0.0.1"),
+            ("127.0.0.1", "127.0.0.1", "127.0.0.1"),
+            ("127.0.0.2", "127.0.0.2", "127.0.0.2"),
+            ("localhost", "localhost", "localhost"),
+            ("0.0.0.0", "0.0.0.0", "127.0.0.1"),
+            ("192.0.2.10", "192.0.2.10", "192.0.2.10"),
+            ("myhost", "myhost", "myhost"),
+            ("::1", "::1", "[::1]"),
+            ("0:0:0:0:0:0:0:1", "0:0:0:0:0:0:0:1", "[0:0:0:0:0:0:0:1]"),
+            ("::", "::", "[::1]"),
+            ("0:0:0:0:0:0:0:0", "0:0:0:0:0:0:0:0", "[::1]"),
+            ("2001:db8::10", "2001:db8::10", "[2001:db8::10]"),
+        ]
+        for host, bind_host, browser_host in cases:
+            with self.subTest(host=host), self.assertLogs(level="INFO") as logs:
+                mock_get_host_name.reset_mock()
+                app = xpl.run_app(host=host)
+                mock_make_server.assert_called_with(bind_host, 8050, mock_smartapp.return_value.server)
+                output = "\n".join(logs.output)
+                self.assertIn(f"http://{browser_host}:8050/", output)
+                self.assertNotIn("http://0.0.0.0:", output)
+                self.assertNotIn("http://::", output)
+                if host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0"):
+                    mock_get_host_name.assert_called_once_with()
+                    self.assertIn("From another machine, try http://myhost:8050/", output)
+                    self.assertIn("firewall", output)
+                    self.assertNotIn("proxy URL", output)
+                elif host in (None, "127.0.0.1", "127.0.0.2", "localhost", "::1", "0:0:0:0:0:0:0:1"):
+                    mock_get_host_name.assert_not_called()
+                    self.assertIn("Only reachable from this machine", output)
+                    self.assertIn("restart with host='0.0.0.0'", output)
+                    self.assertNotIn("firewall", output)
+                else:
+                    mock_get_host_name.assert_not_called()
+                    self.assertNotIn("restart", output)
+                    self.assertNotIn("firewall", output)
+                self.assertIn("Use the method .kill()", output)
+                self.assertIs(app, mock_custom_thread.return_value)
+                app.kill()
+                self.assertTrue(app.killed)
+        self.assertEqual(mock_custom_thread.return_value.start.call_count, len(cases))
+        self.assertEqual(mock_make_server.return_value.shutdown.call_count, len(cases))
+        self.assertEqual(mock_make_server.return_value.server_close.call_count, len(cases))
+
+    @patch("shapash.explainer.smart_explainer.SmartApp")
+    @patch("shapash.explainer.smart_explainer.CustomThread")
+    @patch("shapash.explainer.smart_explainer.make_server")
+    @patch("shapash.explainer.smart_explainer.get_host_name", return_value="myhost")
+    def test_run_app_browser_url_uses_bound_port(
+        self, mock_get_host_name, mock_make_server, mock_custom_thread, mock_smartapp
+    ):
+        xpl = SmartExplainer(self.model)
+        xpl.explainer._case = "regression"
+        for requested_port, bound_port in [(8060, 8060), (0, 49152)]:
+            mock_make_server.return_value.server_port = bound_port
+            for host in (None, "0.0.0.0", "::"):
+                with self.subTest(port=requested_port, host=host), self.assertLogs(level="INFO") as logs:
+                    xpl.run_app(port=requested_port, host=host)
+                    mock_make_server.assert_called_with(
+                        host or "127.0.0.1", requested_port, mock_smartapp.return_value.server
+                    )
+                    browser_host = "[::1]" if host == "::" else "127.0.0.1"
+                    output = "\n".join(logs.output)
+                    self.assertIn(f"http://{browser_host}:{bound_port}/", output)
+                    if host in ("0.0.0.0", "::"):
+                        self.assertIn(f"http://myhost:{bound_port}/", output)
+                    else:
+                        self.assertNotIn("myhost", output)
 
     @patch("shapash.explainer.smart_explainer.generate_smart_report")
     def test_generate_report(self, mock_generate_report):
