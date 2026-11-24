@@ -72,6 +72,10 @@ def load_pickle(path: str) -> Any:
     Returns
     -------
     Any object stored in the pickle file.
+
+    Warnings
+    --------
+    Unpickling can execute arbitrary code: only load files you created or fully trust.
     """
     if not isinstance(path, str):
         raise ValueError(
