@@ -118,3 +118,6 @@ catboost_info/
 
 # Data
 shapash/data/telco_customer_churn.csv
+
+# Cache written by scripts/nlp/serve_nlp.py
+scripts/nlp/nlp_cache/

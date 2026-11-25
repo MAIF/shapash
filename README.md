@@ -165,7 +165,7 @@ xpl.run_app(explanations)  # interactive webapp
 
 Install it with `pip install "shapash[nlp]"`. Learn more in the [overview notebook](https://github.com/MAIF/shapash/blob/develop/tutorial/nlp/overview.ipynb),
 the [technical documentation](https://github.com/MAIF/shapash/blob/develop/docs/wiki/NLP-Explainability.md)
-and the [demo app](https://github.com/MAIF/shapash/blob/develop/demo/README.md).
+and the [serving script](https://github.com/MAIF/shapash/blob/develop/scripts/nlp/README.md).
 
 ## 🛠 Installation
 

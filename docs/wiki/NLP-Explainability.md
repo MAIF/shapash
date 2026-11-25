@@ -118,8 +118,8 @@ LIG backend need gradient/embedding access (`SupportsGradients`, `SupportsEmbedd
 ## Quickstart
 
 The same flow, worked through end to end, lives in `tutorial/nlp/overview.ipynb` (notebook
-walkthrough) and `demo/serve_nlp.py` (a runnable script serving the webapp — see
-`demo/nlp_cache/` for a pre-computed example run).
+walkthrough) and `scripts/nlp/serve_nlp.py` (a runnable script serving the webapp, see
+`scripts/nlp/README.md`).
 
 ```python
 from shapash.model import HFClassifierModel
@@ -132,7 +132,7 @@ model = HFClassifierModel.from_pretrained(
 
 xpl = NlpExplainer(model)  # backend defaults to NlpShapBackend
 xpl = xpl.fit(X_reference=ref_texts, y=ref_labels)  # optional — enables similar-example retrieval
-explanation = xpl.explain(texts, y=labels, cache_dir="demo/nlp_cache")
+explanation = xpl.explain(texts, y=labels, cache_dir="nlp_cache")
 
 explanation.plot.word_importance()  # corpus-level view
 explanation.save("emotion_run.xpl")  # zip of meta.json + parquet, no pickle
@@ -188,7 +188,8 @@ similar-example retriever if `X_reference` is given and the model supports embed
 **`explain(X, y=None, cache_dir=None) -> NlpExplanation`** — the memoization core. The cache key is
 `hash(texts, model_id, backend_name+config)` — same texts *and* same model identity *and* same backend
 class+config hits the cache; anything else busts it. `cache_dir` persists results to
-`<cache_dir>/<hash>.xpl`. Every call returns a fresh `NlpExplanation` (shares read-only arrays with the
+`<cache_dir>/<hash>.xpl`. `y` is not part of the key, so cache entries carry no ground truth: `explain`
+attaches this call's `y` to the returned artifact. Every call returns a fresh `NlpExplanation` (shares read-only arrays with the
 cache, never mutated in place).
 
 **`compute_embeddings(explanation, cache_dir=None, recompute=False)`** — embeds the batch with the
@@ -369,8 +370,7 @@ satisfied — data-derived capabilities survive a reloaded snapshot, `engine:*` 
 ## Where to go next
 
 - Notebook walkthrough: `tutorial/nlp/overview.ipynb`
-- Demo server: `demo/serve_nlp.py` (see `demo/nlp_cache/` for a pre-computed example run on
-  model `bhadresh-savani/distilbert-base-uncased-emotion` over dataset `dair-ai/emotion`)
+- Serving script: `scripts/nlp/serve_nlp.py` (usage in `scripts/nlp/README.md`)
 
 ## Known limitations
 
