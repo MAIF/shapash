@@ -37,7 +37,7 @@ class TestNlpCaptumLigBackend(unittest.TestCase):
 
     def test_requires_captum_capability(self):
         with self.assertRaises(TypeError):
-            NlpCaptumLigBackend(PredictOnlyModel(), label_names=["neg", "pos"])
+            NlpCaptumLigBackend().fit(PredictOnlyModel(), ["neg", "pos"])
 
     def test_backend_contract_attributes(self):
         self.assertEqual(NlpCaptumLigBackend.reference_kind, "point")
@@ -145,13 +145,11 @@ class TestValidOffsets(unittest.TestCase):
 
 
 class TestProgressIter(unittest.TestCase):
-    """``_progress_iter`` is captum-free — exercise it via ``object.__new__`` to skip ``__init__``."""
+    """``_progress_iter`` is captum-free, and so is the constructor: captum is only imported by ``fit``."""
 
     @staticmethod
     def _backend(show_progress):
-        backend = object.__new__(NlpCaptumLigBackend)  # bypass captum import in __init__
-        backend.show_progress = show_progress
-        return backend
+        return NlpCaptumLigBackend(show_progress=show_progress)
 
     def test_returns_items_unchanged_when_disabled(self):
         items = ["a", "b", "c"]

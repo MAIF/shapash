@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 
+from shapash.backend.nlp_backend import NlpBackend
 from shapash.compute.embeddings import Embedding, projection_coords
 from shapash.explainer.nlp_explainer import NlpExplainer
 from shapash.explainer.nlp_explanation import NlpExplanation
@@ -215,6 +216,18 @@ class _CountingReducer:
         return np.asarray(x)[:, :2] * self.scale
 
 
+class _UnusedBackend(NlpBackend):
+    """A backend these tests never run: embeddings and retrieval do not go through attribution."""
+
+    name = "unused"
+    reference_kind = "none"
+    is_additive = True
+    output_space = "probability"
+
+    def _run_explainer(self, x):
+        raise AssertionError("embedding tests must not run the attribution backend")
+
+
 class _TokenizeOnlyModel(TextModel, SupportsTokenization):
     """Tokenizable but gradient-free — only AblationFlip is compatible."""
 
@@ -260,7 +273,7 @@ class TestComputeProjection(unittest.TestCase):
 
     def setUp(self):
         self.model = _ProjectableModel()
-        self.xpl = NlpExplainer(self.model, backend=object())
+        self.xpl = NlpExplainer(self.model, backend=_UnusedBackend())
         self.explanation = _projection_explanation(pd.Series(["alpha", "beta banana", "gamma"]))
 
     def test_returns_two_columns_aligned_with_the_texts(self):
@@ -303,7 +316,7 @@ class TestComputeProjection(unittest.TestCase):
 
     def test_raises_for_a_model_that_cannot_embed(self):
         """A prediction-only model gets a clear error pointing at the escape hatch, not an AttributeError."""
-        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object())
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=_UnusedBackend())
         explanation = _projection_explanation(pd.Series(["alpha", "beta"]))
         with self.assertRaises(TypeError):
             xpl.compute_projection(explanation)
@@ -315,7 +328,7 @@ class TestComputeProjection(unittest.TestCase):
             self.xpl.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
 
             fresh_model = _ProjectableModel()
-            fresh = NlpExplainer(fresh_model, backend=object())
+            fresh = NlpExplainer(fresh_model, backend=_UnusedBackend())
             fresh.compute_projection(self.explanation, reducer=reducer, cache_dir=d)
             self.assertEqual(fresh_model.calls, 0)
             self.assertEqual(reducer.fits, 2)
@@ -357,37 +370,37 @@ class TestFitPrecompute(unittest.TestCase):
 
     def test_precompute_embeds_the_bank_at_fit(self):
         model = _ProjectableModel()
-        xpl = NlpExplainer(model, backend=object()).fit(self.CORPUS, y=self.LABELS)
+        xpl = NlpExplainer(model, backend=_UnusedBackend()).fit(self.CORPUS, y=self.LABELS)
         self.assertEqual(model.calls, 1)  # the corpus, embedded once, inside fit
         xpl.find_similar("a happy line")
         self.assertEqual(model.calls, 2)  # the query only — the bank was already there
 
     def test_precompute_false_defers_to_first_query(self):
         model = _ProjectableModel()
-        xpl = NlpExplainer(model, backend=object()).fit(self.CORPUS, y=self.LABELS, precompute=False)
+        xpl = NlpExplainer(model, backend=_UnusedBackend()).fit(self.CORPUS, y=self.LABELS, precompute=False)
         self.assertEqual(model.calls, 0)
         xpl.find_similar("a happy line")
         self.assertEqual(model.calls, 2)  # bank + query, both charged to the first click
 
     def test_find_similar_threshold_filters_by_score_and_reports_total(self):
         model = _ProjectableModel()
-        xpl = NlpExplainer(model, backend=object()).fit(self.CORPUS, y=self.LABELS)
+        xpl = NlpExplainer(model, backend=_UnusedBackend()).fit(self.CORPUS, y=self.LABELS)
         neighbors, total = xpl.find_similar_threshold("a happy line", threshold=-1.0, limit=1)
         self.assertLessEqual(len(neighbors), 1)
         self.assertGreaterEqual(total, len(neighbors))
 
     def test_find_similar_threshold_requires_a_retriever(self):
-        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object()).fit(self.CORPUS, y=self.LABELS)
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=_UnusedBackend()).fit(self.CORPUS, y=self.LABELS)
         with self.assertRaises(RuntimeError):
             xpl.find_similar_threshold("a happy line")
 
     def test_precompute_is_a_noop_when_no_retriever_was_built(self):
-        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=object()).fit(self.CORPUS, y=self.LABELS)
+        xpl = NlpExplainer(_TokenizeOnlyModel(), backend=_UnusedBackend()).fit(self.CORPUS, y=self.LABELS)
         self.assertFalse(xpl.can_find_similar())  # model cannot embed
         self.assertTrue(xpl.can_probe_labels())  # ... but the model-free probe still fit
 
     def test_a_bank_failure_still_leaves_the_model_free_probe_usable(self):
-        xpl = NlpExplainer(_UnembeddableModel(), backend=object())
+        xpl = NlpExplainer(_UnembeddableModel(), backend=_UnusedBackend())
         with self.assertRaises(RuntimeError):
             xpl.fit(self.CORPUS, y=self.LABELS)
         # reference_/classes_ are assigned before the bank is built, so the half-fitted object keeps

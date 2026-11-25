@@ -92,20 +92,18 @@ def _tiny_model(checkpoint: str) -> HFClassifierModel:
 @pytest.fixture(scope="module", params=list(CHECKPOINTS), ids=list(CHECKPOINTS))
 def explanations(request):
     model = _tiny_model(CHECKPOINTS[request.param])
-    backends = {
-        "shap": NlpShapBackend(
-            model, label_names=LABELS, output_space="logit", explainer_compute_args={"max_evals": 500}
-        ),
-        "shap_prob": NlpShapBackend(model, label_names=LABELS, explainer_compute_args={"max_evals": 500}),
-        "lig": NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2}),
-        "lime": NlpLimeBackend(model, label_names=LABELS, explainer_compute_args={"num_samples": 50}),
+    explainers = {
+        name: NlpExplainer(model, label_names=LABELS, backend=backend)
+        for name, backend in {
+            "shap": NlpShapBackend(output_space="logit", explainer_compute_args={"max_evals": 500}),
+            "shap_prob": NlpShapBackend(explainer_compute_args={"max_evals": 500}),
+            "lig": NlpCaptumLigBackend(explainer_compute_args={"n_steps": 2}),
+            "lime": NlpLimeBackend(explainer_compute_args={"num_samples": 50}),
+        }.items()
     }
-    out = {
-        name: NlpExplainer(model, label_names=LABELS, backend=backend).explain(TEXTS)
-        for name, backend in backends.items()
-    }
+    out = {name: xpl.explain(TEXTS) for name, xpl in explainers.items()}
     out["model"] = model
-    assert backends["shap"].masking == "token_ids"
+    assert explainers["shap"].backend.masking_ == "token_ids"
     return out
 
 
@@ -206,14 +204,13 @@ def test_a_truncated_backend_shows_as_partial_coverage():
     explain = {
         name: NlpExplainer(model, label_names=LABELS, backend=backend).explain(text)
         for name, backend in {
-            "shap": NlpShapBackend(
-                model, label_names=LABELS, output_space="logit", explainer_compute_args={"max_evals": 200}
-            ),
-            "lig": NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2}),
-            "lime": NlpLimeBackend(model, label_names=LABELS, explainer_compute_args={"num_samples": 50}),
+            "shap": NlpShapBackend(output_space="logit", explainer_compute_args={"max_evals": 200}),
+            "lig": NlpCaptumLigBackend(explainer_compute_args={"n_steps": 2}),
+            "lime": NlpLimeBackend(explainer_compute_args={"num_samples": 50}),
         }.items()
     }
     assert explain["shap"].token_strings == explain["lig"].token_strings == [text[0].split()[:6]]
+
     def coverage(other):
         return corpus_agreement(explain["shap"], {other: explain[other]}, label_idx=0).coverage.iloc[0]
 
@@ -228,7 +225,7 @@ def test_lig_without_offsets_locates_its_words(monkeypatch, missing):
     # and values.
     model = _tiny_model(CHECKPOINTS["wordpiece-uncased"])
     text = ["i love unbelievably good tea"]
-    backend = NlpCaptumLigBackend(model, label_names=LABELS, explainer_compute_args={"n_steps": 2})
+    backend = NlpCaptumLigBackend(explainer_compute_args={"n_steps": 2}).fit(model, LABELS)
     exact = backend.run_explainer(text)
     monkeypatch.setattr(model, "token_offsets", lambda text: None)
     if missing == "alignment and offsets":
