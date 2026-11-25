@@ -375,15 +375,13 @@ def update_features_to_display(features: int, nb_columns: int, value: int) -> tu
     return value, max_value, marks
 
 
-def get_id_card_features(data: list, selected: int, special_cols: list, features_dict: dict) -> pd.DataFrame:
+def get_id_card_features(row: dict, special_cols: list, features_dict: dict) -> pd.DataFrame:
     """Get the features of the selected index for the identity card.
 
     Parameters
     ----------
-    data : list
-        Data from the table
-    selected : int
-        Row number of the selected index
+    row : dict
+        Values of the selected individual, keyed by column name
     special_cols : list
         Sepcial columns about the index, the prediction...
     features_dict : dict
@@ -394,7 +392,7 @@ def get_id_card_features(data: list, selected: int, special_cols: list, features
     pd.DataFrame
         Dataframe of the features
     """
-    selected_row = pd.DataFrame([data[selected]], index=["feature_value"]).T
+    selected_row = pd.DataFrame([row], index=["feature_value"]).T
     selected_row["feature_name"] = selected_row.index.map(lambda x: x if x in special_cols else features_dict[x])
     return selected_row
 
