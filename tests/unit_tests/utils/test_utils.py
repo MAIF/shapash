@@ -8,6 +8,7 @@ from shapash.utils.utils import (
     compute_digit_number,
     compute_sorted_variables_interactions_list_indices,
     compute_top_correlations_features,
+    format_index_value,
     inclusion,
     is_nested_list,
     maximum_difference_sort_value,
@@ -160,3 +161,7 @@ class TestUtils(unittest.TestCase):
         list_features = compute_top_correlations_features(corr=corr, max_features=5)
 
         assert len(list_features) == 5
+
+    def test_format_index_value(self):
+        assert format_index_value(("FR", "Paris", 0)) == "FR | Paris | 0"
+        assert format_index_value(7) == "7"

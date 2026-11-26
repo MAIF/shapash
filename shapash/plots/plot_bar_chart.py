@@ -4,7 +4,13 @@ from typing import Any, Literal
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from shapash.utils.utils import add_line_break, adjust_title_height, compute_digit_number, truncate_str
+from shapash.utils.utils import (
+    add_line_break,
+    adjust_title_height,
+    compute_digit_number,
+    format_index_value,
+    truncate_str,
+)
 
 
 def plot_bar_chart(
@@ -118,7 +124,7 @@ def plot_bar_chart(
             return output
 
         topmargin = 80
-        title = f"Local Explanation - Id: <b>{index_value[0]}</b>"
+        title = f"Local Explanation - Id: <b>{format_index_value(index_value[0])}</b>"
         # Add subtitle
         if subtitle:
             max_chars_single_line = max(40, int((width - 120) / 7))

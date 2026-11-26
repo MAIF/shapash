@@ -280,6 +280,25 @@ def add_text(text_list: Iterable[str | None], sep: str) -> str:
     return sep.join(clean_list)
 
 
+def format_index_value(value: Any) -> str:
+    """
+    Format an index value for display, joining the levels of a MultiIndex entry.
+
+    Parameters
+    ----------
+    value : Any
+        An index value; a tuple for a MultiIndex entry.
+
+    Returns
+    -------
+    str
+        ``"FR | Paris | 0"`` for ``("FR", "Paris", 0)``, ``str(value)`` otherwise.
+    """
+    if isinstance(value, tuple):
+        return " | ".join(str(level) for level in value)
+    return str(value)
+
+
 def maximum_difference_sort_value(contributions: Sequence[Sequence[Any]]) -> int | float | np.number:
     """
     Auxiliary function to sort the contributions for the compare_plot.

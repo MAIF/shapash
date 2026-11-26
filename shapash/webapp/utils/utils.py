@@ -4,6 +4,8 @@ from typing import Any, Literal
 import pandas as pd
 from pandas.api.types import is_any_real_numeric_dtype
 
+from shapash.utils.utils import format_index_value
+
 
 def round_to_k(x: float | int, k: int) -> float | int:
     """
@@ -43,15 +45,13 @@ class IndexLabels:
         Index of the explainer's ``x_init``.
     """
 
-    SEPARATOR = " | "
-
     def __init__(self, index: pd.Index) -> None:
         self.is_multi = isinstance(index, pd.MultiIndex)
         self._key_by_label: dict[str, tuple[Any, ...]] = {}
         self._label_by_key: dict[tuple[Any, ...], str] = {}
         if self.is_multi:
             keys = list(index.unique())
-            labels = [self.SEPARATOR.join(str(level) for level in key) for key in keys]
+            labels = [format_index_value(key) for key in keys]
             if len(set(labels)) != len(labels):
                 # A level value contains the separator, or two values print the same:
                 # suffix the position so every row keeps a distinct key.

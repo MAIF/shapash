@@ -117,6 +117,7 @@ class TestSmartAppMultiIndex(unittest.TestCase):
         expected = self.xpl.plot.local_plot(index=self.smart_app.round_dataframe.index[2], show_masked=True)
 
         self.assertEqual([trace.x for trace in figure.data], [trace.x for trace in expected.data])
+        self.assertIn(f"Id: <b>{selected}</b>", figure.layout.title.text)
 
     def test_identity_card_for_the_selected_row(self):
         update_id_card = self._callback("id_card_title_contrib.children")
