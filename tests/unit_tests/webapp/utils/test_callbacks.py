@@ -123,6 +123,13 @@ class TestCallbacks(unittest.TestCase):
         result = select_data_from_prediction_picking(self.df, selected_data)
         pd.testing.assert_frame_equal(expected_result, result)
 
+    def test_select_data_from_prediction_picking_multiindex(self):
+        # A MultiIndex entry comes back from the browser as a JSON list.
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=pd.MultiIndex.from_tuples([("x", 0), ("y", 1), ("z", 2)]))
+        selected_data = {"points": [{"customdata": ["x", 0]}, {"customdata": ["z", 2]}]}
+        result = select_data_from_prediction_picking(df, selected_data)
+        pd.testing.assert_frame_equal(df.iloc[[0, 2]], result)
+
     def test_select_data_from_str_filters(self):
         round_dataframe = self.df
         id_feature = [{"type": "var_dropdown", "index": 1}]
