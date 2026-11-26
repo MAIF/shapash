@@ -429,7 +429,7 @@ class TestCallbacks(unittest.TestCase):
         data = self.smart_app.components["table"]["dataset"].data
         features_dict = copy.deepcopy(self.xpl.explainer.features_dict)
         features_dict.update(self.xpl.explainer.additional_features_dict)
-        selected_row = get_id_card_features(data, 3, self.special_cols, features_dict)
+        selected_row = get_id_card_features(data[3], self.special_cols, features_dict)
         expected_result = pd.DataFrame(
             {
                 "feature_value": [3, 1, 1, 0, 4, 4.4, "d", False, pd.Timestamp("2023-01-04")],

@@ -69,14 +69,14 @@ def suffix_duplicates(lst: list[str]) -> list[str]:
 
 def get_host_name() -> str:
     """
-    Get the hostname of the current host.
+    Get the fully qualified hostname of the current host when available.
 
     Returns
     -------
     str
         Hostname.
     """
-    return socket.gethostname()
+    return socket.getfqdn()
 
 
 def inclusion(first_x: Iterable[Any], second_x: Iterable[Any]) -> bool:

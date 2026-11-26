@@ -2411,7 +2411,6 @@ class SmartApp:
             [
                 State("points", "value"),
                 State("violin", "value"),
-                State("global_feature_importance", "figure"),
             ],
         )
         def update_feature_selector(
@@ -2421,7 +2420,6 @@ class SmartApp:
             click_zoom: int | None,
             points: int | None,
             violin: int | None,
-            gfi_figure: dict,
         ) -> go.Figure:
             """
             Update the feature plot.
@@ -2443,8 +2441,6 @@ class SmartApp:
                 points value in setting
             violin
                 violin value in setting
-            gfi_figure
-                figure of Features Importance graph
 
             Returns
             -------
@@ -2453,16 +2449,17 @@ class SmartApp:
             """
             # Zoom is False by Default. It becomes True if we click on it
             zoom_active = get_figure_zoom(click_zoom)
-            subset = None
-            list_index = self.list_index
             if feature is not None:
                 selected_feature = get_feature_from_clicked_data(feature)
             else:
                 selected_feature = self.selected_feature
 
-            if feature is not None and feature["points"][0]["curveNumber"] == 0 and len(gfi_figure["data"]) == 2:
-                subset = self.index_labels.to_index_list(get_indexes_from_datatable(data, list_index))
-            else:
+            # Show the filtered rows, unless the Global bar is clicked: while a filter is active the
+            # importance graph has two traces, [Subset, Global], so curve 1 is the Global bar.
+            subset = (
+                self.index_labels.to_index_list(get_indexes_from_datatable(data, self.list_index)) or self.list_index
+            )
+            if feature is not None and feature["points"][0]["curveNumber"] == 1:
                 subset = self.list_index
 
             fs_figure = self.explainer.plot.contribution_plot(
@@ -2617,7 +2614,7 @@ class SmartApp:
                 Input("bool_groups", "on"),
                 Input("ember_detail_feature", "n_clicks"),
             ],
-            [State("index_id", "value"), State("dataset", "data")],
+            [State("index_id", "value")],
         )
         def update_detail_feature(
             threshold: float | None,
@@ -2630,7 +2627,6 @@ class SmartApp:
             bool_group: bool,
             click_zoom: int | None,
             index: int | str | None,
-            data: list[dict[str, Any]],
         ) -> go.Figure:
             """
             Update local explanation plot according to app changes.
@@ -2663,8 +2659,6 @@ class SmartApp:
                 click on zoom button
             index
                 selected index
-            data
-                the dataset
 
             Returns
             -------
@@ -2672,8 +2666,10 @@ class SmartApp:
             """
             # Zoom is False by Default. It becomes True if we click on it
             zoom_active = get_figure_zoom(click_zoom)
-            selected = index
-            if check_row(data, selected) is None:
+            # Look the index up in the whole app sample, not the filtered table: the Global
+            # contribution plot also shows individuals that the filters exclude.
+            selected = self.index_labels.to_index(index)
+            if selected not in self.round_dataframe.index:
                 selected = None
             threshold = threshold if threshold != 0 else None
             sign = get_feature_contributions_sign_to_show(positive, negative)
@@ -2702,7 +2698,7 @@ class SmartApp:
                 "mask_params": mask_params,
             }
             figure = self.explainer.plot.local_plot(
-                index=self.index_labels.to_index(selected),
+                index=selected,
                 label=label,
                 show_masked=True,
                 yaxis_max_label=8,
@@ -2744,17 +2740,13 @@ class SmartApp:
                 Input("select_id_card_sorting", "value"),
                 Input("select_id_card_order", "value"),
             ],
-            [
-                State("dataset", "data"),
-                State("index_id", "value"),
-            ],
+            [State("index_id", "value")],
         )
         def update_id_card(
             n_submit: int | None,
             label: int | str | None,
             sort_by: str,
             order: bool,
-            data: list[dict[str, Any]],
             index: int | str | None,
         ) -> tuple[dict[str, Any], list, str]:
             """
@@ -2763,7 +2755,6 @@ class SmartApp:
             Parameters
             ----------
             n_submit : boolean
-            data : the dataset
             label : selected label for classification
             sort_by : identity card column to sort by, data column labels or contribution
             order : order to sort by, ascending or descending
@@ -2773,11 +2764,13 @@ class SmartApp:
             -------
             style to display button and children body for modal.
             """
-            selected = check_row(data, index)
             title_contrib = "Contribution"
-            if n_submit and selected is not None:
-                index = self.index_labels.to_index(index)
-                selected_row = get_id_card_features(data, selected, self.special_cols, self.features_dict)
+            # Whole app sample, not the filtered table (see update_detail_feature).
+            index = self.index_labels.to_index(index)
+            if n_submit and index in self.round_dataframe.index:
+                selected_row = get_id_card_features(
+                    self.round_dataframe.loc[index].to_dict(), self.special_cols, self.features_dict
+                )
                 if self.explainer._case == "classification":
                     if label is None:
                         label = -1

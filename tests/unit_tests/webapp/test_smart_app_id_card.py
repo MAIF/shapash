@@ -40,7 +40,7 @@ class TestUpdateIdCard(unittest.TestCase):
         data = self.smart_app.dataframe.to_dict("records")
         index = data[0]["_index_"]
 
-        style, children, title = update_id_card(1, 1, "feature_name", True, data, index)
+        style, children, title = update_id_card(1, 1, "feature_name", True, index)
 
         self.assertEqual(style["display"], "flex")
         self.assertTrue(children)

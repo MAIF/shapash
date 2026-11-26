@@ -86,7 +86,8 @@ class TestUtils(unittest.TestCase):
         assert labels.to_label("DE | 1") == "DE | 1"
         assert labels.to_index("DE | 1") == ("DE", 1)
         assert labels.to_index(["DE", 1]) == ("DE", 1)
-        assert labels.to_index("unknown") == "unknown"
+        assert labels.to_index("unknown") is None
+        assert labels.to_index("DE") is None
         assert labels.to_index_list(["FR | 0", "DE | 1"]) == [("FR", 0), ("DE", 1)]
         assert labels.to_index_list(None) is None
 

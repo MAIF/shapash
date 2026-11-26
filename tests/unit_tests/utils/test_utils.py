@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ from shapash.utils.utils import (
     compute_sorted_variables_interactions_list_indices,
     compute_top_correlations_features,
     format_index_value,
+    get_host_name,
     inclusion,
     is_nested_list,
     maximum_difference_sort_value,
@@ -18,6 +20,11 @@ from shapash.utils.utils import (
 
 
 class TestUtils(unittest.TestCase):
+    @patch("shapash.utils.utils.socket.getfqdn", return_value="my_server_name.enterprise.local")
+    def test_get_host_name_returns_fully_qualified_hostname(self, mock_getfqdn):
+        self.assertEqual(get_host_name(), "my_server_name.enterprise.local")
+        mock_getfqdn.assert_called_once_with()
+
     def test_inclusion_1(self):
         x1 = [1, 2, 3]
         x2 = [1, 2, 3, 4]

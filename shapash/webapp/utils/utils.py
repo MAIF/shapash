@@ -109,14 +109,15 @@ class IndexLabels:
         Returns
         -------
         Any
-            The MultiIndex tuple for a known label, or ``value`` unchanged otherwise.
+            For a MultiIndex, the tuple of a known label or of a JSON list, else ``None``: an
+            unknown key such as ``"DE"`` would otherwise match a whole level in pandas lookups.
+            For a flat index, ``value`` unchanged.
         """
-        if self.is_multi:
-            if isinstance(value, str) and value in self._key_by_label:
-                return self._key_by_label[value]
-            if isinstance(value, list):
-                return tuple(value)
-        return value
+        if not self.is_multi:
+            return value
+        if isinstance(value, list | tuple):
+            return tuple(value)
+        return self._key_by_label.get(value)
 
     def to_index_list(self, values: list | None) -> list | None:
         """

@@ -113,7 +113,7 @@ class TestSmartAppMultiIndex(unittest.TestCase):
         update_detail_feature = self._callback("detail_feature.figure")
         selected = self.data[2]["_index_"]
 
-        figure = update_detail_feature(None, None, [1], [1], None, None, 1, False, None, selected, self.data)
+        figure = update_detail_feature(None, None, [1], [1], None, None, 1, False, None, selected)
         expected = self.xpl.plot.local_plot(index=self.smart_app.round_dataframe.index[2], show_masked=True)
 
         self.assertEqual([trace.x for trace in figure.data], [trace.x for trace in expected.data])
@@ -123,10 +123,19 @@ class TestSmartAppMultiIndex(unittest.TestCase):
         update_id_card = self._callback("id_card_title_contrib.children")
         selected = self.data[2]["_index_"]
 
-        style, children, _ = update_id_card(1, None, "feature_name", True, self.data, selected)
+        style, children, _ = update_id_card(1, None, "feature_name", True, selected)
 
         self.assertEqual(style["display"], "flex")
         self.assertTrue(children)
+
+    def test_identity_card_ignores_a_partial_key(self):
+        # pandas would match "DE" against the whole first level of the MultiIndex.
+        update_id_card = self._callback("id_card_title_contrib.children")
+
+        style, children, _ = update_id_card(1, None, "feature_name", True, "DE")
+
+        self.assertEqual(style, {"display": "none"})
+        self.assertEqual(children, [])
 
     def _datatable_styles(self, index_value):
         properties = ["style_data_conditional", "style_filter_conditional", "style_header_conditional"]
@@ -164,7 +173,7 @@ class TestSmartAppMultiIndex(unittest.TestCase):
     def test_identity_card_lists_index_levels_after_the_index(self):
         update_id_card = self._callback("id_card_title_contrib.children")
 
-        _, children, _ = update_id_card(1, None, "feature_name", True, self.data, self.data[2]["_index_"])
+        _, children, _ = update_id_card(1, None, "feature_name", True, self.data[2]["_index_"])
         names = [row.children[0].children.children for row in children]
 
         self.assertEqual(names[:5], ["_index_", "index_country", "index_city", "index_n", "_predict_"])

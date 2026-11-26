@@ -939,7 +939,7 @@ def load_model(config: ServeConfig) -> TextModel:
     return builder(config, device) if builder is not None else _load_hf_classifier(config, device)
 
 
-def build_backend(config: ServeConfig, model: TextModel) -> NlpBackend | None:
+def build_backend(config: ServeConfig) -> NlpBackend | None:
     """Return the attribution backend selected by ``--attribution`` and ``--output-space``.
 
     Returns ``None`` for probability-space ``"shap"`` so ``NlpExplainer`` builds its default
@@ -951,13 +951,11 @@ def build_backend(config: ServeConfig, model: TextModel) -> NlpBackend | None:
         # internal_batch_size chunks each sample's n_steps=100 scaled-copies batch so it doesn't OOM
         # memory-hungry architectures (e.g. DeBERTa) on a small GPU — see ServeConfig.lig_batch_size.
         return NlpCaptumLigBackend(
-            model,
-            label_names=model.label_names,
             explainer_compute_args={"internal_batch_size": config.lig_batch_size},
             show_progress=True,
         )
     if config.output_space == "logit":
-        return NlpShapBackend(model, label_names=model.label_names, output_space="logit")
+        return NlpShapBackend(output_space="logit")
     return None
 
 
@@ -1006,7 +1004,7 @@ def main() -> None:
     xpl = NlpExplainer(
         model,
         label_names=model.label_names,
-        backend=build_backend(config, model),
+        backend=build_backend(config),
     )
 
     # Step 2 — fit() learns reference state, which for text is the corpus. Two panels come from it,
