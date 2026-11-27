@@ -1,6 +1,6 @@
 """Unit tests for ``HFClassifierModel.from_pretrained`` and its loader helpers.
 
-These cover the checkpoint-loading logic that used to live in ``demo/serve_nlp.py``: tokenizer-source
+These cover the checkpoint-loading logic that used to live in the NLP serving script: tokenizer-source
 resolution (including the base-model fallback for a directory saved without its tokenizer), the
 ``model_max_length`` no-op trap, the fast/slow tokenizer fallback, the label-name arity check, and the
 end-to-end classmethod. ``transformers`` is faked throughout so the tests stay fast and need no network,
